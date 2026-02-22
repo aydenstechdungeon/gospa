@@ -6,6 +6,7 @@ import (
 	"encoding/json"
 	"reflect"
 	"sync"
+	"time"
 )
 
 // Serializable represents a value that can be serialized to JSON
@@ -260,7 +261,7 @@ func ParseMessage(data []byte) (*StateMessage, error) {
 
 // currentTimeMillis returns current time in milliseconds
 func currentTimeMillis() int64 {
-	return int64(0) // Placeholder - would use time.Now().UnixMilli() in production
+	return time.Now().UnixMilli()
 }
 
 // ValidateState validates state against a schema

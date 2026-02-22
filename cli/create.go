@@ -22,7 +22,7 @@ func CreateProject(name string) {
 	config := &ProjectConfig{
 		Name:      name,
 		Module:    fmt.Sprintf("github.com/%s/%s", getGitUsername(), name),
-		OutputDir: name,
+		OutputDir: filepath.Join("examples", name),
 		WithGit:   true,
 	}
 
@@ -33,7 +33,7 @@ func CreateProject(name string) {
 
 	fmt.Printf("✓ Created GoSPA project '%s'\n", name)
 	fmt.Println("\nNext steps:")
-	fmt.Printf("  cd %s\n", name)
+	fmt.Printf("  cd %s\n", config.OutputDir)
 	fmt.Println("  go mod tidy")
 	fmt.Println("  gospa dev")
 }
@@ -114,14 +114,14 @@ func createProject(config *ProjectConfig) error {
 func createGoMod(config *ProjectConfig) error {
 	content := fmt.Sprintf(`module %s
 
-go 1.22
+go 1.24.0
 
-	require (
-		github.com/aydenstechdungeon/gospa v0.1.0
-		github.com/a-h/templ v0.2.747
-		github.com/gofiber/fiber/v2 v2.52.4
-		github.com/gofiber/websocket/v2 v2.2.1
-	)
+require (
+	github.com/a-h/templ v0.3.977
+	github.com/aydenstechdungeon/gospa v0.1.0
+)
+
+replace github.com/aydenstechdungeon/gospa => ../../
 `, config.Module)
 
 	path := filepath.Join(config.OutputDir, "go.mod")
@@ -134,41 +134,27 @@ func createMainGo(config *ProjectConfig) error {
 import (
 	"log"
 
-	"github.com/aydenstechdungeon/gospa/fiber"
-	"github.com/aydenstechdungeon/gospa/routing"
-	"github.com/gofiber/fiber/v2"
-	"github.com/gofiber/fiber/v2/middleware/logger"
+	"%s/lib"
+	_ "%s/routes" // Import routes to trigger init()
+
+	"github.com/aydenstechdungeon/gospa"
 )
 
 func main() {
-	app := fiber.New(fiber.Config{
-		AppName: "%s",
+	app := gospa.New(gospa.Config{
+		RoutesDir: "./routes",
+		DevMode:   true,
+		AppName:   "%s",
+		DefaultState: map[string]interface{}{
+			"count": lib.GlobalCounter.Count,
+		},
 	})
 
-	// Middleware
-	app.Use(logger.New())
-
-	// Auto-routing
-	router := routing.NewRouter("routes")
-	if err := router.Scan(); err != nil {
-		log.Fatalf("Failed to scan routes: %%v", err)
-	}
-
-	// Register routes
-	for _, route := range router.GetPages() {
-		app.Get(route.Path, fiber.SPAHandler(route))
-	}
-
-	// Static files
-	app.Static("/static", "./static")
-
-	// Start server
-	log.Println("Starting server on :3000")
-	if err := app.Listen(":3000"); err != nil {
-		log.Fatalf("Failed to start server: %%v", err)
+	if err := app.Run(":3000"); err != nil {
+		log.Fatal(err)
 	}
 }
-`, config.Name)
+`, config.Module, config.Module, config.Name)
 
 	path := filepath.Join(config.OutputDir, "main.go")
 	return os.WriteFile(path, []byte(content), 0644)
@@ -246,39 +232,26 @@ templ Layout(title string) {
 func createCounterComponent(config *ProjectConfig) error {
 	content := `package main
 
-import (
-	"github.com/aydenstechdungeon/gospa/templ"
-	"github.com/aydenstechdungeon/gospa/state"
-)
-
-// CounterState holds the counter's reactive state.
-type CounterState struct {
-	Count *state.Rune[int]
-}
-
-// NewCounterState creates a new counter state.
-func NewCounterState() *CounterState {
-	return &CounterState{
-		Count: state.NewRune(0),
-	}
-}
-
 templ Counter() {
-	<div data-gospa-component="counter">
+	<div 
+		class="flex flex-col items-center justify-center p-8"
+		data-gospa-component="counter"
+		data-gospa-state='{"count":0}'
+	>
 		<h2 class="text-2xl font-semibold mb-4">Counter Example</h2>
 		<div class="flex items-center gap-4">
 			<button 
 				class="px-4 py-2 bg-red-500 text-white rounded hover:bg-red-600"
-				@templ.OnClick("decrement")
+				data-on="click:decrement"
 			>
 				-
 			</button>
-			<span class="text-3xl font-mono" @templ.Bind("count", templ.TextBind)>
-				{ fmt.Sprintf("%d", count) }
+			<span class="text-3xl font-mono" data-bind="count">
+				0
 			</span>
 			<button 
 				class="px-4 py-2 bg-green-500 text-white rounded hover:bg-green-600"
-				@templ.OnClick("increment")
+				data-on="click:increment"
 			>
 				+
 			</button>

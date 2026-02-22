@@ -105,9 +105,10 @@ func printUsage(printer *cli.ColorPrinter) {
 func createProject(name string, printer *cli.ColorPrinter) {
 	printer.Title("Creating GoSPA project: %s", name)
 
-	// Create project directory
+	// Create project directory in examples/
+	projectPath := filepath.Join("examples", name)
 	printer.Step(1, 5, "Creating project directory")
-	if err := os.MkdirAll(name, 0755); err != nil {
+	if err := os.MkdirAll(projectPath, 0755); err != nil {
 		printer.Error("Failed to create project directory: %v", err)
 		os.Exit(1)
 	}
@@ -115,10 +116,10 @@ func createProject(name string, printer *cli.ColorPrinter) {
 	// Create subdirectories
 	printer.Step(2, 5, "Creating directory structure")
 	dirs := []string{
-		filepath.Join(name, "routes"),
-		filepath.Join(name, "components"),
-		filepath.Join(name, "lib"),
-		filepath.Join(name, "static"),
+		filepath.Join(projectPath, "routes"),
+		filepath.Join(projectPath, "components"),
+		filepath.Join(projectPath, "lib"),
+		filepath.Join(projectPath, "static"),
 	}
 	for _, dir := range dirs {
 		if err := os.MkdirAll(dir, 0755); err != nil {
@@ -139,7 +140,7 @@ require (
 	github.com/gofiber/fiber/v2 v2.51.0
 )
 `, name)
-	if err := os.WriteFile(filepath.Join(name, "go.mod"), []byte(goMod), 0644); err != nil {
+	if err := os.WriteFile(filepath.Join(projectPath, "go.mod"), []byte(goMod), 0644); err != nil {
 		printer.Error("Failed to create go.mod: %v", err)
 		os.Exit(1)
 	}
@@ -167,7 +168,7 @@ func main() {
 	}
 }
 `
-	if err := os.WriteFile(filepath.Join(name, "main.go"), []byte(mainGo), 0644); err != nil {
+	if err := os.WriteFile(filepath.Join(projectPath, "main.go"), []byte(mainGo), 0644); err != nil {
 		printer.Error("Failed to create main.go: %v", err)
 		os.Exit(1)
 	}
@@ -187,7 +188,7 @@ templ Layout(title string, children templ.Component) {
 	</div>
 }
 `
-	if err := os.WriteFile(filepath.Join(name, "routes", "layout.templ"), []byte(layoutTempl), 0644); err != nil {
+	if err := os.WriteFile(filepath.Join(projectPath, "routes", "layout.templ"), []byte(layoutTempl), 0644); err != nil {
 		printer.Error("Failed to create layout.templ: %v", err)
 		os.Exit(1)
 	}
@@ -202,7 +203,7 @@ templ Page() {
 	</div>
 }
 `
-	if err := os.WriteFile(filepath.Join(name, "routes", "page.templ"), []byte(pageTempl), 0644); err != nil {
+	if err := os.WriteFile(filepath.Join(projectPath, "routes", "page.templ"), []byte(pageTempl), 0644); err != nil {
 		printer.Error("Failed to create page.templ: %v", err)
 		os.Exit(1)
 	}
@@ -212,10 +213,10 @@ templ Page() {
 	printer.Success("Project '%s' created successfully!", name)
 	fmt.Println()
 	printer.Bold("Next steps:")
-	fmt.Printf("    cd %s\n", name)
+	fmt.Printf("    cd %s\n", projectPath)
 	fmt.Println("    go mod tidy")
 	fmt.Println("    templ generate")
 	fmt.Println("    gospa generate")
-	fmt.Println("    go run .")
+	fmt.Println("    go run ../../cmd/gospa")
 	fmt.Println()
 }

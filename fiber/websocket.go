@@ -1,6 +1,8 @@
 package fiber
 
 import (
+	"crypto/rand"
+	"encoding/hex"
 	"encoding/json"
 	"log"
 	"sync"
@@ -9,6 +11,64 @@ import (
 	"github.com/gofiber/fiber/v2"
 	"github.com/gofiber/websocket/v2"
 )
+
+// SessionStore maps session tokens to client IDs for secure HTTP state sync.
+type SessionStore struct {
+	sessions map[string]string // token -> clientID
+	mu       sync.RWMutex
+}
+
+// NewSessionStore creates a new session store.
+func NewSessionStore() *SessionStore {
+	return &SessionStore{
+		sessions: make(map[string]string),
+	}
+}
+
+// CreateSession creates a new session token for a client ID.
+func (s *SessionStore) CreateSession(clientID string) string {
+	token := generateSecureToken()
+	s.mu.Lock()
+	s.sessions[token] = clientID
+	s.mu.Unlock()
+	return token
+}
+
+// ValidateSession returns the client ID for a valid session token.
+func (s *SessionStore) ValidateSession(token string) (string, bool) {
+	s.mu.RLock()
+	defer s.mu.RUnlock()
+	clientID, ok := s.sessions[token]
+	return clientID, ok
+}
+
+// RemoveSession removes a session token.
+func (s *SessionStore) RemoveSession(token string) {
+	s.mu.Lock()
+	delete(s.sessions, token)
+	s.mu.Unlock()
+}
+
+// RemoveClientSessions removes all sessions for a client ID.
+func (s *SessionStore) RemoveClientSessions(clientID string) {
+	s.mu.Lock()
+	for token, id := range s.sessions {
+		if id == clientID {
+			delete(s.sessions, token)
+		}
+	}
+	s.mu.Unlock()
+}
+
+// generateSecureToken generates a cryptographically secure random token.
+func generateSecureToken() string {
+	b := make([]byte, 32)
+	_, _ = rand.Read(b)
+	return hex.EncodeToString(b)
+}
+
+// Global session store for HTTP state sync.
+var globalSessionStore = NewSessionStore()
 
 // WSClient represents a connected WebSocket client.
 type WSClient struct {
@@ -75,15 +135,24 @@ func (h *WSHub) Run() {
 
 		case message := <-h.Broadcast:
 			h.mu.RLock()
+			var toRemove []string
 			for _, client := range h.Clients {
 				select {
 				case client.Send <- message:
 				default:
 					close(client.Send)
-					delete(h.Clients, client.ID)
+					toRemove = append(toRemove, client.ID)
 				}
 			}
 			h.mu.RUnlock()
+			// Safely delete clients with write lock after iteration
+			if len(toRemove) > 0 {
+				h.mu.Lock()
+				for _, id := range toRemove {
+					delete(h.Clients, id)
+				}
+				h.mu.Unlock()
+			}
 		}
 	}
 }
@@ -249,6 +318,24 @@ func (c *WSClient) SendState() {
 	})
 }
 
+// SendInitWithSession sends the initial state with a session token for HTTP state sync.
+func (c *WSClient) SendInitWithSession(sessionToken string) {
+	stateJSON, err := c.State.ToJSON()
+	if err != nil {
+		c.SendError("Failed to serialize state")
+		return
+	}
+
+	log.Printf("DEBUG: SendInitWithSession to client %s", c.ID)
+
+	_ = c.SendJSON(map[string]interface{}{
+		"type":         "init",
+		"state":        json.RawMessage(stateJSON),
+		"sessionToken": sessionToken,
+		"clientId":     c.ID,
+	})
+}
+
 // Close closes the client connection.
 func (c *WSClient) Close() {
 	c.mu.Lock()
@@ -296,8 +383,11 @@ func WebSocketHandler(config WebSocketConfig) fiber.Handler {
 	go config.Hub.Run()
 
 	return websocket.New(func(c *websocket.Conn) {
-		// Generate client ID
+		// Generate client ID server-side (never trust client-provided IDs)
 		clientID := config.GenerateID()
+
+		// Create session token for HTTP state sync
+		sessionToken := globalSessionStore.CreateSession(clientID)
 
 		// Create client
 		client := NewWSClient(clientID, c)
@@ -313,8 +403,8 @@ func WebSocketHandler(config WebSocketConfig) fiber.Handler {
 			config.OnConnect(client)
 		}
 
-		// Send initial state
-		client.SendState()
+		// Send initial state with session token
+		client.SendInitWithSession(sessionToken)
 
 		// Handle messages
 		onMessage := config.OnMessage
@@ -325,6 +415,9 @@ func WebSocketHandler(config WebSocketConfig) fiber.Handler {
 		// Start read/write pumps
 		go client.WritePump()
 		client.ReadPump(config.Hub, onMessage)
+
+		// Clean up session on disconnect
+		globalSessionStore.RemoveClientSessions(clientID)
 
 		// Call onDisconnect hook
 		if config.OnDisconnect != nil {
