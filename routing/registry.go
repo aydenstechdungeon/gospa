@@ -2,6 +2,7 @@
 package routing
 
 import (
+	"fmt"
 	"sync"
 
 	"github.com/a-h/templ"
@@ -34,6 +35,7 @@ func NewRegistry() *Registry {
 
 // RegisterPage registers a page component for a route path.
 func (r *Registry) RegisterPage(path string, fn ComponentFunc) {
+	fmt.Printf("Registering page: %s\n", path)
 	r.mu.Lock()
 	defer r.mu.Unlock()
 	r.pages[path] = fn

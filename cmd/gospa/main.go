@@ -179,22 +179,12 @@ func main() {
 import "github.com/a-h/templ"
 
 templ Layout(title string, children templ.Component) {
-	<!DOCTYPE html>
-	<html lang="en">
-		<head>
-			<meta charset="UTF-8"/>
-			<meta name="viewport" content="width=device-width, initial-scale=1.0"/>
-			<title>{ title }</title>
-		</head>
-		<body>
-			<nav>
-				<a href="/">Home</a>
-			</nav>
-			<main>
-				@templ.Component(children)
-			</main>
-		</body>
-	</html>
+	<nav>
+		<a href="/">Home</a>
+	</nav>
+	<div>
+		@templ.Component(children)
+	</div>
 }
 `
 	if err := os.WriteFile(filepath.Join(name, "routes", "layout.templ"), []byte(layoutTempl), 0644); err != nil {

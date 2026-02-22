@@ -11,6 +11,7 @@ import (
 	"strings"
 
 	"github.com/aydenstechdungeon/gospa/plugin"
+	routing_generator "github.com/aydenstechdungeon/gospa/routing/generator"
 )
 
 // Generate generates TypeScript types and routes from Go templates.
@@ -20,13 +21,19 @@ func Generate() {
 		fmt.Fprintf(os.Stderr, "Warning: BeforeGenerate hook failed: %v\n", err)
 	}
 
+	// Generate Go route registry (e.g., generated_routes.go)
+	if err := routing_generator.Generate("./routes"); err != nil {
+		fmt.Fprintf(os.Stderr, "Error generating Go routes: %v\n", err)
+		os.Exit(1)
+	}
+
 	// Generate TypeScript types from Go state structs
 	if err := generateTypes(); err != nil {
 		fmt.Fprintf(os.Stderr, "Error generating types: %v\n", err)
 		os.Exit(1)
 	}
 
-	// Generate route definitions
+	// Generate route definitions for TypeScript
 	if err := generateRoutes(); err != nil {
 		fmt.Fprintf(os.Stderr, "Error generating routes: %v\n", err)
 		os.Exit(1)
@@ -35,7 +42,7 @@ func Generate() {
 	// Trigger AfterGenerate hook
 	_ = plugin.TriggerHook(plugin.AfterGenerate, nil)
 
-	fmt.Println("✓ Generated TypeScript types and routes")
+	fmt.Println("✓ Generated Go routes, TypeScript types, and TS routes")
 }
 
 // GenerateConfig holds configuration for code generation.

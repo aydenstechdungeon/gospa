@@ -13,7 +13,7 @@
   ],
   "scripts": {
     "typecheck": "tsc --noEmit",
-    "build": "bun build ./src/runtime.ts --outdir ./dist --target browser --minify --sourcemap"
+    "build": "bun build ./src/runtime.ts --outdir ./dist --target browser --minify"
   },
   "devDependencies": {
     "typescript": "^5.3.3"

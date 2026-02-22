@@ -209,6 +209,19 @@ func (a *App) setupRoutes() {
 		a.Fiber.Use(a.Config.StaticPrefix, filesystem.New(filesystem.Config{
 			Root: http.Dir(a.Config.StaticDir),
 		}))
+		// Serve favicon from static dir if requested at root
+		a.Fiber.Get("/favicon.ico", func(c *fiberpkg.Ctx) error {
+			favPath := a.Config.StaticDir + "/favicon.ico"
+			if _, err := os.Stat(favPath); err == nil {
+				return c.SendFile(favPath)
+			}
+			return c.SendStatus(fiberpkg.StatusNoContent)
+		})
+	} else {
+		// Prevent 404 errors for default favicon requests
+		a.Fiber.Get("/favicon.ico", func(c *fiberpkg.Ctx) error {
+			return c.SendStatus(fiberpkg.StatusNoContent)
+		})
 	}
 }
 
@@ -339,7 +352,7 @@ func (a *App) renderRoute(c *fiberpkg.Ctx, route *routing.Route) error {
 		_, _ = fmt.Fprint(w, `</main></div>`)
 
 		// Inject runtime script
-		_, _ = fmt.Fprintf(w, `<script src="%s"></script>`, a.getRuntimePath())
+		_, _ = fmt.Fprintf(w, `<script src="%s" type="module"></script>`, a.getRuntimePath())
 
 		_, _ = fmt.Fprint(w, `</body></html>`)
 		w.Flush()

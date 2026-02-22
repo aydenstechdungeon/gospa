@@ -27,17 +27,17 @@ function nextBindingId(): string {
 // Register a binding
 export function registerBinding(binding: Binding): string {
 	const id = nextBindingId();
-	
+
 	if (!bindings.has(id)) {
 		bindings.set(id, new Set());
 	}
 	bindings.get(id)!.add(binding);
-	
+
 	if (!elementBindings.has(binding.element)) {
 		elementBindings.set(binding.element, new Set());
 	}
 	elementBindings.get(binding.element)!.add(binding);
-	
+
 	return id;
 }
 
@@ -62,36 +62,36 @@ export function unregisterBinding(id: string): void {
 function updateElement(binding: Binding, value: unknown): void {
 	const { element, type, attribute, transform } = binding;
 	const transformedValue = transform ? transform(value) : value;
-	
+
 	switch (type) {
 		case 'text':
 			if (element instanceof HTMLElement || element instanceof SVGElement) {
 				element.textContent = String(transformedValue ?? '');
 			}
 			break;
-			
+
 		case 'html':
 			if (element instanceof HTMLElement) {
 				element.innerHTML = String(transformedValue ?? '');
 			}
 			break;
-			
+
 		case 'value':
-			if (element instanceof HTMLInputElement || 
-				element instanceof HTMLTextAreaElement || 
+			if (element instanceof HTMLInputElement ||
+				element instanceof HTMLTextAreaElement ||
 				element instanceof HTMLSelectElement) {
 				if (element.value !== String(transformedValue ?? '')) {
 					element.value = String(transformedValue ?? '');
 				}
 			}
 			break;
-			
+
 		case 'checked':
 			if (element instanceof HTMLInputElement) {
 				element.checked = Boolean(transformedValue);
 			}
 			break;
-			
+
 		case 'class':
 			if (element instanceof Element) {
 				if (attribute) {
@@ -119,12 +119,12 @@ function updateElement(binding: Binding, value: unknown): void {
 				}
 			}
 			break;
-			
+
 		case 'style':
 			if (element instanceof HTMLElement || element instanceof SVGElement) {
 				if (attribute) {
 					// Set specific style property
-					(element.style as unknown as Record<string, string>)[attribute] = 
+					(element.style as unknown as Record<string, string>)[attribute] =
 						String(transformedValue ?? '');
 				} else if (typeof transformedValue === 'string') {
 					// Set style string
@@ -137,7 +137,7 @@ function updateElement(binding: Binding, value: unknown): void {
 				}
 			}
 			break;
-			
+
 		case 'attr':
 			if (attribute) {
 				if (transformedValue === null || transformedValue === undefined || transformedValue === false) {
@@ -149,7 +149,7 @@ function updateElement(binding: Binding, value: unknown): void {
 				}
 			}
 			break;
-			
+
 		case 'prop':
 			if (attribute && element instanceof HTMLElement) {
 				(element as unknown as Record<string, unknown>)[attribute] = transformedValue;
@@ -171,17 +171,17 @@ export function bindElement<T>(
 		attribute: options.attribute,
 		transform: options.transform
 	};
-	
+
 	const id = registerBinding(binding);
-	
+
 	// Initial update
 	updateElement(binding, rune.get());
-	
+
 	// Subscribe to changes
 	const unsubscribe = rune.subscribe((value) => {
 		updateElement(binding, value);
 	});
-	
+
 	// Return cleanup function
 	return () => {
 		unsubscribe();
@@ -202,17 +202,17 @@ export function bindDerived<T>(
 		attribute: options.attribute,
 		transform: options.transform
 	};
-	
+
 	const id = registerBinding(binding);
-	
+
 	// Initial update
 	updateElement(binding, derived.get());
-	
+
 	// Subscribe to changes
 	const unsubscribe = derived.subscribe((value) => {
 		updateElement(binding, value);
 	});
-	
+
 	// Return cleanup function
 	return () => {
 		unsubscribe();
@@ -228,14 +228,14 @@ export function bindTwoWay<T extends string | number | boolean>(
 	const isCheckbox = element instanceof HTMLInputElement && element.type === 'checkbox';
 	const isRadio = element instanceof HTMLInputElement && element.type === 'radio';
 	const isNumber = element instanceof HTMLInputElement && element.type === 'number';
-	
+
 	// Initial value
 	if (isCheckbox) {
 		element.checked = Boolean(rune.get());
 	} else {
 		element.value = String(rune.get() ?? '');
 	}
-	
+
 	// Subscribe to rune changes
 	const unsubscribe = rune.subscribe((value) => {
 		if (isCheckbox) {
@@ -246,11 +246,11 @@ export function bindTwoWay<T extends string | number | boolean>(
 			}
 		}
 	});
-	
+
 	// Listen to input changes
 	const inputHandler = () => {
 		let newValue: string | number | boolean;
-		
+
 		if (isCheckbox) {
 			newValue = element.checked;
 		} else if (isNumber) {
@@ -258,15 +258,15 @@ export function bindTwoWay<T extends string | number | boolean>(
 		} else {
 			newValue = element.value;
 		}
-		
+
 		batch(() => {
 			rune.set(newValue as T);
 		});
 	};
-	
+
 	element.addEventListener('input', inputHandler);
 	element.addEventListener('change', inputHandler);
-	
+
 	// Return cleanup function
 	return () => {
 		unsubscribe();
@@ -291,7 +291,7 @@ export function createElement<K extends keyof HTMLElementTagNameMap>(
 	children?: (Element | string)[]
 ): HTMLElementTagNameMap[K] {
 	const element = document.createElement(tag);
-	
+
 	Object.entries(attrs).forEach(([key, value]) => {
 		if (key.startsWith('on') && typeof value === 'function') {
 			// Event listener
@@ -321,7 +321,7 @@ export function createElement<K extends keyof HTMLElementTagNameMap>(
 			element.setAttribute(key, String(value));
 		}
 	});
-	
+
 	if (children) {
 		children.forEach(child => {
 			if (typeof child === 'string') {
@@ -331,7 +331,7 @@ export function createElement<K extends keyof HTMLElementTagNameMap>(
 			}
 		});
 	}
-	
+
 	return element;
 }
 
@@ -342,7 +342,7 @@ export function renderIf<T>(
 	falseRender?: () => T
 ): { element: T | null; cleanup: () => void } {
 	let current: T | null = null;
-	
+
 	const update = (value: boolean) => {
 		if (value) {
 			if (!current) {
@@ -356,13 +356,13 @@ export function renderIf<T>(
 			}
 		}
 	};
-	
+
 	// Initial render
 	update(condition.get());
-	
+
 	// Subscribe to changes
 	const unsubscribe = condition.subscribe(update);
-	
+
 	return {
 		element: current,
 		cleanup: () => {
@@ -380,21 +380,22 @@ export function renderList<T, K>(
 	const container = document.createDocumentFragment();
 	const containerElement = document.createElement('div');
 	container.appendChild(containerElement);
-	
+
 	const itemMap = new Map<K, { element: Element; index: number }>();
-	
+
 	const update = (newItems: T[]) => {
 		const newKeys = new Set<K>();
-		
+
 		// Add or update items
 		newItems.forEach((item, index) => {
 			const key = getKey(item, index);
 			newKeys.add(key);
-			
+
 			if (!itemMap.has(key)) {
 				const element = render(item, index);
 				itemMap.set(key, { element, index });
-				containerElement.appendChild(element);
+				const refNode = containerElement.children[index] || null;
+				containerElement.insertBefore(element, refNode);
 			} else {
 				const existing = itemMap.get(key)!;
 				existing.index = index;
@@ -404,7 +405,7 @@ export function renderList<T, K>(
 				}
 			}
 		});
-		
+
 		// Remove items not in new list
 		itemMap.forEach((value, key) => {
 			if (!newKeys.has(key)) {
@@ -413,13 +414,13 @@ export function renderList<T, K>(
 			}
 		});
 	};
-	
+
 	// Initial render
 	update(items.get());
-	
+
 	// Subscribe to changes
 	const unsubscribe = items.subscribe(update);
-	
+
 	return {
 		container: containerElement,
 		cleanup: () => {

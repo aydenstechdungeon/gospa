@@ -22,8 +22,10 @@ type WSClient struct {
 
 // WSMessage represents a WebSocket message.
 type WSMessage struct {
-	Type    string          `json:"type"`
-	Payload json.RawMessage `json:"payload"`
+	Type        string                 `json:"type"`
+	ComponentID string                 `json:"componentId,omitempty"`
+	Data        map[string]interface{} `json:"data,omitempty"`
+	Payload     json.RawMessage        `json:"payload,omitempty"`
 }
 
 // WSStateUpdate represents a state update message.
@@ -326,11 +328,39 @@ func WebSocketHandler(config WebSocketConfig) fiber.Handler {
 
 // DefaultMessageHandler handles incoming WebSocket messages.
 func DefaultMessageHandler(client *WSClient, msg WSMessage) {
+	var reqID interface{}
+	if msg.Data != nil {
+		reqID = msg.Data["_requestId"]
+	}
+
+	sendResponse := func(payload map[string]interface{}) {
+		if reqID != nil {
+			if payload["data"] == nil {
+				payload["data"] = map[string]interface{}{}
+			}
+			if dataMap, ok := payload["data"].(map[string]interface{}); ok {
+				dataMap["_responseId"] = reqID
+			}
+		}
+		_ = client.SendJSON(payload)
+	}
+
 	switch msg.Type {
+	case "init":
+		stateJSON, _ := client.State.ToJSON()
+		sendResponse(map[string]interface{}{
+			"type":        "init",
+			"componentId": msg.ComponentID,
+			"state":       json.RawMessage(stateJSON),
+		})
+
 	case "update":
 		var update WSStateUpdate
 		if err := json.Unmarshal(msg.Payload, &update); err != nil {
-			client.SendError("Invalid update payload")
+			sendResponse(map[string]interface{}{
+				"type":  "error",
+				"error": "Invalid update payload",
+			})
 			return
 		}
 
@@ -338,8 +368,8 @@ func DefaultMessageHandler(client *WSClient, msg WSMessage) {
 		r := state.NewRune(update.Value)
 		client.State.Add(update.Key, r)
 
-		// Broadcast update to other clients
-		_ = client.SendJSON(map[string]interface{}{
+		// Send success to requesting client
+		sendResponse(map[string]interface{}{
 			"type":    "sync",
 			"key":     update.Key,
 			"value":   update.Value,
@@ -347,16 +377,18 @@ func DefaultMessageHandler(client *WSClient, msg WSMessage) {
 		})
 
 	case "sync":
-		// Request full state sync
 		client.SendState()
 
 	case "ping":
-		_ = client.SendJSON(map[string]interface{}{
+		sendResponse(map[string]interface{}{
 			"type": "pong",
 		})
 
 	default:
-		client.SendError("Unknown message type: " + msg.Type)
+		sendResponse(map[string]interface{}{
+			"type":  "error",
+			"error": "Unknown message type: " + msg.Type,
+		})
 	}
 }
 

@@ -213,7 +213,7 @@ export class WSClient {
 					} else {
 						pending.resolve(message.data);
 					}
-					return;
+					// Do not return here, allow the payload to be processed as normal state update by onMessage hook below
 				}
 			}
 

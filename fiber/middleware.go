@@ -85,7 +85,7 @@ func StateMiddleware(config Config) gofiber.Handler {
 
 		stateScript := `<script>window.__GOSPA_STATE__ = ` + stateJSON + `;</script>`
 		if config.DevMode {
-			stateScript += `<script src="` + config.RuntimeScript + `"></script>`
+			stateScript += `<script src="` + config.RuntimeScript + `" type="module"></script>`
 		}
 
 		// Replace </body> with state script + </body>
