@@ -4,7 +4,7 @@
 import { Rune, Derived, Effect, StateMap, batch, effect, watch, type Unsubscribe } from './state.ts';
 import { bindElement, bindTwoWay, renderIf, renderList, registerBinding, unregisterBinding } from './dom.ts';
 import { on, offAll, debounce, throttle, delegate, onKey, keys, transformers } from './events.ts';
-import { WSClient, initWebSocket, getWebSocketClient, syncedRune, applyStateUpdate, type StateMessage } from './websocket.ts';
+import { WSClient, initWebSocket, getWebSocketClient, sendAction, syncedRune, applyStateUpdate, type StateMessage } from './websocket.ts';
 import {
 	navigate,
 	back,
@@ -96,6 +96,25 @@ export function init(options: RuntimeConfig = {}): void {
 	if (config.debug) {
 		console.log('GoSPA runtime initialized');
 	}
+
+	// Expose to window for debugging and manual triggers
+	(window as any).__GOSPA__ = {
+		config,
+		components,
+		globalState,
+		init,
+		createComponent,
+		destroyComponent,
+		getComponent,
+		getState,
+		setState,
+		callAction,
+		bind,
+		autoInit,
+		sendAction,
+		getWebSocketClient,
+		navigate
+	};
 }
 
 // Handle messages from server
@@ -138,6 +157,7 @@ function handleServerMessage(message: StateMessage): void {
 						component.states.set((message as any).key, (message as any).value);
 					}
 				}
+				globalState.set((message as any).key, (message as any).value);
 			}
 			break;
 		case 'error':
@@ -274,7 +294,7 @@ export function bind(
 	element: Element,
 	binding: string,
 	key: string,
-	options?: { twoWay?: boolean; event?: string }
+	options?: { twoWay?: boolean; event?: string; transform?: (value: any) => any }
 ): () => void {
 	const state = getState(componentId, key);
 	if (!state) {
@@ -289,7 +309,10 @@ export function bind(
 		);
 	}
 
-	return bindElement(element, state as Rune<unknown>, { type: binding as 'text' | 'html' | 'value' | 'checked' | 'class' | 'style' | 'attr' | 'prop' });
+	return bindElement(element, state as Rune<unknown>, {
+		type: binding as 'text' | 'html' | 'value' | 'checked' | 'class' | 'style' | 'attr' | 'prop',
+		transform: options?.transform
+	});
 }
 
 // Auto-initialize from DOM
@@ -322,24 +345,32 @@ function setupBindings(): void {
 	const boundElements = document.querySelectorAll('[data-bind]');
 
 	for (const element of boundElements) {
-		const componentId = element.closest('[data-gospa-component]')?.getAttribute('data-gospa-component');
-		if (!componentId) continue;
+		const componentId = element.closest('[data-gospa-component]')?.getAttribute('data-gospa-component') || '';
 
 		const bindingSpec = element.getAttribute('data-bind');
+		const transformName = element.getAttribute('data-transform');
 		if (!bindingSpec) continue;
 
 		// Parse binding spec: "key:binding" or "key" (defaults to text)
 		const [key, binding = 'text'] = bindingSpec.split(':').map(s => s.trim());
 
-		bind(componentId, element, binding, key);
+		// Resolve transform if present
+		let transform: ((v: unknown) => unknown) | undefined;
+		if (transformName) {
+			transform = (window as any)[transformName];
+			if (typeof transform !== 'function' && config.debug) {
+				console.warn(`[GoSPA] Transform "${transformName}" not found or not a function`);
+			}
+		}
+
+		bind(componentId, element, binding, key, { transform });
 	}
 
 	// Find all elements with data-on attribute (event handlers)
 	const eventElements = document.querySelectorAll('[data-on]');
 
 	for (const element of eventElements) {
-		const componentId = element.closest('[data-gospa-component]')?.getAttribute('data-gospa-component');
-		if (!componentId) continue;
+		const componentId = element.closest('[data-gospa-component]')?.getAttribute('data-gospa-component') || '';
 
 		const eventSpec = element.getAttribute('data-on');
 		if (!eventSpec) continue;
@@ -349,7 +380,26 @@ function setupBindings(): void {
 		const args = argsStr ? argsStr.split(',').map(s => s.trim()) : [];
 
 		on(element, event, () => {
-			callAction(componentId, action, ...args);
+			try {
+				// Try client action first
+				callAction(componentId, action, ...args);
+			} catch (e) {
+				// Fallback to server action if client action not found
+				const ws = getWebSocketClient();
+				if (ws?.isConnected) {
+					// Extract payload if args are key=value pairs
+					const payload: Record<string, unknown> = {};
+					args.forEach(arg => {
+						const [k, v] = arg.split('=');
+						if (v !== undefined) {
+							payload[k] = v;
+						}
+					});
+					ws.sendAction(action, Object.keys(payload).length > 0 ? payload : undefined);
+				} else if (config.debug) {
+					console.error(`[GoSPA] Failed to execute action "${action}":`, e);
+				}
+			}
 		});
 	}
 
@@ -357,8 +407,7 @@ function setupBindings(): void {
 	const modelElements = document.querySelectorAll('[data-model]');
 
 	for (const element of modelElements) {
-		const componentId = element.closest('[data-gospa-component]')?.getAttribute('data-gospa-component');
-		if (!componentId) continue;
+		const componentId = element.closest('[data-gospa-component]')?.getAttribute('data-gospa-component') || '';
 
 		const key = element.getAttribute('data-model');
 		if (!key) continue;

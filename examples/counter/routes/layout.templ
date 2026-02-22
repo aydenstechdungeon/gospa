@@ -1,10 +1,31 @@
 package routes
 
 templ Layout(title string, children templ.Component) {
-	<nav>
-		<a href="/">Home</a>
-	</nav>
-	<div class="content">
-		@templ.Component(children)
-	</div>
+	<!DOCTYPE html>
+	<html lang="en" class="dark">
+		<head>
+			<meta charset="UTF-8"/>
+			<meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+			<title>{ title }</title>
+			<script src="https://unpkg.com/@tailwindcss/browser@4"></script>
+			<style>
+				:root {
+					--background: 0 0% 3.9%;
+					--foreground: 0 0% 98%;
+				}
+				body {
+					background-color: #0f172a;
+					color: #f8fafc;
+				}
+			</style>
+		</head>
+		<body class="bg-slate-950 min-h-screen">
+			<nav class="p-6">
+				<a href="/" class="text-sm font-medium text-slate-400 hover:text-white transition-colors">Home</a>
+			</nav>
+			<main class="container mx-auto px-4 py-8">
+				@templ.Component(children)
+			</main>
+		</body>
+	</html>
 }

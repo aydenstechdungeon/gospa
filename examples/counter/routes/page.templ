@@ -1,8 +1,35 @@
 package routes
 
 templ Page() {
-	<div>
-		<h1>Welcome to counter</h1>
-		<p>Your GoSPA application is ready!</p>
+	<div class="flex flex-col items-center justify-center min-h-[60vh] text-white">
+		<div class="w-full max-w-md p-8 bg-slate-800/50 backdrop-blur-xl rounded-3xl border border-white/10 shadow-2xl">
+			<h1 class="text-3xl font-extrabold bg-gradient-to-r from-blue-400 to-indigo-400 bg-clip-text text-transparent mb-2 text-center">
+				GoSPA Counter
+			</h1>
+			<p class="text-slate-400 text-center mb-8 text-sm">Real-time state synchronization</p>
+			
+			<div class="flex flex-col items-center justify-center py-12 bg-slate-900/50 rounded-2xl border border-white/5 mb-8">
+				<span class="text-8xl font-black tracking-tighter tabular-nums" data-bind="text:count">
+					0
+				</span>
+			</div>
+			
+			<div class="grid grid-cols-2 gap-4">
+				<button 
+					class="flex items-center justify-center gap-2 px-6 py-4 bg-slate-700 hover:bg-slate-600 active:scale-95 rounded-2xl font-bold transition-all border border-white/5"
+					data-on="click:decrement"
+				>
+					<span class="text-2xl">−</span>
+					<span>Decrement</span>
+				</button>
+				<button 
+					class="flex items-center justify-center gap-2 px-6 py-4 bg-blue-600 hover:bg-blue-500 active:scale-95 rounded-2xl font-bold transition-all shadow-lg shadow-blue-500/20 border border-white/10"
+					data-on="click:increment"
+				>
+					<span class="text-2xl">+</span>
+					<span>Increment</span>
+				</button>
+			</div>
+		</div>
 	</div>
 }

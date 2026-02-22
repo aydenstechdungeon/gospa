@@ -222,6 +222,10 @@ func (w *DevWatcher) scanDir(dir string) error {
 		}
 
 		if !info.IsDir() {
+			// Ignore generated files
+			if strings.HasSuffix(path, "generated_routes.go") || strings.HasPrefix(filepath.Base(path), "_") {
+				return nil
+			}
 			w.fileTimes[path] = info.ModTime()
 		}
 
@@ -236,6 +240,11 @@ func (w *DevWatcher) checkDir(dir string) {
 		}
 
 		if info.IsDir() {
+			return nil
+		}
+
+		// Ignore generated files to prevent infinite loops
+		if strings.HasSuffix(path, "generated_routes.go") || strings.HasPrefix(filepath.Base(path), "_") {
 			return nil
 		}
 

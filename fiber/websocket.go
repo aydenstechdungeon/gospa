@@ -24,6 +24,7 @@ type WSClient struct {
 type WSMessage struct {
 	Type        string                 `json:"type"`
 	ComponentID string                 `json:"componentId,omitempty"`
+	Action      string                 `json:"action,omitempty"`
 	Data        map[string]interface{} `json:"data,omitempty"`
 	Payload     json.RawMessage        `json:"payload,omitempty"`
 }
@@ -384,12 +385,60 @@ func DefaultMessageHandler(client *WSClient, msg WSMessage) {
 			"type": "pong",
 		})
 
+	case "action":
+		action := msg.Action
+		if action == "" {
+			sendResponse(map[string]interface{}{
+				"type":  "error",
+				"error": "Action name required",
+			})
+			return
+		}
+
+		// Look for action handlers in the hub or app
+		// For now, we'll just log and broadcast if no dedicated handler
+		log.Printf("Action received: %s (Client: %s)", action, client.ID)
+
+		// This is where we will hook into the app's action handlers
+		// For the examples, we can use a global registry for now
+		if handler, ok := GetActionHandler(action); ok {
+			handler(client, msg.Payload)
+		} else {
+			sendResponse(map[string]interface{}{
+				"type":  "error",
+				"error": "Unknown action: " + action,
+			})
+		}
+
 	default:
 		sendResponse(map[string]interface{}{
 			"type":  "error",
 			"error": "Unknown message type: " + msg.Type,
 		})
 	}
+}
+
+// ActionHandler is a function that handles a WebSocket action.
+type ActionHandler func(client *WSClient, payload json.RawMessage)
+
+var (
+	actionHandlers = make(map[string]ActionHandler)
+	actionMu       sync.RWMutex
+)
+
+// RegisterActionHandler registers a global action handler.
+func RegisterActionHandler(name string, handler ActionHandler) {
+	actionMu.Lock()
+	defer actionMu.Unlock()
+	actionHandlers[name] = handler
+}
+
+// GetActionHandler retrieves a global action handler.
+func GetActionHandler(name string) (ActionHandler, bool) {
+	actionMu.RLock()
+	defer actionMu.RUnlock()
+	handler, ok := actionHandlers[name]
+	return handler, ok
 }
 
 // WebSocketUpgradeMiddleware upgrades HTTP connections to WebSocket.
@@ -451,6 +500,9 @@ func StateSyncHandler(hub *WSHub) fiber.Handler {
 
 // BroadcastState broadcasts state to all connected clients.
 func BroadcastState(hub *WSHub, key string, value interface{}) error {
+	if hub == nil {
+		return nil
+	}
 	data, err := json.Marshal(map[string]interface{}{
 		"type":  "sync",
 		"key":   key,

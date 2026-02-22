@@ -339,7 +339,7 @@ func (a *App) renderRoute(c *fiberpkg.Ctx, route *routing.Route) error {
 
 	c.Context().SetBodyStreamWriter(func(w *bufio.Writer) {
 		// Write HTML wrapper with main tag for SPA navigation
-		_, _ = fmt.Fprint(w, `<!DOCTYPE html><html lang="en"><head><meta charset="UTF-8"><meta name="viewport" content="width=device-width, initial-scale=1.0"><title>`)
+		_, _ = fmt.Fprint(w, `<!DOCTYPE html><html lang="en" data-gospa-auto><head><meta charset="UTF-8"><meta name="viewport" content="width=device-width, initial-scale=1.0"><title>`)
 		_, _ = fmt.Fprint(w, a.Config.AppName)
 		_, _ = fmt.Fprint(w, `</title></head><body><div id="app" data-gospa-root><main>`)
 
@@ -353,6 +353,20 @@ func (a *App) renderRoute(c *fiberpkg.Ctx, route *routing.Route) error {
 
 		// Inject runtime script
 		_, _ = fmt.Fprintf(w, `<script src="%s" type="module"></script>`, a.getRuntimePath())
+
+		protocol := "ws://"
+		if c.Secure() {
+			protocol = "wss://"
+		}
+		wsUrl := protocol + string(c.Request().Host()) + a.Config.WebSocketPath
+
+		_, _ = fmt.Fprintf(w, `<script type="module">
+import runtime from '%s';
+runtime.init({
+	wsUrl: '%s',
+	debug: %v
+});
+</script>`, a.getRuntimePath(), wsUrl, a.Config.DevMode)
 
 		_, _ = fmt.Fprint(w, `</body></html>`)
 		w.Flush()

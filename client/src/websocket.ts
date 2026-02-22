@@ -6,11 +6,12 @@ import { Rune, batch } from './state.ts';
 export type ConnectionState = 'connecting' | 'connected' | 'disconnecting' | 'disconnected';
 
 // Message types matching server
-export type MessageType = 'init' | 'update' | 'sync' | 'error' | 'ping' | 'pong';
+export type MessageType = 'init' | 'update' | 'sync' | 'error' | 'ping' | 'pong' | 'action';
 
 export interface StateMessage {
 	type: MessageType;
 	componentId?: string;
+	action?: string;
 	data?: Record<string, unknown>;
 	payload?: Record<string, unknown>;
 	state?: Record<string, unknown>; // Server global state from SendState()
@@ -228,12 +229,30 @@ export class WSClient {
 		this.send({ type: 'sync' });
 	}
 
+	// Send custom action to server
+	sendAction(action: string, payload: any = {}): void {
+		this.send({
+			type: 'action',
+			action,
+			payload
+		});
+	}
+
 	// Request state from server
 	requestState(componentId: string): Promise<Record<string, unknown>> {
 		return this.sendWithResponse({
 			type: 'init',
 			componentId
 		});
+	}
+}
+
+// Global action helper
+export function sendAction(action: string, payload: any = {}): void {
+	if (clientInstance) {
+		clientInstance.sendAction(action, payload);
+	} else {
+		console.warn('[GoSPA] Cannot send action: WebSocket not initialized');
 	}
 }
 
