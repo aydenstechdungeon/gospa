@@ -7,7 +7,6 @@ require (
 	github.com/fsnotify/fsnotify v1.9.0
 	github.com/gofiber/fiber/v2 v2.52.11
 	github.com/gofiber/websocket/v2 v2.2.1
-	golang.org/x/text v0.34.0
 )
 
 require (

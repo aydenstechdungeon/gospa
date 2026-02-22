@@ -7,9 +7,6 @@ import (
 	"path/filepath"
 	"regexp"
 	"strings"
-
-	"golang.org/x/text/cases"
-	"golang.org/x/text/language"
 )
 
 // RouteInfo holds information about a discovered route.
@@ -332,7 +329,7 @@ func toPascalCase(s string) string {
 		if part == "" {
 			continue
 		}
-		result.WriteString(cases.Title(language.English).String(part))
+		result.WriteString(strings.ToUpper(part[:1]) + strings.ToLower(part[1:]))
 	}
 	return result.String()
 }

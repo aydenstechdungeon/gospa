@@ -128,12 +128,12 @@ func New(config Config) *App {
 	}
 	fiberApp := fiberpkg.New(fiberConfig)
 
-	// Create WebSocket hub
+	// Create WebSocket hub (always enabled by default - WebSocket is a core feature)
+	// Note: Go can't distinguish between "unset" and "explicitly false" for bools,
+	// so we always create the hub. Users who don't want WebSocket can simply not use it.
 	var hub *fiber.WSHub
-	if config.EnableWebSocket {
-		hub = fiber.NewWSHub()
-		go hub.Run()
-	}
+	hub = fiber.NewWSHub()
+	go hub.Run()
 
 	// Create state map
 	stateMap := state.NewStateMap()
@@ -192,8 +192,8 @@ func (a *App) setupRoutes() {
 	// Runtime script
 	a.Fiber.Get(a.getRuntimePath(), fiber.RuntimeMiddleware())
 
-	// WebSocket endpoint
-	if a.Config.EnableWebSocket && a.Hub != nil {
+	// WebSocket endpoint (always registered since hub is always created)
+	if a.Hub != nil {
 		handlers := []fiberpkg.Handler{}
 		if a.Config.WebSocketMiddleware != nil {
 			handlers = append(handlers, a.Config.WebSocketMiddleware)
@@ -337,10 +337,19 @@ func (a *App) renderRoute(c *fiberpkg.Ctx, route *routing.Route) error {
 		return nil
 	}
 
+	protocol := "ws://"
+	if c.Secure() {
+		protocol = "wss://"
+	}
+	wsUrl := protocol + string(c.Request().Host()) + a.Config.WebSocketPath
+	runtimePath := a.getRuntimePath()
+	appName := a.Config.AppName
+	devMode := a.Config.DevMode
+
 	c.Context().SetBodyStreamWriter(func(w *bufio.Writer) {
 		// Write HTML wrapper with main tag for SPA navigation
 		_, _ = fmt.Fprint(w, `<!DOCTYPE html><html lang="en" data-gospa-auto><head><meta charset="UTF-8"><meta name="viewport" content="width=device-width, initial-scale=1.0"><title>`)
-		_, _ = fmt.Fprint(w, a.Config.AppName)
+		_, _ = fmt.Fprint(w, appName)
 		_, _ = fmt.Fprint(w, `</title></head><body><div id="app" data-gospa-root><main>`)
 
 		// Render content
@@ -352,13 +361,7 @@ func (a *App) renderRoute(c *fiberpkg.Ctx, route *routing.Route) error {
 		_, _ = fmt.Fprint(w, `</main></div>`)
 
 		// Inject runtime script
-		_, _ = fmt.Fprintf(w, `<script src="%s" type="module"></script>`, a.getRuntimePath())
-
-		protocol := "ws://"
-		if c.Secure() {
-			protocol = "wss://"
-		}
-		wsUrl := protocol + string(c.Request().Host()) + a.Config.WebSocketPath
+		_, _ = fmt.Fprintf(w, `<script src="%s" type="module"></script>`, runtimePath)
 
 		_, _ = fmt.Fprintf(w, `<script type="module">
 import runtime from '%s';
@@ -366,7 +369,7 @@ runtime.init({
 	wsUrl: '%s',
 	debug: %v
 });
-</script>`, a.getRuntimePath(), wsUrl, a.Config.DevMode)
+</script>`, runtimePath, wsUrl, devMode)
 
 		_, _ = fmt.Fprint(w, `</body></html>`)
 		w.Flush()

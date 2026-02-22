@@ -218,6 +218,9 @@ func (w *DevWatcher) watch() {
 func (w *DevWatcher) scanDir(dir string) error {
 	return filepath.Walk(dir, func(path string, info os.FileInfo, err error) error {
 		if err != nil {
+			if os.IsNotExist(err) && path == dir {
+				return nil
+			}
 			return err
 		}
 

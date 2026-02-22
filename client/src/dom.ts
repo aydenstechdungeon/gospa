@@ -173,12 +173,14 @@ export function bindElement<T>(
 	};
 
 	const id = registerBinding(binding);
+	console.log('[GoSPA DEBUG] bindElement called - key:', options.key, 'type:', binding.type, 'initial value:', rune.get());
 
 	// Initial update
 	updateElement(binding, rune.get());
 
 	// Subscribe to changes
 	const unsubscribe = rune.subscribe((value) => {
+		console.log('[GoSPA DEBUG] bindElement subscriber callback - key:', options.key, 'value:', value);
 		updateElement(binding, value);
 	});
 

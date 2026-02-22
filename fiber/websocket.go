@@ -240,6 +240,9 @@ func (c *WSClient) SendState() {
 		return
 	}
 
+	// DEBUG: Log initial state being sent to client
+	log.Printf("DEBUG: SendState to client %s: %s", c.ID, string(stateJSON))
+
 	_ = c.SendJSON(map[string]interface{}{
 		"type":  "init",
 		"state": json.RawMessage(stateJSON),
@@ -301,6 +304,9 @@ func WebSocketHandler(config WebSocketConfig) fiber.Handler {
 
 		// Register client
 		config.Hub.Register <- client
+
+		// Call global connect handlers (for initial state sync)
+		callConnectHandlers(client)
 
 		// Call onConnect hook
 		if config.OnConnect != nil {
@@ -421,9 +427,14 @@ func DefaultMessageHandler(client *WSClient, msg WSMessage) {
 // ActionHandler is a function that handles a WebSocket action.
 type ActionHandler func(client *WSClient, payload json.RawMessage)
 
+// ConnectHandler is a function that handles a new WebSocket connection.
+type ConnectHandler func(client *WSClient)
+
 var (
-	actionHandlers = make(map[string]ActionHandler)
-	actionMu       sync.RWMutex
+	actionHandlers  = make(map[string]ActionHandler)
+	actionMu        sync.RWMutex
+	connectHandlers []ConnectHandler
+	connectMu       sync.RWMutex
 )
 
 // RegisterActionHandler registers a global action handler.
@@ -439,6 +450,22 @@ func GetActionHandler(name string) (ActionHandler, bool) {
 	defer actionMu.RUnlock()
 	handler, ok := actionHandlers[name]
 	return handler, ok
+}
+
+// RegisterOnConnectHandler registers a global connect handler.
+func RegisterOnConnectHandler(handler ConnectHandler) {
+	connectMu.Lock()
+	defer connectMu.Unlock()
+	connectHandlers = append(connectHandlers, handler)
+}
+
+// callConnectHandlers calls all registered connect handlers.
+func callConnectHandlers(client *WSClient) {
+	connectMu.RLock()
+	defer connectMu.RUnlock()
+	for _, handler := range connectHandlers {
+		handler(client)
+	}
 }
 
 // WebSocketUpgradeMiddleware upgrades HTTP connections to WebSocket.

@@ -16,6 +16,12 @@ var GlobalCounter = &CounterState{Count: 0}
 
 // RegisterHandlers registers action handlers for the counter
 func RegisterHandlers(hub *fiber.WSHub) {
+	// Register connect handler to send current counter state to new clients
+	fiber.RegisterOnConnectHandler(func(client *fiber.WSClient) {
+		fmt.Printf("DEBUG: OnConnect - setting initial count to %d\n", GlobalCounter.Count)
+		client.State.AddAny("count", GlobalCounter.Count)
+	})
+
 	fiber.RegisterActionHandler("increment", func(client *fiber.WSClient, payload json.RawMessage) {
 		GlobalCounter.Count++
 		fmt.Printf("Counter incremented: %d\n", GlobalCounter.Count)

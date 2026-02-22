@@ -86,6 +86,7 @@ export class Rune<T> implements Notifier {
 
 	notify(): void {
 		const value = this._value;
+		console.log('[GoSPA DEBUG] Rune.notify - value:', value, 'subscribers count:', this._subscribers.size);
 		this._subscribers.forEach(fn => fn(value, this._value));
 	}
 
@@ -305,6 +306,15 @@ export class StateMap {
 	private readonly _runes: Map<string, Rune<unknown>> = new Map();
 
 	set<T>(key: string, value: T): Rune<T> {
+		console.log('[GoSPA DEBUG] StateMap.set called - key:', key, 'value:', value);
+		const existing = this._runes.get(key);
+		if (existing) {
+			// Update existing Rune to preserve subscribers
+			console.log('[GoSPA DEBUG] StateMap.set - updating existing Rune, subscribers:', (existing as any)._subscribers?.size || 0);
+			existing.set(value);
+			return existing as Rune<T>;
+		}
+		console.log('[GoSPA DEBUG] StateMap.set - creating new Rune');
 		const r = new Rune(value);
 		this._runes.set(key, r as unknown as Rune<unknown>);
 		return r;

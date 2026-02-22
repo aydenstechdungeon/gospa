@@ -119,6 +119,8 @@ export function init(options: RuntimeConfig = {}): void {
 
 // Handle messages from server
 function handleServerMessage(message: StateMessage): void {
+	console.log('[GoSPA DEBUG] handleServerMessage received:', JSON.stringify(message));
+	
 	switch (message.type) {
 		case 'init':
 			if (message.componentId && message.data) {
@@ -147,13 +149,18 @@ function handleServerMessage(message: StateMessage): void {
 			}
 			break;
 		case 'sync':
+			console.log('[GoSPA DEBUG] sync message - data:', message.data, 'key:', (message as any).key, 'value:', (message as any).value);
 			// Full state sync
 			if (message.data) {
 				globalState.fromJSON(message.data);
 			} else if ((message as any).key !== undefined && (message as any).value !== undefined) {
 				// Partial sync from server broadcast
+				console.log('[GoSPA DEBUG] Processing partial sync. Components count:', components.size);
 				for (const component of components.values()) {
-					if (component.states.get((message as any).key) !== undefined) {
+					const existingRune = component.states.get((message as any).key);
+					console.log('[GoSPA DEBUG] Component:', component.id, 'key:', (message as any).key, 'existingRune:', existingRune ? 'exists' : 'not found');
+					if (existingRune !== undefined) {
+						console.log('[GoSPA DEBUG] Setting state key:', (message as any).key, 'to value:', (message as any).value);
 						component.states.set((message as any).key, (message as any).value);
 					}
 				}
@@ -341,11 +348,20 @@ export function autoInit(): void {
 
 // Set up reactive bindings from DOM attributes
 function setupBindings(): void {
+	// DEBUG: Log all data-gospa-component elements found
+	const allComponents = document.querySelectorAll('[data-gospa-component]');
+	console.log('[GoSPA DEBUG] Found components with data-gospa-component:', allComponents.length);
+	allComponents.forEach((el, i) => {
+		console.log(`[GoSPA DEBUG] Component ${i}:`, el.getAttribute('data-gospa-component'), el);
+	});
+
 	// Find all elements with data-bind attribute
 	const boundElements = document.querySelectorAll('[data-bind]');
 
 	for (const element of boundElements) {
-		const componentId = element.closest('[data-gospa-component]')?.getAttribute('data-gospa-component') || '';
+		const closestComponent = element.closest('[data-gospa-component]');
+		const componentId = closestComponent?.getAttribute('data-gospa-component') || '';
+		console.log('[GoSPA DEBUG] setupBindings - element:', element, 'closest component:', closestComponent, 'componentId:', componentId);
 
 		const bindingSpec = element.getAttribute('data-bind');
 		const transformName = element.getAttribute('data-transform');
