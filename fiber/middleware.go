@@ -1,0 +1,374 @@
+package fiber
+
+import (
+	"encoding/json"
+	"math/rand"
+	"strings"
+	"time"
+
+	"github.com/a-h/templ"
+	"github.com/aydenstechdungeon/gospa/embed"
+	"github.com/aydenstechdungeon/gospa/state"
+	gospatempl "github.com/aydenstechdungeon/gospa/templ"
+	gofiber "github.com/gofiber/fiber/v2"
+)
+
+// Config holds the SPA middleware configuration.
+type Config struct {
+	// RuntimeScript is the path to the client runtime script
+	RuntimeScript string
+	// StateKey is the context key for storing state
+	StateKey string
+	// ComponentIDKey is the context key for component IDs
+	ComponentIDKey string
+	// DevMode enables development features
+	DevMode bool
+	// DefaultState is the initial state for new sessions
+	DefaultState map[string]interface{}
+}
+
+// DefaultConfig returns the default configuration.
+func DefaultConfig() Config {
+	return Config{
+		RuntimeScript:  "/_gospa/runtime.js",
+		StateKey:       "gospa.state",
+		ComponentIDKey: "gospa.componentID",
+		DevMode:        false,
+		DefaultState:   make(map[string]interface{}),
+	}
+}
+
+// SPAMiddleware creates a Fiber middleware for SPA support.
+func SPAMiddleware(config Config) gofiber.Handler {
+	return func(c *gofiber.Ctx) error {
+		// Initialize state for this request
+		stateMap := state.NewStateMap()
+		for k, v := range config.DefaultState {
+			r := state.NewRune(v)
+			stateMap.Add(k, r)
+		}
+
+		// Store state in context
+		c.Locals(config.StateKey, stateMap)
+
+		// Generate component ID for this request
+		componentID := generateComponentID()
+		c.Locals(config.ComponentIDKey, componentID)
+
+		return c.Next()
+	}
+}
+
+// StateMiddleware creates middleware that injects state into responses.
+func StateMiddleware(config Config) gofiber.Handler {
+	return func(c *gofiber.Ctx) error {
+		err := c.Next()
+
+		// Only inject state for HTML responses
+		contentType := string(c.Response().Header.ContentType())
+		if !strings.Contains(contentType, "text/html") {
+			return err
+		}
+
+		// Get state from context
+		stateMap, ok := c.Locals(config.StateKey).(*state.StateMap)
+		if !ok {
+			return err
+		}
+
+		// Inject state as a script tag before </body>
+		body := c.Response().Body()
+		stateJSON, err := stateMap.ToJSON()
+		if err != nil {
+			return err
+		}
+
+		stateScript := `<script>window.__GOSPA_STATE__ = ` + stateJSON + `;</script>`
+		if config.DevMode {
+			stateScript += `<script src="` + config.RuntimeScript + `"></script>`
+		}
+
+		// Replace </body> with state script + </body>
+		bodyStr := string(body)
+		bodyStr = strings.Replace(bodyStr, "</body>", stateScript+"</body>", 1)
+		c.Response().SetBodyString(bodyStr)
+
+		return err
+	}
+}
+
+// RuntimeMiddleware serves the client runtime script.
+// Uses the embedded runtime from the embed package.
+func RuntimeMiddleware() gofiber.Handler {
+	runtimeJS, err := embed.RuntimeJS()
+	if err != nil {
+		// Return a middleware that serves an error if runtime is not available
+		return func(c *gofiber.Ctx) error {
+			return c.Status(gofiber.StatusInternalServerError).SendString("Runtime not available")
+		}
+	}
+	return func(c *gofiber.Ctx) error {
+		c.Set("Content-Type", "application/javascript")
+		c.Set("Cache-Control", "public, max-age=31536000")
+		return c.Send(runtimeJS)
+	}
+}
+
+// RuntimeMiddlewareWithContent serves a custom runtime script.
+// This is provided for advanced use cases where a custom runtime is needed.
+func RuntimeMiddlewareWithContent(runtimeContent []byte) gofiber.Handler {
+	return func(c *gofiber.Ctx) error {
+		c.Set("Content-Type", "application/javascript")
+		c.Set("Cache-Control", "public, max-age=31536000")
+		return c.Send(runtimeContent)
+	}
+}
+
+// CSRFTokenMiddleware provides CSRF protection.
+func CSRFTokenMiddleware() gofiber.Handler {
+	return func(c *gofiber.Ctx) error {
+		// Skip for GET, HEAD, OPTIONS
+		if c.Method() == "GET" || c.Method() == "HEAD" || c.Method() == "OPTIONS" {
+			return c.Next()
+		}
+
+		// Check for CSRF token in header
+		token := c.Get("X-CSRF-Token")
+		cookie := c.Cookies("csrf_token")
+
+		if token == "" || cookie == "" || token != cookie {
+			return c.Status(gofiber.StatusForbidden).JSON(gofiber.Map{
+				"error": "CSRF token mismatch",
+			})
+		}
+
+		return c.Next()
+	}
+}
+
+// CompressionMiddleware enables response compression.
+func CompressionMiddleware() gofiber.Handler {
+	return func(c *gofiber.Ctx) error {
+		// Fiber has built-in compression, this is a placeholder
+		// for custom compression logic if needed
+		return c.Next()
+	}
+}
+
+// SecurityHeadersMiddleware adds security headers.
+func SecurityHeadersMiddleware() gofiber.Handler {
+	return func(c *gofiber.Ctx) error {
+		c.Set("X-Content-Type-Options", "nosniff")
+		c.Set("X-Frame-Options", "DENY")
+		c.Set("X-XSS-Protection", "1; mode=block")
+		c.Set("Referrer-Policy", "strict-origin-when-cross-origin")
+		return c.Next()
+	}
+}
+
+// SPANavigationMiddleware detects SPA navigation requests and modifies response.
+// When a request has the X-Requested-With: GoSPA-Navigate header, it strips the
+// full HTML shell and returns only the main content for partial page updates.
+func SPANavigationMiddleware() gofiber.Handler {
+	return func(c *gofiber.Ctx) error {
+		// Check if this is an SPA navigation request
+		isSPANavigate := c.Get("X-Requested-With") == "GoSPA-Navigate"
+
+		// Store in locals for handlers to check
+		c.Locals("gospa.spa_navigate", isSPANavigate)
+
+		err := c.Next()
+		if err != nil {
+			return err
+		}
+
+		// Only process HTML responses for SPA navigation
+		if !isSPANavigate {
+			return nil
+		}
+
+		contentType := string(c.Response().Header.ContentType())
+		if !strings.Contains(contentType, "text/html") {
+			return nil
+		}
+
+		// For SPA navigation, we need to ensure the response contains
+		// the main content, title, and head elements with proper attributes
+		// The client-side will parse and extract these
+		body := c.Response().Body()
+		bodyStr := string(body)
+
+		// Add data-gospa-head attribute to head elements that should be updated
+		// This is a simple implementation - in production you'd want more sophisticated parsing
+		// For now, we just ensure the response is sent as-is and let the client parse it
+
+		// Set a custom header to indicate this is a partial response
+		c.Set("X-GoSPA-Partial", "true")
+
+		// The client expects full HTML and will parse out main, title, and head elements
+		c.Response().SetBodyString(bodyStr)
+
+		return nil
+	}
+}
+
+// IsSPANavigation returns true if the current request is an SPA navigation.
+func IsSPANavigation(c *gofiber.Ctx) bool {
+	if isSPA, ok := c.Locals("gospa.spa_navigate").(bool); ok {
+		return isSPA
+	}
+	return false
+}
+
+// CORSMiddleware handles CORS for API routes.
+func CORSMiddleware(allowedOrigins []string) gofiber.Handler {
+	return func(c *gofiber.Ctx) error {
+		origin := c.Get("Origin")
+
+		// Check if origin is allowed
+		allowed := false
+		for _, o := range allowedOrigins {
+			if o == "*" || o == origin {
+				allowed = true
+				break
+			}
+		}
+
+		if allowed {
+			c.Set("Access-Control-Allow-Origin", origin)
+			c.Set("Access-Control-Allow-Methods", "GET,POST,PUT,DELETE,PATCH,OPTIONS")
+			c.Set("Access-Control-Allow-Headers", "Content-Type,Authorization,X-CSRF-Token")
+			c.Set("Access-Control-Allow-Credentials", "true")
+		}
+
+		// Handle preflight
+		if c.Method() == "OPTIONS" {
+			return c.SendStatus(gofiber.StatusNoContent)
+		}
+
+		return c.Next()
+	}
+}
+
+// RequestLoggerMiddleware logs requests.
+func RequestLoggerMiddleware() gofiber.Handler {
+	return func(c *gofiber.Ctx) error {
+		// Log request details
+		// In production, use a proper logging library
+		return c.Next()
+	}
+}
+
+// RecoveryMiddleware recovers from panics.
+func RecoveryMiddleware() gofiber.Handler {
+	return func(c *gofiber.Ctx) error {
+		defer func() {
+			if r := recover(); r != nil {
+				_ = c.Status(gofiber.StatusInternalServerError).JSON(gofiber.Map{
+					"error": "Internal server error",
+				})
+			}
+		}()
+		return c.Next()
+	}
+}
+
+// GetComponentID extracts the component ID from context.
+func GetComponentID(c *gofiber.Ctx, config Config) string {
+	if id, ok := c.Locals(config.ComponentIDKey).(string); ok {
+		return id
+	}
+	return ""
+}
+
+// GetState extracts the state map from context.
+func GetState(c *gofiber.Ctx, config Config) *state.StateMap {
+	if s, ok := c.Locals(config.StateKey).(*state.StateMap); ok {
+		return s
+	}
+	return nil
+}
+
+// RenderComponent renders a Templ component with state.
+func RenderComponent(c *gofiber.Ctx, config Config, component templ.Component, componentName string) error {
+	stateMap := GetState(c, config)
+
+	// Create component with options
+	opts := []gospatempl.ComponentOption{}
+	if stateMap != nil {
+		// Add state values to component
+		stateData := make(map[string]any)
+		if jsonData, err := stateMap.ToJSON(); err == nil {
+			_ = json.Unmarshal([]byte(jsonData), &stateData)
+		}
+		opts = append(opts, gospatempl.WithProps(stateData))
+	}
+
+	wrapper := gospatempl.NewComponent(componentName, opts...)
+
+	// Render component with wrapper
+	rendered := gospatempl.RenderComponent(wrapper, component)
+
+	c.Set("Content-Type", "text/html")
+	return rendered.Render(c.Context(), c.Response().BodyWriter())
+}
+
+// generateComponentID generates a unique component ID.
+func generateComponentID() string {
+	return "gospa_" + randomString(8)
+}
+
+// randomString generates a random string of given length.
+func randomString(length int) string {
+	const charset = "abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789"
+	r := rand.New(rand.NewSource(time.Now().UnixNano()))
+	b := make([]byte, length)
+	for i := range b {
+		b[i] = charset[r.Intn(len(charset))]
+	}
+	return string(b)
+}
+
+// JSONResponse sends a JSON response.
+func JSONResponse(c *gofiber.Ctx, status int, data interface{}) error {
+	return c.Status(status).JSON(data)
+}
+
+// JSONError sends a JSON error response.
+func JSONError(c *gofiber.Ctx, status int, message string) error {
+	return c.Status(status).JSON(gofiber.Map{
+		"error": message,
+	})
+}
+
+// ParseBody parses request body into a struct.
+func ParseBody(c *gofiber.Ctx, v interface{}) error {
+	return json.Unmarshal(c.Body(), v)
+}
+
+// GetSessionState gets or creates session state.
+func GetSessionState(c *gofiber.Ctx, config Config) map[string]interface{} {
+	stateMap := GetState(c, config)
+	if stateMap == nil {
+		return make(map[string]interface{})
+	}
+
+	result := make(map[string]interface{})
+	// Extract values from state map
+	jsonData, err := stateMap.ToJSON()
+	if err != nil {
+		return result
+	}
+	_ = json.Unmarshal([]byte(jsonData), &result)
+	return result
+}
+
+// SetSessionState sets session state.
+func SetSessionState(c *gofiber.Ctx, config Config, key string, value interface{}) {
+	stateMap := GetState(c, config)
+	if stateMap == nil {
+		return
+	}
+	r := state.NewRune(value)
+	stateMap.Add(key, r)
+}

@@ -1,0 +1,121 @@
+cli/dev.go:65:27: Error return value of `serverCmd.Process.Signal` is not checked (errcheck)
+		serverCmd.Process.Signal(os.Interrupt)
+		                        ^
+cli/dev.go:66:17: Error return value of `serverCmd.Wait` is not checked (errcheck)
+		serverCmd.Wait()
+		              ^
+cli/dev.go:124:27: Error return value of `serverCmd.Process.Signal` is not checked (errcheck)
+		serverCmd.Process.Signal(os.Interrupt)
+		                        ^
+cli/dev.go:125:17: Error return value of `serverCmd.Wait` is not checked (errcheck)
+		serverCmd.Wait()
+		              ^
+cli/dev.go:221:15: Error return value of `filepath.Walk` is not checked (errcheck)
+	filepath.Walk(dir, func(path string, info os.FileInfo, err error) error {
+	             ^
+cli/dev.go:306:28: Error return value of `serverCmd.Process.Signal` is not checked (errcheck)
+			serverCmd.Process.Signal(os.Interrupt)
+			                        ^
+cli/dev.go:307:18: Error return value of `serverCmd.Wait` is not checked (errcheck)
+			serverCmd.Wait()
+			              ^
+cli/dev.go:405:26: Error return value of `s.server.Process.Signal` is not checked (errcheck)
+		s.server.Process.Signal(os.Interrupt)
+		                       ^
+cli/dev.go:406:16: Error return value of `s.server.Wait` is not checked (errcheck)
+		s.server.Wait()
+		             ^
+fiber/dev.go:115:15: Error return value of `filepath.Walk` is not checked (errcheck)
+	filepath.Walk(dir, func(path string, info os.FileInfo, err error) error {
+	             ^
+fiber/dev.go:133:17: Error return value of `filepath.Walk` is not checked (errcheck)
+			filepath.Walk(dir, func(path string, info os.FileInfo, err error) error {
+			             ^
+fiber/dev.go:313:11: Error return value of `c.Close` is not checked (errcheck)
+			c.Close()
+			       ^
+fiber/errors.go:121:21: Error return value of `appErr.WithStack` is not checked (errcheck)
+				appErr.WithStack(string(debug.Stack()))
+				                ^
+fiber/errors.go:289:22: Error return value of `appErr.WithStack` is not checked (errcheck)
+					appErr.WithStack(string(debug.Stack()))
+					                ^
+fiber/websocket.go:150:15: Error return value of `c.Conn.Close` is not checked (errcheck)
+		c.Conn.Close()
+		            ^
+fiber/websocket.go:171:20: Error return value of `c.Conn.Close` is not checked (errcheck)
+	defer c.Conn.Close()
+	                  ^
+fiber/websocket.go:213:12: Error return value of `c.SendJSON` is not checked (errcheck)
+	c.SendJSON(map[string]interface{}{
+	          ^
+fiber/websocket.go:227:12: Error return value of `c.SendJSON` is not checked (errcheck)
+	c.SendJSON(map[string]interface{}{
+	          ^
+fiber/websocket.go:329:18: Error return value of `client.SendJSON` is not checked (errcheck)
+		client.SendJSON(map[string]interface{}{
+		               ^
+fiber/websocket.go:341:18: Error return value of `client.SendJSON` is not checked (errcheck)
+		client.SendJSON(map[string]interface{}{
+		               ^
+gospa.go:243:15: Error return value of `fmt.Fprintf` is not checked (errcheck)
+			fmt.Fprintf(w, `<div data-gospa-page="%s">Page: %s</div>`, route.Path, route.Path)
+			           ^
+gospa.go:268:16: Error return value of `fmt.Fprintf` is not checked (errcheck)
+				fmt.Fprintf(w, `<div data-gospa-layout="%s">`, layout.Path)
+				           ^
+gospa.go:272:15: Error return value of `fmt.Fprint` is not checked (errcheck)
+				fmt.Fprint(w, `</div>`)
+				          ^
+gospa.go:282:12: Error return value of `fmt.Fprint` is not checked (errcheck)
+	fmt.Fprint(c, `<!DOCTYPE html><html lang="en"><head><meta charset="UTF-8"><meta name="viewport" content="width=device-width, initial-scale=1.0"><title>`)
+	          ^
+gospa.go:283:12: Error return value of `fmt.Fprint` is not checked (errcheck)
+	fmt.Fprint(c, a.Config.AppName)
+	          ^
+gospa.go:296:14: Error return value of `fmt.Fprintf` is not checked (errcheck)
+		fmt.Fprintf(c, `<script src="%s"></script>`, a.Config.RuntimeScript)
+		           ^
+cli/dev.go:411:2: S1000: should use for range instead of for { select {} } (staticcheck)
+	for {
+	^
+cli/generate.go:364:4: S1017: should replace this if statement with an unconditional strings.TrimPrefix (staticcheck)
+			if strings.HasPrefix(param, "...") {
+			^
+cmd/gospa-gen/main.go:210:2: QF1012: Use fmt.Fprintf(...) instead of WriteString(fmt.Sprintf(...)) (staticcheck)
+	sb.WriteString(fmt.Sprintf("\trouting.RegisterPage(%q, func(props map[string]interface{}) templ.Component {\n", route.URLPath))
+	^
+cmd/gospa-gen/main.go:215:4: QF1012: Use fmt.Fprintf(...) instead of WriteString(fmt.Sprintf(...)) (staticcheck)
+			sb.WriteString(fmt.Sprintf("\t\t%s, _ := props[%q].(string)\n", param, param))
+			^
+cmd/gospa-gen/main.go:217:3: QF1012: Use fmt.Fprintf(...) instead of WriteString(fmt.Sprintf(...)) (staticcheck)
+		sb.WriteString(fmt.Sprintf("\t\treturn %s(%s)\n", route.ComponentFn, strings.Join(route.Params, ", ")))
+		^
+fiber/errors.go:280:12: SA1006: printf-style function with dynamic format string and no further arguments should use print-style function instead (staticcheck)
+					err = fmt.Errorf(v)
+					      ^
+routing/generator/generate.go:327:22: SA1019: strings.Title has been deprecated since Go 1.18 and an alternative has been available since Go 1.0: The rule Title uses for word boundaries does not handle Unicode punctuation properly. Use golang.org/x/text/cases instead. (staticcheck)
+		result.WriteString(strings.Title(part))
+		                   ^
+templ/layout.go:68:14: ST1023: should omit type templ.Component from declaration; it will be inferred from the right-hand side (staticcheck)
+	var current templ.Component = lc.Page
+	            ^
+cmd/gospa-gen/main.go:242:5: var componentPattern is unused (unused)
+var componentPattern = regexp.MustCompile(`^templ\s+([A-Z][a-zA-Z0-9]*)\s*\(`)
+    ^
+fiber/dev.go:58:2: field lastEvent is unused (unused)
+	lastEvent time.Time
+	^
+routing/generator/generate.go:334:6: func generateLayoutCallArgs is unused (unused)
+func generateLayoutCallArgs(params []FuncParam, fnName string) string {
+     ^
+routing/generator/generate.go:385:6: func generatePageCall is unused (unused)
+func generatePageCall(route RouteInfo) string {
+     ^
+state/effect.go:217:5: var globalScheduler is unused (unused)
+var globalScheduler = &Scheduler{}
+    ^
+39 issues:
+* errcheck: 26
+* staticcheck: 8
+* unused: 5
