@@ -1,0 +1,80 @@
+package api
+
+import "website/components"
+
+templ Page() {
+	<div class="space-y-12">
+		<header>
+			<h1 class="text-4xl font-bold tracking-tight mb-4 text-transparent bg-clip-text bg-gradient-to-r from-[var(--accent-primary)] to-[var(--accent-secondary)]">Go API Reference</h1>
+			<p class="text-xl text-[var(--text-secondary)] leading-relaxed">
+				Complete reference for the GoSPA framework's server-side API.
+			</p>
+		</header>
+
+		<section class="space-y-8">
+			<div>
+				<h2 class="text-2xl font-bold mb-4 border-b border-[var(--border)] pb-2 italic mono">gospa.New(config)</h2>
+				<p class="text-[var(--text-secondary)] mb-4">Initializes a new GoSPA application instance.</p>
+				@components.CodeBlock(`app := gospa.New(gospa.Config{
+    RoutesDir: "./routes",
+    AppName:   "myapp",
+    DevMode:   true,
+})`, "go", "main.go")
+			</div>
+
+			<div>
+				<h2 class="text-2xl font-bold mb-4 border-b border-[var(--border)] pb-2 italic mono">app.Run(addr)</h2>
+				<p class="text-[var(--text-secondary)] mb-4">Starts the HTTP server on the specified address.</p>
+				@components.CodeBlock(`log.Fatal(app.Run(":3000"))`, "go", "main.go")
+			</div>
+
+			<div>
+				<h2 class="text-2xl font-bold mb-4 border-b border-[var(--border)] pb-2 italic mono">gospa.NewRune(initialValue)</h2>
+				<p class="text-[var(--text-secondary)] mb-4">Creates a new reactive state variable.</p>
+				@components.CodeBlock(`name := gospa.NewRune("World")`, "go", "main.go")
+			</div>
+
+			<div>
+				<h2 class="text-2xl font-bold mb-4 border-b border-[var(--border)] pb-2 italic mono">gospa.Derived(dependency, fn)</h2>
+				<p class="text-[var(--text-secondary)] mb-4">Creates a reactive variable that depends on another variable.</p>
+				@components.CodeBlock(`greeting := gospa.Derived(name, func(n string) string {
+    return "Hello, " + n + "!"
+})`, "go", "main.go")
+			</div>
+		</section>
+
+		<div class="rounded-3xl border border-[var(--border)] overflow-hidden">
+			<table class="w-full text-left text-sm">
+				<thead class="bg-[var(--bg-secondary)] text-[var(--text-muted)] uppercase tracking-wider">
+					<tr>
+						<th class="px-6 py-4 font-bold">Config Option</th>
+						<th class="px-6 py-4 font-bold">Type</th>
+						<th class="px-6 py-4 font-bold">Description</th>
+					</tr>
+				</thead>
+				<tbody class="divide-y divide-[var(--border)]">
+					<tr>
+						<td class="px-6 py-4 mono text-[var(--accent-primary)] font-bold">RoutesDir</td>
+						<td class="px-6 py-4 text-[var(--text-muted)]">string</td>
+						<td class="px-6 py-4 text-[var(--text-secondary)]">Path to the directory containing Templ routes.</td>
+					</tr>
+					<tr>
+						<td class="px-6 py-4 mono text-[var(--accent-primary)] font-bold">AppName</td>
+						<td class="px-6 py-4 text-[var(--text-muted)]">string</td>
+						<td class="px-6 py-4 text-[var(--text-secondary)]">Unique name for the application (used for state prefixing).</td>
+					</tr>
+					<tr>
+						<td class="px-6 py-4 mono text-[var(--accent-primary)] font-bold">DevMode</td>
+						<td class="px-6 py-4 text-[var(--text-muted)]">bool</td>
+						<td class="px-6 py-4 text-[var(--text-secondary)]">Enable hot-reloading and debug logging.</td>
+					</tr>
+					<tr>
+						<td class="px-6 py-4 mono text-[var(--accent-primary)] font-bold">StatePersistence</td>
+						<td class="px-6 py-4 text-[var(--text-muted)]">bool</td>
+						<td class="px-6 py-4 text-[var(--text-secondary)]">Whether to persist state in localStorage.</td>
+					</tr>
+				</tbody>
+			</table>
+		</div>
+	</div>
+}

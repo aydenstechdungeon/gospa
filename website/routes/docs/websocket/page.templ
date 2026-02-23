@@ -1,0 +1,38 @@
+package websocket
+
+import "website/components"
+
+templ Page() {
+	<div id="overview" class="space-y-12">
+		<header>
+			<h1 class="text-4xl font-bold tracking-tight mb-4 text-transparent bg-clip-text bg-gradient-to-r from-[var(--accent-primary)] to-[var(--accent-secondary)]">WebSocket Integration</h1>
+			<p class="text-xl text-[var(--text-secondary)] leading-relaxed">
+				Powering real-time, interactive experiences with built-in WebSocket support.
+			</p>
+		</header>
+
+		<section class="space-y-6">
+			<h2 id="websocket-hub" class="text-2xl font-bold">WebSocket Hub</h2>
+			<p class="text-[var(--text-secondary)]">
+				GoSPA comes with a high-performance WebSocket hub out of the box. You don't need to configure anything to start sending and receiving real-time updates.
+			</p>
+			@components.CodeBlock(`// Broadcast a custom message to all clients
+app.Broadcast([]byte("Hello, everyone!"))`, "go", "main.go")
+			<h3 id="broadcast" class="text-xl font-bold mt-8">Broadcast</h3>
+		</section>
+
+		<section class="space-y-6">
+			<h2 id="reconnection" class="text-2xl font-bold">Automatic Reconnection</h2>
+			<p class="text-[var(--text-secondary)]">
+				The Client Runtime automatically handles reconnections with exponential backoff, ensuring your users stay connected even with patchy network conditions.
+			</p>
+		</section>
+
+		<div class="bg-amber-500/5 border border-amber-500/20 p-6 rounded-2xl">
+			<h4 class="text-amber-500 font-bold mb-2">Did you know?</h4>
+			<p class="text-sm text-[var(--text-secondary)]">
+				GoSPA uses a binary-first protocol for state updates, significantly reducing the payload size compared to plain JSON over WebSockets.
+			</p>
+		</div>
+	</div>
+}

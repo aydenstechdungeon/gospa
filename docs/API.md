@@ -1072,6 +1072,53 @@ GoSPA.transformers.stopPropagation
 
 ---
 
+### Event Handling Patterns
+
+GoSPA sanitizes HTML during SPA navigation using DOMPurify, which strips inline event handlers (`onclick`, `onmouseover`, etc.) for security. Use these patterns instead:
+
+**Inside Components (data-on):**
+
+```html
+<div data-gospa-component="counter">
+    <button data-on="click:increment">+</button>
+    <span data-bind="count">0</span>
+</div>
+```
+
+**Outside Components (data-action with global delegation):**
+
+For elements outside `data-gospa-component` (like layouts, static content), use `data-action` attributes with global event delegation:
+
+```html
+<!-- In your template -->
+<button data-action="copy-code">Copy</button>
+<button data-action="toggle-menu">Menu</button>
+```
+
+```javascript
+// In your root layout or main script
+document.addEventListener('click', (e) => {
+    const target = e.target.closest('[data-action]');
+    if (!target) return;
+    
+    const action = target.getAttribute('data-action');
+    
+    switch (action) {
+        case 'copy-code':
+            const code = target.parentElement.querySelector('code');
+            navigator.clipboard.writeText(code.innerText);
+            break;
+        case 'toggle-menu':
+            document.getElementById('menu').classList.toggle('hidden');
+            break;
+    }
+});
+```
+
+This pattern survives SPA navigation because the handler is attached at document level, not on individual elements.
+
+---
+
 ### Component API
 
 ```javascript

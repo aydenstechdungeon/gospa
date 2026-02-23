@@ -1,9 +1,16 @@
 import { Rune, Derived, batch } from './state.ts';
 
 // Configurable sanitizer (defaults to a passthrough, but injected by runtime entry points)
-export let sanitizeHtml: (html: string) => string | Promise<string> = (html) => html;
+let sanitizerConfigured = false;
+export let sanitizeHtml: (html: string) => string | Promise<string> = (html) => {
+	if (!sanitizerConfigured) {
+		console.warn('[GoSPA] No sanitizer configured - HTML will not be sanitized. Call setSanitizer() to configure.');
+	}
+	return html;
+};
 
 export function setSanitizer(fn: (html: string) => string | Promise<string>) {
+	sanitizerConfigured = true;
 	sanitizeHtml = fn;
 }
 
@@ -182,11 +189,15 @@ export function bindElement<T>(
 	const id = registerBinding(binding);
 
 	// Initial update
-	updateElement(binding, rune.get());
+	updateElement(binding, rune.get()).catch((error) => {
+		console.error('[GoSPA] Binding update failed:', error);
+	});
 
 	// Subscribe to changes
 	const unsubscribe = rune.subscribe((value) => {
-		updateElement(binding, value);
+		updateElement(binding, value).catch((error) => {
+			console.error('[GoSPA] Binding update failed:', error);
+		});
 	});
 
 	// Return cleanup function
@@ -213,11 +224,15 @@ export function bindDerived<T>(
 	const id = registerBinding(binding);
 
 	// Initial update
-	updateElement(binding, derived.get());
+	updateElement(binding, derived.get()).catch((error) => {
+		console.error('[GoSPA] Binding update failed:', error);
+	});
 
 	// Subscribe to changes
 	const unsubscribe = derived.subscribe((value) => {
-		updateElement(binding, value);
+		updateElement(binding, value).catch((error) => {
+			console.error('[GoSPA] Binding update failed:', error);
+		});
 	});
 
 	// Return cleanup function

@@ -1,0 +1,46 @@
+package remoteactions
+
+import "website/components"
+
+templ Page() {
+	<div id="overview" class="space-y-12">
+		<header>
+			<h1 class="text-4xl font-bold tracking-tight mb-4 text-transparent bg-clip-text bg-gradient-to-r from-[var(--accent-primary)] to-[var(--accent-secondary)]">Remote Actions</h1>
+			<p class="text-xl text-[var(--text-secondary)] leading-relaxed">
+				Type-safe server functions called directly from your Svelte-like templates.
+			</p>
+		</header>
+
+		<section class="space-y-6">
+			<h2 id="defining-actions" class="text-2xl font-bold">Defining Actions</h2>
+			<p class="text-[var(--text-secondary)]">
+				Remote actions allow you to execute Go code on the server in response to client-side events. They are fully type-safe when used with the generated TypeScript bindings.
+			</p>
+			@components.CodeBlock(`// Server-side definition
+app.RegisterRemoteAction("sendMessage", func(c *gospa.Context, msg string) error {
+    fmt.Printf("Message received: %s\n", msg)
+    return nil
+})`, "go", "main.go")
+		</section>
+
+		<section class="space-y-6">
+			<h2 id="calling-actions" class="text-2xl font-bold">Calling from Templates</h2>
+			<p class="text-[var(--text-secondary)]">
+				Use the <code class="text-[var(--accent-primary)]">data-on</code> attribute to bind events to remote actions.
+			</p>
+			@components.CodeBlock(`<button 
+    data-on="click:remote:sendMessage('Hello Go!')"
+    class="btn-primary"
+>
+    Send Message
+</button>`, "templ", "page.templ")
+		</section>
+
+		<div id="optimistic-ui" class="bg-blue-500/5 border border-blue-500/20 p-6 rounded-2xl">
+			<h4 class="text-blue-500 font-bold mb-2">Power Feature: Optimistic UI</h4>
+			<p class="text-sm text-[var(--text-secondary)]">
+				GoSPA automatically handles state synchronization. When a remote action modifies server-side state, the client is updated instantly via WebSockets, giving you "optimistic-like" updates with zero effort.
+			</p>
+		</div>
+	</div>
+}

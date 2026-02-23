@@ -105,8 +105,8 @@ func printUsage(printer *cli.ColorPrinter) {
 func createProject(name string, printer *cli.ColorPrinter) {
 	printer.Title("Creating GoSPA project: %s", name)
 
-	// Create project directory in examples/
-	projectPath := filepath.Join("examples", name)
+	// Create project directory in current directory
+	projectPath := name
 	printer.Step(1, 5, "Creating project directory")
 	if err := os.MkdirAll(projectPath, 0755); err != nil {
 		printer.Error("Failed to create project directory: %v", err)

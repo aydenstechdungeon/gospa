@@ -1,0 +1,70 @@
+package docs
+
+import (
+	"strings"
+	"website/components"
+)
+
+templ DocsLayout(children templ.Component, path string) {
+	<div class="max-w-7xl mx-auto px-4 flex gap-8">
+		<div class="w-64 flex-shrink-0">
+			@components.Sidebar(path)
+		</div>
+		
+		<div class="flex-grow pt-12 pb-24 min-w-0 animate-in fade-in duration-700">
+			<div class="prose prose-invert prose-cyan max-w-3xl mx-auto">
+				@children
+			</div>
+			
+			<div class="mt-16 pt-8 border-t border-[var(--border)] flex justify-between items-center text-sm">
+				<div class="text-[var(--text-muted)]">
+					Found a mistake? <a href="https://github.com/aydenstechdungeon/gospa" class="text-[var(--accent-primary)] hover:underline">Edit this page on GitHub</a>
+				</div>
+				<div class="text-[var(--text-muted)]">
+					Last updated: Feb 23, 2026
+				</div>
+			</div>
+		</div>
+		
+		<div class="hidden xl:block w-64 flex-shrink-0 pt-12">
+			<div class="sticky top-28">
+				<h4 class="text-xs font-bold uppercase tracking-widest text-[var(--text-muted)] mb-4">On this page</h4>
+				<nav>
+					<ul class="space-y-3 text-xs text-[var(--text-secondary)]">
+						<li><a href="#overview" class="hover:text-[var(--accent-primary)] transition-colors">Overview</a></li>
+						for _, headline := range getHeadlines(path) {
+							<li><a href={ templ.SafeURL("#" + strings.ToLower(strings.ReplaceAll(headline, " ", "-"))) } class="hover:text-[var(--accent-primary)] transition-colors">{ headline }</a></li>
+						}
+					</ul>
+				</nav>
+			</div>
+		</div>
+	</div>
+}
+
+func getHeadlines(path string) []string {
+	switch strings.TrimSuffix(path, "/") {
+	case "/docs":
+		return []string{"Why GoSPA?", "Key Features", "Comparison"}
+	case "/docs/getstarted":
+		return []string{"Installation", "First Project", "Next Steps"}
+	case "/docs/reactive-primitives":
+		return []string{"Runes", "Derived", "Effects"}
+	case "/docs/routing":
+		return []string{"File Structure", "Dynamic Routes", "Layouts"}
+	case "/docs/state-management":
+		return []string{"Synchronization", "Persistence", "Multi-tab Sync"}
+	case "/docs/api":
+		return []string{"Configuration", "App Instance", "State Map"}
+	case "/docs/remote-actions":
+		return []string{"Defining Actions", "Calling Actions", "Optimistic UI"}
+	case "/docs/websocket":
+		return []string{"WebSocket Hub", "Broadcast", "Reconnection"}
+	case "/docs/security":
+		return []string{"XSS Protection", "State Isolation"}
+	case "/docs/client-runtime":
+		return []string{"Initialization", "Navigation", "State Access"}
+	default:
+		return []string{"Usage", "Examples", "Best Practices"}
+	}
+}

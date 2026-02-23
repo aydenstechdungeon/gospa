@@ -1,0 +1,76 @@
+package components
+
+import "strings"
+
+type NavItem struct {
+	Label string
+	Href  string
+}
+
+type NavSection struct {
+	Title string
+	Items []NavItem
+}
+
+templ Sidebar(currentPath string) {
+	<aside class="w-64 flex-shrink-0 hidden lg:block border-r border-[var(--border)] h-[calc(100vh-4rem)] sticky top-16 overflow-y-auto p-6 custom-scrollbar">
+		@SidebarContent(currentPath)
+	</aside>
+}
+
+templ SidebarContent(currentPath string) {
+	<div class="space-y-8">
+		@sidebarSection("Getting Started", []NavItem{
+			{Label: "Introduction", Href: "/docs"},
+			{Label: "Quick Start", Href: "/docs/getstarted"},
+		}, currentPath)
+
+		@sidebarSection("Core Concepts", []NavItem{
+			{Label: "Reactive Primitives", Href: "/docs/reactive-primitives"},
+			{Label: "File-Based Routing", Href: "/docs/routing"},
+			{Label: "State Management", Href: "/docs/state-management"},
+		}, currentPath)
+
+		@sidebarSection("Features", []NavItem{
+			{Label: "WebSocket Integration", Href: "/docs/websocket"},
+			{Label: "Remote Actions", Href: "/docs/remote-actions"},
+			{Label: "Security", Href: "/docs/security"},
+		}, currentPath)
+
+		@sidebarSection("Reference", []NavItem{
+			{Label: "Go API", Href: "/docs/api"},
+			{Label: "Client Runtime API", Href: "/docs/client-runtime"},
+		}, currentPath)
+	</div>
+}
+
+templ sidebarSection(title string, items []NavItem, currentPath string) {
+	<div>
+		<h4 class="text-xs font-bold uppercase tracking-widest text-[var(--text-muted)] mb-4">{ title }</h4>
+		<ul class="space-y-1">
+			for _, item := range items {
+				<li>
+					<a 
+						href={ templ.SafeURL(item.Href) } 
+						class={ "block py-2 px-3 rounded-lg text-sm transition-all " + activeClass(isPathActive(currentPath, item.Href)) }
+					>
+						{ item.Label }
+					</a>
+				</li>
+			}
+		</ul>
+	</div>
+}
+
+func activeClass(active bool) string {
+	if active {
+		return "bg-[var(--accent-primary)]/10 text-[var(--accent-primary)] font-semibold border-l-2 border-[var(--accent-primary)] rounded-l-none"
+	}
+	return "text-[var(--text-secondary)] hover:text-[var(--text-primary)] hover:bg-[var(--bg-tertiary)]"
+}
+
+func isPathActive(currentPath, targetPath string) bool {
+	curr := strings.TrimSuffix(currentPath, "/")
+	target := strings.TrimSuffix(targetPath, "/")
+	return curr == target
+}

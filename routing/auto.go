@@ -507,6 +507,14 @@ func (r *Router) ResolveLayoutChain(route *Route) []*Route {
 
 	// Walk up the path hierarchy collecting layouts
 	path := route.Path
+
+	// Check for layout at current path (if it's a page or error)
+	if route.Type == RouteTypePage || route.Type == RouteTypeError {
+		if layout, ok := layouts[path]; ok {
+			chain = append([]*Route{layout}, chain...)
+		}
+	}
+
 	for {
 		// Check for layout at parent path
 		parent := parentDir(path)

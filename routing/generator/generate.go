@@ -133,7 +133,8 @@ func parseRoute(relPath, routesDir string) RouteInfo {
 
 		// Use the full path as package name (e.g., "blog" or "blogid")
 		// This ensures unique package names for nested routes
-		route.PackageName = strings.Join(pkgParts, "")
+		rawPkgName := strings.Join(pkgParts, "")
+		route.PackageName = regexp.MustCompile(`[^a-zA-Z0-9]+`).ReplaceAllString(rawPkgName, "")
 
 		// The import path is the relative directory path
 		route.ImportPath = dir
@@ -552,6 +553,13 @@ func generateLayoutCallArgsWithPackage(route RouteInfo) string {
 		}
 		return 0.0
 	}()`, param.Type, param.Name, param.Type))
+		case "map[string]interface{}":
+			args = append(args, fmt.Sprintf(`func() map[string]interface{} {
+		if v, ok := props["%s"].(map[string]interface{}); ok {
+			return v
+		}
+		return nil
+	}()`, param.Name))
 		default:
 			args = append(args, fmt.Sprintf(`props["%s"]`, param.Name))
 		}

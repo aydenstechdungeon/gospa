@@ -1,0 +1,52 @@
+package security
+
+templ Page() {
+	<div class="space-y-12">
+		<header>
+			<h1 class="text-4xl font-bold tracking-tight mb-4 text-transparent bg-clip-text bg-gradient-to-r from-[var(--accent-primary)] to-[var(--accent-secondary)]">Security</h1>
+			<p class="text-xl text-[var(--text-secondary)] leading-relaxed">
+				Built-in protections to keep your reactive applications safe.
+			</p>
+		</header>
+
+		<section class="space-y-6">
+			<h2 class="text-2xl font-bold">XSS Protection</h2>
+			<p class="text-[var(--text-secondary)]">
+				GoSPA utilizes <code class="text-[var(--accent-secondary)]">DOMPurify</code> by default to sanitize all incoming state updates before they touch the DOM. This protects your application from Cross-Site Scripting (XSS) attacks.
+			</p>
+			<p class="text-[var(--text-secondary)]">
+				For performance-critical internal applications, you can opt-in to a Lite runtime that skips sanitization.
+			</p>
+		</section>
+
+		<section class="space-y-6">
+			<h2 class="text-2xl font-bold">Event Handler Security</h2>
+			<p class="text-[var(--text-secondary)]">
+				Inline event handlers like <code class="text-[var(--accent-secondary)]">onclick</code> are stripped during SPA navigation sanitization. This prevents XSS vectors where malicious JavaScript could be injected via event attributes.
+			</p>
+			<div class="bg-[var(--bg-secondary)] p-4 rounded-lg space-y-3">
+				<h4 class="font-semibold text-[var(--text-primary)]">Recommended Patterns</h4>
+				<p class="text-sm text-[var(--text-secondary)]">
+					<strong>Inside components:</strong> Use <code class="text-[var(--accent-secondary)]">data-on="click:handlerName"</code> within <code class="text-[var(--accent-secondary)]">data-gospa-component</code> elements.
+				</p>
+				<p class="text-sm text-[var(--text-secondary)]">
+					<strong>Outside components:</strong> Use <code class="text-[var(--accent-secondary)]">data-action="actionName"</code> with global event delegation in your root layout.
+				</p>
+			</div>
+		</section>
+
+		<section class="space-y-6">
+			<h2 class="text-2xl font-bold">State Isolation</h2>
+			<p class="text-[var(--text-secondary)]">
+				Each client session is isolated. Runes and State are bound to the specific user connection, ensuring that private data never leaks between sessions unless explicitly shared via a Global Rune.
+			</p>
+		</section>
+
+		<div class="bg-red-500/5 border border-red-500/20 p-6 rounded-2xl">
+			<h4 class="text-red-500 font-bold mb-2">Security Note</h4>
+			<p class="text-sm text-[var(--text-secondary)]">
+				Always validate inputs inside your Remote Actions on the server. Client-side sanitization is a secondary defense, not a replacement for server-side validation.
+			</p>
+		</div>
+	</div>
+}

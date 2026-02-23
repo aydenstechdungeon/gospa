@@ -1,0 +1,60 @@
+package routes
+
+import (
+	"website/components"
+)
+
+templ Page() {
+	<div class="flex flex-col">
+		@components.Hero()
+		
+		<div class="max-w-7xl mx-auto px-4 w-full">
+			<div class="h-px bg-gradient-to-r from-transparent via-[var(--border)] to-transparent"></div>
+		</div>
+
+		@components.Features()
+
+		@components.Benchmarks()
+
+		<section class="py-24 max-w-7xl mx-auto px-4">
+			<div class="bg-[var(--bg-tertiary)] rounded-[2.5rem] p-8 md:p-16 border border-[var(--border)] relative overflow-hidden group">
+				<div class="absolute top-0 right-0 w-96 h-96 bg-[var(--accent-primary)]/5 rounded-full blur-3xl -translate-y-1/2 translate-x-1/2"></div>
+				
+				<div class="relative z-10 grid md:grid-cols-2 gap-12 items-center">
+					<div>
+						<h2 class="text-3xl md:text-5xl font-bold mb-6">Ready to build <br/> the future of <span class="text-[var(--accent-secondary)]">Go Web Apps?</span></h2>
+						<p class="text-[var(--text-secondary)] mb-8 leading-relaxed">
+							Join our growing community and start building reactive applications that are faster, safer, and easier to maintain. 
+						</p>
+						<div class="flex flex-wrap gap-4">
+							<a href="/docs/getstarted" class="px-8 py-4 bg-[var(--text-primary)] hover:bg-white text-[var(--bg-primary)] font-bold rounded-xl transition-all">
+								Dive into Docs
+							</a>
+							<a href="https://github.com/aydenstechdungeon/gospa/stargazers" target="_blank" class="px-8 py-4 bg-transparent border border-[var(--border)] text-[var(--text-primary)] hover:bg-[var(--bg-secondary)] font-bold rounded-xl transition-all flex items-center gap-2">
+								Star on GitHub
+							</a>
+						</div>
+					</div>
+					
+					<div class="hidden md:block">
+						<div class="bg-[var(--bg-primary)] rounded-2xl p-6 border border-[var(--border)] shadow-2xl rotate-2 group-hover:rotate-0 transition-transform duration-500">
+							<div class="flex items-center gap-2 mb-4">
+								<div class="w-3 h-3 rounded-full bg-red-500/20"></div>
+								<div class="w-3 h-3 rounded-full bg-amber-500/20"></div>
+								<div class="w-3 h-3 rounded-full bg-emerald-500/20"></div>
+							</div>
+							<div class="mono text-xs text-[var(--text-muted)] leading-relaxed">
+								<div>$ go run gospa create my-awesome-app</div>
+								<div class="text-[var(--accent-success)]">Creating project... done.</div>
+								<div>$ cd my-awesome-app</div>
+								<div>$ gospa dev</div>
+								<div class="text-[var(--accent-primary)] mt-2">GoSPA v0.1.0 starting on :3000</div>
+								<div class="text-[var(--text-muted)]">Watching for changes...</div>
+							</div>
+						</div>
+					</div>
+				</div>
+			</div>
+		</section>
+	</div>
+}

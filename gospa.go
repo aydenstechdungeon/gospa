@@ -132,6 +132,15 @@ func (a *App) getRuntimePath() string {
 	return fmt.Sprintf("/_gospa/%s.%s.js", name, h[:8])
 }
 
+// getWSUrl returns the WebSocket URL for the current request.
+func (a *App) getWSUrl(c *fiberpkg.Ctx) string {
+	protocol := "ws://"
+	if c.Secure() {
+		protocol = "wss://"
+	}
+	return protocol + string(c.Request().Host()) + a.Config.WebSocketPath
+}
+
 // App is the main GoSPA application.
 type App struct {
 	// Config is the application configuration.
@@ -456,9 +465,13 @@ func (a *App) renderRoute(c *fiberpkg.Ctx, route *routing.Route) error {
 	rootLayoutFunc := routing.GetRootLayout()
 	if rootLayoutFunc != nil {
 		props := map[string]interface{}{
-			"appName":     a.Config.AppName,
-			"runtimePath": a.getRuntimePath(),
-			"path":        c.Path(),
+			"appName":          a.Config.AppName,
+			"runtimePath":      a.getRuntimePath(),
+			"path":             c.Path(),
+			"debug":            a.Config.DevMode,
+			"wsUrl":            a.getWSUrl(c),
+			"hydrationMode":    a.Config.HydrationMode,
+			"hydrationTimeout": a.Config.HydrationTimeout,
 		}
 		for k, v := range params {
 			props[k] = v

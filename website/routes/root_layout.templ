@@ -1,0 +1,239 @@
+package routes
+
+import "strings"
+
+templ RootLayout(title string, children templ.Component, runtimePath string, path string, wsUrl string, debug bool, hydrationMode string, hydrationTimeout int) {
+	<!DOCTYPE html>
+	<html lang="en" class="dark" data-gospa-auto>
+		<head>
+			<meta charset="UTF-8" />
+			<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+			<title>{ title } | GoSPA</title>
+			<meta name="description" content="Svelte-like Reactivity for Go. Build reactive SPAs with server-side rendering." />
+			
+			<!-- Tailwind v4 -->
+			<script src="https://unpkg.com/@tailwindcss/browser@4"></script>
+			
+			<!-- Google Fonts -->
+			<link rel="preconnect" href="https://fonts.googleapis.com" />
+			<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+			<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500;600&display=swap" rel="stylesheet" />
+			
+			<style type="text/css">
+				:root {
+					--bg-primary: #0a0a0f;
+					--bg-secondary: #12121a;
+					--bg-tertiary: #1a1a24;
+					--text-primary: #e4e4e7;
+					--text-secondary: #a1a1aa;
+					--text-muted: #71717a;
+					--accent-primary: #22d3ee;
+					--accent-secondary: #a78bfa;
+					--accent-success: #22c55e;
+					--accent-warning: #f59e0b;
+					--border: #27272a;
+				}
+
+				body {
+					font-family: 'Inter', system-ui, -apple-system, sans-serif;
+					background-color: var(--bg-primary);
+					color: var(--text-primary);
+					-webkit-font-smoothing: antialiased;
+					scrollbar-gutter: stable;
+				}
+
+				.mono {
+					font-family: 'JetBrains Mono', monospace;
+				}
+
+				/* Custom scrollbar */
+				::-webkit-scrollbar {
+					width: 8px;
+					height: 8px;
+				}
+				::-webkit-scrollbar-track {
+					background: var(--bg-primary);
+				}
+				::-webkit-scrollbar-thumb {
+					background: var(--border);
+					border-radius: 4px;
+				}
+				::-webkit-scrollbar-thumb:hover {
+					background: var(--text-muted);
+				}
+
+				/* Grid background */
+				.grid-bg {
+					background-image: 
+						linear-gradient(to right, var(--border) 1px, transparent 1px),
+						linear-gradient(to bottom, var(--border) 1px, transparent 1px);
+					background-size: 40px 40px;
+					mask-image: radial-gradient(ellipse 60% 50% at 50% 0%, #000 70%, transparent 100%);
+				}
+			</style>
+		</head>
+		<body class="min-h-screen flex flex-col overflow-x-hidden">
+			<div class="fixed inset-0 pointer-events-none grid-bg opacity-30 z-0"></div>
+			
+			<div id="app" data-gospa-root class="flex flex-col min-h-screen">
+			<header class="sticky top-0 z-50 border-b border-[var(--border)] bg-[var(--bg-primary)]/80 backdrop-blur-xl">
+				<div class="max-w-7xl mx-auto px-4 h-16 flex items-center justify-between relative">
+					<div class="absolute inset-x-0 bottom-0 h-px bg-gradient-to-r from-transparent via-[var(--accent-primary)]/20 to-transparent"></div>
+					
+					<div class="flex items-center gap-8">
+						<a href="/" class="flex items-center gap-2 group">
+							<div class="w-8 h-8 rounded-lg bg-gradient-to-br from-[var(--accent-primary)] to-[var(--accent-secondary)] flex items-center justify-center shadow-lg shadow-[var(--accent-primary)]/20 group-hover:shadow-[var(--accent-primary)]/40 transition-all">
+								<svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="white" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><path d="m7 11 2-2-2-2"></path><path d="M11 13h4"></path><rect width="18" height="18" x="3" y="3" rx="2" ry="2"></rect></svg>
+							</div>
+							<span class="text-xl font-bold tracking-tight bg-clip-text text-transparent bg-gradient-to-r from-white to-[var(--text-secondary)]">Go<span class="text-[var(--accent-primary)]">SPA</span></span>
+						</a>
+						
+						<nav class="hidden md:flex items-center gap-1">
+							<a href="/docs" class={ "px-4 py-2 rounded-lg text-sm font-medium transition-all ", templ.KV("text-[var(--accent-primary)] bg-[var(--accent-primary)]/10", strings.HasPrefix(path, "/docs")), templ.KV("text-[var(--text-secondary)] hover:text-[var(--text-primary)] hover:bg-[var(--bg-secondary)]", !strings.HasPrefix(path, "/docs")) }>Docs</a>
+							<a href="/docs/api" class={ "px-4 py-2 rounded-lg text-sm font-medium transition-all ", templ.KV("text-[var(--accent-primary)] bg-[var(--accent-primary)]/10", path == "/docs/api"), templ.KV("text-[var(--text-secondary)] hover:text-[var(--text-primary)] hover:bg-[var(--bg-secondary)]", path != "/docs/api") }>API</a>
+							<a href="/benchmarks" class={ "px-4 py-2 rounded-lg text-sm font-medium transition-all ", templ.KV("text-[var(--accent-primary)] bg-[var(--accent-primary)]/10", path == "/benchmarks"), templ.KV("text-[var(--text-secondary)] hover:text-[var(--text-primary)] hover:bg-[var(--bg-secondary)]", path != "/benchmarks") }>Benchmarks</a>
+						</nav>
+					</div>
+					
+					<div class="flex items-center gap-3">
+						<a href="https://github.com/aydenstechdungeon/gospa" target="_blank" class="p-2 rounded-lg text-[var(--text-secondary)] hover:text-[var(--text-primary)] hover:bg-[var(--bg-secondary)] transition-all" title="GitHub">
+							<svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="lucide lucide-github"><path d="M15 22v-4a4.8 4.8 0 0 0-1-3.5c3 0 6-2 6-5.5.08-1.25-.27-2.48-1-3.5.28-1.15.28-2.35 0-3.5 0 0-1 0-3 1.5-2.64-.5-5.36-.5-8 0C6 2 5 2 5 2c-.3 1.15-.3 2.35 0 3.5A5.403 5.403 0 0 0 4 9c0 3.5 3 5.5 6 5.5-.39.49-.68 1.05-.85 1.65-.17.6-.22 1.23-.15 1.85v4"/><path d="M9 18c-4.51 2-5-2-7-2"/></svg>
+						</a>
+						
+						<div class="h-6 w-px bg-[var(--border)] mx-1 hidden md:block"></div>
+						
+						<a href="/docs/getstarted" class="hidden md:flex px-4 py-2 bg-[var(--accent-primary)] hover:bg-cyan-400 text-black text-xs font-bold rounded-lg transition-all shadow-lg shadow-cyan-500/20 active:scale-95">
+							Get Started
+						</a>
+
+						<button 
+							class="md:hidden p-2 rounded-lg text-[var(--text-primary)] hover:bg-[var(--bg-secondary)] transition-all"
+							data-action="toggle-mobile-menu"
+						>
+							<svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="lucide lucide-menu"><line x1="4" x2="20" y1="12" y2="12"/><line x1="4" x2="20" y1="6" y2="6"/><line x1="4" x2="20" y1="18" y2="18"/></svg>
+						</button>
+					</div>
+				</div>
+
+				<!-- Mobile Menu Overlay -->
+				<div id="mobile-menu" class="fixed inset-0 z-[60] bg-[var(--bg-primary)] hidden md:hidden flex flex-col animate-in fade-in slide-in-from-top-4 duration-300">
+					<div class="h-16 flex items-center justify-between px-4 border-b border-[var(--border)]">
+						<span class="text-xl font-bold">Go<span class="text-[var(--accent-primary)]">SPA</span></span>
+						<button 
+							class="p-2 rounded-lg hover:bg-[var(--bg-secondary)]" 
+							data-action="close-mobile-menu"
+						>
+							<svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="18" y1="6" x2="6" y2="18"></line><line x1="6" y1="6" x2="18" y2="18"></line></svg>
+						</button>
+					</div>
+					<nav class="flex-grow p-6 flex flex-col gap-4 text-lg font-medium">
+						<a href="/" data-action="close-mobile-menu" class="p-4 rounded-2xl bg-[var(--bg-secondary)] border border-[var(--border)] hover:border-[var(--accent-primary)]/50 transition-all">Home</a>
+						<a href="/docs" data-action="close-mobile-menu" class="p-4 rounded-2xl bg-[var(--bg-secondary)] border border-[var(--border)] hover:border-[var(--accent-primary)]/50 transition-all">Documentation</a>
+						<a href="/docs/api" data-action="close-mobile-menu" class="p-4 rounded-2xl bg-[var(--bg-secondary)] border border-[var(--border)] hover:border-[var(--accent-primary)]/50 transition-all">API Reference</a>
+						<a href="/benchmarks" data-action="close-mobile-menu" class="p-4 rounded-2xl bg-[var(--bg-secondary)] border border-[var(--border)] hover:border-[var(--accent-primary)]/50 transition-all">Benchmarks</a>
+						
+						<div class="mt-auto pt-8">
+							<a href="/docs/getstarted" data-action="close-mobile-menu" class="w-full py-4 bg-[var(--accent-primary)] text-black text-center font-bold rounded-2xl flex items-center justify-center gap-2">
+								Get Started
+								<svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12h14"></path><path d="m12 5 7 7-7 7"></path></svg>
+							</a>
+						</div>
+					</nav>
+				</div>
+			</header>
+
+			<main class="flex-grow z-10 relative">
+				<div data-gospa-page={ path }>
+					@children
+				</div>
+			</main>
+
+			<footer class="border-t border-[var(--border)] bg-[var(--bg-secondary)] py-12 z-10 relative">
+				<div class="max-w-7xl mx-auto px-4 grid md:grid-cols-4 gap-8">
+					<div class="col-span-2">
+						<div class="flex items-center gap-2 mb-4">
+							<div class="w-6 h-6 rounded bg-gradient-to-br from-[var(--accent-primary)] to-[var(--accent-secondary)] flex items-center justify-center text-[var(--bg-primary)] font-bold text-sm">
+								G
+							</div>
+							<span class="text-lg font-bold tracking-tight">Go<span class="text-[var(--accent-primary)]">SPA</span></span>
+						</div>
+						<p class="text-[var(--text-secondary)] text-sm max-w-sm mb-6">
+							A lightweight Go framework for building high-performance, reactive single-page applications with server-side rendering.
+						</p>
+						<p class="text-[var(--text-muted)] text-xs">
+							© 2026 GoSPA Contributors. Released under the MIT License.
+						</p>
+					</div>
+					<div>
+						<h4 class="font-semibold mb-4 text-sm">Documentation</h4>
+						<ul class="space-y-2 text-sm text-[var(--text-secondary)]">
+							<li><a href="/docs/getstarted" class="hover:text-[var(--accent-primary)] transition-colors">Getting Started</a></li>
+							<li><a href="/docs/reactive-primitives" class="hover:text-[var(--accent-primary)] transition-colors">Core Concepts</a></li>
+							<li><a href="/docs/routing" class="hover:text-[var(--accent-primary)] transition-colors">Routing</a></li>
+							<li><a href="/docs/api" class="hover:text-[var(--accent-primary)] transition-colors">API Reference</a></li>
+						</ul>
+					</div>
+					<div>
+						<h4 class="font-semibold mb-4 text-sm">Community</h4>
+						<ul class="space-y-2 text-sm text-[var(--text-secondary)]">
+							<li><a href="https://github.com/aydenstechdungeon/gospa" class="hover:text-[var(--accent-primary)] transition-colors">GitHub</a></li>
+							<li><a href="#" class="hover:text-[var(--accent-primary)] transition-colors">Discord</a></li>
+							<li><a href="#" class="hover:text-[var(--accent-primary)] transition-colors">Twitter</a></li>
+						</ul>
+					</div>
+				</div>
+			</footer>
+			</div>
+			@initGoSPA(runtimePath, wsUrl, debug, hydrationMode, hydrationTimeout)
+			@setupGlobalActions()
+		</body>
+	</html>
+}
+
+script initGoSPA(runtimePath, wsUrl string, debug bool, hydrationMode string, hydrationTimeout int) {
+	import(runtimePath).then(runtime => {
+		runtime.init({
+			wsUrl: wsUrl,
+			debug: debug,
+			hydration: {
+				mode: hydrationMode,
+				timeout: hydrationTimeout
+			}
+		});
+	});
+}
+
+script setupGlobalActions() {
+	// Global event delegation for data-action attributes
+	// This survives SPA navigation since it's attached at document level
+	document.addEventListener('click', (e) => {
+		const target = e.target.closest('[data-action]');
+		if (!target) return;
+		
+		const action = target.getAttribute('data-action');
+		
+		switch (action) {
+			case 'copy-code':
+				const codeEl = target.parentElement?.querySelector('code');
+				if (codeEl) {
+					navigator.clipboard.writeText(codeEl.innerText).then(() => {
+						const span = target.querySelector('span');
+						if (span) {
+							const old = span.innerText;
+							span.innerText = 'Copied!';
+							setTimeout(() => { span.innerText = old; }, 2000);
+						}
+					});
+				}
+				break;
+			case 'toggle-mobile-menu':
+				document.getElementById('mobile-menu')?.classList.toggle('hidden');
+				document.body.classList.toggle('overflow-hidden');
+				break;
+			case 'close-mobile-menu':
+				document.getElementById('mobile-menu')?.classList.add('hidden');
+				document.body.classList.remove('overflow-hidden');
+				break;
+		}
+	});
+}

@@ -1,0 +1,59 @@
+package getstarted
+
+import "website/components"
+
+templ Page() {
+	<div id="overview" class="space-y-8">
+		<header>
+			<h1 class="text-4xl font-bold tracking-tight mb-4">Quick Start</h1>
+			<p class="text-xl text-[var(--text-secondary)]">Get your first GoSPA application up and running in minutes.</p>
+		</header>
+
+		<section>
+			<h2 id="installation" class="text-2xl font-bold mb-4 flex items-center gap-3">
+				<span class="w-8 h-8 rounded-full bg-[var(--bg-tertiary)] border border-[var(--border)] flex items-center justify-center text-sm">1</span>
+				Install the CLI
+			</h2>
+			<p class="text-[var(--text-secondary)] mb-4">
+				The easiest way to start a new GoSPA project is by using our CLI tool. It scaffolds the project structure and provides development tools.
+			</p>
+			@components.CodeBlock("go run github.com/aydenstechdungeon/gospa/cmd/gospa@latest create myapp", "bash", "Terminal")
+		</section>
+
+		<section>
+			<h2 id="first-project" class="text-2xl font-bold mb-4 flex items-center gap-3">
+				<span class="w-8 h-8 rounded-full bg-[var(--bg-tertiary)] border border-[var(--border)] flex items-center justify-center text-sm">2</span>
+				Enter and Initialize
+			</h2>
+			<p class="text-[var(--text-secondary)] mb-4">
+				Navigate into your new project directory and install dependencies.
+			</p>
+			@components.CodeBlock("cd myapp\ngo mod tidy", "bash", "Terminal")
+		</section>
+
+		<section>
+			<h2 class="text-2xl font-bold mb-4 flex items-center gap-3">
+				<span class="w-8 h-8 rounded-full bg-[var(--bg-tertiary)] border border-[var(--border)] flex items-center justify-center text-sm">3</span>
+				Start Development Server
+			</h2>
+			<p class="text-[var(--text-secondary)] mb-4">
+				Run the dev server to start building. It will automatically re-generate routes and templates on change.
+			</p>
+			@components.CodeBlock("gospa dev", "bash", "Terminal")
+		</section>
+
+		<div class="p-8 rounded-3xl bg-gradient-to-br from-[var(--bg-tertiary)] to-[var(--bg-secondary)] border border-[var(--border)] shadow-xl mt-12">
+			<h3 id="next-steps" class="text-xl font-bold mb-4">Next Steps</h3>
+			<div class="grid sm:grid-cols-2 gap-4">
+				<a href="/docs/reactive-primitives" class="group p-4 rounded-xl border border-[var(--border)] bg-[var(--bg-primary)] hover:border-[var(--accent-primary)]/50 transition-all">
+					<div class="font-bold group-hover:text-[var(--accent-primary)] transition-colors">Reactive Primitives →</div>
+					<div class="text-xs text-[var(--text-muted)] mt-1">Learn about Rune, Derived, and Effect.</div>
+				</a>
+				<a href="/docs/routing" class="group p-4 rounded-xl border border-[var(--border)] bg-[var(--bg-primary)] hover:border-[var(--accent-primary)]/50 transition-all">
+					<div class="font-bold group-hover:text-[var(--accent-primary)] transition-colors">Master Routing →</div>
+					<div class="text-xs text-[var(--text-muted)] mt-1">Understand the file-based router.</div>
+				</a>
+			</div>
+		</div>
+	</div>
+}

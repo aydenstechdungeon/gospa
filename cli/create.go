@@ -22,7 +22,7 @@ func CreateProject(name string) {
 	config := &ProjectConfig{
 		Name:      name,
 		Module:    fmt.Sprintf("github.com/%s/%s", getGitUsername(), name),
-		OutputDir: filepath.Join("examples", name),
+		OutputDir: name, // Create in current directory
 		WithGit:   true,
 	}
 
@@ -120,8 +120,6 @@ require (
 	github.com/a-h/templ v0.3.977
 	github.com/aydenstechdungeon/gospa v0.1.0
 )
-
-replace github.com/aydenstechdungeon/gospa => ../../
 `, config.Module)
 
 	path := filepath.Join(config.OutputDir, "go.mod")
