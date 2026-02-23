@@ -107,7 +107,7 @@ func parseRoute(relPath, routesDir string) RouteInfo {
 	filename := filepath.Base(relPath)
 
 	// Check if it's a layout
-	route.IsLayout = filename == "layout.templ"
+	route.IsLayout = filename == "layout.templ" || filename == "root_layout.templ"
 
 	// Determine package name and import path based on directory
 	// For subdirectory routes like blog/page.templ, the package should be "blog"
@@ -404,7 +404,11 @@ func generateCode(routes []RouteInfo, routesDir string) (string, error) {
 	if len(layouts) > 0 {
 		sb.WriteString("\n\t// Register layouts\n")
 		for _, route := range layouts {
-			fmt.Fprintf(&sb, "\trouting.RegisterLayout(%q, func(children templ.Component, props map[string]interface{}) templ.Component {\n", route.URLPath)
+			if filepath.Base(route.FilePath) == "root_layout.templ" {
+				fmt.Fprintf(&sb, "\trouting.RegisterRootLayout(func(children templ.Component, props map[string]interface{}) templ.Component {\n")
+			} else {
+				fmt.Fprintf(&sb, "\trouting.RegisterLayout(%q, func(children templ.Component, props map[string]interface{}) templ.Component {\n", route.URLPath)
+			}
 			// Generate function call with proper parameters
 			callArgs := generateLayoutCallArgsWithPackage(route)
 			fmt.Fprintf(&sb, "\t\treturn %s\n", callArgs)
@@ -487,6 +491,13 @@ func generatePageCallWithPackage(route RouteInfo) string {
 		}
 		return 0.0
 	}()`, param.Type, param.Name, param.Type))
+		case "templ.Component":
+			args = append(args, fmt.Sprintf(`func() templ.Component {
+		if v, ok := props["%s"].(templ.Component); ok {
+			return v
+		}
+		return nil
+	}()`, param.Name))
 		default:
 			// For complex types, try interface{}
 			args = append(args, fmt.Sprintf(`props["%s"]`, param.Name))
