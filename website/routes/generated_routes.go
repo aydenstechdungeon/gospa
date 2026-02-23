@@ -4,25 +4,25 @@
 package routes
 
 import (
-	"github.com/a-h/templ"
 	"github.com/aydenstechdungeon/gospa/routing"
-	docsconfiguration "website/routes/docs/configuration"
-	docsdevtools "website/routes/docs/devtools"
-	docsgetstarted "website/routes/docs/getstarted"
-	docsrouting "website/routes/docs/routing"
-	docsstatemanagement "website/routes/docs/state-management"
 	docsapi "website/routes/docs/api"
-	"website/routes/docs"
-	docsremoteactions "website/routes/docs/remote-actions"
-	docswebsocket "website/routes/docs/websocket"
-	docscli "website/routes/docs/cli"
 	docsclientruntime "website/routes/docs/client-runtime"
 	docscomponents "website/routes/docs/components"
+	docsdevtools "website/routes/docs/devtools"
 	docserrors "website/routes/docs/errors"
 	docsparams "website/routes/docs/params"
-	docsreactiveprimitives "website/routes/docs/reactive-primitives"
+	docsremoteactions "website/routes/docs/remote-actions"
+	docswebsocket "website/routes/docs/websocket"
+	"github.com/a-h/templ"
+	docscli "website/routes/docs/cli"
+	docsgetstarted "website/routes/docs/getstarted"
+	"website/routes/docs"
+	docsrouting "website/routes/docs/routing"
 	docsruntime "website/routes/docs/runtime"
 	docssecurity "website/routes/docs/security"
+	docsstatemanagement "website/routes/docs/state-management"
+	docsconfiguration "website/routes/docs/configuration"
+	docsreactiveprimitives "website/routes/docs/reactive-primitives"
 )
 
 func init() {
