@@ -1,0 +1,49 @@
+Starting development server...
+Generating files...
+(✓) Complete [ updates=0 duration=997.896µs ]
+Generated routes/generated_routes.go with 2 routes
+✓ Generated Go routes, TypeScript types, and TS routes
+Server running at http://localhost:3000
+Registering page: /
+2026/02/23 00:50:09 GoSPA 0.1.0 starting on :3000
+
+ ┌───────────────────────────────────────────────────┐ 
+ │                      counter                      │ 
+ │                  Fiber v2.52.11                   │ 
+ │               http://127.0.0.1:3000               │ 
+ │       (bound on host 0.0.0.0 and port 3000)       │ 
+ │                                                   │ 
+ │ Handlers ............ 18  Processes ........... 1 │ 
+ │ Prefork ....... Disabled  PID ............ 170032 │ 
+ └───────────────────────────────────────────────────┘ 
+
+method  | path                                | name | handlers 
+------  | ----                                | ---- | -------- 
+POST    | /                                   |      | github.com/aydenstechdungeon/gospa.(*App).setupMiddleware.New.func1 github.com/gofiber/fiber/v2/middleware/logger.New.func3 github.com/gofiber/fiber/v2/middleware/compress.New.func3 github.com/aydenstechdungeon/gospa.(*App).setupMiddleware.SecurityHeadersMiddleware.func2 github.com/aydenstechdungeon/gospa.(*App).setupMiddleware.SPANavigationMiddleware.func3 github.com/aydenstechdungeon/gospa.(*App).setupMiddleware.SPAMiddleware.func4 
+GET     | /                                   |      | github.com/aydenstechdungeon/gospa.(*App).setupMiddleware.New.func1 github.com/gofiber/fiber/v2/middleware/logger.New.func3 github.com/gofiber/fiber/v2/middleware/compress.New.func3 github.com/aydenstechdungeon/gospa.(*App).setupMiddleware.SecurityHeadersMiddleware.func2 github.com/aydenstechdungeon/gospa.(*App).setupMiddleware.SPANavigationMiddleware.func3 github.com/aydenstechdungeon/gospa.(*App).setupMiddleware.SPAMiddleware.func4 
+PATCH   | /                                   |      | github.com/aydenstechdungeon/gospa.(*App).setupMiddleware.New.func1 github.com/gofiber/fiber/v2/middleware/logger.New.func3 github.com/gofiber/fiber/v2/middleware/compress.New.func3 github.com/aydenstechdungeon/gospa.(*App).setupMiddleware.SecurityHeadersMiddleware.func2 github.com/aydenstechdungeon/gospa.(*App).setupMiddleware.SPANavigationMiddleware.func3 github.com/aydenstechdungeon/gospa.(*App).setupMiddleware.SPAMiddleware.func4 
+TRACE   | /                                   |      | github.com/aydenstechdungeon/gospa.(*App).setupMiddleware.New.func1 github.com/gofiber/fiber/v2/middleware/logger.New.func3 github.com/gofiber/fiber/v2/middleware/compress.New.func3 github.com/aydenstechdungeon/gospa.(*App).setupMiddleware.SecurityHeadersMiddleware.func2 github.com/aydenstechdungeon/gospa.(*App).setupMiddleware.SPANavigationMiddleware.func3 github.com/aydenstechdungeon/gospa.(*App).setupMiddleware.SPAMiddleware.func4 
+OPTIONS | /                                   |      | github.com/aydenstechdungeon/gospa.(*App).setupMiddleware.New.func1 github.com/gofiber/fiber/v2/middleware/logger.New.func3 github.com/gofiber/fiber/v2/middleware/compress.New.func3 github.com/aydenstechdungeon/gospa.(*App).setupMiddleware.SecurityHeadersMiddleware.func2 github.com/aydenstechdungeon/gospa.(*App).setupMiddleware.SPANavigationMiddleware.func3 github.com/aydenstechdungeon/gospa.(*App).setupMiddleware.SPAMiddleware.func4 
+GET     | /                                   |      | github.com/aydenstechdungeon/gospa.(*App).RegisterRoutes.func1 github.com/aydenstechdungeon/gospa.(*App).RegisterRoutes.func1 
+HEAD    | /                                   |      | github.com/aydenstechdungeon/gospa.(*App).setupMiddleware.New.func1 github.com/gofiber/fiber/v2/middleware/logger.New.func3 github.com/gofiber/fiber/v2/middleware/compress.New.func3 github.com/aydenstechdungeon/gospa.(*App).setupMiddleware.SecurityHeadersMiddleware.func2 github.com/aydenstechdungeon/gospa.(*App).setupMiddleware.SPANavigationMiddleware.func3 github.com/aydenstechdungeon/gospa.(*App).setupMiddleware.SPAMiddleware.func4 
+CONNECT | /                                   |      | github.com/aydenstechdungeon/gospa.(*App).setupMiddleware.New.func1 github.com/gofiber/fiber/v2/middleware/logger.New.func3 github.com/gofiber/fiber/v2/middleware/compress.New.func3 github.com/aydenstechdungeon/gospa.(*App).setupMiddleware.SecurityHeadersMiddleware.func2 github.com/aydenstechdungeon/gospa.(*App).setupMiddleware.SPANavigationMiddleware.func3 github.com/aydenstechdungeon/gospa.(*App).setupMiddleware.SPAMiddleware.func4 
+DELETE  | /                                   |      | github.com/aydenstechdungeon/gospa.(*App).setupMiddleware.New.func1 github.com/gofiber/fiber/v2/middleware/logger.New.func3 github.com/gofiber/fiber/v2/middleware/compress.New.func3 github.com/aydenstechdungeon/gospa.(*App).setupMiddleware.SecurityHeadersMiddleware.func2 github.com/aydenstechdungeon/gospa.(*App).setupMiddleware.SPANavigationMiddleware.func3 github.com/aydenstechdungeon/gospa.(*App).setupMiddleware.SPAMiddleware.func4 
+PUT     | /                                   |      | github.com/aydenstechdungeon/gospa.(*App).setupMiddleware.New.func1 github.com/gofiber/fiber/v2/middleware/logger.New.func3 github.com/gofiber/fiber/v2/middleware/compress.New.func3 github.com/aydenstechdungeon/gospa.(*App).setupMiddleware.SecurityHeadersMiddleware.func2 github.com/aydenstechdungeon/gospa.(*App).setupMiddleware.SPANavigationMiddleware.func3 github.com/aydenstechdungeon/gospa.(*App).setupMiddleware.SPAMiddleware.func4 
+HEAD    | /                                   |      | github.com/aydenstechdungeon/gospa.(*App).RegisterRoutes.func1 github.com/aydenstechdungeon/gospa.(*App).RegisterRoutes.func1 
+TRACE   | /_gospa/                            |      | github.com/gofiber/fiber/v2/middleware/filesystem.New.func1 
+POST    | /_gospa/                            |      | github.com/gofiber/fiber/v2/middleware/filesystem.New.func1 
+PATCH   | /_gospa/                            |      | github.com/gofiber/fiber/v2/middleware/filesystem.New.func1 
+PUT     | /_gospa/                            |      | github.com/gofiber/fiber/v2/middleware/filesystem.New.func1 
+HEAD    | /_gospa/                            |      | github.com/gofiber/fiber/v2/middleware/filesystem.New.func1 
+DELETE  | /_gospa/                            |      | github.com/gofiber/fiber/v2/middleware/filesystem.New.func1 
+CONNECT | /_gospa/                            |      | github.com/gofiber/fiber/v2/middleware/filesystem.New.func1 
+GET     | /_gospa/                            |      | github.com/gofiber/fiber/v2/middleware/filesystem.New.func1 
+OPTIONS | /_gospa/                            |      | github.com/gofiber/fiber/v2/middleware/filesystem.New.func1 
+POST    | /_gospa/remote/:name                |      | github.com/aydenstechdungeon/gospa.(*App).setupRoutes.func1 
+GET     | /_gospa/runtime.35495e47c124e4ba.js |      | github.com/aydenstechdungeon/gospa/fiber.RuntimeMiddleware.func2 
+HEAD    | /_gospa/runtime.35495e47c124e4ba.js |      | github.com/aydenstechdungeon/gospa/fiber.RuntimeMiddleware.func2 
+HEAD    | /_gospa/ws                          |      | github.com/gofiber/websocket/v2.New.func2 
+GET     | /_gospa/ws                          |      | github.com/gofiber/websocket/v2.New.func2 
+GET     | /favicon.ico                        |      | github.com/aydenstechdungeon/gospa.(*App).setupRoutes.func3 
+HEAD    | /favicon.ico                        |      | github.com/aydenstechdungeon/gospa.(*App).setupRoutes.func3 
+00:50:12 | 200 |     456.581µs | 127.0.0.1 | GET | / | -

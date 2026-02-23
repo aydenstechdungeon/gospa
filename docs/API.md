@@ -2,11 +2,107 @@
 
 ## Table of Contents
 
+- [GoSPA Package](#gospa-package)
 - [State Package](#state-package)
 - [Routing Package](#routing-package)
 - [Fiber Package](#fiber-package)
 - [Templ Package](#templ-package)
 - [Client Runtime](#client-runtime)
+
+---
+
+## GoSPA Package
+
+`github.com/aydenstechdungeon/gospa`
+
+### App
+
+The main GoSPA application.
+
+```go
+// Create new app
+app := gospa.New(config gospa.Config)
+
+// Start server
+err := app.Run(":3000")
+err := app.RunTLS(":443", "cert.pem", "key.pem")
+
+// Graceful shutdown
+err := app.Shutdown()
+
+// Access internals
+hub := app.GetHub()
+router := app.GetRouter()
+fiberApp := app.GetFiber()
+
+// Broadcast to all WebSocket clients
+app.Broadcast([]byte("message"))
+err := app.BroadcastState("key", value)
+
+// Add routes
+app.Get("/path", handler)
+app.Post("/path", handler)
+app.Put("/path", handler)
+app.Delete("/path", handler)
+
+// Route groups
+group := app.Group("/api", middleware...)
+
+// Static files
+app.Static("/static", "./public")
+```
+
+### Config
+
+```go
+type Config struct {
+    RoutesDir         string                 // Directory with .templ route files
+    RoutesFS          fs.FS                  // Filesystem with routes (optional, takes precedence)
+    DevMode           bool                   // Enable development features
+    RuntimeScript     string                 // Path to client runtime
+    StaticDir         string                 // Static files directory
+    StaticPrefix      string                 // URL prefix for static files
+    AppName           string                 // Application name
+    DefaultState      map[string]interface{} // Initial session state
+    EnableWebSocket   bool                   // Enable WebSocket support
+    WebSocketPath     string                 // WebSocket endpoint path
+    WebSocketMiddleware fiberpkg.Handler     // Pre-WebSocket middleware
+
+    // Performance
+    CompressState  bool   // Compress WebSocket messages
+    StateDiffing   bool   // Send only state diffs
+    CacheTemplates bool   // Cache compiled templates
+    SimpleRuntime  bool   // Use lightweight runtime without DOMPurify (insecure)
+
+    // WebSocket
+    WSReconnectDelay time.Duration // Initial reconnect delay
+    WSMaxReconnect   int           // Max reconnect attempts
+    WSHeartbeat      time.Duration // Heartbeat interval
+
+    // Hydration
+    HydrationMode    string // "immediate" | "lazy" | "visible"
+    HydrationTimeout int    // ms before force hydrate
+
+    // Serialization
+    StateSerializer   StateSerializerFunc
+    StateDeserializer StateDeserializerFunc
+
+    // Routing Options
+    DisableSPA bool // Disable SPA navigation completely
+    SSR        bool // Global SSR mode
+
+    // Remote Action Options
+    MaxRequestBodySize int    // Maximum allowed size for remote action request bodies
+    RemotePrefix       string // Prefix for remote action endpoints (default "/_gospa/remote")
+
+    // Security Options
+    AllowedOrigins []string // Allowed CORS origins
+    EnableCSRF     bool     // Enable automatic CSRF protection
+}
+
+// Default configuration
+config := gospa.DefaultConfig()
+```
 
 ---
 
@@ -35,12 +131,16 @@ unsubscribe := rune.Subscribe(func(newValue T) {})
 unsubscribe := rune.SubscribeAny(func(newValue any) {})
 ```
 
-**Interface**
+**Interfaces**
 
 ```go
 type Observable interface {
     GetAny() any
     SubscribeAny(func(any)) func()
+}
+
+type Settable interface {
+    SetAny(value any) error
 }
 ```
 
@@ -78,6 +178,22 @@ derived.Get() T
 
 // Subscribe
 unsubscribe := derived.Subscribe(func(T) {})
+
+// Lifecycle
+derived.Dispose()
+```
+
+**Helper Functions**
+
+```go
+// Single dependency
+d := state.DerivedFrom(rune, func(v T) U { ... })
+
+// Two dependencies
+d := state.Derived2(rune1, rune2, func(v1 T1, v2 T2) U { ... })
+
+// Three dependencies
+d := state.Derived3(rune1, rune2, rune3, func(v1 T1, v2 T2, v3 T3) U { ... })
 ```
 
 **Example**
@@ -107,6 +223,17 @@ cleanup := state.NewEffect(func() func() {
         // cleanup logic
     }
 })
+```
+
+**Helper Functions**
+
+```go
+// Single dependency
+cleanup := state.EffectOn(rune, func(v T) { ... })
+
+// Watch multiple
+cleanup := state.Watch(rune1, rune2, func(v1 T1, v2 T2) { ... })
+cleanup := state.Watch3(rune1, rune2, rune3, func(v1 T1, v2 T2, v3 T3) { ... })
 ```
 
 **Example**
@@ -140,16 +267,39 @@ state.Batch(func() {
 
 ---
 
-### Serialization
+### StateMap
+
+Collection of named reactive values.
 
 ```go
-// Types
-type StateMap map[string]interface{}
-type StateSnapshot struct {
-    ComponentID string
-    State       StateMap
-    Timestamp   int64
-}
+// Create
+sm := state.NewStateMap()
+
+// Add reactive value
+sm.Add(key string, observable Observable)
+
+// Get value
+obs, ok := sm.Get(key string)
+
+// Remove
+sm.Remove(key string)
+
+// Serialize
+json, err := sm.ToJSON()
+sm.FromJSON(data []byte)
+
+// Diff
+diff := sm.Diff(other *StateMap) *StateDiff
+
+// OnChange callback
+sm.OnChange = func(key string, value any) { ... }
+```
+
+---
+
+### Serialization Types
+
+```go
 type StateMessage struct {
     Type        string      `json:"type"`
     ComponentID string      `json:"componentId"`
@@ -157,11 +307,22 @@ type StateMessage struct {
     Timestamp   int64       `json:"timestamp"`
 }
 
+type StateSnapshot struct {
+    ComponentID string
+    State       StateMap
+    Timestamp   int64
+}
+
+type StateDiff struct {
+    Added   map[string]interface{}
+    Removed map[string]interface{}
+    Changed map[string]interface{}
+}
+
 // Constructors
-func NewStateMap() *StateMap
-func NewInitMessage(componentID string, state interface{}) *StateMessage
-func NewSyncMessage(componentID string, state interface{}) *StateMessage
-func NewSnapshot(componentID string, state StateMap) *StateSnapshot
+msg := state.NewInitMessage(componentID string, state interface{})
+msg := state.NewSyncMessage(componentID string, state interface{})
+snapshot := state.NewSnapshot(componentID string, state StateMap)
 ```
 
 ---
@@ -170,27 +331,55 @@ func NewSnapshot(componentID string, state StateMap) *StateSnapshot
 
 `github.com/aydenstechdungeon/gospa/routing`
 
-### Auto Router
+### Router
 
-Scans `.templ` files and builds route tree.
+File-based router that scans `.templ` files.
 
 ```go
-router := routing.NewAutoRouter(routesDir string)
-router.Scan() error
-routes := router.GetRoutes() []*Route
-tree := router.GetRouteTree() *RouteNode
+// Create from directory
+router := routing.NewRouter(routesDir string)
+
+// Create from filesystem (hybrid approach)
+router := routing.NewRouter(routesFS fs.FS)
+
+// Scan routes directory
+err := router.Scan()
+
+// Match route
+route, params := router.Match(path string)
+
+// Match with layout chain
+route, params, layouts := router.MatchWithLayout(path string)
+
+// Get all routes
+routes := router.GetRoutes()
+
+// Get page routes only
+pages := router.GetPages()
+
+// Resolve layout chain for route
+layouts := router.ResolveLayoutChain(route *Route)
 ```
 
 **Route Structure**
 
 ```go
 type Route struct {
-    Path       string
-    FilePath   string
-    Params     []string
-    IsCatchAll bool
-    Meta       map[string]string
+    Path       string            // URL path
+    FilePath   string            // Source .templ file
+    Params     []string          // Dynamic param names
+    IsCatchAll bool              // [...rest] route
+    Type       RouteType         // page, layout, error, api
+    Meta       map[string]string // Custom metadata
 }
+
+type RouteType int
+const (
+    RouteTypePage RouteType = iota
+    RouteTypeLayout
+    RouteTypeError
+    RouteTypeAPI
+)
 ```
 
 **File Convention**
@@ -227,7 +416,14 @@ router.DELETE(path string, handler Handler, middleware ...Middleware)
 router.PATCH(path string, handler Handler, middleware ...Middleware)
 
 // Get all routes
-routes := router.GetRoutes() []*ManualRoute
+routes := router.GetRoutes()
+
+// Create route group
+group := router.Group(prefix string, middleware ...Middleware)
+group.GET("/subpath", handler)
+
+// Register all routes to Fiber
+router.RegisterToFiber(fiberApp *fiber.App)
 ```
 
 **Handler Type**
@@ -237,66 +433,70 @@ type Handler func(c *fiber.Ctx, params Params) error
 type Middleware func(Handler) Handler
 ```
 
-**Example**
-
-```go
-router := routing.NewManualRouter()
-
-router.GET("/", func(c *fiber.Ctx, params routing.Params) error {
-    return c.SendString("Hello")
-})
-
-router.GET("/users/:id", func(c *fiber.Ctx, params routing.Params) error {
-    id := params.Get("id")
-    return c.SendString("User: " + id)
-})
-
-// Register with Fiber
-for _, route := range router.GetRoutes() {
-    app.Add(route.Method, route.Path, func(c *fiber.Ctx) error {
-        params := routing.ExtractParams(c, route.Params)
-        return route.Handler(c, params)
-    })
-}
-```
-
 ---
 
-### Route Parameters
+### Params
+
+Route parameter extraction and typed access.
 
 ```go
 type Params map[string]string
 
-func (p Params) Get(key string) string
-func (p Params) GetDefault(key, defaultValue string) string
-func ExtractParams(c *fiber.Ctx, paramKeys []string) Params
+// Basic access
+value := params.Get("id")
+value := params.GetDefault("id", "default")
+
+// Typed access
+intVal, err := params.Int("count")
+int64Val, err := params.Int64("id")
+floatVal, err := params.Float64("price")
+boolVal, err := params.Bool("active")
+sliceVal, err := params.Slice("tags", ",")
+
+// Utility functions
+params := routing.ExtractParams(c *fiber.Ctx, paramKeys []string)
+queryParams := routing.QueryParams(c *fiber.Ctx)
 ```
 
 ---
 
-### Layouts
+### Route Registry
+
+Register page and layout components.
 
 ```go
-// Create layout manager
-lm := routing.NewLayoutManager()
+// Register page component
+routing.RegisterPage(path string, fn func(props map[string]interface{}) templ.Component)
 
-// Register layout for path prefix
-lm.Register(path string, layout Layout)
+// Register layout component
+routing.RegisterLayout(path string, fn func(content templ.Component, props map[string]interface{}) templ.Component)
 
-// Get layouts for path
-layouts := lm.GetLayouts(path string) []Layout
+// Register root layout
+routing.RegisterRootLayout(fn func(content templ.Component, props map[string]interface{}) templ.Component)
 
-// Root layout
-routing.RegisterRootLayout(fn LayoutFunc)
-routing.GetRootLayout() LayoutFunc
+// Get registered components
+pageFunc := routing.GetPage(path string)
+layoutFunc := routing.GetLayout(path string)
+rootLayoutFunc := routing.GetRootLayout()
+
+// Remote actions
+routing.RegisterRemoteAction(name string, fn func(ctx context.Context, input interface{}) (interface{}, error))
+fn, ok := routing.GetRemoteAction(name string)
 ```
 
-**Layout Interface**
+---
+
+### Route Options
 
 ```go
-type Layout interface {
-    Render(content templ.Component, params Params) templ.Component
+type RouteOptions struct {
+    Strategy   RenderStrategy // SSR, CSR, SSG
+    Prerender  bool
+    CacheTTL   time.Duration
 }
+
+// Get options for route
+opts := routing.GetRouteOptions(path string)
 ```
 
 ---
@@ -308,14 +508,38 @@ type Layout interface {
 ### Middleware
 
 ```go
-// Inject GoSPA runtime into HTML responses
-app.Use(gospafiber.RuntimeMiddleware())
-```
+// SPA middleware - initializes state and component ID
+app.Use(fiber.SPAMiddleware(config fiber.Config))
 
-The middleware:
-1. Serves runtime JavaScript at `/_gospa/runtime.js`
-2. Injects runtime script tag into HTML responses
-3. Adds GoSPA headers to all responses
+// State injection into HTML responses
+app.Use(fiber.StateMiddleware(config fiber.Config))
+
+// Runtime script serving
+app.Get("/_gospa/runtime.js", fiber.RuntimeMiddleware())
+app.Get("/_gospa/runtime.js", fiber.RuntimeMiddlewareWithContent(content []byte))
+
+// SPA navigation detection
+app.Use(fiber.SPANavigationMiddleware())
+isSPA := fiber.IsSPANavigation(c *fiber.Ctx) bool
+
+// CORS
+app.Use(fiber.CORSMiddleware(allowedOrigins []string))
+
+// Security headers
+app.Use(fiber.SecurityHeadersMiddleware())
+
+// CSRF protection
+app.Use(fiber.CSRFTokenMiddleware())
+
+// Compression placeholder
+app.Use(fiber.CompressionMiddleware())
+
+// Request logging placeholder
+app.Use(fiber.RequestLoggerMiddleware())
+
+// Panic recovery
+app.Use(fiber.RecoveryMiddleware())
+```
 
 ---
 
@@ -325,11 +549,23 @@ The middleware:
 // Create hub
 hub := fiber.NewWSHub()
 
-// Start hub
+// Start hub (run in goroutine)
 go hub.Run()
 
 // Broadcast to all clients
-fiber.BroadcastState(hub, key string, value interface{}) error
+hub.Broadcast <- []byte(message)
+
+// Broadcast to specific clients
+hub.BroadcastTo(clientIDs []string, message []byte)
+
+// Broadcast except one
+hub.BroadcastExcept(exceptID string, message []byte)
+
+// Get client
+client, ok := hub.GetClient(id string)
+
+// Client count
+count := hub.ClientCount()
 ```
 
 ---
@@ -338,43 +574,46 @@ fiber.BroadcastState(hub, key string, value interface{}) error
 
 ```go
 // Create client
-client := gospafiber.NewWSClient(id string, conn *websocket.Conn)
+client := fiber.NewWSClient(id string, conn *websocket.Conn)
+
+// Properties
+client.ID        string
+client.SessionID string
+client.Conn      *websocket.Conn
+client.State     *state.StateMap
 
 // Methods
-client.Send(msg *state.StateMessage) error
+client.SendJSON(v interface{}) error
+client.SendError(message string)
+client.SendState()
+client.SendInitWithSession(sessionToken string)
 client.Close() error
-client.GetState() *state.StateMap
-client.SetState(s *state.StateMap)
+
+// Read/Write pumps
+client.ReadPump(hub *WSHub, onMessage func(*WSClient, WSMessage))
+client.WritePump()
 ```
 
-**Example**
+---
+
+### WebSocket Configuration
 
 ```go
-import "github.com/gofiber/websocket/v2"
+config := fiber.WebSocketConfig{
+    Hub:         hub,                    // WebSocket hub
+    OnConnect:   func(*WSClient) {},     // Connect callback
+    OnDisconnect: func(*WSClient) {},    // Disconnect callback
+    OnMessage:   func(*WSClient, WSMessage) {}, // Message handler
+    GenerateID:  func() string {},       // ID generator
+}
 
-app.Get("/ws", websocket.New(func(c *websocket.Conn) {
-    client := gospafiber.NewWSClient(generateID(), c)
-    defer client.Close()
-    
-    // Send initial state
-    client.Send(state.NewInitMessage("app", initialState))
-    
-    // Handle incoming
-    for {
-        _, msg, err := c.ReadMessage()
-        if err != nil {
-            break
-        }
-        // Process message...
-    }
-}))
+// Create handler
+handler := fiber.WebSocketHandler(config)
 ```
 
 ---
 
 ### Action Handlers
-
-Register server-side action handlers for synced state.
 
 ```go
 // Register action handler
@@ -382,6 +621,9 @@ fiber.RegisterActionHandler(name string, handler func(*WSClient, json.RawMessage
 
 // Register connect handler
 fiber.RegisterOnConnectHandler(handler func(*WSClient))
+
+// Get action handler
+handler, ok := fiber.GetActionHandler(name string)
 ```
 
 **Example**
@@ -395,6 +637,58 @@ fiber.RegisterActionHandler("increment", func(client *fiber.WSClient, payload js
 
 ---
 
+### Session Management
+
+```go
+// Session store - maps tokens to client IDs
+sessionStore := fiber.NewSessionStore()
+token := sessionStore.CreateSession(clientID string)
+clientID, ok := sessionStore.ValidateSession(token string)
+sessionStore.RemoveSession(token string)
+sessionStore.RemoveClientSessions(clientID string)
+
+// Client state store - persists state by client ID
+stateStore := fiber.NewClientStateStore()
+stateStore.Save(clientID string, state *state.StateMap)
+state, ok := stateStore.Get(clientID string)
+stateStore.Remove(clientID string)
+
+// Global instances
+fiber.globalSessionStore
+fiber.globalClientStateStore
+```
+
+---
+
+### Utility Functions
+
+```go
+// Broadcast state to all clients
+fiber.BroadcastState(hub *WSHub, key string, value interface{}) error
+
+// Send to specific client
+fiber.SendToClient(hub *WSHub, clientID string, message interface{}) error
+
+// State sync HTTP handler
+handler := fiber.StateSyncHandler(hub *WSHub)
+
+// Component rendering
+fiber.RenderComponent(c *fiber.Ctx, config Config, component templ.Component, name string) error
+
+// State access
+stateMap := fiber.GetState(c *fiber.Ctx, config Config)
+componentID := fiber.GetComponentID(c *fiber.Ctx, config Config)
+sessionState := fiber.GetSessionState(c *fiber.Ctx, config Config)
+fiber.SetSessionState(c *fiber.Ctx, config Config, key string, value interface{})
+
+// Response helpers
+fiber.JSONResponse(c *fiber.Ctx, status int, data interface{}) error
+fiber.JSONError(c *fiber.Ctx, status int, message string) error
+fiber.ParseBody(c *fiber.Ctx, v interface{}) error
+```
+
+---
+
 ## Templ Package
 
 `github.com/aydenstechdungeon/gospa/templ`
@@ -403,10 +697,10 @@ fiber.RegisterActionHandler("increment", func(client *fiber.WSClient, payload js
 
 ```go
 // Create data binding attribute
-templ.Bind(componentID, key string) templ.Attributes
+attrs := templ.Bind(componentID, key string) templ.Attributes
 
 // Create multiple bindings
-templ.BindAll(componentID string, keys ...string) templ.Attributes
+attrs := templ.BindAll(componentID string, keys ...string) templ.Attributes
 ```
 
 **Example**
@@ -426,10 +720,10 @@ templ Counter(count int) {
 
 ```go
 // Create event handler attribute
-templ.On(event, componentID, handler string) templ.Attributes
+attrs := templ.On(event, componentID, handler string) templ.Attributes
 
 // With options
-templ.OnWithOpts(event, componentID, handler string, opts EventOptions) templ.Attributes
+attrs := templ.OnWithOpts(event, componentID, handler string, opts templ.EventOptions) templ.Attributes
 
 type EventOptions struct {
     PreventDefault  bool
@@ -446,7 +740,7 @@ templ Button() {
     <button { templ.On("click", "counter", "increment")... }>
         Click me
     </button>
-    
+
     <form { templ.OnWithOpts("submit", "form", "handleSubmit", templ.EventOptions{
         PreventDefault: true,
     })... }>
@@ -454,6 +748,22 @@ templ Button() {
         <button type="submit">Submit</button>
     </form>
 }
+```
+
+---
+
+### Component Helpers
+
+```go
+// Create component wrapper
+comp := templ.NewComponent(name string, opts ...ComponentOption) *Component
+
+// Options
+templ.WithProps(props map[string]any) ComponentOption
+templ.WithState(state *state.StateMap) ComponentOption
+
+// Render
+rendered := templ.RenderComponent(comp *Component, content templ.Component) templ.Component
 ```
 
 ---
@@ -469,8 +779,8 @@ count.get()           // 0
 count.set(5)
 count.update(v => v + 1)
 
-const unsub = count.subscribe(v => {
-    console.log('Count:', v)
+const unsub = count.subscribe((value, oldValue) => {
+    console.log('Count:', value)
 })
 unsub() // stop listening
 ```
@@ -505,20 +815,124 @@ cleanup() // stop effect
 
 ---
 
-### StateMap
+### StateMap Class
 
 ```javascript
-const state = new GoSPA.StateMap({
-    count: 0,
-    name: 'Alice'
+const state = new GoSPA.StateMap()
+
+state.set('count', 0)
+state.get('count')     // Rune object
+state.has('count')     // true
+state.delete('count')
+state.clear()
+
+state.toJSON()         // { count: 0 }
+state.fromJSON({ count: 5 })
+```
+
+---
+
+### Batch Updates
+
+```javascript
+GoSPA.batch(() => {
+    count.set(1)
+    name.set('Alice')
+})
+```
+
+---
+
+### Watch
+
+```javascript
+// Watch single rune
+const unsub = GoSPA.watch(count, (value, oldValue) => {
+    console.log('Changed:', value)
 })
 
-state.get('count')
-state.set('count', 5)
-
-state.subscribe('count', (newValue) => {
-    console.log('Count changed:', newValue)
+// Watch multiple runes
+const unsub = GoSPA.watch([count, name], (values, oldValues) => {
+    console.log('Count:', values[0], 'Name:', values[1])
 })
+```
+
+---
+
+### Advanced State
+
+```javascript
+// Untrack - read without subscribing
+const value = GoSPA.untrack(() => count.get())
+
+// Raw rune - shallow reactivity
+const raw = new GoSPA.RuneRaw({ name: 'Alice' })
+
+// Snapshot - non-reactive copy
+const snap = GoSPA.snapshot(count)
+
+// Pre-effect - runs before DOM updates
+const cleanup = new GoSPA.PreEffect(() => {
+    console.log('Before DOM update')
+})
+
+// Effect root - manual lifecycle
+const stop = GoSPA.effectRoot(() => {
+    console.log('Effect running')
+})
+
+// Check if tracking
+if (GoSPA.tracking()) { ... }
+```
+
+---
+
+### Async State
+
+```javascript
+// Async derived
+const data = new GoSPA.DerivedAsync(async () => {
+    const res = await fetch('/api/data')
+    return res.json()
+})
+
+data.get()       // undefined while loading
+data.status      // 'idle' | 'pending' | 'success' | 'error'
+data.isPending   // true/false
+data.isSuccess   // true/false
+data.isError     // true/false
+data.error       // Error object if failed
+
+// Resource
+const res = new GoSPA.Resource(async () => {
+    const response = await fetch('/api/data')
+    return response.json()
+})
+
+await res.refetch()
+res.reset()
+res.data         // current data
+res.status       // current status
+
+// Reactive resource
+const res = GoSPA.resourceReactive([userId], async () => {
+    return fetch(`/api/users/${userId.get()}`).then(r => r.json())
+})
+```
+
+---
+
+### Debug
+
+```javascript
+// Inspect state changes (dev only)
+GoSPA.inspect(count, name)
+GoSPA.inspect(count).with((type, values) => {
+    if (type === 'update') debugger
+})
+
+// Trace dependencies
+GoSPA.inspect.trace('label')
 ```
 
 ---
@@ -526,23 +940,80 @@ state.subscribe('count', (newValue) => {
 ### WebSocket Client
 
 ```javascript
-const client = new GoSPA.WSClient('ws://localhost:3000/ws')
+// Initialize WebSocket
+const ws = GoSPA.initWebSocket('ws://localhost:3000/_gospa/ws')
 
-client.onConnect(() => {
-    console.log('Connected')
+// Get client
+const client = GoSPA.getWebSocketClient()
+
+// Send action
+GoSPA.sendAction('increment', { value: 1 })
+
+// Synced rune (auto-syncs with server)
+const count = GoSPA.syncedRune('count', 0)
+
+// Apply state update
+GoSPA.applyStateUpdate({ key: 'count', value: 5 })
+```
+
+---
+
+### Navigation
+
+```javascript
+// Navigate
+GoSPA.navigate('/about')
+GoSPA.navigate('/about', { replace: true })
+
+// History
+GoSPA.back()
+GoSPA.forward()
+GoSPA.go(-2)  // Go back 2
+
+// Prefetch
+GoSPA.prefetch('/blog')      // Prefetch data
+GoSPA.prefetch('/blog', { code: true })  // Prefetch JS only
+
+// State
+GoSPA.getCurrentPath()
+GoSPA.isNavigating()
+
+// Events
+GoSPA.onBeforeNavigate((from, to) => {
+    // Return false to cancel
+})
+GoSPA.onAfterNavigate((from, to) => {
+    console.log('Navigated to:', to)
 })
 
-client.onMessage((msg) => {
-    console.log('Message:', msg)
+// Initialize navigation
+GoSPA.initNavigation()
+GoSPA.destroyNavigation()
+
+// Navigation state
+const navState = GoSPA.createNavigationState()
+```
+
+---
+
+### Transitions
+
+```javascript
+// Setup transitions on element
+GoSPA.setupTransitions(element, {
+    enter: 'fade',
+    leave: 'slide'
 })
 
-client.send({
-    type: 'sync',
-    componentId: 'counter',
-    state: { count: 5 }
-})
+// Built-in transitions
+GoSPA.fade(element, { duration: 300 })
+GoSPA.fly(element, { duration: 300, y: 50 })
+GoSPA.slide(element, { duration: 300, direction: 'left' })
+GoSPA.scale(element, { duration: 300, start: 0.8 })
+GoSPA.blur(element, { duration: 300 })
 
-client.disconnect()
+// Crossfade between elements
+GoSPA.crossfade(elementA, elementB, { duration: 300 })
 ```
 
 ---
@@ -550,34 +1021,90 @@ client.disconnect()
 ### DOM Binding
 
 ```javascript
-// Bind element to state
-GoSPA.bind('element-id', rune)
-
-// Bind multiple
-GoSPA.bindAll({
-    'count-display': countRune,
-    'name-input': nameRune
-})
+// Bind element to rune
+GoSPA.bindElement('element-id', countRune)
 
 // Two-way binding for inputs
-GoSPA.bindInput('input-id', rune)
+GoSPA.bindTwoWay('input-id', nameRune)
+
+// Conditional rendering
+GoSPA.renderIf(conditionRune, element)
+
+// List rendering
+GoSPA.renderList(itemsRune, (item, index) => {
+    return document.createElement('div')
+})
+
+// Register/unregister custom bindings
+GoSPA.registerBinding('custom', (element, rune) => { ... })
+GoSPA.unregisterBinding('custom')
 ```
 
 ---
 
-### Component Initialization
+### Events
 
 ```javascript
-// Initialize with server state
-GoSPA.init('component-id', {
-    count: 0,
-    name: 'Alice'
+// Add event listener with auto-cleanup
+GoSPA.on(element, 'click', handler)
+
+// Remove all listeners
+GoSPA.offAll(element)
+
+// Debounce
+const debounced = GoSPA.debounce(handler, 300)
+
+// Throttle
+const throttled = GoSPA.throttle(handler, 300)
+
+// Event delegation
+GoSPA.delegate(container, '.button', 'click', handler)
+
+// Keyboard shortcuts
+GoSPA.onKey(['ctrl', 's'], handler)
+GoSPA.keys.ctrl  // Check if key is pressed
+GoSPA.keys.all   // Set of all pressed keys
+
+// Event transformers
+GoSPA.transformers.preventDefault
+GoSPA.transformers.stopPropagation
+```
+
+---
+
+### Component API
+
+```javascript
+// Initialize component
+GoSPA.init({
+    wsUrl: 'ws://localhost:3000/_gospa/ws',
+    debug: true,
+    hydration: {
+        mode: 'immediate',  // 'immediate' | 'lazy' | 'visible'
+        timeout: 5000
+    }
 })
 
-// Register handler
-GoSPA.registerHandler('increment', (state, event) => {
-    state.update('count', v => v + 1)
+// Create component
+const comp = GoSPA.createComponent('counter', {
+    count: new GoSPA.Rune(0)
 })
+
+// Get component
+const comp = GoSPA.getComponent('counter')
+
+// State access
+const state = GoSPA.getState('counter')
+GoSPA.setState('counter', { count: 5 })
+
+// Call action
+GoSPA.callAction('increment', { value: 1 })
+
+// Destroy component
+GoSPA.destroyComponent('counter')
+
+// Auto-initialize from DOM
+GoSPA.autoInit()
 ```
 
 ---
@@ -607,7 +1134,7 @@ GoSPA.registerHandler('increment', (state, event) => {
 </div>
 ```
 
-Available transitions: `fade`, `fly`, `slide`
+Available transitions: `fade`, `fly`, `slide`, `scale`, `blur`
 
 ---
 

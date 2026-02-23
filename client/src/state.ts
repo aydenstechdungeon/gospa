@@ -90,7 +90,10 @@ export class Rune<T> implements Notifier {
 	}
 
 	private _equal(a: T, b: T): boolean {
-		return Object.is(a, b) || JSON.stringify(a) === JSON.stringify(b);
+		if (Object.is(a, b)) return true;
+		if (typeof a !== typeof b) return false;
+		if (typeof a !== 'object' || a === null || b === null) return false;
+		return JSON.stringify(a) === JSON.stringify(b);
 	}
 
 	private trackDependency(): void {
@@ -151,7 +154,7 @@ export class Derived<T> implements Notifier {
 				this._dependencies.add(rune);
 			}
 		} as Effect;
-		
+
 		currentEffect = collector;
 		try {
 			this._value = this._compute();
@@ -855,15 +858,15 @@ type InspectType = 'init' | 'update';
  * $inspect - Debug helper for observing state changes (dev only).
  * In production, this becomes a no-op.
  */
-export function inspect<T>(...values: (() => T)[] | T[]): { 
-	with: (callback: (type: InspectType, value: T[]) => void) => void 
+export function inspect<T>(...values: (() => T)[] | T[]): {
+	with: (callback: (type: InspectType, value: T[]) => void) => void
 } {
 	// Check if in development
-	const isDev = typeof window !== 'undefined' && 
+	const isDev = typeof window !== 'undefined' &&
 		(window as unknown as { __GOSPA_DEV__?: boolean }).__GOSPA_DEV__ !== false;
 
 	if (!isDev) {
-		return { with: () => {} };
+		return { with: () => { } };
 	}
 
 	let firstRun = true;
@@ -871,7 +874,7 @@ export function inspect<T>(...values: (() => T)[] | T[]): {
 
 	// Log initial values
 	const getValues = (): T[] => values.map(v => typeof v === 'function' ? (v as () => T)() : v);
-	
+
 	const logValues = (type: InspectType) => {
 		const currentValues = getValues();
 		console.log(`%c[${type}]`, 'color: #888', ...currentValues);
@@ -882,7 +885,7 @@ export function inspect<T>(...values: (() => T)[] | T[]): {
 	new Effect(() => {
 		// Read all values to track them
 		getValues();
-		
+
 		if (firstRun) {
 			firstRun = false;
 			logValues('init');
@@ -902,7 +905,7 @@ export function inspect<T>(...values: (() => T)[] | T[]): {
  * $inspect.trace - Log which dependencies triggered an effect.
  */
 inspect.trace = (label?: string) => {
-	const isDev = typeof window !== 'undefined' && 
+	const isDev = typeof window !== 'undefined' &&
 		(window as unknown as { __GOSPA_DEV__?: boolean }).__GOSPA_DEV__ !== false;
 
 	if (!isDev) return;
@@ -918,13 +921,13 @@ inspect.trace = (label?: string) => {
 function getByPath<T>(obj: T, path: string): unknown {
 	const parts = path.split('.');
 	let current: unknown = obj;
-	
+
 	for (const part of parts) {
 		if (current === null || current === undefined) return undefined;
 		if (typeof current !== 'object') return undefined;
 		current = (current as Record<string, unknown>)[part];
 	}
-	
+
 	return current;
 }
 
@@ -938,7 +941,7 @@ export function watchPath<T extends object>(
 	callback: (value: unknown, oldValue: unknown) => void
 ): Unsubscribe {
 	let oldValue: unknown;
-	
+
 	return obj.subscribe((current) => {
 		const newValue = getByPath(current, path);
 		if (newValue !== oldValue) {

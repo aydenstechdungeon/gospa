@@ -99,8 +99,8 @@ func StateMiddleware(config Config) gofiber.Handler {
 
 // RuntimeMiddleware serves the client runtime script.
 // Uses the embedded runtime from the embed package.
-func RuntimeMiddleware() gofiber.Handler {
-	runtimeJS, err := embed.RuntimeJS()
+func RuntimeMiddleware(simple bool) gofiber.Handler {
+	runtimeJS, err := embed.RuntimeJS(simple)
 	if err != nil {
 		// Return a middleware that serves an error if runtime is not available
 		return func(c *gofiber.Ctx) error {
@@ -109,7 +109,7 @@ func RuntimeMiddleware() gofiber.Handler {
 	}
 	return func(c *gofiber.Ctx) error {
 		c.Set("Content-Type", "application/javascript")
-		c.Set("Cache-Control", "public, max-age=31536000")
+		c.Set("Cache-Control", "public, max-age=31536000, immutable")
 		return c.Send(runtimeJS)
 	}
 }

@@ -4,6 +4,7 @@ package routing
 
 import (
 	"fmt"
+	"io/fs"
 	"os"
 	"path/filepath"
 	"regexp"
@@ -47,33 +48,41 @@ type Route struct {
 
 // Router manages all routes.
 type Router struct {
-	routes    []*Route
-	routesDir string
+	routes []*Route
+	fs     fs.FS
 }
 
-// NewRouter creates a new router with the given routes directory.
-func NewRouter(routesDir string) *Router {
+// NewRouter creates a new router with the given routes directory or filesystem.
+// You can pass a string (directory path) or fs.FS.
+func NewRouter(routesSource interface{}) *Router {
+	var fileSystem fs.FS
+
+	switch src := routesSource.(type) {
+	case string:
+		fileSystem = os.DirFS(src)
+	case fs.FS:
+		fileSystem = src
+	default:
+		// Fallback
+		fileSystem = os.DirFS("./routes")
+	}
+
 	return &Router{
-		routes:    make([]*Route, 0),
-		routesDir: routesDir,
+		routes: make([]*Route, 0),
+		fs:     fileSystem,
 	}
 }
 
 // Scan scans the routes directory and builds the route tree.
 func (r *Router) Scan() error {
-	// Check if routes directory exists
-	if _, err := os.Stat(r.routesDir); os.IsNotExist(err) {
-		return fmt.Errorf("routes directory does not exist: %s", r.routesDir)
-	}
-
-	// Walk the routes directory
-	err := filepath.Walk(r.routesDir, func(path string, info os.FileInfo, err error) error {
+	// Walk the routes filesystem
+	err := fs.WalkDir(r.fs, ".", func(path string, d fs.DirEntry, err error) error {
 		if err != nil {
 			return err
 		}
 
 		// Skip directories
-		if info.IsDir() {
+		if d.IsDir() {
 			return nil
 		}
 
@@ -82,7 +91,7 @@ func (r *Router) Scan() error {
 			return nil
 		}
 
-		// Parse the route
+		// Parse the route. path is already relative to the fs root.
 		route, err := r.parseRoute(path)
 		if err != nil {
 			return fmt.Errorf("failed to parse route %s: %w", path, err)
@@ -108,19 +117,13 @@ func (r *Router) Scan() error {
 }
 
 // parseRoute parses a file path into a Route.
-func (r *Router) parseRoute(filePath string) (*Route, error) {
-	// Get relative path from routes directory
-	relPath, err := filepath.Rel(r.routesDir, filePath)
-	if err != nil {
-		return nil, fmt.Errorf("failed to get relative path: %w", err)
-	}
-
-	// Normalize path separators
+func (r *Router) parseRoute(relPath string) (*Route, error) {
+	// Normalize path separators (fs.FS uses slash, but just in case)
 	relPath = filepath.ToSlash(relPath)
 
 	// Determine route type
 	routeType := RouteTypePage
-	fileName := filepath.Base(filePath)
+	fileName := filepath.Base(relPath)
 
 	switch {
 	case fileName == "page.templ":
@@ -144,7 +147,7 @@ func (r *Router) parseRoute(filePath string) (*Route, error) {
 
 	return &Route{
 		Path:       urlPath,
-		File:       filePath,
+		File:       relPath,
 		Type:       routeType,
 		Params:     params,
 		IsDynamic:  isDynamic,

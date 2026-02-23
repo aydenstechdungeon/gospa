@@ -9,6 +9,7 @@ import (
 	"crypto/sha256"
 	"fmt"
 	"io"
+	"io/fs"
 	"log"
 	"net/http"
 	"os"
@@ -41,6 +42,8 @@ const Version = "0.1.0"
 type Config struct {
 	// RoutesDir is the directory containing route files.
 	RoutesDir string
+	// RoutesFS is the filesystem containing route files (optional). Takes precedence over RoutesDir if provided.
+	RoutesFS fs.FS
 	// DevMode enables development features.
 	DevMode bool
 	// RuntimeScript is the path to the client runtime script.
@@ -64,6 +67,7 @@ type Config struct {
 	CompressState  bool // Compress WebSocket messages
 	StateDiffing   bool // Only send state diffs
 	CacheTemplates bool // Cache compiled templates
+	SimpleRuntime  bool // Use lightweight runtime without DOMPurify
 
 	// New WebSocket Options
 	WSReconnectDelay time.Duration // Initial reconnect delay
@@ -77,20 +81,34 @@ type Config struct {
 	// New Serialization Options
 	StateSerializer   StateSerializerFunc
 	StateDeserializer StateDeserializerFunc
+
+	// Routing Options
+	DisableSPA bool // Disable SPA navigation completely
+	SSR        bool // Global SSR mode
+
+	// Remote Action Options
+	MaxRequestBodySize int    // Maximum allowed size for remote action request bodies
+	RemotePrefix       string // Prefix for remote action endpoints (default "/_gospa/remote")
+
+	// Security Options
+	AllowedOrigins []string // Allowed CORS origins
+	EnableCSRF     bool     // Enable automatic CSRF protection
 }
 
 // DefaultConfig returns the default configuration.
 func DefaultConfig() Config {
 	return Config{
-		RoutesDir:       "./routes",
-		DevMode:         false,
-		RuntimeScript:   "/_gospa/runtime.js",
-		StaticDir:       "./static",
-		StaticPrefix:    "/static",
-		AppName:         "GoSPA App",
-		DefaultState:    make(map[string]interface{}),
-		EnableWebSocket: true,
-		WebSocketPath:   "/_gospa/ws",
+		RoutesDir:          "./routes",
+		DevMode:            false,
+		RuntimeScript:      "/_gospa/runtime.js",
+		StaticDir:          "./static",
+		StaticPrefix:       "/static",
+		AppName:            "GoSPA App",
+		DefaultState:       make(map[string]interface{}),
+		EnableWebSocket:    true,
+		WebSocketPath:      "/_gospa/ws",
+		RemotePrefix:       "/_gospa/remote",
+		MaxRequestBodySize: 4 * 1024 * 1024, // Default 4MB
 	}
 }
 
@@ -99,13 +117,19 @@ func (a *App) getRuntimePath() string {
 	if a.Config.RuntimeScript != "/_gospa/runtime.js" && a.Config.RuntimeScript != "" {
 		return a.Config.RuntimeScript
 	}
+
+	name := "runtime"
+	if a.Config.SimpleRuntime {
+		name = "runtime-simple"
+	}
+
 	// Try to get hash from content for better cache busting
-	if h, err := embed.RuntimeHash(); err == nil {
-		return fmt.Sprintf("/_gospa/runtime.%s.js", h)
+	if h, err := embed.RuntimeHash(a.Config.SimpleRuntime); err == nil {
+		return fmt.Sprintf("/_gospa/%s.%s.js", name, h)
 	}
 	// Fallback to version-based hash
 	h := fmt.Sprintf("%x", sha256.Sum256([]byte(Version)))
-	return fmt.Sprintf("/_gospa/runtime.%s.js", h[:8])
+	return fmt.Sprintf("/_gospa/%s.%s.js", name, h[:8])
 }
 
 // App is the main GoSPA application.
@@ -148,8 +172,21 @@ func New(config Config) *App {
 		config.WebSocketPath = "/_gospa/ws"
 	}
 
+	if config.RemotePrefix == "" {
+		config.RemotePrefix = "/_gospa/remote"
+	}
+	if config.MaxRequestBodySize == 0 {
+		config.MaxRequestBodySize = 4 * 1024 * 1024
+	}
+
 	// Create router
-	router := routing.NewRouter(config.RoutesDir)
+	var routerSource interface{}
+	if config.RoutesFS != nil {
+		routerSource = config.RoutesFS
+	} else {
+		routerSource = config.RoutesDir
+	}
+	router := routing.NewRouter(routerSource)
 
 	// Create Fiber app
 	fiberConfig := fiberpkg.Config{
@@ -204,14 +241,24 @@ func (a *App) setupMiddleware() {
 
 	// Compression
 	a.Fiber.Use(compress.New(compress.Config{
-		Level: compress.LevelBestSpeed,
+		Level: compress.LevelDefault,
 	}))
 
 	// Security headers
 	a.Fiber.Use(fiber.SecurityHeadersMiddleware())
 
+	if len(a.Config.AllowedOrigins) > 0 {
+		a.Fiber.Use(fiber.CORSMiddleware(a.Config.AllowedOrigins))
+	}
+
+	if a.Config.EnableCSRF {
+		a.Fiber.Use(fiber.CSRFTokenMiddleware())
+	}
+
 	// SPA navigation middleware (must come before SPAMiddleware)
-	a.Fiber.Use(fiber.SPANavigationMiddleware())
+	if !a.Config.DisableSPA {
+		a.Fiber.Use(fiber.SPANavigationMiddleware())
+	}
 
 	// SPA middleware
 	spaConfig := fiber.DefaultConfig()
@@ -222,8 +269,17 @@ func (a *App) setupMiddleware() {
 
 // setupRoutes configures the routes.
 func (a *App) setupRoutes() {
-	// Runtime script
-	a.Fiber.Get(a.getRuntimePath(), fiber.RuntimeMiddleware())
+	// Serve main runtime script with specific middleware to support hashing and 'simple' toggle
+	a.Fiber.Get(a.getRuntimePath(), fiber.RuntimeMiddleware(a.Config.SimpleRuntime))
+
+	// Serve other runtime chunks from the embedded filesystem with long-term caching
+	a.Fiber.Use("/_gospa/", func(c *fiberpkg.Ctx) error {
+		c.Set("Cache-Control", "public, max-age=31536000, immutable")
+		return c.Next()
+	})
+	a.Fiber.Use("/_gospa/", filesystem.New(filesystem.Config{
+		Root: http.FS(embed.RuntimeFS()),
+	}))
 
 	// WebSocket endpoint (always registered since hub is always created)
 	if a.Hub != nil {
@@ -238,7 +294,7 @@ func (a *App) setupRoutes() {
 	}
 
 	// Remote Actions endpoint
-	a.Fiber.Post("/_gospa/remote/:name", func(c *fiberpkg.Ctx) error {
+	a.Fiber.Post(a.Config.RemotePrefix+"/:name", func(c *fiberpkg.Ctx) error {
 		name := c.Params("name")
 		fn, ok := routing.GetRemoteAction(name)
 		if !ok {
@@ -250,6 +306,11 @@ func (a *App) setupRoutes() {
 		var input interface{}
 		// Only parse if body is not empty
 		if len(c.Body()) > 0 {
+			if len(c.Body()) > a.Config.MaxRequestBodySize {
+				return c.Status(fiberpkg.StatusRequestEntityTooLarge).JSON(fiberpkg.Map{
+					"error": "Request body too large",
+				})
+			}
 			if err := c.BodyParser(&input); err != nil {
 				return c.Status(fiberpkg.StatusBadRequest).JSON(fiberpkg.Map{
 					"error": "Invalid input JSON",
@@ -452,7 +513,7 @@ func (a *App) renderRoute(c *fiberpkg.Ctx, route *routing.Route) error {
 		_, _ = fmt.Fprintf(w, `<script src="%s" type="module"></script>`, runtimePath)
 
 		_, _ = fmt.Fprintf(w, `<script type="module">
-import runtime from '%s';
+import * as runtime from '%s';
 runtime.init({
 	wsUrl: '%s',
 	debug: %v,

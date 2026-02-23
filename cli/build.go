@@ -1,7 +1,9 @@
 package cli
 
 import (
+	"compress/gzip"
 	"fmt"
+	"io"
 	"os"
 	"os/exec"
 	"path/filepath"
@@ -94,6 +96,14 @@ func BuildWithConfig(config *BuildConfig) error {
 		fmt.Println("Copying static assets...")
 		if err := copyStaticAssets(config); err != nil {
 			return fmt.Errorf("failed to copy static assets: %w", err)
+		}
+	}
+
+	// Step 6: Pre-compress static assets if requested
+	if config.Compress {
+		fmt.Println("Pre-compressing static assets...")
+		if err := compressStaticAssets(config); err != nil {
+			return fmt.Errorf("failed to compress static assets: %w", err)
 		}
 	}
 
@@ -203,6 +213,59 @@ func copyStaticAssets(config *BuildConfig) error {
 
 		return os.WriteFile(destPath, data, info.Mode())
 	})
+}
+
+func compressStaticAssets(config *BuildConfig) error {
+	destDir := filepath.Join(config.OutputDir, "static")
+	if _, err := os.Stat(destDir); os.IsNotExist(err) {
+		return nil
+	}
+
+	return filepath.Walk(destDir, func(path string, info os.FileInfo, err error) error {
+		if err != nil {
+			return err
+		}
+
+		if info.IsDir() {
+			return nil
+		}
+
+		// Only compress compressible files
+		ext := strings.ToLower(filepath.Ext(path))
+		if ext != ".js" && ext != ".css" && ext != ".html" && ext != ".svg" && ext != ".json" {
+			return nil
+		}
+
+		// Skip already compressed files
+		if ext == ".gz" || ext == ".br" {
+			return nil
+		}
+
+		return compressFileGzip(path)
+	})
+}
+
+func compressFileGzip(path string) error {
+	input, err := os.Open(path)
+	if err != nil {
+		return err
+	}
+	defer input.Close()
+
+	output, err := os.Create(path + ".gz")
+	if err != nil {
+		return err
+	}
+	defer output.Close()
+
+	writer, err := gzip.NewWriterLevel(output, gzip.BestCompression)
+	if err != nil {
+		return err
+	}
+	defer writer.Close()
+
+	_, err = io.Copy(writer, input)
+	return err
 }
 
 // BuildAll builds for all platforms.

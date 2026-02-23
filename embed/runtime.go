@@ -8,17 +8,21 @@ import (
 	"io/fs"
 )
 
-//go:embed runtime.js
+//go:embed *.js
 var runtimeFS embed.FS
 
-// RuntimeJS returns the embedded runtime JavaScript.
-func RuntimeJS() ([]byte, error) {
-	return runtimeFS.ReadFile("runtime.js")
+// RuntimeJS returns the embedded runtime JavaScript based on the simple flag.
+func RuntimeJS(simple bool) ([]byte, error) {
+	name := "runtime.js"
+	if simple {
+		name = "runtime-simple.js"
+	}
+	return runtimeFS.ReadFile(name)
 }
 
 // RuntimeHash returns a truncated SHA256 hash of the runtime JavaScript.
-func RuntimeHash() (string, error) {
-	content, err := RuntimeJS()
+func RuntimeHash(simple bool) (string, error) {
+	content, err := RuntimeJS(simple)
 	if err != nil {
 		return "", err
 	}

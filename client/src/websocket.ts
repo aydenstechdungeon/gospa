@@ -30,17 +30,17 @@ function validateMessage(raw: unknown): StateMessage | null {
 	if (!raw || typeof raw !== 'object' || Array.isArray(raw)) {
 		return null;
 	}
-	
+
 	const msg = raw as Record<string, unknown>;
-	
+
 	// Required: type field must be a valid message type
 	if (typeof msg.type !== 'string' || !VALID_MESSAGE_TYPES.has(msg.type)) {
 		return null;
 	}
-	
+
 	// Validate optional fields have correct types
 	const validated: StateMessage = { type: msg.type as MessageType };
-	
+
 	if (typeof msg.componentId === 'string') validated.componentId = msg.componentId;
 	if (typeof msg.action === 'string') validated.action = msg.action;
 	if (msg.data && typeof msg.data === 'object' && !Array.isArray(msg.data)) {
@@ -59,14 +59,14 @@ function validateMessage(raw: unknown): StateMessage | null {
 	if (typeof msg.timestamp === 'number') validated.timestamp = msg.timestamp;
 	if (typeof msg.sessionToken === 'string') validated.sessionToken = msg.sessionToken;
 	if (typeof msg.clientId === 'string') validated.clientId = msg.clientId;
-	
+
 	return validated;
 }
 
 // Session storage key
-const SESSION_STORAGE_KEY = 'gospa_session';
+const SESSION_COOKIE_KEY = 'gospa_session';
 
-// Session data stored in localStorage
+// Session data stored in cookies
 interface SessionData {
 	token: string;
 	clientId: string;
@@ -88,9 +88,17 @@ export interface WebSocketConfig {
 // Helper functions for session persistence
 function loadSession(): SessionData | null {
 	try {
-		const stored = localStorage.getItem(SESSION_STORAGE_KEY);
-		if (stored) {
-			return JSON.parse(stored) as SessionData;
+		const name = SESSION_COOKIE_KEY + '=';
+		const ca = document.cookie.split(';');
+		for (let i = 0; i < ca.length; i++) {
+			let c = ca[i];
+			while (c.charAt(0) === ' ') {
+				c = c.substring(1);
+			}
+			if (c.indexOf(name) === 0) {
+				const val = decodeURIComponent(c.substring(name.length, c.length));
+				return JSON.parse(val) as SessionData;
+			}
 		}
 	} catch (e) {
 		console.warn('[GoSPA] Failed to load session:', e);
@@ -100,7 +108,16 @@ function loadSession(): SessionData | null {
 
 function saveSession(data: SessionData): void {
 	try {
-		localStorage.setItem(SESSION_STORAGE_KEY, JSON.stringify(data));
+		const d = new Date();
+		// Set to expire in 7 days
+		d.setTime(d.getTime() + (7 * 24 * 60 * 60 * 1000));
+		const expires = "expires=" + d.toUTCString();
+		const val = encodeURIComponent(JSON.stringify(data));
+		let cookieStr = `${SESSION_COOKIE_KEY}=${val};${expires};path=/;SameSite=Strict`;
+		if (window.location.protocol === 'https:') {
+			cookieStr += ';Secure';
+		}
+		document.cookie = cookieStr;
 	} catch (e) {
 		console.warn('[GoSPA] Failed to save session:', e);
 	}
@@ -108,7 +125,7 @@ function saveSession(data: SessionData): void {
 
 function clearSession(): void {
 	try {
-		localStorage.removeItem(SESSION_STORAGE_KEY);
+		document.cookie = `${SESSION_COOKIE_KEY}=;expires=Thu, 01 Jan 1970 00:00:00 UTC;path=/;`;
 	} catch (e) {
 		console.warn('[GoSPA] Failed to clear session:', e);
 	}
@@ -294,7 +311,7 @@ export class WSClient {
 	private handleMessage(data: string): void {
 		try {
 			const raw = JSON.parse(data);
-			
+
 			// SECURITY: Validate message structure before processing
 			const message = validateMessage(raw);
 			if (!message) {

@@ -1,37 +1,10 @@
-// DOM update engine for reactive bindings
-
-import DOMPurify from 'dompurify';
 import { Rune, Derived, batch } from './state.ts';
 
-/**
- * Sanitize HTML using DOMPurify to prevent XSS attacks.
- * Removes dangerous tags, attributes, and URLs.
- */
-export function sanitizeHtml(html: string): string {
-	return DOMPurify.sanitize(html, {
-		// Remove all dangerous tags
-		FORBID_TAGS: ['script', 'iframe', 'object', 'embed', 'form', 'meta', 'link', 'base',
-			'applet', 'frame', 'frameset'],
-		// Remove all event handlers and dangerous attributes
-		FORBID_ATTR: ['onload', 'onerror', 'onclick', 'onmouseover', 'onmouseout', 'onmouseenter',
-			'onmouseleave', 'onmousedown', 'onmouseup', 'onmousemove', 'onkeydown',
-			'onkeyup', 'onkeypress', 'onfocus', 'onblur', 'onchange', 'onsubmit',
-			'onreset', 'onselect', 'oninput', 'oncontextmenu', 'onwheel', 'ondrag',
-			'ondragend', 'ondragenter', 'ondragleave', 'ondragover', 'ondragstart',
-			'ondrop', 'onscroll', 'oncopy', 'oncut', 'onpaste', 'onabort', 'oncanplay',
-			'oncanplaythrough', 'ondurationchange', 'onemptied', 'onended', 'onloadeddata',
-			'onloadedmetadata', 'onloadstart', 'onpause', 'onplay', 'onplaying', 'onprogress',
-			'onratechange', 'onseeked', 'onseeking', 'onstalled', 'onsuspend', 'ontimeupdate',
-			'onvolumechange', 'onwaiting', 'ontouchstart', 'ontouchmove', 'ontouchend',
-			'ontouchcancel', 'onanimationstart', 'onanimationend', 'onanimationiteration',
-			'ontransitionend', 'onpointerdown', 'onpointermove', 'onpointerup', 'onpointerover',
-			'onpointerout', 'onpointerenter', 'onpointerleave', 'onpointercancel', 'ongotpointercapture',
-			'onlostpointercapture', 'formaction', 'xlink:href'],
-		// Disallow data attributes
-		ALLOW_DATA_ATTR: false,
-		// Strip unsafe HTML
-		ALLOW_UNKNOWN_PROTOCOLS: false,
-	}) as string;
+// Configurable sanitizer (defaults to a passthrough, but injected by runtime entry points)
+export let sanitizeHtml: (html: string) => string | Promise<string> = (html) => html;
+
+export function setSanitizer(fn: (html: string) => string | Promise<string>) {
+	sanitizeHtml = fn;
 }
 
 // Binding types
@@ -91,7 +64,7 @@ export function unregisterBinding(id: string): void {
 }
 
 // Update element based on binding type
-function updateElement(binding: Binding, value: unknown): void {
+async function updateElement(binding: Binding, value: unknown): Promise<void> {
 	const { element, type, attribute, transform } = binding;
 	const transformedValue = transform ? transform(value) : value;
 
@@ -105,7 +78,7 @@ function updateElement(binding: Binding, value: unknown): void {
 		case 'html':
 			if (element instanceof HTMLElement) {
 				// SECURITY: Sanitize HTML before setting innerHTML to prevent XSS
-				const sanitized = sanitizeHtml(String(transformedValue ?? ''));
+				const sanitized = await sanitizeHtml(String(transformedValue ?? ''));
 				element.innerHTML = sanitized;
 			}
 			break;

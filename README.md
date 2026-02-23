@@ -4,12 +4,15 @@ A Go framework for building reactive SPAs with server-side rendering. Brings Sve
 
 ## Features
 
-- **Reactive Primitives** — `$state`, `$derived`, `$effect` equivalents in Go
+- **Reactive Primitives** — `Rune[T]`, `Derived[T]`, `Effect` - Svelte-like reactivity in Go
 - **File-Based Routing** — SvelteKit-style routing for `.templ` files
 - **WebSocket Sync** — Real-time client-server state synchronization
-- **Local State Mode** — Client-only reactivity without server roundtrips
+- **Session Management** — Secure session persistence with `SessionStore` and `ClientStateStore`
 - **Type Safety** — Compile-time template validation with Templ
-- **Lightweight Runtime** — <15KB gzipped client JavaScript
+- **Lightweight Runtime** — ~11KB gzipped for the simple runtime, ~18KB for the DOMPurify-enabled runtime.
+- **Remote Actions** — Type-safe server functions callable directly from the client.
+- **Security** — Built-in CSRF protection, customizable CORS origins, and strict XSS prevention.
+- **Rendering Modes** — Seamlessly mix CSR, SSR, and SSG per-page rendering strategies.
 
 ## Installation
 
@@ -91,13 +94,6 @@ State lives entirely in the browser. No server synchronization.
 </div>
 ```
 
-```go
-// Register local-only handlers (no WebSocket broadcast)
-fiber.RegisterLocalAction("increment", func(state *fiber.LocalState, payload json.RawMessage) {
-    state.Update("count", func(v int) int { return v + 1 })
-})
-```
-
 #### Synced State (Client-Server)
 
 State synchronizes across all connected clients via WebSocket.
@@ -158,11 +154,37 @@ routes/
         └ page.templ   → /posts/* (catch-all)
 ```
 
+#### Embedded Routes (Production)
+
+For production, you can embed your routes into the binary using `go:embed`. This allows for a zero-dependency, single-binary distribution.
+
+```go
+// prod.go
+//go:embed routes/*
+var embeddedRoutes embed.FS
+
+// main.go
+var routesFS fs.FS
+if devMode {
+    routesFS = os.DirFS("./routes") // Real files for hot-reloading
+} else {
+    // Use the embedded files for production
+    sub, _ := fs.Sub(embeddedRoutes, "routes")
+    routesFS = sub
+}
+
+app := gospa.New(gospa.Config{
+    RoutesFS: routesFS,
+    DevMode:  devMode,
+    // ...
+})
+```
+
 ### Client Runtime
 
 ```javascript
 // Initialize component
-GoSPA.init('component-id', { count: 0 })
+GoSPA.init({ wsUrl: 'ws://localhost:3000/_gospa/ws' })
 
 // Reactive state
 const count = new GoSPA.Rune(0)
@@ -174,7 +196,60 @@ new GoSPA.Effect(() => {
 })
 
 // DOM binding
-GoSPA.bind('element-id', count)
+GoSPA.bindElement('element-id', count)
+
+// Navigation
+GoSPA.navigate('/about')
+GoSPA.prefetch('/blog')
+
+// Transitions
+GoSPA.fade(element, { duration: 300 })
+```
+
+#### Performance vs Security (Simple Runtime)
+
+By default, the client runtime includes [DOMPurify](https://github.com/cure53/DOMPurify) for robust XSS protection on dynamically bound templates. If you prefer a smaller bundle size and are comfortable with a less strictly-secured basic sanitizer, you can switch to the lightweight runtime using the configuration flag:
+
+```go
+app := gospa.New(gospa.Config{
+    // ...
+    SimpleRuntime: true, 
+})
+```
+
+### Remote Actions
+
+Remote Actions allow you to Define type-safe server functions that can be invoked seamlessly from the client without manually managing HTTP endpoints.
+
+```go
+// Register on server
+routing.RegisterRemoteAction("saveData", func(ctx context.Context, input interface{}) (interface{}, error) {
+    // Process data securely on the server
+    return map[string]string{"status": "success"}, nil
+})
+
+// Configure endpoint restrictions
+app := gospa.New(gospa.Config{
+    RemotePrefix:       "/api/rpc",
+    MaxRequestBodySize: 1024 * 1024, // Limit body to 1MB
+})
+```
+
+```javascript
+// Call from client
+const result = await GoSPA.callAction('saveData', { id: 123 });
+```
+
+### Application Security
+
+GoSPA comes with secure defaults, but robust configurations exist for production use to secure cross-origin requests and mitigate CSRF attacks:
+
+```go
+app := gospa.New(gospa.Config{
+    // ...
+    EnableCSRF: true,
+    AllowedOrigins: []string{"https://myapp.com", "https://api.myapp.com"},
+})
 ```
 
 ### Partial Hydration
@@ -233,7 +308,7 @@ gospa build           # Production build
 ┌─────────────────────────────────────────────────────────────┐
 │                         Browser                              │
 │  ┌─────────────────────────────────────────────────────┐    │
-│  │              GoSPA Runtime (<15KB)                   │    │
+│  │              GoSPA Runtime (<15KB*)                   │    │
 │  │  ┌─────────┐ ┌──────────┐ ┌─────────┐ ┌──────────┐ │    │
 │  │  │  Rune   │ │ Derived  │ │ Effect  │ │WebSocket │ │    │
 │  │  └────┬────┘ └────┬─────┘ └────┬────┘ └────┬─────┘ │    │
@@ -270,7 +345,7 @@ gospa build           # Production build
 | Feature | GoSPA | HTMX | Alpine | SvelteKit |
 |---------|-------|------|--------|-----------|
 | Language | Go | HTML | JS | JS/TS |
-| Runtime Size | <15KB | ~14KB | ~15KB | Varies |
+| Runtime Size | <15KB* | ~14KB | ~15KB | Varies |
 | SSR | ✅ | ✅ | ❌ | ✅ |
 | Type Safety | ✅ | ❌ | ❌ | ✅ |
 | WebSocket | ✅ | ❌ | ❌ | ✅ |
