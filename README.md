@@ -25,6 +25,19 @@ go get github.com/aydenstechdungeon/gospa
 ### 1. Initialize Project
 
 ```bash
+go run github.com/aydenstechdungeon/gospa/cmd/gospa@latest create myapp
+```
+or
+from examples/:
+```bash
+go run ../cmd/gospa create myapp
+```
+from inside a examples project:
+```bash
+go run ../../cmd/gospa create myapp
+```
+
+```bash
 mkdir myapp && cd myapp
 go mod init myapp
 ```
