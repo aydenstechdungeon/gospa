@@ -1,6 +1,8 @@
 // GoSPA Client-side Navigation
 // Enables SPA-style navigation without full page reloads
 
+import { sanitizeHtml } from './dom.ts';
+
 // Navigation state
 const state = {
 	currentPath: window.location.pathname,
@@ -125,12 +127,13 @@ function updateDOM(data: PageData): void {
 	}
 	
 	// Update main content
+	// SECURITY: Sanitize HTML before setting innerHTML to prevent XSS
 	const mainEl = document.querySelector('main');
 	if (mainEl) {
-		mainEl.innerHTML = data.content;
+		mainEl.innerHTML = sanitizeHtml(data.content);
 	} else {
 		// Fallback: replace body content
-		document.body.innerHTML = data.content;
+		document.body.innerHTML = sanitizeHtml(data.content);
 	}
 	
 	// Update head (managed head elements)
@@ -217,7 +220,8 @@ function initNewContent(): void {
 					element.textContent = value;
 					break;
 				case 'html':
-					element.innerHTML = value;
+					// SECURITY: Sanitize HTML before setting innerHTML to prevent XSS
+					element.innerHTML = sanitizeHtml(value);
 					break;
 				case 'value':
 					(element as HTMLInputElement).value = value;

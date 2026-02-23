@@ -35,8 +35,14 @@ func NewSessionStore() *SessionStore {
 }
 
 // CreateSession creates a new session token for a client ID.
+// Returns the session token, or empty string if random generation fails.
 func (s *SessionStore) CreateSession(clientID string) string {
 	token := generateSecureToken()
+	if token == "" {
+		// Random generation failed - this is a critical error
+		// Return empty string to indicate failure
+		return ""
+	}
 	s.mu.Lock()
 	s.sessions[token] = clientID
 	s.mu.Unlock()
@@ -70,9 +76,16 @@ func (s *SessionStore) RemoveClientSessions(clientID string) {
 }
 
 // generateSecureToken generates a cryptographically secure random token.
+// Returns an empty string if random generation fails (which should never happen
+// on modern systems with a properly functioning OS).
 func generateSecureToken() string {
 	b := make([]byte, 32)
-	_, _ = rand.Read(b)
+	if _, err := rand.Read(b); err != nil {
+		// This should never happen on modern systems. If it does, log and return
+		// empty string - callers should handle this case appropriately.
+		log.Printf("CRITICAL: crypto/rand.Read failed: %v", err)
+		return ""
+	}
 	return hex.EncodeToString(b)
 }
 
@@ -130,11 +143,13 @@ type WSClient struct {
 
 // WSMessage represents a WebSocket message.
 type WSMessage struct {
-	Type        string                 `json:"type"`
-	ComponentID string                 `json:"componentId,omitempty"`
-	Action      string                 `json:"action,omitempty"`
-	Data        map[string]interface{} `json:"data,omitempty"`
-	Payload     json.RawMessage        `json:"payload,omitempty"`
+	Type         string                 `json:"type"`
+	ComponentID  string                 `json:"componentId,omitempty"`
+	Action       string                 `json:"action,omitempty"`
+	Data         map[string]interface{} `json:"data,omitempty"`
+	Payload      json.RawMessage        `json:"payload,omitempty"`
+	SessionToken string                 `json:"sessionToken,omitempty"` // SECURITY: Token sent in message, not URL
+	ClientID     string                 `json:"clientId,omitempty"`     // Client ID for session association
 }
 
 // WSStateUpdate represents a state update message.
@@ -373,9 +388,6 @@ func (c *WSClient) SendState() {
 		return
 	}
 
-	// DEBUG: Log initial state being sent to client
-	log.Printf("DEBUG: SendState to client %s: %s", c.ID, string(stateJSON))
-
 	_ = c.SendJSON(map[string]interface{}{
 		"type":  "init",
 		"state": json.RawMessage(stateJSON),
@@ -389,8 +401,6 @@ func (c *WSClient) SendInitWithSession(sessionToken string) {
 		c.SendError("Failed to serialize state")
 		return
 	}
-
-	log.Printf("DEBUG: SendInitWithSession to client %s", c.ID)
 
 	_ = c.SendJSON(map[string]interface{}{
 		"type":         "init",
@@ -451,17 +461,62 @@ func WebSocketHandler(config WebSocketConfig) fiber.Handler {
 		var sessionToken string
 		var restoredState *state.StateMap
 
-		// Check for session token in query params (for reconnection)
-		sessionParam := c.Query("session")
-		if sessionParam != "" {
-			// Validate session and get previous session ID
-			if prevSessionID, ok := globalSessionStore.ValidateSession(sessionParam); ok {
+		// SECURITY: Session token can come from:
+		// 1. First message after connection (preferred - no URL leakage)
+		// 2. URL query param (fallback for legacy clients - less secure)
+		// We'll wait for the first message to check for session token
+
+		// Generate unique connection ID so tabs don't kick each other off
+		connID := "conn_" + generateSecureToken()[:8]
+
+		// Create client with placeholder session (will be updated after auth)
+		client := NewWSClient(connID, c)
+		client.SessionID = "" // Will be set after session validation
+
+		// Register client
+		config.Hub.Register <- client
+
+		// Set up read deadline for initial auth message
+		_ = c.SetReadDeadline(time.Now().Add(10 * time.Second))
+
+		// Wait for first message (should be init with session token)
+		_, firstMsg, err := c.Conn.ReadMessage()
+		if err != nil {
+			log.Printf("Failed to read initial message: %v", err)
+			_ = c.Conn.Close()
+			return
+		}
+
+		var initMsg WSMessage
+		if err := json.Unmarshal(firstMsg, &initMsg); err != nil {
+			client.SendError("Invalid initial message format")
+			_ = c.Conn.Close()
+			return
+		}
+
+		// Handle session authentication
+		if initMsg.Type == "init" && initMsg.SessionToken != "" {
+			// SECURITY: Session token provided in message (preferred method)
+			if prevSessionID, ok := globalSessionStore.ValidateSession(initMsg.SessionToken); ok {
 				// Check if we have saved state for this session
 				if savedState, hasState := globalClientStateStore.Get(prevSessionID); hasState {
 					log.Printf("Restoring session state for %s", prevSessionID)
 					sessionID = prevSessionID
 					restoredState = savedState
-					sessionToken = sessionParam
+					sessionToken = initMsg.SessionToken
+				}
+			}
+		} else {
+			// Fallback: Check for session token in query params (legacy support)
+			sessionParam := c.Query("session")
+			if sessionParam != "" {
+				if prevSessionID, ok := globalSessionStore.ValidateSession(sessionParam); ok {
+					if savedState, hasState := globalClientStateStore.Get(prevSessionID); hasState {
+						log.Printf("Restoring session state for %s", prevSessionID)
+						sessionID = prevSessionID
+						restoredState = savedState
+						sessionToken = sessionParam
+					}
 				}
 			}
 		}
@@ -470,13 +525,14 @@ func WebSocketHandler(config WebSocketConfig) fiber.Handler {
 		if sessionID == "" {
 			sessionID = config.GenerateID()
 			sessionToken = globalSessionStore.CreateSession(sessionID)
+			if sessionToken == "" {
+				client.SendError("Failed to create session")
+				_ = c.Conn.Close()
+				return
+			}
 		}
 
-		// Generate unique connection ID so tabs don't kick each other off
-		connID := "conn_" + generateSecureToken()[:8]
-
-		// Create client
-		client := NewWSClient(connID, c)
+		// Update client with session ID
 		client.SessionID = sessionID
 
 		// Restore previous state if available, passing pointer
@@ -513,8 +569,8 @@ func WebSocketHandler(config WebSocketConfig) fiber.Handler {
 			globalClientStateStore.Save(sessionID, client.State)
 		}
 
-		// Register client
-		config.Hub.Register <- client
+		// Reset read deadline for normal operation
+		_ = c.SetReadDeadline(time.Now().Add(pongWait))
 
 		// Call global connect handlers (for initial state sync)
 		callConnectHandlers(client)
@@ -533,8 +589,10 @@ func WebSocketHandler(config WebSocketConfig) fiber.Handler {
 			onMessage = DefaultMessageHandler
 		}
 
-		// Start read/write pumps
+		// Start write pump
 		go client.WritePump()
+
+		// Continue with normal read pump
 		client.ReadPump(config.Hub, onMessage)
 
 		// Save final state before disconnect

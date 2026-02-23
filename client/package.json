@@ -16,7 +16,10 @@
     "build": "bun build ./src/runtime.ts --outdir ./dist --target browser --minify"
   },
   "devDependencies": {
+    "@types/dompurify": "^3.2.0",
     "typescript": "^5.3.3"
   },
-  "dependencies": {}
+  "dependencies": {
+    "dompurify": "^3.3.1"
+  }
 }

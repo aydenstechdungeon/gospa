@@ -22,6 +22,47 @@ export interface StateMessage {
 	clientId?: string;
 }
 
+// Valid message types for validation
+const VALID_MESSAGE_TYPES: Set<string> = new Set(['init', 'update', 'sync', 'error', 'ping', 'pong', 'action']);
+
+// Validate WebSocket message structure
+function validateMessage(raw: unknown): StateMessage | null {
+	if (!raw || typeof raw !== 'object' || Array.isArray(raw)) {
+		return null;
+	}
+	
+	const msg = raw as Record<string, unknown>;
+	
+	// Required: type field must be a valid message type
+	if (typeof msg.type !== 'string' || !VALID_MESSAGE_TYPES.has(msg.type)) {
+		return null;
+	}
+	
+	// Validate optional fields have correct types
+	const validated: StateMessage = { type: msg.type as MessageType };
+	
+	if (typeof msg.componentId === 'string') validated.componentId = msg.componentId;
+	if (typeof msg.action === 'string') validated.action = msg.action;
+	if (msg.data && typeof msg.data === 'object' && !Array.isArray(msg.data)) {
+		validated.data = msg.data as Record<string, unknown>;
+	}
+	if (msg.payload && typeof msg.payload === 'object' && !Array.isArray(msg.payload)) {
+		validated.payload = msg.payload as Record<string, unknown>;
+	}
+	if (msg.state && typeof msg.state === 'object' && !Array.isArray(msg.state)) {
+		validated.state = msg.state as Record<string, unknown>;
+	}
+	if (msg.diff && typeof msg.diff === 'object' && !Array.isArray(msg.diff)) {
+		validated.diff = msg.diff as Record<string, unknown>;
+	}
+	if (typeof msg.error === 'string') validated.error = msg.error;
+	if (typeof msg.timestamp === 'number') validated.timestamp = msg.timestamp;
+	if (typeof msg.sessionToken === 'string') validated.sessionToken = msg.sessionToken;
+	if (typeof msg.clientId === 'string') validated.clientId = msg.clientId;
+	
+	return validated;
+}
+
 // Session storage key
 const SESSION_STORAGE_KEY = 'gospa_session';
 
@@ -119,15 +160,10 @@ export class WSClient {
 
 			this.connectionState.set('connecting');
 
-			// Build URL with session token if we have one
-			let wsUrl = this.config.url;
-			if (this.sessionData?.token) {
-				const separator = wsUrl.includes('?') ? '&' : '?';
-				wsUrl = `${wsUrl}${separator}session=${encodeURIComponent(this.sessionData.token)}`;
-			}
-
+			// SECURITY: Do NOT pass session token in URL - it leaks in logs/referrers
+			// Instead, send it as the first message after connection opens
 			try {
-				this.ws = new WebSocket(wsUrl);
+				this.ws = new WebSocket(this.config.url);
 			} catch (error) {
 				this.connectionState.set('disconnected');
 				reject(error);
@@ -138,6 +174,17 @@ export class WSClient {
 				this.connectionState.set('connected');
 				this.reconnectAttempts = 0;
 				this.startHeartbeat();
+
+				// SECURITY: Send session token as first message (not in URL)
+				// Server will validate and associate this connection with the session
+				if (this.sessionData?.token) {
+					this.send({
+						type: 'init',
+						sessionToken: this.sessionData.token,
+						clientId: this.sessionData.clientId
+					});
+				}
+
 				this.flushMessageQueue();
 
 				// State HMR: Request fresh state from server on reconnect
@@ -246,7 +293,14 @@ export class WSClient {
 
 	private handleMessage(data: string): void {
 		try {
-			const message = JSON.parse(data) as StateMessage;
+			const raw = JSON.parse(data);
+			
+			// SECURITY: Validate message structure before processing
+			const message = validateMessage(raw);
+			if (!message) {
+				console.warn('[GoSPA] Received invalid WebSocket message, ignoring');
+				return;
+			}
 
 			// Handle pong
 			if (message.type === 'pong') {

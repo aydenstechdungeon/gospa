@@ -158,8 +158,6 @@ export function init(options: RuntimeConfig = {}): void {
 
 // Handle messages from server
 function handleServerMessage(message: StateMessage): void {
-	console.log('[GoSPA DEBUG] handleServerMessage received:', JSON.stringify(message));
-
 	switch (message.type) {
 		case 'init':
 			if (message.componentId && message.data) {
@@ -178,7 +176,6 @@ function handleServerMessage(message: StateMessage): void {
 						const stateKey = scopedKey.substring(dotIndex + 1);
 						const component = components.get(componentId);
 						if (component) {
-							console.log(`[GoSPA DEBUG] Restoring state: component=${componentId}, key=${stateKey}, value=${value}`);
 							component.states.set(stateKey, value);
 						}
 					} else {
@@ -202,7 +199,6 @@ function handleServerMessage(message: StateMessage): void {
 			}
 			break;
 		case 'sync':
-			console.log('[GoSPA DEBUG] sync message - data:', message.data, 'key:', (message as any).key, 'value:', (message as any).value, 'componentId:', (message as any).componentId);
 			// Full state sync
 			if (message.data) {
 				globalState.fromJSON(message.data);
@@ -215,17 +211,13 @@ function handleServerMessage(message: StateMessage): void {
 				if (componentId) {
 					const component = components.get(componentId);
 					if (component) {
-						console.log(`[GoSPA DEBUG] Setting state for component ${componentId}: ${key} = ${value}`);
 						component.states.set(key, value);
 					}
 				} else {
 					// No componentId - update all components that have this key
-					console.log('[GoSPA DEBUG] Processing partial sync. Components count:', components.size);
 					for (const component of components.values()) {
 						const existingRune = component.states.get(key);
-						console.log('[GoSPA DEBUG] Component:', component.id, 'key:', key, 'existingRune:', existingRune ? 'exists' : 'not found');
 						if (existingRune !== undefined) {
-							console.log('[GoSPA DEBUG] Setting state key:', key, 'to value:', value);
 							component.states.set(key, value);
 						}
 					}
@@ -457,6 +449,30 @@ export function bind(
 	});
 }
 
+// Validate parsed state is a valid object
+function validateState(state: unknown): Record<string, unknown> {
+	if (state === null || typeof state !== 'object') {
+		return {};
+	}
+	if (Array.isArray(state)) {
+		return {};
+	}
+	return state as Record<string, unknown>;
+}
+
+// Safely parse JSON with validation
+function safeParseJson(json: string): Record<string, unknown> | null {
+	try {
+		const parsed = JSON.parse(json);
+		return validateState(parsed);
+	} catch {
+		if (config.debug) {
+			console.warn('[GoSPA] Failed to parse state JSON');
+		}
+		return null;
+	}
+}
+
 // Auto-initialize from DOM
 export function autoInit(): void {
 	// Find all components with data-gospa-component attribute
@@ -469,7 +485,7 @@ export function autoInit(): void {
 
 		if (!id) continue;
 
-		const state = stateJson ? JSON.parse(stateJson) : {};
+		const state = stateJson ? safeParseJson(stateJson) ?? {} : {};
 
 		const hydrate = element.getAttribute('data-gospa-hydrate') || (config.hydration?.mode) || 'immediate';
 
@@ -501,23 +517,12 @@ export function autoInit(): void {
 
 // Set up reactive bindings from DOM attributes
 function setupBindings(root: Element | Document = document): void {
-	// DEBUG: Log all data-gospa-component elements found
-	const debugEnabled = typeof config.debug === 'object' ? config.debug.enabled : config.debug;
-	if (debugEnabled) {
-		const allComponents = root.querySelectorAll('[data-gospa-component]');
-		console.log('[GoSPA DEBUG] Found components with data-gospa-component:', allComponents.length);
-		allComponents.forEach((el, i) => {
-			console.log(`[GoSPA DEBUG] Component ${i}:`, el.getAttribute('data-gospa-component'), el);
-		});
-	}
-
 	// Find all elements with data-bind attribute
 	const boundElements = root.querySelectorAll('[data-bind]');
 
 	for (const element of boundElements) {
 		const closestComponent = element.closest('[data-gospa-component]');
 		const componentId = closestComponent?.getAttribute('data-gospa-component') || '';
-		console.log('[GoSPA DEBUG] setupBindings - element:', element, 'closest component:', closestComponent, 'componentId:', componentId);
 
 		const bindingSpec = element.getAttribute('data-bind');
 		const transformName = element.getAttribute('data-transform');

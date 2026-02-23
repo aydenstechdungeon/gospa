@@ -3,6 +3,7 @@ package fiber
 import (
 	"encoding/json"
 	"fmt"
+	"html"
 	"runtime/debug"
 
 	"github.com/aydenstechdungeon/gospa/state"
@@ -160,17 +161,33 @@ func ErrorHandler(config ErrorHandlerConfig) fiber.ErrorHandler {
 	}
 }
 
+// escapeJS escapes a string for safe inclusion in JavaScript string literals.
+func escapeJS(s string) string {
+	s = html.EscapeString(s)
+	// Additional escaping for JavaScript string context
+	s = fmt.Sprintf("%q", s)
+	// Remove surrounding quotes since we're embedding in a JS string literal
+	if len(s) >= 2 {
+		return s[1 : len(s)-1]
+	}
+	return s
+}
+
 // renderErrorPage renders an error page.
 func renderErrorPage(c *fiber.Ctx, appErr *AppError, stateData map[string]interface{}, devMode bool) error {
 	c.Set("Content-Type", "text/html; charset=utf-8")
 
+	// Escape all user-controlled values to prevent XSS
+	escapedCode := html.EscapeString(string(appErr.Code))
+	escapedMessage := html.EscapeString(appErr.Message)
+
 	// Build error page HTML
-	html := `<!DOCTYPE html>
+	htmlContent := `<!DOCTYPE html>
 <html lang="en">
 <head>
 	<meta charset="UTF-8">
 	<meta name="viewport" content="width=device-width, initial-scale=1.0">
-	<title>Error - ` + string(appErr.Code) + `</title>
+	<title>Error - ` + escapedCode + `</title>
 	<style>
 		* { margin: 0; padding: 0; box-sizing: border-box; }
 		body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; background: #1a1a2e; color: #eee; min-height: 100vh; display: flex; align-items: center; justify-content: center; }
@@ -191,53 +208,56 @@ func renderErrorPage(c *fiber.Ctx, appErr *AppError, stateData map[string]interf
 </head>
 <body>
 	<div class="container">
-		<div class="error-code">` + string(appErr.Code) + `</div>
-		<div class="error-message">` + appErr.Message + `</div>`
+		<div class="error-code">` + escapedCode + `</div>
+		<div class="error-message">` + escapedMessage + `</div>`
 
 	// Add details if present
 	if len(appErr.Details) > 0 {
 		detailsJSON, _ := json.MarshalIndent(appErr.Details, "", "  ")
-		html += `
+		htmlContent += `
 		<div class="error-details">
-			<pre>` + string(detailsJSON) + `</pre>
+			<pre>` + html.EscapeString(string(detailsJSON)) + `</pre>
 		</div>`
 	}
 
 	// Add actions
-	html += `
+	htmlContent += `
 		<div class="actions">
 			<a href="/" class="btn btn-primary">Go Home</a>
 			<a href="javascript:history.back()" class="btn btn-secondary">Go Back</a>
 		</div>`
 
-	// Add stack trace in dev mode
+	// Add stack trace in dev mode (escaped to prevent XSS)
 	if devMode && appErr.Stack != "" {
-		html += `
+		htmlContent += `
 		<div class="stack">
-			<pre>` + appErr.Stack + `</pre>
+			<pre>` + html.EscapeString(appErr.Stack) + `</pre>
 		</div>`
 	}
 
-	// Add state recovery script
+	// Add state recovery script with proper escaping
 	if stateData != nil {
 		stateJSON, _ := json.Marshal(stateData)
-		html += `
+		// Escape JS string values for safe embedding
+		escapedCodeJS := escapeJS(string(appErr.Code))
+		escapedMessageJS := escapeJS(appErr.Message)
+		htmlContent += `
 		<script>
 			window.__GOSPA_STATE__ = ` + string(stateJSON) + `;
 			window.__GOSPA_ERROR__ = {
-				code: "` + string(appErr.Code) + `",
-				message: "` + appErr.Message + `",
+				code: "` + escapedCodeJS + `",
+				message: "` + escapedMessageJS + `",
 				recover: ` + fmt.Sprintf("%v", appErr.Recover) + `
 			};
 		</script>`
 	}
 
-	html += `
+	htmlContent += `
 	</div>
 </body>
 </html>`
 
-	return c.Status(appErr.StatusCode).SendString(html)
+	return c.Status(appErr.StatusCode).SendString(htmlContent)
 }
 
 // NotFoundHandler creates a 404 handler.

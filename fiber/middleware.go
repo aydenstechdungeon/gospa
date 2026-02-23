@@ -1,10 +1,10 @@
 package fiber
 
 import (
+	"crypto/rand"
 	"encoding/json"
-	"math/rand"
+	"fmt"
 	"strings"
-	"time"
 
 	"github.com/a-h/templ"
 	"github.com/aydenstechdungeon/gospa/embed"
@@ -318,13 +318,21 @@ func generateComponentID() string {
 	return "gospa_" + randomString(8)
 }
 
-// randomString generates a random string of given length.
+// randomString generates a cryptographically secure random string of given length.
 func randomString(length int) string {
 	const charset = "abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789"
-	r := rand.New(rand.NewSource(time.Now().UnixNano()))
 	b := make([]byte, length)
+	randomBytes := make([]byte, length)
+
+	// Use crypto/rand for cryptographically secure random generation
+	if _, err := rand.Read(randomBytes); err != nil {
+		// This should never happen with crypto/rand on modern systems
+		// If it does, we panic as this is a critical security function
+		panic(fmt.Sprintf("failed to generate secure random: %v", err))
+	}
+
 	for i := range b {
-		b[i] = charset[r.Intn(len(charset))]
+		b[i] = charset[int(randomBytes[i])%len(charset)]
 	}
 	return string(b)
 }
