@@ -8,6 +8,7 @@ import (
 	"os/signal"
 	"path/filepath"
 	"strings"
+	"sync"
 	"syscall"
 	"time"
 
@@ -34,48 +35,16 @@ func Dev() {
 	_ = regenerateTempl()
 	runGenerate()
 
-	// Create context for graceful shutdown
-	ctx, cancel := context.WithCancel(context.Background())
-	defer cancel()
-
-	// Set up signal handling
-	sigChan := make(chan os.Signal, 1)
-	signal.Notify(sigChan, os.Interrupt, syscall.SIGTERM)
-
-	// Start file watcher
-	watcher := NewDevWatcher("./routes", "./components")
-	if err := watcher.Start(); err != nil {
-		fmt.Fprintf(os.Stderr, "Error starting watcher: %v\n", err)
+	// Use startDevWithConfig which handles restart logic properly
+	err := startDevWithConfig(&DevConfig{
+		Port:          3000,
+		Host:          "localhost",
+		RoutesDir:     "./routes",
+		ComponentsDir: "./components",
+	})
+	if err != nil {
+		fmt.Fprintf(os.Stderr, "Error: %v\n", err)
 		os.Exit(1)
-	}
-	defer watcher.Stop()
-
-	// Start the server
-	serverCmd := startServer(ctx)
-
-	// Handle file changes
-	go func() {
-		for {
-			select {
-			case <-ctx.Done():
-				return
-			case event := <-watcher.Events:
-				fmt.Printf("\nFile changed: %s\n", event.File)
-				handleFileChange(event, serverCmd, ctx)
-			case err := <-watcher.Errors:
-				fmt.Fprintf(os.Stderr, "Watcher error: %v\n", err)
-			}
-		}
-	}()
-
-	// Wait for interrupt
-	<-sigChan
-	fmt.Println("\nShutting down...")
-
-	// Stop the server
-	if serverCmd != nil && serverCmd.Process != nil {
-		_ = serverCmd.Process.Signal(os.Interrupt)
-		_ = serverCmd.Wait()
 	}
 }
 
@@ -111,8 +80,38 @@ func startDevWithConfig(config *DevConfig) error {
 	}
 	defer watcher.Stop()
 
-	// Start the server
-	serverCmd := startServerWithConfig(ctx, config)
+	// Start the server manager goroutine
+	restartCh := make(chan struct{}, 1)
+
+	// Create context for running the server process
+	serverCtx, cancelServer := context.WithCancel(ctx)
+	defer cancelServer()
+
+	// Initial start signal
+	restartCh <- struct{}{}
+
+	var cmdMu sync.Mutex
+	var currentCmd *exec.Cmd
+
+	go func() {
+		for {
+			select {
+			case <-ctx.Done():
+				return
+			case <-restartCh:
+				// Stop existing server if any
+				cmdMu.Lock()
+				if currentCmd != nil && currentCmd.Process != nil {
+					_ = currentCmd.Process.Signal(os.Interrupt)
+					_ = currentCmd.Wait()
+				}
+
+				// Start new server
+				currentCmd = startServerProcess(serverCtx, config)
+				cmdMu.Unlock()
+			}
+		}
+	}()
 
 	// Handle file changes
 	go func() {
@@ -121,7 +120,7 @@ func startDevWithConfig(config *DevConfig) error {
 			case <-ctx.Done():
 				return
 			case event := <-watcher.Events:
-				handleFileChange(event, serverCmd, ctx)
+				handleFileChange(event, restartCh, ctx)
 			case err := <-watcher.Errors:
 				fmt.Fprintf(os.Stderr, "Watcher error: %v\n", err)
 			}
@@ -132,12 +131,32 @@ func startDevWithConfig(config *DevConfig) error {
 	<-sigChan
 
 	// Stop the server
-	if serverCmd != nil && serverCmd.Process != nil {
-		_ = serverCmd.Process.Signal(os.Interrupt)
-		_ = serverCmd.Wait()
+	cmdMu.Lock()
+	if currentCmd != nil && currentCmd.Process != nil {
+		_ = currentCmd.Process.Signal(os.Interrupt)
+		_ = currentCmd.Wait()
 	}
+	cmdMu.Unlock()
 
 	return nil
+}
+
+func startServerProcess(ctx context.Context, config *DevConfig) *exec.Cmd {
+	// Build and run the server
+	args := []string{"run", "."}
+	cmd := exec.CommandContext(ctx, "go", args...)
+	cmd.Stdout = os.Stdout
+	cmd.Stderr = os.Stderr
+	cmd.Env = append(os.Environ(), "GOSPA_DEV=1")
+
+	if err := cmd.Start(); err != nil {
+		fmt.Fprintf(os.Stderr, "Error starting server: %v\n", err)
+		return nil
+	}
+
+	fmt.Printf("Server running at http://%s:%d\n", config.Host, config.Port)
+
+	return cmd
 }
 
 // FileEvent represents a file change event.
@@ -313,7 +332,7 @@ func startServerWithConfig(ctx context.Context, config *DevConfig) *exec.Cmd {
 	return cmd
 }
 
-func handleFileChange(event FileEvent, serverCmd *exec.Cmd, ctx context.Context) {
+func handleFileChange(event FileEvent, restartCh chan struct{}, ctx context.Context) {
 	ext := filepath.Ext(event.File)
 
 	switch ext {
@@ -326,18 +345,18 @@ func handleFileChange(event FileEvent, serverCmd *exec.Cmd, ctx context.Context)
 		fmt.Println("✓ Templates regenerated")
 
 		// Restart server
-		if serverCmd != nil && serverCmd.Process != nil {
-			_ = serverCmd.Process.Signal(os.Interrupt)
-			_ = serverCmd.Wait()
+		select {
+		case restartCh <- struct{}{}:
+		default:
 		}
 
 	case ".go":
 		fmt.Println("Go file changed, restarting server...")
 
 		// Restart server
-		if serverCmd != nil && serverCmd.Process != nil {
-			_ = serverCmd.Process.Signal(os.Interrupt)
-			_ = serverCmd.Wait()
+		select {
+		case restartCh <- struct{}{}:
+		default:
 		}
 
 	case ".css", ".js":

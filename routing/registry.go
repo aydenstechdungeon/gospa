@@ -14,12 +14,26 @@ type ComponentFunc func(props map[string]interface{}) templ.Component
 // LayoutFunc is a function that returns a templ.Component for layouts.
 type LayoutFunc func(children templ.Component, props map[string]interface{}) templ.Component
 
+// RenderStrategy defines how a page is rendered.
+type RenderStrategy string
+
+const (
+	StrategySSR RenderStrategy = "ssr"
+	StrategySSG RenderStrategy = "ssg"
+)
+
+// RouteOptions holds page-level options like rendering strategy.
+type RouteOptions struct {
+	Strategy RenderStrategy
+}
+
 // Registry holds registered page and layout components.
 type Registry struct {
-	mu         sync.RWMutex
-	pages      map[string]ComponentFunc
-	layouts    map[string]LayoutFunc
-	rootLayout LayoutFunc
+	mu          sync.RWMutex
+	pages       map[string]ComponentFunc
+	pageOptions map[string]RouteOptions
+	layouts     map[string]LayoutFunc
+	rootLayout  LayoutFunc
 }
 
 // globalRegistry is the default global registry.
@@ -28,17 +42,34 @@ var globalRegistry = NewRegistry()
 // NewRegistry creates a new component registry.
 func NewRegistry() *Registry {
 	return &Registry{
-		pages:   make(map[string]ComponentFunc),
-		layouts: make(map[string]LayoutFunc),
+		pages:       make(map[string]ComponentFunc),
+		pageOptions: make(map[string]RouteOptions),
+		layouts:     make(map[string]LayoutFunc),
 	}
 }
 
-// RegisterPage registers a page component for a route path.
+// RegisterPage registers a page component for a route path (default to SSR).
 func (r *Registry) RegisterPage(path string, fn ComponentFunc) {
+	r.RegisterPageWithOptions(path, fn, RouteOptions{Strategy: StrategySSR})
+}
+
+// RegisterPageWithOptions registers a page component with specific options.
+func (r *Registry) RegisterPageWithOptions(path string, fn ComponentFunc, opts RouteOptions) {
 	fmt.Printf("Registering page: %s\n", path)
 	r.mu.Lock()
 	defer r.mu.Unlock()
 	r.pages[path] = fn
+	r.pageOptions[path] = opts
+}
+
+// GetRouteOptions returns the route options for a path.
+func (r *Registry) GetRouteOptions(path string) RouteOptions {
+	r.mu.RLock()
+	defer r.mu.RUnlock()
+	if opts, ok := r.pageOptions[path]; ok {
+		return opts
+	}
+	return RouteOptions{Strategy: StrategySSR}
 }
 
 // RegisterLayout registers a layout component for a route path.
@@ -94,9 +125,19 @@ func (r *Registry) HasLayout(path string) bool {
 
 // Global registry functions
 
-// RegisterPage registers a page component in the global registry.
+// RegisterPage registers a page component in the global registry (default SSR).
 func RegisterPage(path string, fn ComponentFunc) {
 	globalRegistry.RegisterPage(path, fn)
+}
+
+// RegisterPageWithOptions registers a page in the global registry with options.
+func RegisterPageWithOptions(path string, fn ComponentFunc, opts RouteOptions) {
+	globalRegistry.RegisterPageWithOptions(path, fn, opts)
+}
+
+// GetRouteOptions returns route options from the global registry.
+func GetRouteOptions(path string) RouteOptions {
+	return globalRegistry.GetRouteOptions(path)
 }
 
 // RegisterLayout registers a layout component in the global registry.

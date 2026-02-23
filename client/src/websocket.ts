@@ -18,6 +18,17 @@ export interface StateMessage {
 	diff?: Record<string, unknown>;
 	error?: string;
 	timestamp?: number;
+	sessionToken?: string;
+	clientId?: string;
+}
+
+// Session storage key
+const SESSION_STORAGE_KEY = 'gospa_session';
+
+// Session data stored in localStorage
+interface SessionData {
+	token: string;
+	clientId: string;
 }
 
 // WebSocket configuration
@@ -33,6 +44,35 @@ export interface WebSocketConfig {
 	onMessage?: (message: StateMessage) => void;
 }
 
+// Helper functions for session persistence
+function loadSession(): SessionData | null {
+	try {
+		const stored = localStorage.getItem(SESSION_STORAGE_KEY);
+		if (stored) {
+			return JSON.parse(stored) as SessionData;
+		}
+	} catch (e) {
+		console.warn('[GoSPA] Failed to load session:', e);
+	}
+	return null;
+}
+
+function saveSession(data: SessionData): void {
+	try {
+		localStorage.setItem(SESSION_STORAGE_KEY, JSON.stringify(data));
+	} catch (e) {
+		console.warn('[GoSPA] Failed to save session:', e);
+	}
+}
+
+function clearSession(): void {
+	try {
+		localStorage.removeItem(SESSION_STORAGE_KEY);
+	} catch (e) {
+		console.warn('[GoSPA] Failed to clear session:', e);
+	}
+}
+
 // WebSocket client
 export class WSClient {
 	private ws: WebSocket | null = null;
@@ -43,6 +83,7 @@ export class WSClient {
 	private connectionState: Rune<ConnectionState>;
 	private pendingRequests = new Map<string, { resolve: (value: unknown) => void; reject: (error: Error) => void }>();
 	private requestId = 0;
+	private sessionData: SessionData | null = null;
 
 	constructor(config: WebSocketConfig) {
 		this.config = {
@@ -57,6 +98,8 @@ export class WSClient {
 			...config
 		};
 		this.connectionState = new Rune<ConnectionState>('disconnected');
+		// Load existing session on construction
+		this.sessionData = loadSession();
 	}
 
 	get state(): ConnectionState {
@@ -76,8 +119,15 @@ export class WSClient {
 
 			this.connectionState.set('connecting');
 
+			// Build URL with session token if we have one
+			let wsUrl = this.config.url;
+			if (this.sessionData?.token) {
+				const separator = wsUrl.includes('?') ? '&' : '?';
+				wsUrl = `${wsUrl}${separator}session=${encodeURIComponent(this.sessionData.token)}`;
+			}
+
 			try {
-				this.ws = new WebSocket(this.config.url);
+				this.ws = new WebSocket(wsUrl);
 			} catch (error) {
 				this.connectionState.set('disconnected');
 				reject(error);
@@ -201,6 +251,12 @@ export class WSClient {
 			// Handle pong
 			if (message.type === 'pong') {
 				return;
+			}
+
+			// Save session data when server sends it (init message with session token)
+			if (message.type === 'init' && message.sessionToken && message.clientId) {
+				this.sessionData = { token: message.sessionToken, clientId: message.clientId };
+				saveSession(this.sessionData);
 			}
 
 			// Handle response to pending request

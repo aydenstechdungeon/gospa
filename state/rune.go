@@ -22,16 +22,28 @@ type Observable interface {
 	GetAny() any
 }
 
+// Settable extends Observable for types that can be updated.
+type Settable interface {
+	Observable
+	SetAny(any) error
+}
+
+type subEntry[T any] struct {
+	id uint64
+	fn Subscriber[T]
+}
+
 // Rune is the base reactive primitive, similar to Svelte's $state rune.
 // It holds a value of type T and notifies all subscribers when the value changes.
 type Rune[T any] struct {
 	mu          sync.RWMutex
 	value       T
-	subscribers []Subscriber[T]
+	subscribers []subEntry[T]
 	// ID uniquely identifies this rune for client-side synchronization
 	id string
 	// dirty marks if the rune has uncommitted changes in batch mode
-	dirty bool
+	dirty     bool
+	nextSubID uint64
 }
 
 // runeIDCounter is used to generate unique IDs for runes
@@ -56,8 +68,9 @@ func generateRuneID() string {
 func NewRune[T any](initial T) *Rune[T] {
 	return &Rune[T]{
 		value:       initial,
-		subscribers: make([]Subscriber[T], 0),
+		subscribers: make([]subEntry[T], 0),
 		id:          generateRuneID(),
+		nextSubID:   1,
 	}
 }
 
@@ -96,13 +109,33 @@ func (r *Rune[T]) Set(value T) {
 	}
 
 	// Copy subscribers to avoid holding lock during callbacks
-	subs := make([]Subscriber[T], len(r.subscribers))
+	subs := make([]subEntry[T], len(r.subscribers))
 	copy(subs, r.subscribers)
 	r.dirty = false
 	r.mu.Unlock()
 
 	// Notify subscribers outside the lock
 	r.notify(subs, value)
+}
+
+// SetAny updates the rune's value from an interface{}.
+// This implements the Settable interface.
+func (r *Rune[T]) SetAny(value any) error {
+	var newValue T
+	if v, ok := value.(T); ok {
+		newValue = v
+	} else {
+		// Try JSON fallback for converting types (e.g., float64 to int)
+		data, err := json.Marshal(value)
+		if err != nil {
+			return err
+		}
+		if err := json.Unmarshal(data, &newValue); err != nil {
+			return err
+		}
+	}
+	r.Set(newValue)
+	return nil
 }
 
 // Subscribe registers a callback that will be called whenever the value changes.
@@ -118,16 +151,17 @@ func (r *Rune[T]) Subscribe(fn Subscriber[T]) Unsubscribe {
 	r.mu.Lock()
 	defer r.mu.Unlock()
 
-	r.subscribers = append(r.subscribers, fn)
+	id := r.nextSubID
+	r.nextSubID++
+
+	r.subscribers = append(r.subscribers, subEntry[T]{id: id, fn: fn})
 
 	// Return unsubscribe function
 	return func() {
 		r.mu.Lock()
 		defer r.mu.Unlock()
 		for i, sub := range r.subscribers {
-			// Using reflect to check function pointer equality
-			// because we cannot compare functions directly in Go
-			if reflect.ValueOf(sub).Pointer() == reflect.ValueOf(fn).Pointer() {
+			if sub.id == id {
 				r.subscribers = append(r.subscribers[:i], r.subscribers[i+1:]...)
 				break
 			}
@@ -145,9 +179,9 @@ func (r *Rune[T]) SubscribeAny(fn func(any)) Unsubscribe {
 
 // notify calls all subscribers with the new value.
 // This is called outside the lock to prevent deadlocks.
-func (r *Rune[T]) notify(subs []Subscriber[T], value T) {
+func (r *Rune[T]) notify(subs []subEntry[T], value T) {
 	for _, sub := range subs {
-		sub(value)
+		sub.fn(value)
 	}
 }
 
@@ -159,7 +193,7 @@ func (r *Rune[T]) notifySubscribers() {
 		return
 	}
 	value := r.value
-	subs := make([]Subscriber[T], len(r.subscribers))
+	subs := make([]subEntry[T], len(r.subscribers))
 	copy(subs, r.subscribers)
 	r.dirty = false
 	r.mu.Unlock()
@@ -206,7 +240,7 @@ func (r *Rune[T]) Update(fn func(T) T) {
 		return
 	}
 
-	subs := make([]Subscriber[T], len(r.subscribers))
+	subs := make([]subEntry[T], len(r.subscribers))
 	copy(subs, r.subscribers)
 	r.dirty = false
 	r.mu.Unlock()

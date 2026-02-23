@@ -5,11 +5,20 @@ import (
 	"encoding/hex"
 	"encoding/json"
 	"log"
+	"strings"
 	"sync"
+	"time"
 
 	"github.com/aydenstechdungeon/gospa/state"
 	"github.com/gofiber/fiber/v2"
 	"github.com/gofiber/websocket/v2"
+)
+
+const (
+	// Time allowed to keep an idle connection alive.
+	pongWait = 60 * time.Second
+	// Send pings to peer with this period.
+	pingPeriod = (pongWait * 9) / 10
 )
 
 // SessionStore maps session tokens to client IDs for secure HTTP state sync.
@@ -70,14 +79,53 @@ func generateSecureToken() string {
 // Global session store for HTTP state sync.
 var globalSessionStore = NewSessionStore()
 
+// ClientStateStore persists client state by client ID for session restoration.
+type ClientStateStore struct {
+	states map[string]*state.StateMap
+	mu     sync.RWMutex
+}
+
+// NewClientStateStore creates a new client state store.
+func NewClientStateStore() *ClientStateStore {
+	return &ClientStateStore{
+		states: make(map[string]*state.StateMap),
+	}
+}
+
+// Save saves a client's state.
+func (s *ClientStateStore) Save(clientID string, sm *state.StateMap) {
+	s.mu.Lock()
+	s.states[clientID] = sm
+	s.mu.Unlock()
+}
+
+// Get retrieves a client's state.
+func (s *ClientStateStore) Get(clientID string) (*state.StateMap, bool) {
+	s.mu.RLock()
+	defer s.mu.RUnlock()
+	sm, ok := s.states[clientID]
+	return sm, ok
+}
+
+// Remove removes a client's state.
+func (s *ClientStateStore) Remove(clientID string) {
+	s.mu.Lock()
+	delete(s.states, clientID)
+	s.mu.Unlock()
+}
+
+// Global client state store for session persistence.
+var globalClientStateStore = NewClientStateStore()
+
 // WSClient represents a connected WebSocket client.
 type WSClient struct {
-	ID     string
-	Conn   *websocket.Conn
-	Send   chan []byte
-	State  *state.StateMap
-	mu     sync.Mutex
-	closed bool
+	ID        string
+	SessionID string
+	Conn      *websocket.Conn
+	Send      chan []byte
+	State     *state.StateMap
+	mu        sync.Mutex
+	closed    bool
 }
 
 // WSMessage represents a WebSocket message.
@@ -120,16 +168,19 @@ func (h *WSHub) Run() {
 		select {
 		case client := <-h.Register:
 			h.mu.Lock()
+			if oldClient, ok := h.Clients[client.ID]; ok {
+				_ = oldClient.Conn.Close()
+			}
 			h.Clients[client.ID] = client
 			h.mu.Unlock()
 			log.Printf("Client connected: %s", client.ID)
 
 		case client := <-h.Unregister:
 			h.mu.Lock()
-			if _, ok := h.Clients[client.ID]; ok {
+			if existing, ok := h.Clients[client.ID]; ok && existing == client {
 				delete(h.Clients, client.ID)
-				close(client.Send)
 			}
+			close(client.Send)
 			h.mu.Unlock()
 			log.Printf("Client disconnected: %s", client.ID)
 
@@ -213,16 +264,6 @@ func NewWSClient(id string, conn *websocket.Conn) *WSClient {
 		State:  state.NewStateMap(),
 		closed: false,
 	}
-
-	// Setup differential sync
-	client.State.OnChange = func(key string, value any) {
-		_ = client.SendJSON(map[string]interface{}{
-			"type":  "sync",
-			"key":   key,
-			"value": value,
-		})
-	}
-
 	return client
 }
 
@@ -232,6 +273,12 @@ func (c *WSClient) ReadPump(hub *WSHub, onMessage func(*WSClient, WSMessage)) {
 		hub.Unregister <- c
 		_ = c.Conn.Close()
 	}()
+
+	_ = c.Conn.SetReadDeadline(time.Now().Add(pongWait))
+	c.Conn.SetPongHandler(func(string) error {
+		_ = c.Conn.SetReadDeadline(time.Now().Add(pongWait))
+		return nil
+	})
 
 	for {
 		_, message, err := c.Conn.ReadMessage()
@@ -251,21 +298,38 @@ func (c *WSClient) ReadPump(hub *WSHub, onMessage func(*WSClient, WSMessage)) {
 
 // WritePump pumps messages from the hub to the WebSocket connection.
 func (c *WSClient) WritePump() {
+	ticker := time.NewTicker(pingPeriod)
 	defer func() {
+		ticker.Stop()
 		_ = c.Conn.Close()
 	}()
 
-	for message := range c.Send {
-		c.mu.Lock()
-		if c.closed {
+	for {
+		select {
+		case message, ok := <-c.Send:
+			c.mu.Lock()
+			if c.closed || !ok {
+				c.mu.Unlock()
+				return
+			}
+			err := c.Conn.WriteMessage(websocket.TextMessage, message)
 			c.mu.Unlock()
-			return
-		}
-		err := c.Conn.WriteMessage(websocket.TextMessage, message)
-		c.mu.Unlock()
 
-		if err != nil {
-			break
+			if err != nil {
+				return
+			}
+		case <-ticker.C:
+			c.mu.Lock()
+			if c.closed {
+				c.mu.Unlock()
+				return
+			}
+			err := c.Conn.WriteMessage(websocket.PingMessage, nil)
+			c.mu.Unlock()
+
+			if err != nil {
+				return
+			}
 		}
 	}
 }
@@ -332,7 +396,7 @@ func (c *WSClient) SendInitWithSession(sessionToken string) {
 		"type":         "init",
 		"state":        json.RawMessage(stateJSON),
 		"sessionToken": sessionToken,
-		"clientId":     c.ID,
+		"clientId":     c.SessionID,
 	})
 }
 
@@ -383,14 +447,71 @@ func WebSocketHandler(config WebSocketConfig) fiber.Handler {
 	go config.Hub.Run()
 
 	return websocket.New(func(c *websocket.Conn) {
-		// Generate client ID server-side (never trust client-provided IDs)
-		clientID := config.GenerateID()
+		var sessionID string
+		var sessionToken string
+		var restoredState *state.StateMap
 
-		// Create session token for HTTP state sync
-		sessionToken := globalSessionStore.CreateSession(clientID)
+		// Check for session token in query params (for reconnection)
+		sessionParam := c.Query("session")
+		if sessionParam != "" {
+			// Validate session and get previous session ID
+			if prevSessionID, ok := globalSessionStore.ValidateSession(sessionParam); ok {
+				// Check if we have saved state for this session
+				if savedState, hasState := globalClientStateStore.Get(prevSessionID); hasState {
+					log.Printf("Restoring session state for %s", prevSessionID)
+					sessionID = prevSessionID
+					restoredState = savedState
+					sessionToken = sessionParam
+				}
+			}
+		}
+
+		// If no valid session, generate new session ID
+		if sessionID == "" {
+			sessionID = config.GenerateID()
+			sessionToken = globalSessionStore.CreateSession(sessionID)
+		}
+
+		// Generate unique connection ID so tabs don't kick each other off
+		connID := "conn_" + generateSecureToken()[:8]
 
 		// Create client
-		client := NewWSClient(clientID, c)
+		client := NewWSClient(connID, c)
+		client.SessionID = sessionID
+
+		// Restore previous state if available, passing pointer
+		if restoredState != nil {
+			client.State = restoredState
+		} else {
+			// Setup differential sync for the first time for this state
+			client.State.OnChange = func(key string, value any) {
+				// Save state to persistent store safely
+				globalClientStateStore.Save(sessionID, client.State)
+
+				// Parse componentId and local key for Svelte updates
+				componentID := ""
+				localKey := key
+				if dotIdx := strings.Index(key, "."); dotIdx > 0 {
+					componentID = key[:dotIdx]
+					localKey = key[dotIdx+1:]
+				}
+
+				// Broadcast state change to all clients sharing this session ID
+				config.Hub.mu.RLock()
+				for _, hubClient := range config.Hub.Clients {
+					if hubClient.SessionID == sessionID {
+						_ = hubClient.SendJSON(map[string]interface{}{
+							"type":        "sync",
+							"componentId": componentID,
+							"key":         localKey,
+							"value":       value,
+						})
+					}
+				}
+				config.Hub.mu.RUnlock()
+			}
+			globalClientStateStore.Save(sessionID, client.State)
+		}
 
 		// Register client
 		config.Hub.Register <- client
@@ -416,8 +537,12 @@ func WebSocketHandler(config WebSocketConfig) fiber.Handler {
 		go client.WritePump()
 		client.ReadPump(config.Hub, onMessage)
 
-		// Clean up session on disconnect
-		globalSessionStore.RemoveClientSessions(clientID)
+		// Save final state before disconnect
+		globalClientStateStore.Save(sessionID, client.State)
+
+		// Note: We don't remove the session on disconnect so the client can reconnect
+		// Sessions will be cleaned up by the session store when they expire (if TTL is implemented)
+		// globalSessionStore.RemoveClientSessions(clientID)
 
 		// Call onDisconnect hook
 		if config.OnDisconnect != nil {
@@ -464,16 +589,29 @@ func DefaultMessageHandler(client *WSClient, msg WSMessage) {
 			return
 		}
 
+		// Create component-scoped key (e.g., "counter.count")
+		stateKey := update.Key
+		if msg.ComponentID != "" {
+			stateKey = msg.ComponentID + "." + update.Key
+		}
+
 		// Update state
-		r := state.NewRune(update.Value)
-		client.State.Add(update.Key, r)
+		if obs, ok := client.State.Get(stateKey); ok {
+			if settable, isSettable := obs.(state.Settable); isSettable {
+				_ = settable.SetAny(update.Value)
+			}
+		} else {
+			r := state.NewRune(update.Value)
+			client.State.Add(stateKey, r)
+		}
 
 		// Send success to requesting client
 		sendResponse(map[string]interface{}{
-			"type":    "sync",
-			"key":     update.Key,
-			"value":   update.Value,
-			"success": true,
+			"type":        "sync",
+			"componentId": msg.ComponentID,
+			"key":         update.Key,
+			"value":       update.Value,
+			"success":     true,
 		})
 
 	case "sync":
@@ -577,23 +715,30 @@ func WebSocketUpgradeMiddleware() fiber.Handler {
 // StateSyncHandler creates a handler for state synchronization.
 func StateSyncHandler(hub *WSHub) fiber.Handler {
 	return func(c *fiber.Ctx) error {
-		// Get client ID from query or header
-		clientID := c.Query("client_id")
-		if clientID == "" {
-			clientID = c.Get("X-Client-ID")
+		// Get session token from header or query
+		sessionToken := c.Query("session")
+		if sessionToken == "" {
+			sessionToken = c.Get("X-Session-Token")
 		}
 
-		if clientID == "" {
-			return c.Status(fiber.StatusBadRequest).JSON(fiber.Map{
-				"error": "Client ID required",
+		if sessionToken == "" {
+			return c.Status(fiber.StatusUnauthorized).JSON(fiber.Map{
+				"error": "Session token required",
 			})
 		}
 
-		// Get client
-		client, ok := hub.GetClient(clientID)
+		sessionID, ok := globalSessionStore.ValidateSession(sessionToken)
+		if !ok {
+			return c.Status(fiber.StatusUnauthorized).JSON(fiber.Map{
+				"error": "Invalid session",
+			})
+		}
+
+		// Get shared state map
+		stateMap, ok := globalClientStateStore.Get(sessionID)
 		if !ok {
 			return c.Status(fiber.StatusNotFound).JSON(fiber.Map{
-				"error": "Client not found",
+				"error": "Session state not found",
 			})
 		}
 
@@ -605,12 +750,15 @@ func StateSyncHandler(hub *WSHub) fiber.Handler {
 			})
 		}
 
-		// Update state
-		r := state.NewRune(update.Value)
-		client.State.Add(update.Key, r)
-
-		// Broadcast to other clients
-		hub.BroadcastExcept(clientID, []byte(`{"type":"sync","key":"`+update.Key+`"}`))
+		// Update state - this triggers the shared OnChange safely, broadcasting to all tabs
+		if obs, ok := stateMap.Get(update.Key); ok {
+			if settable, isSettable := obs.(state.Settable); isSettable {
+				_ = settable.SetAny(update.Value)
+			}
+		} else {
+			r := state.NewRune(update.Value)
+			stateMap.Add(update.Key, r)
+		}
 
 		return c.JSON(fiber.Map{
 			"success": true,

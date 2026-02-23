@@ -14,18 +14,19 @@ type Derived[T any] struct {
 	mu          sync.RWMutex
 	value       T
 	compute     func() T
-	subscribers []Subscriber[T]
-	// deps tracks the runes this derived value depends on
+	subscribers []subEntry[T]
+	// deps tracks the observables this derived value depends on
 	deps []dependency
 	// dirty marks if dependencies have changed and value needs recomputation
 	dirty bool
 	// id uniquely identifies this derived value
-	id string
+	id        string
+	nextSubID uint64
 }
 
-// dependency represents a dependency on a rune
+// dependency represents a dependency on an observable
 type dependency struct {
-	rune        *Rune[any]
+	observable  Observable
 	unsubscribe Unsubscribe
 }
 
@@ -41,10 +42,11 @@ type dependency struct {
 func NewDerived[T any](compute func() T) *Derived[T] {
 	d := &Derived[T]{
 		compute:     compute,
-		subscribers: make([]Subscriber[T], 0),
+		subscribers: make([]subEntry[T], 0),
 		deps:        make([]dependency, 0),
 		id:          generateRuneID(),
 		dirty:       true,
+		nextSubID:   1,
 	}
 	// Compute initial value
 	d.recompute()
@@ -62,16 +64,16 @@ func (d *Derived[T]) recompute() {
 
 	// Only notify if value actually changed
 	if !equal(oldValue, d.value) {
-		subs := make([]Subscriber[T], len(d.subscribers))
+		subs := make([]subEntry[T], len(d.subscribers))
 		copy(subs, d.subscribers)
 		go d.notify(subs, d.value)
 	}
 }
 
 // notify calls all subscribers with the new value
-func (d *Derived[T]) notify(subs []Subscriber[T], value T) {
+func (d *Derived[T]) notify(subs []subEntry[T], value T) {
 	for _, sub := range subs {
-		sub(value)
+		sub.fn(value)
 	}
 }
 
@@ -93,19 +95,28 @@ func (d *Derived[T]) Get() T {
 	return d.value
 }
 
+// GetAny returns the current value of the derivative as an interface{}.
+// This implements the Observable interface.
+func (d *Derived[T]) GetAny() any {
+	return d.Get()
+}
+
 // Subscribe registers a callback for when the derived value changes.
 // Returns an unsubscribe function.
 func (d *Derived[T]) Subscribe(fn Subscriber[T]) Unsubscribe {
 	d.mu.Lock()
 	defer d.mu.Unlock()
 
-	d.subscribers = append(d.subscribers, fn)
+	id := d.nextSubID
+	d.nextSubID++
+
+	d.subscribers = append(d.subscribers, subEntry[T]{id: id, fn: fn})
 
 	return func() {
 		d.mu.Lock()
 		defer d.mu.Unlock()
 		for i, sub := range d.subscribers {
-			if &sub == &fn {
+			if sub.id == id {
 				d.subscribers = append(d.subscribers[:i], d.subscribers[i+1:]...)
 				break
 			}
@@ -113,8 +124,16 @@ func (d *Derived[T]) Subscribe(fn Subscriber[T]) Unsubscribe {
 	}
 }
 
-// DependOn adds a rune as a dependency of this derived value.
-// When the rune changes, this derived value will be marked dirty.
+// SubscribeAny registers a type-erased callback.
+// This implements the Observable interface.
+func (d *Derived[T]) SubscribeAny(fn func(any)) Unsubscribe {
+	return d.Subscribe(func(v T) {
+		fn(v)
+	})
+}
+
+// DependOn adds an observable as a dependency of this derived value.
+// When the observable changes, this derived value will be marked dirty.
 //
 // Example:
 //
@@ -123,17 +142,17 @@ func (d *Derived[T]) Subscribe(fn Subscriber[T]) Unsubscribe {
 //	    return count.Get() * 2
 //	})
 //	doubled.DependOn(count)
-func (d *Derived[T]) DependOn(r *Rune[any]) {
+func (d *Derived[T]) DependOn(o Observable) {
 	d.mu.Lock()
 	defer d.mu.Unlock()
 
-	// Subscribe to the rune's changes
-	unsub := r.Subscribe(func(_ any) {
+	// Subscribe to the observable's changes
+	unsub := o.SubscribeAny(func(_ any) {
 		d.markDirty()
 	})
 
 	d.deps = append(d.deps, dependency{
-		rune:        r,
+		observable:  o,
 		unsubscribe: unsub,
 	})
 }
@@ -172,7 +191,7 @@ func (d *Derived[T]) Dispose() {
 	d.subscribers = nil
 }
 
-// DerivedFrom creates a derived value that depends on one or more runes.
+// DerivedFrom creates a derived value that depends on one or more observables.
 // This is a convenience function that automatically sets up dependencies.
 //
 // Example:
@@ -181,34 +200,24 @@ func (d *Derived[T]) Dispose() {
 //	doubled := state.DerivedFrom(func() int {
 //	    return count.Get() * 2
 //	}, count)
-func DerivedFrom[T any](compute func() T, runes ...*Rune[any]) *Derived[T] {
+func DerivedFrom[T any](compute func() T, observables ...Observable) *Derived[T] {
 	d := NewDerived(compute)
-	for _, r := range runes {
-		d.DependOn(r)
+	for _, o := range observables {
+		d.DependOn(o)
 	}
 	return d
 }
 
-// Derived2 creates a derived value from two runes with a combine function.
+// Derived2 creates a derived value from two runses with a combine function.
 func Derived2[A, B, T any](a *Rune[A], b *Rune[B], combine func(A, B) T) *Derived[T] {
 	return DerivedFrom(func() T {
 		return combine(a.Get(), b.Get())
-	}, anyRune(a), anyRune(b))
+	}, a, b)
 }
 
 // Derived3 creates a derived value from three runes with a combine function.
 func Derived3[A, B, C, T any](a *Rune[A], b *Rune[B], c *Rune[C], combine func(A, B, C) T) *Derived[T] {
 	return DerivedFrom(func() T {
 		return combine(a.Get(), b.Get(), c.Get())
-	}, anyRune(a), anyRune(b), anyRune(c))
-}
-
-// anyRune converts a typed Rune to *Rune[any]
-func anyRune[T any](r *Rune[T]) *Rune[any] {
-	// Create a wrapper that tracks the original rune
-	wrapper := NewRune[any](r.Get())
-	r.Subscribe(func(v T) {
-		wrapper.Set(v)
-	})
-	return wrapper
+	}, a, b, c)
 }

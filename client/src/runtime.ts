@@ -20,7 +20,7 @@ import {
 	createNavigationState,
 	type NavigationOptions
 } from './navigation.ts';
-import { setupTransitions, fade, fly, slide } from './transition.ts';
+import { setupTransitions, fade, fly, slide, scale, blur, crossfade } from './transition.ts';
 
 // Component definition
 export interface ComponentDefinition {
@@ -43,13 +43,52 @@ export interface ComponentInstance {
 	unsubscribers: Unsubscribe[];
 	cleanup: (() => void)[];
 	element: Element | null;
+	isLocal: boolean; // true = localStorage persisted, no server sync
 }
 
 // Runtime configuration
 export interface RuntimeConfig {
 	wsUrl?: string;
-	debug?: boolean;
-	performance?: boolean;
+
+	// WebSocket Options
+	ws?: {
+		reconnect?: boolean;
+		reconnectDelay?: number;
+		reconnectMaxAttempts?: number;
+		heartbeat?: number;
+		protocols?: string[];
+	};
+
+	// Hydration Options
+	hydration?: {
+		mode?: 'immediate' | 'lazy' | 'visible' | 'idle';
+		timeout?: number;
+		priorityAttribute?: string;
+	};
+
+	// State Options
+	state?: {
+		batchUpdates?: boolean;
+		batchDelay?: number;
+		persistLocal?: boolean;
+		storageKey?: string;
+	};
+
+	// Performance Options
+	performance?: boolean | {
+		trackMetrics?: boolean;
+		logSlowUpdates?: number;
+		profileEffects?: boolean;
+	};
+
+	// Debug Options
+	debug?: boolean | {
+		enabled?: boolean;
+		logState?: boolean;
+		logEffects?: boolean;
+		logWebSocket?: boolean;
+		traceUpdates?: boolean;
+	};
 }
 
 // Global component registry
@@ -120,7 +159,7 @@ export function init(options: RuntimeConfig = {}): void {
 // Handle messages from server
 function handleServerMessage(message: StateMessage): void {
 	console.log('[GoSPA DEBUG] handleServerMessage received:', JSON.stringify(message));
-	
+
 	switch (message.type) {
 		case 'init':
 			if (message.componentId && message.data) {
@@ -129,15 +168,29 @@ function handleServerMessage(message: StateMessage): void {
 					component.states.fromJSON(message.data);
 				}
 			} else if (message.state) {
-				// Global state HMR from server - iterate through components and apply updates based on keys
-				for (const component of components.values()) {
-					for (const [key, value] of Object.entries(message.state)) {
-						if (component.states.get(key) !== undefined) {
-							component.states.set(key, value);
+				// Global state from server - parse component-scoped keys (e.g., "counter.count")
+				const stateObj = message.state as Record<string, unknown>;
+				for (const [scopedKey, value] of Object.entries(stateObj)) {
+					// Check if key is component-scoped (contains a dot)
+					const dotIndex = scopedKey.indexOf('.');
+					if (dotIndex > 0) {
+						const componentId = scopedKey.substring(0, dotIndex);
+						const stateKey = scopedKey.substring(dotIndex + 1);
+						const component = components.get(componentId);
+						if (component) {
+							console.log(`[GoSPA DEBUG] Restoring state: component=${componentId}, key=${stateKey}, value=${value}`);
+							component.states.set(stateKey, value);
 						}
+					} else {
+						// Non-scoped key - apply to all components that have this key
+						for (const component of components.values()) {
+							if (component.states.get(scopedKey) !== undefined) {
+								component.states.set(scopedKey, value);
+							}
+						}
+						globalState.set(scopedKey, value);
 					}
 				}
-				globalState.fromJSON(message.state);
 			}
 			break;
 		case 'update':
@@ -149,22 +202,35 @@ function handleServerMessage(message: StateMessage): void {
 			}
 			break;
 		case 'sync':
-			console.log('[GoSPA DEBUG] sync message - data:', message.data, 'key:', (message as any).key, 'value:', (message as any).value);
+			console.log('[GoSPA DEBUG] sync message - data:', message.data, 'key:', (message as any).key, 'value:', (message as any).value, 'componentId:', (message as any).componentId);
 			// Full state sync
 			if (message.data) {
 				globalState.fromJSON(message.data);
 			} else if ((message as any).key !== undefined && (message as any).value !== undefined) {
-				// Partial sync from server broadcast
-				console.log('[GoSPA DEBUG] Processing partial sync. Components count:', components.size);
-				for (const component of components.values()) {
-					const existingRune = component.states.get((message as any).key);
-					console.log('[GoSPA DEBUG] Component:', component.id, 'key:', (message as any).key, 'existingRune:', existingRune ? 'exists' : 'not found');
-					if (existingRune !== undefined) {
-						console.log('[GoSPA DEBUG] Setting state key:', (message as any).key, 'to value:', (message as any).value);
-						component.states.set((message as any).key, (message as any).value);
+				const key = (message as any).key;
+				const value = (message as any).value;
+				const componentId = (message as any).componentId;
+
+				// If componentId is specified, update only that component
+				if (componentId) {
+					const component = components.get(componentId);
+					if (component) {
+						console.log(`[GoSPA DEBUG] Setting state for component ${componentId}: ${key} = ${value}`);
+						component.states.set(key, value);
 					}
+				} else {
+					// No componentId - update all components that have this key
+					console.log('[GoSPA DEBUG] Processing partial sync. Components count:', components.size);
+					for (const component of components.values()) {
+						const existingRune = component.states.get(key);
+						console.log('[GoSPA DEBUG] Component:', component.id, 'key:', key, 'existingRune:', existingRune ? 'exists' : 'not found');
+						if (existingRune !== undefined) {
+							console.log('[GoSPA DEBUG] Setting state key:', key, 'to value:', value);
+							component.states.set(key, value);
+						}
+					}
+					globalState.set(key, value);
 				}
-				globalState.set((message as any).key, (message as any).value);
 			}
 			break;
 		case 'error':
@@ -175,8 +241,39 @@ function handleServerMessage(message: StateMessage): void {
 	}
 }
 
+// LocalStorage key prefix for local state
+const LOCAL_STORAGE_PREFIX = 'gospa_local_';
+
+// Load local state from localStorage
+function loadLocalState(componentId: string): Record<string, unknown> | null {
+	try {
+		const key = LOCAL_STORAGE_PREFIX + componentId;
+		const stored = localStorage.getItem(key);
+		if (stored) {
+			return JSON.parse(stored);
+		}
+	} catch (e) {
+		if (config.debug) {
+			console.warn(`[GoSPA] Failed to load local state for ${componentId}:`, e);
+		}
+	}
+	return null;
+}
+
+// Save local state to localStorage
+function saveLocalState(componentId: string, state: Record<string, unknown>): void {
+	try {
+		const key = LOCAL_STORAGE_PREFIX + componentId;
+		localStorage.setItem(key, JSON.stringify(state));
+	} catch (e) {
+		if (config.debug) {
+			console.warn(`[GoSPA] Failed to save local state for ${componentId}:`, e);
+		}
+	}
+}
+
 // Create component instance
-export function createComponent(def: ComponentDefinition, element?: Element): ComponentInstance {
+export function createComponent(def: ComponentDefinition, element?: Element, isLocal = false): ComponentInstance {
 	const instance: ComponentInstance = {
 		id: def.id,
 		definition: def,
@@ -184,12 +281,38 @@ export function createComponent(def: ComponentDefinition, element?: Element): Co
 		derived: new Map(),
 		unsubscribers: [],
 		cleanup: [],
-		element: element || null
+		element: element || null,
+		isLocal
 	};
 
-	// Initialize state
+	// For local components, try to load from localStorage first
+	if (isLocal) {
+		const savedState = loadLocalState(def.id);
+		if (savedState) {
+			for (const [key, value] of Object.entries(savedState)) {
+				instance.states.set(key, value);
+			}
+		}
+	}
+
+	// Initialize state (localStorage values take precedence for local components)
 	for (const [key, value] of Object.entries(def.state)) {
-		instance.states.set(key, value);
+		if (!isLocal || instance.states.get(key) === undefined) {
+			instance.states.set(key, value);
+		}
+	}
+
+	// For local components, subscribe to state changes and persist to localStorage
+	if (isLocal) {
+		for (const key of Object.keys(def.state)) {
+			const rune = instance.states.get(key);
+			if (rune) {
+				const unsub = watch(rune, () => {
+					saveLocalState(def.id, instance.states.toJSON());
+				});
+				instance.unsubscribers.push(unsub);
+			}
+		}
 	}
 
 	// Initialize computed properties
@@ -277,6 +400,18 @@ export function setState(componentId: string, key: string, value: unknown): void
 	const component = components.get(componentId);
 	if (component) {
 		component.states.set(key, value);
+
+		// For synced (non-local) components, send update to server for persistence
+		if (!component.isLocal) {
+			const ws = getWebSocketClient();
+			if (ws?.isConnected) {
+				ws.send({
+					type: 'update',
+					componentId,
+					payload: { key, value }
+				});
+			}
+		}
 	}
 }
 
@@ -330,33 +465,54 @@ export function autoInit(): void {
 	for (const element of elements) {
 		const id = element.getAttribute('data-gospa-component');
 		const stateJson = element.getAttribute('data-gospa-state');
+		const isLocal = element.hasAttribute('data-gospa-local');
 
 		if (!id) continue;
 
 		const state = stateJson ? JSON.parse(stateJson) : {};
 
-		createComponent({
-			id,
-			name: id,
-			state
-		}, element);
-	}
+		const hydrate = element.getAttribute('data-gospa-hydrate') || (config.hydration?.mode) || 'immediate';
 
-	// Set up bindings
-	setupBindings();
+		const initComponent = () => {
+			createComponent({
+				id,
+				name: id,
+				state
+			}, element, isLocal);
+			setupBindings(element);
+		};
+
+		if (hydrate === 'visible') {
+			const observer = new IntersectionObserver((entries) => {
+				if (entries[0].isIntersecting) {
+					observer.disconnect();
+					initComponent();
+				}
+			});
+			observer.observe(element);
+		} else if (hydrate === 'idle' && 'requestIdleCallback' in window) {
+			(window as any).requestIdleCallback(() => initComponent(), { timeout: config.hydration?.timeout || 2000 });
+		} else {
+			// immediate or fallback
+			initComponent();
+		}
+	}
 }
 
 // Set up reactive bindings from DOM attributes
-function setupBindings(): void {
+function setupBindings(root: Element | Document = document): void {
 	// DEBUG: Log all data-gospa-component elements found
-	const allComponents = document.querySelectorAll('[data-gospa-component]');
-	console.log('[GoSPA DEBUG] Found components with data-gospa-component:', allComponents.length);
-	allComponents.forEach((el, i) => {
-		console.log(`[GoSPA DEBUG] Component ${i}:`, el.getAttribute('data-gospa-component'), el);
-	});
+	const debugEnabled = typeof config.debug === 'object' ? config.debug.enabled : config.debug;
+	if (debugEnabled) {
+		const allComponents = root.querySelectorAll('[data-gospa-component]');
+		console.log('[GoSPA DEBUG] Found components with data-gospa-component:', allComponents.length);
+		allComponents.forEach((el, i) => {
+			console.log(`[GoSPA DEBUG] Component ${i}:`, el.getAttribute('data-gospa-component'), el);
+		});
+	}
 
 	// Find all elements with data-bind attribute
-	const boundElements = document.querySelectorAll('[data-bind]');
+	const boundElements = root.querySelectorAll('[data-bind]');
 
 	for (const element of boundElements) {
 		const closestComponent = element.closest('[data-gospa-component]');
@@ -383,7 +539,7 @@ function setupBindings(): void {
 	}
 
 	// Find all elements with data-on attribute (event handlers)
-	const eventElements = document.querySelectorAll('[data-on]');
+	const eventElements = root.querySelectorAll('[data-on]');
 
 	for (const element of eventElements) {
 		const componentId = element.closest('[data-gospa-component]')?.getAttribute('data-gospa-component') || '';
@@ -420,7 +576,7 @@ function setupBindings(): void {
 	}
 
 	// Find all elements with data-model attribute (two-way binding)
-	const modelElements = document.querySelectorAll('[data-model]');
+	const modelElements = root.querySelectorAll('[data-model]');
 
 	for (const element of modelElements) {
 		const componentId = element.closest('[data-gospa-component]')?.getAttribute('data-gospa-component') || '';
@@ -533,6 +689,9 @@ export default {
 	fade,
 	fly,
 	slide,
+	scale,
+	blur,
+	crossfade,
 	setupTransitions,
 
 	// Navigation

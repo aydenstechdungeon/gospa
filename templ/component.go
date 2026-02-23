@@ -2,6 +2,7 @@
 package templ
 
 import (
+	"bytes"
 	"context"
 	"encoding/json"
 	"fmt"
@@ -11,6 +12,26 @@ import (
 	"github.com/a-h/templ"
 	"github.com/aydenstechdungeon/gospa/state"
 )
+
+// Snippet defines a reusable template chunk with typed parameters
+type Snippet[T any] func(params T) templ.Component
+
+// ErrorBoundary catches rendering errors from content and renders a fallback UI instead
+func ErrorBoundary(content templ.Component, fallback func(error) templ.Component) templ.Component {
+	return templ.ComponentFunc(func(ctx context.Context, w io.Writer) error {
+		var buf bytes.Buffer
+		err := content.Render(ctx, &buf)
+		if err != nil {
+			if fallback != nil {
+				return fallback(err).Render(ctx, w)
+			}
+			// if no fallback, we still return the err
+			return err
+		}
+		_, writeErr := io.Copy(w, &buf)
+		return writeErr
+	})
+}
 
 // componentIDCounter is a global counter for generating unique component IDs.
 var componentIDCounter atomic.Uint64

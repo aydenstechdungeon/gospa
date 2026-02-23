@@ -13,13 +13,12 @@ type CleanupFunc func()
 type EffectFn func() CleanupFunc
 
 // Effect represents a reactive side effect that runs when dependencies change.
-// Similar to Svelte's $effect rune, it automatically tracks dependencies and
-// re-runs when they change.
 type Effect struct {
 	mu       sync.RWMutex
+	runMu    sync.Mutex
 	fn       EffectFn
 	cleanup  CleanupFunc
-	deps     []*Rune[any]
+	deps     []Observable
 	unsubs   []Unsubscribe
 	active   bool
 	disposed bool
@@ -42,7 +41,7 @@ type Effect struct {
 func NewEffect(fn EffectFn) *Effect {
 	e := &Effect{
 		fn:     fn,
-		deps:   make([]*Rune[any], 0),
+		deps:   make([]Observable, 0),
 		unsubs: make([]Unsubscribe, 0),
 		active: true,
 	}
@@ -53,6 +52,17 @@ func NewEffect(fn EffectFn) *Effect {
 
 // run executes the effect function with cleanup
 func (e *Effect) run() {
+	e.runMu.Lock()
+	defer e.runMu.Unlock()
+
+	e.mu.RLock()
+	isActive := e.active && !e.disposed
+	e.mu.RUnlock()
+
+	if !isActive {
+		return
+	}
+
 	e.mu.Lock()
 	// Run cleanup from previous execution
 	if e.cleanup != nil {
@@ -69,9 +79,9 @@ func (e *Effect) run() {
 	e.mu.Unlock()
 }
 
-// DependOn adds a rune as a dependency of this effect.
-// When the rune changes, the effect will re-run.
-func (e *Effect) DependOn(r *Rune[any]) {
+// DependOn adds an observable as a dependency of this effect.
+// When the observable changes, the effect will re-run.
+func (e *Effect) DependOn(o Observable) {
 	e.mu.Lock()
 	defer e.mu.Unlock()
 
@@ -79,14 +89,14 @@ func (e *Effect) DependOn(r *Rune[any]) {
 		return
 	}
 
-	// Subscribe to the rune
-	unsub := r.Subscribe(func(_ any) {
+	// Subscribe to the observable
+	unsub := o.SubscribeAny(func(_ any) {
 		if e.IsActive() {
 			e.run()
 		}
 	})
 
-	e.deps = append(e.deps, r)
+	e.deps = append(e.deps, o)
 	e.unsubs = append(e.unsubs, unsub)
 }
 
@@ -143,7 +153,7 @@ func (e *Effect) Dispose() {
 	e.deps = nil
 }
 
-// EffectOn creates an effect that depends on one or more runes.
+// EffectOn creates an effect that depends on one or more observables.
 // This is a convenience function that automatically sets up dependencies.
 //
 // Example:
@@ -154,10 +164,10 @@ func (e *Effect) Dispose() {
 //	    return nil
 //	}, count)
 //	defer effect.Dispose()
-func EffectOn(fn EffectFn, runes ...*Rune[any]) *Effect {
+func EffectOn(fn EffectFn, observables ...Observable) *Effect {
 	e := NewEffect(fn)
-	for _, r := range runes {
-		e.DependOn(r)
+	for _, o := range observables {
+		e.DependOn(o)
 	}
 	return e
 }
@@ -175,7 +185,7 @@ func Watch[T any](r *Rune[T], callback func(T)) Unsubscribe {
 	effect := EffectOn(func() CleanupFunc {
 		callback(r.Get())
 		return nil
-	}, anyRune(r))
+	}, r)
 
 	return func() {
 		effect.Dispose()
@@ -187,7 +197,7 @@ func Watch2[A, B any](a *Rune[A], b *Rune[B], callback func(A, B)) Unsubscribe {
 	effect := EffectOn(func() CleanupFunc {
 		callback(a.Get(), b.Get())
 		return nil
-	}, anyRune(a), anyRune(b))
+	}, a, b)
 
 	return func() {
 		effect.Dispose()
@@ -199,7 +209,7 @@ func Watch3[A, B, C any](a *Rune[A], b *Rune[B], c *Rune[C], callback func(A, B,
 	effect := EffectOn(func() CleanupFunc {
 		callback(a.Get(), b.Get(), c.Get())
 		return nil
-	}, anyRune(a), anyRune(b), anyRune(c))
+	}, a, b, c)
 
 	return func() {
 		effect.Dispose()

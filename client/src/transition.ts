@@ -19,6 +19,22 @@ export const cubicOut = (t: number) => {
 export const cubicInOut = (t: number) => {
     return t < 0.5 ? 4.0 * t * t * t : 0.5 * Math.pow(2.0 * t - 2.0, 3.0) + 1.0;
 };
+export const elasticOut = (t: number) => {
+    return Math.sin(-13.0 * (t + 1.0) * Math.PI / 2) * Math.pow(2.0, -10.0 * t) + 1.0;
+};
+export const bounceOut = (t: number) => {
+    const n1 = 7.5625;
+    const d1 = 2.75;
+    if (t < 1 / d1) {
+        return n1 * t * t;
+    } else if (t < 2 / d1) {
+        return n1 * (t -= 1.5 / d1) * t + 0.75;
+    } else if (t < 2.5 / d1) {
+        return n1 * (t -= 2.25 / d1) * t + 0.9375;
+    } else {
+        return n1 * (t -= 2.625 / d1) * t + 0.984375;
+    }
+};
 
 // Built-in transitions
 export function fade(node: Element, { delay = 0, duration = 400, easing = linear } = {}): TransitionConfig {
@@ -73,6 +89,50 @@ export function slide(node: Element, { delay = 0, duration = 400, easing = cubic
 			border-top-width: ${t * borderTopWidth}px;
 			border-bottom-width: ${t * borderBottomWidth}px;
 		`
+    };
+}
+
+export function scale(node: Element, { delay = 0, duration = 400, easing = cubicOut, start = 0, opacity = 0 } = {}): TransitionConfig {
+    const style = getComputedStyle(node);
+    const targetOpacity = +style.opacity;
+    const transform = style.transform === 'none' ? '' : style.transform;
+    const sd = 1 - start;
+
+    return {
+        delay,
+        duration,
+        easing: 'ease-out',
+        css: (t, u) => `
+            transform: ${transform} scale(${1 - (sd * u)});
+            opacity: ${targetOpacity - (targetOpacity - opacity) * u}
+        `
+    };
+}
+
+export function blur(node: Element, { delay = 0, duration = 400, easing = cubicInOut, amount = 5, opacity = 0 } = {}): TransitionConfig {
+    const style = getComputedStyle(node);
+    const targetOpacity = +style.opacity;
+
+    return {
+        delay,
+        duration,
+        easing: 'ease-in-out',
+        css: (t, u) => `
+            opacity: ${targetOpacity - (targetOpacity - opacity) * u};
+            filter: blur(${u * amount}px);
+        `
+    };
+}
+
+export function crossfade(node: Element, { delay = 0, duration = 400, easing = linear } = {}): TransitionConfig {
+    return {
+        delay,
+        duration,
+        easing: 'linear',
+        css: (t, u) => `
+            opacity: ${t};
+            position: absolute;
+        `
     };
 }
 
@@ -201,6 +261,9 @@ function getTransitionFn(name: string): TransitionFn | null {
     if (name.startsWith('fade')) return fade;
     if (name.startsWith('fly')) return fly;
     if (name.startsWith('slide')) return slide;
+    if (name.startsWith('scale')) return scale;
+    if (name.startsWith('blur')) return blur;
+    if (name.startsWith('crossfade')) return crossfade;
     return null;
 }
 

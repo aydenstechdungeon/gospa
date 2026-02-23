@@ -4,6 +4,7 @@ package gospa
 
 import (
 	"bufio"
+	"bytes"
 	"context"
 	"crypto/sha256"
 	"fmt"
@@ -11,6 +12,9 @@ import (
 	"log"
 	"net/http"
 	"os"
+	"sync"
+
+	"time"
 
 	"github.com/a-h/templ"
 	"github.com/aydenstechdungeon/gospa/embed"
@@ -23,6 +27,12 @@ import (
 	"github.com/gofiber/fiber/v2/middleware/logger"
 	"github.com/gofiber/fiber/v2/middleware/recover"
 )
+
+// StateSerializerFunc defines a function for state serialization
+type StateSerializerFunc func(interface{}) ([]byte, error)
+
+// StateDeserializerFunc defines a function for state deserialization
+type StateDeserializerFunc func([]byte, interface{}) error
 
 // Version is the current version of GoSPA.
 const Version = "0.1.0"
@@ -49,6 +59,24 @@ type Config struct {
 	WebSocketPath string
 	// WebSocketMiddleware allows injecting session/auth middleware before WebSocket upgrade.
 	WebSocketMiddleware fiberpkg.Handler
+
+	// New Performance Options
+	CompressState  bool // Compress WebSocket messages
+	StateDiffing   bool // Only send state diffs
+	CacheTemplates bool // Cache compiled templates
+
+	// New WebSocket Options
+	WSReconnectDelay time.Duration // Initial reconnect delay
+	WSMaxReconnect   int           // Max reconnect attempts
+	WSHeartbeat      time.Duration // Heartbeat interval
+
+	// New Hydration Options
+	HydrationMode    string // "immediate" | "lazy" | "visible"
+	HydrationTimeout int    // ms before force hydrate
+
+	// New Serialization Options
+	StateSerializer   StateSerializerFunc
+	StateDeserializer StateDeserializerFunc
 }
 
 // DefaultConfig returns the default configuration.
@@ -92,6 +120,10 @@ type App struct {
 	Hub *fiber.WSHub
 	// StateMap is the global state map.
 	StateMap *state.StateMap
+	// ssgCache stores pre-rendered SSG pages
+	ssgCache map[string][]byte
+	// ssgCacheMu protects ssgCache
+	ssgCacheMu sync.RWMutex
 }
 
 // New creates a new GoSPA application.
@@ -148,6 +180,7 @@ func New(config Config) *App {
 		Fiber:    fiberApp,
 		Hub:      hub,
 		StateMap: stateMap,
+		ssgCache: make(map[string][]byte),
 	}
 
 	// Setup middleware
@@ -204,6 +237,36 @@ func (a *App) setupRoutes() {
 		a.Fiber.Get(a.Config.WebSocketPath, handlers...)
 	}
 
+	// Remote Actions endpoint
+	a.Fiber.Post("/_gospa/remote/:name", func(c *fiberpkg.Ctx) error {
+		name := c.Params("name")
+		fn, ok := routing.GetRemoteAction(name)
+		if !ok {
+			return c.Status(fiberpkg.StatusNotFound).JSON(fiberpkg.Map{
+				"error": "Remote action not found",
+			})
+		}
+
+		var input interface{}
+		// Only parse if body is not empty
+		if len(c.Body()) > 0 {
+			if err := c.BodyParser(&input); err != nil {
+				return c.Status(fiberpkg.StatusBadRequest).JSON(fiberpkg.Map{
+					"error": "Invalid input JSON",
+				})
+			}
+		}
+
+		result, err := fn(c.Context(), input)
+		if err != nil {
+			return c.Status(fiberpkg.StatusInternalServerError).JSON(fiberpkg.Map{
+				"error": err.Error(),
+			})
+		}
+
+		return c.JSON(result)
+	})
+
 	// Static files
 	if _, err := os.Stat(a.Config.StaticDir); err == nil {
 		a.Fiber.Use(a.Config.StaticPrefix, filesystem.New(filesystem.Config{
@@ -250,6 +313,19 @@ func (a *App) RegisterRoutes() error {
 
 // renderRoute renders a route with its layout chain.
 func (a *App) renderRoute(c *fiberpkg.Ctx, route *routing.Route) error {
+	// Check SSG cache
+	opts := routing.GetRouteOptions(route.Path)
+	cacheKey := c.Path()
+	if a.Config.CacheTemplates && opts.Strategy == routing.StrategySSG {
+		a.ssgCacheMu.RLock()
+		if cached, ok := a.ssgCache[cacheKey]; ok {
+			a.ssgCacheMu.RUnlock()
+			c.Set("Content-Type", "text/html")
+			return c.Send(cached)
+		}
+		a.ssgCacheMu.RUnlock()
+	}
+
 	// Get layout chain
 	layouts := a.Router.ResolveLayoutChain(route)
 
@@ -328,6 +404,18 @@ func (a *App) renderRoute(c *fiberpkg.Ctx, route *routing.Route) error {
 		}
 
 		wrappedContent := rootLayoutFunc(content, props)
+
+		if a.Config.CacheTemplates && opts.Strategy == routing.StrategySSG {
+			var buf bytes.Buffer
+			if err := wrappedContent.Render(ctx, &buf); err != nil {
+				log.Printf("Render error: %v", err)
+			}
+			a.ssgCacheMu.Lock()
+			a.ssgCache[cacheKey] = buf.Bytes()
+			a.ssgCacheMu.Unlock()
+			return c.Send(buf.Bytes())
+		}
+
 		c.Context().SetBodyStreamWriter(func(w *bufio.Writer) {
 			if err := wrappedContent.Render(ctx, w); err != nil {
 				log.Printf("Streaming render error: %v", err)
@@ -367,13 +455,22 @@ func (a *App) renderRoute(c *fiberpkg.Ctx, route *routing.Route) error {
 import runtime from '%s';
 runtime.init({
 	wsUrl: '%s',
-	debug: %v
+	debug: %v,
+	hydration: {
+		mode: '%s',
+		timeout: %d
+	}
 });
-</script>`, runtimePath, wsUrl, devMode)
+</script>`, runtimePath, wsUrl, devMode, a.Config.HydrationMode, a.Config.HydrationTimeout)
 
 		_, _ = fmt.Fprint(w, `</body></html>`)
 		w.Flush()
 	})
+
+	if a.Config.CacheTemplates && opts.Strategy == routing.StrategySSG {
+		// Read back out since we rendered into the stream directly? Wait, body stream writer doesn't allow easy caching.
+		// For SSG, we should render to a buffer first instead of streaming.
+	}
 
 	return nil
 }

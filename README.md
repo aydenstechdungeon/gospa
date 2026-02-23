@@ -1,21 +1,15 @@
 # GoSPA
 
-A modern SPA framework for Go that brings Svelte-like reactivity to server-side rendering with Fiber and Templ.
+A Go framework for building reactive SPAs with server-side rendering. Brings Svelte-like reactivity to Go using Fiber and Templ.
 
-## Overview
+## Features
 
-GoSPA enables developers to build Single Page Applications using Go with:
-
-- **Svelte rune-like reactive primitives** - `$state`, `$derived`, `$effect` equivalents in Go
-- **Automatic file-based routing** - SvelteKit-style routing for `.templ` files
-- **WebSocket state synchronization** - Real-time client-server differential state sync
-- **Generic State Stores** - Strong typing using Go Generics wrapped in an `Observable` interface
-- **TypeScript Definition Generation** - Export `.go` structs into `.d.ts` types automatically
-- **State HMR** - Automatically patch state in dev-mode across application reloads
-- **Partial Hydration** - Opt-out of reactivity for static zones using `data-gospa-static`
-- **Transition Engine** - Svelte-like animation engine (`data-transition="fade"`) natively in runtime
-- **Lightweight client runtime** - <15KB gzipped, replaces HTMX/Alpine/Petite Vue
-- **Type-safe templating** - Compile-time template validation with Templ
+- **Reactive Primitives** — `$state`, `$derived`, `$effect` equivalents in Go
+- **File-Based Routing** — SvelteKit-style routing for `.templ` files
+- **WebSocket Sync** — Real-time client-server state synchronization
+- **Local State Mode** — Client-only reactivity without server roundtrips
+- **Type Safety** — Compile-time template validation with Templ
+- **Lightweight Runtime** — <15KB gzipped client JavaScript
 
 ## Installation
 
@@ -25,14 +19,14 @@ go get github.com/aydenstechdungeon/gospa
 
 ## Quick Start
 
-### 1. Create a new project
+### 1. Initialize Project
 
 ```bash
 mkdir myapp && cd myapp
 go mod init myapp
 ```
 
-### 2. Create a simple page
+### 2. Create Main File
 
 ```go
 // main.go
@@ -40,35 +34,41 @@ package main
 
 import (
     "log"
+    _ "myapp/routes" // Import routes to trigger init()
     
-    gofiber "github.com/gofiber/fiber/v2"
-    "github.com/aydenstechdungeon/gospa/fiber"
-    "github.com/aydenstechdungeon/gospa/state"
+    "github.com/aydenstechdungeon/gospa"
 )
 
-type PageState struct {
-    Count int `json:"count"`
-}
-
 func main() {
-    app := gofiber.New()
-    
-    // Inject GoSPA runtime
-    app.Use(gospafiber.RuntimeMiddleware())
-    
-    // Your page route
-    app.Get("/", func(c *gofiber.Ctx) error {
-        pageState := PageState{Count: 0}
-        return c.Render("index", gofiber.Map{
-            "State": pageState,
-        })
+    app := gospa.New(gospa.Config{
+        RoutesDir: "./routes",
+        DevMode:   true,
+        AppName:   "myapp",
     })
-    
-    log.Fatal(app.Listen(":3000"))
+
+    if err := app.Run(":3000"); err != nil {
+        log.Fatal(err)
+    }
 }
 ```
 
-### 3. Run the server
+### 3. Create a Page
+
+```templ
+// routes/page.templ
+package routes
+
+templ Page() {
+    <div data-gospa-component="counter" data-gospa-state='{"count":0}'>
+        <h1>Counter</h1>
+        <span data-bind="count">0</span>
+        <button data-on="click:increment">+</button>
+        <button data-on="click:decrement">−</button>
+    </div>
+}
+```
+
+### 4. Run
 
 ```bash
 go run main.go
@@ -76,295 +76,155 @@ go run main.go
 
 ## Core Concepts
 
-### State Management
+### State Modes
 
-GoSPA provides Svelte-like reactive primitives:
+GoSPA supports two state management modes:
 
-#### Rune[T] - Reactive State
+#### Local State (Client-Only)
 
-```go
-import "github.com/aydenstechdungeon/gospa/state"
+State lives entirely in the browser. No server synchronization.
 
-// Create a reactive value
-count := state.NewRune(0)
-
-// Get value
-value := count.Get()
-
-// Set value (notifies subscribers)
-count.Set(5)
-
-// Subscribe to changes
-unsubscribe := count.Subscribe(func(newValue int) {
-    fmt.Println("Count changed to:", newValue)
-})
-defer unsubscribe()
+```templ
+<div data-gospa-component="counter" data-gospa-local>
+    <span data-bind="count">0</span>
+    <button data-on="click:increment">+</button>
+</div>
 ```
 
-#### Derived[T] - Computed State
+```go
+// Register local-only handlers (no WebSocket broadcast)
+fiber.RegisterLocalAction("increment", func(state *fiber.LocalState, payload json.RawMessage) {
+    state.Update("count", func(v int) int { return v + 1 })
+})
+```
+
+#### Synced State (Client-Server)
+
+State synchronizes across all connected clients via WebSocket.
 
 ```go
-// Create derived state that updates when dependencies change
+// Server-side handler with broadcast
+fiber.RegisterActionHandler("increment", func(client *fiber.WSClient, payload json.RawMessage) {
+    GlobalCounter.Count++
+    fiber.BroadcastState(hub, "count", GlobalCounter.Count)
+})
+```
+
+### Reactive Primitives
+
+#### Rune[T] — Reactive State
+
+```go
+count := state.NewRune(0)
+count.Get()           // 0
+count.Set(5)          // notifies subscribers
+count.Update(func(v int) int { return v + 1 })
+```
+
+#### Derived[T] — Computed State
+
+```go
 count := state.NewRune(5)
 doubled := state.NewDerived(func() int {
     return count.Get() * 2
 })
-
-fmt.Println(doubled.Get()) // 10
-count.Set(10)
-fmt.Println(doubled.Get()) // 20
+doubled.Get() // 10
 ```
 
-#### Effect - Side Effects
+#### Effect — Side Effects
 
 ```go
-count := state.NewRune(0)
-
-// Run side effect when count changes
 cleanup := state.NewEffect(func() func() {
-    fmt.Println("Count is:", count.Get())
-    return func() {
-        fmt.Println("Cleanup on next run or unsubscribe")
-    }
+    fmt.Println("Count:", count.Get())
+    return func() { fmt.Println("cleanup") }
 })
 defer cleanup()
 ```
 
-#### Batch Updates
-
-```go
-count := state.NewRune(0)
-name := state.NewRune("")
-
-// Batch multiple updates - subscribers notified once
-state.Batch(func() {
-    count.Set(1)
-    name.Set("Alice")
-})
-```
-
-### Routing
-
-#### File-Based Routing (Automatic)
-
-Create `.templ` files in the `routes/` directory:
+### File-Based Routing
 
 ```
 routes/
-├── root_layout.templ    → Base HTML shell
-├── page.templ           → /
-├── about/
-│   └── page.templ       → /about
-├── blog/
-│   ├── layout.templ     → Shared layout for /blog/*
-│   └── [id]/
-│       └── page.templ   → /blog/:id
-└── posts/
-    └── [...rest]/
-        └── page.templ   → /posts/* (catch-all)
+├ root_layout.templ    → Base HTML shell
+├ page.templ           → /
+├ about/
+│   └ page.templ       → /about
+├ blog/
+│   ├── layout.templ   → Layout for /blog/*
+│   └ [id]/
+│       └ page.templ   → /blog/:id
+└ posts/
+    └ [...rest]/
+        └ page.templ   → /posts/* (catch-all)
 ```
 
-#### Manual Routing
+### Client Runtime
 
-For advanced use cases:
+```javascript
+// Initialize component
+GoSPA.init('component-id', { count: 0 })
 
-```go
-import "github.com/aydenstechdungeon/gospa/routing"
+// Reactive state
+const count = new GoSPA.Rune(0)
+const doubled = new GoSPA.Derived(() => count.get() * 2)
 
-router := routing.NewManualRouter()
+// Effects
+new GoSPA.Effect(() => {
+    console.log('Count:', count.get())
+})
 
-// Register routes
-router.GET("/", homeHandler)
-router.GET("/users/:id", userHandler)
-router.POST("/api/data", createDataHandler)
-
-// Get all routes for registration
-for _, route := range router.GetRoutes() {
-    fmt.Printf("%s %s\n", route.Method, route.Path)
-}
+// DOM binding
+GoSPA.bind('element-id', count)
 ```
 
-```
+### Partial Hydration
 
-### Client Runtime & Partial Hydration
-
-The client runtime provides:
-
-- **State synchronization** via WebSocket
-- **DOM binding** with reactive updates
-- **Event handling** with server callbacks
-- **Optimistic updates** with automatic rollbacks on network failure
-- **State HMR** - Hot-swaps internal states automatically across local dev rebuilds
-- **Partial Hydration** - Skip evaluating or binding static trees of the DOM with `data-gospa-static`
-
-#### Partial Hydration Example
+Opt out of reactivity for static content:
 
 ```html
 <div data-gospa-static>
-    <h1>This huge tree will not be bound by GoSPA and saves memory!</h1>
-    <p>And it will never have recursive event listeners attached either.</p>
+    <h1>Static content — no bindings or event listeners</h1>
 </div>
 ```
 
-#### Transitions
-
-You can add animations to DOM elements seamlessly when they mount or unmount via transition data-attributes. Included primitives: `fade`, `fly`, and `slide`.
+### Transitions
 
 ```html
 <div data-transition="fade" data-transition-params='{"duration": 300}'>
-    I fade in and out!
+    Fades in and out
 </div>
 
-<div data-transition-in="fly" data-transition-params='{"y": 50}' data-transition-out="slide">
-    I fly in from the bottom, but I slide up on removal!
+<div data-transition-in="fly" data-transition-out="slide">
+    Different enter/exit animations
 </div>
-```
-
-#### Runtime Features
-
-```javascript
-// Initialize component with server state
-GoSPA.init('component-id', { count: 0 });
-
-// Create reactive state
-const count = new GoSPA.Rune(0);
-
-// Create derived state
-const doubled = new GoSPA.Derived(() => count.get() * 2);
-
-// Create effect
-const cleanup = new GoSPA.Effect(() => {
-    console.log('Count:', count.get());
-});
-
-// Bind to DOM
-GoSPA.bind('element-id', count);
-
-// WebSocket sync
-GoSPA.connect('ws://localhost:3000/ws');
-```
-
-### Fiber Integration
-
-#### Middleware
-
-```go
-// Inject runtime JavaScript
-app.Use(gospafiber.RuntimeMiddleware())
-```
-
-#### WebSocket Handler
-
-```go
-import "github.com/gofiber/websocket/v2"
-
-app.Get("/ws", websocket.New(func(c *websocket.Conn) {
-    client := gospafiber.NewWSClient("client-id", c)
-    defer client.Close()
-    
-    // Send initial state
-    client.Conn.WriteJSON(state.NewInitMessage("app", initialState))
-    
-    // Handle incoming messages
-    for {
-        _, msg, err := c.ReadMessage()
-        if err != nil {
-            break
-        }
-        // Process message...
-    }
-}))
 ```
 
 ## Project Structure
 
 ```
 myapp/
-├── routes/              # Auto-routed .templ files
-│   ├── page.templ       # Home page
-│   ├── about/
-│   │   └── page.templ   # /about
-│   └── blog/
-│       └── [id]/
-│           └── page.templ  # /blog/:id
-├── components/          # Reusable .templ components
-├── lib/                 # Shared Go code
-│   └── state.go         # App-wide state
-├── main.go
-└── go.mod
+├ routes/              # Auto-routed .templ files
+│   ├── page.templ
+│   └ about/
+│       └ page.templ
+├ components/          # Reusable .templ components
+├ lib/                 # Shared Go code
+│   └ state.go         # App state
+├ main.go
+└ go.mod
 ```
-
-## Examples
-
-See the [`examples/`](./examples) directory:
-
-- **Counter** - Basic reactive counter
-- **Blog** - Dynamic routes with parameters
 
 ## API Reference
 
-### State Package
+See [`docs/API.md`](docs/API.md) for complete API documentation.
 
-```go
-// Rune - reactive value
-rune := state.NewRune[T](initial T)
-rune.Get() T
-rune.Set(value T)
-rune.Subscribe(fn func(T)) func() // returns unsubscribe
-
-// Derived - computed value
-derived := state.NewDerived[T](compute func() T)
-derived.Get() T
-
-// Effect - side effect
-effect := state.NewEffect(fn func() func()) func()
-
-// Batch - batch updates
-state.Batch(fn func())
-```
-
-### Routing Package
-
-```go
-// Manual router
-router := routing.NewManualRouter()
-router.GET(path string, handler routing.Handler, middleware ...routing.Middleware)
-router.POST(path string, handler routing.Handler, middleware ...routing.Middleware)
-router.GetRoutes() []*routing.ManualRoute
-```
-
-### Fiber Package
-
-```go
-// Middleware
-gospafiber.RuntimeMiddleware() fiber.Handler
-
-// WebSocket client
-client := gospafiber.NewWSClient(id string, conn *websocket.Conn)
-```
-
-### State Serialization
-
-```go
-// Create state messages for client
-initMsg := state.NewInitMessage(componentID string, state interface{})
-syncMsg := state.NewSyncMessage(componentID string, state interface{})
-```
-
-## CLI Tool
+## CLI
 
 ```bash
-# Create new project
-gospa create myapp
-
-# Generate types and routes
-gospa generate
-
-# Development server with hot reload
-gospa dev
-
-# Production build
-gospa build
+gospa create myapp    # Create new project
+gospa generate        # Generate types and routes
+gospa dev             # Development server with hot reload
+gospa build           # Production build
 ```
 
 ## Architecture
@@ -384,9 +244,9 @@ gospa build
 │  │              └───────────────┘                     │    │
 │  └─────────────────────────────────────────────────────┘    │
 └─────────────────────────────────────────────────────────────┘
-                              │
-                              │ WebSocket / HTTP
-                              ▼
+                               │
+                               │ WebSocket / HTTP
+                               ▼
 ┌─────────────────────────────────────────────────────────────┐
 │                       Go Server                              │
 │  ┌─────────────────────────────────────────────────────┐    │
@@ -401,12 +261,6 @@ gospa build
 │  │  ┌─────────┐ ┌──────────┐ ┌─────────┐ ┌──────────┐ │    │
 │  │  │  Rune   │ │ Derived  │ │ Effect  │ │  Batch   │ │    │
 │  │  └─────────┘ └──────────┘ └─────────┘ └──────────┘ │    │
-│  └─────────────────────────────────────────────────────┘    │
-│  ┌─────────────────────────────────────────────────────┐    │
-│  │                 Routing Package                      │    │
-│  │  ┌──────────────┐  ┌──────────────┐                 │    │
-│  │  │  Auto Router │  │ Manual Router│                 │    │
-│  │  └──────────────┘  └──────────────┘                 │    │
 │  └─────────────────────────────────────────────────────┘    │
 └─────────────────────────────────────────────────────────────┘
 ```
@@ -425,8 +279,4 @@ gospa build
 
 ## License
 
-MIT License
-
-## Contributing
-
-Contributions welcome! Please read the contributing guidelines first.
+MIT

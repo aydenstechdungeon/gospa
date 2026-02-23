@@ -33,21 +33,39 @@ func NewStateMap() *StateMap {
 // Add adds an observable to the state collection
 func (sm *StateMap) Add(name string, obs Observable) *StateMap {
 	sm.mu.Lock()
-	defer sm.mu.Unlock()
 
 	// Clear out old subscription if one exists
 	if unsub, ok := sm.unsubscribes[name]; ok {
 		unsub()
 	}
 
+	var existingValue any
+	var hasExisting bool
+	if existing, ok := sm.observables[name]; ok {
+		existingValue = existing.GetAny()
+		hasExisting = true
+	}
+
 	sm.observables[name] = obs
 
 	// Subscribe to changes to trigger differential sync pushes
 	sm.unsubscribes[name] = obs.SubscribeAny(func(v any) {
-		if sm.OnChange != nil {
-			sm.OnChange(name, v)
+		sm.mu.RLock()
+		handler := sm.OnChange
+		sm.mu.RUnlock()
+		if handler != nil {
+			handler(name, v)
 		}
 	})
+
+	sm.mu.Unlock()
+
+	// Transfer value from existing observable if the new one is Settable
+	if hasExisting {
+		if settable, isSettable := obs.(Settable); isSettable {
+			_ = settable.SetAny(existingValue)
+		}
+	}
 
 	return sm
 }
@@ -63,6 +81,26 @@ func (sm *StateMap) Get(name string) (Observable, bool) {
 	defer sm.mu.RUnlock()
 	r, ok := sm.observables[name]
 	return r, ok
+}
+
+// ForEach iterates over all observables in the state map
+func (sm *StateMap) ForEach(fn func(key string, value any)) {
+	sm.mu.RLock()
+	defer sm.mu.RUnlock()
+	for key, obs := range sm.observables {
+		fn(key, obs.GetAny())
+	}
+}
+
+// ToMap returns all state values as a plain map
+func (sm *StateMap) ToMap() map[string]any {
+	sm.mu.RLock()
+	defer sm.mu.RUnlock()
+	result := make(map[string]any)
+	for key, obs := range sm.observables {
+		result[key] = obs.GetAny()
+	}
+	return result
 }
 
 // MarshalJSON serializes the state map to JSON
