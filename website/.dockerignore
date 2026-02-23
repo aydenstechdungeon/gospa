@@ -1,0 +1,45 @@
+# Build artifacts
+website.bin
+*.exe
+*.exe~
+*.dll
+*.so
+*.dylib
+
+# Test files
+*_test.go
+tests/
+
+# Development files
+*.log
+.vscode/
+.idea/
+
+# Git
+.git/
+.gitignore
+
+# Node/Bun (not used but ignore if present)
+node_modules/
+bun.lock
+
+# Binary output
+gospa
+examples/*/counter
+examples/*/gospa_bin
+
+# PSD and design files
+*.psd
+*.jpeg
+*.png
+*.ico
+*.svg
+*.webp
+
+# Documentation
+docs/
+*.md
+!README.md
+
+# Lint logs
+lint.log

@@ -4,25 +4,25 @@
 package routes
 
 import (
+	docsrouting "website/routes/docs/routing"
+	docsstatemanagement "website/routes/docs/state-management"
 	"github.com/aydenstechdungeon/gospa/routing"
-	docsapi "website/routes/docs/api"
-	docsclientruntime "website/routes/docs/client-runtime"
 	docscomponents "website/routes/docs/components"
-	docsdevtools "website/routes/docs/devtools"
-	docserrors "website/routes/docs/errors"
 	docsparams "website/routes/docs/params"
-	docsremoteactions "website/routes/docs/remote-actions"
-	docswebsocket "website/routes/docs/websocket"
-	"github.com/a-h/templ"
-	docscli "website/routes/docs/cli"
+	docsruntime "website/routes/docs/runtime"
+	docsclientruntime "website/routes/docs/client-runtime"
 	docsgetstarted "website/routes/docs/getstarted"
 	"website/routes/docs"
-	docsrouting "website/routes/docs/routing"
-	docsruntime "website/routes/docs/runtime"
-	docssecurity "website/routes/docs/security"
-	docsstatemanagement "website/routes/docs/state-management"
-	docsconfiguration "website/routes/docs/configuration"
 	docsreactiveprimitives "website/routes/docs/reactive-primitives"
+	docsconfiguration "website/routes/docs/configuration"
+	docsremoteactions "website/routes/docs/remote-actions"
+	docssecurity "website/routes/docs/security"
+	docswebsocket "website/routes/docs/websocket"
+	"github.com/a-h/templ"
+	docsapi "website/routes/docs/api"
+	docscli "website/routes/docs/cli"
+	docsdevtools "website/routes/docs/devtools"
+	docserrors "website/routes/docs/errors"
 )
 
 func init() {
