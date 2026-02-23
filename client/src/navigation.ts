@@ -140,20 +140,9 @@ async function updateDOM(data: PageData): Promise<void> {
 		document.title = data.title;
 	}
 
-	// DEBUG: Log before sanitization
-	console.log('[GoSPA DEBUG] Content before sanitization (first 500 chars):', data.content.substring(0, 500));
-	
 	// Update content area
 	const rootEl = document.querySelector('[data-gospa-root]');
 	const sanitizedContent = await safeSanitize(data.content);
-	
-	// DEBUG: Log after sanitization
-	console.log('[GoSPA DEBUG] Content after sanitization (first 500 chars):', sanitizedContent.substring(0, 500));
-	
-	// DEBUG: Check for onclick in original vs sanitized
-	const onclickCountBefore = (data.content.match(/onclick=/g) || []).length;
-	const onclickCountAfter = (sanitizedContent.match(/onclick=/g) || []).length;
-	console.log('[GoSPA DEBUG] onclick attributes - Before:', onclickCountBefore, 'After:', onclickCountAfter);
 	
 	if (rootEl) {
 		rootEl.innerHTML = sanitizedContent;
@@ -172,12 +161,6 @@ async function updateDOM(data: PageData): Promise<void> {
 
 	// Re-initialize runtime for new content
 	await initNewContent();
-	
-	// DEBUG: Check if Tailwind is available and needs re-scanning
-	if ((window as any).__tw) {
-		console.log('[GoSPA DEBUG] Tailwind runtime detected, checking if rescan needed');
-	}
-	console.log('[GoSPA DEBUG] DOM update complete, rootEl children:', rootEl?.children.length);
 }
 
 // Update head elements - smart reconciliation to avoid CSS flashes
@@ -482,8 +465,6 @@ export function initNavigation(): void {
 
 	// Mark as SPA-enabled
 	document.documentElement.setAttribute('data-gospa-spa', 'true');
-
-	console.log('[GoSPA] SPA navigation initialized');
 }
 
 // Cleanup navigation

@@ -1,0 +1,307 @@
+package components
+
+import "website/components"
+
+templ Page() {
+	<div class="space-y-12">
+		<header>
+			<h1 class="text-4xl font-bold tracking-tight mb-4 text-transparent bg-clip-text bg-gradient-to-r from-[var(--accent-primary)] to-[var(--accent-secondary)]">Component System</h1>
+			<p class="text-xl text-[var(--text-secondary)] leading-relaxed">
+				GoSPA's component system provides a hierarchical structure for managing UI components with lifecycle hooks, props, and state.
+			</p>
+		</header>
+
+		<section class="space-y-8">
+			<div>
+				<h2 class="text-2xl font-bold mb-4 border-b border-[var(--border)] pb-2 italic mono">BaseComponent</h2>
+				<p class="text-[var(--text-secondary)] mb-4">The foundation for all GoSPA components, providing core functionality for state management and lifecycle.</p>
+				@components.CodeBlock(`type BaseComponent struct {
+    ID       string
+    Name     string
+    State    *StateMap
+    Props    *Props
+    Children []*BaseComponent
+    Parent   *BaseComponent
+    Context  map[string]any
+}`, "go", "component/base.go")
+				<div class="mt-4 rounded-xl border border-[var(--border)] overflow-hidden">
+					<table class="w-full text-left text-sm">
+						<thead class="bg-[var(--bg-secondary)] text-[var(--text-muted)] uppercase tracking-wider">
+							<tr>
+								<th class="px-4 py-3 font-bold">Method</th>
+								<th class="px-4 py-3 font-bold">Return</th>
+								<th class="px-4 py-3 font-bold">Description</th>
+							</tr>
+						</thead>
+						<tbody class="divide-y divide-[var(--border)]">
+							<tr>
+								<td class="px-4 py-3 mono text-[var(--accent-primary)]">GetID()</td>
+								<td class="px-4 py-3 text-[var(--text-muted)]">string</td>
+								<td class="px-4 py-3 text-[var(--text-secondary)]">Returns unique component identifier</td>
+							</tr>
+							<tr>
+								<td class="px-4 py-3 mono text-[var(--accent-primary)]">GetName()</td>
+								<td class="px-4 py-3 text-[var(--text-muted)]">string</td>
+								<td class="px-4 py-3 text-[var(--text-secondary)]">Returns component name</td>
+							</tr>
+							<tr>
+								<td class="px-4 py-3 mono text-[var(--accent-primary)]">GetState()</td>
+								<td class="px-4 py-3 text-[var(--text-muted)]">*StateMap</td>
+								<td class="px-4 py-3 text-[var(--text-secondary)]">Returns component's state map</td>
+							</tr>
+							<tr>
+								<td class="px-4 py-3 mono text-[var(--accent-primary)]">GetProps()</td>
+								<td class="px-4 py-3 text-[var(--text-muted)]">*Props</td>
+								<td class="px-4 py-3 text-[var(--text-secondary)]">Returns component's props</td>
+							</tr>
+							<tr>
+								<td class="px-4 py-3 mono text-[var(--accent-primary)]">GetChildren()</td>
+								<td class="px-4 py-3 text-[var(--text-muted)]">[]*BaseComponent</td>
+								<td class="px-4 py-3 text-[var(--text-secondary)]">Returns child components</td>
+							</tr>
+							<tr>
+								<td class="px-4 py-3 mono text-[var(--accent-primary)]">AddChild(child)</td>
+								<td class="px-4 py-3 text-[var(--text-muted)]">error</td>
+								<td class="px-4 py-3 text-[var(--text-secondary)]">Adds a child component</td>
+							</tr>
+							<tr>
+								<td class="px-4 py-3 mono text-[var(--accent-primary)]">RemoveChild(id)</td>
+								<td class="px-4 py-3 text-[var(--text-muted)]">error</td>
+								<td class="px-4 py-3 text-[var(--text-secondary)]">Removes a child by ID</td>
+							</tr>
+							<tr>
+								<td class="px-4 py-3 mono text-[var(--accent-primary)]">ToJSON()</td>
+								<td class="px-4 py-3 text-[var(--text-muted)]">[]byte</td>
+								<td class="px-4 py-3 text-[var(--text-secondary)]">Serializes component to JSON</td>
+							</tr>
+							<tr>
+								<td class="px-4 py-3 mono text-[var(--accent-primary)]">Clone()</td>
+								<td class="px-4 py-3 text-[var(--text-muted)]">*BaseComponent</td>
+								<td class="px-4 py-3 text-[var(--text-secondary)]">Creates a deep copy</td>
+							</tr>
+						</tbody>
+					</table>
+				</div>
+			</div>
+
+			<div>
+				<h2 class="text-2xl font-bold mb-4 border-b border-[var(--border)] pb-2 italic mono">ComponentTree</h2>
+				<p class="text-[var(--text-secondary)] mb-4">Manages the hierarchical structure of components with traversal and search capabilities.</p>
+				@components.CodeBlock(`tree := component.NewTree(rootComponent)
+
+// Walk the tree
+tree.Walk(func(c *BaseComponent) bool {
+    fmt.Println(c.GetName())
+    return true // continue walking
+})
+
+// Find a component by ID
+found := tree.Find("component-id")
+
+// Find all matching components
+matches := tree.FindAll(func(c *BaseComponent) bool {
+    return c.GetName() == "Button"
+})`, "go", "example.go")
+				<div class="mt-4 rounded-xl border border-[var(--border)] overflow-hidden">
+					<table class="w-full text-left text-sm">
+						<thead class="bg-[var(--bg-secondary)] text-[var(--text-muted)] uppercase tracking-wider">
+							<tr>
+								<th class="px-4 py-3 font-bold">Method</th>
+								<th class="px-4 py-3 font-bold">Description</th>
+							</tr>
+						</thead>
+						<tbody class="divide-y divide-[var(--border)]">
+							<tr>
+								<td class="px-4 py-3 mono text-[var(--accent-primary)]">Root()</td>
+								<td class="px-4 py-3 text-[var(--text-secondary)]">Returns the root component</td>
+							</tr>
+							<tr>
+								<td class="px-4 py-3 mono text-[var(--accent-primary)]">Get(id)</td>
+								<td class="px-4 py-3 text-[var(--text-secondary)]">Get component by ID</td>
+							</tr>
+							<tr>
+								<td class="px-4 py-3 mono text-[var(--accent-primary)]">Add(parentID, child)</td>
+								<td class="px-4 py-3 text-[var(--text-secondary)]">Add child to parent</td>
+							</tr>
+							<tr>
+								<td class="px-4 py-3 mono text-[var(--accent-primary)]">Remove(id)</td>
+								<td class="px-4 py-3 text-[var(--text-secondary)]">Remove component and descendants</td>
+							</tr>
+							<tr>
+								<td class="px-4 py-3 mono text-[var(--accent-primary)]">Walk(fn)</td>
+								<td class="px-4 py-3 text-[var(--text-secondary)]">Depth-first traversal</td>
+							</tr>
+							<tr>
+								<td class="px-4 py-3 mono text-[var(--accent-primary)]">Find(id)</td>
+								<td class="px-4 py-3 text-[var(--text-secondary)]">Find component by ID</td>
+							</tr>
+							<tr>
+								<td class="px-4 py-3 mono text-[var(--accent-primary)]">FindAll(predicate)</td>
+								<td class="px-4 py-3 text-[var(--text-secondary)]">Find all matching components</td>
+							</tr>
+						</tbody>
+					</table>
+				</div>
+			</div>
+
+			<div>
+				<h2 class="text-2xl font-bold mb-4 border-b border-[var(--border)] pb-2 italic mono">Lifecycle</h2>
+				<p class="text-[var(--text-secondary)] mb-4">Components go through defined phases with hooks for each transition.</p>
+				@components.CodeBlock(`component.OnMount(func(c *BaseComponent) {
+    fmt.Println("Component mounted:", c.GetID())
+})
+
+component.OnUpdate(func(c *BaseComponent, oldProps, newProps *Props) {
+    fmt.Println("Props updated")
+})
+
+component.OnDestroy(func(c *BaseComponent) {
+    // Cleanup resources
+})`, "go", "lifecycle.go")
+				<div class="mt-4 rounded-xl border border-[var(--border)] overflow-hidden">
+					<table class="w-full text-left text-sm">
+						<thead class="bg-[var(--bg-secondary)] text-[var(--text-muted)] uppercase tracking-wider">
+							<tr>
+								<th class="px-4 py-3 font-bold">Phase</th>
+								<th class="px-4 py-3 font-bold">Hook</th>
+								<th class="px-4 py-3 font-bold">Description</th>
+							</tr>
+						</thead>
+						<tbody class="divide-y divide-[var(--border)]">
+							<tr>
+								<td class="px-4 py-3 text-[var(--text-primary)] font-semibold">Created</td>
+								<td class="px-4 py-3 mono text-[var(--accent-primary)]">OnCreate</td>
+								<td class="px-4 py-3 text-[var(--text-secondary)]">Component instance created</td>
+							</tr>
+							<tr>
+								<td class="px-4 py-3 text-[var(--text-primary)] font-semibold">Mounting</td>
+								<td class="px-4 py-3 mono text-[var(--accent-primary)]">OnMount</td>
+								<td class="px-4 py-3 text-[var(--text-secondary)]">Before DOM insertion</td>
+							</tr>
+							<tr>
+								<td class="px-4 py-3 text-[var(--text-primary)] font-semibold">Mounted</td>
+								<td class="px-4 py-3 mono text-[var(--accent-primary)]">OnMounted</td>
+								<td class="px-4 py-3 text-[var(--text-secondary)]">After DOM insertion</td>
+							</tr>
+							<tr>
+								<td class="px-4 py-3 text-[var(--text-primary)] font-semibold">Updating</td>
+								<td class="px-4 py-3 mono text-[var(--accent-primary)]">OnUpdate</td>
+								<td class="px-4 py-3 text-[var(--text-secondary)]">Before props/state change</td>
+							</tr>
+							<tr>
+								<td class="px-4 py-3 text-[var(--text-primary)] font-semibold">Updated</td>
+								<td class="px-4 py-3 mono text-[var(--accent-primary)]">OnUpdated</td>
+								<td class="px-4 py-3 text-[var(--text-secondary)]">After props/state change</td>
+							</tr>
+							<tr>
+								<td class="px-4 py-3 text-[var(--text-primary)] font-semibold">Destroying</td>
+								<td class="px-4 py-3 mono text-[var(--accent-primary)]">OnDestroy</td>
+								<td class="px-4 py-3 text-[var(--text-secondary)]">Before removal</td>
+							</tr>
+							<tr>
+								<td class="px-4 py-3 text-[var(--text-primary)] font-semibold">Destroyed</td>
+								<td class="px-4 py-3 mono text-[var(--accent-primary)]">OnDestroyed</td>
+								<td class="px-4 py-3 text-[var(--text-secondary)]">After removal</td>
+							</tr>
+						</tbody>
+					</table>
+				</div>
+			</div>
+
+			<div>
+				<h2 class="text-2xl font-bold mb-4 border-b border-[var(--border)] pb-2 italic mono">Props</h2>
+				<p class="text-[var(--text-secondary)] mb-4">Type-safe property access with validation and default values.</p>
+				@components.CodeBlock(`props := component.NewProps()
+props.Set("title", "Hello")
+props.Set("count", 42)
+
+title := props.GetString("title")     // "Hello"
+count := props.GetInt("count")        // 42
+enabled := props.GetBool("enabled", false) // false (default)
+
+// With schema validation
+schema := component.PropSchema{
+    "title": {Type: "string", Required: true},
+    "count": {Type: "int", Default: 0},
+}
+props := component.NewPropsWithSchema(schema)`, "go", "props.go")
+				<div class="mt-4 rounded-xl border border-[var(--border)] overflow-hidden">
+					<table class="w-full text-left text-sm">
+						<thead class="bg-[var(--bg-secondary)] text-[var(--text-muted)] uppercase tracking-wider">
+							<tr>
+								<th class="px-4 py-3 font-bold">Method</th>
+								<th class="px-4 py-3 font-bold">Return</th>
+								<th class="px-4 py-3 font-bold">Description</th>
+							</tr>
+						</thead>
+						<tbody class="divide-y divide-[var(--border)]">
+							<tr>
+								<td class="px-4 py-3 mono text-[var(--accent-primary)]">Get(key)</td>
+								<td class="px-4 py-3 text-[var(--text-muted)]">any</td>
+								<td class="px-4 py-3 text-[var(--text-secondary)]">Get raw value</td>
+							</tr>
+							<tr>
+								<td class="px-4 py-3 mono text-[var(--accent-primary)]">GetString(key)</td>
+								<td class="px-4 py-3 text-[var(--text-muted)]">string</td>
+								<td class="px-4 py-3 text-[var(--text-secondary)]">Get as string</td>
+							</tr>
+							<tr>
+								<td class="px-4 py-3 mono text-[var(--accent-primary)]">GetInt(key)</td>
+								<td class="px-4 py-3 text-[var(--text-muted)]">int</td>
+								<td class="px-4 py-3 text-[var(--text-secondary)]">Get as integer</td>
+							</tr>
+							<tr>
+								<td class="px-4 py-3 mono text-[var(--accent-primary)]">GetBool(key, default)</td>
+								<td class="px-4 py-3 text-[var(--text-muted)]">bool</td>
+								<td class="px-4 py-3 text-[var(--text-secondary)]">Get as boolean with default</td>
+							</tr>
+							<tr>
+								<td class="px-4 py-3 mono text-[var(--accent-primary)]">GetFloat64(key)</td>
+								<td class="px-4 py-3 text-[var(--text-muted)]">float64</td>
+								<td class="px-4 py-3 text-[var(--text-secondary)]">Get as float</td>
+							</tr>
+							<tr>
+								<td class="px-4 py-3 mono text-[var(--accent-primary)]">GetSlice(key)</td>
+								<td class="px-4 py-3 text-[var(--text-muted)]">[]any</td>
+								<td class="px-4 py-3 text-[var(--text-secondary)]">Get as slice</td>
+							</tr>
+							<tr>
+								<td class="px-4 py-3 mono text-[var(--accent-primary)]">Set(key, value)</td>
+								<td class="px-4 py-3 text-[var(--text-muted)]">-</td>
+								<td class="px-4 py-3 text-[var(--text-secondary)]">Set a value</td>
+							</tr>
+							<tr>
+								<td class="px-4 py-3 mono text-[var(--accent-primary)]">Has(key)</td>
+								<td class="px-4 py-3 text-[var(--text-muted)]">bool</td>
+								<td class="px-4 py-3 text-[var(--text-secondary)]">Check if key exists</td>
+							</tr>
+							<tr>
+								<td class="px-4 py-3 mono text-[var(--accent-primary)]">Validate()</td>
+								<td class="px-4 py-3 text-[var(--text-muted)]">error</td>
+								<td class="px-4 py-3 text-[var(--text-secondary)]">Validate against schema</td>
+							</tr>
+						</tbody>
+					</table>
+				</div>
+			</div>
+
+			<div>
+				<h2 class="text-2xl font-bold mb-4 border-b border-[var(--border)] pb-2 italic mono">BindableProp</h2>
+				<p class="text-[var(--text-secondary)] mb-4">Two-way binding support for parent-child communication.</p>
+				@components.CodeBlock(`// Create a bindable prop
+name := component.NewBindableProp("World")
+
+// Subscribe to changes
+name.OnChange(func(newVal string) {
+    fmt.Println("Name changed to:", newVal)
+})
+
+// Set value (triggers OnChange)
+name.Set("GoSPA")
+
+// Get current value
+current := name.Get() // "GoSPA"`, "go", "bindable.go")
+			</div>
+		</section>
+	</div>
+}

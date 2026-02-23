@@ -1,0 +1,175 @@
+package cli
+
+import "website/components"
+
+templ Page() {
+	<div class="space-y-12">
+		<header>
+			<h1 class="text-4xl font-bold tracking-tight mb-4 text-transparent bg-clip-text bg-gradient-to-r from-[var(--accent-primary)] to-[var(--accent-secondary)]">CLI Reference</h1>
+			<p class="text-xl text-[var(--text-secondary)] leading-relaxed">
+				Complete reference for the GoSPA command-line interface tools.
+			</p>
+		</header>
+
+		<section class="space-y-8">
+			<div>
+				<h2 class="text-2xl font-bold mb-4 border-b border-[var(--border)] pb-2 italic mono">gospa create</h2>
+				<p class="text-[var(--text-secondary)] mb-4">Creates a new GoSPA project with the specified name.</p>
+				@components.CodeBlock(`gospa create myapp
+gospa create myapp --dir ./projects
+gospa create myapp --template minimal`, "bash", "terminal")
+				<div class="mt-4 rounded-xl border border-[var(--border)] overflow-hidden">
+					<table class="w-full text-left text-sm">
+						<thead class="bg-[var(--bg-secondary)] text-[var(--text-muted)] uppercase tracking-wider">
+							<tr>
+								<th class="px-4 py-3 font-bold">Flag</th>
+								<th class="px-4 py-3 font-bold">Default</th>
+								<th class="px-4 py-3 font-bold">Description</th>
+							</tr>
+						</thead>
+						<tbody class="divide-y divide-[var(--border)]">
+							<tr>
+								<td class="px-4 py-3 mono text-[var(--accent-primary)]">--dir</td>
+								<td class="px-4 py-3 text-[var(--text-muted)]">.</td>
+								<td class="px-4 py-3 text-[var(--text-secondary)]">Target directory for the project</td>
+							</tr>
+							<tr>
+								<td class="px-4 py-3 mono text-[var(--accent-primary)]">--template</td>
+								<td class="px-4 py-3 text-[var(--text-muted)]">default</td>
+								<td class="px-4 py-3 text-[var(--text-secondary)]">Project template (default, minimal, full)</td>
+							</tr>
+							<tr>
+								<td class="px-4 py-3 mono text-[var(--accent-primary)]">--skip-git</td>
+								<td class="px-4 py-3 text-[var(--text-muted)]">false</td>
+								<td class="px-4 py-3 text-[var(--text-secondary)]">Skip git initialization</td>
+							</tr>
+						</tbody>
+					</table>
+				</div>
+			</div>
+
+			<div>
+				<h2 class="text-2xl font-bold mb-4 border-b border-[var(--border)] pb-2 italic mono">gospa build</h2>
+				<p class="text-[var(--text-secondary)] mb-4">Builds the application for production deployment.</p>
+				@components.CodeBlock(`gospa build
+gospa build --output ./dist
+gospa build --minify`, "bash", "terminal")
+				<div class="mt-4 rounded-xl border border-[var(--border)] overflow-hidden">
+					<table class="w-full text-left text-sm">
+						<thead class="bg-[var(--bg-secondary)] text-[var(--text-muted)] uppercase tracking-wider">
+							<tr>
+								<th class="px-4 py-3 font-bold">Flag</th>
+								<th class="px-4 py-3 font-bold">Default</th>
+								<th class="px-4 py-3 font-bold">Description</th>
+							</tr>
+						</thead>
+						<tbody class="divide-y divide-[var(--border)]">
+							<tr>
+								<td class="px-4 py-3 mono text-[var(--accent-primary)]">--output</td>
+								<td class="px-4 py-3 text-[var(--text-muted)]">./bin</td>
+								<td class="px-4 py-3 text-[var(--text-secondary)]">Output directory for built files</td>
+							</tr>
+							<tr>
+								<td class="px-4 py-3 mono text-[var(--accent-primary)]">--minify</td>
+								<td class="px-4 py-3 text-[var(--text-muted)]">true</td>
+								<td class="px-4 py-3 text-[var(--text-secondary)]">Minify JavaScript output</td>
+							</tr>
+							<tr>
+								<td class="px-4 py-3 mono text-[var(--accent-primary)]">--env</td>
+								<td class="px-4 py-3 text-[var(--text-muted)]">production</td>
+								<td class="px-4 py-3 text-[var(--text-secondary)]">Build environment</td>
+							</tr>
+						</tbody>
+					</table>
+				</div>
+			</div>
+
+			<div>
+				<h2 class="text-2xl font-bold mb-4 border-b border-[var(--border)] pb-2 italic mono">gospa dev</h2>
+				<p class="text-[var(--text-secondary)] mb-4">Starts the development server with hot reload.</p>
+				@components.CodeBlock(`gospa dev
+gospa dev --port 8080
+gospa dev --no-watch`, "bash", "terminal")
+				<div class="mt-4 rounded-xl border border-[var(--border)] overflow-hidden">
+					<table class="w-full text-left text-sm">
+						<thead class="bg-[var(--bg-secondary)] text-[var(--text-muted)] uppercase tracking-wider">
+							<tr>
+								<th class="px-4 py-3 font-bold">Flag</th>
+								<th class="px-4 py-3 font-bold">Default</th>
+								<th class="px-4 py-3 font-bold">Description</th>
+							</tr>
+						</thead>
+						<tbody class="divide-y divide-[var(--border)]">
+							<tr>
+								<td class="px-4 py-3 mono text-[var(--accent-primary)]">--port</td>
+								<td class="px-4 py-3 text-[var(--text-muted)]">3000</td>
+								<td class="px-4 py-3 text-[var(--text-secondary)]">Server port</td>
+							</tr>
+							<tr>
+								<td class="px-4 py-3 mono text-[var(--accent-primary)]">--host</td>
+								<td class="px-4 py-3 text-[var(--text-muted)]">localhost</td>
+								<td class="px-4 py-3 text-[var(--text-secondary)]">Server host</td>
+							</tr>
+							<tr>
+								<td class="px-4 py-3 mono text-[var(--accent-primary)]">--no-watch</td>
+								<td class="px-4 py-3 text-[var(--text-muted)]">false</td>
+								<td class="px-4 py-3 text-[var(--text-secondary)]">Disable file watching</td>
+							</tr>
+						</tbody>
+					</table>
+				</div>
+			</div>
+
+			<div>
+				<h2 class="text-2xl font-bold mb-4 border-b border-[var(--border)] pb-2 italic mono">gospa generate</h2>
+				<p class="text-[var(--text-secondary)] mb-4">Generates TypeScript types and route definitions.</p>
+				@components.CodeBlock(`gospa generate
+gospa generate --routes-only
+gospa generate --types-only`, "bash", "terminal")
+				<div class="mt-4 rounded-xl border border-[var(--border)] overflow-hidden">
+					<table class="w-full text-left text-sm">
+						<thead class="bg-[var(--bg-secondary)] text-[var(--text-muted)] uppercase tracking-wider">
+							<tr>
+								<th class="px-4 py-3 font-bold">Flag</th>
+								<th class="px-4 py-3 font-bold">Default</th>
+								<th class="px-4 py-3 font-bold">Description</th>
+							</tr>
+						</thead>
+						<tbody class="divide-y divide-[var(--border)]">
+							<tr>
+								<td class="px-4 py-3 mono text-[var(--accent-primary)]">--routes-only</td>
+								<td class="px-4 py-3 text-[var(--text-muted)]">false</td>
+								<td class="px-4 py-3 text-[var(--text-secondary)]">Generate only route definitions</td>
+							</tr>
+							<tr>
+								<td class="px-4 py-3 mono text-[var(--accent-primary)]">--types-only</td>
+								<td class="px-4 py-3 text-[var(--text-muted)]">false</td>
+								<td class="px-4 py-3 text-[var(--text-secondary)]">Generate only TypeScript types</td>
+							</tr>
+							<tr>
+								<td class="px-4 py-3 mono text-[var(--accent-primary)]">--output</td>
+								<td class="px-4 py-3 text-[var(--text-muted)]">./generated</td>
+								<td class="px-4 py-3 text-[var(--text-secondary)]">Output directory for generated files</td>
+							</tr>
+						</tbody>
+					</table>
+				</div>
+			</div>
+		</section>
+
+		<section>
+			<h2 class="text-2xl font-bold mb-4 border-b border-[var(--border)] pb-2">Project Structure</h2>
+			<p class="text-[var(--text-secondary)] mb-4">A newly created GoSPA project has the following structure:</p>
+			@components.CodeBlock(`myapp/
+├── main.go           # Application entry point
+├── go.mod            # Go module definition
+├── routes/           # Route handlers (Templ)
+│   ├── layout.templ  # Root layout
+│   └── page.templ    # Home page
+├── generated/        # Auto-generated TypeScript
+│   ├── routes.ts     # Route definitions
+│   └── types.ts      # TypeScript types
+└── static/           # Static assets`, "plaintext", "structure")
+		</section>
+	</div>
+}

@@ -106,6 +106,10 @@ func getHeadlines(path string) []string {
 		return []string{"File Structure", "Dynamic Routes", "Layouts"}
 	case "/docs/state-management":
 		return []string{"Synchronization", "Persistence", "Multi-tab Sync"}
+	case "/docs/components":
+		return []string{"BaseComponent", "ComponentTree", "Lifecycle", "Props"}
+	case "/docs/params":
+		return []string{"Params", "QueryParams", "ParamExtractor", "PathBuilder"}
 	case "/docs/api":
 		return []string{"Configuration", "App Instance", "State Map"}
 	case "/docs/remote-actions":
@@ -114,8 +118,14 @@ func getHeadlines(path string) []string {
 		return []string{"WebSocket Hub", "Broadcast", "Reconnection"}
 	case "/docs/security":
 		return []string{"XSS Protection", "State Isolation"}
+	case "/docs/errors":
+		return []string{"AppError", "ErrorCode", "ErrorHandler", "Recovery"}
+	case "/docs/devtools":
+		return []string{"Hot Reload", "File Watching", "State Inspector", "Debug Logging"}
 	case "/docs/client-runtime":
 		return []string{"Initialization", "Navigation", "State Access"}
+	case "/docs/cli":
+		return []string{"create", "build", "dev", "generate"}
 	default:
 		return []string{"Usage", "Examples", "Best Practices"}
 	}

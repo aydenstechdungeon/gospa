@@ -6,9 +6,9 @@ templ Benchmarks() {
 	<section class="py-24 bg-[var(--bg-secondary)] relative">
 		<div class="max-w-7xl mx-auto px-4">
 			<div class="mb-16">
-				<h2 class="text-3xl md:text-5xl font-bold mb-4">Unrivaled <span class="text-[var(--accent-primary)]">Performance</span></h2>
+				<h2 class="text-3xl md:text-5xl font-bold mb-4">Proven <span class="text-[var(--accent-primary)]">Performance</span></h2>
 				<p class="text-[var(--text-secondary)] max-w-2xl">
-					GoSPA is built for speed. By leveraging Fiber's zero-allocation router and Templ's lightning-fast rendering, we achieve enterprise-grade throughput with minimal latency.
+					Real benchmark results from GoSPA v0.1.0 with Fiber v2.52.11. Tested with gradual load increase from 1 to 200 concurrent connections.
 				</p>
 			</div>
 
@@ -25,16 +25,20 @@ templ Benchmarks() {
 					</div>
 
 					<div class="space-y-6">
-						@benchmarkBar("Low Load", "10,295 RPS", 42)
-						@benchmarkBar("Medium Load", "15,907 RPS", 65)
-						@benchmarkBar("High Load", "20,074 RPS", 82)
-						@benchmarkBar("Extreme Load (Peak)", "24,345 RPS", 100)
+						@benchmarkBar("Low Load (5 conn)", "10,295 RPS", 42)
+						@benchmarkBar("Medium Load (50 conn)", "15,907 RPS", 65)
+						@benchmarkBar("High Load (100 conn)", "22,563 RPS", 93)
+						@benchmarkBar("Peak (150 conn)", "24,345 RPS", 100)
 					</div>
 					
-					<div class="mt-12 pt-8 border-t border-[var(--border)] grid grid-cols-2 gap-4">
+					<div class="mt-12 pt-8 border-t border-[var(--border)] grid grid-cols-3 gap-4">
 						<div>
-							<div class="text-[var(--text-muted)] text-xs mb-1">Avg Latency</div>
-							<div class="text-xl font-bold mono italic">6.03ms</div>
+							<div class="text-[var(--text-muted)] text-xs mb-1">Best Latency</div>
+							<div class="text-xl font-bold mono">484µs</div>
+						</div>
+						<div>
+							<div class="text-[var(--text-muted)] text-xs mb-1">P95 at Peak</div>
+							<div class="text-xl font-bold mono">15.13ms</div>
 						</div>
 						<div>
 							<div class="text-[var(--text-muted)] text-xs mb-1">Success Rate</div>
@@ -45,17 +49,17 @@ templ Benchmarks() {
 
 				<div class="bg-[var(--bg-tertiary)] rounded-3xl p-8 border border-[var(--border)] shadow-xl">
 					<div class="flex items-center justify-between mb-8">
-						<h3 class="text-xl font-bold">RPS vs Concurrency</h3>
-						<div class="text-xs text-[var(--text-muted)] mono">Measured on 32-core instance</div>
+						<h3 class="text-xl font-bold">Throughput Scaling</h3>
+						<div class="text-xs text-[var(--text-muted)] mono">307,600 total requests (local env)</div>
 					</div>
 					
 					<div class="h-64 flex items-end justify-between gap-2">
 						@chartBar(10, "5", "10k")
 						@chartBar(14, "10", "14k")
-						@chartBar(15, "25", "15k")
+						@chartBar(14, "25", "14k")
 						@chartBar(16, "50", "16k")
 						@chartBar(20, "75", "20k")
-						@chartBar(22, "100", "22k")
+						@chartBar(23, "100", "23k")
 						@chartBar(24, "150", "24k")
 						@chartBar(23, "200", "23k")
 					</div>
@@ -65,8 +69,8 @@ templ Benchmarks() {
 					</div>
 
 					<div class="mt-12 bg-[var(--bg-primary)] rounded-2xl p-4 border border-[var(--border)]">
-						<p class="text-sm text-[var(--text-secondary)] italic leading-relaxed">
-							"GoSPA demonstrates exceptional scaling characteristics, maintaining 100% success rate even under extreme 200x concurrency while keeping P95 latency well within interactive thresholds."
+						<p class="text-sm text-[var(--text-secondary)] leading-relaxed">
+							<span class="text-[var(--accent-success)] font-semibold">100% success rate</span> across all load levels. P95 latency scales predictably from 1.5ms at low load to 21.6ms at maximum 200 concurrent connections.
 						</p>
 					</div>
 				</div>

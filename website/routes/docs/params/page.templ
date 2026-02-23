@@ -1,0 +1,178 @@
+package params
+
+import "website/components"
+
+templ Page() {
+	<div class="space-y-12">
+		<header>
+			<h1 class="text-4xl font-bold tracking-tight mb-4 text-transparent bg-clip-text bg-gradient-to-r from-[var(--accent-primary)] to-[var(--accent-secondary)]">Route Parameters</h1>
+			<p class="text-xl text-[var(--text-secondary)] leading-relaxed">
+				GoSPA provides type-safe route parameter extraction and URL building utilities.
+			</p>
+		</header>
+
+		<section class="space-y-8">
+			<div>
+				<h2 class="text-2xl font-bold mb-4 border-b border-[var(--border)] pb-2 italic mono">Params</h2>
+				<p class="text-[var(--text-secondary)] mb-4">Extract and manage route parameters from URLs.</p>
+				@components.CodeBlock(`type Params struct {
+    values map[string]string
+}
+
+// Get a parameter value
+id := params.Get("id")  // returns string
+
+// Get with default
+page := params.GetDefault("page", "1")
+
+// Get all parameters
+all := params.All()  // returns map[string]string
+
+// Check if parameter exists
+if params.Has("id") {
+    // ...
+}`, "go", "routing/params.go")
+			</div>
+
+			<div>
+				<h2 class="text-2xl font-bold mb-4 border-b border-[var(--border)] pb-2 italic mono">QueryParams</h2>
+				<p class="text-[var(--text-secondary)] mb-4">Handle URL query string parameters.</p>
+				@components.CodeBlock(`type QueryParams struct {
+    values url.Values
+}
+
+// Get a query parameter
+search := query.Get("q")
+
+// Get all values for a key (multi-value)
+tags := query.GetAll("tag")  // returns []string
+
+// Get typed values
+page := query.GetInt("page", 1)
+limit := query.GetInt("limit", 10)
+active := query.GetBool("active", false)
+
+// Set a query parameter
+query.Set("sort", "created_at")
+
+// Add a query parameter (appends to existing)
+query.Add("filter", "active")
+
+// Delete a query parameter
+query.Del("token")
+
+// Encode to string
+encoded := query.Encode()  // "q=test&page=1"`, "go", "routing/params.go")
+			</div>
+
+			<div>
+				<h2 class="text-2xl font-bold mb-4 border-b border-[var(--border)] pb-2 italic mono">ParamExtractor</h2>
+				<p class="text-[var(--text-secondary)] mb-4">Extract parameters from route patterns.</p>
+				@components.CodeBlock(`// Create extractor with route pattern
+extractor := routing.NewParamExtractor("/users/:id/posts/:postId")
+
+// Extract from URL
+params, err := extractor.Extract("/users/123/posts/456")
+// params = {"id": "123", "postId": "456"}
+
+// With wildcard patterns
+extractor := routing.NewParamExtractor("/files/*path")
+params, _ := extractor.Extract("/files/docs/readme.md")
+// params = {"path": "docs/readme.md"}
+
+// With optional segments
+extractor := routing.NewParamExtractor("/search/:query?")
+params, _ := extractor.Extract("/search")
+// params = {"query": ""}`, "go", "routing/params.go")
+			</div>
+
+			<div>
+				<h2 class="text-2xl font-bold mb-4 border-b border-[var(--border)] pb-2 italic mono">PathBuilder</h2>
+				<p class="text-[var(--text-secondary)] mb-4">Build URLs from route patterns and parameters.</p>
+				@components.CodeBlock(`// Create path builder
+builder := routing.NewPathBuilder("/users/:id/posts/:postId")
+
+// Build path with parameters
+path, err := builder.Build(map[string]string{
+    "id":     "123",
+    "postId": "456",
+})
+// path = "/users/123/posts/456"
+
+// Build with query parameters
+fullURL := builder.BuildWithQuery(
+    map[string]string{"id": "123"},
+    map[string]string{"sort": "date", "order": "desc"},
+)
+// fullURL = "/users/123?sort=date&order=desc"
+
+// Validate parameters before building
+if err := builder.Validate(map[string]string{"id": "123"}); err != nil {
+    // Missing required parameter: postId
+}`, "go", "routing/params.go")
+			</div>
+
+			<div>
+				<h2 class="text-2xl font-bold mb-4 border-b border-[var(--border)] pb-2 italic mono">Route Patterns</h2>
+				<p class="text-[var(--text-secondary)] mb-4">Supported route pattern syntax.</p>
+				<div class="mt-4 rounded-xl border border-[var(--border)] overflow-hidden">
+					<table class="w-full text-left text-sm">
+						<thead class="bg-[var(--bg-secondary)] text-[var(--text-muted)] uppercase tracking-wider">
+							<tr>
+								<th class="px-4 py-3 font-bold">Pattern</th>
+								<th class="px-4 py-3 font-bold">Example</th>
+								<th class="px-4 py-3 font-bold">Description</th>
+							</tr>
+						</thead>
+						<tbody class="divide-y divide-[var(--border)]">
+							<tr>
+								<td class="px-4 py-3 mono text-[var(--accent-primary)]">:param</td>
+								<td class="px-4 py-3 text-[var(--text-muted)]">/users/:id</td>
+								<td class="px-4 py-3 text-[var(--text-secondary)]">Named parameter (required)</td>
+							</tr>
+							<tr>
+								<td class="px-4 py-3 mono text-[var(--accent-primary)]">:param?</td>
+								<td class="px-4 py-3 text-[var(--text-muted)]">/search/:query?</td>
+								<td class="px-4 py-3 text-[var(--text-secondary)]">Optional parameter</td>
+							</tr>
+							<tr>
+								<td class="px-4 py-3 mono text-[var(--accent-primary)]">*param</td>
+								<td class="px-4 py-3 text-[var(--text-muted)]">/files/*path</td>
+								<td class="px-4 py-3 text-[var(--text-secondary)]">Wildcard (catch-all)</td>
+							</tr>
+							<tr>
+								<td class="px-4 py-3 mono text-[var(--accent-primary)]">:param(regex)</td>
+								<td class="px-4 py-3 text-[var(--text-muted)]">/users/:id(^[0-9]+$)</td>
+								<td class="px-4 py-3 text-[var(--text-secondary)]">Parameter with regex constraint</td>
+							</tr>
+						</tbody>
+					</table>
+				</div>
+			</div>
+
+			<div>
+				<h2 class="text-2xl font-bold mb-4 border-b border-[var(--border)] pb-2 italic mono">Client-Side Navigation</h2>
+				<p class="text-[var(--text-secondary)] mb-4">Type-safe navigation in TypeScript.</p>
+				@components.CodeBlock(`import { navigate, buildPath, getParams } from 'gospa/navigation';
+
+// Navigate to a route
+navigate('/users/123');
+
+// Build path from parameters
+const path = buildPath('/users/:id/posts/:postId', {
+    id: '123',
+    postId: '456'
+});
+// path = '/users/123/posts/456'
+
+// Get current route parameters
+const params = getParams();
+console.log(params.id);  // "123"
+
+// Get query parameters
+const query = getQueryParams();
+console.log(query.sort);  // "date"`, "typescript", "client/navigation.ts")
+			</div>
+		</section>
+	</div>
+}

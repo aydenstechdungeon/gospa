@@ -1,0 +1,437 @@
+# GoSPA Configuration Reference
+
+Complete reference for all `gospa.Config` options. This is the single source of truth for configuring your GoSPA application.
+
+## Quick Reference
+
+```go
+app := gospa.New(gospa.Config{
+    RoutesDir: "./routes",
+    DevMode:   true,
+    AppName:   "My App",
+})
+```
+
+## All Configuration Options
+
+### Basic Options
+
+| Option | Type | Default | Description |
+|--------|------|---------|-------------|
+| `RoutesDir` | `string` | `"./routes"` | Directory containing route files |
+| `RoutesFS` | `fs.FS` | `nil` | Filesystem for routes (takes precedence over RoutesDir) |
+| `DevMode` | `bool` | `false` | Enable development features (logging, print routes) |
+| `RuntimeScript` | `string` | `"/_gospa/runtime.js"` | Path to client runtime script |
+| `StaticDir` | `string` | `"./static"` | Directory for static files |
+| `StaticPrefix` | `string` | `"/static"` | URL prefix for static files |
+| `AppName` | `string` | `"GoSPA App"` | Application name (used in default layout) |
+
+### State Options
+
+| Option | Type | Default | Description |
+|--------|------|---------|-------------|
+| `DefaultState` | `map[string]interface{}` | `{}` | Initial state for new sessions |
+| `StateSerializer` | `StateSerializerFunc` | JSON | Custom state serialization function |
+| `StateDeserializer` | `StateDeserializerFunc` | JSON | Custom state deserialization function |
+
+### WebSocket Options
+
+| Option | Type | Default | Description |
+|--------|------|---------|-------------|
+| `EnableWebSocket` | `bool` | `true` | Enable WebSocket support |
+| `WebSocketPath` | `string` | `"/_gospa/ws"` | WebSocket endpoint path |
+| `WebSocketMiddleware` | `fiber.Handler` | `nil` | Middleware before WebSocket upgrade |
+| `WSReconnectDelay` | `time.Duration` | `0` | Initial reconnect delay |
+| `WSMaxReconnect` | `int` | `0` | Max reconnect attempts (0 = unlimited) |
+| `WSHeartbeat` | `time.Duration` | `0` | Heartbeat interval |
+
+### Performance Options
+
+| Option | Type | Default | Description |
+|--------|------|---------|-------------|
+| `CompressState` | `bool` | `false` | Compress WebSocket messages |
+| `StateDiffing` | `bool` | `false` | Only send state diffs over WebSocket |
+| `CacheTemplates` | `bool` | `false` | Cache compiled templates |
+| `SimpleRuntime` | `bool` | `false` | Use lightweight runtime without DOMPurify |
+
+### Hydration Options
+
+| Option | Type | Default | Description |
+|--------|------|---------|-------------|
+| `HydrationMode` | `string` | `""` | Hydration strategy: `"immediate"`, `"lazy"`, `"visible"`, `"idle"` |
+| `HydrationTimeout` | `int` | `0` | Milliseconds before force hydrate |
+
+### Routing Options
+
+| Option | Type | Default | Description |
+|--------|------|---------|-------------|
+| `DisableSPA` | `bool` | `false` | Disable SPA navigation completely |
+| `SSR` | `bool` | `false` | Global SSR mode |
+
+### Remote Action Options
+
+| Option | Type | Default | Description |
+|--------|------|---------|-------------|
+| `MaxRequestBodySize` | `int` | `4194304` (4MB) | Max size for remote action request bodies |
+| `RemotePrefix` | `string` | `"/_gospa/remote"` | Prefix for remote action endpoints |
+
+### Security Options
+
+| Option | Type | Default | Description |
+|--------|------|---------|-------------|
+| `AllowedOrigins` | `[]string` | `[]` | Allowed CORS origins |
+| `EnableCSRF` | `bool` | `false` | Enable automatic CSRF protection |
+
+---
+
+## Detailed Option Descriptions
+
+### RoutesDir
+
+Directory containing your `.templ` route files. GoSPA scans this directory to build the route tree.
+
+```go
+RoutesDir: "./routes"
+```
+
+### RoutesFS
+
+Alternative: provide an `fs.FS` filesystem for routes. Takes precedence over `RoutesDir` if provided. Useful for embedding routes in the binary.
+
+```go
+//go:embed routes
+var routesFS embed.FS
+
+app := gospa.New(gospa.Config{
+    RoutesFS: routesFS,
+})
+```
+
+### DevMode
+
+Enables development features:
+- Request logging
+- Route printing on startup
+- Debug mode in client runtime
+
+```go
+DevMode: true
+```
+
+### RuntimeScript
+
+Path to the client runtime script. Defaults to the embedded runtime. Override to use a custom build.
+
+```go
+RuntimeScript: "/static/js/runtime.js"
+```
+
+### StaticDir & StaticPrefix
+
+Configure static file serving:
+
+```go
+StaticDir:    "./public",     // Directory containing static files
+StaticPrefix: "/assets",      // Serve at /assets/*
+```
+
+### DefaultState
+
+Initial state for new sessions. This state is synced to the client on initial load.
+
+```go
+DefaultState: map[string]interface{}{
+    "user":    nil,
+    "theme":   "light",
+    "counter": 0,
+}
+```
+
+### StateSerializer / StateDeserializer
+
+Custom serialization for state. Useful for complex types or compression.
+
+```go
+StateSerializer: func(state interface{}) ([]byte, error) {
+    return json.Marshal(state)
+},
+
+StateDeserializer: func(data []byte, target interface{}) error {
+    return json.Unmarshal(data, target)
+},
+```
+
+### WebSocketPath
+
+WebSocket endpoint path. Must match client configuration.
+
+```go
+WebSocketPath: "/_gospa/ws"
+```
+
+### WebSocketMiddleware
+
+Middleware that runs before WebSocket upgrade. Use for authentication, session validation, etc.
+
+```go
+WebSocketMiddleware: func(c *fiber.Ctx) error {
+    // Check session/auth before upgrade
+    token := c.Get("Authorization")
+    if !validateToken(token) {
+        return c.Status(401).SendString("Unauthorized")
+    }
+    return c.Next()
+},
+```
+
+### WSReconnectDelay
+
+Initial delay before reconnecting after WebSocket disconnect. The delay increases exponentially with each failed attempt.
+
+```go
+WSReconnectDelay: 100 * time.Millisecond,
+```
+
+### WSMaxReconnect
+
+Maximum number of reconnection attempts. Set to 0 for unlimited attempts.
+
+```go
+WSMaxReconnect: 10,  // Give up after 10 attempts
+```
+
+### WSHeartbeat
+
+Interval for sending heartbeat/ping messages to keep the connection alive.
+
+```go
+WSHeartbeat: 30 * time.Second,
+```
+
+### CompressState
+
+Enable compression for WebSocket messages. Reduces bandwidth for large state updates.
+
+```go
+CompressState: true,
+```
+
+### StateDiffing
+
+Only send state differences over WebSocket instead of full state. Reduces bandwidth when state changes are small.
+
+```go
+StateDiffing: true,
+```
+
+### CacheTemplates
+
+Cache compiled templates in memory. Improves performance for SSG pages.
+
+```go
+CacheTemplates: true,
+```
+
+### SimpleRuntime
+
+Use the lightweight runtime without DOMPurify sanitization. **Faster but less secure.** Only use when you control all HTML content.
+
+```go
+SimpleRuntime: true,  // ~30% smaller runtime, no DOMPurify
+```
+
+See [Runtime Selection Guide](./RUNTIME.md) for details.
+
+### HydrationMode
+
+Control when components hydrate (become interactive):
+
+- `"immediate"` - Hydrate as soon as possible (default)
+- `"lazy"` - Hydrate during browser idle time
+- `"visible"` - Hydrate when component enters viewport
+- `"idle"` - Hydrate when browser is idle (uses requestIdleCallback)
+
+```go
+HydrationMode: "visible",  // Hydrate when scrolled into view
+```
+
+### HydrationTimeout
+
+Milliseconds before forcing hydration. Used with `"lazy"` and `"idle"` modes to ensure hydration happens even if the browser never becomes idle.
+
+```go
+HydrationMode:    "idle",
+HydrationTimeout: 2000,  // Force hydrate after 2 seconds
+```
+
+### DisableSPA
+
+Disable SPA navigation completely. All navigation will trigger full page loads.
+
+```go
+DisableSPA: true,  // Traditional multi-page app behavior
+```
+
+### SSR
+
+Enable global Server-Side Rendering mode.
+
+```go
+SSR: true,
+```
+
+### MaxRequestBodySize
+
+Maximum allowed size for remote action request bodies in bytes.
+
+```go
+MaxRequestBodySize: 10 * 1024 * 1024,  // 10MB
+```
+
+### RemotePrefix
+
+URL prefix for remote action endpoints.
+
+```go
+RemotePrefix: "/api/remote",  // Remote actions at /api/remote/:name
+```
+
+### AllowedOrigins
+
+CORS allowed origins. Set to allow cross-origin requests.
+
+```go
+AllowedOrigins: []string{
+    "https://example.com",
+    "https://app.example.com",
+},
+```
+
+### EnableCSRF
+
+Enable automatic CSRF protection. Adds CSRF token to forms and validates on POST requests.
+
+```go
+EnableCSRF: true,
+```
+
+---
+
+## Complete Example
+
+```go
+package main
+
+import (
+    "time"
+    
+    "github.com/aydenstechdungeon/gospa"
+)
+
+func main() {
+    app := gospa.New(gospa.Config{
+        // Basic
+        RoutesDir: "./routes",
+        AppName:   "My Application",
+        DevMode:   true,
+        
+        // State
+        DefaultState: map[string]interface{}{
+            "theme": "dark",
+            "user":  nil,
+        },
+        
+        // WebSocket
+        EnableWebSocket:    true,
+        WebSocketPath:      "/_gospa/ws",
+        WSReconnectDelay:   100 * time.Millisecond,
+        WSMaxReconnect:     10,
+        WSHeartbeat:        30 * time.Second,
+        
+        // Performance
+        CompressState:  true,
+        StateDiffing:   true,
+        CacheTemplates: true,
+        SimpleRuntime:  false,  // Use full runtime with DOMPurify
+        
+        // Hydration
+        HydrationMode:    "visible",
+        HydrationTimeout: 3000,
+        
+        // Security
+        AllowedOrigins: []string{"https://myapp.com"},
+        EnableCSRF:     true,
+        
+        // Remote Actions
+        MaxRequestBodySize: 8 * 1024 * 1024,  // 8MB
+    })
+    
+    if err := app.Run(":3000"); err != nil {
+        panic(err)
+    }
+}
+```
+
+---
+
+## Default Configuration
+
+The `DefaultConfig()` function returns sensible defaults:
+
+```go
+config := gospa.DefaultConfig()
+// Returns:
+// - RoutesDir: "./routes"
+// - RuntimeScript: "/_gospa/runtime.js"
+// - StaticDir: "./static"
+// - StaticPrefix: "/static"
+// - AppName: "GoSPA App"
+// - EnableWebSocket: true
+// - WebSocketPath: "/_gospa/ws"
+// - RemotePrefix: "/_gospa/remote"
+// - MaxRequestBodySize: 4MB
+```
+
+---
+
+## Environment-Specific Configuration
+
+### Development
+
+```go
+app := gospa.New(gospa.Config{
+    DevMode:     true,
+    AppName:     "My App (Dev)",
+    RoutesDir:   "./routes",
+    SimpleRuntime: false,  // Full sanitization for dev
+})
+```
+
+### Production
+
+```go
+app := gospa.New(gospa.Config{
+    DevMode:         false,
+    AppName:         "My App",
+    RoutesDir:       "./routes",
+    CompressState:   true,
+    StateDiffing:    true,
+    CacheTemplates:  true,
+    EnableCSRF:      true,
+    AllowedOrigins:  []string{"https://myapp.com"},
+    WSHeartbeat:     30 * time.Second,
+})
+```
+
+### High-Performance
+
+```go
+app := gospa.New(gospa.Config{
+    DevMode:         false,
+    SimpleRuntime:   true,   // No DOMPurify - only if you control all content!
+    CompressState:   true,
+    StateDiffing:    true,
+    CacheTemplates:  true,
+    HydrationMode:   "lazy",
+})
+```

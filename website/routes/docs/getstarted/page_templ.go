@@ -31,23 +31,80 @@ func Page() templ.Component {
 			templ_7745c5c3_Var1 = templ.NopComponent
 		}
 		ctx = templ.ClearChildren(ctx)
-		templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 1, "<div id=\"overview\" class=\"space-y-8\"><header><h1 class=\"text-4xl font-bold tracking-tight mb-4\">Quick Start</h1><p class=\"text-xl text-[var(--text-secondary)]\">Get your first GoSPA application up and running in minutes.</p></header><section><h2 id=\"installation\" class=\"text-2xl font-bold mb-4 flex items-center gap-3\"><span class=\"w-8 h-8 rounded-full bg-[var(--bg-tertiary)] border border-[var(--border)] flex items-center justify-center text-sm\">1</span> Install the CLI</h2><p class=\"text-[var(--text-secondary)] mb-4\">The easiest way to start a new GoSPA project is by using our CLI tool. It scaffolds the project structure and provides development tools.</p>")
+		templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 1, "<div id=\"overview\" class=\"space-y-8\"><header><h1 class=\"text-4xl font-bold tracking-tight mb-4\">Getting Started</h1><p class=\"text-xl text-[var(--text-secondary)]\">Complete guide to building reactive single-page applications with GoSPA.</p></header><section class=\"p-6 rounded-2xl bg-[var(--bg-secondary)] border border-[var(--border)]\"><h2 class=\"text-xl font-bold mb-4\">What is GoSPA?</h2><p class=\"text-[var(--text-secondary)] mb-4\">GoSPA is a Go-based SPA framework that brings Svelte-like reactive primitives to server-side rendering. It combines:</p><ul class=\"list-disc list-inside space-y-2 text-[var(--text-secondary)]\"><li><strong class=\"text-[var(--text-primary)]\">Go + Templ</strong> ")
 		if templ_7745c5c3_Err != nil {
 			return templ_7745c5c3_Err
 		}
-		templ_7745c5c3_Err = components.CodeBlock("go run github.com/aydenstechdungeon/gospa/cmd/gospa@latest create myapp", "bash", "Terminal").Render(ctx, templ_7745c5c3_Buffer)
+		var templ_7745c5c3_Var2 string
+		templ_7745c5c3_Var2, templ_7745c5c3_Err = templ.JoinStringErrs("for")
+		if templ_7745c5c3_Err != nil {
+			return templ.Error{Err: templ_7745c5c3_Err, FileName: `routes/docs/getstarted/page.templ`, Line: 18, Col: 78}
+		}
+		_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ.EscapeString(templ_7745c5c3_Var2))
 		if templ_7745c5c3_Err != nil {
 			return templ_7745c5c3_Err
 		}
-		templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 2, "</section><section><h2 id=\"first-project\" class=\"text-2xl font-bold mb-4 flex items-center gap-3\"><span class=\"w-8 h-8 rounded-full bg-[var(--bg-tertiary)] border border-[var(--border)] flex items-center justify-center text-sm\">2</span> Enter and Initialize</h2><p class=\"text-[var(--text-secondary)] mb-4\">Navigate into your new project directory and install dependencies.</p>")
+		templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 2, " server-side rendering</li><li><strong class=\"text-[var(--text-primary)]\">TypeScript Runtime</strong> ")
 		if templ_7745c5c3_Err != nil {
 			return templ_7745c5c3_Err
 		}
-		templ_7745c5c3_Err = components.CodeBlock("cd myapp\ngo mod tidy", "bash", "Terminal").Render(ctx, templ_7745c5c3_Buffer)
+		var templ_7745c5c3_Var3 string
+		templ_7745c5c3_Var3, templ_7745c5c3_Err = templ.JoinStringErrs("for")
+		if templ_7745c5c3_Err != nil {
+			return templ.Error{Err: templ_7745c5c3_Err, FileName: `routes/docs/getstarted/page.templ`, Line: 19, Col: 86}
+		}
+		_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ.EscapeString(templ_7745c5c3_Var3))
 		if templ_7745c5c3_Err != nil {
 			return templ_7745c5c3_Err
 		}
-		templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 3, "</section><section><h2 class=\"text-2xl font-bold mb-4 flex items-center gap-3\"><span class=\"w-8 h-8 rounded-full bg-[var(--bg-tertiary)] border border-[var(--border)] flex items-center justify-center text-sm\">3</span> Start Development Server</h2><p class=\"text-[var(--text-secondary)] mb-4\">Run the dev server to start building. It will automatically re-generate routes and templates on change.</p>")
+		templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 3, " client-side reactivity</li><li><strong class=\"text-[var(--text-primary)]\">WebSocket Sync</strong> ")
+		if templ_7745c5c3_Err != nil {
+			return templ_7745c5c3_Err
+		}
+		var templ_7745c5c3_Var4 string
+		templ_7745c5c3_Var4, templ_7745c5c3_Err = templ.JoinStringErrs("for")
+		if templ_7745c5c3_Err != nil {
+			return templ.Error{Err: templ_7745c5c3_Err, FileName: `routes/docs/getstarted/page.templ`, Line: 20, Col: 82}
+		}
+		_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ.EscapeString(templ_7745c5c3_Var4))
+		if templ_7745c5c3_Err != nil {
+			return templ_7745c5c3_Err
+		}
+		templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 4, " real-time state synchronization</li><li><strong class=\"text-[var(--text-primary)]\">File-based Routing</strong> with automatic code generation</li></ul></section><section><h2 id=\"prerequisites\" class=\"text-2xl font-bold mb-4\">Prerequisites</h2><ul class=\"list-disc list-inside space-y-1 text-[var(--text-secondary)]\"><li>Go 1.21 or later</li><li>Node.js 18+ (for client-side tooling)</li><li>Basic understanding of Go and TypeScript</li></ul></section><section><h2 id=\"installation\" class=\"text-2xl font-bold mb-4 flex items-center gap-3\"><span class=\"w-8 h-8 rounded-full bg-[var(--bg-tertiary)] border border-[var(--border)] flex items-center justify-center text-sm\">1</span> Install the CLI</h2><p class=\"text-[var(--text-secondary)] mb-4\">The easiest way to start a new GoSPA project is by using our CLI tool.</p>")
+		if templ_7745c5c3_Err != nil {
+			return templ_7745c5c3_Err
+		}
+		templ_7745c5c3_Err = components.CodeBlock("go install github.com/a4bet/gospa/cmd/gospa@latest", "bash", "Terminal").Render(ctx, templ_7745c5c3_Buffer)
+		if templ_7745c5c3_Err != nil {
+			return templ_7745c5c3_Err
+		}
+		templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 5, "</section><section><h2 id=\"create-project\" class=\"text-2xl font-bold mb-4 flex items-center gap-3\"><span class=\"w-8 h-8 rounded-full bg-[var(--bg-tertiary)] border border-[var(--border)] flex items-center justify-center text-sm\">2</span> Create a New Project</h2>")
+		if templ_7745c5c3_Err != nil {
+			return templ_7745c5c3_Err
+		}
+		templ_7745c5c3_Err = components.CodeBlock("gospa create myapp\ncd myapp\ngo mod tidy", "bash", "Terminal").Render(ctx, templ_7745c5c3_Buffer)
+		if templ_7745c5c3_Err != nil {
+			return templ_7745c5c3_Err
+		}
+		templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 6, "</section><section><h2 id=\"project-structure\" class=\"text-2xl font-bold mb-4\">Project Structure</h2>")
+		if templ_7745c5c3_Err != nil {
+			return templ_7745c5c3_Err
+		}
+		templ_7745c5c3_Err = components.CodeBlock(`myapp/
+├── main.go                 # Application entry point
+├── go.mod                  # Go dependencies
+├── routes/                 # Route definitions
+│   ├── layout.templ        # Root layout
+│   ├── page.templ          # Home page
+│   └── generated_routes.go # Auto-generated routing
+├── generated/              # Auto-generated TypeScript
+│   ├── routes.ts           # Route definitions
+│   └── types.ts            # Type definitions
+└── static/                 # Static assets`, "plaintext", "File Structure").Render(ctx, templ_7745c5c3_Buffer)
+		if templ_7745c5c3_Err != nil {
+			return templ_7745c5c3_Err
+		}
+		templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 7, "</section><section><h2 id=\"dev-server\" class=\"text-2xl font-bold mb-4 flex items-center gap-3\"><span class=\"w-8 h-8 rounded-full bg-[var(--bg-tertiary)] border border-[var(--border)] flex items-center justify-center text-sm\">3</span> Start Development Server</h2><p class=\"text-[var(--text-secondary)] mb-4\">Run the dev server to start building. It will automatically re-generate routes and templates on change.</p>")
 		if templ_7745c5c3_Err != nil {
 			return templ_7745c5c3_Err
 		}
@@ -55,7 +112,214 @@ func Page() templ.Component {
 		if templ_7745c5c3_Err != nil {
 			return templ_7745c5c3_Err
 		}
-		templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 4, "</section><div class=\"p-8 rounded-3xl bg-gradient-to-br from-[var(--bg-tertiary)] to-[var(--bg-secondary)] border border-[var(--border)] shadow-xl mt-12\"><h3 id=\"next-steps\" class=\"text-xl font-bold mb-4\">Next Steps</h3><div class=\"grid sm:grid-cols-2 gap-4\"><a href=\"/docs/reactive-primitives\" class=\"group p-4 rounded-xl border border-[var(--border)] bg-[var(--bg-primary)] hover:border-[var(--accent-primary)]/50 transition-all\"><div class=\"font-bold group-hover:text-[var(--accent-primary)] transition-colors\">Reactive Primitives →</div><div class=\"text-xs text-[var(--text-muted)] mt-1\">Learn about Rune, Derived, and Effect.</div></a> <a href=\"/docs/routing\" class=\"group p-4 rounded-xl border border-[var(--border)] bg-[var(--bg-primary)] hover:border-[var(--accent-primary)]/50 transition-all\"><div class=\"font-bold group-hover:text-[var(--accent-primary)] transition-colors\">Master Routing →</div><div class=\"text-xs text-[var(--text-muted)] mt-1\">Understand the file-based router.</div></a></div></div></div>")
+		templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 8, "<p class=\"text-sm text-[var(--text-muted)] mt-2\">This starts: Go server with hot reload, TypeScript generation, and WebSocket server ")
+		if templ_7745c5c3_Err != nil {
+			return templ_7745c5c3_Err
+		}
+		var templ_7745c5c3_Var5 string
+		templ_7745c5c3_Var5, templ_7745c5c3_Err = templ.JoinStringErrs("for")
+		if templ_7745c5c3_Err != nil {
+			return templ.Error{Err: templ_7745c5c3_Err, FileName: `routes/docs/getstarted/page.templ`, Line: 77, Col: 143}
+		}
+		_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ.EscapeString(templ_7745c5c3_Var5))
+		if templ_7745c5c3_Err != nil {
+			return templ_7745c5c3_Err
+		}
+		templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 9, " state sync.</p></section><section><h2 id=\"first-page\" class=\"text-2xl font-bold mb-4\">Your First Page</h2><p class=\"text-[var(--text-secondary)] mb-4\">Create a new route by adding a template file:</p>")
+		if templ_7745c5c3_Err != nil {
+			return templ_7745c5c3_Err
+		}
+		templ_7745c5c3_Err = components.CodeBlock(`package routes
+
+templ AboutPage() {
+	<div>
+		<h1>About</h1>
+		<p>This is the about page.</p>
+	</div>
+}`, "go", "routes/about.templ").Render(ctx, templ_7745c5c3_Buffer)
+		if templ_7745c5c3_Err != nil {
+			return templ_7745c5c3_Err
+		}
+		templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 10, "</section><section><h2 id=\"interactive-state\" class=\"text-2xl font-bold mb-4\">Add Interactive State</h2><p class=\"text-[var(--text-secondary)] mb-4\">Create a counter with reactive state:</p>")
+		if templ_7745c5c3_Err != nil {
+			return templ_7745c5c3_Err
+		}
+		templ_7745c5c3_Err = components.CodeBlock(`package routes
+
+import (
+	"github.com/a4bet/gospa/templ"
+	"github.com/a4bet/gospa/state"
+)
+
+templ CounterPage() {
+	<div data-gospa-component="counter">
+		<h1>Counter</h1>
+		<p data-gospa-bind="count">0</p>
+		<button data-gospa-on:click="increment">+1</button>
+	</div>
+}
+
+templ CounterState() *state.StateMap {
+	sm := state.NewStateMap()
+	sm.AddAny("count", 0)
+	return sm
+}`, "go", "routes/counter.templ").Render(ctx, templ_7745c5c3_Buffer)
+		if templ_7745c5c3_Err != nil {
+			return templ_7745c5c3_Err
+		}
+		templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 11, "</section><section><h2 id=\"client-reactivity\" class=\"text-2xl font-bold mb-4\">Client-Side Reactivity</h2><p class=\"text-[var(--text-secondary)] mb-4\">GoSPA includes a TypeScript runtime that provides Svelte-like reactivity:</p>")
+		if templ_7745c5c3_Err != nil {
+			return templ_7745c5c3_Err
+		}
+		templ_7745c5c3_Err = components.CodeBlock(`import { Rune, Derived, Effect, StateMap } from '@gospa/runtime'
+
+// Create reactive state
+const count = new Rune(0)
+
+// Create derived value
+const doubled = new Derived(() => count.get() * 2)
+
+// React to changes
+const effect = new Effect(() => {
+  console.log('Count changed:', count.get())
+  return () => console.log('Cleanup')
+})
+
+// Update state
+count.set(5)
+count.update(v => v + 1)`, "typescript", "Client Runtime").Render(ctx, templ_7745c5c3_Buffer)
+		if templ_7745c5c3_Err != nil {
+			return templ_7745c5c3_Err
+		}
+		templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 12, "</section><section><h2 id=\"dom-bindings\" class=\"text-2xl font-bold mb-4\">DOM Bindings</h2><p class=\"text-[var(--text-secondary)] mb-4\">The runtime automatically handles DOM bindings via data attributes:</p><div class=\"grid gap-4\">")
+		if templ_7745c5c3_Err != nil {
+			return templ_7745c5c3_Err
+		}
+		templ_7745c5c3_Err = components.CodeBlock(`<!-- Bind text content -->
+<p data-gospa-bind="count">0</p>
+
+<!-- Bind input value -->
+<input data-gospa-bind:value="name" />
+
+<!-- Event handlers -->
+<button data-gospa-on:click="increment">Click</button>
+
+<!-- Conditional rendering -->
+<div data-gospa-if="isVisible">Hidden content</div>
+
+<!-- List rendering -->
+<ul data-gospa-each="items">
+  <li data-gospa-each-item></li>
+</ul>`, "html", "Template Bindings").Render(ctx, templ_7745c5c3_Buffer)
+		if templ_7745c5c3_Err != nil {
+			return templ_7745c5c3_Err
+		}
+		templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 13, "</div></section><section><h2 id=\"routing\" class=\"text-2xl font-bold mb-4\">File-Based Routing</h2><p class=\"text-[var(--text-secondary)] mb-4\">Routes are defined by files in the <code class=\"bg-[var(--bg-tertiary)] px-1.5 py-0.5 rounded\">routes/</code> directory:</p><div class=\"overflow-x-auto\"><table class=\"w-full text-sm\"><thead><tr class=\"border-b border-[var(--border)]\"><th class=\"text-left py-2 px-4\">File</th><th class=\"text-left py-2 px-4\">URL</th><th class=\"text-left py-2 px-4\">Description</th></tr></thead> <tbody class=\"text-[var(--text-secondary)]\"><tr class=\"border-b border-[var(--border)]\"><td class=\"py-2 px-4\"><code class=\"text-[var(--accent-primary)]\">page.templ</code></td><td class=\"py-2 px-4\">/</td><td class=\"py-2 px-4\">Home page</td></tr><tr class=\"border-b border-[var(--border)]\"><td class=\"py-2 px-4\"><code class=\"text-[var(--accent-primary)]\">about.templ</code></td><td class=\"py-2 px-4\">/about</td><td class=\"py-2 px-4\">About page</td></tr><tr class=\"border-b border-[var(--border)]\"><td class=\"py-2 px-4\"><code class=\"text-[var(--accent-primary)]\">blog/index.templ</code></td><td class=\"py-2 px-4\">/blog</td><td class=\"py-2 px-4\">Blog index</td></tr><tr class=\"border-b border-[var(--border)]\"><td class=\"py-2 px-4\"><code class=\"text-[var(--accent-primary)]\">blog/[slug].templ</code></td><td class=\"py-2 px-4\">/blog/:slug</td><td class=\"py-2 px-4\">Dynamic route</td></tr><tr><td class=\"py-2 px-4\"><code class=\"text-[var(--accent-primary)]\">layout.templ</code></td><td class=\"py-2 px-4\">N/A</td><td class=\"py-2 px-4\">Layout wrapper</td></tr></tbody></table></div></section><section><h2 id=\"layouts\" class=\"text-2xl font-bold mb-4\">Layouts</h2><p class=\"text-[var(--text-secondary)] mb-4\">Create a root layout that wraps all pages:</p>")
+		if templ_7745c5c3_Err != nil {
+			return templ_7745c5c3_Err
+		}
+		templ_7745c5c3_Err = components.CodeBlock(`package routes
+
+templ Layout(content templ.Component) {
+	<!DOCTYPE html>
+	<html>
+		<head>
+			<title>My App</title>
+			<script src="/static/runtime.js"></script>
+		</head>
+		<body>
+			<nav>
+				<a href="/">Home</a>
+				<a href="/about">About</a>
+			</nav>
+			<main>
+				@content
+			</main>
+		</body>
+	</html>
+}`, "go", "routes/layout.templ").Render(ctx, templ_7745c5c3_Buffer)
+		if templ_7745c5c3_Err != nil {
+			return templ_7745c5c3_Err
+		}
+		templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 14, "</section><section><h2 id=\"dynamic-routes\" class=\"text-2xl font-bold mb-4\">Dynamic Routes</h2><p class=\"text-[var(--text-secondary)] mb-4\">Create dynamic routes with path parameters:</p>")
+		if templ_7745c5c3_Err != nil {
+			return templ_7745c5c3_Err
+		}
+		templ_7745c5c3_Err = components.CodeBlock(`package routes
+
+templ BlogPost(slug string) {
+	<article>
+		<h1>Post: { slug }</h1>
+	</article>
+}`, "go", "routes/blog/[slug].templ").Render(ctx, templ_7745c5c3_Buffer)
+		if templ_7745c5c3_Err != nil {
+			return templ_7745c5c3_Err
+		}
+		templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 15, "<p class=\"text-sm text-[var(--text-muted)] mt-2\">Access via <code class=\"bg-[var(--bg-tertiary)] px-1.5 py-0.5 rounded\">/blog/my-post</code> - slug will be \"my-post\".</p></section><section><h2 id=\"websocket-sync\" class=\"text-2xl font-bold mb-4\">WebSocket Sync</h2><p class=\"text-[var(--text-secondary)] mb-4\">Enable real-time state synchronization:</p>")
+		if templ_7745c5c3_Err != nil {
+			return templ_7745c5c3_Err
+		}
+		templ_7745c5c3_Err = components.CodeBlock(`import { WSClient, syncedRune } from '@gospa/runtime'
+
+const ws = new WSClient({
+  url: 'ws://localhost:3000/ws',
+  onConnect: () => console.log('Connected'),
+  onDisconnect: () => console.log('Disconnected')
+})
+
+// Create synced rune
+const count = syncedRune('count', 0, ws)`, "typescript", "WebSocket Client").Render(ctx, templ_7745c5c3_Buffer)
+		if templ_7745c5c3_Err != nil {
+			return templ_7745c5c3_Err
+		}
+		templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 16, "</section><section><h2 id=\"configuration\" class=\"text-2xl font-bold mb-4\">Configuration</h2><p class=\"text-[var(--text-secondary)] mb-4\">Create <code class=\"bg-[var(--bg-tertiary)] px-1.5 py-0.5 rounded\">gospa.json</code> to customize your project:</p>")
+		if templ_7745c5c3_Err != nil {
+			return templ_7745c5c3_Err
+		}
+		templ_7745c5c3_Err = components.CodeBlock(`{
+  "app": {
+    "name": "myapp",
+    "port": 3000
+  },
+  "build": {
+    "output": "dist",
+    "minify": true
+  },
+  "runtime": {
+    "mode": "full",
+    "websocket": true
+  }
+}`, "json", "gospa.json").Render(ctx, templ_7745c5c3_Buffer)
+		if templ_7745c5c3_Err != nil {
+			return templ_7745c5c3_Err
+		}
+		templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 17, "</section><section><h2 id=\"runtime-selection\" class=\"text-2xl font-bold mb-4\">Runtime Selection</h2><p class=\"text-[var(--text-secondary)] mb-4\">Choose between full and minimal runtime:</p><div class=\"grid sm:grid-cols-2 gap-4\"><div class=\"p-4 rounded-xl border border-[var(--border)] bg-[var(--bg-secondary)]\"><h3 class=\"font-bold text-[var(--accent-primary)] mb-2\">Full Runtime (~25KB)</h3><ul class=\"text-sm text-[var(--text-secondary)] space-y-1\"><li>DOMPurify sanitization</li><li>Full reactive primitives</li><li>WebSocket client</li><li>Transitions</li></ul></div><div class=\"p-4 rounded-xl border border-[var(--border)] bg-[var(--bg-secondary)]\"><h3 class=\"font-bold text-[var(--accent-secondary)] mb-2\">Minimal Runtime (~9.5KB)</h3><ul class=\"text-sm text-[var(--text-secondary)] space-y-1\"><li>Basic reactivity</li><li>No sanitization</li><li>No WebSocket</li><li>No transitions</li></ul></div></div></section><section><h2 id=\"cli-commands\" class=\"text-2xl font-bold mb-4\">CLI Commands</h2><div class=\"overflow-x-auto\"><table class=\"w-full text-sm\"><thead><tr class=\"border-b border-[var(--border)]\"><th class=\"text-left py-2 px-4\">Command</th><th class=\"text-left py-2 px-4\">Description</th></tr></thead> <tbody class=\"text-[var(--text-secondary)]\"><tr class=\"border-b border-[var(--border)]\"><td class=\"py-2 px-4\"><code class=\"text-[var(--accent-primary)]\">gospa create ")
+		if templ_7745c5c3_Err != nil {
+			return templ_7745c5c3_Err
+		}
+		var templ_7745c5c3_Var6 string
+		templ_7745c5c3_Var6, templ_7745c5c3_Err = templ.JoinStringErrs("<name>")
+		if templ_7745c5c3_Err != nil {
+			return templ.Error{Err: templ_7745c5c3_Err, FileName: `routes/docs/getstarted/page.templ`, Line: 317, Col: 95}
+		}
+		_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ.EscapeString(templ_7745c5c3_Var6))
+		if templ_7745c5c3_Err != nil {
+			return templ_7745c5c3_Err
+		}
+		templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 18, "</code></td><td class=\"py-2 px-4\">Create new project</td></tr><tr class=\"border-b border-[var(--border)]\"><td class=\"py-2 px-4\"><code class=\"text-[var(--accent-primary)]\">gospa dev</code></td><td class=\"py-2 px-4\">Start development server</td></tr><tr class=\"border-b border-[var(--border)]\"><td class=\"py-2 px-4\"><code class=\"text-[var(--accent-primary)]\">gospa build</code></td><td class=\"py-2 px-4\">Build ")
+		if templ_7745c5c3_Err != nil {
+			return templ_7745c5c3_Err
+		}
+		var templ_7745c5c3_Var7 string
+		templ_7745c5c3_Var7, templ_7745c5c3_Err = templ.JoinStringErrs("for")
+		if templ_7745c5c3_Err != nil {
+			return templ.Error{Err: templ_7745c5c3_Err, FileName: `routes/docs/getstarted/page.templ`, Line: 326, Col: 42}
+		}
+		_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ.EscapeString(templ_7745c5c3_Var7))
+		if templ_7745c5c3_Err != nil {
+			return templ_7745c5c3_Err
+		}
+		templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 19, " production</td></tr><tr class=\"border-b border-[var(--border)]\"><td class=\"py-2 px-4\"><code class=\"text-[var(--accent-primary)]\">gospa generate</code></td><td class=\"py-2 px-4\">Generate routes and types</td></tr><tr><td class=\"py-2 px-4\"><code class=\"text-[var(--accent-primary)]\">gospa check</code></td><td class=\"py-2 px-4\">Type check project</td></tr></tbody></table></div></section><div class=\"p-8 rounded-3xl bg-gradient-to-br from-[var(--bg-tertiary)] to-[var(--bg-secondary)] border border-[var(--border)] shadow-xl mt-12\"><h3 id=\"next-steps\" class=\"text-xl font-bold mb-4\">Next Steps</h3><div class=\"grid sm:grid-cols-2 lg:grid-cols-3 gap-4\"><a href=\"/docs/reactive-primitives\" class=\"group p-4 rounded-xl border border-[var(--border)] bg-[var(--bg-primary)] hover:border-[var(--accent-primary)]/50 transition-all\"><div class=\"font-bold group-hover:text-[var(--accent-primary)] transition-colors\">Reactive Primitives →</div><div class=\"text-xs text-[var(--text-muted)] mt-1\">Learn about Rune, Derived, and Effect.</div></a> <a href=\"/docs/routing\" class=\"group p-4 rounded-xl border border-[var(--border)] bg-[var(--bg-primary)] hover:border-[var(--accent-primary)]/50 transition-all\"><div class=\"font-bold group-hover:text-[var(--accent-primary)] transition-colors\">Master Routing →</div><div class=\"text-xs text-[var(--text-muted)] mt-1\">Understand the file-based router.</div></a> <a href=\"/docs/client-runtime\" class=\"group p-4 rounded-xl border border-[var(--border)] bg-[var(--bg-primary)] hover:border-[var(--accent-primary)]/50 transition-all\"><div class=\"font-bold group-hover:text-[var(--accent-primary)] transition-colors\">Client Runtime →</div><div class=\"text-xs text-[var(--text-muted)] mt-1\">Full TypeScript API reference.</div></a> <a href=\"/docs/state-management\" class=\"group p-4 rounded-xl border border-[var(--border)] bg-[var(--bg-primary)] hover:border-[var(--accent-primary)]/50 transition-all\"><div class=\"font-bold group-hover:text-[var(--accent-primary)] transition-colors\">State Management →</div><div class=\"text-xs text-[var(--text-muted)] mt-1\">Server and client state patterns.</div></a> <a href=\"/docs/websocket\" class=\"group p-4 rounded-xl border border-[var(--border)] bg-[var(--bg-primary)] hover:border-[var(--accent-primary)]/50 transition-all\"><div class=\"font-bold group-hover:text-[var(--accent-primary)] transition-colors\">WebSocket Sync →</div><div class=\"text-xs text-[var(--text-muted)] mt-1\">Real-time state synchronization.</div></a> <a href=\"/docs/api\" class=\"group p-4 rounded-xl border border-[var(--border)] bg-[var(--bg-primary)] hover:border-[var(--accent-primary)]/50 transition-all\"><div class=\"font-bold group-hover:text-[var(--accent-primary)] transition-colors\">API Reference →</div><div class=\"text-xs text-[var(--text-muted)] mt-1\">Complete API documentation.</div></a></div></div></div>")
 		if templ_7745c5c3_Err != nil {
 			return templ_7745c5c3_Err
 		}

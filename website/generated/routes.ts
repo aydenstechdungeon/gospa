@@ -9,14 +9,20 @@ export interface Route {
 }
 
 export const routes: Route[] = [
-  {"Path":"/benchmarks","File":"routes/benchmarks/page.templ","Params":[],"IsDynamic":false,"IsCatchAll":false},
   {"Path":"/docs/api","File":"routes/docs/api/page.templ","Params":[],"IsDynamic":false,"IsCatchAll":false},
+  {"Path":"/docs/cli","File":"routes/docs/cli/page.templ","Params":[],"IsDynamic":false,"IsCatchAll":false},
   {"Path":"/docs/client-runtime","File":"routes/docs/client-runtime/page.templ","Params":[],"IsDynamic":false,"IsCatchAll":false},
+  {"Path":"/docs/components","File":"routes/docs/components/page.templ","Params":[],"IsDynamic":false,"IsCatchAll":false},
+  {"Path":"/docs/configuration","File":"routes/docs/configuration/page.templ","Params":[],"IsDynamic":false,"IsCatchAll":false},
+  {"Path":"/docs/devtools","File":"routes/docs/devtools/page.templ","Params":[],"IsDynamic":false,"IsCatchAll":false},
+  {"Path":"/docs/errors","File":"routes/docs/errors/page.templ","Params":[],"IsDynamic":false,"IsCatchAll":false},
   {"Path":"/docs/getstarted","File":"routes/docs/getstarted/page.templ","Params":[],"IsDynamic":false,"IsCatchAll":false},
   {"Path":"/docs","File":"routes/docs/page.templ","Params":[],"IsDynamic":false,"IsCatchAll":false},
+  {"Path":"/docs/params","File":"routes/docs/params/page.templ","Params":[],"IsDynamic":false,"IsCatchAll":false},
   {"Path":"/docs/reactive-primitives","File":"routes/docs/reactive-primitives/page.templ","Params":[],"IsDynamic":false,"IsCatchAll":false},
   {"Path":"/docs/remote-actions","File":"routes/docs/remote-actions/page.templ","Params":[],"IsDynamic":false,"IsCatchAll":false},
   {"Path":"/docs/routing","File":"routes/docs/routing/page.templ","Params":[],"IsDynamic":false,"IsCatchAll":false},
+  {"Path":"/docs/runtime","File":"routes/docs/runtime/page.templ","Params":[],"IsDynamic":false,"IsCatchAll":false},
   {"Path":"/docs/security","File":"routes/docs/security/page.templ","Params":[],"IsDynamic":false,"IsCatchAll":false},
   {"Path":"/docs/state-management","File":"routes/docs/state-management/page.templ","Params":[],"IsDynamic":false,"IsCatchAll":false},
   {"Path":"/docs/websocket","File":"routes/docs/websocket/page.templ","Params":[],"IsDynamic":false,"IsCatchAll":false},
@@ -25,14 +31,20 @@ export const routes: Route[] = [
 ];
 
 export const routeMap: Record<string, Route> = {
-  '/benchmarks': routes.find(r => r.path === '/benchmarks')!,
   '/docs/api': routes.find(r => r.path === '/docs/api')!,
+  '/docs/cli': routes.find(r => r.path === '/docs/cli')!,
   '/docs/client-runtime': routes.find(r => r.path === '/docs/client-runtime')!,
+  '/docs/components': routes.find(r => r.path === '/docs/components')!,
+  '/docs/configuration': routes.find(r => r.path === '/docs/configuration')!,
+  '/docs/devtools': routes.find(r => r.path === '/docs/devtools')!,
+  '/docs/errors': routes.find(r => r.path === '/docs/errors')!,
   '/docs/getstarted': routes.find(r => r.path === '/docs/getstarted')!,
   '/docs': routes.find(r => r.path === '/docs')!,
+  '/docs/params': routes.find(r => r.path === '/docs/params')!,
   '/docs/reactive-primitives': routes.find(r => r.path === '/docs/reactive-primitives')!,
   '/docs/remote-actions': routes.find(r => r.path === '/docs/remote-actions')!,
   '/docs/routing': routes.find(r => r.path === '/docs/routing')!,
+  '/docs/runtime': routes.find(r => r.path === '/docs/runtime')!,
   '/docs/security': routes.find(r => r.path === '/docs/security')!,
   '/docs/state-management': routes.find(r => r.path === '/docs/state-management')!,
   '/docs/websocket': routes.find(r => r.path === '/docs/websocket')!,

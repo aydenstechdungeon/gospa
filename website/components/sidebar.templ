@@ -29,17 +29,24 @@ templ SidebarContent(currentPath string) {
 			{Label: "Reactive Primitives", Href: "/docs/reactive-primitives"},
 			{Label: "File-Based Routing", Href: "/docs/routing"},
 			{Label: "State Management", Href: "/docs/state-management"},
+			{Label: "Components", Href: "/docs/components"},
+			{Label: "Route Parameters", Href: "/docs/params"},
 		}, currentPath)
 
 		@sidebarSection("Features", []NavItem{
 			{Label: "WebSocket Integration", Href: "/docs/websocket"},
 			{Label: "Remote Actions", Href: "/docs/remote-actions"},
 			{Label: "Security", Href: "/docs/security"},
+			{Label: "Error Handling", Href: "/docs/errors"},
+			{Label: "Development Tools", Href: "/docs/devtools"},
 		}, currentPath)
 
 		@sidebarSection("Reference", []NavItem{
 			{Label: "Go API", Href: "/docs/api"},
 			{Label: "Client Runtime API", Href: "/docs/client-runtime"},
+			{Label: "Configuration", Href: "/docs/configuration"},
+			{Label: "Runtime Selection", Href: "/docs/runtime"},
+			{Label: "CLI Reference", Href: "/docs/cli"},
 		}, currentPath)
 	</div>
 }

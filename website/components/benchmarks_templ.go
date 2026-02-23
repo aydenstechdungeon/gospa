@@ -31,27 +31,27 @@ func Benchmarks() templ.Component {
 			templ_7745c5c3_Var1 = templ.NopComponent
 		}
 		ctx = templ.ClearChildren(ctx)
-		templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 1, "<section class=\"py-24 bg-[var(--bg-secondary)] relative\"><div class=\"max-w-7xl mx-auto px-4\"><div class=\"mb-16\"><h2 class=\"text-3xl md:text-5xl font-bold mb-4\">Unrivaled <span class=\"text-[var(--accent-primary)]\">Performance</span></h2><p class=\"text-[var(--text-secondary)] max-w-2xl\">GoSPA is built for speed. By leveraging Fiber's zero-allocation router and Templ's lightning-fast rendering, we achieve enterprise-grade throughput with minimal latency.</p></div><div class=\"grid lg:grid-cols-2 gap-8\"><div class=\"bg-[var(--bg-tertiary)] rounded-3xl p-8 border border-[var(--border)] shadow-xl overflow-hidden relative group\"><div class=\"flex items-center justify-between mb-12\"><div><div class=\"text-[var(--text-muted)] text-sm font-medium uppercase tracking-wider mb-1\">Peak Throughput</div><div class=\"text-4xl font-bold mono text-[var(--accent-primary)]\">24,345 <span class=\"text-lg\">RPS</span></div></div><div class=\"w-12 h-12 rounded-2xl bg-[var(--accent-primary)]/10 flex items-center justify-center text-[var(--accent-primary)]\"><svg xmlns=\"http://www.w3.org/2000/svg\" width=\"24\" height=\"24\" viewBox=\"0 0 24 24\" fill=\"none\" stroke=\"currentColor\" stroke-width=\"2\" stroke-linecap=\"round\" stroke-linejoin=\"round\" class=\"lucide lucide-zap\"><polygon points=\"13 2 3 14 12 14 11 22 21 10 12 10 13 2\"></polygon></svg></div></div><div class=\"space-y-6\">")
+		templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 1, "<section class=\"py-24 bg-[var(--bg-secondary)] relative\"><div class=\"max-w-7xl mx-auto px-4\"><div class=\"mb-16\"><h2 class=\"text-3xl md:text-5xl font-bold mb-4\">Proven <span class=\"text-[var(--accent-primary)]\">Performance</span></h2><p class=\"text-[var(--text-secondary)] max-w-2xl\">Real benchmark results from GoSPA v0.1.0 with Fiber v2.52.11. Tested with gradual load increase from 1 to 200 concurrent connections.</p></div><div class=\"grid lg:grid-cols-2 gap-8\"><div class=\"bg-[var(--bg-tertiary)] rounded-3xl p-8 border border-[var(--border)] shadow-xl overflow-hidden relative group\"><div class=\"flex items-center justify-between mb-12\"><div><div class=\"text-[var(--text-muted)] text-sm font-medium uppercase tracking-wider mb-1\">Peak Throughput</div><div class=\"text-4xl font-bold mono text-[var(--accent-primary)]\">24,345 <span class=\"text-lg\">RPS</span></div></div><div class=\"w-12 h-12 rounded-2xl bg-[var(--accent-primary)]/10 flex items-center justify-center text-[var(--accent-primary)]\"><svg xmlns=\"http://www.w3.org/2000/svg\" width=\"24\" height=\"24\" viewBox=\"0 0 24 24\" fill=\"none\" stroke=\"currentColor\" stroke-width=\"2\" stroke-linecap=\"round\" stroke-linejoin=\"round\" class=\"lucide lucide-zap\"><polygon points=\"13 2 3 14 12 14 11 22 21 10 12 10 13 2\"></polygon></svg></div></div><div class=\"space-y-6\">")
 		if templ_7745c5c3_Err != nil {
 			return templ_7745c5c3_Err
 		}
-		templ_7745c5c3_Err = benchmarkBar("Low Load", "10,295 RPS", 42).Render(ctx, templ_7745c5c3_Buffer)
+		templ_7745c5c3_Err = benchmarkBar("Low Load (5 conn)", "10,295 RPS", 42).Render(ctx, templ_7745c5c3_Buffer)
 		if templ_7745c5c3_Err != nil {
 			return templ_7745c5c3_Err
 		}
-		templ_7745c5c3_Err = benchmarkBar("Medium Load", "15,907 RPS", 65).Render(ctx, templ_7745c5c3_Buffer)
+		templ_7745c5c3_Err = benchmarkBar("Medium Load (50 conn)", "15,907 RPS", 65).Render(ctx, templ_7745c5c3_Buffer)
 		if templ_7745c5c3_Err != nil {
 			return templ_7745c5c3_Err
 		}
-		templ_7745c5c3_Err = benchmarkBar("High Load", "20,074 RPS", 82).Render(ctx, templ_7745c5c3_Buffer)
+		templ_7745c5c3_Err = benchmarkBar("High Load (100 conn)", "22,563 RPS", 93).Render(ctx, templ_7745c5c3_Buffer)
 		if templ_7745c5c3_Err != nil {
 			return templ_7745c5c3_Err
 		}
-		templ_7745c5c3_Err = benchmarkBar("Extreme Load (Peak)", "24,345 RPS", 100).Render(ctx, templ_7745c5c3_Buffer)
+		templ_7745c5c3_Err = benchmarkBar("Peak (150 conn)", "24,345 RPS", 100).Render(ctx, templ_7745c5c3_Buffer)
 		if templ_7745c5c3_Err != nil {
 			return templ_7745c5c3_Err
 		}
-		templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 2, "</div><div class=\"mt-12 pt-8 border-t border-[var(--border)] grid grid-cols-2 gap-4\"><div><div class=\"text-[var(--text-muted)] text-xs mb-1\">Avg Latency</div><div class=\"text-xl font-bold mono italic\">6.03ms</div></div><div><div class=\"text-[var(--text-muted)] text-xs mb-1\">Success Rate</div><div class=\"text-xl font-bold mono text-[var(--accent-success)]\">100%</div></div></div></div><div class=\"bg-[var(--bg-tertiary)] rounded-3xl p-8 border border-[var(--border)] shadow-xl\"><div class=\"flex items-center justify-between mb-8\"><h3 class=\"text-xl font-bold\">RPS vs Concurrency</h3><div class=\"text-xs text-[var(--text-muted)] mono\">Measured on 32-core instance</div></div><div class=\"h-64 flex items-end justify-between gap-2\">")
+		templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 2, "</div><div class=\"mt-12 pt-8 border-t border-[var(--border)] grid grid-cols-3 gap-4\"><div><div class=\"text-[var(--text-muted)] text-xs mb-1\">Best Latency</div><div class=\"text-xl font-bold mono\">484µs</div></div><div><div class=\"text-[var(--text-muted)] text-xs mb-1\">P95 at Peak</div><div class=\"text-xl font-bold mono\">15.13ms</div></div><div><div class=\"text-[var(--text-muted)] text-xs mb-1\">Success Rate</div><div class=\"text-xl font-bold mono text-[var(--accent-success)]\">100%</div></div></div></div><div class=\"bg-[var(--bg-tertiary)] rounded-3xl p-8 border border-[var(--border)] shadow-xl\"><div class=\"flex items-center justify-between mb-8\"><h3 class=\"text-xl font-bold\">Throughput Scaling</h3><div class=\"text-xs text-[var(--text-muted)] mono\">307,600 total requests (local env)</div></div><div class=\"h-64 flex items-end justify-between gap-2\">")
 		if templ_7745c5c3_Err != nil {
 			return templ_7745c5c3_Err
 		}
@@ -63,7 +63,7 @@ func Benchmarks() templ.Component {
 		if templ_7745c5c3_Err != nil {
 			return templ_7745c5c3_Err
 		}
-		templ_7745c5c3_Err = chartBar(15, "25", "15k").Render(ctx, templ_7745c5c3_Buffer)
+		templ_7745c5c3_Err = chartBar(14, "25", "14k").Render(ctx, templ_7745c5c3_Buffer)
 		if templ_7745c5c3_Err != nil {
 			return templ_7745c5c3_Err
 		}
@@ -75,7 +75,7 @@ func Benchmarks() templ.Component {
 		if templ_7745c5c3_Err != nil {
 			return templ_7745c5c3_Err
 		}
-		templ_7745c5c3_Err = chartBar(22, "100", "22k").Render(ctx, templ_7745c5c3_Buffer)
+		templ_7745c5c3_Err = chartBar(23, "100", "23k").Render(ctx, templ_7745c5c3_Buffer)
 		if templ_7745c5c3_Err != nil {
 			return templ_7745c5c3_Err
 		}
@@ -87,7 +87,7 @@ func Benchmarks() templ.Component {
 		if templ_7745c5c3_Err != nil {
 			return templ_7745c5c3_Err
 		}
-		templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 3, "</div><div class=\"mt-4 flex justify-center\"><div class=\"text-xs text-[var(--text-muted)] uppercase tracking-widest font-bold\">Concurrent Connections</div></div><div class=\"mt-12 bg-[var(--bg-primary)] rounded-2xl p-4 border border-[var(--border)]\"><p class=\"text-sm text-[var(--text-secondary)] italic leading-relaxed\">\"GoSPA demonstrates exceptional scaling characteristics, maintaining 100% success rate even under extreme 200x concurrency while keeping P95 latency well within interactive thresholds.\"</p></div></div></div></div></section>")
+		templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 3, "</div><div class=\"mt-4 flex justify-center\"><div class=\"text-xs text-[var(--text-muted)] uppercase tracking-widest font-bold\">Concurrent Connections</div></div><div class=\"mt-12 bg-[var(--bg-primary)] rounded-2xl p-4 border border-[var(--border)]\"><p class=\"text-sm text-[var(--text-secondary)] leading-relaxed\"><span class=\"text-[var(--accent-success)] font-semibold\">100% success rate</span> across all load levels. P95 latency scales predictably from 1.5ms at low load to 21.6ms at maximum 200 concurrent connections.</p></div></div></div></div></section>")
 		if templ_7745c5c3_Err != nil {
 			return templ_7745c5c3_Err
 		}
@@ -123,7 +123,7 @@ func benchmarkBar(label, value string, percent int) templ.Component {
 		var templ_7745c5c3_Var3 string
 		templ_7745c5c3_Var3, templ_7745c5c3_Err = templ.JoinStringErrs(label)
 		if templ_7745c5c3_Err != nil {
-			return templ.Error{Err: templ_7745c5c3_Err, FileName: `components/benchmarks.templ`, Line: 81, Col: 36}
+			return templ.Error{Err: templ_7745c5c3_Err, FileName: `components/benchmarks.templ`, Line: 85, Col: 36}
 		}
 		_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ.EscapeString(templ_7745c5c3_Var3))
 		if templ_7745c5c3_Err != nil {
@@ -136,7 +136,7 @@ func benchmarkBar(label, value string, percent int) templ.Component {
 		var templ_7745c5c3_Var4 string
 		templ_7745c5c3_Var4, templ_7745c5c3_Err = templ.JoinStringErrs(value)
 		if templ_7745c5c3_Err != nil {
-			return templ.Error{Err: templ_7745c5c3_Err, FileName: `components/benchmarks.templ`, Line: 82, Col: 54}
+			return templ.Error{Err: templ_7745c5c3_Err, FileName: `components/benchmarks.templ`, Line: 86, Col: 54}
 		}
 		_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ.EscapeString(templ_7745c5c3_Var4))
 		if templ_7745c5c3_Err != nil {
@@ -149,7 +149,7 @@ func benchmarkBar(label, value string, percent int) templ.Component {
 		var templ_7745c5c3_Var5 string
 		templ_7745c5c3_Var5, templ_7745c5c3_Err = templruntime.SanitizeStyleAttributeValues("width: " + fmt.Sprintf("%d%%", percent))
 		if templ_7745c5c3_Err != nil {
-			return templ.Error{Err: templ_7745c5c3_Err, FileName: `components/benchmarks.templ`, Line: 85, Col: 175}
+			return templ.Error{Err: templ_7745c5c3_Err, FileName: `components/benchmarks.templ`, Line: 89, Col: 175}
 		}
 		_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ.EscapeString(templ_7745c5c3_Var5))
 		if templ_7745c5c3_Err != nil {
@@ -191,7 +191,7 @@ func chartBar(height int, label string, value string) templ.Component {
 		var templ_7745c5c3_Var7 string
 		templ_7745c5c3_Var7, templ_7745c5c3_Err = templruntime.SanitizeStyleAttributeValues("height: " + fmt.Sprintf("%d%%", height*4))
 		if templ_7745c5c3_Err != nil {
-			return templ.Error{Err: templ_7745c5c3_Err, FileName: `components/benchmarks.templ`, Line: 92, Col: 184}
+			return templ.Error{Err: templ_7745c5c3_Err, FileName: `components/benchmarks.templ`, Line: 96, Col: 184}
 		}
 		_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ.EscapeString(templ_7745c5c3_Var7))
 		if templ_7745c5c3_Err != nil {
@@ -204,7 +204,7 @@ func chartBar(height int, label string, value string) templ.Component {
 		var templ_7745c5c3_Var8 string
 		templ_7745c5c3_Var8, templ_7745c5c3_Err = templ.JoinStringErrs(value)
 		if templ_7745c5c3_Err != nil {
-			return templ.Error{Err: templ_7745c5c3_Err, FileName: `components/benchmarks.templ`, Line: 95, Col: 11}
+			return templ.Error{Err: templ_7745c5c3_Err, FileName: `components/benchmarks.templ`, Line: 99, Col: 11}
 		}
 		_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ.EscapeString(templ_7745c5c3_Var8))
 		if templ_7745c5c3_Err != nil {
@@ -217,7 +217,7 @@ func chartBar(height int, label string, value string) templ.Component {
 		var templ_7745c5c3_Var9 string
 		templ_7745c5c3_Var9, templ_7745c5c3_Err = templ.JoinStringErrs(label)
 		if templ_7745c5c3_Err != nil {
-			return templ.Error{Err: templ_7745c5c3_Err, FileName: `components/benchmarks.templ`, Line: 98, Col: 126}
+			return templ.Error{Err: templ_7745c5c3_Err, FileName: `components/benchmarks.templ`, Line: 102, Col: 126}
 		}
 		_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ.EscapeString(templ_7745c5c3_Var9))
 		if templ_7745c5c3_Err != nil {

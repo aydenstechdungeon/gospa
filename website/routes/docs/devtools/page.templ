@@ -1,0 +1,173 @@
+package devtools
+
+import "website/components"
+
+templ Page() {
+	<div class="space-y-12">
+		<header>
+			<h1 class="text-4xl font-bold tracking-tight mb-4 text-transparent bg-clip-text bg-gradient-to-r from-[var(--accent-primary)] to-[var(--accent-secondary)]">Development Tools</h1>
+			<p class="text-xl text-[var(--text-secondary)] leading-relaxed">
+				GoSPA includes powerful development tools for rapid iteration and debugging.
+			</p>
+		</header>
+
+		<section class="space-y-8">
+			<div>
+				<h2 class="text-2xl font-bold mb-4 border-b border-[var(--border)] pb-2 italic mono">Hot Reload</h2>
+				<p class="text-[var(--text-secondary)] mb-4">Automatic page refresh when files change.</p>
+				@components.CodeBlock(`# Start development server with hot reload
+gospa dev
+
+# With options
+gospa dev --port 3000 --watch ./routes,./components
+
+# Hot reload behavior:
+// - Template changes (.templ) -> Full page reload
+// - Go code changes -> Server restart + page reload
+// - Static files -> Instant refresh
+// - Client TypeScript -> HMR (Hot Module Replacement)`, "bash", "cli/dev.go")
+			</div>
+
+			<div>
+				<h2 class="text-2xl font-bold mb-4 border-b border-[var(--border)] pb-2 italic mono">File Watching</h2>
+				<p class="text-[var(--text-secondary)] mb-4">Configure which files trigger rebuilds.</p>
+				@components.CodeBlock(`// In gospa.json
+{
+    "watch": {
+        "paths": [
+            "./routes",
+            "./components",
+            "./lib"
+        ],
+        "exclude": [
+            "./static/dist",
+            "./node_modules"
+        ],
+        "debounce": "100ms"
+    }
+}`, "json", "cli/dev.go")
+			</div>
+
+			<div>
+				<h2 class="text-2xl font-bold mb-4 border-b border-[var(--border)] pb-2 italic mono">State Inspector</h2>
+				<p class="text-[var(--text-secondary)] mb-4">Debug reactive state in development mode.</p>
+				@components.CodeBlock(`// Enable state inspector in development
+import { enableStateInspector } from 'gospa/runtime';
+
+if (import.meta.env.DEV) {
+    enableStateInspector({
+        logChanges: true,      // Console log state changes
+        showTimeline: true,    // Track state history
+        highlightUpdates: true // Visual feedback on updates
+    });
+}
+
+// Access inspector via window
+window.__GOSPA_STATE_INSPECTOR__.getState();
+window.__GOSPA_STATE_INSPECTOR__.getHistory();
+window.__GOSPA_STATE_INSPECTOR__.reset();`, "typescript", "client/src/state.ts")
+			</div>
+
+			<div>
+				<h2 class="text-2xl font-bold mb-4 border-b border-[var(--border)] pb-2 italic mono">Debug Logging</h2>
+				<p class="text-[var(--text-secondary)] mb-4">Enhanced logging for development.</p>
+				@components.CodeBlock(`// Server-side debug logging
+// Set environment variable
+GOSPA_DEBUG=true gospa dev
+
+// Log levels
+GOSPA_LOG_LEVEL=debug gospa dev  // debug, info, warn, error
+
+// Client-side debug
+import { setLogLevel } from 'gospa/runtime';
+setLogLevel('debug');
+
+// Debug specific modules
+GOSPA_DEBUG=state:*,routing:* gospa dev`, "bash", "cli/dev.go")
+			</div>
+
+			<div>
+				<h2 class="text-2xl font-bold mb-4 border-b border-[var(--border)] pb-2 italic mono">WebSocket Debugging</h2>
+				<p class="text-[var(--text-secondary)] mb-4">Monitor WebSocket communication.</p>
+				@components.CodeBlock(`// Enable WebSocket debugging
+import { enableWebSocketDebug } from 'gospa/runtime';
+
+if (import.meta.env.DEV) {
+    enableWebSocketDebug({
+        logMessages: true,
+        logLatency: true
+    });
+}
+
+// Server-side WebSocket logging
+// In development mode, all WebSocket messages are logged
+// with timestamps and message types`, "typescript", "client/src/websocket.ts")
+			</div>
+
+			<div>
+				<h2 class="text-2xl font-bold mb-4 border-b border-[var(--border)] pb-2 italic mono">Build Analysis</h2>
+				<p class="text-[var(--text-secondary)] mb-4">Analyze bundle size and dependencies.</p>
+				@components.CodeBlock(`# Analyze production build
+gospa build --analyze
+
+# Output includes:
+# - Bundle size breakdown
+# - Dependency tree
+# - Unused code detection
+# - Optimization suggestions
+
+# Example output:
+# Bundle Analysis
+# ================
+# Total size: 245 KB
+# 
+# Runtime:     45 KB (18%)
+# State:       32 KB (13%)
+# DOM:         28 KB (11%)
+# WebSocket:   18 KB (7%)
+# Your code:  122 KB (50%)`, "bash", "cli/build.go")
+			</div>
+
+			<div>
+				<h2 class="text-2xl font-bold mb-4 border-b border-[var(--border)] pb-2 italic mono">Performance Profiling</h2>
+				<p class="text-[var(--text-secondary)] mb-4">Profile rendering and state updates.</p>
+				@components.CodeBlock(`// Enable performance profiling
+import { enableProfiling } from 'gospa/runtime';
+
+if (import.meta.env.DEV) {
+    enableProfiling({
+        trackRenders: true,     // Track component renders
+        trackUpdates: true,     // Track state updates
+        trackEffects: true,     // Track effect execution
+        slowThreshold: 16       // Warn if > 16ms (60fps)
+    });
+}
+
+// Get profiling report
+const report = window.__GOSPA_PROFILER__.getReport();
+console.log(report.slowRenders);
+console.log(report.frequentUpdates);`, "typescript", "client/src/runtime-core.ts")
+			</div>
+
+			<div>
+				<h2 class="text-2xl font-bold mb-4 border-b border-[var(--border)] pb-2 italic mono">Error Overlay</h2>
+				<p class="text-[var(--text-secondary)] mb-4">Development error display overlay.</p>
+				@components.CodeBlock(`// Error overlay is automatically enabled in development
+// Shows:
+// - Compile errors with file location
+// - Runtime errors with stack trace
+// - WebSocket connection errors
+// - State update errors
+
+// Configure error overlay
+import { configureErrorOverlay } from 'gospa/runtime';
+
+configureErrorOverlay({
+    showStackTrace: true,
+    openInEditor: true,    // Click to open in editor
+    editor: 'code'         // 'code', 'vim', 'emacs', etc.
+});`, "typescript", "client/src/runtime.ts")
+			</div>
+		</section>
+	</div>
+}

@@ -4,37 +4,58 @@
 package routes
 
 import (
-	docsgetstarted "website/routes/docs/getstarted"
-	docssecurity "website/routes/docs/security"
-	docswebsocket "website/routes/docs/websocket"
-	docsclientruntime "website/routes/docs/client-runtime"
-	"website/routes/docs"
-	docsreactiveprimitives "website/routes/docs/reactive-primitives"
-	docsremoteactions "website/routes/docs/remote-actions"
-	docsrouting "website/routes/docs/routing"
-	docsstatemanagement "website/routes/docs/state-management"
 	"github.com/a-h/templ"
 	"github.com/aydenstechdungeon/gospa/routing"
-	"website/routes/benchmarks"
+	docsconfiguration "website/routes/docs/configuration"
+	docsdevtools "website/routes/docs/devtools"
+	docsgetstarted "website/routes/docs/getstarted"
+	docsrouting "website/routes/docs/routing"
+	docsstatemanagement "website/routes/docs/state-management"
 	docsapi "website/routes/docs/api"
+	"website/routes/docs"
+	docsremoteactions "website/routes/docs/remote-actions"
+	docswebsocket "website/routes/docs/websocket"
+	docscli "website/routes/docs/cli"
+	docsclientruntime "website/routes/docs/client-runtime"
+	docscomponents "website/routes/docs/components"
+	docserrors "website/routes/docs/errors"
+	docsparams "website/routes/docs/params"
+	docsreactiveprimitives "website/routes/docs/reactive-primitives"
+	docsruntime "website/routes/docs/runtime"
+	docssecurity "website/routes/docs/security"
 )
 
 func init() {
 	// Register pages
-	routing.RegisterPage("/benchmarks", func(props map[string]interface{}) templ.Component {
-		return benchmarks.Page()
-	})
 	routing.RegisterPage("/docs/api", func(props map[string]interface{}) templ.Component {
 		return docsapi.Page()
 	})
+	routing.RegisterPage("/docs/cli", func(props map[string]interface{}) templ.Component {
+		return docscli.Page()
+	})
 	routing.RegisterPage("/docs/client-runtime", func(props map[string]interface{}) templ.Component {
 		return docsclientruntime.Page()
+	})
+	routing.RegisterPage("/docs/components", func(props map[string]interface{}) templ.Component {
+		return docscomponents.Page()
+	})
+	routing.RegisterPage("/docs/configuration", func(props map[string]interface{}) templ.Component {
+		return docsconfiguration.Page()
+	})
+	routing.RegisterPage("/docs/devtools", func(props map[string]interface{}) templ.Component {
+		return docsdevtools.Page()
+	})
+	routing.RegisterPage("/docs/errors", func(props map[string]interface{}) templ.Component {
+		return docserrors.Page()
 	})
 	routing.RegisterPage("/docs/getstarted", func(props map[string]interface{}) templ.Component {
 		return docsgetstarted.Page()
 	})
 	routing.RegisterPage("/docs", func(props map[string]interface{}) templ.Component {
 		return docs.Page()
+	})
+	routing.RegisterPage("/docs/params", func(props map[string]interface{}) templ.Component {
+		return docsparams.Page()
 	})
 	routing.RegisterPage("/docs/reactive-primitives", func(props map[string]interface{}) templ.Component {
 		return docsreactiveprimitives.Page()
@@ -44,6 +65,9 @@ func init() {
 	})
 	routing.RegisterPage("/docs/routing", func(props map[string]interface{}) templ.Component {
 		return docsrouting.Page()
+	})
+	routing.RegisterPage("/docs/runtime", func(props map[string]interface{}) templ.Component {
+		return docsruntime.Page()
 	})
 	routing.RegisterPage("/docs/security", func(props map[string]interface{}) templ.Component {
 		return docssecurity.Page()

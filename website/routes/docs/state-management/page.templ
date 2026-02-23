@@ -3,45 +3,416 @@ package statemanagement
 import "website/components"
 
 templ Page() {
-	<div id="overview" class="space-y-12">
+	<div class="space-y-12">
 		<header>
 			<h1 class="text-4xl font-bold tracking-tight mb-4 text-transparent bg-clip-text bg-gradient-to-r from-[var(--accent-primary)] to-[var(--accent-secondary)]">State Management</h1>
 			<p class="text-xl text-[var(--text-secondary)] leading-relaxed">
-				Seamless state sharing between your Go server and the browser.
+				GoSPA provides a unified state management system that works seamlessly across server and client, with automatic synchronization via WebSocket.
 			</p>
 		</header>
 
 		<section class="space-y-6">
-			<h2 id="synchronization" class="text-2xl font-bold">Automatic Synchronization</h2>
+			<h2 class="text-2xl font-bold">Architecture Overview</h2>
 			<p class="text-[var(--text-secondary)]">
-				GoSPA handles the heavy lifting of keeping your Go server state in sync with the client. When you update a Rune on the server, the change is automatically pushed to all connected clients.
+				State in GoSPA flows from server to client with real-time synchronization. The server is the source of truth, and clients receive updates through WebSocket connections.
 			</p>
-			@components.CodeBlock(`// Server-side
-app.Config.DefaultState["user"] = gospa.NewRune("Guest")
-
-// Update it later
-userRune := app.StateMap.Get("user")
-userRune.Set("Ayden") // Automatically syncs to client!`, "go", "main.go")
+			<div class="grid md:grid-cols-2 gap-6">
+				<div class="p-6 rounded-2xl bg-[var(--bg-secondary)] border border-[var(--border)]">
+					<h3 class="font-bold mb-3 flex items-center gap-2">
+						<span class="w-2 h-2 rounded-full bg-[var(--accent-primary)]"></span>
+						Server State
+					</h3>
+					<ul class="space-y-2 text-sm text-[var(--text-secondary)]">
+						<li>• Thread-safe Rune containers</li>
+						<li>• StateMap { "for" } key-value storage</li>
+						<li>• JSON serialization</li>
+						<li>• WebSocket broadcast</li>
+					</ul>
+				</div>
+				<div class="p-6 rounded-2xl bg-[var(--bg-secondary)] border border-[var(--border)]">
+					<h3 class="font-bold mb-3 flex items-center gap-2">
+						<span class="w-2 h-2 rounded-full bg-[var(--accent-secondary)]"></span>
+						Client State
+					</h3>
+					<ul class="space-y-2 text-sm text-[var(--text-secondary)]">
+						<li>• Reactive Rune primitives</li>
+						<li>• Automatic dependency tracking</li>
+						<li>• WebSocket sync</li>
+						<li>• Local state { "for" } UI</li>
+					</ul>
+				</div>
+			</div>
 		</section>
 
 		<section class="space-y-6">
-			<h2 id="persistence" class="text-2xl font-bold">Persistence</h2>
+			<h2 class="text-2xl font-bold" id="server-state">Server-Side State</h2>
+			
+			<h3 class="text-xl font-semibold mt-8" id="statemap">StateMap</h3>
 			<p class="text-[var(--text-secondary)]">
-				Enable <code class="text-[var(--text-primary)]">StatePersistence</code> in your config to automatically save and restore state from the browser's <code class="text-[var(--text-primary)]">localStorage</code>.
+				StateMap provides a thread-safe key-value store { "for" } managing multiple state values.
 			</p>
-			@components.CodeBlock(`app := gospa.New(gospa.Config{
-    StatePersistence: true,
-})`, "go", "main.go")
+			@components.CodeBlock(`import "github.com/a4bet/gospa"
+
+// Create a new state map
+states := gospa.NewStateMap()
+
+// Set values
+states.Set("user", User{ID: 1, Name: "Alice"})
+states.Set("count", 42)
+states.Set("items", []string{"a", "b", "c"})
+
+// Get values (returns *Rune[any])
+rune := states.Get("user")
+if rune != nil {
+    value := rune.Get()
+    user := value.(User)
+}
+
+// Delete values
+states.Delete("count")
+
+// Check existence
+exists := states.Has("user")
+
+// List all keys
+keys := states.Keys()
+
+// Clear all
+states.Clear()`, "go", "statemap.go")
+
+			<h3 class="text-xl font-semibold mt-8" id="serialization">Serialization</h3>
+			<p class="text-[var(--text-secondary)]">
+				StateMap can serialize to JSON { "for" } client hydration.
+			</p>
+			@components.CodeBlock(`// Serialize to JSON
+json := states.ToJSON()
+// Output: {"user":{"ID":1,"Name":"Alice"},"count":42}
+
+// Deserialize from JSON
+err := states.FromJSON(jsonBytes)
+
+// Serialize specific keys
+partialJSON := states.ToJSONKeys("user", "count")`, "go", "serialize.go")
+
+			<h3 class="text-xl font-semibold mt-8" id="batch-updates">Batch Updates</h3>
+			<p class="text-[var(--text-secondary)]">
+				Batch multiple updates into a single transaction.
+			</p>
+			@components.CodeBlock(`// Batch updates - subscribers notified once
+states.Batch(func(m *gospa.StateMap) {
+    m.Set("a", 1)
+    m.Set("b", 2)
+    m.Set("c", 3)
+})
+
+// Global batch across multiple runes
+a := gospa.NewRune(1)
+b := gospa.NewRune(2)
+
+gospa.Batch(func() {
+    a.Set(10)
+    b.Set(20)
+})
+// Subscribers to a and b notified once after batch completes`, "go", "batch.go")
 		</section>
 
-		<div class="p-8 rounded-3xl bg-[var(--bg-secondary)] border border-[var(--border)] relative overflow-hidden group">
-			<div class="absolute top-0 right-0 p-4 opacity-10 group-hover:opacity-20 transition-opacity">
-				<svg xmlns="http://www.w3.org/2000/svg" width="64" height="64" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 2v20"></path><path d="m17 5-5-3-5 3"></path><path d="m17 19-5 3-5-3"></path><path d="M2 12h20"></path><path d="m5 7-3 5 3 5"></path><path d="m19 7 3 5-3 5"></path></svg>
-			</div>
-			<h3 id="multi-tab-sync" class="text-lg font-bold mb-4">Multi-Tab Sync</h3>
-			<p class="text-sm text-[var(--text-secondary)] leading-relaxed">
-				GoSPA supports real-time synchronization across multiple browser tabs. If a user updates their state in one tab, all other open tabs connected to the same session will reflect the change immediately.
+		<section class="space-y-6">
+			<h2 class="text-2xl font-bold" id="client-state">Client-Side State</h2>
+			
+			<h3 class="text-xl font-semibold mt-8" id="rune-client">Rune</h3>
+			<p class="text-[var(--text-secondary)]">
+				The primary reactive primitive { "for" } client-side state.
 			</p>
+			@components.CodeBlock(`import { Rune, derived, effect } from '@gospa/runtime';
+
+// Create reactive state
+const count = new Rune(0);
+const user = new Rune({ name: 'Alice', age: 30 });
+
+// Read
+console.log(count.value);  // 0
+console.log(user.get());   // { name: 'Alice', age: 30 }
+
+// Write
+count.value = 1;
+user.set({ name: 'Bob', age: 25 });
+
+// Update with function
+count.update(n => n + 1);
+user.update(u => ({ ...u, age: u.age + 1 }));
+
+// Subscribe to changes
+const unsub = count.subscribe((newVal, oldVal) => {
+  console.log('Changed:', oldVal, '->', newVal);
+});`, "typescript", "rune.ts")
+
+			<h3 class="text-xl font-semibold mt-8" id="derived-client">Derived State</h3>
+			@components.CodeBlock(`import { Derived, derived } from '@gospa/runtime';
+
+const count = new Rune(5);
+
+// Create derived value
+const doubled = new Derived(() => count.get() * 2);
+const summary = derived(() => 'Count: ' + count.get());
+
+// Derived from multiple sources
+const a = new Rune(10);
+const b = new Rune(20);
+const sum = derived(() => a.get() + b.get());
+
+// Read
+console.log(doubled.value); // 10
+console.log(sum.value);     // 30
+
+// Derived is lazy - only computes when read
+// and re-computes when dependencies change`, "typescript", "derived.ts")
+
+			<h3 class="text-xl font-semibold mt-8" id="effect-client">Effects</h3>
+			@components.CodeBlock(`import { Effect, effect } from '@gospa/runtime';
+
+const count = new Rune(0);
+
+// Create effect
+const myEffect = new Effect(() => {
+  console.log('Count is:', count.get());
+  
+  // Optional cleanup function
+  return () => {
+    console.log('Cleanup before next run');
+  };
+});
+
+// Effect runs immediately and re-runs when dependencies change
+
+// Control
+myEffect.pause();   // Stop reacting
+myEffect.resume();  // Resume
+myEffect.dispose(); // Permanent cleanup
+
+// Shorthand
+const dispose = effect(() => {
+  document.title = 'Count: ' + count.get();
+});`, "typescript", "effect.ts")
+		</section>
+
+		<section class="space-y-6">
+			<h2 class="text-2xl font-bold" id="sync">Server-Client Synchronization</h2>
+			
+			<h3 class="text-xl font-semibold mt-8" id="synced-rune">Synced Rune</h3>
+			<p class="text-[var(--text-secondary)]">
+				Create a rune that automatically syncs with the server via WebSocket.
+			</p>
+			@components.CodeBlock(`import { syncedRune, wsClient } from '@gospa/runtime';
+
+// Connect to WebSocket
+const ws = wsClient({
+  url: 'ws://localhost:3000/ws',
+  reconnect: true,
+  heartbeat: 30000
+});
+
+// Create synced state
+const serverCount = syncedRune({
+  key: 'count',
+  socket: ws,
+  initial: 0
+});
+
+// Changes automatically sync to server
+serverCount.set(10);  // Sends update to server
+
+// Server updates are received automatically
+// No manual refresh needed`, "typescript", "synced.ts")
+
+			<h3 class="text-xl font-semibold mt-8" id="websocket-config">WebSocket Configuration</h3>
+			@components.CodeBlock(`import { WSClient } from '@gospa/runtime';
+
+const client = new WSClient({
+  url: 'ws://localhost:3000/ws',
+  
+  // Reconnection
+  reconnect: true,
+  reconnectInterval: 1000,
+  maxReconnectAttempts: 10,
+  
+  // Heartbeat
+  heartbeat: 30000,
+  heartbeatTimeout: 5000,
+  
+  // Session
+  sessionId: 'user-123',
+  
+  // Event handlers
+  onOpen: () => console.log('Connected'),
+  onClose: (e) => console.log('Disconnected'),
+  onError: (e) => console.error('Error:', e),
+  onMessage: (data) => console.log('Message:', data)
+});
+
+// Control
+await client.connect();
+client.disconnect();
+client.reconnect();
+
+// Status
+console.log(client.isConnected);
+console.log(client.sessionId);`, "typescript", "wsconfig.ts")
+		</section>
+
+		<section class="space-y-6">
+			<h2 class="text-2xl font-bold" id="patterns">State Patterns</h2>
+
+			<h3 class="text-xl font-semibold mt-8" id="form-state">Form State</h3>
+			@components.CodeBlock(`import { Rune, derived } from '@gospa/runtime';
+
+// Form state
+const form = new Rune({
+  email: '',
+  password: '',
+  remember: false
+});
+
+// Validation
+const errors = derived(() => {
+  const errs: Record<string, string> = {};
+  const f = form.get();
+  
+  if (!f.email.includes('@')) {
+    errs.email = 'Invalid email';
+  }
+  if (f.password.length < 8) {
+    errs.password = 'Password too short';
+  }
+  
+  return errs;
+});
+
+// Submit handler
+async function submit() {
+  if (Object.keys(errors.get()).length > 0) return;
+  
+  const response = await fetch('/api/login', {
+    method: 'POST',
+    body: JSON.stringify(form.get())
+  });
+  
+  // Handle response
+}`, "typescript", "form.ts")
+
+			<h3 class="text-xl font-semibold mt-8" id="async-state">Async State</h3>
+			@components.CodeBlock(`import { resourceReactive, Rune } from '@gospa/runtime';
+
+const userId = new Rune(1);
+
+// Resource - async data with status
+const userResource = resourceReactive(
+  [userId],
+  async () => {
+    const res = await fetch('/api/user/' + userId.get());
+    return res.json();
+  }
+);
+
+// Status tracking
+console.log(userResource.status);     // 'idle' | 'pending' | 'success' | 'error'
+console.log(userResource.isPending);  // boolean
+console.log(userResource.data);       // T | undefined
+console.log(userResource.error);      // Error | undefined
+
+// Refetch
+await userResource.refetch();`, "typescript", "async.ts")
+
+			<h3 class="text-xl font-semibold mt-8" id="global-state">Global State</h3>
+			@components.CodeBlock(`// store.svelte.ts
+import { Rune, derived } from '@gospa/runtime';
+
+// Global store
+export const user = new Rune<User | null>(null);
+export const theme = new Rune<'light' | 'dark'>('light');
+
+// Derived from global
+export const isAuthenticated = derived(() => user.get() !== null);
+export const userName = derived(() => user.get()?.name ?? 'Guest');
+
+// Actions
+export function login(userData: User) {
+  user.set(userData);
+}
+
+export function logout() {
+  user.set(null);
+}
+
+export function toggleTheme() {
+  theme.update(t => t === 'light' ? 'dark' : 'light');
+}`, "typescript", "global.ts")
+		</section>
+
+		<section class="space-y-6">
+			<h2 class="text-2xl font-bold" id="utilities">Utility Functions</h2>
+			
+			<div class="grid md:grid-cols-2 gap-4">
+				<div class="p-4 rounded-xl bg-[var(--bg-secondary)] border border-[var(--border)]">
+					<h4 class="font-mono text-sm text-[var(--accent-primary)] mb-2">batch(fn)</h4>
+					<p class="text-sm text-[var(--text-secondary)]">Combine multiple updates into single notification.</p>
+				</div>
+				<div class="p-4 rounded-xl bg-[var(--bg-secondary)] border border-[var(--border)]">
+					<h4 class="font-mono text-sm text-[var(--accent-primary)] mb-2">untrack(fn)</h4>
+					<p class="text-sm text-[var(--text-secondary)]">Read values without creating dependencies.</p>
+				</div>
+				<div class="p-4 rounded-xl bg-[var(--bg-secondary)] border border-[var(--border)]">
+					<h4 class="font-mono text-sm text-[var(--accent-primary)] mb-2">watch(sources, fn)</h4>
+					<p class="text-sm text-[var(--text-secondary)]">Watch multiple sources { "for" } changes.</p>
+				</div>
+				<div class="p-4 rounded-xl bg-[var(--bg-secondary)] border border-[var(--border)]">
+					<h4 class="font-mono text-sm text-[var(--accent-primary)] mb-2">inspect(value)</h4>
+					<p class="text-sm text-[var(--text-secondary)]">Debug reactive values (dev only).</p>
+				</div>
+			</div>
+
+			@components.CodeBlock(`import { batch, untrack, watch, inspect } from '@gospa/runtime';
+
+const a = new Rune(1);
+const b = new Rune(2);
+
+// Batch - single notification
+batch(() => {
+  a.set(10);
+  b.set(20);
+});
+
+// Untrack - don't track dependency
+effect(() => {
+  console.log('A:', a.get());
+  untrack(() => {
+    console.log('B (untracked):', b.get());
+  });
+  // Only re-runs when a changes, not b
+});
+
+// Watch multiple sources
+const unsub = watch([a, b], (values, oldValues) => {
+  console.log('Changed:', { from: oldValues, to: values });
+});
+
+// Debug (dev only)
+inspect(a);
+inspect(a).with((type, value) => {
+  if (type === 'update') {
+    console.log('Updated to:', value);
+  }
+});`, "typescript", "utilities.ts")
+		</section>
+
+		<div class="bg-gradient-to-r from-[var(--bg-secondary)] to-[var(--bg-tertiary)] p-8 rounded-3xl border border-[var(--border)] shadow-inner">
+			<h3 class="text-lg font-bold mb-4">Best Practices</h3>
+			<ul class="space-y-2 text-sm text-[var(--text-secondary)]">
+				<li>• <strong>Server as source of truth</strong> - Use synced runes { "for" } shared state</li>
+				<li>• <strong>Derive when possible</strong> - Use derived instead of duplicating state</li>
+				<li>• <strong>Batch updates</strong> - Use batch() { "for" } multiple related changes</li>
+				<li>• <strong>Clean up effects</strong> - Dispose effects when components unmount</li>
+				<li>• <strong>Keep state minimal</strong> - Store only what's needed</li>
+			</ul>
 		</div>
 	</div>
 }

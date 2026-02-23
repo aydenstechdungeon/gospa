@@ -31,54 +31,400 @@ func Page() templ.Component {
 			templ_7745c5c3_Var1 = templ.NopComponent
 		}
 		ctx = templ.ClearChildren(ctx)
-		templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 1, "<div id=\"overview\" class=\"space-y-12\"><header><h1 class=\"text-4xl font-bold tracking-tight mb-4 text-transparent bg-clip-text bg-gradient-to-r from-[var(--accent-primary)] to-[var(--accent-secondary)]\">File-Based Routing</h1><p class=\"text-xl text-[var(--text-secondary)] leading-relaxed\">GoSPA uses a filesystem-based router inspired by SvelteKit and Next.js. Your directory structure defines your URL structure.</p></header><section class=\"space-y-6\"><h2 id=\"file-structure\" class=\"text-2xl font-bold\">Directory Structure</h2><p class=\"text-[var(--text-secondary)]\">Each directory in your <code class=\"text-[var(--text-primary)]\">routes/</code> folder represents a path. A <code class=\"text-[var(--text-primary)]\">page.templ</code> file inside that directory becomes the entry point for that route.</p>")
+		templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 1, "<div class=\"space-y-12\"><header><h1 class=\"text-4xl font-bold tracking-tight mb-4 text-transparent bg-clip-text bg-gradient-to-r from-[var(--accent-primary)] to-[var(--accent-secondary)]\">Routing</h1><p class=\"text-xl text-[var(--text-secondary)] leading-relaxed\">GoSPA uses file-system based routing with automatic route generation. Define routes using Templ templates and the framework handles the rest.</p></header><section class=\"space-y-6\"><h2 class=\"text-2xl font-bold\">Route Structure</h2><p class=\"text-[var(--text-secondary)]\">Routes are defined in the <code class=\"text-[var(--accent-primary)]\">routes/</code> directory. Each <code class=\"text-[var(--accent-primary)]\">*.templ</code> file becomes a route.</p>")
 		if templ_7745c5c3_Err != nil {
 			return templ_7745c5c3_Err
 		}
-		templ_7745c5c3_Err = components.CodeBlock(`routes/
-├── page.templ             // -> /
-├── about/
-│   └── page.templ         // -> /about
-├── blog/
-│   ├── page.templ         // -> /blog
-│   └── [slug]/
-│       └── page.templ     // -> /blog/:slug
-└── layout.templ           // Shared layout for all routes`, "text", "Project Structure").Render(ctx, templ_7745c5c3_Buffer)
+		templ_7745c5c3_Err = components.CodeBlock(`project/
+├── routes/
+│   ├── layout.templ          # Root layout
+│   ├── page.templ            # Home page (/)
+│   ├── about/
+│   │   └── page.templ        # About page (/about)
+│   ├── blog/
+│   │   ├── layout.templ      # Blog layout
+│   │   ├── page.templ        # Blog index (/blog)
+│   │   └── [slug]/
+│   │       └── page.templ    # Blog post (/blog/my-post)
+│   └── api/
+│       └── users.go          # API endpoint
+└── generated/
+    ├── routes.go             # Generated route registry
+    ├── routes.ts             # Client-side routes
+    └── types.ts              # TypeScript types`, "plaintext", "structure.txt").Render(ctx, templ_7745c5c3_Buffer)
 		if templ_7745c5c3_Err != nil {
 			return templ_7745c5c3_Err
 		}
-		templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 2, "</section><section class=\"space-y-6\"><h2 id=\"dynamic-routes\" class=\"text-2xl font-bold\">Dynamic Routes</h2><p class=\"text-[var(--text-secondary)]\">Use brackets <code class=\"text-[var(--text-primary)]\">[param]</code> in directory names to create dynamic routes. These parameters are passed to your Templ components automatically.</p>")
+		templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 2, "<h3 class=\"text-xl font-semibold mt-8\" id=\"route-files\">Route Files</h3><div class=\"grid md:grid-cols-2 gap-4\"><div class=\"p-4 rounded-xl bg-[var(--bg-secondary)] border border-[var(--border)]\"><h4 class=\"font-mono text-sm text-[var(--accent-primary)] mb-2\">page.templ</h4><p class=\"text-sm text-[var(--text-secondary)]\">Page component ")
+		if templ_7745c5c3_Err != nil {
+			return templ_7745c5c3_Err
+		}
+		var templ_7745c5c3_Var2 string
+		templ_7745c5c3_Var2, templ_7745c5c3_Err = templ.JoinStringErrs("for")
+		if templ_7745c5c3_Err != nil {
+			return templ.Error{Err: templ_7745c5c3_Err, FileName: `routes/docs/routing/page.templ`, Line: 41, Col: 75}
+		}
+		_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ.EscapeString(templ_7745c5c3_Var2))
+		if templ_7745c5c3_Err != nil {
+			return templ_7745c5c3_Err
+		}
+		templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 3, " a route. Renders the main content.</p></div><div class=\"p-4 rounded-xl bg-[var(--bg-secondary)] border border-[var(--border)]\"><h4 class=\"font-mono text-sm text-[var(--accent-primary)] mb-2\">layout.templ</h4><p class=\"text-sm text-[var(--text-secondary)]\">Layout wrapper. Shared UI ")
+		if templ_7745c5c3_Err != nil {
+			return templ_7745c5c3_Err
+		}
+		var templ_7745c5c3_Var3 string
+		templ_7745c5c3_Var3, templ_7745c5c3_Err = templ.JoinStringErrs("for")
+		if templ_7745c5c3_Err != nil {
+			return templ.Error{Err: templ_7745c5c3_Err, FileName: `routes/docs/routing/page.templ`, Line: 45, Col: 86}
+		}
+		_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ.EscapeString(templ_7745c5c3_Var3))
+		if templ_7745c5c3_Err != nil {
+			return templ_7745c5c3_Err
+		}
+		templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 4, " child routes.</p></div><div class=\"p-4 rounded-xl bg-[var(--bg-secondary)] border border-[var(--border)]\"><h4 class=\"font-mono text-sm text-[var(--accent-primary)] mb-2\">error.templ</h4><p class=\"text-sm text-[var(--text-secondary)]\">Error boundary. Catches errors in child routes.</p></div><div class=\"p-4 rounded-xl bg-[var(--bg-secondary)] border border-[var(--border)]\"><h4 class=\"font-mono text-sm text-[var(--accent-primary)] mb-2\">*.go</h4><p class=\"text-sm text-[var(--text-secondary)]\">Server-side handlers (API endpoints, remote actions).</p></div></div></section><section class=\"space-y-6\"><h2 class=\"text-2xl font-bold\" id=\"layouts\">Layouts</h2><p class=\"text-[var(--text-secondary)]\">Layouts wrap child routes and provide shared UI elements like headers, footers, and navigation.</p>")
+		if templ_7745c5c3_Err != nil {
+			return templ_7745c5c3_Err
+		}
+		templ_7745c5c3_Err = components.CodeBlock(`// routes/layout.templ
+package main
+
+import "gospa"
+
+templ Layout(children gospa.Children) {
+	<!DOCTYPE html>
+	<html>
+		<head>
+			<meta charset="utf-8"/>
+			<title>My App</title>
+			@gospa.Head()
+		</head>
+		<body>
+			<nav>
+				<a href="/">Home</a>
+				<a href="/about">About</a>
+			</nav>
+			<main>
+				@gospa.RenderChildren(children)
+			</main>
+			@gospa.Scripts()
+		</body>
+	</html>
+}`, "go", "layout.templ").Render(ctx, templ_7745c5c3_Buffer)
+		if templ_7745c5c3_Err != nil {
+			return templ_7745c5c3_Err
+		}
+		templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 5, "<h3 class=\"text-xl font-semibold mt-8\" id=\"nested-layouts\">Nested Layouts</h3>")
+		if templ_7745c5c3_Err != nil {
+			return templ_7745c5c3_Err
+		}
+		templ_7745c5c3_Err = components.CodeBlock(`// routes/blog/layout.templ
+package blog
+
+templ Layout(children gospa.Children) {
+	<div class="blog-container">
+		<aside class="sidebar">
+			<!-- Blog sidebar -->
+		</aside>
+		<article>
+			@gospa.RenderChildren(children)
+		</article>
+	</div>
+}`, "go", "blog_layout.templ").Render(ctx, templ_7745c5c3_Buffer)
+		if templ_7745c5c3_Err != nil {
+			return templ_7745c5c3_Err
+		}
+		templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 6, "</section><section class=\"space-y-6\"><h2 class=\"text-2xl font-bold\" id=\"dynamic-routes\">Dynamic Routes</h2><h3 class=\"text-xl font-semibold mt-8\" id=\"params\">Route Parameters</h3><p class=\"text-[var(--text-secondary)]\">Use square brackets to define dynamic segments. Parameters are passed to page components.</p>")
 		if templ_7745c5c3_Err != nil {
 			return templ_7745c5c3_Err
 		}
 		templ_7745c5c3_Err = components.CodeBlock(`// routes/blog/[slug]/page.templ
 package blog
 
-templ Page(props map[string]interface{}) {
-    <h1>Post: { props["slug"].(string) }</h1>
-}`, "go", "routes/blog/[slug]/page.templ").Render(ctx, templ_7745c5c3_Buffer)
-		if templ_7745c5c3_Err != nil {
-			return templ_7745c5c3_Err
-		}
-		templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 3, "</section><section class=\"space-y-6\"><h2 id=\"layouts\" class=\"text-2xl font-bold\">Nested Layouts</h2><p class=\"text-[var(--text-secondary)]\">You can define <code class=\"text-[var(--text-primary)]\">layout.templ</code> files at any level. They will wrap all pages and sub-layouts within that directory.</p>")
-		if templ_7745c5c3_Err != nil {
-			return templ_7745c5c3_Err
-		}
-		templ_7745c5c3_Err = components.CodeBlock(`// routes/docs/layout.templ
-package docs
+import "gospa"
 
-templ Layout(children templ.Component) {
-    <div class="docs-container">
-        <nav class="sidebar">...</nav>
-        <main>
-            @children
-        </main>
-    </div>
-}`, "go", "routes/docs/layout.templ").Render(ctx, templ_7745c5c3_Buffer)
+templ Page(params gospa.Params) {
+	<h1>Post: { params["slug"] }</h1>
+}
+
+// Access multiple params
+// routes/users/[id]/posts/[postId]
+// params["id"] and params["postId"]`, "go", "dynamic.templ").Render(ctx, templ_7745c5c3_Buffer)
 		if templ_7745c5c3_Err != nil {
 			return templ_7745c5c3_Err
 		}
-		templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 4, "</section><div class=\"p-6 rounded-2xl bg-[var(--accent-primary)]/5 border border-[var(--accent-primary)]/20\"><h4 class=\"font-bold text-[var(--accent-primary)] mb-2\">Pro Tip</h4><p class=\"text-sm text-[var(--text-secondary)]\">The route generator automatically handles imports and registration. Just add your files, and <code class=\"text-[var(--text-primary)]\">gospa dev</code> will take care of the rest.</p></div></div>")
+		templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 7, "<h3 class=\"text-xl font-semibold mt-8\" id=\"catch-all\">Catch-All Routes</h3>")
+		if templ_7745c5c3_Err != nil {
+			return templ_7745c5c3_Err
+		}
+		templ_7745c5c3_Err = components.CodeBlock(`// routes/docs/[...path]/page.templ
+// Matches: /docs/a, /docs/a/b, /docs/a/b/c
+
+templ Page(params gospa.Params) {
+	<h1>Path: { params["path"] }</h1>
+	// params["path"] = "a/b/c"
+}`, "go", "catchall.templ").Render(ctx, templ_7745c5c3_Buffer)
+		if templ_7745c5c3_Err != nil {
+			return templ_7745c5c3_Err
+		}
+		templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 8, "<h3 class=\"text-xl font-semibold mt-8\" id=\"optional\">Optional Routes</h3>")
+		if templ_7745c5c3_Err != nil {
+			return templ_7745c5c3_Err
+		}
+		templ_7745c5c3_Err = components.CodeBlock(`// routes/blog/[[page]]/page.templ
+// Matches: /blog AND /blog/2
+
+templ Page(params gospa.Params) {
+	page := params.Get("page", "1")
+	<h1>Page { page }</h1>
+}`, "go", "optional.templ").Render(ctx, templ_7745c5c3_Buffer)
+		if templ_7745c5c3_Err != nil {
+			return templ_7745c5c3_Err
+		}
+		templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 9, "</section><section class=\"space-y-6\"><h2 class=\"text-2xl font-bold\" id=\"api-routes\">API Routes</h2><p class=\"text-[var(--text-secondary)]\">Define API endpoints in Go files within the routes directory.</p>")
+		if templ_7745c5c3_Err != nil {
+			return templ_7745c5c3_Err
+		}
+		templ_7745c5c3_Err = components.CodeBlock(`// routes/api/users.go
+package api
+
+import (
+	"github.com/gofiber/fiber/v2"
+)
+
+// GET /api/users
+func ListUsers(c *fiber.Ctx) error {
+	users := []User{
+		{ID: 1, Name: "Alice"},
+		{ID: 2, Name: "Bob"},
+	}
+	return c.JSON(users)
+}
+
+// POST /api/users
+func CreateUser(c *fiber.Ctx) error {
+	var user User
+	if err := c.BodyParser(&user); err != nil {
+		return c.Status(400).JSON(fiber.Map{
+			"error": "Invalid request",
+		})
+	}
+	// Save user...
+	return c.Status(201).JSON(user)
+}
+
+// GET /api/users/:id
+func GetUser(c *fiber.Ctx) error {
+	id := c.Params("id")
+	// Fetch user...
+	return c.JSON(user)
+}`, "go", "api.go").Render(ctx, templ_7745c5c3_Buffer)
+		if templ_7745c5c3_Err != nil {
+			return templ_7745c5c3_Err
+		}
+		templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 10, "</section><section class=\"space-y-6\"><h2 class=\"text-2xl font-bold\" id=\"remote-actions\">Remote Actions</h2><p class=\"text-[var(--text-secondary)]\">Define server functions that can be called from the client.</p>")
+		if templ_7745c5c3_Err != nil {
+			return templ_7745c5c3_Err
+		}
+		templ_7745c5c3_Err = components.CodeBlock(`// routes/actions.go
+package routes
+
+import "github.com/a4bet/gospa"
+
+// Define remote action
+func init() {
+	gospa.Remote("updateUser", func(c *fiber.Ctx, input UpdateUserInput) (User, error) {
+		// Validate input
+		if input.Name == "" {
+			return User{}, errors.New("name required")
+		}
+		
+		// Update user
+		user := User{
+			ID:   input.ID,
+			Name: input.Name,
+		}
+		
+		// Broadcast update to connected clients
+		gospa.Broadcast("userUpdated", user)
+		
+		return user, nil
+	})
+}`, "go", "remote.go").Render(ctx, templ_7745c5c3_Buffer)
+		if templ_7745c5c3_Err != nil {
+			return templ_7745c5c3_Err
+		}
+		templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 11, "<h3 class=\"text-xl font-semibold mt-8\">Client-Side Call</h3>")
+		if templ_7745c5c3_Err != nil {
+			return templ_7745c5c3_Err
+		}
+		templ_7745c5c3_Err = components.CodeBlock(`import { remote } from '@gospa/runtime';
+
+// Call remote action
+const result = await remote('updateUser', {
+	id: 1,
+	name: 'New Name'
+});
+
+if (result.ok) {
+	console.log('Updated:', result.value);
+} else {
+	console.error('Error:', result.error);
+}`, "typescript", "remote_client.ts").Render(ctx, templ_7745c5c3_Buffer)
+		if templ_7745c5c3_Err != nil {
+			return templ_7745c5c3_Err
+		}
+		templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 12, "</section><section class=\"space-y-6\"><h2 class=\"text-2xl font-bold\" id=\"navigation\">Client Navigation</h2><p class=\"text-[var(--text-secondary)]\">GoSPA provides SPA-style navigation with prefetching and history management.</p><h3 class=\"text-xl font-semibold mt-8\" id=\"nav-functions\">Navigation Functions</h3>")
+		if templ_7745c5c3_Err != nil {
+			return templ_7745c5c3_Err
+		}
+		templ_7745c5c3_Err = components.CodeBlock(`import { 
+	navigate, 
+	prefetch, 
+	back, 
+	forward,
+	replace,
+	preloadRoute
+} from '@gospa/runtime';
+
+// Navigate to a new page
+navigate('/about');
+navigate('/blog/my-post', { replace: true });
+
+// Prefetch a route (cache for instant navigation)
+prefetch('/dashboard');
+
+// History navigation
+back();     // Go back in history
+forward();  // Go forward in history
+
+// Replace current URL without adding to history
+replace('/login');
+
+// Preload route data
+await preloadRoute('/users/1');`, "typescript", "navigation.ts").Render(ctx, templ_7745c5c3_Buffer)
+		if templ_7745c5c3_Err != nil {
+			return templ_7745c5c3_Err
+		}
+		templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 13, "<h3 class=\"text-xl font-semibold mt-8\" id=\"nav-events\">Navigation Events</h3>")
+		if templ_7745c5c3_Err != nil {
+			return templ_7745c5c3_Err
+		}
+		templ_7745c5c3_Err = components.CodeBlock(`import { 
+	onNavigate, 
+	onNavigated, 
+	onNavigateError 
+} from '@gospa/runtime';
+
+// Before navigation
+const unsub = onNavigate((to, from) => {
+	console.log('Navigating from', from, 'to', to);
+	// Return false to cancel
+});
+
+// After navigation
+onNavigated((to, from) => {
+	console.log('Navigated to', to);
+	// Analytics, scroll restoration, etc.
+});
+
+// Navigation error
+onNavigateError((error, to) => {
+	console.error('Navigation failed:', error);
+});
+
+// Cleanup
+unsub();`, "typescript", "nav_events.ts").Render(ctx, templ_7745c5c3_Buffer)
+		if templ_7745c5c3_Err != nil {
+			return templ_7745c5c3_Err
+		}
+		templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 14, "<h3 class=\"text-xl font-semibold mt-8\" id=\"nav-links\">Enhanced Links</h3>")
+		if templ_7745c5c3_Err != nil {
+			return templ_7745c5c3_Err
+		}
+		templ_7745c5c3_Err = components.CodeBlock(`<!-- Automatic SPA navigation -->
+<a href="/about" data-gospa-link>About</a>
+
+<!-- Prefetch on hover -->
+<a href="/dashboard" data-gospa-prefetch>Dashboard</a>
+
+<!-- Disable SPA navigation -->
+<a href="/external" data-gospa-reload>External Link</a>
+
+<!-- Active state -->
+<a href="/about" data-gospa-active="active-class">About</a>`, "html", "links.html").Render(ctx, templ_7745c5c3_Buffer)
+		if templ_7745c5c3_Err != nil {
+			return templ_7745c5c3_Err
+		}
+		templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 15, "</section><section class=\"space-y-6\"><h2 class=\"text-2xl font-bold\" id=\"route-params\">Route Params API</h2><h3 class=\"text-xl font-semibold mt-8\">Go Params</h3>")
+		if templ_7745c5c3_Err != nil {
+			return templ_7745c5c3_Err
+		}
+		templ_7745c5c3_Err = components.CodeBlock(`// In page.templ
+templ Page(params gospa.Params) {
+	// Get single param
+	slug := params["slug"]
+	
+	// Get with default
+	page := params.Get("page", "1")
+	
+	// Get as int
+	id := params.GetInt("id", 0)
+	
+	// Get all params
+	allParams := params.All()
+	
+	// Check existence
+	if params.Has("filter") {
+		filter := params["filter"]
+	}
+}`, "go", "params_go.go").Render(ctx, templ_7745c5c3_Buffer)
+		if templ_7745c5c3_Err != nil {
+			return templ_7745c5c3_Err
+		}
+		templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 16, "<h3 class=\"text-xl font-semibold mt-8\">TypeScript Params</h3>")
+		if templ_7745c5c3_Err != nil {
+			return templ_7745c5c3_Err
+		}
+		templ_7745c5c3_Err = components.CodeBlock(`import { useParams, useSearchParams } from '@gospa/runtime';
+
+// Route params (from URL segments)
+const params = useParams();
+console.log(params.slug);  // /blog/[slug]
+console.log(params.id);    // /users/[id]
+
+// Query params
+const searchParams = useSearchParams();
+console.log(searchParams.page);     // ?page=2
+console.log(searchParams.filter);   // ?filter=active
+
+// With defaults
+const page = searchParams.get('page', '1');
+const limit = searchParams.getInt('limit', 10);
+
+// Update query params
+searchParams.set('page', '2');
+searchParams.delete('filter');`, "typescript", "params_ts.ts").Render(ctx, templ_7745c5c3_Buffer)
+		if templ_7745c5c3_Err != nil {
+			return templ_7745c5c3_Err
+		}
+		templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 17, "</section><section class=\"space-y-6\"><h2 class=\"text-2xl font-bold\" id=\"code-splitting\">Code Splitting</h2><p class=\"text-[var(--text-secondary)]\">Routes are automatically code-split for optimal loading performance.</p>")
+		if templ_7745c5c3_Err != nil {
+			return templ_7745c5c3_Err
+		}
+		templ_7745c5c3_Err = components.CodeBlock(`// Generated routes.ts
+export const routes = {
+	'/': () => import('./routes/page.js'),
+	'/about': () => import('./routes/about/page.js'),
+	'/blog': () => import('./routes/blog/page.js'),
+	'/blog/[slug]': () => import('./routes/blog/[slug]/page.js'),
+};
+
+// Lazy loaded on navigation
+// Prefetching available via data-gospa-prefetch`, "typescript", "routes.ts").Render(ctx, templ_7745c5c3_Buffer)
+		if templ_7745c5c3_Err != nil {
+			return templ_7745c5c3_Err
+		}
+		templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 18, "</section><div class=\"bg-gradient-to-r from-[var(--bg-secondary)] to-[var(--bg-tertiary)] p-8 rounded-3xl border border-[var(--border)] shadow-inner\"><h3 class=\"text-lg font-bold mb-4\">Route Generation</h3><p class=\"text-sm text-[var(--text-secondary)] mb-4\">Run <code class=\"text-[var(--accent-primary)]\">gospa generate</code> to regenerate route files after adding, removing, or renaming routes.</p><div class=\"flex gap-4 text-sm\"><div class=\"px-3 py-1.5 rounded-lg bg-[var(--bg-tertiary)] border border-[var(--border)]\"><code class=\"text-[var(--accent-primary)]\">generated/routes.go</code> <span class=\"text-[var(--text-secondary)] ml-2\">Server route registry</span></div><div class=\"px-3 py-1.5 rounded-lg bg-[var(--bg-tertiary)] border border-[var(--border)]\"><code class=\"text-[var(--accent-primary)]\">generated/routes.ts</code> <span class=\"text-[var(--text-secondary)] ml-2\">Client routes</span></div></div></div></div>")
 		if templ_7745c5c3_Err != nil {
 			return templ_7745c5c3_Err
 		}
