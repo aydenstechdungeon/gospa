@@ -51,12 +51,15 @@ RUN chown -R appuser:appuser /app
 
 USER appuser
 
-# Expose port
-EXPOSE 3000
+# Expose port (Fly.io uses 8080 by default)
+EXPOSE 8080
 
 # Health check
 HEALTHCHECK --interval=30s --timeout=3s --start-period=5s --retries=3 \
-    CMD wget --no-verbose --tries=1 --spider http://localhost:3000/ || exit 1
+    CMD wget --no-verbose --tries=1 --spider http://localhost:8080/ || exit 1
+
+# Default environment for production
+ENV PORT=8080
 
 # Run
 CMD ["./website"]
