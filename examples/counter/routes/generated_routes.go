@@ -4,8 +4,8 @@
 package routes
 
 import (
-	"github.com/a-h/templ"
 	"github.com/aydenstechdungeon/gospa/routing"
+	"github.com/a-h/templ"
 )
 
 func init() {
