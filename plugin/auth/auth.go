@@ -294,12 +294,14 @@ import (
 )
 
 // getJWTSecret returns the JWT secret from environment variable.
-// IMPORTANT: Set JWT_SECRET environment variable in production!
+// CRITICAL: JWT_SECRET must be set via environment variable.
+// The application will panic if JWT_SECRET is not configured.
 func getJWTSecret() []byte {
 	secret := os.Getenv("JWT_SECRET")
 	if secret == "" {
-		// Development fallback - NEVER use in production
-		secret = "dev-secret-change-in-production"
+		panic("JWT_SECRET environment variable is not set. " +
+			"Generate a secure secret with: openssl rand -hex 32 " +
+			"and set it in your environment before starting the application.")
 	}
 	return []byte(secret)
 }

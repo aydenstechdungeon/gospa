@@ -3,6 +3,8 @@
 package fiber
 
 import (
+	"crypto/rand"
+	"encoding/hex"
 	"encoding/json"
 	"fmt"
 	"sync"
@@ -287,6 +289,8 @@ func (b *SSEBroker) SSEHandler(clientIDFunc func(*fiber.Ctx) string) fiber.Handl
 }
 
 // SSESubscribeHandler returns a handler for subscribing to topics.
+// Security: Only allows subscription to topics for clients that are currently connected.
+// This prevents unauthorized clients from subscribing to topics they don't own.
 func (b *SSEBroker) SSESubscribeHandler() fiber.Handler {
 	return func(c *fiber.Ctx) error {
 		var req struct {
@@ -298,6 +302,14 @@ func (b *SSEBroker) SSESubscribeHandler() fiber.Handler {
 			return c.Status(400).JSON(fiber.Map{"error": "invalid request"})
 		}
 
+		// Validate that the client exists and is currently connected
+		// This prevents unauthorized subscription to other clients' topics
+		if !b.clientExists(req.ClientID) {
+			return c.Status(404).JSON(fiber.Map{
+				"error": "client not found or not connected",
+			})
+		}
+
 		b.Subscribe(req.ClientID, req.Topics...)
 
 		return c.JSON(fiber.Map{
@@ -305,6 +317,15 @@ func (b *SSEBroker) SSESubscribeHandler() fiber.Handler {
 			"topics":  req.Topics,
 		})
 	}
+}
+
+// clientExists checks if a client is currently connected.
+// This is used to validate subscription requests.
+func (b *SSEBroker) clientExists(clientID string) bool {
+	b.mutex.RLock()
+	defer b.mutex.RUnlock()
+	_, exists := b.clients[clientID]
+	return exists
 }
 
 // SSEUnsubscribeHandler returns a handler for unsubscribing from topics.
@@ -365,9 +386,15 @@ func writeSSEEvent(c *fiber.Ctx, event SSEEvent) error {
 	return nil
 }
 
-// generateClientID generates a unique client ID.
+// generateClientID generates a unique client ID using cryptographically secure random bytes.
+// This prevents session hijacking via predictable client IDs.
 func generateClientID() string {
-	return fmt.Sprintf("sse_%d", time.Now().UnixNano())
+	bytes := make([]byte, 16)
+	if _, err := rand.Read(bytes); err != nil {
+		// This should never happen with crypto/rand, but fall back to timestamp if it does
+		return fmt.Sprintf("sse_%d", time.Now().UnixNano())
+	}
+	return "sse_" + hex.EncodeToString(bytes)
 }
 
 // SetupSSE sets up SSE routes on a Fiber app.

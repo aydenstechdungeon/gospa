@@ -329,8 +329,11 @@ func (a *App) setupRoutes() {
 
 		result, err := fn(c.Context(), input)
 		if err != nil {
+			// Log the actual error internally for debugging
+			log.Printf("Remote action %q error: %v", name, err)
+			// Return generic error to client to avoid information disclosure
 			return c.Status(fiberpkg.StatusInternalServerError).JSON(fiberpkg.Map{
-				"error": err.Error(),
+				"error": "Internal server error",
 			})
 		}
 
