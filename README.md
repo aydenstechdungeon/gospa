@@ -9,7 +9,7 @@ A Go framework for building reactive SPAs with server-side rendering. Brings Sve
 - **WebSocket Sync** — Real-time client-server state synchronization
 - **Session Management** — Secure session persistence with `SessionStore` and `ClientStateStore`
 - **Type Safety** — Compile-time template validation with Templ
-- **Lightweight Runtime** — ~11KB gzipped for the simple runtime, ~18KB for the DOMPurify-enabled runtime.
+- **Lightweight Runtime** — ~11KB gzipped for the simple runtime, ~17KB for the DOMPurify-enabled runtime.
 - **Remote Actions** — Type-safe server functions callable directly from the client.
 - **Security** — Built-in CSRF protection, customizable CORS origins, and strict XSS prevention.
 - **Rendering Modes** — Seamlessly mix CSR, SSR, and SSG per-page rendering strategies.
@@ -329,6 +329,7 @@ GoSPA includes a powerful plugin system for extending build and development work
 | **Validation** | Form validation (Valibot client + Go validator server) | `gospa validation:generate`, `gospa validation:schema` |
 | **SEO** | Sitemap, robots.txt, meta tags, structured data | `gospa seo:generate`, `gospa seo:meta` |
 | **Auth** | OAuth2, JWT sessions, TOTP/OTP authentication | `gospa auth:generate`, `gospa auth:otp` |
+| **QRCode** | QR code generation with customizable options | `gospa qrcode:generate` |
 
 ### Configuration
 

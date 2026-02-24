@@ -22,7 +22,7 @@ GoSPA is a Go-based SPA framework that brings Svelte-like reactive primitives to
 ### Install the CLI
 
 ```bash
-go install github.com/a4bet/gospa/cmd/gospa@latest
+go install github.com/aydenstechdungeon/gospa/cmd/gospa@latest
 ```
 
 ### Create a New Project
@@ -95,8 +95,8 @@ Create `routes/counter.templ`:
 package routes
 
 import (
-	"github.com/a4bet/gospa/templ"
-	"github.com/a4bet/gospa/state"
+	"github.com/aydenstechdungeon/gospa/templ"
+	"github.com/aydenstechdungeon/gospa/state"
 )
 
 templ CounterPage() {
@@ -236,7 +236,7 @@ Access URL parameters in your templates:
 ```go
 package routes
 
-import "github.com/a4bet/gospa/routing"
+import "github.com/aydenstechdungeon/gospa/routing"
 
 templ SearchPage(params routing.Params) {
 	<div>
@@ -254,7 +254,7 @@ Use Go's state primitives for server-side state:
 ```go
 package routes
 
-import "github.com/a4bet/gospa/state"
+import "github.com/aydenstechdungeon/gospa/state"
 
 templ TodoPage() *state.StateMap {
 	sm := state.NewStateMap()
