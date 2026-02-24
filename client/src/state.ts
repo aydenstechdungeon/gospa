@@ -4,6 +4,7 @@ export type Unsubscribe = () => void;
 export type Subscriber<T> = (value: T, oldValue: T) => void;
 export type EffectFn = () => void | (() => void);
 export type ComputeFn<T> = () => T;
+export type CleanupFn = () => void;
 
 let runeId = 0;
 let effectId = 0;
@@ -12,6 +13,87 @@ let pendingNotifications: Set<Notifier> = new Set();
 
 interface Notifier {
 	notify(): void;
+}
+
+// === Disposal Tracking for Memory Management ===
+
+/**
+ * Disposable interface for reactive primitives that need cleanup.
+ */
+export interface Disposable {
+	dispose(): void;
+	isDisposed(): boolean;
+}
+
+/**
+ * Global registry for tracking active reactive primitives.
+ * Useful for debugging memory leaks in development.
+ */
+const activeDisposables: Set<{ deref: () => Disposable | undefined }> = new Set();
+
+// FinalizationRegistry for automatic cleanup notification (ES2021+)
+let finalizationRegistry: {
+	register(target: object, heldValue: string): void;
+	unregister(target: object): void;
+} | null = null;
+
+// Check for FinalizationRegistry availability at runtime
+if (typeof (globalThis as unknown as { FinalizationRegistry?: unknown }).FinalizationRegistry !== 'undefined') {
+	finalizationRegistry = new (globalThis as unknown as { FinalizationRegistry: new <T>(cb: (heldValue: T) => void) => { register(target: object, heldValue: string): void; unregister(target: object): void } }).FinalizationRegistry<string>((_id) => {
+		// Called when object is GC'd - could log in dev mode
+	});
+}
+
+let disposalTrackingEnabled = false;
+
+/**
+ * Enable disposal tracking for debugging memory leaks.
+ * In production, this should be disabled.
+ */
+export function enableDisposalTracking(enabled: boolean = true): void {
+	disposalTrackingEnabled = enabled;
+}
+
+/**
+ * Get count of tracked disposables (for debugging).
+ * Note: Some may have been garbage collected.
+ */
+export function getActiveDisposableCount(): number {
+	let count = 0;
+	for (const ref of activeDisposables) {
+		if (ref.deref()) count++;
+	}
+	return count;
+}
+
+/**
+ * Force dispose all tracked disposables (for testing/cleanup).
+ */
+export function disposeAll(): void {
+	for (const ref of activeDisposables) {
+		const disposable = ref.deref();
+		if (disposable && !disposable.isDisposed()) {
+			disposable.dispose();
+		}
+	}
+	activeDisposables.clear();
+}
+
+function trackDisposable<T extends Disposable>(disposable: T): T {
+	if (disposalTrackingEnabled) {
+		// Use WeakRef if available (ES2021+)
+		if (typeof (globalThis as unknown as { WeakRef?: unknown }).WeakRef !== 'undefined') {
+			const WeakRefCtor = (globalThis as unknown as { WeakRef: new <T extends object>(target: T) => { deref: () => T | undefined } }).WeakRef;
+			activeDisposables.add(new WeakRefCtor(disposable));
+		} else {
+			// Fallback: store directly (not ideal but works)
+			activeDisposables.add({ deref: () => disposable });
+		}
+		if (finalizationRegistry) {
+			finalizationRegistry.register(disposable, `disposable-${Date.now()}`);
+		}
+	}
+	return disposable;
 }
 
 // Track current effect for dependency collection
@@ -34,15 +116,17 @@ export function batch(fn: () => void): void {
 }
 
 // Rune - core reactive primitive
-export class Rune<T> implements Notifier {
+export class Rune<T> implements Notifier, Disposable {
 	private _value: T;
 	private readonly _id: number;
 	private readonly _subscribers: Set<Subscriber<T>> = new Set();
 	private _dirty: boolean = false;
+	private _disposed: boolean = false;
 
 	constructor(initialValue: T) {
 		this._value = initialValue;
 		this._id = ++runeId;
+		trackDisposable(this);
 	}
 
 	get value(): T {
@@ -104,6 +188,22 @@ export class Rune<T> implements Notifier {
 
 	toJSON(): { id: number; value: T } {
 		return { id: this._id, value: this._value };
+	}
+
+	/**
+	 * Dispose the rune, clearing all subscribers.
+	 * After disposal, the rune will no longer notify subscribers.
+	 */
+	dispose(): void {
+		this._disposed = true;
+		this._subscribers.clear();
+	}
+
+	/**
+	 * Check if the rune has been disposed.
+	 */
+	isDisposed(): boolean {
+		return this._disposed;
 	}
 }
 
@@ -201,6 +301,13 @@ export class Derived<T> implements Notifier {
 		this._dependencies.clear();
 		this._subscribers.clear();
 	}
+
+	/**
+	 * Check if the derived has been disposed.
+	 */
+	isDisposed(): boolean {
+		return this._disposed;
+	}
 }
 
 // Create a Derived
@@ -271,6 +378,13 @@ export class Effect implements Notifier {
 		}
 		this._disposed = true;
 		this._dependencies.clear();
+	}
+
+	/**
+	 * Check if the effect has been disposed.
+	 */
+	isDisposed(): boolean {
+		return this._disposed;
 	}
 }
 
@@ -351,6 +465,25 @@ export class StateMap {
 				this.set(key, value);
 			}
 		});
+	}
+
+	/**
+	 * Dispose all runes in the map.
+	 */
+	dispose(): void {
+		this._runes.forEach(rune => {
+			if ('dispose' in rune && typeof rune.dispose === 'function') {
+				rune.dispose();
+			}
+		});
+		this._runes.clear();
+	}
+
+	/**
+	 * Check if the map has been disposed.
+	 */
+	isDisposed(): boolean {
+		return this._runes.size === 0;
 	}
 }
 
@@ -726,6 +859,13 @@ export class DerivedAsync<T, E = Error> implements Notifier {
 		this._dependencies.clear();
 		this._subscribers.clear();
 	}
+
+	/**
+	 * Check if the derived async has been disposed.
+	 */
+	isDisposed(): boolean {
+		return this._disposed;
+	}
 }
 
 /**
@@ -818,6 +958,26 @@ export class Resource<T, E = Error> {
 		this._error.set(undefined);
 		this._status.set('idle');
 	}
+
+	/**
+	 * Dispose the resource, aborting any pending requests.
+	 */
+	dispose(): void {
+		if (this._abortController) {
+			this._abortController.abort();
+			this._abortController = null;
+		}
+		this._data.dispose();
+		this._error.dispose();
+		this._status.dispose();
+	}
+
+	/**
+	 * Check if the resource has been disposed.
+	 */
+	isDisposed(): boolean {
+		return this._data.isDisposed() && this._error.isDisposed() && this._status.isDisposed();
+	}
 }
 
 /**
@@ -850,68 +1010,10 @@ export function resourceReactive<T, E = Error>(
 	return res;
 }
 
-// === $inspect Debug Helper ===
-
-type InspectType = 'init' | 'update';
-
-/**
- * $inspect - Debug helper for observing state changes (dev only).
- * In production, this becomes a no-op.
- */
-export function inspect<T>(...values: (() => T)[] | T[]): {
-	with: (callback: (type: InspectType, value: T[]) => void) => void
-} {
-	// Check if in development
-	const isDev = typeof window !== 'undefined' &&
-		(window as unknown as { __GOSPA_DEV__?: boolean }).__GOSPA_DEV__ !== false;
-
-	if (!isDev) {
-		return { with: () => { } };
-	}
-
-	let firstRun = true;
-	const callbacks: Array<(type: InspectType, value: T[]) => void> = [];
-
-	// Log initial values
-	const getValues = (): T[] => values.map(v => typeof v === 'function' ? (v as () => T)() : v);
-
-	const logValues = (type: InspectType) => {
-		const currentValues = getValues();
-		console.log(`%c[${type}]`, 'color: #888', ...currentValues);
-		callbacks.forEach(cb => cb(type, currentValues));
-	};
-
-	// Set up effect to track changes
-	new Effect(() => {
-		// Read all values to track them
-		getValues();
-
-		if (firstRun) {
-			firstRun = false;
-			logValues('init');
-		} else {
-			logValues('update');
-		}
-	});
-
-	return {
-		with: (callback: (type: InspectType, value: T[]) => void) => {
-			callbacks.push(callback);
-		}
-	};
-}
-
-/**
- * $inspect.trace - Log which dependencies triggered an effect.
- */
-inspect.trace = (label?: string) => {
-	const isDev = typeof window !== 'undefined' &&
-		(window as unknown as { __GOSPA_DEV__?: boolean }).__GOSPA_DEV__ !== false;
-
-	if (!isDev) return;
-
-	console.log(`%c[trace]${label ? ` ${label}` : ''}`, 'color: #666; font-style: italic');
-};
+// === Debug utilities - lazy loaded from separate module ===
+// Re-exported for convenience, but tree-shaken in production
+export { inspect, isDev, timing, memoryUsage, debugLog, createInspector } from './debug.ts';
+export type { InspectType } from './debug.ts';
 
 // === Deep Watch Path Support ===
 

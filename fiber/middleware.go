@@ -146,12 +146,109 @@ func CSRFTokenMiddleware() gofiber.Handler {
 	}
 }
 
-// CompressionMiddleware enables response compression.
-func CompressionMiddleware() gofiber.Handler {
+// PreloadConfig configures preload headers for critical resources.
+type PreloadConfig struct {
+	// RuntimeScript is the path to the runtime JS
+	RuntimeScript string
+	// NavigationScript is the path to the navigation module
+	NavigationScript string
+	// WebSocketScript is the path to the WebSocket module
+	WebSocketScript string
+	// CoreScript is the path to the core runtime
+	CoreScript string
+	// MicroScript is the path to the micro runtime
+	MicroScript string
+	// Enabled determines if preload headers are added
+	Enabled bool
+}
+
+// DefaultPreloadConfig returns the default preload configuration.
+func DefaultPreloadConfig() PreloadConfig {
+	return PreloadConfig{
+		RuntimeScript:    "/_gospa/runtime.js",
+		NavigationScript: "/_gospa/navigation.js",
+		WebSocketScript:  "/_gospa/websocket.js",
+		CoreScript:       "/_gospa/runtime-core.js",
+		MicroScript:      "/_gospa/runtime-micro.js",
+		Enabled:          true,
+	}
+}
+
+// PreloadHeadersMiddleware adds HTTP Link headers for preloading critical resources.
+// This allows browsers to start fetching critical scripts before parsing HTML,
+// reducing time-to-interactive (TTI).
+func PreloadHeadersMiddleware(config PreloadConfig) gofiber.Handler {
 	return func(c *gofiber.Ctx) error {
-		// Fiber has built-in compression, this is a placeholder
-		// for custom compression logic if needed
-		return c.Next()
+		err := c.Next()
+		if err != nil {
+			return err
+		}
+
+		// Only add preload headers for HTML responses
+		contentType := string(c.Response().Header.ContentType())
+		if !strings.Contains(contentType, "text/html") {
+			return nil
+		}
+
+		if !config.Enabled {
+			return nil
+		}
+
+		// Build Link header with preload hints
+		// Priority: runtime-core (smallest), then full runtime
+		// Navigation and WebSocket are lazy-loaded, so we use preconnect instead
+		var links []string
+
+		// Preload the core runtime (smallest, essential for hydration)
+		if config.CoreScript != "" {
+			links = append(links, fmt.Sprintf("<%s>; rel=preload; as=script", config.CoreScript))
+		}
+
+		// Preload full runtime if needed (for full SPA experience)
+		if config.RuntimeScript != "" {
+			links = append(links, fmt.Sprintf("<%s>; rel=preload; as=script", config.RuntimeScript))
+		}
+
+		// Preconnect for lazy-loaded modules (starts DNS + TCP + TLS early)
+		// These are fetched on-demand, so preconnect is more efficient than preload
+		if config.NavigationScript != "" {
+			// Extract origin for preconnect if it's an external URL
+			links = append(links, fmt.Sprintf("<%s>; rel=modulepreload", config.NavigationScript))
+		}
+
+		if len(links) > 0 {
+			c.Set("Link", strings.Join(links, ", "))
+		}
+
+		return nil
+	}
+}
+
+// PreloadHeadersMiddlewareMinimal adds minimal preload headers for micro-runtime.
+// Use this for pages that only need basic reactivity without full SPA features.
+func PreloadHeadersMiddlewareMinimal(config PreloadConfig) gofiber.Handler {
+	return func(c *gofiber.Ctx) error {
+		err := c.Next()
+		if err != nil {
+			return err
+		}
+
+		// Only add preload headers for HTML responses
+		contentType := string(c.Response().Header.ContentType())
+		if !strings.Contains(contentType, "text/html") {
+			return nil
+		}
+
+		if !config.Enabled {
+			return nil
+		}
+
+		// Only preload the micro runtime for minimal pages
+		if config.MicroScript != "" {
+			c.Set("Link", fmt.Sprintf("<%s>; rel=preload; as=script", config.MicroScript))
+		}
+
+		return nil
 	}
 }
 

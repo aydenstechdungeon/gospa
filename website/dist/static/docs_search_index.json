@@ -1,0 +1,585 @@
+[
+  {
+    "title": "Go API Reference",
+    "description": "",
+    "url": "/docs/api",
+    "content": "package api import \"website/components\" templ Page() { Go API Reference Complete reference for the GoSPA framework's server-side API. App Initialization Server Lifecycle State Management WebSocket Messaging Templ Utilities Layout System App Initialization gospa.New(config) Initializes a new GoSPA application instance with the provided configuration. @components.CodeBlock(`app := gospa.New(gospa.Config{ RoutesDir: \"./routes\", AppName: \"GoSPA App\", DevMode: true, })`, \"go\", \"main.go\") gospa.DefaultConfig() Returns a Config object with default values. config.AppName = \"My Custom App\" app := gospa.New(config)`, \"go\", \"main.go\") Server Lifecycle app.Run(addr) Starts the HTTP server on the specified address. app.RunTLS(addr, cert, key) Starts the HTTPS server with the provided certificate and key files. app.Shutdown() Gracefully shuts down the server. ; err != nil { log.Printf(\"Shutdown error: %v\", err) }`, \"go\", \"main.go\") Routing \u0026 Middleware app.Use(handlers...) Adds middleware to the application (Fiber style). error { log.Println(\"Request path:\", c.Path()) return c.Next() })`, \"go\", \"main.go\") app.Get(path, handlers...) Registers a manual GET route (bypassing file-based routing). error { return c.SendString(\"OK\") })`, \"go\", \"main.go\") app.Static(prefix, root) Registers a static file server. State Management gospa.NewRune(initialValue) Creates a new reactive state variable of any type. name := gospa.NewRune(\"World\")`, \"go\", \"state.go\") gospa.Derived(rune, fn) Creates a reactive variable that auto-updates when its source rune changes. int { return v * 2 })`, \"go\", \"state.go\") gospa.Batch(fn) Groups multiple state updates into a single notification event. { count.Set(10) name.Set(\"GoSPA\") })`, \"go\", \"state.go\") WebSocket Messaging app.Broadcast(message) Sends a raw byte message to all connected clients. app.BroadcastState(key, value) Broadcasts a specific state update (key-value) to all clients. Templ Utilities The templ package provides specialized helpers for building GoSPA UI components. Control Flow (cond, comp) - Conditional render (cond, ifT, ifF) - If/Else render (items, fn) - List rendering (items, keyFn, fn) - Keyed list rendering (cases...) - Switch/Case rendering HTML Elements (html) - Unsafe raw HTML (comps...) - Group components (comps...) - Add to document head (src) - Add GoSPA runtime (href) - Add stylesheet link HeadManager Programmatically manage document head for SPA navigation. hm.SetHeadTitle(\"Product Details\") hm.AddHeadMeta(\"description\", \"Premium product\") hm.AddHeadLink(\"canonical\", \"https://example.com\")`, \"go\", \"head.go\") Reactive Bindings Helpers for defining client-side reactive bindings in Templ templates. (key) - Bind text content (key) - Bind inner HTML (key) - Bind input value (key) - Bind checkbox state (key) - Two-way form binding (key, class) - Toggle CSS class (key) - Show/hide element (key) - Conditional element }\u003e0 `, \"templ\", \"bindings.templ\") Layout System GoSPA's layout system allows for deep nesting and server-side data loading. @components.CodeBlock(`type LayoutProps struct { Data map[string]any Children Params map[string]string Path string }`, \"go\", \"templ/layout.go\") Interface for server-side layout data fetching (similar to SvelteKit +layout.server.ts). @components.CodeBlock(`type MyLoader struct{} func (l *MyLoader) Load(ctx context.Context, params map[string]string) (map[string]any, error) { return map[string]any{\"user\": fetchUser()}, nil }`, \"go\", \"loader.go\") }",
+    "sections": null
+  },
+  {
+    "title": "CLI Reference",
+    "description": "",
+    "url": "/docs/cli",
+    "content": "package cli import \"website/components\" templ Page() { CLI Reference Complete reference for the GoSPA command-line interface tools. gospa create Creates a new GoSPA project with the specified name. @components.CodeBlock(`gospa create myapp gospa create myapp --dir ./projects gospa create myapp --template minimal`, \"bash\", \"terminal\") Flag Default Description --dir . Target directory for the project --template default Project template (default, minimal, full) --skip-git false Skip git initialization gospa build Builds the application for production deployment. @components.CodeBlock(`gospa build gospa build --output ./dist gospa build --minify`, \"bash\", \"terminal\") Flag Default Description --output ./bin Output directory for built files --minify true Minify JavaScript output --env production Build environment gospa dev Starts the development server with hot reload. @components.CodeBlock(`gospa dev gospa dev --port 8080 gospa dev --no-watch`, \"bash\", \"terminal\") Flag Default Description --port 3000 Server port --host localhost Server host --no-watch false Disable file watching gospa generate Generates TypeScript types and route definitions. @components.CodeBlock(`gospa generate gospa generate --routes-only gospa generate --types-only`, \"bash\", \"terminal\") Flag Default Description --routes-only false Generate only route definitions --types-only false Generate only TypeScript types --output ./generated Output directory for generated files Project Structure A newly created GoSPA project has the following structure: @components.CodeBlock(`myapp/ ├── main.go # Application entry point ├── go.mod # Go module definition ├── routes/ # Route handlers (Templ) │ ├── layout.templ # Root layout │ └── page.templ # Home page ├── generated/ # Auto-generated TypeScript │ ├── routes.ts # Route definitions │ └── types.ts # TypeScript types └── static/ # Static assets`, \"plaintext\", \"structure\") }",
+    "sections": null
+  },
+  {
+    "title": "DOM Bindings",
+    "description": "How to connect your reactive state to the DOM using data attributes and programmatic APIs.",
+    "url": "/docs/client-runtime/dom-bindings",
+    "content": "package dombindings import \"website/components\" templ Page() { DOM Bindings How to connect your reactive state to the DOM using data attributes and programmatic APIs. DOM Attributes Reference Attribute Description data-bind State binding (key:type) data-model Two-way binding (key) data-on Event handler (event:action:args) data-gospa-component Component ID Programmatic Bindings Bind runes to DOM elements manually for more complex scenarios. @components.CodeBlock(`import { bindElement, bindTwoWay } from '@gospa/runtime'; // One-way bindings bindElement(element, textRune); bindElement(element, htmlRune, { type: 'html' }); bindElement(element, colorRune, { type: 'style', attribute: 'color' }); // Two-way binding bindTwoWay(inputElement, textRune);`, \"typescript\", \"bindings.ts\") Previous Overview Next Navigation \u0026 Events }",
+    "sections": [
+      {
+        "id": "data-attributes",
+        "title": "DOM Attributes Reference",
+        "text": ""
+      },
+      {
+        "id": "programmatic",
+        "title": "Programmatic Bindings",
+        "text": ""
+      }
+    ]
+  },
+  {
+    "title": "Navigation \u0026 Events",
+    "description": "Managing SPA navigation and advanced event handling.",
+    "url": "/docs/client-runtime/navigation-events",
+    "content": "package navigationevents import \"website/components\" templ Page() { Navigation \u0026 Events Managing SPA navigation and advanced event handling. Navigation @components.CodeBlock(`import { navigate, back, prefetch } from '@gospa/runtime'; // Basic navigation await navigate('/about'); // With options await navigate('/dashboard', { replace: true, scrollToTop: true }); // Prefetch prefetch('/blog/hello-world');`, \"typescript\", \"navigation.ts\") Lifecycle Callbacks Register callbacks that run before or after navigation. @components.CodeBlock(`import { onBeforeNavigate, onAfterNavigate } from '@gospa/runtime'; onBeforeNavigate((path) =\u003e { console.log('Starting navigation to:', path); }); onAfterNavigate((path) =\u003e { console.log('Finished navigation to:', path); });`, \"typescript\", \"events.ts\") Global DOM Event The runtime dispatches a gospa:navigated event on the document, useful for vanilla JS scripts. =\u003e { console.log('Navigated to:', e.detail.path); // Re-run third-party initializers here });`, \"javascript\", \"script.js\") Event Handling @components.CodeBlock(`import { on, delegate, debounce } from '@gospa/runtime'; // With modifiers on(form, 'submit:prevent', (e) =\u003e { console.log('Form submitted'); }); // Event delegation delegate(document.body, '.item', 'click', (e) =\u003e { console.log('Item clicked'); });`, \"typescript\", \"events.ts\") Previous DOM Bindings Next Transitions }",
+    "sections": [
+      {
+        "id": "navigation",
+        "title": "Navigation",
+        "text": ""
+      },
+      {
+        "id": "lifecycle",
+        "title": "Lifecycle Callbacks",
+        "text": ""
+      },
+      {
+        "id": "dom-events",
+        "title": "Global DOM Event",
+        "text": ""
+      },
+      {
+        "id": "events",
+        "title": "Event Handling",
+        "text": ""
+      }
+    ]
+  },
+  {
+    "title": "Runtime Overview",
+    "description": "Complete reference for initializing and configuring the GoSPA client-side runtime.",
+    "url": "/docs/client-runtime/overview",
+    "content": "package overview import \"website/components\" templ Page() { Runtime Overview Complete reference for initializing and configuring the GoSPA client-side runtime. Installation The runtime is automatically injected into your pages by the GoSPA server. No manual installation required. import { Rune, Effect, navigate } from '@gospa/runtime'; // Lightweight runtime without sanitizer (~11KB) import { Rune, Effect, navigate } from '@gospa/runtime-simple';`, \"typescript\", \"imports.ts\") Runtime Variants Variant Size Includes runtime.js ~17KB Full runtime + DOMPurify sanitizer runtime-simple.js ~11KB Lightweight runtime (no sanitizer) Initialization @components.CodeBlock(`import { init } from '@gospa/runtime'; init({ wsUrl: 'ws://localhost:3000/ws', debug: true, hydration: { mode: 'immediate', // 'immediate' | 'lazy' | 'visible' | 'idle' timeout: 2000 } });`, \"typescript\", \"init.ts\") Global API The runtime exposes a global __GOSPA__ object for debugging. @components.CodeBlock(`window.__GOSPA__ = { config, // Runtime configuration components, // Component registry Map globalState, // Global StateMap init, // init function // ... and many more };`, \"typescript\", \"global.ts\") Previous Client Runtime Next DOM Bindings }",
+    "sections": [
+      {
+        "id": "init",
+        "title": "Initialization",
+        "text": ""
+      },
+      {
+        "id": "global",
+        "title": "Global API",
+        "text": ""
+      }
+    ]
+  },
+  {
+    "title": "Transitions",
+    "description": "Animate elements as they enter or leave the DOM.",
+    "url": "/docs/client-runtime/transitions",
+    "content": "package transitions import \"website/components\" templ Page() { Transitions Animate elements as they enter or leave the DOM. Built-in Transitions fade Smoothly transitions opacity from 0 to 1. fly Animates position (x, y) and opacity. slide Slides the element vertically. scale Scales the element from a starting point. Attribute API @components.CodeBlock(` I fade in/out I fly from the right `, \"html\", \"transitions.html\") Previous Navigation \u0026 Events Next Go API }",
+    "sections": [
+      {
+        "id": "built-in",
+        "title": "Built-in Transitions",
+        "text": ""
+      },
+      {
+        "id": "attribute",
+        "title": "Attribute API",
+        "text": ""
+      }
+    ]
+  },
+  {
+    "title": "Component System",
+    "description": "",
+    "url": "/docs/components",
+    "content": "package components import \"website/components\" templ Page() { Component System GoSPA's component system provides a hierarchical structure for managing UI components with lifecycle hooks, props, and state. BaseComponent The foundation for all GoSPA components, providing core functionality for state management and lifecycle. @components.CodeBlock(`type BaseComponent struct { ID string Name string State *StateMap Props *Props Children []*BaseComponent Parent *BaseComponent Context map[string]any }`, \"go\", \"component/base.go\") Method Return Description GetID() string Returns unique component identifier GetName() string Returns component name GetState() *StateMap Returns component's state map GetProps() *Props Returns component's props GetChildren() []*BaseComponent Returns child components AddChild(child) error Adds a child component RemoveChild(id) error Removes a child by ID ToJSON() []byte Serializes component to JSON Clone() *BaseComponent Creates a deep copy ComponentTree Manages the hierarchical structure of components with traversal and search capabilities. // Walk the tree tree.Walk(func(c *BaseComponent) bool { fmt.Println(c.GetName()) return true // continue walking }) // Find a component by ID found := tree.Find(\"component-id\") // Find all matching components matches := tree.FindAll(func(c *BaseComponent) bool { return c.GetName() == \"Button\" })`, \"go\", \"example.go\") Method Description Root() Returns the root component Get(id) Get component by ID Add(parentID, child) Add child to parent Remove(id) Remove component and descendants Walk(fn) Depth-first traversal Find(id) Find component by ID FindAll(predicate) Find all matching components Lifecycle Components go through defined phases with hooks for each transition. { fmt.Println(\"Component mounted:\", c.GetID()) }) component.OnUpdate(func(c *BaseComponent, oldProps, newProps *Props) { fmt.Println(\"Props updated\") }) component.OnDestroy(func(c *BaseComponent) { // Cleanup resources })`, \"go\", \"lifecycle.go\") Phase Hook Description Created OnCreate Component instance created Mounting OnMount Before DOM insertion Mounted OnMounted After DOM insertion Updating OnUpdate Before props/state change Updated OnUpdated After props/state change Destroying OnDestroy Before removal Destroyed OnDestroyed After removal Props Type-safe property access with validation and default values. props.Set(\"title\", \"Hello\") props.Set(\"count\", 42) title := props.GetString(\"title\") // \"Hello\" count := props.GetInt(\"count\") // 42 enabled := props.GetBool(\"enabled\", false) // false (default) // With schema validation schema := component.PropSchema{ \"title\": {Type: \"string\", Required: true}, \"count\": {Type: \"int\", Default: 0}, } props := component.NewPropsWithSchema(schema)`, \"go\", \"props.go\") Method Return Description Get(key) any Get raw value GetString(key) string Get as string GetInt(key) int Get as integer GetBool(key, default) bool Get as boolean with default GetFloat64(key) float64 Get as float GetSlice(key) []any Get as slice Set(key, value) - Set a value Has(key) bool Check if key exists Validate() error Validate against schema BindableProp Two-way binding support for parent-child communication. @components.CodeBlock(`// Create a bindable prop name := component.NewBindableProp(\"World\") // Subscribe to changes name.OnChange(func(newVal string) { fmt.Println(\"Name changed to:\", newVal) }) // Set value (triggers OnChange) name.Set(\"GoSPA\") // Get current value current := name.Get() // \"GoSPA\"`, \"go\", \"bindable.go\") }",
+    "sections": null
+  },
+  {
+    "title": "Configuration Reference",
+    "description": "",
+    "url": "/docs/configuration",
+    "content": "package configuration import \"website/components\" templ Page() { Configuration Reference Complete reference for all gospa.Config options. This is the single source of truth for configuring your GoSPA application. Quick Reference @components.CodeBlock(`app := gospa.New(gospa.Config{ RoutesDir: \"./routes\", DevMode: true, AppName: \"My App\", })`, \"go\", \"main.go\") Basic Options Option Type Default Description RoutesDir string \"./routes\" Directory containing route files RoutesFS fs.FS nil Filesystem for routes (takes precedence over RoutesDir) DevMode bool false Enable development features RuntimeScript string \"/_gospa/runtime.js\" Path to client runtime script StaticDir string \"./static\" Directory for static files StaticPrefix string \"/static\" URL prefix for static files AppName string \"GoSPA App\" Application name State Options Option Type Default Description DefaultState map[string]interface{} {} Initial state for new sessions StateSerializer StateSerializerFunc JSON Custom state serialization function StateDeserializer StateDeserializerFunc JSON Custom state deserialization function WebSocket Options Option Type Default Description EnableWebSocket bool true Enable WebSocket support WebSocketPath string \"/_gospa/ws\" WebSocket endpoint path WebSocketMiddleware fiber.Handler nil Middleware before WebSocket upgrade WSReconnectDelay time.Duration 0 Initial reconnect delay WSMaxReconnect int 0 Max reconnect attempts (0 = unlimited) WSHeartbeat time.Duration 0 Heartbeat interval Performance Options Option Type Default Description CompressState bool false Compress WebSocket messages StateDiffing bool false Only send state diffs over WebSocket CacheTemplates bool false Cache compiled templates SimpleRuntime bool false Use lightweight runtime without DOMPurify Hydration Options Option Type Default Description HydrationMode string \"\" Hydration strategy: \"immediate\", \"lazy\", \"visible\", \"idle\" HydrationTimeout int 0 Milliseconds before force hydrate Routing Options Option Type Default Description DisableSPA bool false Disable SPA navigation completely SSR bool false Global SSR mode Remote Action Options Option Type Default Description MaxRequestBodySize int 4194304 (4MB) Max size for remote action request bodies RemotePrefix string \"/_gospa/remote\" Prefix for remote action endpoints Security Options Option Type Default Description AllowedOrigins []string [] Allowed CORS origins EnableCSRF bool false Enable automatic CSRF protection Detailed Examples RoutesDir \u0026 RoutesFS Directory containing your .templ route files. Use RoutesFS to embed routes in the binary: @components.CodeBlock(`//go:embed routes var routesFS embed.FS app := gospa.New(gospa.Config{ RoutesFS: routesFS, })`, \"go\", \"main.go\") DefaultState Initial state for new sessions, synced to the client on initial load: @components.CodeBlock(`DefaultState: map[string]interface{}{ \"user\": nil, \"theme\": \"light\", \"counter\": 0, }`, \"go\", \"main.go\") WebSocketMiddleware Middleware that runs before WebSocket upgrade for authentication: error { token := c.Get(\"Authorization\") if !validateToken(token) { return c.Status(401).SendString(\"Unauthorized\") } return c.Next() },`, \"go\", \"main.go\") HydrationMode Control when components hydrate (become interactive): \"immediate\" - Hydrate as soon as possible (default) \"lazy\" - Hydrate during browser idle time \"visible\" - Hydrate when component enters viewport \"idle\" - Hydrate when browser is idle @components.CodeBlock(`HydrationMode: \"visible\", // Hydrate when scrolled into view HydrationTimeout: 2000, // Force hydrate after 2 seconds`, \"go\", \"main.go\") Environment-Specific Configuration Development @components.CodeBlock(`app := gospa.New(gospa.Config{ DevMode: true, AppName: \"My App (Dev)\", RoutesDir: \"./routes\", SimpleRuntime: false, // Full sanitization for dev })`, \"go\", \"main.go\") Production @components.CodeBlock(`app := gospa.New(gospa.Config{ DevMode: false, AppName: \"My App\", RoutesDir: \"./routes\", CompressState: true, StateDiffing: true, CacheTemplates: true, EnableCSRF: true, AllowedOrigins: []string{\"https://myapp.com\"}, WSHeartbeat: 30 * time.Second, })`, \"go\", \"main.go\") High-Performance @components.CodeBlock(`app := gospa.New(gospa.Config{ DevMode: false, SimpleRuntime: true, // No DOMPurify - only if you control all content! CompressState: true, StateDiffing: true, CacheTemplates: true, HydrationMode: \"lazy\", })`, \"go\", \"main.go\") Complete Example @components.CodeBlock(`package main import ( \"time\" \"github.com/a-b-0-1-2-3-4-5/gospa\" ) func main() { app := gospa.New(gospa.Config{ // Basic RoutesDir: \"./routes\", AppName: \"My Application\", DevMode: true, // State DefaultState: map[string]interface{}{ \"theme\": \"dark\", \"user\": nil, }, // WebSocket EnableWebSocket: true, WebSocketPath: \"/_gospa/ws\", WSReconnectDelay: 100 * time.Millisecond, WSMaxReconnect: 10, WSHeartbeat: 30 * time.Second, // Performance CompressState: true, StateDiffing: true, CacheTemplates: true, SimpleRuntime: false, // Hydration HydrationMode: \"visible\", HydrationTimeout: 3000, // Security AllowedOrigins: []string{\"https://myapp.com\"}, EnableCSRF: true, // Remote Actions MaxRequestBodySize: 8 * 1024 * 1024, // 8MB }) if err := app.Run(\":3000\"); err != nil { panic(err) } }`, \"go\", \"main.go\") }",
+    "sections": null
+  },
+  {
+    "title": "Development Tools",
+    "description": "",
+    "url": "/docs/devtools",
+    "content": "package devtools import \"website/components\" templ Page() { Development Tools GoSPA includes powerful development tools for rapid iteration and debugging. Hot Reload Automatic page refresh when files change. @components.CodeBlock(`# Start development server with hot reload gospa dev # With options gospa dev --port 3000 --watch ./routes,./components # Hot reload behavior: // - Template changes (.templ) -\u003e Full page reload // - Go code changes -\u003e Server restart + page reload // - Static files -\u003e Instant refresh // - Client TypeScript -\u003e HMR (Hot Module Replacement)`, \"bash\", \"cli/dev.go\") File Watching Configure which files trigger rebuilds. @components.CodeBlock(`// In gospa.json { \"watch\": { \"paths\": [ \"./routes\", \"./components\", \"./lib\" ], \"exclude\": [ \"./static/dist\", \"./node_modules\" ], \"debounce\": \"100ms\" } }`, \"json\", \"cli/dev.go\") State Inspector Debug reactive state in development mode. @components.CodeBlock(`// Enable state inspector in development import { enableStateInspector } from 'gospa/runtime'; if (import.meta.env.DEV) { enableStateInspector({ logChanges: true, // Console log state changes showTimeline: true, // Track state history highlightUpdates: true // Visual feedback on updates }); } // Access inspector via window window.__GOSPA_STATE_INSPECTOR__.getState(); window.__GOSPA_STATE_INSPECTOR__.getHistory(); window.__GOSPA_STATE_INSPECTOR__.reset();`, \"typescript\", \"client/src/state.ts\") Debug Logging Enhanced logging for development. @components.CodeBlock(`// Server-side debug logging // Set environment variable GOSPA_DEBUG=true gospa dev // Log levels GOSPA_LOG_LEVEL=debug gospa dev // debug, info, warn, error // Client-side debug import { setLogLevel } from 'gospa/runtime'; setLogLevel('debug'); // Debug specific modules GOSPA_DEBUG=state:*,routing:* gospa dev`, \"bash\", \"cli/dev.go\") WebSocket Debugging Monitor WebSocket communication. @components.CodeBlock(`// Enable WebSocket debugging import { enableWebSocketDebug } from 'gospa/runtime'; if (import.meta.env.DEV) { enableWebSocketDebug({ logMessages: true, logLatency: true }); } // Server-side WebSocket logging // In development mode, all WebSocket messages are logged // with timestamps and message types`, \"typescript\", \"client/src/websocket.ts\") Build Analysis Analyze bundle size and dependencies. @components.CodeBlock(`# Analyze production build gospa build --analyze # Output includes: # - Bundle size breakdown # - Dependency tree # - Unused code detection # - Optimization suggestions # Example output: # Bundle Analysis # ================ # Total size: 245 KB # # Runtime: 45 KB (18%) # State: 32 KB (13%) # DOM: 28 KB (11%) # WebSocket: 18 KB (7%) # Your code: 122 KB (50%)`, \"bash\", \"cli/build.go\") Performance Profiling Profile rendering and state updates. @components.CodeBlock(`// Enable performance profiling import { enableProfiling } from 'gospa/runtime'; if (import.meta.env.DEV) { enableProfiling({ trackRenders: true, // Track component renders trackUpdates: true, // Track state updates trackEffects: true, // Track effect execution slowThreshold: 16 // Warn if \u003e 16ms (60fps) }); } // Get profiling report const report = window.__GOSPA_PROFILER__.getReport(); console.log(report.slowRenders); console.log(report.frequentUpdates);`, \"typescript\", \"client/src/runtime-core.ts\") Error Overlay Development error display overlay. @components.CodeBlock(`// Error overlay is automatically enabled in development // Shows: // - Compile errors with file location // - Runtime errors with stack trace // - WebSocket connection errors // - State update errors // Configure error overlay import { configureErrorOverlay } from 'gospa/runtime'; configureErrorOverlay({ showStackTrace: true, openInEditor: true, // Click to open in editor editor: 'code' // 'code', 'vim', 'emacs', etc. });`, \"typescript\", \"client/src/runtime.ts\") }",
+    "sections": null
+  },
+  {
+    "title": "Error Handling",
+    "description": "",
+    "url": "/docs/errors",
+    "content": "package errors import \"website/components\" templ Page() { Error Handling GoSPA provides a comprehensive error handling system with typed error codes, middleware, and recovery mechanisms. AppError The primary error type for application errors with structured codes and context. @components.CodeBlock(`type AppError struct { Code ErrorCode Message string Details map[string]any Stack string Cause error Timestamp time.Time } // Create a new error err := fiber.NewAppError(fiber.ErrNotFound, \"Resource not found\") err.Details[\"resource_id\"] = \"123\" // With cause err := fiber.WrapError(originalErr, fiber.ErrInternal, \"Operation failed\")`, \"go\", \"fiber/errors.go\") ErrorCode Typed error codes for consistent error classification. Code HTTP Status Description ErrBadRequest 400 Invalid request data ErrUnauthorized 401 Authentication required ErrForbidden 403 Access denied ErrNotFound 404 Resource not found ErrConflict 409 Resource conflict ErrValidation 422 Validation failed ErrInternal 500 Internal server error ErrNotImplemented 501 Feature not implemented ErrServiceUnavailable 503 Service temporarily unavailable ErrorHandler Middleware Centralized error handling middleware for consistent error responses. @components.CodeBlock(`// Configure error handler handler := fiber.NewErrorHandler(fiber.ErrorHandlerConfig{ Debug: true, LogErrors: true, DefaultMessage: \"Something went wrong\", }) // Use as middleware app.Use(handler.Handle) // Custom error response format type ErrorResponse struct { Code string ` + \"`\" + `json:\"code\"` + \"`\" + ` Message string ` + \"`\" + `json:\"message\"` + \"`\" + ` Details map[string]any ` + \"`\" + `json:\"details,omitempty\"` + \"`\" + ` RequestID string ` + \"`\" + `json:\"request_id\"` + \"`\" + ` }`, \"go\", \"fiber/middleware.go\") Recovery Middleware Panic recovery to prevent server crashes. @components.CodeBlock(`// Add recovery middleware app.Use(fiber.Recovery()) // With custom config app.Use(fiber.RecoveryWithConfig(fiber.RecoveryConfig{ Enabled: true, StackTrace: true, StackTraceAll: false, DefaultErrorCode: fiber.ErrInternal, }))`, \"go\", \"fiber/middleware.go\") Error Utilities Helper functions for error handling. @components.CodeBlock(`// Check error type if fiber.IsAppError(err) { appErr := fiber.ToAppError(err) fmt.Println(appErr.Code) } // Check specific error code if fiber.IsErrorCode(err, fiber.ErrNotFound) { // Handle not found } // Get HTTP status from error status := fiber.GetStatusFromError(err) // Error chaining err := fiber.NewAppError(fiber.ErrValidation, \"Invalid input\"). WithDetail(\"field\", \"email\"). WithDetail(\"reason\", \"invalid format\"). WithCause(originalErr)`, \"go\", \"fiber/errors.go\") Client-Side Errors Error handling in the TypeScript client runtime. @components.CodeBlock(`// Client-side error handling import { handleError, isAppError } from 'gospa/runtime'; try { await fetchData(); } catch (error) { if (isAppError(error)) { console.log(error.code); // ErrorCode console.log(error.message); // string console.log(error.details); // Record } // Global error handler handleError(error, { showToast: true, logToServer: true }); }`, \"typescript\", \"client/runtime.ts\") }",
+    "sections": null
+  },
+  {
+    "title": "Installation",
+    "description": "How to set up your environment for GoSPA development.",
+    "url": "/docs/getstarted/installation",
+    "content": "package installation import \"website/components\" templ Page() { Installation How to set up your environment for GoSPA development. Prerequisites Go 1.21+ : Install from go.dev Node.js 18+ : Required for client-side asset processing Templ CLI : go install github.com/a-h/templ/cmd/templ@latest Install GoSPA CLI The GoSPA CLI is the recommended way to manage your project. It handles code generation, development servers, and production builds. Verify Installation Check if the CLI is correctly installed: Previous Introduction Next Quick Start }",
+    "sections": [
+      {
+        "id": "prerequisites",
+        "title": "Prerequisites",
+        "text": ""
+      },
+      {
+        "id": "cli-installation",
+        "title": "Install GoSPA CLI",
+        "text": ""
+      },
+      {
+        "id": "verify-installation",
+        "title": "Verify Installation",
+        "text": ""
+      }
+    ]
+  },
+  {
+    "title": "Quick Start",
+    "description": "Build your first reactive GoSPA application in minutes.",
+    "url": "/docs/getstarted/quickstart",
+    "content": "package quickstart import \"website/components\" templ Page() { Quick Start Build your first reactive GoSPA application in minutes. 1. Create a Project Use the CLI to scaffold a new project: 2. Start Dev Server Launch the development environment with hot reloading: 3. Create a Route Add a new file routes/hello.templ : @components.CodeBlock(`package routes templ HelloPage() { Hello from GoSPA! This page was created in seconds. }`, \"go\", \"routes/hello.templ\") 4. Add Reactivity Make it interactive with reactive state: @components.CodeBlock(`package routes import ( \"github.com/aydenstechdungeon/gospa/state\" ) templ HelloPage() { Counter: 0 Increment } func HelloState() *state.StateMap { sm := state.NewStateMap() sm.AddAny(\"count\", 0) return sm }`, \"go\", \"routes/hello.templ\") Previous Installation Next Project Structure }",
+    "sections": [
+      {
+        "id": "create-project",
+        "title": "1. Create a Project",
+        "text": ""
+      },
+      {
+        "id": "dev-server",
+        "title": "2. Start Dev Server",
+        "text": ""
+      },
+      {
+        "id": "create-route",
+        "title": "3. Create a Route",
+        "text": ""
+      },
+      {
+        "id": "add-reactivity",
+        "title": "4. Add Reactivity",
+        "text": ""
+      }
+    ]
+  },
+  {
+    "title": "Project Structure",
+    "description": "Anatomy of a GoSPA application.",
+    "url": "/docs/getstarted/structure",
+    "content": "package structure import \"website/components\" templ Page() { Project Structure Anatomy of a GoSPA application. File Hierarchy A standard GoSPA project follows this structure: @components.CodeBlock(`my-app/ ├── main.go # Server entry point \u0026 configuration ├── go.mod # Go module dependencies ├── routes/ # File-based routing \u0026 UI templates │ ├── layout.templ # Shared root layout │ └── page.templ # Home page template ├── static/ # Public assets (images, CSS, JS) ├── generated/ # Auto-generated TypeScript bindings └── gospa.json # Optional project configuration`, \"plaintext\", \"File Structure\") The `routes/` Directory Your UI lives here. GoSPA looks for `.templ` files to build its routing table. Supporting nested directories, dynamic parameters like [id].templ , and layout inheritance. The `generated/` Directory GoSPA automatically synchronizes your Go types and routes with TypeScript. This directory contains the generated JS/TS files that power the client-side runtime. Do not edit these files manually. Previous Quick Start Next Routing }",
+    "sections": [
+      {
+        "id": "overview",
+        "title": "File Hierarchy",
+        "text": ""
+      },
+      {
+        "id": "routes-dir",
+        "title": "The `routes/` Directory",
+        "text": ""
+      },
+      {
+        "id": "generated-dir",
+        "title": "The `generated/` Directory",
+        "text": ""
+      }
+    ]
+  },
+  {
+    "title": "Documentation",
+    "description": "",
+    "url": "/docs/layout",
+    "content": "package docs import ( \"website/components\" ) templ DocsLayout(children , path string) { @children Found a mistake? Edit this page on GitHub Last updated: Feb 24, 2026 On this page }",
+    "sections": null
+  },
+  {
+    "title": "Introduction",
+    "description": "",
+    "url": "/docs",
+    "content": "package docs import \"website/components\" templ Page() { Introduction GoSPA is a modern framework for building reactive single-page applications using Go and Templ. It brings the power of Svelte-like reactivity to the Go ecosystem without compromising on performance or type safety. Fast by Default Sub-15KB runtime and optimized SSR ensure your apps load instantly and perform smoothly. Truly Reactive Primitive-based reactivity system that works seamlessly between Go server and browser. Why GoSPA? Building SPAs in Go has traditionally been a choice between high-performance APIs with complex JS frontends, or simple SSR with limited interactivity. GoSPA bridges this gap by providing: Key Features Unified Language : Write your UI logic and state management in Go. Automatic Hydration : Server-rendered templates automatically become interactive on the client. Real-time Synchronization : Built-in WebSocket support for collaborative, multi-user experiences. Zero-Config Routing : SvelteKit-inspired file system based routing. Comparison Unlike HTMX which focus on hypermedia updates, GoSPA provides a full reactive state machine mirroring Svelte's approach, but running on your Go server. Note GoSPA is currently in Alpha. While stable enough for documentation projects (like this one!), APIs may change. feedback and contributions are welcome! Next Installation }",
+    "sections": [
+      {
+        "id": "why-gospa?",
+        "title": "Why GoSPA?",
+        "text": ""
+      },
+      {
+        "id": "key-features",
+        "title": "Key Features",
+        "text": ""
+      },
+      {
+        "id": "comparison",
+        "title": "Comparison",
+        "text": ""
+      }
+    ]
+  },
+  {
+    "title": "Route Parameters",
+    "description": "",
+    "url": "/docs/params",
+    "content": "package params import \"website/components\" templ Page() { Route Parameters GoSPA provides type-safe route parameter extraction and URL building utilities. Params Extract and manage route parameters from URLs. @components.CodeBlock(`type Params struct { values map[string]string } // Get a parameter value id := params.Get(\"id\") // returns string // Get with default page := params.GetDefault(\"page\", \"1\") // Get all parameters all := params.All() // returns map[string]string // Check if parameter exists if params.Has(\"id\") { // ... }`, \"go\", \"routing/params.go\") QueryParams Handle URL query string parameters. @components.CodeBlock(`type QueryParams struct { values url.Values } // Get a query parameter search := query.Get(\"q\") // Get all values for a key (multi-value) tags := query.GetAll(\"tag\") // returns []string // Get typed values page := query.GetInt(\"page\", 1) limit := query.GetInt(\"limit\", 10) active := query.GetBool(\"active\", false) // Set a query parameter query.Set(\"sort\", \"created_at\") // Add a query parameter (appends to existing) query.Add(\"filter\", \"active\") // Delete a query parameter query.Del(\"token\") // Encode to string encoded := query.Encode() // \"q=test\u0026page=1\"`, \"go\", \"routing/params.go\") ParamExtractor Extract parameters from route patterns. @components.CodeBlock(`// Create extractor with route pattern extractor := routing.NewParamExtractor(\"/users/:id/posts/:postId\") // Extract from URL params, err := extractor.Extract(\"/users/123/posts/456\") // params = {\"id\": \"123\", \"postId\": \"456\"} // With wildcard patterns extractor := routing.NewParamExtractor(\"/files/*path\") params, _ := extractor.Extract(\"/files/docs/readme.md\") // params = {\"path\": \"docs/readme.md\"} // With optional segments extractor := routing.NewParamExtractor(\"/search/:query?\") params, _ := extractor.Extract(\"/search\") // params = {\"query\": \"\"}`, \"go\", \"routing/params.go\") PathBuilder Build URLs from route patterns and parameters. @components.CodeBlock(`// Create path builder builder := routing.NewPathBuilder(\"/users/:id/posts/:postId\") // Build path with parameters path, err := builder.Build(map[string]string{ \"id\": \"123\", \"postId\": \"456\", }) // path = \"/users/123/posts/456\" // Build with query parameters fullURL := builder.BuildWithQuery( map[string]string{\"id\": \"123\"}, map[string]string{\"sort\": \"date\", \"order\": \"desc\"}, ) // fullURL = \"/users/123?sort=date\u0026order=desc\" // Validate parameters before building if err := builder.Validate(map[string]string{\"id\": \"123\"}); err != nil { // Missing required parameter: postId }`, \"go\", \"routing/params.go\") Route Patterns Supported route pattern syntax. Pattern Example Description :param /users/:id Named parameter (required) :param? /search/:query? Optional parameter *param /files/*path Wildcard (catch-all) :param(regex) /users/:id(^[0-9]+$) Parameter with regex constraint Client-Side Navigation Type-safe navigation in TypeScript. @components.CodeBlock(`import { navigate, buildPath, getParams } from 'gospa/navigation'; // Navigate to a route navigate('/users/123'); // Build path from parameters const path = buildPath('/users/:id/posts/:postId', { id: '123', postId: '456' }); // path = '/users/123/posts/456' // Get current route parameters const params = getParams(); console.log(params.id); // \"123\" // Get query parameters const query = getQueryParams(); console.log(query.sort); // \"date\"`, \"typescript\", \"client/navigation.ts\") }",
+    "sections": null
+  },
+  {
+    "title": "Authentication Plugin",
+    "description": "",
+    "url": "/docs/plugins/auth",
+    "content": "package auth import \"website/components\" templ Page() { Authentication Plugin Complete authentication solution with OAuth2 providers, JWT sessions, TOTP/OTP, and backup codes. Installation @components.CodeBlock(`plugins: auth: enabled: true jwt_secret: \"your-secret-key-min-32-chars\" jwt_expiry: \"24h\" session_cookie: \"session\" oauth: google: client_id: \"xxx.apps.googleusercontent.com\" client_secret: \"GOCSPX-xxx\" redirect_url: \"http://localhost:3000/auth/callback/google\" github: client_id: \"Ov23xxx\" client_secret: \"xxx\" redirect_url: \"http://localhost:3000/auth/callback/github\" otp: issuer: \"MyApp\" digits: 6 period: 30 backup_codes: 10`, \"yaml\", \"gospa.yaml\") CLI Commands Command Alias Description gospa auth:generate ag Generate auth scaffolding (routes, handlers) gospa auth:secret as Generate a secure JWT secret gospa auth:otp ao Generate TOTP secret and QR code URL gospa auth:backup ab Generate backup codes for 2FA recovery gospa auth:verify av Verify a TOTP code against a secret OAuth2 Providers @providerCard(\"Google\", \"OAuth2 with profile/email scopes\") @providerCard(\"GitHub\", \"OAuth2 with user:email scope\") @providerCard(\"Facebook\", \"OAuth2 with public_profile scope\") @providerCard(\"Microsoft\", \"OAuth2 with Azure AD\") @providerCard(\"Discord\", \"OAuth2 with identify scope\") @providerCard(\"Telegram\", \"Login Widget with hash verification\") @providerCard(\"Twitter/X\", \"OAuth2 with PKCE flow\") Provider Configuration @components.CodeBlock(`plugins: auth: enabled: true jwt_secret: \"your-secret-key-min-32-chars\" oauth: # Standard OAuth2 providers google: client_id: \"xxx.apps.googleusercontent.com\" client_secret: \"GOCSPX-xxx\" redirect_url: \"http://localhost:3000/auth/callback/google\" github: client_id: \"Ov23xxx\" client_secret: \"xxx\" redirect_url: \"http://localhost:3000/auth/callback/github\" facebook: client_id: \"xxx\" client_secret: \"xxx\" redirect_url: \"http://localhost:3000/auth/callback/facebook\" microsoft: client_id: \"xxx\" client_secret: \"xxx\" redirect_url: \"http://localhost:3000/auth/callback/microsoft\" discord: client_id: \"xxx\" client_secret: \"xxx\" redirect_url: \"http://localhost:3000/auth/callback/discord\" # Twitter/X - OAuth2 with PKCE twitter: client_id: \"xxx\" client_secret: \"xxx\" redirect_url: \"http://localhost:3000/auth/callback/twitter\" # Telegram uses Login Widget (different from OAuth2) telegram_bot_token: \"123456789:ABCdefGHIjklMNOpqrsTUVwxyz\"`, \"yaml\", \"gospa.yaml\") Telegram Login Setup Telegram uses a Login Widget instead of standard OAuth2. The flow is different: @components.CodeBlock(` function onTelegramAuth(user) { // Send user data to your backend for verification fetch('/auth/telegram/callback', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(user) }).then(res =\u003e res.json()) .then(data =\u003e console.log('Auth success:', data)); } `, \"html\", \"telegram_widget.html\") The backend verifies the hash using your bot token. No redirect URL needed. Features @featureCard(\"JWT Sessions\", \"Stateless authentication with configurable expiry.\") @featureCard(\"OAuth2 Flow\", \"Complete authorization code flow with PKCE support.\") @featureCard(\"TOTP/OTP\", \"Time-based One-Time Password (RFC 6238).\") @featureCard(\"QR Codes\", \"Generate QR code URLs for authenticator apps.\") @featureCard(\"Backup Codes\", \"One-time recovery codes for 2FA bypass.\") @featureCard(\"Session Management\", \"Login, logout, refresh token rotation.\") Usage Example @components.CodeBlock(`package main import ( \"github.com/aydenstechdungeon/gospa/plugin/auth\" \"github.com/gofiber/fiber/v2\" ) func main() { app := fiber.New() // Initialize auth plugin authPlugin := auth.New(auth.Config{ JWTSecret: \"your-secret-key\", JWTExpiry: 24 * time.Hour, }) // OAuth routes app.Get(\"/auth/google\", authPlugin.OAuthRedirect(\"google\")) app.Get(\"/auth/callback/google\", authPlugin.OAuthCallback(\"google\")) // Protected route app.Get(\"/protected\", authPlugin.RequireAuth(), func(c *fiber.Ctx) error { user := c.Locals(\"user\").(*auth.User) return c.JSON(user) }) // TOTP setup app.Post(\"/auth/2fa/enable\", authPlugin.EnableTOTP()) app.Post(\"/auth/2fa/verify\", authPlugin.VerifyTOTP()) app.Listen(\":3000\") }`, \"go\", \"main.go\") TOTP Setup Flow @components.CodeBlock(`// 1. Generate secret and QR code URL secret, qrURL, err := auth.GenerateTOTPSecret(\"user@example.com\", \"MyApp\") // qrURL = otpauth://totp/MyApp:user@example.com?secret=XXX\u0026issuer=MyApp // 2. User scans QR code with authenticator app (Google Authenticator, Authy, etc.) // 3. Verify TOTP code valid := auth.VerifyTOTP(secret, userProvidedCode) // 4. Generate backup codes backupCodes := auth.GenerateBackupCodes(10) // 10 codes // 5. Store secret and hashed backup codes in database`, \"go\", \"2fa_setup.go\") Generated Auth Routes @components.CodeBlock(`# OAuth Routes GET /auth/{provider} - Redirect to OAuth provider GET /auth/callback/{provider} - OAuth callback handler # Session Routes POST /auth/login - Email/password login POST /auth/logout - Logout and clear session POST /auth/refresh - Refresh JWT token # 2FA Routes POST /auth/2fa/enable - Enable TOTP for user POST /auth/2fa/verify - Verify TOTP code POST /auth/2fa/backup - Use backup code for recovery POST /auth/2fa/disable - Disable 2FA`, \"text\", \"routes\") Dependencies Go packages: golang.org/x/oauth2 github.com/golang-jwt/jwt/v5 github.com/pquerna/otp Environment variables: GOOGLE_CLIENT_ID GOOGLE_CLIENT_SECRET JWT_SECRET } templ providerCard(name string, description string) { { name } { description } } templ featureCard(title string, description string) { { title } { description } }",
+    "sections": null
+  },
+  {
+    "title": "Image Optimization Plugin",
+    "description": "",
+    "url": "/docs/plugins/image",
+    "content": "package image import \"website/components\" templ Page() { Image Optimization Plugin Build-time image optimization with responsive sizes, format conversion, and optional on-the-fly processing. Installation Enable the Image plugin in your configuration: @components.CodeBlock(`plugins: image: enabled: true input_dir: static/images output_dir: static/optimized sizes: [320, 640, 1280, 1920, 2560] formats: [webp, jpeg, png] quality: 85 on_the_fly: false # Enable runtime optimization`, \"yaml\", \"gospa.yaml\") CLI Commands Command Alias Description gospa image:optimize io Optimize all images in input directory gospa image:clean ic Remove optimized images from output directory gospa image:sizes is List configured image sizes Features @featureCard(\"Responsive Sizes\", \"Auto-generate 320w, 640w, 1280w, 1920w, 2560w variants.\") @featureCard(\"Format Conversion\", \"Convert to WebP, JPEG, PNG with configurable quality.\") @featureCard(\"Build-time\", \"Optimize at build time for zero runtime overhead.\") @featureCard(\"On-the-fly\", \"Optional runtime optimization for dynamic images.\") Output Structure @components.CodeBlock(`static/optimized/ hero-320w.webp hero-640w.webp hero-1280w.webp hero-1920w.webp hero-2560w.webp hero-320w.jpeg hero-640w.jpeg ...`, \"text\", \"Directory structure\") Usage in Templates { }`, \"templ\", \"component.templ\") Dependencies Go packages (auto-installed): golang.org/x/image } templ featureCard(title string, description string) { { title } { description } }",
+    "sections": null
+  },
+  {
+    "title": "Plugin System",
+    "description": "",
+    "url": "/docs/plugins",
+    "content": "package plugins import \"website/components\" templ Page() { Plugin System Extend GoSPA with powerful plugins for CSS processing, image optimization, form validation, SEO, and authentication. Overview GoSPA's plugin system allows you to extend the framework with additional functionality. Plugins can hook into the build process, add CLI commands, and provide runtime features. Built-in Plugins @pluginCard(\"Tailwind CSS\", \"/docs/plugins/tailwind\", \"CSS framework with v4 support, CSS-first configuration, and JIT compilation.\") @pluginCard(\"PostCSS\", \"/docs/plugins/postcss\", \"Advanced CSS processing with autoprefixer, nesting, and Tailwind extensions.\") @pluginCard(\"Image Optimization\", \"/docs/plugins/image\", \"Responsive images with WebP conversion, lazy loading, and srcset generation.\") @pluginCard(\"Form Validation\", \"/docs/plugins/validation\", \"Client-side Valibot + server-side Go validator with TypeScript type generation.\") @pluginCard(\"SEO\", \"/docs/plugins/seo\", \"Sitemaps, robots.txt, meta tags, Open Graph, and JSON-LD structured data.\") @pluginCard(\"Authentication\", \"/docs/plugins/auth\", \"OAuth2 providers, JWT sessions, TOTP/OTP, and backup codes.\") @pluginCard(\"QR Code\", \"/docs/plugins/qrcode\", \"A QR Code generator.\") Configuration Configure plugins in your gospa.yaml file: @components.CodeBlock(`plugins: tailwind: enabled: true config: tailwind.config.js postcss: enabled: true plugins: - tailwindcss - autoprefixer image: enabled: true formats: [webp, jpeg, png] sizes: [320, 640, 1280, 1920] validation: enabled: true schemasDir: schemas seo: enabled: true siteUrl: https://example.com auth: enabled: true jwtSecret: \"\\${JWT_SECRET}\" providers: [google, github]`, \"yaml\", \"gospa.yaml\") Plugin Hooks Plugins can hook into various stages of the build and development lifecycle: Hook Description BeforeGenerate Runs before route generation AfterGenerate Runs after route generation BeforeDev Runs before dev server starts AfterDev Runs after dev server starts BeforeBuild Runs before production build AfterBuild Runs after production build CLI Commands Each plugin provides CLI commands for common tasks: gospa add tailwind # Add Tailwind CSS to project # PostCSS gospa postcss:config # Generate PostCSS config (alias: pc) gospa postcss:init # Initialize PostCSS (alias: pi) # Image Optimization gospa image:optimize # Optimize all images (alias: io) gospa image:clean # Clean optimized images (alias: ic) gospa image:sizes # List image sizes (alias: is) # Form Validation gospa validation:generate # Generate validation code (alias: vg) gospa validation:create # Create schema file (alias: vc) gospa validation:list # List all schemas (alias: vl) # SEO gospa seo:generate # Generate sitemap and robots.txt (alias: sg) gospa seo:meta # Generate meta tags (alias: sm) gospa seo:structured # Generate JSON-LD (alias: ss) # Authentication gospa auth:generate # Generate auth handlers (alias: ag) gospa auth:secret # Generate JWT secret (alias: as) gospa auth:otp # Generate TOTP secret (alias: ao) gospa auth:backup # Generate backup codes (alias: ab) gospa auth:verify # Verify OTP code (alias: av) # QR Code (programmatic API only - no CLI commands)`, \"bash\", \"terminal\") Creating Custom Plugins Create your own plugins by implementing the Plugin interface: @components.CodeBlock(`package myplugin import \"github.com/aydenstechdungeon/gospa/plugin\" type MyPlugin struct{} func (p *MyPlugin) Name() string { return \"my-plugin\" } func (p *MyPlugin) Init() error { return nil } func (p *MyPlugin) Dependencies() []plugin.Dependency { return []plugin.Dependency{ {Type: plugin.DepGo, Name: \"github.com/example/pkg\", Version: \"v1.0.0\"}, {Type: plugin.DepBun, Name: \"some-npm-package\", Version: \"^2.0.0\"}, } } func (p *MyPlugin) OnHook(hook plugin.Hook, ctx map[string]interface{}) error { switch hook { case plugin.BeforeBuild: // Pre-build logic case plugin.AfterBuild: // Post-build logic } return nil } func (p *MyPlugin) Commands() []plugin.Command { return []plugin.Command{ { Name: \"myplugin:run\", Aliases: []string{\"mp\"}, Desc: \"Run my plugin\", Action: p.runAction, }, } }`, \"go\", \"myplugin.go\") External Plugins External plugins are cached in ~/.gospa/plugins/ and can be installed from Git repositories or local paths. } templ pluginCard(title string, href string, description string) { { title } { description } }",
+    "sections": null
+  },
+  {
+    "title": "PostCSS Plugin",
+    "description": "",
+    "url": "/docs/plugins/postcss",
+    "content": "package postcss import \"website/components\" templ Page() { PostCSS Plugin Advanced CSS processing with PostCSS, Tailwind CSS extensions, and autoprefixer support. Installation Enable the PostCSS plugin in your configuration: @components.CodeBlock(`plugins: postcss: enabled: true config: postcss.config.js extensions: - typography - forms - aspect-ratio - line-clamp`, \"yaml\", \"gospa.yaml\") CLI Commands Command Alias Description gospa postcss:config pc Generate PostCSS configuration file gospa postcss:init pi Initialize PostCSS with default plugins Built-in Extensions @extensionCard(\"Typography\", \"@tailwindcss/typography\", \"Beautiful typographic defaults with prose classes.\") @extensionCard(\"Forms\", \"@tailwindcss/forms\", \"Form element styling and normalization.\") @extensionCard(\"Aspect Ratio\", \"@tailwindcss/aspect-ratio\", \"Aspect ratio utilities for responsive media.\") @extensionCard(\"Line Clamp\", \"@tailwindcss/line-clamp\", \"Truncate text with line-clamp utilities.\") @extensionCard(\"Autoprefixer\", \"autoprefixer\", \"Automatic vendor prefixing for CSS.\") PostCSS Configuration @components.CodeBlock(`export default { plugins: { 'tailwindcss': {}, 'autoprefixer': {}, '@tailwindcss/typography': {}, '@tailwindcss/forms': {}, '@tailwindcss/aspect-ratio': {}, }, }`, \"javascript\", \"postcss.config.js\") Usage Example @components.CodeBlock(`/* Input CSS */ .article { @apply prose prose-lg dark:prose-invert; } .form-input { @apply form-input rounded-lg border-gray-300; } .video-container { @apply aspect-video w-full; } .truncated { @apply line-clamp-3; }`, \"css\", \"styles.css\") Dependencies Bun packages (auto-installed): autoprefixer, @tailwindcss/typography, @tailwindcss/forms, @tailwindcss/aspect-ratio, @tailwindcss/line-clamp } templ extensionCard(name string, pkg string, description string) { { name } { pkg } { description } }",
+    "sections": null
+  },
+  {
+    "title": "QR Code Plugin",
+    "description": "",
+    "url": "/docs/plugins/qrcode",
+    "content": "package qrcode import \"website/components\" templ Page() { QR Code Plugin A pure Go QR code generation plugin for GoSPA applications. Generate QR codes for URLs, OTP/TOTP setup, and any other content with customizable size, colors, and error correction. Features ✓ Pure Go implementation - no external dependencies ✓ Multiple output formats: Image, PNG bytes, Base64, Data URL ✓ Configurable error correction levels (Low, Medium, Quartile, High) ✓ Customizable size and colors ✓ Built-in OTP/TOTP QR code generation for auth flows ✓ Functional options pattern for flexible configuration Installation Enable the QR Code plugin in your gospa.yaml : @components.CodeBlock(`plugins: qrcode: default_size: 256 # Default QR code size in pixels default_level: medium # Error correction: low, medium, quartile, high`, \"yaml\", \"gospa.yaml\") Basic Usage Generate a Simple QR Code @components.CodeBlock(`package main import ( \"fmt\" \"github.com/aydenstechdungeon/gospa/plugin/qrcode\" ) func main() { // Generate a QR code as a data URL (for HTML img src) dataURL, err := qrcode.GenerateDataURL(\"https://example.com\") if err != nil { panic(err) } fmt.Println(dataURL) // Output: data:image/png;base64,iVBORw0KGgo... // Generate PNG bytes pngBytes, err := qrcode.GeneratePNG(\"https://example.com\") if err != nil { panic(err) } // Save to file or send as HTTP response }`, \"go\", \"main.go\") Customization Options @components.CodeBlock(`package main import ( \"image/color\" \"github.com/aydenstechdungeon/gospa/plugin/qrcode\" ) func main() { // Custom size dataURL, _ := qrcode.GenerateDataURL(\"https://example.com\", qrcode.WithSize(512), ) // Custom error correction level dataURL, _ = qrcode.GenerateDataURL(\"https://example.com\", qrcode.WithLevel(qrcode.LevelHigh), ) // Custom colors dataURL, _ = qrcode.GenerateDataURL(\"https://example.com\", qrcode.WithColors(color.Black, color.White), ) // Custom branded colors (e.g., dark blue on light gray) dataURL, _ = qrcode.GenerateDataURL(\"https://example.com\", qrcode.WithSize(400), qrcode.WithLevel(qrcode.LevelQuartile), qrcode.WithColors( color.RGBA{R: 30, G: 60, B: 114, A: 255}, // Foreground color.RGBA{R: 240, G: 244, B: 248, A: 255}, // Background ), ) }`, \"go\", \"main.go\") Error Correction Levels Level Recovery Use Case LevelLow ~7% Clean environments, maximum data capacity LevelMedium ~15% General use (default) LevelQuartile ~25% Printed materials, potential damage LevelHigh ~30% Harsh environments, logos/overlays OTP/TOTP Integration The plugin provides a convenient method for generating QR codes compatible with authenticator apps like Google Authenticator, Authy, and 1Password. @components.CodeBlock(`package main import ( \"fmt\" \"net/url\" \"github.com/aydenstechdungeon/gospa/plugin/qrcode\" ) func main() { // Build the otpauth:// URL issuer := \"MyApp\" account := \"user@example.com\" secret := \"JBSWY3DPEHPK3PXP\" // Base32 encoded secret otpURL := fmt.Sprintf( \"otpauth://totp/%s:%s?secret=%s\u0026issuer=%s\u0026algorithm=SHA1\u0026digits=6\u0026period=30\", url.QueryEscape(issuer), url.QueryEscape(account), secret, url.QueryEscape(issuer), ) // Generate QR code for authenticator apps dataURL, err := qrcode.ForOTP(otpURL) if err != nil { panic(err) } // Use in HTML template fmt.Printf(\" \", dataURL) }`, \"go\", \"main.go\") HTTP Handler Example Serve QR codes directly via HTTP endpoints: @components.CodeBlock(`package main import ( \"github.com/aydenstechdungeon/gospa/plugin/qrcode\" \"github.com/gofiber/fiber/v2\" ) func main() { app := fiber.New() // Serve QR code as PNG image app.Get(\"/qr/:content\", func(c *fiber.Ctx) error { content := c.Params(\"content\") pngBytes, err := qrcode.GeneratePNG(content, qrcode.WithSize(256), qrcode.WithLevel(qrcode.LevelMedium), ) if err != nil { return c.Status(500).SendString(\"Failed to generate QR code\") } c.Set(\"Content-Type\", \"image/png\") c.Set(\"Cache-Control\", \"public, max-age=86400\") // Cache for 24 hours return c.Send(pngBytes) }) // Serve QR code as data URL (for JSON APIs) app.Get(\"/api/qr/:content\", func(c *fiber.Ctx) error { content := c.Params(\"content\") dataURL, err := qrcode.GenerateDataURL(content) if err != nil { return c.Status(500).JSON(fiber.Map{ \"error\": \"Failed to generate QR code\", }) } return c.JSON(fiber.Map{ \"data_url\": dataURL, }) }) app.Listen(\":3000\") }`, \"go\", \"main.go\") API Reference Package Functions @apiRef(\"func Generate(content string, opts ...Option) (image.Image, error)\", \"Generates a QR code as an image.Image.\") @apiRef(\"func GeneratePNG(content string, opts ...Option) ([]byte, error)\", \"Generates a QR code as PNG-encoded bytes.\") @apiRef(\"func GenerateBase64(content string, opts ...Option) (string, error)\", \"Generates a QR code as a base64-encoded PNG string.\") @apiRef(\"func GenerateDataURL(content string, opts ...Option) (string, error)\", \"Generates a QR code as a data URL (ready for img src).\") @apiRef(\"func ForOTP(otpURL string, opts ...Option) (string, error)\", \"Generates a QR code for OTP/TOTP setup (300px default size).\") Options @apiRef(\"func WithSize(size int) Option\", \"Sets the QR code size in pixels (default: 256).\") @apiRef(\"func WithLevel(level Level) Option\", \"Sets the error correction level (default: LevelMedium).\") @apiRef(\"func WithColors(foreground, background color.Color) Option\", \"Sets the foreground and background colors.\") Integration with Auth Plugin The QR Code plugin integrates seamlessly with the Authentication plugin for TOTP setup flows. When users enable two-factor authentication, generate a QR code they can scan with their authenticator app. See the Authentication Plugin documentation for complete TOTP implementation examples. } templ apiRef(signature string, description string) { { signature } { description } }",
+    "sections": null
+  },
+  {
+    "title": "SEO Plugin",
+    "description": "",
+    "url": "/docs/plugins/seo",
+    "content": "package seo import \"website/components\" templ Page() { SEO Plugin Search engine optimization with sitemap generation, meta tags, Open Graph, Twitter Cards, and JSON-LD structured data. Installation @components.CodeBlock(`plugins: seo: enabled: true site_url: https://example.com site_name: \"My GoSPA App\" site_description: \"A modern web application\" generate_sitemap: true generate_robots: true structured_data: true`, \"yaml\", \"gospa.yaml\") CLI Commands Command Alias Description gospa seo:generate sg Generate sitemap.xml and robots.txt gospa seo:meta sm Generate meta tags for a page gospa seo:structured ss Generate JSON-LD structured data Features @featureCard(\"Sitemap.xml\", \"Auto-generate sitemap with lastmod, changefreq, priority.\") @featureCard(\"robots.txt\", \"Configure crawler access with allow/disallow rules.\") @featureCard(\"Meta Tags\", \"Title, description, keywords, canonical URLs.\") @featureCard(\"Open Graph\", \"Facebook/LinkedIn sharing with og:* tags.\") @featureCard(\"Twitter Cards\", \"Summary, summary_large_image, player cards.\") @featureCard(\"JSON-LD\", \"Schema.org structured data for rich results.\") Generated Output sitemap.xml @components.CodeBlock(` https://example.com/ 2024-01-15 weekly 1.0 https://example.com/about 2024-01-10 monthly 0.8 `, \"xml\", \"static/sitemap.xml\") robots.txt @components.CodeBlock(`User-agent: * Allow: / Disallow: /admin/ Disallow: /api/ Sitemap: https://example.com/sitemap.xml`, \"text\", \"static/robots.txt\") Usage in Templates @components.CodeBlock(`package main import \"github.com/aydenstechdungeon/gospa/plugin/seo\" templ Page() { @@seo.Meta(seo.MetaParams{ Title: \"Home | My App\", Description: \"Welcome to my awesome application\", Keywords: []string{\"gospa\", \"go\", \"spa\"}, Canonical: \"https://example.com/\", OGImage: \"/images/og-home.png\", }) @@seo.OpenGraph(seo.OGParams{ Type: \"website\", Title: \"Home | My App\", Description: \"Welcome to my awesome application\", Image: \"/images/og-home.png\", }) @@seo.TwitterCard(seo.TwitterParams{ Card: \"summary_large_image\", Title: \"Home | My App\", Description: \"Welcome to my awesome application\", Image: \"/images/twitter-home.png\", }) @@seo.StructuredData(seo.Organization{ Name: \"My App\", URL: \"https://example.com\", Logo: \"https://example.com/logo.png\", }) }`, \"templ\", \"routes/page.templ\") JSON-LD Structured Data Supported schema types: @schemaBadge(\"Organization\") @schemaBadge(\"WebSite\") @schemaBadge(\"Article\") @schemaBadge(\"Product\") @schemaBadge(\"BreadcrumbList\") @schemaBadge(\"FAQPage\") @schemaBadge(\"HowTo\") @schemaBadge(\"LocalBusiness\") @schemaBadge(\"Person\") Dependencies Go packages (auto-installed): github.com/microcosm-cc/bluemonday (HTML sanitization) } templ featureCard(title string, description string) { { title } { description } } templ schemaBadge(name string) { { name } }",
+    "sections": null
+  },
+  {
+    "title": "Tailwind CSS Plugin",
+    "description": "",
+    "url": "/docs/plugins/tailwind",
+    "content": "package tailwind import \"website/components\" templ Page() { Tailwind CSS Plugin Utility-first CSS framework with Tailwind v4 support, CSS-first configuration, and JIT compilation. Installation Add Tailwind CSS to your project using the add command: This command installs the required dependencies and configures PostCSS to use Tailwind. The plugin integrates automatically with the build process through hooks - no separate CLI commands needed. Configuration Enable Tailwind in your gospa.yaml: @components.CodeBlock(`plugins: tailwind: enabled: true`, \"yaml\", \"gospa.yaml\") CSS-First Configuration Tailwind v4 uses CSS-first configuration with the @@theme directive: Features @featureCard(\"JIT Compilation\", \"On-demand utility generation for smaller bundle sizes.\") @featureCard(\"CSS-First Config\", \"Configure themes directly in CSS with @theme directive.\") @featureCard(\"Container Queries\", \"Built-in support for @container queries.\") @featureCard(\"3D Transforms\", \"rotate-x-*, translate-z-*, perspective-* utilities.\") Usage Example @components.CodeBlock(` templ MyComponent() { Hello, Tailwind v4! Click me }`, \"templ\", \"component.templ\") } templ featureCard(title string, description string) { { title } { description } }",
+    "sections": null
+  },
+  {
+    "title": "Form Validation Plugin",
+    "description": "",
+    "url": "/docs/plugins/validation",
+    "content": "package validation import \"website/components\" templ Page() { Form Validation Plugin Isomorphic form validation with Valibot (client) and Go validator (server). Generates TypeScript types, Valibot schemas, and Go structs from JSON schemas. Why Valibot? @statCard(\"~1.5KB\", \"Gzipped bundle size\") @statCard(\"Tree-shakeable\", \"Only import what you use\") @statCard(\"Standard Schema\", \"Compatible with any library\") Valibot is significantly smaller than Zod (~12KB) while providing the same validation capabilities. Perfect for client-side bundles. Installation @components.CodeBlock(`plugins: validation: enabled: true schemas_dir: schemas output_dir: generated generate_types: true generate_go: true`, \"yaml\", \"gospa.yaml\") CLI Commands Command Alias Description gospa validation:generate vg Generate types and schemas from JSON schemas gospa validation:create vc Create a new validation schema gospa validation:list vl List all validation schemas Schema Definition @components.CodeBlock(`{ \"$schema\": \"https://json-schema.org/draft/2020-12/schema\", \"type\": \"object\", \"properties\": { \"email\": { \"type\": \"string\", \"format\": \"email\", \"minLength\": 5, \"maxLength\": 255 }, \"password\": { \"type\": \"string\", \"minLength\": 8, \"maxLength\": 100 }, \"age\": { \"type\": \"integer\", \"minimum\": 18, \"maximum\": 120 } }, \"required\": [\"email\", \"password\"] }`, \"json\", \"schemas/user.json\") Generated Output TypeScript Types @components.CodeBlock(`export interface User { email: string; password: string; age?: number; }`, \"typescript\", \"generated/types.ts\") Valibot Schema @components.CodeBlock(`import * as v from 'valibot'; export const UserSchema = v.object({ email: v.pipe(v.string(), v.email(), v.minLength(5), v.maxLength(255)), password: v.pipe(v.string(), v.minLength(8), v.maxLength(100)), age: v.optional(v.pipe(v.number(), v.minValue(18), v.maxValue(120))) });`, \"typescript\", \"generated/schemas.ts\") Server-side Validation @components.CodeBlock(`type User struct { Email string ` + \"`\" + `validate:\"required,email,min=5,max=255\"` + \"`\" + ` Password string ` + \"`\" + `validate:\"required,min=8,max=100\"` + \"`\" + ` Age int ` + \"`\" + `validate:\"omitempty,min=18,max=120\"` + \"`\" + ` } func ValidateUser(user User) error { return validator.New().Struct(user) }`, \"go\", \"generated/user.go\") Dependencies Bun packages: valibot Go packages: github.com/go-playground/validator/v10 } templ statCard(value string, description string) { { value } { description } }",
+    "sections": null
+  },
+  {
+    "title": "Reactive Primitives",
+    "description": "",
+    "url": "/docs/reactive-primitives",
+    "content": "package reactiveprimitives import \"website/components\" templ Page() { Reactive Primitives GoSPA provides reactive primitives for both server-side Go and client-side TypeScript. These primitives form the foundation of the framework's reactivity system. Overview The reactivity system consists of three core primitives: Rune { \"for\" } state, Derived { \"for\" } computed values, and Effect { \"for\" } side effects. Rune Reactive state container that notifies subscribers on change. Derived Computed values that auto-update when dependencies change. Effect Side effects that run in response to state changes. Go Server-Side Primitives Server-side primitives are thread-safe and designed for concurrent access in Go handlers and components. Rune @components.CodeBlock(`import \"github.com/a4bet/gospa\" // Create a new rune with initial value count := gospa.NewRune(0) // Get value value := count.Get() // Set value count.Set(5) // Update with function count.Update(func(v int) int { return v + 1 }) // Subscribe to changes unsubscribe := count.Subscribe(func(newValue, oldValue int) { log.Printf(\"Changed from %d to %d\", oldValue, newValue) }) // Unsubscribe when done unsubscribe()`, \"go\", \"rune.go\") Derived @components.CodeBlock(`import \"github.com/a4bet/gospa\" // Create derived value from a rune count := gospa.NewRune(5) doubled := gospa.Derived(count, func(v int) int { return v * 2 }) fmt.Println(doubled.Get()) // 10 // Derived from multiple runes a := gospa.NewRune(10) b := gospa.NewRune(20) sum := gospa.Derived2(a, b, func(a, b int) int { return a + b }) fmt.Println(sum.Get()) // 30`, \"go\", \"derived.go\") Effect @components.CodeBlock(`import \"github.com/a4bet/gospa\" count := gospa.NewRune(0) // Create effect that runs on changes effect := gospa.Effect(count, func(v int) { log.Printf(\"Count is now: %d\", v) }) // Effect with cleanup effect := gospa.Effect(count, func(v int) func() { log.Printf(\"Count changed to: %d\", v) return func() { log.Println(\"Cleanup before next run\") } }) // Dispose effect when done effect.Dispose()`, \"go\", \"effect.go\") StateMap @components.CodeBlock(`import \"github.com/a4bet/gospa\" states := gospa.NewStateMap() // Set values states.Set(\"count\", 0) states.Set(\"name\", \"GoSPA\") // Get values countRune := states.Get(\"count\") if countRune != nil { fmt.Println(countRune.Get()) } // Serialize for client json := states.ToJSON() // Deserialize from client states.FromJSON(jsonString) // Batch updates states.Batch(func(m *gospa.StateMap) { m.Set(\"a\", 1) m.Set(\"b\", 2) })`, \"go\", \"statemap.go\") Batch Updates @components.CodeBlock(`import \"github.com/a4bet/gospa\" a := gospa.NewRune(1) b := gospa.NewRune(2) // Batch multiple updates - subscribers notified once gospa.Batch(func() { a.Set(10) b.Set(20) })`, \"go\", \"batch.go\") TypeScript Client Primitives Client primitives mirror the server API and integrate with the browser runtime. Rune @components.CodeBlock(`import { Rune, rune } from '@gospa/runtime'; // Create const count = new Rune(0); const name = rune('initial'); // factory function // Read console.log(count.value); // 0 console.log(count.get()); // 0 // Write count.value = 1; count.set(2); count.update(n =\u003e n + 1); // Subscribe const unsubscribe = count.subscribe((value, oldValue) =\u003e { console.log('Changed:', oldValue, '-\u003e', value); }); // Cleanup unsubscribe();`, \"typescript\", \"rune.ts\") Derived @components.CodeBlock(`import { Derived, derived } from '@gospa/runtime'; const count = new Rune(5); // Create derived const doubled = new Derived(() =\u003e count.get() * 2); const summary = derived(() =\u003e 'Count: ' + count.get()); // Read console.log(doubled.value); // 10 // Subscribe doubled.subscribe(v =\u003e console.log('Doubled:', v)); // Cleanup doubled.dispose();`, \"typescript\", \"derived.ts\") Effect @components.CodeBlock(`import { Effect, effect } from '@gospa/runtime'; const count = new Rune(0); // Create effect const myEffect = new Effect(() =\u003e { console.log('Count changed:', count.get()); // Optional cleanup return () =\u003e { console.log('Cleanup before next run'); }; }); // Control myEffect.pause(); // Stop reacting myEffect.resume(); // Resume myEffect.dispose(); // Permanent cleanup`, \"typescript\", \"effect.ts\") Utility Functions @components.CodeBlock(`import { batch, untrack, watch, inspect } from '@gospa/runtime'; // Batch updates - single notification batch(() =\u003e { a.set(10); b.set(20); }); // Untrack - don't track dependency effect(() =\u003e { console.log('Count:', count.get()); untrack(() =\u003e { console.log('Untracked:', other.get()); // Not a dependency }); }); // Watch multiple sources const unsub = watch([a, b], (values, oldValues) =\u003e { console.log('Changed:', values, oldValues); }); // Debug (dev only) inspect(count); inspect(count).with((type, value) =\u003e { if (type === 'update') console.log('Updated:', value); });`, \"typescript\", \"utilities.ts\") Advanced Types Resource Async data fetching with loading/error states. @components.CodeBlock(`import { resourceReactive } from '@gospa/runtime'; const userId = new Rune(1); // Reactive resource - refetches when userId changes const userResource = resourceReactive( [userId], async () =\u003e { const res = await fetch('/api/user/' + userId.get()); return res.json(); } ); // Status console.log(userResource.status); // 'idle' | 'pending' | 'success' | 'error' console.log(userResource.isPending); // boolean console.log(userResource.data); // T | undefined console.log(userResource.error); // Error | undefined // Refetch await userResource.refetch();`, \"typescript\", \"resource.ts\") RuneRaw Shallow reactive state - only top-level changes tracked. @components.CodeBlock(`import { RuneRaw } from '@gospa/runtime'; // Shallow reactivity const person = new RuneRaw({ name: 'Zeno', nested: { age: 30 } }); // This does NOT trigger updates person.value.nested.age = 31; // This DOES trigger updates (top-level reassignment) person.value = { ...person.value, name: 'New Name' };`, \"typescript\", \"runeraw.ts\") PreEffect Effect that runs before DOM updates. @components.CodeBlock(`import { PreEffect } from '@gospa/runtime'; // Runs before DOM updates const preEffect = new PreEffect(() =\u003e { // Read scroll position before DOM changes const scrollY = window.scrollY; console.log('Scroll position:', scrollY); });`, \"typescript\", \"preeffect.ts\") EffectRoot Non-tracked effect scope with manual cleanup. @components.CodeBlock(`import { EffectRoot } from '@gospa/runtime'; // Non-tracked scope const cleanup = EffectRoot(() =\u003e { // Effects created here are not auto-tracked const e1 = new Effect(() =\u003e { /* ... */ }); const e2 = new Effect(() =\u003e { /* ... */ }); // Return cleanup for all return () =\u003e { e1.dispose(); e2.dispose(); }; }); // Manual cleanup cleanup();`, \"typescript\", \"effectroot.ts\") API Reference Go Rune Methods Method Signature Description Get() T Get current value (thread-safe) Set() func(T) Set new value and notify subscribers Update() func(func(T) T) Update using function Subscribe() func(func(T, T)) func() Subscribe to changes, returns unsubscribe TypeScript Rune Methods Property/Method Type Description value T Get/set value directly get() () ={}\u003e T Get value (tracks dependencies) set() (v: T) ={}\u003e void Set new value update() (fn: (v: T) ={}\u003e T) ={}\u003e void Update using function subscribe() (fn: Subscriber) ={}\u003e Unsubscribe Subscribe to changes Why \"Runes\"? Inspired by Svelte 5's terminology, Runes in GoSPA represent magical symbols that imbue your data with reactive properties. They are the building blocks of an interactive UI that responds naturally to user input and server events. The name reflects their power to transform ordinary values into reactive state. }",
+    "sections": [
+      {
+        "id": "go-server",
+        "title": "Go Server-Side Primitives",
+        "text": ""
+      },
+      {
+        "id": "go-rune",
+        "title": "Rune",
+        "text": ""
+      },
+      {
+        "id": "go-derived",
+        "title": "Derived",
+        "text": ""
+      },
+      {
+        "id": "go-effect",
+        "title": "Effect",
+        "text": ""
+      },
+      {
+        "id": "go-statemap",
+        "title": "StateMap",
+        "text": ""
+      },
+      {
+        "id": "go-batch",
+        "title": "Batch Updates",
+        "text": ""
+      },
+      {
+        "id": "ts-client",
+        "title": "TypeScript Client Primitives",
+        "text": ""
+      },
+      {
+        "id": "ts-rune",
+        "title": "Rune",
+        "text": ""
+      },
+      {
+        "id": "ts-derived",
+        "title": "Derived",
+        "text": ""
+      },
+      {
+        "id": "ts-effect",
+        "title": "Effect",
+        "text": ""
+      },
+      {
+        "id": "ts-utilities",
+        "title": "Utility Functions",
+        "text": ""
+      },
+      {
+        "id": "advanced",
+        "title": "Advanced Types",
+        "text": ""
+      },
+      {
+        "id": "resource",
+        "title": "Resource",
+        "text": ""
+      },
+      {
+        "id": "runeraw",
+        "title": "RuneRaw",
+        "text": ""
+      },
+      {
+        "id": "preeffect",
+        "title": "PreEffect",
+        "text": ""
+      },
+      {
+        "id": "effectroot",
+        "title": "EffectRoot",
+        "text": ""
+      },
+      {
+        "id": "api-reference",
+        "title": "API Reference",
+        "text": ""
+      }
+    ]
+  },
+  {
+    "title": "Remote Actions",
+    "description": "",
+    "url": "/docs/remote-actions",
+    "content": "package remoteactions import \"website/components\" templ Page() { Remote Actions Type-safe server functions called directly from your Svelte-like templates or client-side scripts. Defining Actions Complex Inputs Calling from Template Calling from Script Defining Actions Remote actions are registered globally using the routing package. They receive a context and an interface which contains the parsed JSON input from the client. @components.CodeBlock(`import \"github.com/aydenstechdungeon/gospa/routing\" func init() { routing.RegisterRemoteAction(\"greet\", func(ctx context.Context, input any) (any, error) { name := input.(string) return \"Hello, \" + name, nil }) }`, \"go\", \"actions.go\") Complex Inputs \u0026 Validation Since inputs are passed as any , you should use type assertions or a library like mitchellh/mapstructure to map to your structs. @components.CodeBlock(`type CreateUser struct { Username string ` + \"`\" + `json:\"username\"` + \"`\" + ` Email string ` + \"`\" + `json:\"email\"` + \"`\" + ` } routing.RegisterRemoteAction(\"createUser\", func(ctx context.Context, input any) (any, error) { var data CreateUser // Map input to struct... if data.Username == \"\" { return nil, errors.New(\"username required\") } return \"User \" + data.Username + \" created\", nil })`, \"go\", \"user.go\") Calling from Templates The easiest way to trigger a remote action is via the data-on attribute. @components.CodeBlock(` Greet Me `, \"templ\", \"page.templ\") Calling from Script You can also call remote actions programmatically using the remote function from the runtime. @components.CodeBlock(`import { remote } from '@gospa/runtime'; async function handleSignup() { const result = await remote('createUser', { username: 'ayden', email: 'ayden@example.com' }); if (result.error) { alert('Error: ' + result.error); } else { console.log('Success:', result.data); } }`, \"typescript\", \"signup.ts\") Security Note Remote actions are public endpoints. Always perform authentication and authorization checks inside your action functions using the provided context.Context . }",
+    "sections": null
+  },
+  {
+    "title": "Routing",
+    "description": "",
+    "url": "/docs/routing",
+    "content": "package routing import \"website/components\" templ Page() { Routing GoSPA uses file-system based routing with automatic route generation. Define routes using Templ templates and the framework handles the rest. Route Structure Routes are defined in the routes/ directory. Each *.templ file becomes a route. @components.CodeBlock(`project/ ├── routes/ │ ├── layout.templ # Root layout │ ├── page.templ # Home page (/) │ ├── about/ │ │ └── page.templ # About page (/about) │ ├── blog/ │ │ ├── layout.templ # Blog layout │ │ ├── page.templ # Blog index (/blog) │ │ └── [slug]/ │ │ └── page.templ # Blog post (/blog/my-post) │ └── api/ │ └── users.go # API endpoint └── generated/ ├── routes.go # Generated route registry ├── routes.ts # Client-side routes └── types.ts # TypeScript types`, \"plaintext\", \"structure.txt\") Route Files page.templ Page component { \"for\" } a route. Renders the main content. layout.templ Layout wrapper. Shared UI { \"for\" } child routes. error.templ Error boundary. Catches errors in child routes. *.go Server-side handlers (API endpoints, remote actions). Layouts Layouts wrap child routes and provide shared UI elements like headers, footers, and navigation. @components.CodeBlock(`// routes/layout.templ package main import \"gospa\" templ Layout(children gospa.Children) { My App @gospa.Head() Home About @gospa.RenderChildren(children) @gospa.Scripts() }`, \"go\", \"layout.templ\") Nested Layouts @components.CodeBlock(`// routes/blog/layout.templ package blog templ Layout(children gospa.Children) { @gospa.RenderChildren(children) }`, \"go\", \"blog_layout.templ\") Dynamic Routes Route Parameters Use square brackets to define dynamic segments. Parameters are passed to page components. @components.CodeBlock(`// routes/blog/[slug]/page.templ package blog import \"gospa\" templ Page(params gospa.Params) { Post: { params[\"slug\"] } } // Access multiple params // routes/users/[id]/posts/[postId] // params[\"id\"] and params[\"postId\"]`, \"go\", \"dynamic.templ\") Catch-All Routes @components.CodeBlock(`// routes/docs/[...path]/page.templ // Matches: /docs/a, /docs/a/b, /docs/a/b/c templ Page(params gospa.Params) { Path: { params[\"path\"] } // params[\"path\"] = \"a/b/c\" }`, \"go\", \"catchall.templ\") Optional Routes @components.CodeBlock(`// routes/blog/[[page]]/page.templ // Matches: /blog AND /blog/2 templ Page(params gospa.Params) { page := params.Get(\"page\", \"1\") Page { page } }`, \"go\", \"optional.templ\") API Routes Define API endpoints in Go files within the routes directory. @components.CodeBlock(`// routes/api/users.go package api import ( \"github.com/gofiber/fiber/v2\" ) // GET /api/users func ListUsers(c *fiber.Ctx) error { users := []User{ {ID: 1, Name: \"Alice\"}, {ID: 2, Name: \"Bob\"}, } return c.JSON(users) } // POST /api/users func CreateUser(c *fiber.Ctx) error { var user User if err := c.BodyParser(\u0026user); err != nil { return c.Status(400).JSON(fiber.Map{ \"error\": \"Invalid request\", }) } // Save user... return c.Status(201).JSON(user) } // GET /api/users/:id func GetUser(c *fiber.Ctx) error { id := c.Params(\"id\") // Fetch user... return c.JSON(user) }`, \"go\", \"api.go\") Remote Actions Define server functions that can be called from the client. @components.CodeBlock(`// routes/actions.go package routes import \"github.com/a4bet/gospa\" // Define remote action func init() { gospa.Remote(\"updateUser\", func(c *fiber.Ctx, input UpdateUserInput) (User, error) { // Validate input if input.Name == \"\" { return User{}, errors.New(\"name required\") } // Update user user := User{ ID: input.ID, Name: input.Name, } // Broadcast update to connected clients gospa.Broadcast(\"userUpdated\", user) return user, nil }) }`, \"go\", \"remote.go\") Client-Side Call @components.CodeBlock(`import { remote } from '@gospa/runtime'; // Call remote action const result = await remote('updateUser', { id: 1, name: 'New Name' }); if (result.ok) { console.log('Updated:', result.value); } else { console.error('Error:', result.error); }`, \"typescript\", \"remote_client.ts\") Client Navigation GoSPA provides SPA-style navigation with prefetching and history management. Navigation Functions @components.CodeBlock(`import { navigate, prefetch, back, forward, replace, preloadRoute } from '@gospa/runtime'; // Navigate to a new page navigate('/about'); navigate('/blog/my-post', { replace: true }); // Prefetch a route (cache for instant navigation) prefetch('/dashboard'); // History navigation back(); // Go back in history forward(); // Go forward in history // Replace current URL without adding to history replace('/login'); // Preload route data await preloadRoute('/users/1');`, \"typescript\", \"navigation.ts\") Navigation Events @components.CodeBlock(`import { onNavigate, onNavigated, onNavigateError } from '@gospa/runtime'; // Before navigation const unsub = onNavigate((to, from) =\u003e { console.log('Navigating from', from, 'to', to); // Return false to cancel }); // After navigation onNavigated((to, from) =\u003e { console.log('Navigated to', to); // Analytics, scroll restoration, etc. }); // Navigation error onNavigateError((error, to) =\u003e { console.error('Navigation failed:', error); }); // Cleanup unsub();`, \"typescript\", \"nav_events.ts\") Enhanced Links @components.CodeBlock(` About Dashboard External Link About `, \"html\", \"links.html\") Route Params API Go Params @components.CodeBlock(`// In page.templ templ Page(params gospa.Params) { // Get single param slug := params[\"slug\"] // Get with default page := params.Get(\"page\", \"1\") // Get as int id := params.GetInt(\"id\", 0) // Get all params allParams := params.All() // Check existence if params.Has(\"filter\") { filter := params[\"filter\"] } }`, \"go\", \"params_go.go\") TypeScript Params @components.CodeBlock(`import { useParams, useSearchParams } from '@gospa/runtime'; // Route params (from URL segments) const params = useParams(); console.log(params.slug); // /blog/[slug] console.log(params.id); // /users/[id] // Query params const searchParams = useSearchParams(); console.log(searchParams.page); // ?page=2 console.log(searchParams.filter); // ?filter=active // With defaults const page = searchParams.get('page', '1'); const limit = searchParams.getInt('limit', 10); // Update query params searchParams.set('page', '2'); searchParams.delete('filter');`, \"typescript\", \"params_ts.ts\") Code Splitting Routes are automatically code-split for optimal loading performance. @components.CodeBlock(`// Generated routes.ts export const routes = { '/': () =\u003e import('./routes/page.js'), '/about': () =\u003e import('./routes/about/page.js'), '/blog': () =\u003e import('./routes/blog/page.js'), '/blog/[slug]': () =\u003e import('./routes/blog/[slug]/page.js'), }; // Lazy loaded on navigation // Prefetching available via data-gospa-prefetch`, \"typescript\", \"routes.ts\") Route Generation Run gospa generate to regenerate route files after adding, removing, or renaming routes. generated/routes.go Server route registry generated/routes.ts Client routes }",
+    "sections": [
+      {
+        "id": "route-files",
+        "title": "Route Files",
+        "text": ""
+      },
+      {
+        "id": "layouts",
+        "title": "Layouts",
+        "text": ""
+      },
+      {
+        "id": "nested-layouts",
+        "title": "Nested Layouts",
+        "text": ""
+      },
+      {
+        "id": "dynamic-routes",
+        "title": "Dynamic Routes",
+        "text": ""
+      },
+      {
+        "id": "params",
+        "title": "Route Parameters",
+        "text": ""
+      },
+      {
+        "id": "catch-all",
+        "title": "Catch-All Routes",
+        "text": ""
+      },
+      {
+        "id": "optional",
+        "title": "Optional Routes",
+        "text": ""
+      },
+      {
+        "id": "api-routes",
+        "title": "API Routes",
+        "text": ""
+      },
+      {
+        "id": "remote-actions",
+        "title": "Remote Actions",
+        "text": ""
+      },
+      {
+        "id": "navigation",
+        "title": "Client Navigation",
+        "text": ""
+      },
+      {
+        "id": "nav-functions",
+        "title": "Navigation Functions",
+        "text": ""
+      },
+      {
+        "id": "nav-events",
+        "title": "Navigation Events",
+        "text": ""
+      },
+      {
+        "id": "nav-links",
+        "title": "Enhanced Links",
+        "text": ""
+      },
+      {
+        "id": "route-params",
+        "title": "Route Params API",
+        "text": ""
+      },
+      {
+        "id": "code-splitting",
+        "title": "Code Splitting",
+        "text": ""
+      }
+    ]
+  },
+  {
+    "title": "Runtime Selection",
+    "description": "",
+    "url": "/docs/runtime",
+    "content": "package runtime import \"website/components\" templ Page() { Runtime Selection GoSPA offers two runtime variants: Full (with DOMPurify) and Simple (lightweight). Choose based on your security requirements and performance needs. Quick Comparison Feature Full Runtime Simple Runtime Size (minified) ~25.2 KB ~9.3 KB HTML Sanitization DOMPurify (comprehensive) Basic sanitizer XSS Protection Full protection Basic protection Use Case User-generated content Trusted content only Configuration SimpleRuntime: false SimpleRuntime: true Full Runtime The full runtime includes DOMPurify for comprehensive HTML sanitization. Use this when: Your app displays user-generated content You need protection against XSS attacks Security is a priority over bundle size You're in development mode Configuration @components.CodeBlock(`app := gospa.New(gospa.Config{ RoutesDir: \"./routes\", SimpleRuntime: false, // Default - uses full runtime with DOMPurify })`, \"go\", \"main.go\") What DOMPurify Protects Against Script injection via \u0026lt;script\u0026gt; tags Event handler injection (onclick, onerror, etc.) JavaScript URIs (javascript: protocol) Data URI attacks SVG-based XSS MathML-based XSS DOM clobbering attacks Simple Runtime The simple runtime uses a lightweight sanitizer. Use this when: All content is trusted (you control the data) Bundle size is critical Performance is the top priority No user-generated HTML is displayed Configuration @components.CodeBlock(`app := gospa.New(gospa.Config{ RoutesDir: \"./routes\", SimpleRuntime: true, // Use lightweight runtime })`, \"go\", \"main.go\") Simple Sanitizer Features The simple sanitizer provides basic protection: Removes \u0026lt;script\u0026gt; tags Removes event handler attributes Removes javascript: URIs Basic attribute sanitization ⚠️ Warning The simple runtime does NOT provide complete XSS protection. Only use it when you control all content or have other sanitization measures in place. Decision Matrix Scenario Recommended Runtime Blog with comments Full (DOMPurify) Admin dashboard (trusted users) Simple E-commerce product pages Simple (if content is controlled) Social media feed Full (DOMPurify) Internal tool Simple Public forum Full (DOMPurify) Documentation site Simple CMS with rich text Full (DOMPurify) Security Considerations When to Always Use Full Runtime Any application accepting user input that becomes HTML Applications with user profiles or bios Comment systems or forums Chat applications Any application handling rich text input When Simple Runtime is Safe Static content websites Internal tools with authenticated, trusted users Applications where all HTML is generated server-side from trusted sources Read-only dashboards 💡 Best Practice Start with the full runtime in development. Only switch to simple runtime after auditing your content sources and confirming no user-generated HTML is displayed without additional sanitization. Performance Impact The full runtime adds ~16 KB to your bundle. This impacts: Initial Load @components.CodeBlock(`// Full runtime: ~25.2 KB minified // Simple runtime: ~9.3 KB minified // Difference: ~16 KB`, \"text\", \"sizes.txt\") Sanitization Speed DOMPurify is highly optimized, but the simple sanitizer is faster for large HTML strings: Simple sanitizer: ~0.1ms for typical content DOMPurify: ~0.5-2ms for typical content For most applications, this difference is negligible. The security benefits of DOMPurify far outweigh the minimal performance cost. Custom Sanitization You can implement custom sanitization by extending the runtime or using server-side sanitization before sending HTML to the client. Server-Side Sanitization (Recommended) @components.CodeBlock(`import \"github.com/microcosm-cc/bluemonday\" func sanitizeHTML(input string) string { p := bluemonday.UGCPolicy() // User Generated Content policy return p.Sanitize(input) } // Use in your handlers safeHTML := sanitizeHTML(userInput)`, \"go\", \"sanitize.go\") Client-Side Custom Sanitizer You can provide a custom sanitizer function in the runtime config: @components.CodeBlock(`// In your client-side code gospa.setSanitizer(function(html) { // Custom sanitization logic return sanitizedHtml; });`, \"javascript\", \"sanitize.js\") Migration Guide From Full to Simple Runtime Audit all places where HTML is rendered Confirm no user-generated content is displayed as HTML Test thoroughly in development Enable SimpleRuntime in staging Monitor for any XSS-related issues Deploy to production From Simple to Full Runtime @components.CodeBlock(`// Simply change the config app := gospa.New(gospa.Config{ RoutesDir: \"./routes\", SimpleRuntime: false, // Switch to full runtime })`, \"go\", \"main.go\") No other changes required. The full runtime is a drop-in replacement. }",
+    "sections": null
+  },
+  {
+    "title": "Security",
+    "description": "",
+    "url": "/docs/security",
+    "content": "package security import \"website/components\" templ Page() { Security Built-in protections and configurable security primitives to keep your reactive applications safe. XSS Protection CSRF Protection CORS \u0026 Origins Security Headers XSS Protection GoSPA utilizes DOMPurify by default to sanitize all incoming state updates before they touch the DOM. This protects your application from Cross-Site Scripting (XSS) attacks. { \"For\" } trusted environments, you can switch to the SimpleRuntime which uses a lightweight sanitizer for better performance. See Runtime Selection { \"for\" } details. CSRF Protection GoSPA provides automatic Cross-Site Request Forgery (CSRF) protection for all state-changing operations and remote actions. @components.CodeBlock(`app := gospa.New(gospa.Config{ EnableCSRF: true, // Enable automatic protection })`, \"go\", \"main.go\") When enabled, the framework automatically manages CSRF tokens via cookies and header validation { \"for\" } all POST , PUT , and DELETE requests. CORS \u0026 Allowed Origins Restrict which domains can interact with your application's API and WebSocket endpoints. @components.CodeBlock(`app := gospa.New(gospa.Config{ AllowedOrigins: []string{ \"https://myapp.com\", \"https://api.myapp.com\", }, })`, \"go\", \"main.go\") Security Headers GoSPA automatically injects recommended security headers into every response: X-Content-Type-Options: nosniff X-Frame-Options: DENY X-XSS-Protection: 1; mode=block Referrer-Policy: strict-origin-when-cross-origin Content-Security-Policy (Configurable via middleware) Defense in Depth Always validate and sanitize inputs inside your Remote Actions on the server. Client-side sanitization is a secondary defense layer designed to prevent malicious content from executing in the user's browser, not to validate the integrity of your business data. }",
+    "sections": null
+  },
+  {
+    "title": "State Management",
+    "description": "",
+    "url": "/docs/state-management",
+    "content": "package statemanagement import \"website/components\" templ Page() { State Management GoSPA provides a unified state management system that works seamlessly across server and client, with automatic synchronization via WebSocket. Architecture Overview State in GoSPA flows from server to client with real-time synchronization. The server is the source of truth, and clients receive updates through WebSocket connections. Server State • Thread-safe Rune containers • StateMap { \"for\" } key-value storage • JSON serialization • WebSocket broadcast Client State • Reactive Rune primitives • Automatic dependency tracking • WebSocket sync • Local state { \"for\" } UI Server-Side State StateMap StateMap provides a thread-safe key-value store { \"for\" } managing multiple state values. @components.CodeBlock(`import \"github.com/a4bet/gospa\" // Create a new state map states := gospa.NewStateMap() // Set values states.Set(\"user\", User{ID: 1, Name: \"Alice\"}) states.Set(\"count\", 42) states.Set(\"items\", []string{\"a\", \"b\", \"c\"}) // Get values (returns *Rune[any]) rune := states.Get(\"user\") if rune != nil { value := rune.Get() user := value.(User) } // Delete values states.Delete(\"count\") // Check existence exists := states.Has(\"user\") // List all keys keys := states.Keys() // Clear all states.Clear()`, \"go\", \"statemap.go\") Serialization StateMap can serialize to JSON { \"for\" } client hydration. @components.CodeBlock(`// Serialize to JSON json := states.ToJSON() // Output: {\"user\":{\"ID\":1,\"Name\":\"Alice\"},\"count\":42} // Deserialize from JSON err := states.FromJSON(jsonBytes) // Serialize specific keys partialJSON := states.ToJSONKeys(\"user\", \"count\")`, \"go\", \"serialize.go\") Batch Updates Batch multiple updates into a single transaction. @components.CodeBlock(`// Batch updates - subscribers notified once states.Batch(func(m *gospa.StateMap) { m.Set(\"a\", 1) m.Set(\"b\", 2) m.Set(\"c\", 3) }) // Global batch across multiple runes a := gospa.NewRune(1) b := gospa.NewRune(2) gospa.Batch(func() { a.Set(10) b.Set(20) }) // Subscribers to a and b notified once after batch completes`, \"go\", \"batch.go\") Client-Side State Rune The primary reactive primitive { \"for\" } client-side state. @components.CodeBlock(`import { Rune, derived, effect } from '@gospa/runtime'; // Create reactive state const count = new Rune(0); const user = new Rune({ name: 'Alice', age: 30 }); // Read console.log(count.value); // 0 console.log(user.get()); // { name: 'Alice', age: 30 } // Write count.value = 1; user.set({ name: 'Bob', age: 25 }); // Update with function count.update(n =\u003e n + 1); user.update(u =\u003e ({ ...u, age: u.age + 1 })); // Subscribe to changes const unsub = count.subscribe((newVal, oldVal) =\u003e { console.log('Changed:', oldVal, '-\u003e', newVal); });`, \"typescript\", \"rune.ts\") Derived State @components.CodeBlock(`import { Derived, derived } from '@gospa/runtime'; const count = new Rune(5); // Create derived value const doubled = new Derived(() =\u003e count.get() * 2); const summary = derived(() =\u003e 'Count: ' + count.get()); // Derived from multiple sources const a = new Rune(10); const b = new Rune(20); const sum = derived(() =\u003e a.get() + b.get()); // Read console.log(doubled.value); // 10 console.log(sum.value); // 30 // Derived is lazy - only computes when read // and re-computes when dependencies change`, \"typescript\", \"derived.ts\") Effects @components.CodeBlock(`import { Effect, effect } from '@gospa/runtime'; const count = new Rune(0); // Create effect const myEffect = new Effect(() =\u003e { console.log('Count is:', count.get()); // Optional cleanup function return () =\u003e { console.log('Cleanup before next run'); }; }); // Effect runs immediately and re-runs when dependencies change // Control myEffect.pause(); // Stop reacting myEffect.resume(); // Resume myEffect.dispose(); // Permanent cleanup // Shorthand const dispose = effect(() =\u003e { document.title = 'Count: ' + count.get(); });`, \"typescript\", \"effect.ts\") Server-Client Synchronization Synced Rune Create a rune that automatically syncs with the server via WebSocket. @components.CodeBlock(`import { syncedRune, wsClient } from '@gospa/runtime'; // Connect to WebSocket const ws = wsClient({ url: 'ws://localhost:3000/ws', reconnect: true, heartbeat: 30000 }); // Create synced state const serverCount = syncedRune({ key: 'count', socket: ws, initial: 0 }); // Changes automatically sync to server serverCount.set(10); // Sends update to server // Server updates are received automatically // No manual refresh needed`, \"typescript\", \"synced.ts\") WebSocket Configuration @components.CodeBlock(`import { WSClient } from '@gospa/runtime'; const client = new WSClient({ url: 'ws://localhost:3000/ws', // Reconnection reconnect: true, reconnectInterval: 1000, maxReconnectAttempts: 10, // Heartbeat heartbeat: 30000, heartbeatTimeout: 5000, // Session sessionId: 'user-123', // Event handlers onOpen: () =\u003e console.log('Connected'), onClose: (e) =\u003e console.log('Disconnected'), onError: (e) =\u003e console.error('Error:', e), onMessage: (data) =\u003e console.log('Message:', data) }); // Control await client.connect(); client.disconnect(); client.reconnect(); // Status console.log(client.isConnected); console.log(client.sessionId);`, \"typescript\", \"wsconfig.ts\") State Patterns Form State @components.CodeBlock(`import { Rune, derived } from '@gospa/runtime'; // Form state const form = new Rune({ email: '', password: '', remember: false }); // Validation const errors = derived(() =\u003e { const errs: Record = {}; const f = form.get(); if (!f.email.includes('@')) { errs.email = 'Invalid email'; } if (f.password.length 0) return; const response = await fetch('/api/login', { method: 'POST', body: JSON.stringify(form.get()) }); // Handle response }`, \"typescript\", \"form.ts\") Async State @components.CodeBlock(`import { resourceReactive, Rune } from '@gospa/runtime'; const userId = new Rune(1); // Resource - async data with status const userResource = resourceReactive( [userId], async () =\u003e { const res = await fetch('/api/user/' + userId.get()); return res.json(); } ); // Status tracking console.log(userResource.status); // 'idle' | 'pending' | 'success' | 'error' console.log(userResource.isPending); // boolean console.log(userResource.data); // T | undefined console.log(userResource.error); // Error | undefined // Refetch await userResource.refetch();`, \"typescript\", \"async.ts\") Global State @components.CodeBlock(`// store.svelte.ts import { Rune, derived } from '@gospa/runtime'; // Global store export const user = new Rune (null); export const theme = new Rune ('light'); // Derived from global export const isAuthenticated = derived(() =\u003e user.get() !== null); export const userName = derived(() =\u003e user.get()?.name ?? 'Guest'); // Actions export function login(userData: User) { user.set(userData); } export function logout() { user.set(null); } export function toggleTheme() { theme.update(t =\u003e t === 'light' ? 'dark' : 'light'); }`, \"typescript\", \"global.ts\") Utility Functions batch(fn) Combine multiple updates into single notification. untrack(fn) Read values without creating dependencies. watch(sources, fn) Watch multiple sources { \"for\" } changes. inspect(value) Debug reactive values (dev only). @components.CodeBlock(`import { batch, untrack, watch, inspect } from '@gospa/runtime'; const a = new Rune(1); const b = new Rune(2); // Batch - single notification batch(() =\u003e { a.set(10); b.set(20); }); // Untrack - don't track dependency effect(() =\u003e { console.log('A:', a.get()); untrack(() =\u003e { console.log('B (untracked):', b.get()); }); // Only re-runs when a changes, not b }); // Watch multiple sources const unsub = watch([a, b], (values, oldValues) =\u003e { console.log('Changed:', { from: oldValues, to: values }); }); // Debug (dev only) inspect(a); inspect(a).with((type, value) =\u003e { if (type === 'update') { console.log('Updated to:', value); } });`, \"typescript\", \"utilities.ts\") Best Practices • Server as source of truth - Use synced runes { \"for\" } shared state • Derive when possible - Use derived instead of duplicating state • Batch updates - Use batch() { \"for\" } multiple related changes • Clean up effects - Dispose effects when components unmount • Keep state minimal - Store only what's needed }",
+    "sections": [
+      {
+        "id": "server-state",
+        "title": "Server-Side State",
+        "text": ""
+      },
+      {
+        "id": "statemap",
+        "title": "StateMap",
+        "text": ""
+      },
+      {
+        "id": "serialization",
+        "title": "Serialization",
+        "text": ""
+      },
+      {
+        "id": "batch-updates",
+        "title": "Batch Updates",
+        "text": ""
+      },
+      {
+        "id": "client-state",
+        "title": "Client-Side State",
+        "text": ""
+      },
+      {
+        "id": "rune-client",
+        "title": "Rune",
+        "text": ""
+      },
+      {
+        "id": "derived-client",
+        "title": "Derived State",
+        "text": ""
+      },
+      {
+        "id": "effect-client",
+        "title": "Effects",
+        "text": ""
+      },
+      {
+        "id": "sync",
+        "title": "Server-Client Synchronization",
+        "text": ""
+      },
+      {
+        "id": "synced-rune",
+        "title": "Synced Rune",
+        "text": ""
+      },
+      {
+        "id": "websocket-config",
+        "title": "WebSocket Configuration",
+        "text": ""
+      },
+      {
+        "id": "patterns",
+        "title": "State Patterns",
+        "text": ""
+      },
+      {
+        "id": "form-state",
+        "title": "Form State",
+        "text": ""
+      },
+      {
+        "id": "async-state",
+        "title": "Async State",
+        "text": ""
+      },
+      {
+        "id": "global-state",
+        "title": "Global State",
+        "text": ""
+      },
+      {
+        "id": "utilities",
+        "title": "Utility Functions",
+        "text": ""
+      }
+    ]
+  },
+  {
+    "title": "WebSocket Integration",
+    "description": "",
+    "url": "/docs/websocket",
+    "content": "package websocket import \"website/components\" templ Page() { WebSocket Integration Powering real-time, interactive experiences with built-in WebSocket support and automatic state synchronization. Overview Server API Client API Configuration Overview GoSPA's WebSocket implementation is designed for massive scale and low latency. It uses a binary-first protocol to synchronize reactive state (Runes) between the Go server and the TypeScript client. Real-time Sync State changes on the server are instantly pushed to all connected clients, and vice versa. Binary Protocol Efficient state diffing and binary serialization minimize network bandwidth usage. Server API app.Broadcast(message) Sends a raw message to all connected clients. app.BroadcastState(key, value) Broadcasts a specific state update. This is the preferred way to sync data. app.GetHub() Returns the underlying WebSocket hub for advanced Room/Client management. hub.SendTo(\"client-123\", []byte(\"direct_message\"))`, \"go\", \"main.go\") Client API syncedRune(key, initialValue, client) Creates a reactive state variable that is automatically synchronized with the server. @components.CodeBlock(`import { syncedRune, getWSClient } from '@gospa/runtime'; const ws = getWSClient(); const count = syncedRune('count', 0, ws); // Updating locally will sync to server count.update(n =\u003e n + 1); // Updates from server will update locally and trigger UI refreshes count.subscribe(v =\u003e console.log('Synced value:', v));`, \"typescript\", \"state.ts\") WSClient The core WebSocket client handling reconnections and messaging. @components.CodeBlock(`const ws = new WSClient({ url: 'ws://localhost:3000/_gospa/ws', onConnect: () =\u003e console.log('Connected!'), onMessage: (msg) =\u003e console.log('Message:', msg) });`, \"typescript\", \"websocket.ts\") Configuration Fine-tune WebSocket behavior in gospa.Config . Option Default Description WSReconnectDelay 1s Initial delay before reconnection attempt. WSMaxReconnect 10 Maximum number of reconnection attempts. WSHeartbeat 30s Interval for heartbeat ping/pong to keep connection alive. CompressState false Enable GZIP compression for state updates. Power Tip: State Diffing Enable StateDiffing: true in your config to send only the changed parts of large objects over the wire, optimizing performance for complex state maps. }",
+    "sections": null
+  }
+]

@@ -5,11 +5,19 @@
 // This file includes all features including WebSocket, Navigation, Transitions
 
 // Core exports (re-exported from runtime-core for convenience)
-import { domPurifySanitizer } from './sanitize.ts';
+import { domPurifySanitizer, preloadSanitizer } from './sanitize.ts';
 import { setSanitizer } from './dom.ts';
 
 // Set up the full DOMPurify sanitizer for the standard runtime
 setSanitizer(domPurifySanitizer);
+
+// Preload DOMPurify immediately to ensure it's ready for first HTML binding
+// This runs in the background and caches the instance for sync use later
+if (typeof window !== 'undefined') {
+	// Use requestIdleCallback for non-blocking preload, or setTimeout as fallback
+	const schedulePreload = window.requestIdleCallback || ((cb: () => void) => setTimeout(cb, 1));
+	schedulePreload(() => preloadSanitizer());
+}
 
 import {
 	init, createComponent, destroyComponent, getComponent, getState, setState, callAction, bind, autoInit,

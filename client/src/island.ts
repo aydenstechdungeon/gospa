@@ -79,7 +79,7 @@ export class IslandManager {
 	private defaultTimeout: number;
 	private debug: boolean;
 	private observers: IntersectionObserver[] = [];
-	private idleCallbacks: Map<string, number> = new Map();
+	private idleCallbacks: Map<string, number | ReturnType<typeof setTimeout>> = new Map();
 	private interactionListeners: Map<string, () => void> = new Map();
 
 	constructor(config: IslandManagerConfig = {}) {
@@ -325,8 +325,8 @@ export class IslandManager {
 	 * Schedule hydration during idle time.
 	 */
 	private scheduleIdleHydration(island: IslandElementData): void {
-		if ('requestIdleCallback' in window) {
-			const callbackId = (window as any).requestIdleCallback(
+		if (typeof requestIdleCallback !== 'undefined') {
+			const callbackId = requestIdleCallback(
 				() => {
 					this.queueHydration(island);
 					this.processQueue();
@@ -337,11 +337,11 @@ export class IslandManager {
 			this.idleCallbacks.set(island.id, callbackId);
 		} else {
 			// Fallback to setTimeout
-			const timeoutId = window.setTimeout(() => {
+			const timeoutId = setTimeout(() => {
 				this.queueHydration(island);
 				this.processQueue();
 				this.idleCallbacks.delete(island.id);
-			}, island.defer ?? 2000) as unknown as number;
+			}, island.defer ?? 2000);
 			this.idleCallbacks.set(island.id, timeoutId);
 		}
 	}
