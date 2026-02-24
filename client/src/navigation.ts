@@ -91,10 +91,13 @@ async function fetchPageFromServer(path: string): Promise<PageData | null> {
 		const parser = new DOMParser();
 		const doc = parser.parseFromString(html, 'text/html');
 
-		// Extract content from root, main element or body
+		// Extract content from page content region first (preserves header/footer)
+		// Fall back to root, main element or body for backwards compatibility
+		const contentEl = doc.querySelector('[data-gospa-page-content]');
 		const rootEl = doc.querySelector('[data-gospa-root]');
 		const mainEl = doc.querySelector('main');
-		const content = rootEl ? rootEl.innerHTML : (mainEl ? mainEl.innerHTML : doc.body.innerHTML);
+		const content = contentEl ? contentEl.innerHTML : 
+			(rootEl ? rootEl.innerHTML : (mainEl ? mainEl.innerHTML : doc.body.innerHTML));
 
 		// Extract title
 		const title = doc.querySelector('title')?.textContent || '';
@@ -140,14 +143,20 @@ async function updateDOM(data: PageData): Promise<void> {
 		document.title = data.title;
 	}
 
-	// Update content area
+	// Update content area - target page content region first to preserve header/footer
+	// Fall back to root, main or body for backwards compatibility
+	const contentEl = document.querySelector('[data-gospa-page-content]');
 	const rootEl = document.querySelector('[data-gospa-root]');
 	const sanitizedContent = await safeSanitize(data.content);
-	
-	if (rootEl) {
+
+	if (contentEl) {
+		// Preferred: update only the content region, preserving header/footer
+		contentEl.innerHTML = sanitizedContent;
+	} else if (rootEl) {
+		// Fallback: update entire root (legacy behavior)
 		rootEl.innerHTML = sanitizedContent;
 	} else {
-		// Fallback to main or body
+		// Last resort: update main or body
 		const mainEl = document.querySelector('main');
 		if (mainEl) {
 			mainEl.innerHTML = sanitizedContent;

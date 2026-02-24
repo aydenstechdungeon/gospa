@@ -1,6 +1,8 @@
 package main
 
 import (
+	"crypto/sha256"
+	"encoding/hex"
 	"log"
 	"os"
 	"strconv"
@@ -42,42 +44,87 @@ func main() {
 	}
 }
 
-// staticCacheMiddleware adds Cache-Control headers for static assets
+// staticCacheMiddleware adds Cache-Control headers and ETag support for static assets
 func staticCacheMiddleware(c *fiber.Ctx) error {
 	path := c.Path()
 
 	// Apply cache headers for static assets
-	if strings.HasPrefix(path, "/static/") {
-		// Static assets with content hash: 1 year cache
+	isStatic := strings.HasPrefix(path, "/static/")
+	isImage := isImageFile(path)
+
+	if isStatic || isImage {
+		// Static assets with content hash: 1 year cache, immutable
 		if hasContentHash(path) {
 			c.Set("Cache-Control", "public, max-age=31536000, immutable")
+		} else if isImage {
+			// Image files without hash: 1 week cache with revalidation
+			c.Set("Cache-Control", "public, max-age=604800, stale-while-revalidate=2419200")
 		} else {
-			// Static assets without hash: 1 day cache, revalidate
+			// Other static assets without hash: 1 day cache, revalidate
 			c.Set("Cache-Control", "public, max-age=86400, stale-while-revalidate=604800")
+		}
+
+		// Generate ETag for conditional requests
+		etag := generateETag(path)
+		if etag != "" {
+			c.Set("ETag", etag)
+
+			// Check If-None-Match for 304 response
+			if match := c.Get("If-None-Match"); match != "" {
+				if strings.Contains(match, etag) {
+					return c.SendStatus(fiber.StatusNotModified)
+				}
+			}
 		}
 	}
 
 	return c.Next()
 }
 
+// isImageFile checks if the path is an image file
+func isImageFile(path string) bool {
+	lower := strings.ToLower(path)
+	for _, ext := range []string{".webp", ".png", ".jpg", ".jpeg", ".gif", ".svg", ".ico"} {
+		if strings.HasSuffix(lower, ext) {
+			return true
+		}
+	}
+	return false
+}
+
 // hasContentHash checks if filename contains a content hash pattern
+// Supports patterns like: name-64.ext, name-a1b2c3.ext, name.abc123.ext
 func hasContentHash(path string) bool {
+	// Extract filename from path
+	idx := strings.LastIndex(path, "/")
+	if idx >= 0 {
+		path = path[idx+1:]
+	}
+
 	// Check for common hash patterns: -abc123, .abc123, _abc123
-	// Matches patterns like: gospa1-64.webp, app.a1b2c3.js, etc.
 	for _, pattern := range []string{"-", ".", "_"} {
 		parts := strings.Split(path, pattern)
 		if len(parts) >= 2 {
-			// Check if last part looks like a hash (alphanumeric, 4+ chars before extension)
+			// Check if last part looks like a hash (alphanumeric before extension)
 			last := parts[len(parts)-1]
-			if idx := strings.Index(last, "."); idx > 3 {
-				hash := last[:idx]
-				if isAlphanumeric(hash) && len(hash) >= 4 {
+			if dotIdx := strings.Index(last, "."); dotIdx > 0 {
+				hash := last[:dotIdx]
+				// Accept 2+ character hashes for logo files like gospa1-64.webp
+				if isAlphanumeric(hash) && len(hash) >= 2 {
 					return true
 				}
 			}
 		}
 	}
 	return false
+}
+
+// generateETag creates a weak ETag based on file path
+func generateETag(path string) string {
+	// Use path as basis for ETag (in production, you'd use file content hash)
+	// This is a weak ETag since we don't have access to file contents here
+	h := sha256.Sum256([]byte(path))
+	return `W/"` + hex.EncodeToString(h[:8]) + `"`
 }
 
 func isAlphanumeric(s string) bool {
