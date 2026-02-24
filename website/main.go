@@ -7,12 +7,19 @@ import (
 	"os"
 	"strconv"
 	"strings"
+	"sync"
 	"time"
 
 	_ "website/routes" // Import routes to trigger init()
 
 	"github.com/aydenstechdungeon/gospa"
 	"github.com/gofiber/fiber/v2"
+)
+
+// Cached file hashes for ETags - computed once at startup for static files
+var (
+	fileHashCache = make(map[string]string)
+	hashCacheMu   sync.RWMutex
 )
 
 func main() {
@@ -61,6 +68,24 @@ func cacheMiddleware(c *fiber.Ctx) error {
 	isImage := isImageFile(path)
 
 	if isStatic || isImage {
+		// Special handling for docs search index - aggressive caching with immutable
+		if strings.HasSuffix(path, "/docs_search_index.json") {
+			c.Set("Cache-Control", "public, max-age=31536000, immutable")
+			c.Set("Vary", "Accept-Encoding")
+
+			// Generate content-based ETag
+			etag := generateFileETag(path)
+			if etag != "" {
+				c.Set("ETag", etag)
+				if match := c.Get("If-None-Match"); match != "" {
+					if strings.Contains(match, etag) {
+						return c.SendStatus(fiber.StatusNotModified)
+					}
+				}
+			}
+			return c.Next()
+		}
+
 		// Static assets with content hash: 1 year cache, immutable
 		if hasContentHash(path) {
 			c.Set("Cache-Control", "public, max-age=31536000, immutable")
@@ -147,6 +172,36 @@ func generateETag(path string) string {
 	// This is a weak ETag since we don't have access to file contents here
 	h := sha256.Sum256([]byte(path))
 	return `W/"` + hex.EncodeToString(h[:8]) + `"`
+}
+
+// generateFileETag creates a strong ETag based on file content hash (cached)
+func generateFileETag(path string) string {
+	// Check cache first
+	hashCacheMu.RLock()
+	if hash, ok := fileHashCache[path]; ok {
+		hashCacheMu.RUnlock()
+		return `"` + hash + `"`
+	}
+	hashCacheMu.RUnlock()
+
+	// Try to read file and compute hash
+	filePath := "." + path // Convert URL path to file path
+	if info, err := os.Stat(filePath); err == nil && !info.IsDir() {
+		if data, err := os.ReadFile(filePath); err == nil {
+			h := sha256.Sum256(data)
+			hash := hex.EncodeToString(h[:8])
+
+			// Cache the hash
+			hashCacheMu.Lock()
+			fileHashCache[path] = hash
+			hashCacheMu.Unlock()
+
+			return `"` + hash + `"`
+		}
+	}
+
+	// Fallback to path-based ETag
+	return generateETag(path)
 }
 
 func isAlphanumeric(s string) bool {
