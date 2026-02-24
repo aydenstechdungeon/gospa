@@ -1,0 +1,151 @@
+package starter
+
+// Skeleton is a loading placeholder component
+templ Skeleton(props SkeletonProps) {
+	<div
+		id={ props.ID }
+		class={ "bg-gray-200 " + SkeletonVariantClasses(props.Variant) + " " + props.Class + " " + skeletonAnimationClass(props.Animated) }
+		style={ skeletonStyle(props.Width, props.Height) }
+		aria-hidden="true"
+	>
+	</div>
+}
+
+// skeletonAnimationClass returns animation class
+func skeletonAnimationClass(animated bool) string {
+	if animated {
+		return "animate-pulse"
+	}
+	return ""
+}
+
+// skeletonStyle returns inline style for dimensions
+func skeletonStyle(width, height string) string {
+	style := ""
+	if width != "" {
+		style += "width:" + width + ";"
+	}
+	if height != "" {
+		style += "height:" + height + ";"
+	}
+	return style
+}
+
+// SkeletonText is a multi-line text skeleton
+templ SkeletonText(props SkeletonTextProps) {
+	<div id={ props.ID } class={ "space-y-2 " + props.Class } aria-hidden="true">
+		for i := 0; i < props.Lines; i++ {
+			<div
+				class="bg-gray-200 rounded animate-pulse"
+				style={ skeletonTextStyle(i, props.Lines, props.LineHeight, props.LastLineWidth) }
+			></div>
+		}
+	</div>
+}
+
+// skeletonTextStyle returns style for text skeleton line
+func skeletonTextStyle(line, totalLines int, lineHeight, lastLineWidth string) string {
+	style := "height:" + lineHeight + ";"
+	if line == totalLines-1 && lastLineWidth != "" {
+		style += "width:" + lastLineWidth + ";"
+	} else {
+		style += "width:100%;"
+	}
+	return style
+}
+
+// SkeletonCard is a card skeleton placeholder
+templ SkeletonCard(props SkeletonCardProps) {
+	<div id={ props.ID } class={ "bg-white rounded-lg shadow-md overflow-hidden " + props.Class } aria-hidden="true">
+		if props.ShowImage {
+			<div class="bg-gray-200 animate-pulse" style={ "height:" + props.ImageHeight }></div>
+		}
+		<div class="p-4 space-y-4">
+			if props.ShowAvatar {
+				<div class="flex items-center space-x-3">
+					<div class="w-10 h-10 bg-gray-200 rounded-full animate-pulse"></div>
+					<div class="flex-1 space-y-2">
+						<div class="h-4 bg-gray-200 rounded animate-pulse w-1/4"></div>
+						<div class="h-3 bg-gray-200 rounded animate-pulse w-1/3"></div>
+					</div>
+				</div>
+			}
+			if props.ShowTitle {
+				<div class="h-5 bg-gray-200 rounded animate-pulse w-3/4"></div>
+			}
+			if props.ShowDescription {
+				<div class="space-y-2">
+					for i := 0; i < props.DescriptionLines; i++ {
+						<div class="h-3 bg-gray-200 rounded animate-pulse" style={ skeletonTextStyle(i, props.DescriptionLines, "0.75rem", "60%") }></div>
+					}
+				</div>
+			}
+		</div>
+	</div>
+}
+
+// SkeletonTable is a table skeleton placeholder
+templ SkeletonTable(props SkeletonTableProps) {
+	<div id={ props.ID } class={ "overflow-hidden " + props.Class } aria-hidden="true">
+		<table class="w-full">
+			if props.ShowHeader {
+				<thead>
+					<tr>
+						for i := 0; i < props.Columns; i++ {
+							<th class="p-3">
+								<div class="h-4 bg-gray-200 rounded animate-pulse"></div>
+							</th>
+						}
+					</tr>
+				</thead>
+			}
+			<tbody>
+				for i := 0; i < props.Rows; i++ {
+					<tr class="border-t border-gray-100">
+						for j := 0; j < props.Columns; j++ {
+							<td class="p-3">
+								<div class="h-4 bg-gray-200 rounded animate-pulse"></div>
+							</td>
+						}
+					</tr>
+				}
+			</tbody>
+		</table>
+	</div>
+}
+
+// SkeletonList is a list skeleton placeholder
+templ SkeletonList(count int, showAvatar bool) {
+	<div class="space-y-3" aria-hidden="true">
+		for i := 0; i < count; i++ {
+			<div class="flex items-center space-x-3">
+				if showAvatar {
+					<div class="w-10 h-10 bg-gray-200 rounded-full animate-pulse flex-shrink-0"></div>
+				}
+				<div class="flex-1 space-y-2">
+					<div class="h-4 bg-gray-200 rounded animate-pulse w-3/4"></div>
+					<div class="h-3 bg-gray-200 rounded animate-pulse w-1/2"></div>
+				</div>
+			</div>
+		}
+	</div>
+}
+
+// SkeletonAvatar is an avatar skeleton placeholder
+templ SkeletonAvatar(size string) {
+	<div class={ "bg-gray-200 rounded-full animate-pulse " + skeletonAvatarSizeClass(size) } aria-hidden="true"></div>
+}
+
+// skeletonAvatarSizeClass returns size class for avatar
+func skeletonAvatarSizeClass(size string) string {
+	switch size {
+	case "sm":
+		return "w-8 h-8"
+	case "lg":
+		return "w-16 h-16"
+	case "xl":
+		return "w-24 h-24"
+	default:
+		return "w-10 h-10"
+	}
+}

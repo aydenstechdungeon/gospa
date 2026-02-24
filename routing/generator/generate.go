@@ -56,6 +56,16 @@ func Generate(routesDir string) error {
 		fmt.Printf("Warning: failed to generate TypeScript definitions: %v\n", err)
 	}
 
+	// Generate type-safe route helpers
+	modulePath := getModulePath(routesDir)
+	routeGen := NewRouteTypeScriptGenerator(routes, modulePath)
+	generatedDir := filepath.Join(routesDir, "..", "generated")
+	if err := os.MkdirAll(generatedDir, 0755); err != nil {
+		fmt.Printf("Warning: failed to create generated directory: %v\n", err)
+	} else if err := routeGen.GenerateRoutesFile(generatedDir); err != nil {
+		fmt.Printf("Warning: failed to generate route helpers: %v\n", err)
+	}
+
 	fmt.Printf("Generated %s with %d routes\n", outputPath, len(routes))
 	return nil
 }

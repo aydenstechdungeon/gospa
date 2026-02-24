@@ -1,0 +1,136 @@
+package starter
+
+// Input renders a text input with label and helper text
+templ Input(props InputProps) {
+	props = MergeInputProps(props)
+	<div class="w-full">
+		if props.Label != "" {
+			<label for={ props.ID } class={ LabelClasses(props) }>
+				{ props.Label }
+				if props.Required {
+					<span class="text-red-500 ml-1">*</span>
+				}
+			</label>
+		}
+		<input
+			type={ string(props.Type) }
+			id={ props.ID }
+			name={ props.Name }
+			value={ props.Value }
+			placeholder={ props.Placeholder }
+			class={ InputClasses(props) }
+			if props.Disabled {
+				disabled
+			}
+			if props.ReadOnly {
+				readonly
+			}
+			if props.Required {
+				required
+			}
+			if props.AutoFocus {
+				autofocus
+			}
+			if props.Min != "" {
+				min={ props.Min }
+			}
+			if props.Max != "" {
+				max={ props.Max }
+			}
+			if props.Step != "" {
+				step={ props.Step }
+			}
+			if props.Pattern != "" {
+				pattern={ props.Pattern }
+			}
+			if props.MaxLength > 0 {
+				maxlength={ props.MaxLength }
+			}
+			if props.MinLength > 0 {
+				minlength={ props.MinLength }
+			}
+			if props.AutoComplete != "" {
+				autocomplete={ props.AutoComplete }
+			}
+		/>
+		if props.ErrorMessage != "" && props.Error {
+			<p class={ HelperTextClasses(props) }>{ props.ErrorMessage }</p>
+		} else if props.HelperText != "" {
+			<p class={ HelperTextClasses(props) }>{ props.HelperText }</p>
+		}
+	</div>
+}
+
+// EmailInput is a convenience component for email inputs
+templ EmailInput(props InputProps) {
+	props.Type = InputEmail
+	@Input(props) {}
+}
+
+// PasswordInput is a convenience component for password inputs
+templ PasswordInput(props InputProps) {
+	props.Type = InputPassword
+	@Input(props) {}
+}
+
+// SearchInput is a convenience component for search inputs
+templ SearchInput(props InputProps) {
+	props.Type = InputSearch
+	@Input(props) {}
+}
+
+// NumberInput is a convenience component for number inputs
+templ NumberInput(props InputProps) {
+	props.Type = InputNumber
+	@Input(props) {}
+}
+
+// DateInput is a convenience component for date inputs
+templ DateInput(props InputProps) {
+	props.Type = InputDate
+	@Input(props) {}
+}
+
+// TextArea renders a multi-line text input
+templ TextArea(props InputProps) {
+	props = MergeInputProps(props)
+	<div class="w-full">
+		if props.Label != "" {
+			<label for={ props.ID } class={ LabelClasses(props) }>
+				{ props.Label }
+				if props.Required {
+					<span class="text-red-500 ml-1">*</span>
+				}
+			</label>
+		}
+		<textarea
+			id={ props.ID }
+			name={ props.Name }
+			placeholder={ props.Placeholder }
+			class={ InputClasses(props) + " resize-y min-h-[100px]" }
+			if props.Disabled {
+				disabled
+			}
+			if props.ReadOnly {
+				readonly
+			}
+			if props.Required {
+				required
+			}
+			if props.AutoFocus {
+				autofocus
+			}
+			if props.MaxLength > 0 {
+				maxlength={ props.MaxLength }
+			}
+			if props.MinLength > 0 {
+				minlength={ props.MinLength }
+			}
+		>{ props.Value }</textarea>
+		if props.ErrorMessage != "" && props.Error {
+			<p class={ HelperTextClasses(props) }>{ props.ErrorMessage }</p>
+		} else if props.HelperText != "" {
+			<p class={ HelperTextClasses(props) }>{ props.HelperText }</p>
+		}
+	</div>
+}

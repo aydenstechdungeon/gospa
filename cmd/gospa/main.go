@@ -61,6 +61,12 @@ func main() {
 			os.Exit(1)
 		}
 		printer.Success("Added %s feature", feature)
+	case "prune":
+		handlePruneCommand(printer)
+	case "state:analyze":
+		handleStateAnalyzeCommand(printer)
+	case "state:tree":
+		handleStateTreeCommand(printer)
 	case "version", "-v", "--version":
 		fmt.Printf("GoSPA v%s\n", Version)
 	case "help", "-h", "--help":
@@ -219,4 +225,141 @@ templ Page() {
 	fmt.Println("    gospa generate")
 	fmt.Println("    go run ../../cmd/gospa")
 	fmt.Println()
+}
+
+// handlePruneCommand handles the prune command.
+func handlePruneCommand(printer *cli.ColorPrinter) {
+	config := &cli.PruneConfig{}
+
+	// Parse flags
+	args := os.Args[2:]
+	for i := 0; i < len(args); i++ {
+		switch args[i] {
+		case "--root", "-r":
+			if i+1 < len(args) {
+				config.RootDir = args[i+1]
+				i++
+			}
+		case "--output", "-o":
+			if i+1 < len(args) {
+				config.OutputDir = args[i+1]
+				i++
+			}
+		case "--report", "-R":
+			if i+1 < len(args) {
+				config.ReportFile = args[i+1]
+				i++
+			}
+		case "--keep-unused", "-k":
+			config.KeepUnused = true
+		case "--aggressive", "-a":
+			config.Aggressive = true
+		case "--dry-run", "-d":
+			config.DryRun = true
+		case "--verbose", "-v":
+			config.Verbose = true
+		case "--json", "-j":
+			config.JSONOutput = true
+		case "--exclude", "-e":
+			if i+1 < len(args) {
+				config.Exclude = append(config.Exclude, args[i+1])
+				i++
+			}
+		case "--include", "-i":
+			if i+1 < len(args) {
+				config.Include = append(config.Include, args[i+1])
+				i++
+			}
+		case "--help", "-h":
+			printPruneUsage(printer)
+			return
+		}
+	}
+
+	cli.Prune(config)
+}
+
+// handleStateAnalyzeCommand handles the state:analyze command.
+func handleStateAnalyzeCommand(printer *cli.ColorPrinter) {
+	config := &cli.PruneConfig{}
+
+	// Parse flags
+	args := os.Args[2:]
+	for i := 0; i < len(args); i++ {
+		switch args[i] {
+		case "--root", "-r":
+			if i+1 < len(args) {
+				config.RootDir = args[i+1]
+				i++
+			}
+		case "--json", "-j":
+			config.JSONOutput = true
+		case "--verbose", "-v":
+			config.Verbose = true
+		case "--help", "-h":
+			printer.Info("Usage: gospa state:analyze [options]")
+			fmt.Println("\nOptions:")
+			fmt.Println("  --root, -r <dir>    Root directory to analyze")
+			fmt.Println("  --json, -j          Output as JSON")
+			fmt.Println("  --verbose, -v       Verbose output")
+			return
+		}
+	}
+
+	cli.StateAnalyze(config)
+}
+
+// handleStateTreeCommand handles the state:tree command.
+func handleStateTreeCommand(printer *cli.ColorPrinter) {
+	var stateFile string
+	var usedPaths []string
+	jsonOut := false
+
+	// Parse flags
+	args := os.Args[2:]
+	for i := 0; i < len(args); i++ {
+		switch args[i] {
+		case "--file", "-f":
+			if i+1 < len(args) {
+				stateFile = args[i+1]
+				i++
+			}
+		case "--used", "-u":
+			if i+1 < len(args) {
+				usedPaths = append(usedPaths, args[i+1])
+				i++
+			}
+		case "--json", "-j":
+			jsonOut = true
+		case "--help", "-h":
+			printer.Info("Usage: gospa state:tree [options]")
+			fmt.Println("\nOptions:")
+			fmt.Println("  --file, -f <file>   State file to analyze")
+			fmt.Println("  --used, -u <path>   Used state paths (can be repeated)")
+			fmt.Println("  --json, -j          Output as JSON")
+			return
+		}
+	}
+
+	cli.StateTree(stateFile, usedPaths, jsonOut)
+}
+
+// printPruneUsage prints usage for the prune command.
+func printPruneUsage(printer *cli.ColorPrinter) {
+	printer.Info("Usage: gospa prune [options]")
+	fmt.Println("\nOptions:")
+	fmt.Println("  --root, -r <dir>       Root directory to analyze")
+	fmt.Println("  --output, -o <dir>     Output directory for pruned files")
+	fmt.Println("  --report, -R <file>    Write pruning report to file")
+	fmt.Println("  --keep-unused, -k      Keep unused state (only analyze)")
+	fmt.Println("  --aggressive, -a       Enable aggressive pruning")
+	fmt.Println("  --exclude, -e <pattern> Exclude patterns (can be repeated)")
+	fmt.Println("  --include, -i <pattern> Include patterns (can be repeated)")
+	fmt.Println("  --dry-run, -d          Analyze without making changes")
+	fmt.Println("  --verbose, -v          Verbose output")
+	fmt.Println("  --json, -j             Output as JSON")
+	fmt.Println("\nExamples:")
+	fmt.Println("  gospa prune --dry-run")
+	fmt.Println("  gospa prune --report pruned.json")
+	fmt.Println("  gospa prune --aggressive --output ./pruned")
 }

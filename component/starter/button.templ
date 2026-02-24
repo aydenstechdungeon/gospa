@@ -1,0 +1,100 @@
+package starter
+
+// LoadingSpinner renders a loading spinner icon
+templ loadingSpinner() {
+	<svg class="animate-spin -ml-1 mr-2 h-4 w-4" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+		<circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
+		<path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+	</svg>
+}
+
+// Button renders a button component with the given props and content
+templ Button(props ButtonProps) {
+	props = MergeButtonProps(props)
+	if props.Href != "" {
+		<a
+			href={ props.Href }
+			target={ props.Target }
+			id={ props.ID }
+			class={ ButtonClasses(props) }
+			if props.Disabled {
+				aria-disabled="true"
+				tabindex="-1"
+			}
+			if props.Attributes != nil {
+				{ props.Attributes... }
+			}
+		>
+			if props.Loading {
+				@loadingSpinner()
+			}
+			{ children... }
+		</a>
+	} else {
+		<button
+			type={ props.Type }
+			id={ props.ID }
+			class={ ButtonClasses(props) }
+			if props.Disabled || props.Loading {
+				disabled
+			}
+			if props.Attributes != nil {
+				{ props.Attributes... }
+			}
+		>
+			if props.Loading {
+				@loadingSpinner()
+			}
+			{ children... }
+		</button>
+	}
+}
+
+// PrimaryButton is a convenience component for primary buttons
+templ PrimaryButton(props ButtonProps) {
+	props.Variant = ButtonPrimary
+	@Button(props) {
+		{ children... }
+	}
+}
+
+// SecondaryButton is a convenience component for secondary buttons
+templ SecondaryButton(props ButtonProps) {
+	props.Variant = ButtonSecondary
+	@Button(props) {
+		{ children... }
+	}
+}
+
+// OutlineButton is a convenience component for outline buttons
+templ OutlineButton(props ButtonProps) {
+	props.Variant = ButtonOutline
+	@Button(props) {
+		{ children... }
+	}
+}
+
+// GhostButton is a convenience component for ghost buttons
+templ GhostButton(props ButtonProps) {
+	props.Variant = ButtonGhost
+	@Button(props) {
+		{ children... }
+	}
+}
+
+// DangerButton is a convenience component for danger buttons
+templ DangerButton(props ButtonProps) {
+	props.Variant = ButtonDanger
+	@Button(props) {
+		{ children... }
+	}
+}
+
+// IconButton renders a button with only an icon
+templ IconButton(props ButtonProps) {
+	props = MergeButtonProps(props)
+	props.Class = "p-2 " + props.Class
+	@Button(props) {
+		{ children... }
+	}
+}
