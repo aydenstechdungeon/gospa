@@ -186,7 +186,11 @@ new Rune<T>(initialValue: T)
 | `set()` | `(value: T) => void` | Set new value |
 | `update()` | `(fn: (current: T) => T) => void` | Update using function |
 | `subscribe()` | `(fn: Subscriber<T>) => Unsubscribe` | Subscribe to changes |
-| `toJSON()` | `() => { id: number; value: T }` | Serialize for JSON |
+| `peek()` | `() => T` | Get value without tracking dependency |
+| `toString()`| `() => string` | String representation |
+| `valueOf()` | `() => T` | Primitive value |
+| `ID()` | `() => string` | Unique internal identifier |
+| `toJSON()` | `() => { id: string; value: T }` | Serialize for JSON |
 
 #### Example: Object State
 
@@ -243,7 +247,9 @@ new Derived<T>(compute: () => T)
 |--------|-----------|-------------|
 | `get()` | `() => T` | Get computed value |
 | `subscribe()` | `(fn: Subscriber<T>) => Unsubscribe` | Subscribe to changes |
+| `peek()` | `() => T` | Get value without tracking dependency |
 | `dispose()` | `() => void` | Cleanup and release dependencies |
+| `toJSON()` | `() => T` | Result of computation |
 
 #### Example: Multi-dependency
 
@@ -301,6 +307,7 @@ The function can return a cleanup function that runs before the next effect exec
 
 | Method | Signature | Description |
 |--------|-----------|-------------|
+| `isActive` | `boolean` | (Property) Returns if effect is currently active |
 | `pause()` | `() => void` | Stop reacting to changes |
 | `resume()` | `() => void` | Resume reacting (immediately re-runs) |
 | `dispose()` | `() => void` | Permanently cleanup |
@@ -364,11 +371,15 @@ new StateMap()
 
 | Method | Signature | Description |
 |--------|-----------|-------------|
+| `size` | `number` | (Property) Number of runes in map |
 | `set()` | `<T>(key: string, value: T) => Rune<T>` | Create or update rune |
 | `get()` | `<T>(key: string) => Rune<T> \| undefined` | Get rune by key |
 | `has()` | `(key: string) => boolean` | Check if key exists |
 | `delete()` | `(key: string) => boolean` | Delete rune by key |
 | `clear()` | `() => void` | Remove all runes |
+| `keys()` | `() => IterableIterator<string>` | Iterator for keys |
+| `values()` | `() => IterableIterator<Rune<any>>` | Iterator for runes |
+| `entries()`| `() => IterableIterator<[string, Rune<any>]>`| Iterator for pairs |
 | `toJSON()` | `() => Record<string, unknown>` | Serialize all values |
 | `fromJSON()` | `(data: Record<string, unknown>) => void` | Restore from JSON |
 
@@ -947,17 +958,6 @@ document.body.appendChild(div);
 
 ### setSanitizer
 
-Configure HTML sanitizer for `type: 'html'` bindings.
-
-```typescript
-import { setSanitizer } from '@gospa/runtime';
-
-// Custom sanitizer
-setSanitizer(async (html) => {
-  return mySanitizer.sanitize(html);
-});
-
-// Using DOMPurify
 import DOMPurify from 'dompurify';
 setSanitizer((html) => DOMPurify.sanitize(html));
 ```
@@ -1002,6 +1002,16 @@ interface NavigationOptions {
 ---
 
 ### back/forward/go
+
+Navigation history methods.
+
+```typescript
+import { back, forward, go } from '@gospa/runtime';
+
+back();      // Equivalent to history.back()
+forward();   // Equivalent to history.forward()
+go(-2);      // Equivalent to history.go(-2)
+```
 
 History navigation.
 
@@ -1076,6 +1086,17 @@ unsub1();
 unsub2();
 ```
 
+#### Global DOM Event
+
+For scripts outside the GoSPA lifecycle (like simple script tags), a global `gospa:navigated` event is dispatched on the `document` whenever a navigation completes.
+
+```javascript
+document.addEventListener('gospa:navigated', (event) => {
+  const { path } = event.detail;
+  console.log('DOM informed of navigation to:', path);
+});
+```
+
 ---
 
 ## Event Handling
@@ -1121,6 +1142,14 @@ unsub1();
 ---
 
 ### offAll
+
+Remove all event listeners registered via `on()`.
+
+```typescript
+import { offAll } from '@gospa/runtime';
+
+offAll();
+```
 
 Remove all event listeners from a target.
 

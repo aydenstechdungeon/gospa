@@ -1,0 +1,145 @@
+package islands
+
+import "website/components"
+
+templ Page() {
+	<div class="space-y-12">
+		<header>
+			<h1 class="text-4xl font-bold tracking-tight mb-4 text-transparent bg-clip-text bg-gradient-to-r from-[var(--accent-primary)] to-[var(--accent-secondary)]">Islands & Streaming</h1>
+			<p class="text-xl text-[var(--text-secondary)] leading-relaxed">
+				Selective hydration and progressive SSR for maximum performance. Ship minimal JavaScript by default and hydrate only interactive components.
+			</p>
+		</header>
+
+		<section class="space-y-8">
+			<div>
+				<h2 class="text-2xl font-bold mb-4 border-b border-[var(--border)] pb-2 italic mono">Hydration Modes</h2>
+				<p class="text-[var(--text-secondary)] mb-4">Control when your components become interactive using <code class="bg-[var(--surface)] px-1 rounded">data-gospa-mode</code>:</p>
+				<div class="grid md:grid-cols-2 gap-4 mb-6">
+					<div class="p-4 rounded-xl bg-[var(--bg-secondary)] border border-[var(--border)]">
+						<h3 class="font-bold border-b border-[var(--border)] pb-1 mb-2">immediate</h3>
+						<p class="text-sm text-[var(--text-secondary)]">Hydrate as soon as the script loads (default).</p>
+					</div>
+					<div class="p-4 rounded-xl bg-[var(--bg-secondary)] border border-[var(--border)]">
+						<h3 class="font-bold border-b border-[var(--border)] pb-1 mb-2">visible</h3>
+						<p class="text-sm text-[var(--text-secondary)]">Hydrate when element enters viewport (Intersection Observer).</p>
+					</div>
+					<div class="p-4 rounded-xl bg-[var(--bg-secondary)] border border-[var(--border)]">
+						<h3 class="font-bold border-b border-[var(--border)] pb-1 mb-2">idle</h3>
+						<p class="text-sm text-[var(--text-secondary)]">Hydrate when browser is idle (requestIdleCallback).</p>
+					</div>
+					<div class="p-4 rounded-xl bg-[var(--bg-secondary)] border border-[var(--border)]">
+						<h3 class="font-bold border-b border-[var(--border)] pb-1 mb-2">interaction</h3>
+						<p class="text-sm text-[var(--text-secondary)]">Hydrate on first click, focus, or hover.</p>
+					</div>
+					<div class="p-4 rounded-xl bg-[var(--bg-secondary)] border border-[var(--border)]">
+						<h3 class="font-bold border-b border-[var(--border)] pb-1 mb-2">lazy</h3>
+						<p class="text-sm text-[var(--text-secondary)]">Hydrate only when manually triggered via API.</p>
+					</div>
+				</div>
+				@components.CodeBlock(`<div data-gospa-island="Counter" 
+     data-gospa-mode="visible"
+     data-gospa-priority="high"
+     data-gospa-props='{"initial": 10}'>
+    <!-- Server-rendered content goes here -->
+</div>`, "html", "counter.templ")
+			</div>
+
+			<div>
+				<h2 class="text-2xl font-bold mb-4 border-b border-[var(--border)] pb-2 italic mono">Priority Levels</h2>
+				<p class="text-[var(--text-secondary)] mb-4">When multiple islands are scheduled, the PriorityScheduler ensures critical components load first.</p>
+				<div class="overflow-x-auto mb-6">
+					<table class="w-full text-sm text-left text-[var(--text-secondary)]">
+						<thead class="text-xs uppercase bg-[var(--surface)] text-[var(--text-primary)]">
+							<tr>
+								<th class="px-4 py-2">Level</th>
+								<th class="px-4 py-2">Value</th>
+								<th class="px-4 py-2">Use Case</th>
+							</tr>
+						</thead>
+						<tbody>
+							<tr class="border-b border-[var(--border)]"><td class="px-4 py-2 font-mono">critical</td><td class="px-4 py-2">100</td><td class="px-4 py-2">Navigation, search, purchase buttons.</td></tr>
+							<tr class="border-b border-[var(--border)]"><td class="px-4 py-2 font-mono">high</td><td class="px-4 py-2">75</td><td class="px-4 py-2">Above-the-fold interactive elements.</td></tr>
+							<tr class="border-b border-[var(--border)]"><td class="px-4 py-2 font-mono">normal</td><td class="px-4 py-2">50</td><td class="px-4 py-2">(Default) General interactive components.</td></tr>
+							<tr class="border-b border-[var(--border)]"><td class="px-4 py-2 font-mono">low</td><td class="px-4 py-2">25</td><td class="px-4 py-2">Below-the-fold or non-essential widgets.</td></tr>
+						</tbody>
+					</table>
+				</div>
+				@components.CodeBlock(`import { getPriorityScheduler } from '@gospa/runtime';
+
+const scheduler = getPriorityScheduler();
+scheduler.forceHydrate('gospa-island-123');
+
+console.log(scheduler.getStats()); 
+// { total: 10, pending: 2, hydrated: 8, ... }`, "typescript", "app.ts")
+			</div>
+
+			<div>
+				<h2 class="text-2xl font-bold mb-4 border-b border-[var(--border)] pb-2 italic mono">Streaming SSR</h2>
+				<p class="text-[var(--text-secondary)] mb-4">Send the HTML skeleton immediately and stream in islands and state updates as they resolve.</p>
+				@components.CodeBlock(`// Server-side
+app.Get("/dashboard", func(c *fiber.Ctx) error {
+    return fiber.RenderStream(c, DashboardPage())
+})`, "go", "main.go")
+			</div>
+
+			<div>
+				<h2 class="text-2xl font-bold mb-4 border-b border-[var(--border)] pb-2 italic mono">Streaming Features</h2>
+				<ul class="list-disc list-inside space-y-2 text-[var(--text-secondary)] mb-6">
+					<li><strong class="text-[var(--text-primary)]">Progressive Hydration</strong>: Islands hydrate as soon as their HTML chunk arrives.</li>
+					<li><strong class="text-[var(--text-primary)]">Out-of-Order Updates</strong>: Stream content to specific placeholders after main page renders.</li>
+					<li><strong class="text-[var(--text-primary)]">Automatic State Sync</strong>: The <code class="bg-[var(--surface)] px-1 rounded">__GOSPA_STATE__</code> is updated automatically as chunks arrive.</li>
+				</ul>
+			</div>
+
+			<div>
+				<h2 class="text-2xl font-bold mb-4 border-b border-[var(--border)] pb-2 italic mono">Client-Side Streaming</h2>
+				<p class="text-[var(--text-secondary)] mb-4">The StreamingManager handles incoming chunks automatically:</p>
+				@components.CodeBlock(`import { initStreaming } from '@gospa/runtime';
+
+const streamer = initStreaming({
+  enableLogging: true,
+  hydrationTimeout: 5000
+});
+
+document.addEventListener('gospa:hydrated', (ev) => {
+  console.log('Island hydrated:', ev.detail.island.name);
+});`, "typescript", "streaming.ts")
+			</div>
+
+			<div>
+				<h2 class="text-2xl font-bold mb-4 border-b border-[var(--border)] pb-2 italic mono">Chunk Types</h2>
+				<div class="overflow-x-auto">
+					<table class="w-full text-sm text-left text-[var(--text-secondary)]">
+						<thead class="text-xs uppercase bg-[var(--surface)] text-[var(--text-primary)]">
+							<tr>
+								<th class="px-4 py-2">Type</th>
+								<th class="px-4 py-2">Action</th>
+							</tr>
+						</thead>
+						<tbody>
+							<tr class="border-b border-[var(--border)]"><td class="px-4 py-2 font-mono">html</td><td class="px-4 py-2">Updates a specific DOM element by ID.</td></tr>
+							<tr class="border-b border-[var(--border)]"><td class="px-4 py-2 font-mono">island</td><td class="px-4 py-2">Registers and schedules an island for hydration.</td></tr>
+							<tr class="border-b border-[var(--border)]"><td class="px-4 py-2 font-mono">script</td><td class="px-4 py-2">Dynamically injects and executes a script.</td></tr>
+							<tr class="border-b border-[var(--border)]"><td class="px-4 py-2 font-mono">state</td><td class="px-4 py-2">Updates the global reactive state.</td></tr>
+							<tr class="border-b border-[var(--border)]"><td class="px-4 py-2 font-mono">error</td><td class="px-4 py-2">Reports a server-side rendering error.</td></tr>
+						</tbody>
+					</table>
+				</div>
+			</div>
+
+			<div>
+				<h2 class="text-2xl font-bold mb-4 border-b border-[var(--border)] pb-2 italic mono">Island Module Convention</h2>
+				<p class="text-[var(--text-secondary)] mb-4">Islands should export an object with <code class="bg-[var(--surface)] px-1 rounded">hydrate</code> or <code class="bg-[var(--surface)] px-1 rounded">mount</code> functions:</p>
+				@components.CodeBlock(`// islands/Counter.ts
+export default {
+    hydrate(element: Element, props: any, state: any) {
+        // Initialize your framework (Svelte, Preact, Vanilla)
+        console.log('Hydrating Counter with props:', props);
+    }
+}`, "typescript", "islands/Counter.ts")
+				<p class="text-[var(--text-secondary)] mt-4">By default, the IslandManager expects modules at <code class="bg-[var(--surface)] px-1 rounded">/islands/{"{name}"}.js</code>. Customize in <code class="bg-[var(--surface)] px-1 rounded">initIslands()</code>.</p>
+			</div>
+		</section>
+	</div>
+}

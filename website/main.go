@@ -33,6 +33,14 @@ func main() {
 		HydrationMode:    "immediate",
 	})
 
+	// Legacy redirects after documentation restructuring
+	app.Get("/docs/getstarted", func(c *fiber.Ctx) error {
+		return c.Redirect("/docs/getstarted/installation", fiber.StatusMovedPermanently)
+	})
+	app.Get("/docs/client-runtime", func(c *fiber.Ctx) error {
+		return c.Redirect("/docs/client-runtime/overview", fiber.StatusMovedPermanently)
+	})
+
 	// Add cache headers middleware for static assets and pages
 	if !devMode {
 		app.Use(cacheMiddleware)

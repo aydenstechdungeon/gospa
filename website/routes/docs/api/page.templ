@@ -14,10 +14,12 @@ templ Page() {
 		<nav class="flex flex-wrap gap-4 p-4 rounded-2xl bg-[var(--bg-secondary)] border border-[var(--border)]">
 			<a href="#app-initialization" class="text-sm font-medium hover:text-[var(--accent-primary)] transition-colors">App Initialization</a>
 			<a href="#server-lifecycle" class="text-sm font-medium hover:text-[var(--accent-primary)] transition-colors">Server Lifecycle</a>
+			<a href="#routing-middleware" class="text-sm font-medium hover:text-[var(--accent-primary)] transition-colors">Routing & Middleware</a>
 			<a href="#state-management" class="text-sm font-medium hover:text-[var(--accent-primary)] transition-colors">State Management</a>
-			<a href="#websocket-messaging" class="text-sm font-medium hover:text-[var(--accent-primary)] transition-colors">WebSocket Messaging</a>
+			<a href="#routing-package" class="text-sm font-medium hover:text-[var(--accent-primary)] transition-colors">Routing Package</a>
+			<a href="#fiber-package" class="text-sm font-medium hover:text-[var(--accent-primary)] transition-colors">Fiber Package</a>
 			<a href="#templ-utilities" class="text-sm font-medium hover:text-[var(--accent-primary)] transition-colors">Templ Utilities</a>
-			<a href="#layout-system" class="text-sm font-medium hover:text-[var(--accent-primary)] transition-colors">Layout System</a>
+			<a href="#client-runtime" class="text-sm font-medium hover:text-[var(--accent-primary)] transition-colors">Client Runtime</a>
 		</nav>
 
 		<section id="app-initialization" class="space-y-8">
@@ -70,6 +72,22 @@ app := gospa.New(config)`, "go", "main.go")
 			<h2 class="text-2xl font-bold border-b border-[var(--border)] pb-2">Routing & Middleware</h2>
 
 			<div>
+				<h3 class="text-xl font-bold mb-4 mono italic">app.Scan()</h3>
+				<p class="text-[var(--text-secondary)] mb-4">Scans the routes directory or filesystem for <code class="mono">.templ</code> files.</p>
+				@components.CodeBlock(`if err := app.Scan(); err != nil {
+    log.Fatal(err)
+}`, "go", "main.go")
+			</div>
+
+			<div>
+				<h3 class="text-xl font-bold mb-4 mono italic">app.RegisterRoutes()</h3>
+				<p class="text-[var(--text-secondary)] mb-4">Registers all discovered file-based routes with the Fiber application.</p>
+				@components.CodeBlock(`if err := app.RegisterRoutes(); err != nil {
+    log.Fatal(err)
+}`, "go", "main.go")
+			</div>
+
+			<div>
 				<h3 class="text-xl font-bold mb-4 mono italic">app.Use(handlers...)</h3>
 				<p class="text-[var(--text-secondary)] mb-4">Adds middleware to the application (Fiber style).</p>
 				@components.CodeBlock(`app.Use(func(c *fiber.Ctx) error {
@@ -87,6 +105,20 @@ app := gospa.New(config)`, "go", "main.go")
 			</div>
 
 			<div>
+				<h3 class="text-xl font-bold mb-4 mono italic">app.HandleSSE(path, broker)</h3>
+				<p class="text-[var(--text-secondary)] mb-4">Registers a Server-Sent Events handler with the provided broker.</p>
+				@components.CodeBlock(`app.HandleSSE("/notifications", broker)`, "go", "main.go")
+			</div>
+
+			<div>
+				<h3 class="text-xl font-bold mb-4 mono italic">app.HandleWS(path, config)</h3>
+				<p class="text-[var(--text-secondary)] mb-4">Registers a WebSocket handler with specific configuration.</p>
+				@components.CodeBlock(`app.HandleWS("/ws", fiber.WSConfig{
+    OnConnect: func(c *fiber.WSClient) { ... }
+})`, "go", "main.go")
+			</div>
+
+			<div>
 				<h3 class="text-xl font-bold mb-4 mono italic">app.Static(prefix, root)</h3>
 				<p class="text-[var(--text-secondary)] mb-4">Registers a static file server.</p>
 				@components.CodeBlock(`app.Static("/assets", "./assets")`, "go", "main.go")
@@ -100,7 +132,11 @@ app := gospa.New(config)`, "go", "main.go")
 				<h3 class="text-xl font-bold mb-4 mono italic">gospa.NewRune(initialValue)</h3>
 				<p class="text-[var(--text-secondary)] mb-4">Creates a new reactive state variable of any type.</p>
 				@components.CodeBlock(`count := gospa.NewRune(0)
-name := gospa.NewRune("World")`, "go", "state.go")
+name := gospa.NewRune("World")
+
+// New methods
+id := count.ID()      // Unique identifier
+val := count.Peek()   // Read without tracking`, "go", "state.go")
 			</div>
 
 			<div>
@@ -117,6 +153,30 @@ name := gospa.NewRune("World")`, "go", "state.go")
 				@components.CodeBlock(`gospa.Batch(func() {
     count.Set(10)
     name.Set("GoSPA")
+})`, "go", "state.go")
+			</div>
+
+			<div>
+				<h3 class="text-xl font-bold mb-4 mono italic">StateMap Helpers</h3>
+				<p class="text-[var(--text-secondary)] mb-4">Advanced methods for managing reactive maps.</p>
+				@components.CodeBlock(`sm := state.NewStateMap()
+
+sm.AddAny("key", 123)    // Auto-creates rune
+m := sm.ToMap()          // plain map[string]any
+sm.ForEach(func(k, v) {  // Iterator
+    fmt.Println(k, v)
+})`, "go", "state.go")
+			</div>
+
+			<div>
+				<h3 class="text-xl font-bold mb-4 mono italic">StateValidator</h3>
+				<p class="text-[var(--text-secondary)] mb-4">Server-side validation for state updates.</p>
+				@components.CodeBlock(`v := state.NewStateValidator()
+v.AddValidator("email", func(v any) error {
+    if !strings.Contains(v.(string), "@") {
+        return errors.New("invalid email")
+    }
+    return nil
 })`, "go", "state.go")
 			</div>
 		</section>
@@ -182,6 +242,7 @@ hm.AddHeadLink("canonical", "https://example.com")`, "go", "head.go")
 						<li><code class="text-[var(--accent-secondary)]">templ.HTML(key)</code> - Bind inner HTML</li>
 						<li><code class="text-[var(--accent-secondary)]">templ.Value(key)</code> - Bind input value</li>
 						<li><code class="text-[var(--accent-secondary)]">templ.Checked(key)</code> - Bind checkbox state</li>
+						<li><code class="text-[var(--accent-secondary)]">templ.Bind(id, key)</code> - Generic attribute binding</li>
 					</ul>
 					<ul class="space-y-2 text-sm text-[var(--text-secondary)]">
 						<li><code class="text-[var(--accent-secondary)]">templ.TwoWayBind(key)</code> - Two-way form binding</li>
@@ -219,6 +280,308 @@ hm.AddHeadLink("canonical", "https://example.com")`, "go", "head.go")
 func (l *MyLoader) Load(ctx context.Context, params map[string]string) (map[string]any, error) {
     return map[string]any{"user": fetchUser()}, nil
 }`, "go", "loader.go")
+			</div>
+		</section>
+
+		<section id="routing-package" class="space-y-8">
+			<h2 class="text-2xl font-bold border-b border-[var(--border)] pb-2">Routing Package</h2>
+			<p class="text-[var(--text-secondary)]"><code class="mono text-[var(--accent-primary)]">github.com/aydenstechdungeon/gospa/routing</code></p>
+
+			<div>
+				<h3 class="text-xl font-bold mb-4 mono italic">Router</h3>
+				<p class="text-[var(--text-secondary)] mb-4">File-based router that scans <code class="mono">.templ</code> files.</p>
+				@components.CodeBlock(`// Create from directory
+router := routing.NewRouter(routesDir string)
+
+// Create from filesystem (hybrid approach)
+router := routing.NewRouter(routesFS fs.FS)
+
+// Scan routes directory
+err := router.Scan()
+
+// Match route
+route, params := router.Match(path string)
+
+// Match with layout chain
+route, params, layouts := router.MatchWithLayout(path string)
+
+// Get all routes
+routes := router.GetRoutes()
+
+// Get page routes only
+pages := router.GetPages()
+
+// Resolve layout chain for route
+layouts := router.ResolveLayoutChain(route *Route)`, "go", "routing.go")
+			</div>
+
+			<div>
+				<h3 class="text-xl font-bold mb-4 mono italic">Manual Router</h3>
+				<p class="text-[var(--text-secondary)] mb-4">For programmatic route registration.</p>
+				@components.CodeBlock(`router := routing.NewManualRouter()
+
+// Register routes
+router.GET(path string, handler Handler, middleware ...Middleware)
+router.POST(path string, handler Handler, middleware ...Middleware)
+router.PUT(path string, handler Handler, middleware ...Middleware)
+router.DELETE(path string, handler Handler, middleware ...Middleware)
+
+// Create route group
+group := router.Group(prefix string, middleware ...Middleware)
+group.GET("/subpath", handler)
+
+// Register all routes to Fiber
+router.RegisterToFiber(fiberApp *fiber.App)`, "go", "manual.go")
+			</div>
+
+			<div>
+				<h3 class="text-xl font-bold mb-4 mono italic">Params</h3>
+				<p class="text-[var(--text-secondary)] mb-4">Route parameter extraction and typed access.</p>
+				@components.CodeBlock(`type Params map[string]string
+
+// Basic access
+value := params.Get("id")
+value := params.GetDefault("id", "default")
+exists := params.Has("id")
+
+// Typed access (returns (T, error))
+intVal, err := params.Int("count")
+int64Val, err := params.Int64("id")
+floatVal, err := params.Float64("price")
+boolVal, err := params.Bool("active")
+
+// Slice (for catch-all params)
+sliceVal := params.Slice("path")`, "go", "params.go")
+			</div>
+
+			<div>
+				<h3 class="text-xl font-bold mb-4 mono italic">Route Registry</h3>
+				<p class="text-[var(--text-secondary)] mb-4">Register page and layout components.</p>
+				@components.CodeBlock(`// Register page component
+routing.RegisterPage(path string, fn ComponentFunc)
+routing.RegisterPageWithOptions(path string, fn ComponentFunc, opts RouteOptions)
+
+// Register layout component
+routing.RegisterLayout(path string, fn LayoutFunc)
+
+// Register root layout
+routing.RegisterRootLayout(fn LayoutFunc)
+
+// Get registered components
+pageFunc := routing.GetPage(path string)
+layoutFunc := routing.GetLayout(path string)
+
+// Remote actions
+routing.RegisterRemoteAction(name string, fn RemoteActionFunc)
+fn, ok := routing.GetRemoteAction(name string)`, "go", "registry.go")
+			</div>
+		</section>
+
+		<section id="fiber-package" class="space-y-8">
+			<h2 class="text-2xl font-bold border-b border-[var(--border)] pb-2">Fiber Package</h2>
+			<p class="text-[var(--text-secondary)]"><code class="mono text-[var(--accent-primary)]">github.com/aydenstechdungeon/gospa/fiber</code></p>
+
+			<div>
+				<h3 class="text-xl font-bold mb-4 mono italic">Middleware</h3>
+				@components.CodeBlock(`// SPA middleware - initializes state and component ID
+app.Use(fiber.SPAMiddleware(config fiber.Config))
+
+// State injection into HTML responses
+app.Use(fiber.StateMiddleware(config fiber.Config))
+
+// Runtime script serving
+app.Get("/_gospa/runtime.js", fiber.RuntimeMiddleware())
+
+// SPA navigation detection
+app.Use(fiber.SPANavigationMiddleware())
+isSPA := fiber.IsSPANavigation(c *fiber.Ctx) bool
+
+// CORS
+app.Use(fiber.CORSMiddleware(allowedOrigins []string))
+
+// Security headers
+app.Use(fiber.SecurityHeadersMiddleware())
+
+// CSRF protection
+app.Use(fiber.CSRFTokenMiddleware())
+
+// Panic recovery
+app.Use(fiber.RecoveryMiddleware())`, "go", "middleware.go")
+			</div>
+
+			<div>
+				<h3 class="text-xl font-bold mb-4 mono italic">WebSocket Hub</h3>
+				@components.CodeBlock(`// Create hub
+hub := fiber.NewWSHub()
+
+// Start hub (run in goroutine)
+go hub.Run()
+
+// Broadcast to all clients
+hub.Broadcast <- []byte(message)
+
+// Broadcast to specific clients
+hub.BroadcastTo(clientIDs []string, message []byte)
+
+// Broadcast except one
+hub.BroadcastExcept(exceptID string, message []byte)
+
+// Get client
+client, ok := hub.GetClient(id string)
+
+// Client count
+count := hub.ClientCount()`, "go", "websocket.go")
+			</div>
+
+			<div>
+				<h3 class="text-xl font-bold mb-4 mono italic">Session Management</h3>
+				@components.CodeBlock(`// Session store - maps tokens to client IDs
+sessionStore := fiber.NewSessionStore()
+token := sessionStore.CreateSession(clientID string)
+clientID, ok := sessionStore.ValidateSession(token string)
+sessionStore.RemoveSession(token string)
+
+// Client state store - persists state by client ID
+stateStore := fiber.NewClientStateStore()
+stateStore.Save(clientID string, state *state.StateMap)
+state, ok := stateStore.Get(clientID string)
+stateStore.Remove(clientID string)`, "go", "session.go")
+			</div>
+
+			<div>
+				<h3 class="text-xl font-bold mb-4 mono italic">Action Handlers</h3>
+				@components.CodeBlock(`// Register action handler
+fiber.RegisterActionHandler(name string, handler func(*WSClient, json.RawMessage))
+
+// Register connect handler
+fiber.RegisterOnConnectHandler(handler func(*WSClient))
+
+// Example
+fiber.RegisterActionHandler("increment", func(client *fiber.WSClient, payload json.RawMessage) {
+    GlobalCounter.Count++
+    fiber.BroadcastState(hub, "count", GlobalCounter.Count)
+})`, "go", "actions.go")
+			</div>
+		</section>
+
+		<section id="client-runtime" class="space-y-8">
+			<h2 class="text-2xl font-bold border-b border-[var(--border)] pb-2">Client Runtime</h2>
+			<p class="text-[var(--text-secondary)]">The GoSPA client runtime provides reactive primitives and utilities in the browser.</p>
+
+			<div class="grid md:grid-cols-2 gap-6">
+				<div class="space-y-4">
+					<h3 class="text-lg font-bold mono">Reactive State</h3>
+					<ul class="space-y-2 text-sm text-[var(--text-secondary)]">
+						<li><code class="text-[var(--accent-secondary)]">new GoSPA.Rune(value)</code> - Reactive primitive</li>
+						<li><code class="text-[var(--accent-secondary)]">new GoSPA.Derived(fn)</code> - Computed state</li>
+						<li><code class="text-[var(--accent-secondary)]">new GoSPA.Effect(fn)</code> - Side effects</li>
+						<li><code class="text-[var(--accent-secondary)]">new GoSPA.StateMap()</code> - Collection of runes</li>
+						<li><code class="text-[var(--accent-secondary)]">GoSPA.batch(fn)</code> - Batch updates</li>
+					</ul>
+				</div>
+				<div class="space-y-4">
+					<h3 class="text-lg font-bold mono">Navigation</h3>
+					<ul class="space-y-2 text-sm text-[var(--text-secondary)]">
+						<li><code class="text-[var(--accent-secondary)]">GoSPA.navigate(path)</code> - SPA navigation</li>
+						<li><code class="text-[var(--accent-secondary)]">GoSPA.back()</code> - Go back in history</li>
+						<li><code class="text-[var(--accent-secondary)]">GoSPA.forward()</code> - Go forward</li>
+						<li><code class="text-[var(--accent-secondary)]">GoSPA.prefetch(path)</code> - Prefetch route</li>
+						<li><code class="text-[var(--accent-secondary)]">GoSPA.prefetch(path, {"{"}code: true{"}"})</code> - Prefetch JS only</li>
+					</ul>
+				</div>
+			</div>
+
+			<div class="mt-8">
+				<h3 class="text-xl font-bold mb-4 mono italic">Rune Example</h3>
+				@components.CodeBlock(`const count = new GoSPA.Rune(0)
+
+count.get()           // 0
+count.set(5)
+count.update(v => v + 1)
+
+const unsub = count.subscribe((value, oldValue) => {
+    console.log('Count:', value)
+})
+unsub() // stop listening`, "javascript", "runtime.js")
+			</div>
+
+			<div class="mt-8">
+				<h3 class="text-xl font-bold mb-4 mono italic">WebSocket Client</h3>
+				@components.CodeBlock(`// Initialize WebSocket
+const ws = GoSPA.initWebSocket('ws://localhost:3000/_gospa/ws')
+
+// Get client
+const client = GoSPA.getWebSocketClient()
+
+// Send action
+GoSPA.sendAction('increment', { value: 1 })
+
+// Synced rune (auto-syncs with server)
+const count = GoSPA.syncedRune('count', 0)
+
+// Apply state update
+GoSPA.applyStateUpdate({ key: 'count', value: 5 })`, "javascript", "websocket.js")
+			</div>
+
+			<div class="mt-8">
+				<h3 class="text-xl font-bold mb-4 mono italic">Transitions</h3>
+				@components.CodeBlock(`// Setup transitions on element
+GoSPA.setupTransitions(element, {
+    enter: 'fade',
+    leave: 'slide'
+})
+
+// Built-in transitions
+GoSPA.fade(element, { duration: 300 })
+GoSPA.fly(element, { duration: 300, y: 50 })
+GoSPA.slide(element, { duration: 300, direction: 'left' })
+GoSPA.scale(element, { duration: 300, start: 0.8 })
+GoSPA.blur(element, { duration: 300 })
+
+// Crossfade between elements
+GoSPA.crossfade(elementA, elementB, { duration: 300 })`, "javascript", "transitions.js")
+			</div>
+
+			<div class="mt-8">
+				<h3 class="text-xl font-bold mb-4 mono italic">Component API</h3>
+				@components.CodeBlock(`// Initialize component
+GoSPA.init({
+    wsUrl: 'ws://localhost:3000/_gospa/ws',
+    debug: true,
+    hydration: {
+        mode: 'immediate',  // 'immediate' | 'lazy' | 'visible'
+        timeout: 5000
+    }
+})
+
+// Create component
+const comp = GoSPA.createComponent('counter', {
+    count: new GoSPA.Rune(0)
+})
+
+// Get component
+const comp = GoSPA.getComponent('counter')
+
+// State access
+const state = GoSPA.getState('counter')
+GoSPA.setState('counter', { count: 5 })
+
+// Call action
+GoSPA.callAction('increment', { value: 1 })`, "javascript", "component.js")
+			</div>
+
+			<div class="mt-8">
+				<h3 class="text-xl font-bold mb-4 mono italic">Partial Hydration</h3>
+				@components.CodeBlock(`<!-- Static content (no bindings or event listeners) -->
+<div data-gospa-static>
+    <p>Static content</p>
+</div>
+
+<!-- Local state mode (client-only, no server sync) -->
+<div data-gospa-component="counter" data-gospa-local>
+    <span data-bind="count">0</span>
+    <button data-on="click:increment">+</button>
+</div>`, "html", "hydration.html")
 			</div>
 		</section>
 	</div>

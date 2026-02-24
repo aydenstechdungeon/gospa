@@ -78,13 +78,15 @@ func SidebarContent(currentPath string) templ.Component {
 			templ_7745c5c3_Var2 = templ.NopComponent
 		}
 		ctx = templ.ClearChildren(ctx)
-		templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 3, "<div class=\"space-y-8\">")
+		templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 3, "<div class=\"space-y-8\"><button data-action=\"open-search\" class=\"w-full flex items-center justify-between px-3 py-2 mb-6 rounded-xl bg-[var(--bg-secondary)] border border-[var(--border)] text-sm text-[var(--text-secondary)] hover:border-[var(--accent-primary)]/50 transition-all group\"><div class=\"flex items-center gap-2\"><svg xmlns=\"http://www.w3.org/2000/svg\" width=\"16\" height=\"16\" viewBox=\"0 0 24 24\" fill=\"none\" stroke=\"currentColor\" stroke-width=\"2\" stroke-linecap=\"round\" stroke-linejoin=\"round\" class=\"text-[var(--text-muted)] group-hover:text-[var(--accent-primary)]\"><circle cx=\"11\" cy=\"11\" r=\"8\"></circle><path d=\"m21 21-4.3-4.3\"></path></svg> <span>Search docs...</span></div><kbd class=\"text-[10px] font-sans opacity-50 px-1.5 py-0.5 rounded border border-[var(--border)] bg-[var(--bg-primary)]\">⌘K</kbd></button>")
 		if templ_7745c5c3_Err != nil {
 			return templ_7745c5c3_Err
 		}
 		templ_7745c5c3_Err = sidebarSection("Getting Started", []NavItem{
 			{Label: "Introduction", Href: "/docs"},
-			{Label: "Quick Start", Href: "/docs/getstarted"},
+			{Label: "Installation", Href: "/docs/getstarted/installation"},
+			{Label: "Quick Start", Href: "/docs/getstarted/quickstart"},
+			{Label: "Project Structure", Href: "/docs/getstarted/structure"},
 		}, currentPath).Render(ctx, templ_7745c5c3_Buffer)
 		if templ_7745c5c3_Err != nil {
 			return templ_7745c5c3_Err
@@ -101,10 +103,13 @@ func SidebarContent(currentPath string) templ.Component {
 		}
 		templ_7745c5c3_Err = sidebarSection("Features", []NavItem{
 			{Label: "WebSocket Integration", Href: "/docs/websocket"},
+			{Label: "Server-Sent Events", Href: "/docs/sse"},
+			{Label: "Islands & Streaming", Href: "/docs/islands"},
 			{Label: "Remote Actions", Href: "/docs/remote-actions"},
 			{Label: "Security", Href: "/docs/security"},
 			{Label: "Error Handling", Href: "/docs/errors"},
 			{Label: "Development Tools", Href: "/docs/devtools"},
+			{Label: "Hot Module Replacement", Href: "/docs/hmr"},
 		}, currentPath).Render(ctx, templ_7745c5c3_Buffer)
 		if templ_7745c5c3_Err != nil {
 			return templ_7745c5c3_Err
@@ -122,9 +127,18 @@ func SidebarContent(currentPath string) templ.Component {
 		if templ_7745c5c3_Err != nil {
 			return templ_7745c5c3_Err
 		}
+		templ_7745c5c3_Err = sidebarSection("Client Runtime", []NavItem{
+			{Label: "Overview", Href: "/docs/client-runtime/overview"},
+			{Label: "DOM Bindings", Href: "/docs/client-runtime/dom-bindings"},
+			{Label: "Navigation & Events", Href: "/docs/client-runtime/navigation-events"},
+			{Label: "WebSocket", Href: "/docs/client-runtime/websocket"},
+			{Label: "Transitions", Href: "/docs/client-runtime/transitions"},
+		}, currentPath).Render(ctx, templ_7745c5c3_Buffer)
+		if templ_7745c5c3_Err != nil {
+			return templ_7745c5c3_Err
+		}
 		templ_7745c5c3_Err = sidebarSection("Reference", []NavItem{
 			{Label: "Go API", Href: "/docs/api"},
-			{Label: "Client Runtime API", Href: "/docs/client-runtime"},
 			{Label: "Configuration", Href: "/docs/configuration"},
 			{Label: "Runtime Selection", Href: "/docs/runtime"},
 			{Label: "CLI Reference", Href: "/docs/cli"},
@@ -168,7 +182,7 @@ func sidebarSection(title string, items []NavItem, currentPath string) templ.Com
 		var templ_7745c5c3_Var4 string
 		templ_7745c5c3_Var4, templ_7745c5c3_Err = templ.JoinStringErrs(title)
 		if templ_7745c5c3_Err != nil {
-			return templ.Error{Err: templ_7745c5c3_Err, FileName: `components/sidebar.templ`, Line: 67, Col: 95}
+			return templ.Error{Err: templ_7745c5c3_Err, FileName: `components/sidebar.templ`, Line: 90, Col: 95}
 		}
 		_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ.EscapeString(templ_7745c5c3_Var4))
 		if templ_7745c5c3_Err != nil {
@@ -195,7 +209,7 @@ func sidebarSection(title string, items []NavItem, currentPath string) templ.Com
 			var templ_7745c5c3_Var6 templ.SafeURL
 			templ_7745c5c3_Var6, templ_7745c5c3_Err = templ.JoinURLErrs(templ.SafeURL(item.Href))
 			if templ_7745c5c3_Err != nil {
-				return templ.Error{Err: templ_7745c5c3_Err, FileName: `components/sidebar.templ`, Line: 72, Col: 37}
+				return templ.Error{Err: templ_7745c5c3_Err, FileName: `components/sidebar.templ`, Line: 95, Col: 37}
 			}
 			_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ.EscapeString(templ_7745c5c3_Var6))
 			if templ_7745c5c3_Err != nil {
@@ -221,7 +235,7 @@ func sidebarSection(title string, items []NavItem, currentPath string) templ.Com
 			var templ_7745c5c3_Var8 string
 			templ_7745c5c3_Var8, templ_7745c5c3_Err = templ.JoinStringErrs(item.Label)
 			if templ_7745c5c3_Err != nil {
-				return templ.Error{Err: templ_7745c5c3_Err, FileName: `components/sidebar.templ`, Line: 75, Col: 18}
+				return templ.Error{Err: templ_7745c5c3_Err, FileName: `components/sidebar.templ`, Line: 98, Col: 18}
 			}
 			_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ.EscapeString(templ_7745c5c3_Var8))
 			if templ_7745c5c3_Err != nil {

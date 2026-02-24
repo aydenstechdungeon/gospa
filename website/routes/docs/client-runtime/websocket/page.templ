@@ -1,0 +1,221 @@
+package websocket
+
+import "website/components"
+
+templ Page() {
+	<div class="space-y-12">
+		<header>
+			<h1 class="text-4xl font-bold tracking-tight mb-4">WebSocket Client</h1>
+			<p class="text-xl text-[var(--text-secondary)]">Real-time state synchronization between server and client.</p>
+		</header>
+
+		<section class="space-y-6">
+			<h2 class="text-2xl font-bold" id="wsclient">WSClient</h2>
+			<p class="text-[var(--text-secondary)]">WebSocket client for real-time state synchronization with auto-reconnect and heartbeat support.</p>
+			
+			@components.CodeBlock(`import { WSClient, initWebSocket, getWebSocketClient } from '@gospa/runtime';
+
+// Initialize
+const ws = initWebSocket({
+  url: 'ws://localhost:3000/ws',
+  reconnect: true,              // Auto-reconnect (default: true)
+  reconnectInterval: 1000,      // Base interval (default: 1000ms)
+  maxReconnectAttempts: 10,     // Max attempts (default: 10)
+  heartbeatInterval: 30000,     // Ping interval (default: 30s)
+  onOpen: () => console.log('Connected'),
+  onClose: (e) => console.log('Disconnected'),
+  onError: (e) => console.error('Error'),
+  onMessage: (msg) => console.log('Message:', msg)
+});
+
+// Connect
+await ws.connect();
+
+// Check state
+console.log(ws.state);        // 'connecting' | 'connected' | 'disconnecting' | 'disconnected'
+console.log(ws.isConnected);  // boolean
+
+// Send message
+ws.send({ type: 'update', payload: { key: 'value' } });
+
+// Send with response
+const response = await ws.sendWithResponse({ 
+  type: 'init', 
+  componentId: 'my-component' 
+});
+
+// Request state sync
+ws.requestSync();
+
+// Send action
+ws.sendAction('increment', { amount: 1 });
+
+// Disconnect
+ws.disconnect();
+
+// Get singleton instance
+const client = getWebSocketClient();`, "typescript", "wsclient.ts")
+		</section>
+
+		<section class="space-y-6">
+			<h2 class="text-2xl font-bold" id="config">Configuration Options</h2>
+			<div class="overflow-x-auto">
+				<table class="w-full text-sm">
+					<thead>
+						<tr class="border-b border-[var(--border)]">
+							<th class="text-left py-3 px-4 font-bold">Option</th>
+							<th class="text-left py-3 px-4 font-bold">Type</th>
+							<th class="text-left py-3 px-4 font-bold">Default</th>
+							<th class="text-left py-3 px-4 font-bold">Description</th>
+						</tr>
+					</thead>
+					<tbody class="divide-y divide-[var(--border)]">
+						<tr>
+							<td class="py-3 px-4 font-mono text-[var(--accent-primary)]">url</td>
+							<td class="py-3 px-4">string</td>
+							<td class="py-3 px-4">-</td>
+							<td class="py-3 px-4">WebSocket server URL</td>
+						</tr>
+						<tr>
+							<td class="py-3 px-4 font-mono text-[var(--accent-primary)]">reconnect</td>
+							<td class="py-3 px-4">boolean</td>
+							<td class="py-3 px-4">true</td>
+							<td class="py-3 px-4">Auto-reconnect on disconnect</td>
+						</tr>
+						<tr>
+							<td class="py-3 px-4 font-mono text-[var(--accent-primary)]">reconnectInterval</td>
+							<td class="py-3 px-4">number</td>
+							<td class="py-3 px-4">1000</td>
+							<td class="py-3 px-4">Base reconnection interval (ms)</td>
+						</tr>
+						<tr>
+							<td class="py-3 px-4 font-mono text-[var(--accent-primary)]">maxReconnectAttempts</td>
+							<td class="py-3 px-4">number</td>
+							<td class="py-3 px-4">10</td>
+							<td class="py-3 px-4">Maximum reconnection attempts</td>
+						</tr>
+						<tr>
+							<td class="py-3 px-4 font-mono text-[var(--accent-primary)]">heartbeatInterval</td>
+							<td class="py-3 px-4">number</td>
+							<td class="py-3 px-4">30000</td>
+							<td class="py-3 px-4">Heartbeat ping interval (ms)</td>
+						</tr>
+						<tr>
+							<td class="py-3 px-4 font-mono text-[var(--accent-primary)]">onOpen</td>
+							<td class="py-3 px-4">function</td>
+							<td class="py-3 px-4">-</td>
+							<td class="py-3 px-4">Called when connection opens</td>
+						</tr>
+						<tr>
+							<td class="py-3 px-4 font-mono text-[var(--accent-primary)]">onClose</td>
+							<td class="py-3 px-4">function</td>
+							<td class="py-3 px-4">-</td>
+							<td class="py-3 px-4">Called when connection closes</td>
+						</tr>
+						<tr>
+							<td class="py-3 px-4 font-mono text-[var(--accent-primary)]">onError</td>
+							<td class="py-3 px-4">function</td>
+							<td class="py-3 px-4">-</td>
+							<td class="py-3 px-4">Called on connection error</td>
+						</tr>
+						<tr>
+							<td class="py-3 px-4 font-mono text-[var(--accent-primary)]">onMessage</td>
+							<td class="py-3 px-4">function</td>
+							<td class="py-3 px-4">-</td>
+							<td class="py-3 px-4">Called on incoming message</td>
+						</tr>
+					</tbody>
+				</table>
+			</div>
+		</section>
+
+		<section class="space-y-6">
+			<h2 class="text-2xl font-bold" id="synced-rune">syncedRune</h2>
+			<p class="text-[var(--text-secondary)]">Create a rune that automatically syncs with the server.</p>
+			
+			@components.CodeBlock(`import { syncedRune } from '@gospa/runtime';
+
+const count = syncedRune(0, {
+  componentId: 'counter',
+  key: 'count',
+  debounce: 100 // Optional debounce
+});
+
+// Local update (optimistic)
+count.set(5);
+
+// Server will be notified
+// If server rejects, value rolls back`, "typescript", "synced-rune.ts")
+		</section>
+
+		<section class="space-y-6">
+			<h2 class="text-2xl font-bold" id="sync-batch">syncBatch</h2>
+			<p class="text-[var(--text-secondary)]">Batch sync multiple runes together for efficient updates.</p>
+			
+			@components.CodeBlock(`import { syncBatch, Rune } from '@gospa/runtime';
+
+const states = {
+  name: new Rune(''),
+  email: new Rune('')
+};
+
+// Sync all states under a component ID
+syncBatch('user-form', states);`, "typescript", "sync-batch.ts")
+		</section>
+
+		<section class="space-y-6">
+			<h2 class="text-2xl font-bold" id="apply-state-update">applyStateUpdate</h2>
+			<p class="text-[var(--text-secondary)]">Apply server state updates to multiple runes at once.</p>
+			
+			@components.CodeBlock(`import { applyStateUpdate, Rune } from '@gospa/runtime';
+
+const states = {
+  count: new Rune(0),
+  name: new Rune('')
+};
+
+// Apply updates from server
+applyStateUpdate(states, {
+  count: 10,
+  name: 'Updated'
+});`, "typescript", "apply-state.ts")
+		</section>
+
+		<section class="space-y-6">
+			<h2 class="text-2xl font-bold" id="connection-state">Connection State</h2>
+			<p class="text-[var(--text-secondary)]">Monitor connection state changes.</p>
+			
+			@components.CodeBlock(`const ws = getWebSocketClient();
+
+// Check current state
+if (ws.isConnected) {
+  console.log('WebSocket is connected');
+}
+
+// State values: 'connecting' | 'connected' | 'disconnecting' | 'disconnected'
+console.log('Current state:', ws.state);
+
+// Listen for state changes
+ws.onStateChange((newState) => {
+  console.log('State changed to:', newState);
+});`, "typescript", "connection-state.ts")
+		</section>
+
+		<div class="flex justify-between mt-16">
+			<a href="/docs/client-runtime/navigation-events" class="group flex items-center gap-3 px-6 py-3 rounded-xl border border-[var(--border)] bg-[var(--bg-secondary)] hover:border-[var(--accent-primary)]/50 transition-all">
+				<svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="text-[var(--text-muted)] group-hover:text-[var(--accent-primary)] transition-colors"><path d="M19 12H5"></path><path d="m12 19-7-7 7-7"></path></svg>
+				<div>
+					<div class="text-[var(--text-muted)] text-xs uppercase tracking-widest font-bold mb-1">Previous</div>
+					<div class="font-bold group-hover:text-[var(--accent-primary)] transition-colors">Navigation & Events</div>
+				</div>
+			</a>
+			<a href="/docs/client-runtime/transitions" class="group flex items-center gap-3 px-6 py-3 rounded-xl border border-[var(--border)] bg-[var(--bg-secondary)] hover:border-[var(--accent-primary)]/50 transition-all text-right">
+				<div>
+					<div class="text-[var(--text-muted)] text-xs uppercase tracking-widest font-bold mb-1">Next</div>
+					<div class="font-bold group-hover:text-[var(--accent-primary)] transition-colors">Transitions</div>
+				</div>
+				<svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="text-[var(--text-muted)] group-hover:text-[var(--accent-primary)] transition-colors"><path d="M5 12h14"></path><path d="m12 5 7 7-7 7"></path></svg>
+			</a>
+		</div>
+	</div>
+}

@@ -1,7 +1,6 @@
 package docs
 
 import (
-	"strings"
 	"website/components"
 )
 
@@ -21,7 +20,7 @@ templ DocsLayout(children templ.Component, path string) {
 					Found a mistake? <a href="https://github.com/aydenstechdungeon/gospa" class="text-[var(--accent-primary)] hover:underline">Edit this page on GitHub</a>
 				</div>
 				<div class="text-[var(--text-muted)]">
-					Last updated: Feb 23, 2026
+					Last updated: Feb 24, 2026
 				</div>
 			</div>
 		</div>
@@ -29,52 +28,12 @@ templ DocsLayout(children templ.Component, path string) {
 		<div class="hidden xl:block w-64 flex-shrink-0 pt-12">
 			<div class="sticky top-28">
 				<h4 class="text-xs font-bold uppercase tracking-widest text-[var(--text-muted)] mb-4">On this page</h4>
-				<nav>
+				<nav id="toc">
 					<ul class="space-y-3 text-xs text-[var(--text-secondary)]">
-						<li><a href="#overview" class="hover:text-[var(--accent-primary)] transition-colors">Overview</a></li>
-						for _, headline := range getHeadlines(path) {
-							<li><a href={ templ.SafeURL("#" + strings.ToLower(strings.ReplaceAll(headline, " ", "-"))) } class="hover:text-[var(--accent-primary)] transition-colors">{ headline }</a></li>
-						}
+						<!-- Populated by static/docs.js -->
 					</ul>
 				</nav>
 			</div>
 		</div>
 	</div>
-}
-
-func getHeadlines(path string) []string {
-	switch strings.TrimSuffix(path, "/") {
-	case "/docs":
-		return []string{"Why GoSPA?", "Key Features", "Comparison"}
-	case "/docs/getstarted":
-		return []string{"Installation", "First Project", "Next Steps"}
-	case "/docs/reactive-primitives":
-		return []string{"Runes", "Derived", "Effects"}
-	case "/docs/routing":
-		return []string{"File Structure", "Dynamic Routes", "Layouts"}
-	case "/docs/state-management":
-		return []string{"Synchronization", "Persistence", "Multi-tab Sync"}
-	case "/docs/components":
-		return []string{"BaseComponent", "ComponentTree", "Lifecycle", "Props"}
-	case "/docs/params":
-		return []string{"Params", "QueryParams", "ParamExtractor", "PathBuilder"}
-	case "/docs/api":
-		return []string{"Configuration", "App Instance", "State Map"}
-	case "/docs/remote-actions":
-		return []string{"Defining Actions", "Calling Actions", "Optimistic UI"}
-	case "/docs/websocket":
-		return []string{"WebSocket Hub", "Broadcast", "Reconnection"}
-	case "/docs/security":
-		return []string{"XSS Protection", "State Isolation"}
-	case "/docs/errors":
-		return []string{"AppError", "ErrorCode", "ErrorHandler", "Recovery"}
-	case "/docs/devtools":
-		return []string{"Hot Reload", "File Watching", "State Inspector", "Debug Logging"}
-	case "/docs/client-runtime":
-		return []string{"Initialization", "Navigation", "State Access"}
-	case "/docs/cli":
-		return []string{"create", "build", "dev", "generate"}
-	default:
-		return []string{"Usage", "Examples", "Best Practices"}
-	}
 }

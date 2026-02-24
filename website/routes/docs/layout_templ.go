@@ -9,7 +9,6 @@ import "github.com/a-h/templ"
 import templruntime "github.com/a-h/templ/runtime"
 
 import (
-	"strings"
 	"website/components"
 )
 
@@ -50,85 +49,12 @@ func DocsLayout(children templ.Component, path string) templ.Component {
 		if templ_7745c5c3_Err != nil {
 			return templ_7745c5c3_Err
 		}
-		templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 3, "</div><div class=\"mt-16 pt-8 border-t border-[var(--border)] flex justify-between items-center text-sm\"><div class=\"text-[var(--text-muted)]\">Found a mistake? <a href=\"https://github.com/aydenstechdungeon/gospa\" class=\"text-[var(--accent-primary)] hover:underline\">Edit this page on GitHub</a></div><div class=\"text-[var(--text-muted)]\">Last updated: Feb 23, 2026</div></div></div><div class=\"hidden xl:block w-64 flex-shrink-0 pt-12\"><div class=\"sticky top-28\"><h4 class=\"text-xs font-bold uppercase tracking-widest text-[var(--text-muted)] mb-4\">On this page</h4><nav><ul class=\"space-y-3 text-xs text-[var(--text-secondary)]\"><li><a href=\"#overview\" class=\"hover:text-[var(--accent-primary)] transition-colors\">Overview</a></li>")
-		if templ_7745c5c3_Err != nil {
-			return templ_7745c5c3_Err
-		}
-		for _, headline := range getHeadlines(path) {
-			templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 4, "<li><a href=\"")
-			if templ_7745c5c3_Err != nil {
-				return templ_7745c5c3_Err
-			}
-			var templ_7745c5c3_Var2 templ.SafeURL
-			templ_7745c5c3_Var2, templ_7745c5c3_Err = templ.JoinURLErrs(templ.SafeURL("#" + strings.ToLower(strings.ReplaceAll(headline, " ", "-"))))
-			if templ_7745c5c3_Err != nil {
-				return templ.Error{Err: templ_7745c5c3_Err, FileName: `routes/docs/layout.templ`, Line: 36, Col: 97}
-			}
-			_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ.EscapeString(templ_7745c5c3_Var2))
-			if templ_7745c5c3_Err != nil {
-				return templ_7745c5c3_Err
-			}
-			templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 5, "\" class=\"hover:text-[var(--accent-primary)] transition-colors\">")
-			if templ_7745c5c3_Err != nil {
-				return templ_7745c5c3_Err
-			}
-			var templ_7745c5c3_Var3 string
-			templ_7745c5c3_Var3, templ_7745c5c3_Err = templ.JoinStringErrs(headline)
-			if templ_7745c5c3_Err != nil {
-				return templ.Error{Err: templ_7745c5c3_Err, FileName: `routes/docs/layout.templ`, Line: 36, Col: 171}
-			}
-			_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ.EscapeString(templ_7745c5c3_Var3))
-			if templ_7745c5c3_Err != nil {
-				return templ_7745c5c3_Err
-			}
-			templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 6, "</a></li>")
-			if templ_7745c5c3_Err != nil {
-				return templ_7745c5c3_Err
-			}
-		}
-		templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 7, "</ul></nav></div></div></div>")
+		templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 3, "</div><div class=\"mt-16 pt-8 border-t border-[var(--border)] flex justify-between items-center text-sm\"><div class=\"text-[var(--text-muted)]\">Found a mistake? <a href=\"https://github.com/aydenstechdungeon/gospa\" class=\"text-[var(--accent-primary)] hover:underline\">Edit this page on GitHub</a></div><div class=\"text-[var(--text-muted)]\">Last updated: Feb 24, 2026</div></div></div><div class=\"hidden xl:block w-64 flex-shrink-0 pt-12\"><div class=\"sticky top-28\"><h4 class=\"text-xs font-bold uppercase tracking-widest text-[var(--text-muted)] mb-4\">On this page</h4><nav id=\"toc\"><ul class=\"space-y-3 text-xs text-[var(--text-secondary)]\"><!-- Populated by static/docs.js --></ul></nav></div></div></div>")
 		if templ_7745c5c3_Err != nil {
 			return templ_7745c5c3_Err
 		}
 		return nil
 	})
-}
-
-func getHeadlines(path string) []string {
-	switch strings.TrimSuffix(path, "/") {
-	case "/docs":
-		return []string{"Why GoSPA?", "Key Features", "Comparison"}
-	case "/docs/getstarted":
-		return []string{"Installation", "First Project", "Next Steps"}
-	case "/docs/reactive-primitives":
-		return []string{"Runes", "Derived", "Effects"}
-	case "/docs/routing":
-		return []string{"File Structure", "Dynamic Routes", "Layouts"}
-	case "/docs/state-management":
-		return []string{"Synchronization", "Persistence", "Multi-tab Sync"}
-	case "/docs/components":
-		return []string{"BaseComponent", "ComponentTree", "Lifecycle", "Props"}
-	case "/docs/params":
-		return []string{"Params", "QueryParams", "ParamExtractor", "PathBuilder"}
-	case "/docs/api":
-		return []string{"Configuration", "App Instance", "State Map"}
-	case "/docs/remote-actions":
-		return []string{"Defining Actions", "Calling Actions", "Optimistic UI"}
-	case "/docs/websocket":
-		return []string{"WebSocket Hub", "Broadcast", "Reconnection"}
-	case "/docs/security":
-		return []string{"XSS Protection", "State Isolation"}
-	case "/docs/errors":
-		return []string{"AppError", "ErrorCode", "ErrorHandler", "Recovery"}
-	case "/docs/devtools":
-		return []string{"Hot Reload", "File Watching", "State Inspector", "Debug Logging"}
-	case "/docs/client-runtime":
-		return []string{"Initialization", "Navigation", "State Access"}
-	case "/docs/cli":
-		return []string{"create", "build", "dev", "generate"}
-	default:
-		return []string{"Usage", "Examples", "Best Practices"}
-	}
 }
 
 var _ = templruntime.GeneratedTemplate

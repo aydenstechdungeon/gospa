@@ -30,6 +30,16 @@ err := app.RunTLS(":443", "cert.pem", "key.pem")
 // Graceful shutdown
 err := app.Shutdown()
 
+// Routing & Middleware
+app.Scan()            // Scans routes directory
+app.RegisterRoutes()  // Registers Fiber routes
+app.Use(middleware)   // Adds global middleware
+group := app.Group("/api") // Creates route group
+
+// Real-time
+app.HandleSSE("/_sse", broker)
+app.HandleWS("/_ws", config)
+
 // Access internals
 hub := app.GetHub()
 router := app.GetRouter()
@@ -39,14 +49,11 @@ fiberApp := app.GetFiber()
 app.Broadcast([]byte("message"))
 err := app.BroadcastState("key", value)
 
-// Add routes
+// Add routes manually
 app.Get("/path", handler)
 app.Post("/path", handler)
 app.Put("/path", handler)
 app.Delete("/path", handler)
-
-// Route groups
-group := app.Group("/api", middleware...)
 
 // Static files
 app.Static("/static", "./public")
@@ -141,14 +148,20 @@ rune := state.NewRune[T](initial T)
 // Read
 rune.Get() T
 rune.GetAny() any  // for Observable interface
+rune.ID() string   // returns unique internal ID
+rune.peek() T      // read without tracking
 
 // Write
 rune.Set(value T)
 rune.Update(fn func(T) T)
+rune.SetAny(value any) error // for Settable interface
 
 // Subscribe
 unsubscribe := rune.Subscribe(func(newValue T) {})
 unsubscribe := rune.SubscribeAny(func(newValue any) {})
+
+// Serialization
+data, err := rune.MarshalJSON()
 ```
 
 **Interfaces**
@@ -297,6 +310,7 @@ sm := state.NewStateMap()
 
 // Add reactive value
 sm.Add(key string, observable Observable)
+sm.AddAny(key string, value any) error // Adds plain value as auto-rune
 
 // Get value
 obs, ok := sm.Get(key string)
@@ -304,8 +318,15 @@ obs, ok := sm.Get(key string)
 // Remove
 sm.Remove(key string)
 
-// Serialize
+// Iteration
+sm.ForEach(func(key string, value Observable) { ... })
+
+// Conversion
+m := sm.ToMap() // returns map[string]any
+
+// Serialization
 json, err := sm.ToJSON()
+data, err := sm.MarshalJSON()
 sm.FromJSON(data []byte)
 
 // Diff
@@ -313,6 +334,26 @@ diff := sm.Diff(other *StateMap) *StateDiff
 
 // OnChange callback
 sm.OnChange = func(key string, value any) { ... }
+```
+
+---
+
+### StateValidator
+
+Validates reactive state updates.
+
+```go
+validator := state.NewStateValidator()
+
+// Register rules
+validator.AddValidator("count", func(v any) error {
+    if v.(int) < 0 { return errors.New("must be positive") }
+    return nil
+})
+
+// Validate
+err := validator.Validate("count", -1)
+err := validator.ValidateAll(map[string]any{"count": 5})
 ```
 
 ---
@@ -465,6 +506,10 @@ type Params map[string]string
 // Basic access
 value := params.Get("id")
 value := params.GetDefault("id", "default")
+exists := params.Has("id")
+
+// Writing
+params.Set("id", "123")
 
 // Typed access (returns (T, error))
 intVal, err := params.Int("count")
@@ -1019,6 +1064,11 @@ GoSPA.destroyNavigation()
 
 // Navigation state
 const navState = GoSPA.createNavigationState()
+
+// Global DOM Event (for vanilla JS)
+document.addEventListener('gospa:navigated', (e) => {
+    console.log('Navigated to:', e.detail.path)
+})
 ```
 
 ---

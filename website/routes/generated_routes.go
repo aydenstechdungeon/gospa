@@ -4,33 +4,42 @@
 package routes
 
 import (
-	docspluginspostcss "website/routes/docs/plugins/postcss"
-	docspluginsvalidation "website/routes/docs/plugins/validation"
-	docsreactiveprimitives "website/routes/docs/reactive-primitives"
-	docswebsocket "website/routes/docs/websocket"
-	docsapi "website/routes/docs/api"
-	docspluginsauth "website/routes/docs/plugins/auth"
-	docsruntime "website/routes/docs/runtime"
-	docsstatemanagement "website/routes/docs/state-management"
-	"github.com/aydenstechdungeon/gospa/routing"
-	docsclientruntime "website/routes/docs/client-runtime"
-	docsdevtools "website/routes/docs/devtools"
-	docserrors "website/routes/docs/errors"
-	docsgetstarted "website/routes/docs/getstarted"
-	docspluginsseo "website/routes/docs/plugins/seo"
-	docsrouting "website/routes/docs/routing"
-	docssecurity "website/routes/docs/security"
-	docscli "website/routes/docs/cli"
-	docscomponents "website/routes/docs/components"
-	docsconfiguration "website/routes/docs/configuration"
-	"website/routes/docs"
-	docsparams "website/routes/docs/params"
-	docspluginsqrcode "website/routes/docs/plugins/qrcode"
-	docspluginstailwind "website/routes/docs/plugins/tailwind"
-	docsremoteactions "website/routes/docs/remote-actions"
 	"github.com/a-h/templ"
+	docsconfiguration "website/routes/docs/configuration"
+	docsgetstartedstructure "website/routes/docs/getstarted/structure"
+	docsreactiveprimitives "website/routes/docs/reactive-primitives"
+	docssecurity "website/routes/docs/security"
+	docshmr "website/routes/docs/hmr"
 	docspluginsimage "website/routes/docs/plugins/image"
+	docswebsocket "website/routes/docs/websocket"
+	docspluginsvalidation "website/routes/docs/plugins/validation"
+	docserrors "website/routes/docs/errors"
+	docsclientruntimenavigationevents "website/routes/docs/client-runtime/navigation-events"
+	"website/routes/docs"
 	docsplugins "website/routes/docs/plugins"
+	docspluginspostcss "website/routes/docs/plugins/postcss"
+	docssse "website/routes/docs/sse"
+	"github.com/aydenstechdungeon/gospa/routing"
+	docsclientruntimetransitions "website/routes/docs/client-runtime/transitions"
+	docspluginsqrcode "website/routes/docs/plugins/qrcode"
+	docsdevtools "website/routes/docs/devtools"
+	docsapi "website/routes/docs/api"
+	docsclientruntimewebsocket "website/routes/docs/client-runtime/websocket"
+	docsremoteactions "website/routes/docs/remote-actions"
+	docscli "website/routes/docs/cli"
+	docspluginsseo "website/routes/docs/plugins/seo"
+	docsruntime "website/routes/docs/runtime"
+	docsclientruntimedombindings "website/routes/docs/client-runtime/dom-bindings"
+	docsclientruntimeoverview "website/routes/docs/client-runtime/overview"
+	docscomponents "website/routes/docs/components"
+	docsgetstartedquickstart "website/routes/docs/getstarted/quickstart"
+	docsparams "website/routes/docs/params"
+	docspluginsauth "website/routes/docs/plugins/auth"
+	docsrouting "website/routes/docs/routing"
+	docsislands "website/routes/docs/islands"
+	docspluginstailwind "website/routes/docs/plugins/tailwind"
+	docsstatemanagement "website/routes/docs/state-management"
+	docsgetstartedinstallation "website/routes/docs/getstarted/installation"
 )
 
 func init() {
@@ -41,8 +50,20 @@ func init() {
 	routing.RegisterPage("/docs/cli", func(props map[string]interface{}) templ.Component {
 		return docscli.Page()
 	})
-	routing.RegisterPage("/docs/client-runtime", func(props map[string]interface{}) templ.Component {
-		return docsclientruntime.Page()
+	routing.RegisterPage("/docs/client-runtime/dom-bindings", func(props map[string]interface{}) templ.Component {
+		return docsclientruntimedombindings.Page()
+	})
+	routing.RegisterPage("/docs/client-runtime/navigation-events", func(props map[string]interface{}) templ.Component {
+		return docsclientruntimenavigationevents.Page()
+	})
+	routing.RegisterPage("/docs/client-runtime/overview", func(props map[string]interface{}) templ.Component {
+		return docsclientruntimeoverview.Page()
+	})
+	routing.RegisterPage("/docs/client-runtime/transitions", func(props map[string]interface{}) templ.Component {
+		return docsclientruntimetransitions.Page()
+	})
+	routing.RegisterPage("/docs/client-runtime/websocket", func(props map[string]interface{}) templ.Component {
+		return docsclientruntimewebsocket.Page()
 	})
 	routing.RegisterPage("/docs/components", func(props map[string]interface{}) templ.Component {
 		return docscomponents.Page()
@@ -56,8 +77,20 @@ func init() {
 	routing.RegisterPage("/docs/errors", func(props map[string]interface{}) templ.Component {
 		return docserrors.Page()
 	})
-	routing.RegisterPage("/docs/getstarted", func(props map[string]interface{}) templ.Component {
-		return docsgetstarted.Page()
+	routing.RegisterPage("/docs/getstarted/installation", func(props map[string]interface{}) templ.Component {
+		return docsgetstartedinstallation.Page()
+	})
+	routing.RegisterPage("/docs/getstarted/quickstart", func(props map[string]interface{}) templ.Component {
+		return docsgetstartedquickstart.Page()
+	})
+	routing.RegisterPage("/docs/getstarted/structure", func(props map[string]interface{}) templ.Component {
+		return docsgetstartedstructure.Page()
+	})
+	routing.RegisterPage("/docs/hmr", func(props map[string]interface{}) templ.Component {
+		return docshmr.Page()
+	})
+	routing.RegisterPage("/docs/islands", func(props map[string]interface{}) templ.Component {
+		return docsislands.Page()
 	})
 	routing.RegisterPage("/docs", func(props map[string]interface{}) templ.Component {
 		return docs.Page()
@@ -103,6 +136,9 @@ func init() {
 	})
 	routing.RegisterPage("/docs/security", func(props map[string]interface{}) templ.Component {
 		return docssecurity.Page()
+	})
+	routing.RegisterPage("/docs/sse", func(props map[string]interface{}) templ.Component {
+		return docssse.Page()
 	})
 	routing.RegisterPage("/docs/state-management", func(props map[string]interface{}) templ.Component {
 		return docsstatemanagement.Page()

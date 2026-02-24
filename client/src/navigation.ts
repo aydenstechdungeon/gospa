@@ -96,7 +96,7 @@ async function fetchPageFromServer(path: string): Promise<PageData | null> {
 		const contentEl = doc.querySelector('[data-gospa-page-content]');
 		const rootEl = doc.querySelector('[data-gospa-root]');
 		const mainEl = doc.querySelector('main');
-		const content = contentEl ? contentEl.innerHTML : 
+		const content = contentEl ? contentEl.innerHTML :
 			(rootEl ? rootEl.innerHTML : (mainEl ? mainEl.innerHTML : doc.body.innerHTML));
 
 		// Extract title
@@ -379,6 +379,9 @@ export async function navigate(path: string, options: NavigationOptions = {}): P
 			// Notify after navigation
 			afterNavCallbacks.forEach(cb => cb(path));
 
+			// Dispatch custom event for external scripts (e.g. documentation search/ToC)
+			document.dispatchEvent(new CustomEvent('gospa:navigated', { detail: { path } }));
+
 			return true;
 		})();
 
@@ -427,6 +430,7 @@ function handlePopState(event: PopStateEvent): void {
 			state.currentPath = path;
 			updateDOM(data).then(() => {
 				afterNavCallbacks.forEach(cb => cb(path));
+				document.dispatchEvent(new CustomEvent('gospa:navigated', { detail: { path } }));
 			});
 		} else {
 			// Fallback to reload

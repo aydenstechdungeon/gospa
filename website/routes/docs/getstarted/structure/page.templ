@@ -1,0 +1,60 @@
+package structure
+
+import "website/components"
+
+templ Page() {
+	<div class="space-y-8">
+		<header>
+			<h1 class="text-4xl font-bold tracking-tight mb-4">Project Structure</h1>
+			<p class="text-xl text-[var(--text-secondary)]">Anatomy of a GoSPA application.</p>
+		</header>
+
+		<section>
+			<h2 id="overview" class="text-2xl font-bold mb-4">File Hierarchy</h2>
+			<p class="text-[var(--text-secondary)] mb-4">A standard GoSPA project follows this structure:</p>
+			@components.CodeBlock(`my-app/
+├── main.go           # Server entry point & configuration
+├── go.mod            # Go module dependencies
+├── routes/           # File-based routing & UI templates
+│   ├── layout.templ  # Shared root layout
+│   └── page.templ    # Home page template
+├── static/           # Public assets (images, CSS, JS)
+├── generated/        # Auto-generated TypeScript bindings
+└── gospa.json        # Optional project configuration`, "plaintext", "File Structure")
+		</section>
+
+		<section>
+			<h2 id="routes-dir" class="text-2xl font-bold mb-4">The `routes/` Directory</h2>
+			<p class="text-[var(--text-secondary)] mb-4">
+				Your UI lives here. GoSPA looks for `.templ` files to build its routing table. 
+				Supporting nested directories, dynamic parameters like <code class="bg-[var(--bg-tertiary)] px-1.5 py-0.5 rounded">[id].templ</code>, and layout inheritance.
+			</p>
+		</section>
+
+		<section>
+			<h2 id="generated-dir" class="text-2xl font-bold mb-4">The `generated/` Directory</h2>
+			<p class="text-[var(--text-secondary)] mb-4">
+				GoSPA automatically synchronizes your Go types and routes with TypeScript. 
+				This directory contains the generated JS/TS files that power the client-side runtime. 
+				<strong>Do not edit these files manually.</strong>
+			</p>
+		</section>
+
+		<div class="flex justify-between mt-16">
+			<a href="/docs/getstarted/quickstart" class="group flex items-center gap-3 px-6 py-3 rounded-xl border border-[var(--border)] bg-[var(--bg-secondary)] hover:border-[var(--accent-primary)]/50 transition-all">
+				<svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="text-[var(--text-muted)] group-hover:text-[var(--accent-primary)] transition-colors"><path d="M19 12H5"></path><path d="m12 19-7-7 7-7"></path></svg>
+				<div>
+					<div class="text-[var(--text-muted)] text-xs uppercase tracking-widest font-bold mb-1">Previous</div>
+					<div class="font-bold group-hover:text-[var(--accent-primary)] transition-colors">Quick Start</div>
+				</div>
+			</a>
+			<a href="/docs/routing" class="group flex items-center gap-3 px-6 py-3 rounded-xl border border-[var(--border)] bg-[var(--bg-secondary)] hover:border-[var(--accent-primary)]/50 transition-all text-right">
+				<div>
+					<div class="text-[var(--text-muted)] text-xs uppercase tracking-widest font-bold mb-1">Next</div>
+					<div class="font-bold group-hover:text-[var(--accent-primary)] transition-colors">Routing</div>
+				</div>
+				<svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="text-[var(--text-muted)] group-hover:text-[var(--accent-primary)] transition-colors"><path d="M5 12h14"></path><path d="m12 5 7 7-7 7"></path></svg>
+			</a>
+		</div>
+	</div>
+}

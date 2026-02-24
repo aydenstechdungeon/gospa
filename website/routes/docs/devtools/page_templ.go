@@ -182,29 +182,87 @@ console.log(report.frequentUpdates);`, "typescript", "client/src/runtime-core.ts
 		if templ_7745c5c3_Err != nil {
 			return templ_7745c5c3_Err
 		}
-		templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 8, "</div><div><h2 class=\"text-2xl font-bold mb-4 border-b border-[var(--border)] pb-2 italic mono\">Error Overlay</h2><p class=\"text-[var(--text-secondary)] mb-4\">Development error display overlay.</p>")
+		templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 8, "</div><div><h2 class=\"text-2xl font-bold mb-4 border-b border-[var(--border)] pb-2 italic mono\">Error Overlay</h2><p class=\"text-[var(--text-secondary)] mb-4\">Development error display overlay with source code snippets, stack traces, and request information.</p>")
 		if templ_7745c5c3_Err != nil {
 			return templ_7745c5c3_Err
 		}
-		templ_7745c5c3_Err = components.CodeBlock(`// Error overlay is automatically enabled in development
-// Shows:
-// - Compile errors with file location
-// - Runtime errors with stack trace
-// - WebSocket connection errors
-// - State update errors
+		templ_7745c5c3_Err = components.CodeBlock(`// Server-side configuration
+config := fiber.ErrorOverlayConfig{
+    Enabled:     true,
+    ShowStack:   true,     // Display stack traces
+    ShowRequest: true,     // Show request details
+    Theme:       "dark",   // "dark" or "light"
+    Editor:      "code",   // Opens files in VS Code via vscode:// protocol
+}
 
-// Configure error overlay
-import { configureErrorOverlay } from 'gospa/runtime';
+overlay := fiber.NewErrorOverlay(config)
 
-configureErrorOverlay({
-    showStackTrace: true,
-    openInEditor: true,    // Click to open in editor
-    editor: 'code'         // 'code', 'vim', 'emacs', etc.
-});`, "typescript", "client/src/runtime.ts").Render(ctx, templ_7745c5c3_Buffer)
+// Auto-triggered for 500 errors in DevMode`, "go", "fiber/error_overlay.go").Render(ctx, templ_7745c5c3_Buffer)
 		if templ_7745c5c3_Err != nil {
 			return templ_7745c5c3_Err
 		}
-		templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 9, "</div></section></div>")
+		templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 9, "</div><div><h2 class=\"text-2xl font-bold mb-4 border-b border-[var(--border)] pb-2 italic mono\">State Inspector Server Setup</h2><p class=\"text-[var(--text-secondary)] mb-4\">Monitor reactive state changes across server and client in real-time.</p>")
+		if templ_7745c5c3_Err != nil {
+			return templ_7745c5c3_Err
+		}
+		templ_7745c5c3_Err = components.CodeBlock(`// Mount Dev Panel
+devTools := fiber.NewDevTools(fiber.DevConfig{
+    Enabled:   true,
+    RoutesDir: "./routes",
+})
+
+// Add state inspector middleware
+app.Use(fiber.StateInspectorMiddleware(devTools, config))
+
+// Mount the dev panel UI
+app.Get("/_gospa/dev", devTools.DevPanelHandler())
+app.Get("/_gospa/dev/ws", devTools.DevToolsHandler()) // WS for real-time updates`, "go", "fiber/dev.go").Render(ctx, templ_7745c5c3_Buffer)
+		if templ_7745c5c3_Err != nil {
+			return templ_7745c5c3_Err
+		}
+		templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 10, "<h3 class=\"text-lg font-semibold mt-6 mb-3\">Features</h3><ul class=\"list-disc list-inside text-[var(--text-secondary)] space-y-2 ml-4\"><li><strong class=\"text-[var(--text-primary)]\">Live Change Log</strong> — See every Rune or StateMap update as it happens on both server and client</li><li><strong class=\"text-[var(--text-primary)]\">Diff View</strong> — Compare \"Before\" and \"After\" state values</li><li><strong class=\"text-[var(--text-primary)]\">Source Tracking</strong> — Identify whether a state change originated from server or client</li><li><strong class=\"text-[var(--text-primary)]\">Key Registry</strong> — Browse all currently tracked reactive state keys</li></ul></div><div><h2 class=\"text-2xl font-bold mb-4 border-b border-[var(--border)] pb-2 italic mono\">Debug Middleware</h2><p class=\"text-[var(--text-secondary)] mb-4\">Lightweight middleware that logs every request with method, path, status, and processing time.</p>")
+		if templ_7745c5c3_Err != nil {
+			return templ_7745c5c3_Err
+		}
+		templ_7745c5c3_Err = components.CodeBlock(`// Add debug middleware
+app.Use(fiber.DebugMiddleware(devTools))
+
+// Logging format:
+// [GET] /docs/api 200 1.2ms
+// [POST] /api/users 201 45.3ms`, "go", "fiber/middleware.go").Render(ctx, templ_7745c5c3_Buffer)
+		if templ_7745c5c3_Err != nil {
+			return templ_7745c5c3_Err
+		}
+		templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 11, "</div><div><h2 class=\"text-2xl font-bold mb-4 border-b border-[var(--border)] pb-2 italic mono\">Client-Side Debugging</h2><p class=\"text-[var(--text-secondary)] mb-4\">The runtime exposes internal state via <code class=\"bg-[var(--surface)] px-1 rounded\">window.__GOSPA__</code> when the auto-init attribute is present.</p>")
+		if templ_7745c5c3_Err != nil {
+			return templ_7745c5c3_Err
+		}
+		templ_7745c5c3_Err = components.CodeBlock(`<!-- Enable in HTML -->
+<html data-gospa-auto>
+
+// From browser console, you can inspect:
+__GOSPA__.components   // All active component instances
+__GOSPA__.globalState  // The root StateMap
+__GOSPA__.config       // Active runtime configuration`, "html", "client/src/runtime.ts").Render(ctx, templ_7745c5c3_Buffer)
+		if templ_7745c5c3_Err != nil {
+			return templ_7745c5c3_Err
+		}
+		templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 12, "<h3 class=\"text-lg font-semibold mt-6 mb-3\">Manual Error Reporting</h3><p class=\"text-[var(--text-secondary)] mb-4\">Trigger the error overlay programmatically from client code.</p>")
+		if templ_7745c5c3_Err != nil {
+			return templ_7745c5c3_Err
+		}
+		templ_7745c5c3_Err = components.CodeBlock(`import { displayError } from '@gospa/runtime';
+
+displayError({
+    message: "Custom validation failed",
+    type: "ValidationError",
+    file: "main.ts",
+    line: 42
+});`, "typescript", "client/src/error_overlay.ts").Render(ctx, templ_7745c5c3_Buffer)
+		if templ_7745c5c3_Err != nil {
+			return templ_7745c5c3_Err
+		}
+		templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 13, "</div></section></div>")
 		if templ_7745c5c3_Err != nil {
 			return templ_7745c5c3_Err
 		}

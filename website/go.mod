@@ -7,12 +7,12 @@ replace github.com/aydenstechdungeon/gospa => ..
 require (
 	github.com/a-h/templ v0.3.977
 	github.com/aydenstechdungeon/gospa v0.1.0
+	github.com/gofiber/fiber/v2 v2.52.11
 )
 
 require (
 	github.com/andybalholm/brotli v1.1.0 // indirect
 	github.com/fasthttp/websocket v1.5.3 // indirect
-	github.com/gofiber/fiber/v2 v2.52.11 // indirect
 	github.com/gofiber/websocket/v2 v2.2.1 // indirect
 	github.com/google/uuid v1.6.0 // indirect
 	github.com/klauspost/compress v1.17.9 // indirect
