@@ -97,32 +97,36 @@ func Page() templ.Component {
 		if templ_7745c5c3_Err != nil {
 			return templ_7745c5c3_Err
 		}
-		templ_7745c5c3_Err = components.CodeBlock(`# Tailwind CSS
-gospa tailwind:process    # Process CSS with Tailwind
-gospa tailwind:watch      # Watch and rebuild CSS
+		templ_7745c5c3_Err = components.CodeBlock(`# Tailwind CSS (via add command)
+gospa add tailwind        # Add Tailwind CSS to project
 
 # PostCSS
-gospa postcss:process     # Process CSS with PostCSS
-gospa postcss:watch       # Watch and rebuild CSS
+gospa postcss:config      # Generate PostCSS config (alias: pc)
+gospa postcss:init        # Initialize PostCSS (alias: pi)
 
 # Image Optimization
-gospa image:optimize      # Optimize all images
-gospa image:resize        # Generate responsive sizes
+gospa image:optimize      # Optimize all images (alias: io)
+gospa image:clean         # Clean optimized images (alias: ic)
+gospa image:sizes         # List image sizes (alias: is)
 
 # Form Validation
-gospa validation:generate # Generate types from schemas
-gospa validation:schema   # Create a new schema
+gospa validation:generate # Generate validation code (alias: vg)
+gospa validation:create   # Create schema file (alias: vc)
+gospa validation:list     # List all schemas (alias: vl)
 
 # SEO
-gospa seo:generate        # Generate sitemap and robots.txt
-gospa seo:meta            # Generate meta tags
-gospa seo:structured      # Generate JSON-LD
+gospa seo:generate        # Generate sitemap and robots.txt (alias: sg)
+gospa seo:meta            # Generate meta tags (alias: sm)
+gospa seo:structured      # Generate JSON-LD (alias: ss)
 
 # Authentication
-gospa auth:generate       # Generate auth handlers
-gospa auth:secret         # Generate JWT secret
-gospa auth:otp            # Generate TOTP secret
-gospa auth:backup         # Generate backup codes`, "bash", "terminal").Render(ctx, templ_7745c5c3_Buffer)
+gospa auth:generate       # Generate auth handlers (alias: ag)
+gospa auth:secret         # Generate JWT secret (alias: as)
+gospa auth:otp            # Generate TOTP secret (alias: ao)
+gospa auth:backup         # Generate backup codes (alias: ab)
+gospa auth:verify         # Verify OTP code (alias: av)
+
+# QR Code (programmatic API only - no CLI commands)`, "bash", "terminal").Render(ctx, templ_7745c5c3_Buffer)
 		if templ_7745c5c3_Err != nil {
 			return templ_7745c5c3_Err
 		}
@@ -210,7 +214,7 @@ func pluginCard(title string, href string, description string) templ.Component {
 		var templ_7745c5c3_Var3 templ.SafeURL
 		templ_7745c5c3_Var3, templ_7745c5c3_Err = templ.JoinURLErrs(templ.SafeURL(href))
 		if templ_7745c5c3_Err != nil {
-			return templ.Error{Err: templ_7745c5c3_Err, FileName: `routes/docs/plugins/page.templ`, Line: 198, Col: 30}
+			return templ.Error{Err: templ_7745c5c3_Err, FileName: `routes/docs/plugins/page.templ`, Line: 202, Col: 30}
 		}
 		_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ.EscapeString(templ_7745c5c3_Var3))
 		if templ_7745c5c3_Err != nil {
@@ -223,7 +227,7 @@ func pluginCard(title string, href string, description string) templ.Component {
 		var templ_7745c5c3_Var4 string
 		templ_7745c5c3_Var4, templ_7745c5c3_Err = templ.JoinStringErrs(title)
 		if templ_7745c5c3_Err != nil {
-			return templ.Error{Err: templ_7745c5c3_Err, FileName: `routes/docs/plugins/page.templ`, Line: 199, Col: 103}
+			return templ.Error{Err: templ_7745c5c3_Err, FileName: `routes/docs/plugins/page.templ`, Line: 203, Col: 103}
 		}
 		_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ.EscapeString(templ_7745c5c3_Var4))
 		if templ_7745c5c3_Err != nil {
@@ -236,7 +240,7 @@ func pluginCard(title string, href string, description string) templ.Component {
 		var templ_7745c5c3_Var5 string
 		templ_7745c5c3_Var5, templ_7745c5c3_Err = templ.JoinStringErrs(description)
 		if templ_7745c5c3_Err != nil {
-			return templ.Error{Err: templ_7745c5c3_Err, FileName: `routes/docs/plugins/page.templ`, Line: 200, Col: 59}
+			return templ.Error{Err: templ_7745c5c3_Err, FileName: `routes/docs/plugins/page.templ`, Line: 204, Col: 59}
 		}
 		_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ.EscapeString(templ_7745c5c3_Var5))
 		if templ_7745c5c3_Err != nil {

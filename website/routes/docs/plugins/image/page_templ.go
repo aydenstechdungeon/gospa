@@ -47,7 +47,7 @@ func Page() templ.Component {
 		if templ_7745c5c3_Err != nil {
 			return templ_7745c5c3_Err
 		}
-		templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 2, "</section><section class=\"space-y-6\"><h2 class=\"text-2xl font-bold border-b border-[var(--border)] pb-2\">CLI Commands</h2><div class=\"rounded-3xl border border-[var(--border)] overflow-hidden\"><table class=\"w-full text-left text-sm\"><thead class=\"bg-[var(--bg-secondary)] text-[var(--text-muted)] uppercase tracking-wider\"><tr><th class=\"px-6 py-4 font-bold\">Command</th><th class=\"px-6 py-4 font-bold\">Alias</th><th class=\"px-6 py-4 font-bold\">Description</th></tr></thead> <tbody class=\"divide-y divide-[var(--border)]\"><tr><td class=\"px-6 py-4 mono text-[var(--accent-primary)] font-bold\">gospa image:optimize</td><td class=\"px-6 py-4 text-[var(--text-muted)]\">io</td><td class=\"px-6 py-4 text-[var(--text-secondary)]\">Optimize all images in input directory</td></tr><tr><td class=\"px-6 py-4 mono text-[var(--accent-primary)] font-bold\">gospa image:resize</td><td class=\"px-6 py-4 text-[var(--text-muted)]\">ir</td><td class=\"px-6 py-4 text-[var(--text-secondary)]\">Generate responsive image sizes</td></tr></tbody></table></div></section><section class=\"space-y-6\"><h2 class=\"text-2xl font-bold border-b border-[var(--border)] pb-2\">Features</h2><div class=\"grid gap-4 md:grid-cols-2\">")
+		templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 2, "</section><section class=\"space-y-6\"><h2 class=\"text-2xl font-bold border-b border-[var(--border)] pb-2\">CLI Commands</h2><div class=\"rounded-3xl border border-[var(--border)] overflow-hidden\"><table class=\"w-full text-left text-sm\"><thead class=\"bg-[var(--bg-secondary)] text-[var(--text-muted)] uppercase tracking-wider\"><tr><th class=\"px-6 py-4 font-bold\">Command</th><th class=\"px-6 py-4 font-bold\">Alias</th><th class=\"px-6 py-4 font-bold\">Description</th></tr></thead> <tbody class=\"divide-y divide-[var(--border)]\"><tr><td class=\"px-6 py-4 mono text-[var(--accent-primary)] font-bold\">gospa image:optimize</td><td class=\"px-6 py-4 text-[var(--text-muted)]\">io</td><td class=\"px-6 py-4 text-[var(--text-secondary)]\">Optimize all images in input directory</td></tr><tr><td class=\"px-6 py-4 mono text-[var(--accent-primary)] font-bold\">gospa image:clean</td><td class=\"px-6 py-4 text-[var(--text-muted)]\">ic</td><td class=\"px-6 py-4 text-[var(--text-secondary)]\">Remove optimized images from output directory</td></tr><tr><td class=\"px-6 py-4 mono text-[var(--accent-primary)] font-bold\">gospa image:sizes</td><td class=\"px-6 py-4 text-[var(--text-muted)]\">is</td><td class=\"px-6 py-4 text-[var(--text-secondary)]\">List configured image sizes</td></tr></tbody></table></div></section><section class=\"space-y-6\"><h2 class=\"text-2xl font-bold border-b border-[var(--border)] pb-2\">Features</h2><div class=\"grid gap-4 md:grid-cols-2\">")
 		if templ_7745c5c3_Err != nil {
 			return templ_7745c5c3_Err
 		}
@@ -110,7 +110,7 @@ func Page() templ.Component {
 		if templ_7745c5c3_Err != nil {
 			return templ_7745c5c3_Err
 		}
-		templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 5, "</section><section class=\"space-y-6\"><h2 class=\"text-2xl font-bold border-b border-[var(--border)] pb-2\">Dependencies</h2><div class=\"rounded-xl border border-[var(--border)] bg-[var(--bg-secondary)] p-4\"><p class=\"text-[var(--text-secondary)] mb-3\">Go packages (auto-installed):</p><code class=\"text-sm text-[var(--accent-primary)]\">github.com/disintegration/imaging, github.com/chai2010/webp</code></div></section></div>")
+		templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 5, "</section><section class=\"space-y-6\"><h2 class=\"text-2xl font-bold border-b border-[var(--border)] pb-2\">Dependencies</h2><div class=\"rounded-xl border border-[var(--border)] bg-[var(--bg-secondary)] p-4\"><p class=\"text-[var(--text-secondary)] mb-3\">Go packages (auto-installed):</p><code class=\"text-sm text-[var(--accent-primary)]\">golang.org/x/image</code></div></section></div>")
 		if templ_7745c5c3_Err != nil {
 			return templ_7745c5c3_Err
 		}
@@ -146,7 +146,7 @@ func featureCard(title string, description string) templ.Component {
 		var templ_7745c5c3_Var3 string
 		templ_7745c5c3_Var3, templ_7745c5c3_Err = templ.JoinStringErrs(title)
 		if templ_7745c5c3_Err != nil {
-			return templ.Error{Err: templ_7745c5c3_Err, FileName: `routes/docs/plugins/image/page.templ`, Line: 114, Col: 36}
+			return templ.Error{Err: templ_7745c5c3_Err, FileName: `routes/docs/plugins/image/page.templ`, Line: 119, Col: 36}
 		}
 		_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ.EscapeString(templ_7745c5c3_Var3))
 		if templ_7745c5c3_Err != nil {
@@ -159,7 +159,7 @@ func featureCard(title string, description string) templ.Component {
 		var templ_7745c5c3_Var4 string
 		templ_7745c5c3_Var4, templ_7745c5c3_Err = templ.JoinStringErrs(description)
 		if templ_7745c5c3_Err != nil {
-			return templ.Error{Err: templ_7745c5c3_Err, FileName: `routes/docs/plugins/image/page.templ`, Line: 115, Col: 59}
+			return templ.Error{Err: templ_7745c5c3_Err, FileName: `routes/docs/plugins/image/page.templ`, Line: 120, Col: 59}
 		}
 		_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ.EscapeString(templ_7745c5c3_Var4))
 		if templ_7745c5c3_Err != nil {

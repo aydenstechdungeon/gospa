@@ -33,9 +33,9 @@ func main() {
 		HydrationMode:    "immediate",
 	})
 
-	// Add cache headers middleware for static assets
+	// Add cache headers middleware for static assets and pages
 	if !devMode {
-		app.Use(staticCacheMiddleware)
+		app.Use(cacheMiddleware)
 	}
 
 	port := getEnvString("PORT", ":3000")
@@ -44,8 +44,8 @@ func main() {
 	}
 }
 
-// staticCacheMiddleware adds Cache-Control headers and ETag support for static assets
-func staticCacheMiddleware(c *fiber.Ctx) error {
+// cacheMiddleware adds Cache-Control headers for static assets and pages
+func cacheMiddleware(c *fiber.Ctx) error {
 	path := c.Path()
 
 	// Apply cache headers for static assets
@@ -76,9 +76,23 @@ func staticCacheMiddleware(c *fiber.Ctx) error {
 				}
 			}
 		}
+	} else if isHTMLPage(path) {
+		// HTML pages: short cache with revalidation (60 seconds)
+		c.Set("Cache-Control", "public, max-age=60, stale-while-revalidate=300")
 	}
 
 	return c.Next()
+}
+
+// isHTMLPage checks if the path is an HTML page request
+func isHTMLPage(path string) bool {
+	// Skip API routes and static files
+	if strings.HasPrefix(path, "/api/") ||
+		strings.HasPrefix(path, "/_") ||
+		strings.Contains(path, ".") {
+		return false
+	}
+	return true
 }
 
 // isImageFile checks if the path is an image file

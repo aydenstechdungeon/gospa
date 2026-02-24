@@ -61,7 +61,7 @@ func Page() templ.Component {
 		if templ_7745c5c3_Err != nil {
 			return templ_7745c5c3_Err
 		}
-		templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 3, "</section><section class=\"space-y-6\"><h2 class=\"text-2xl font-bold border-b border-[var(--border)] pb-2\">CLI Commands</h2><div class=\"rounded-3xl border border-[var(--border)] overflow-hidden\"><table class=\"w-full text-left text-sm\"><thead class=\"bg-[var(--bg-secondary)] text-[var(--text-muted)] uppercase tracking-wider\"><tr><th class=\"px-6 py-4 font-bold\">Command</th><th class=\"px-6 py-4 font-bold\">Alias</th><th class=\"px-6 py-4 font-bold\">Description</th></tr></thead> <tbody class=\"divide-y divide-[var(--border)]\"><tr><td class=\"px-6 py-4 mono text-[var(--accent-primary)] font-bold\">gospa validation:generate</td><td class=\"px-6 py-4 text-[var(--text-muted)]\">vg</td><td class=\"px-6 py-4 text-[var(--text-secondary)]\">Generate types and schemas from JSON schemas</td></tr><tr><td class=\"px-6 py-4 mono text-[var(--accent-primary)] font-bold\">gospa validation:schema</td><td class=\"px-6 py-4 text-[var(--text-muted)]\">vs</td><td class=\"px-6 py-4 text-[var(--text-secondary)]\">Create a new validation schema</td></tr></tbody></table></div></section><section class=\"space-y-6\"><h2 class=\"text-2xl font-bold border-b border-[var(--border)] pb-2\">Schema Definition</h2>")
+		templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 3, "</section><section class=\"space-y-6\"><h2 class=\"text-2xl font-bold border-b border-[var(--border)] pb-2\">CLI Commands</h2><div class=\"rounded-3xl border border-[var(--border)] overflow-hidden\"><table class=\"w-full text-left text-sm\"><thead class=\"bg-[var(--bg-secondary)] text-[var(--text-muted)] uppercase tracking-wider\"><tr><th class=\"px-6 py-4 font-bold\">Command</th><th class=\"px-6 py-4 font-bold\">Alias</th><th class=\"px-6 py-4 font-bold\">Description</th></tr></thead> <tbody class=\"divide-y divide-[var(--border)]\"><tr><td class=\"px-6 py-4 mono text-[var(--accent-primary)] font-bold\">gospa validation:generate</td><td class=\"px-6 py-4 text-[var(--text-muted)]\">vg</td><td class=\"px-6 py-4 text-[var(--text-secondary)]\">Generate types and schemas from JSON schemas</td></tr><tr><td class=\"px-6 py-4 mono text-[var(--accent-primary)] font-bold\">gospa validation:create</td><td class=\"px-6 py-4 text-[var(--text-muted)]\">vc</td><td class=\"px-6 py-4 text-[var(--text-secondary)]\">Create a new validation schema</td></tr><tr><td class=\"px-6 py-4 mono text-[var(--accent-primary)] font-bold\">gospa validation:list</td><td class=\"px-6 py-4 text-[var(--text-muted)]\">vl</td><td class=\"px-6 py-4 text-[var(--text-secondary)]\">List all validation schemas</td></tr></tbody></table></div></section><section class=\"space-y-6\"><h2 class=\"text-2xl font-bold border-b border-[var(--border)] pb-2\">Schema Definition</h2>")
 		if templ_7745c5c3_Err != nil {
 			return templ_7745c5c3_Err
 		}
@@ -169,7 +169,7 @@ func statCard(value string, description string) templ.Component {
 		var templ_7745c5c3_Var3 string
 		templ_7745c5c3_Var3, templ_7745c5c3_Err = templ.JoinStringErrs(value)
 		if templ_7745c5c3_Err != nil {
-			return templ.Error{Err: templ_7745c5c3_Err, FileName: `routes/docs/plugins/validation/page.templ`, Line: 144, Col: 70}
+			return templ.Error{Err: templ_7745c5c3_Err, FileName: `routes/docs/plugins/validation/page.templ`, Line: 149, Col: 70}
 		}
 		_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ.EscapeString(templ_7745c5c3_Var3))
 		if templ_7745c5c3_Err != nil {
@@ -182,7 +182,7 @@ func statCard(value string, description string) templ.Component {
 		var templ_7745c5c3_Var4 string
 		templ_7745c5c3_Var4, templ_7745c5c3_Err = templ.JoinStringErrs(description)
 		if templ_7745c5c3_Err != nil {
-			return templ.Error{Err: templ_7745c5c3_Err, FileName: `routes/docs/plugins/validation/page.templ`, Line: 145, Col: 61}
+			return templ.Error{Err: templ_7745c5c3_Err, FileName: `routes/docs/plugins/validation/page.templ`, Line: 150, Col: 61}
 		}
 		_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ.EscapeString(templ_7745c5c3_Var4))
 		if templ_7745c5c3_Err != nil {

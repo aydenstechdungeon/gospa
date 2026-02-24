@@ -29,14 +29,14 @@ func Hero() templ.Component {
 			templ_7745c5c3_Var1 = templ.NopComponent
 		}
 		ctx = templ.ClearChildren(ctx)
-		templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 1, "<section class=\"relative pt-20 pb-16 md:pt-32 md:pb-24 overflow-hidden\"><div class=\"max-w-7xl mx-auto px-4 relative z-10\"><div class=\"flex flex-col items-center text-center\"><div class=\"inline-flex items-center gap-2 px-3 py-1 rounded-full bg-[var(--accent-primary)]/10 border border-[var(--accent-primary)]/20 text-[var(--accent-primary)] text-xs font-semibold mb-6 animate-pulse\"><span class=\"relative flex h-2 w-2\"><span class=\"animate-ping absolute inline-flex h-full w-full rounded-full bg-[var(--accent-primary)] opacity-75\"></span> <span class=\"relative inline-flex rounded-full h-2 w-2 bg-[var(--accent-primary)]\"></span></span> v0.1.0 Alpha is now live</div><h1 class=\"text-5xl md:text-7xl font-extrabold tracking-tight mb-6 leading-tight\">Svelte-like <span class=\"bg-gradient-to-r from-[var(--accent-primary)] to-[var(--accent-secondary)] bg-clip-text text-transparent\">Reactivity</span><br>")
+		templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 1, "<section class=\"relative pt-20 pb-16 md:pt-32 md:pb-24 overflow-hidden\"><div class=\"max-w-7xl mx-auto px-4 relative z-10\"><div class=\"flex flex-col items-center text-center\"><h1 class=\"text-5xl md:text-7xl font-extrabold tracking-tight mb-6 leading-tight\">Svelte-like <span class=\"bg-gradient-to-r from-[var(--accent-primary)] to-[var(--accent-secondary)] bg-clip-text text-transparent\">Reactivity</span><br>")
 		if templ_7745c5c3_Err != nil {
 			return templ_7745c5c3_Err
 		}
 		var templ_7745c5c3_Var2 string
 		templ_7745c5c3_Var2, templ_7745c5c3_Err = templ.JoinStringErrs("for")
 		if templ_7745c5c3_Err != nil {
-			return templ.Error{Err: templ_7745c5c3_Err, FileName: `components/hero.templ`, Line: 16, Col: 167}
+			return templ.Error{Err: templ_7745c5c3_Err, FileName: `components/hero.templ`, Line: 9, Col: 167}
 		}
 		_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ.EscapeString(templ_7745c5c3_Var2))
 		if templ_7745c5c3_Err != nil {
