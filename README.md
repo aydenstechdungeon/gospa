@@ -9,7 +9,7 @@ A Go framework for building reactive SPAs with server-side rendering. Brings Sve
 - **WebSocket Sync** — Real-time client-server state synchronization
 - **Session Management** — Secure session persistence with `SessionStore` and `ClientStateStore`
 - **Type Safety** — Compile-time template validation with Templ
-- **Lightweight Runtime** — ~11KB gzipped for the simple runtime, ~17KB for the DOMPurify-enabled runtime.
+- **Lightweight Runtime** — ~11KB for the simple runtime, ~17KB for the full runtime with DOMPurify.
 - **Remote Actions** — Type-safe server functions callable directly from the client.
 - **Security** — Built-in CSRF protection, customizable CORS origins, and strict XSS prevention.
 - **Rendering Modes** — Seamlessly mix CSR, SSR, and SSG per-page rendering strategies.
@@ -77,7 +77,7 @@ package routes
 templ Page() {
     <div data-gospa-component="counter" data-gospa-state='{"count":0}'>
         <h1>Counter</h1>
-        <span data-bind="count">0</span>
+        <span data-bind="text:count">0</span>
         <button data-on="click:increment">+</button>
         <button data-on="click:decrement">−</button>
     </div>
@@ -102,7 +102,7 @@ State lives entirely in the browser. No server synchronization.
 
 ```templ
 <div data-gospa-component="counter" data-gospa-local>
-    <span data-bind="count">0</span>
+    <span data-bind="text:count">0</span>
     <button data-on="click:increment">+</button>
 </div>
 ```

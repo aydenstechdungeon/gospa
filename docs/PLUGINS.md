@@ -51,11 +51,11 @@ Plugins can respond to lifecycle events:
 Plugins declare their dependencies with type information:
 
 ```go
-type DependencyType int
+type DependencyType string
 
 const (
-    DepGo  DependencyType = iota  // Go module dependency
-    DepBun                        // Bun/JavaScript dependency
+    DepGo  DependencyType = "go"  // Go module dependency
+    DepBun DependencyType = "bun" // Bun/JavaScript dependency
 )
 
 type Dependency struct {
@@ -688,15 +688,15 @@ type Flag struct {
 ### Hook Types
 
 ```go
-type Hook int
+type Hook string
 
 const (
-    BeforeDev Hook = iota
-    AfterDev
-    BeforeBuild
-    AfterBuild
-    BeforeGenerate
-    AfterGenerate
+    BeforeDev      Hook = "before:dev"
+    AfterDev       Hook = "after:dev"
+    BeforeBuild    Hook = "before:build"
+    AfterBuild     Hook = "after:build"
+    BeforeGenerate Hook = "before:generate"
+    AfterGenerate  Hook = "after:generate"
 )
 ```
 

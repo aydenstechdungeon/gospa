@@ -52,57 +52,77 @@ group := app.Group("/api", middleware...)
 app.Static("/static", "./public")
 ```
 
-### Config
+### `Config`
+The `Config` struct defines the application's configuration.
 
 ```go
 type Config struct {
-    RoutesDir         string                 // Directory with .templ route files
-    RoutesFS          fs.FS                  // Filesystem with routes (optional, takes precedence)
-    DevMode           bool                   // Enable development features
-    RuntimeScript     string                 // Path to client runtime
-    StaticDir         string                 // Static files directory
-    StaticPrefix      string                 // URL prefix for static files
-    AppName           string                 // Application name
-    DefaultState      map[string]interface{} // Initial session state
-    EnableWebSocket   bool                   // Enable WebSocket support
-    WebSocketPath     string                 // WebSocket endpoint path
-    WebSocketMiddleware fiberpkg.Handler     // Pre-WebSocket middleware
+	// RoutesDir is the directory containing route files.
+	RoutesDir string
+	// RoutesFS is the filesystem containing route files (optional).
+	RoutesFS fs.FS
+	// DevMode enables development features.
+	DevMode bool
+	// RuntimeScript is the path to the client runtime script.
+	RuntimeScript string
+	// StaticDir is the directory for static files.
+	StaticDir string
+	// StaticPrefix is the URL prefix for static files.
+	StaticPrefix string
+	// AppName is the application name.
+	AppName string
+	// DefaultState is the initial state for new sessions.
+	DefaultState map[string]interface{}
+	// EnableWebSocket enables WebSocket support.
+	EnableWebSocket bool
+	// WebSocketPath is the WebSocket endpoint path.
+	WebSocketPath string
+	// WebSocketMiddleware allows injecting middleware before WebSocket upgrade.
+	WebSocketMiddleware fiberpkg.Handler
 
-    // Performance
-    CompressState  bool   // Compress WebSocket messages
-    StateDiffing   bool   // Send only state diffs
-    CacheTemplates bool   // Cache compiled templates
-    SimpleRuntime  bool   // Use lightweight runtime without DOMPurify (insecure)
+	// Performance Options
+	CompressState  bool // Compress WebSocket messages
+	StateDiffing   bool // Only send state diffs
+	CacheTemplates bool // Cache compiled templates
+	SimpleRuntime  bool // Use lightweight runtime without DOMPurify
 
-    // WebSocket
-    WSReconnectDelay time.Duration // Initial reconnect delay
-    WSMaxReconnect   int           // Max reconnect attempts
-    WSHeartbeat      time.Duration // Heartbeat interval
+	// WebSocket Options
+	WSReconnectDelay time.Duration // Initial reconnect delay
+	WSMaxReconnect   int           // Max reconnect attempts
+	WSHeartbeat      time.Duration // Heartbeat interval
 
-    // Hydration
-    HydrationMode    string // "immediate" | "lazy" | "visible"
-    HydrationTimeout int    // ms before force hydrate
+	// Hydration Options
+	HydrationMode    string // "immediate" | "lazy" | "visible" | "idle"
+	HydrationTimeout int    // ms before force hydrate
 
-    // Serialization
-    StateSerializer   StateSerializerFunc
-    StateDeserializer StateDeserializerFunc
+	// Serialization Options
+	StateSerializer   StateSerializerFunc
+	StateDeserializer StateDeserializerFunc
 
-    // Routing Options
-    DisableSPA bool // Disable SPA navigation completely
-    SSR        bool // Global SSR mode
+	// Routing Options
+	DisableSPA bool // Disable SPA navigation completely
+	SSR        bool // Global SSR mode
 
-    // Remote Action Options
-    MaxRequestBodySize int    // Maximum allowed size for remote action request bodies
-    RemotePrefix       string // Prefix for remote action endpoints (default "/_gospa/remote")
+	// Remote Action Options
+	MaxRequestBodySize int    // Maximum allowed size for remote action request bodies
+	RemotePrefix       string // Prefix for remote action endpoints
 
-    // Security Options
-    AllowedOrigins []string // Allowed CORS origins
-    EnableCSRF     bool     // Enable automatic CSRF protection
+	// Security Options
+	AllowedOrigins []string // Allowed CORS origins
+	EnableCSRF     bool     // Enable automatic CSRF protection
 }
+```
+
+#### Key Options:
+- `RoutesFS`: Allows embedding routes using `go:embed`.
+- `CompressState`: Uses zlib compression for large state updates over WebSocket.
+- `StateDiffing`: Only sends the changed parts of the state to clients.
+- `SimpleRuntime`: Reduces client bundle size by ~6KB by removing DOMPurify. Use only if all content is trusted.
+- `HydrationMode`: Controls when components become interactive.
+- `SSR`: If true, all pages are rendered on the server even during SPA navigation.
 
 // Default configuration
 config := gospa.DefaultConfig()
-```
 
 ---
 

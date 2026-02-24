@@ -172,6 +172,30 @@ hm.SetHeadTitle("Product Details")
 hm.AddHeadMeta("description", "Premium product")
 hm.AddHeadLink("canonical", "https://example.com")`, "go", "head.go")
 			</div>
+
+			<div class="mt-8">
+				<h3 class="text-xl font-bold mb-4 mono italic">Reactive Bindings</h3>
+				<p class="text-[var(--text-secondary)] mb-4">Helpers for defining client-side reactive bindings in Templ templates.</p>
+				<div class="grid md:grid-cols-2 gap-6">
+					<ul class="space-y-2 text-sm text-[var(--text-secondary)]">
+						<li><code class="text-[var(--accent-secondary)]">templ.Text(key)</code> - Bind text content</li>
+						<li><code class="text-[var(--accent-secondary)]">templ.HTML(key)</code> - Bind inner HTML</li>
+						<li><code class="text-[var(--accent-secondary)]">templ.Value(key)</code> - Bind input value</li>
+						<li><code class="text-[var(--accent-secondary)]">templ.Checked(key)</code> - Bind checkbox state</li>
+					</ul>
+					<ul class="space-y-2 text-sm text-[var(--text-secondary)]">
+						<li><code class="text-[var(--accent-secondary)]">templ.TwoWayBind(key)</code> - Two-way form binding</li>
+						<li><code class="text-[var(--accent-secondary)]">templ.ClassBinding(key, class)</code> - Toggle CSS class</li>
+						<li><code class="text-[var(--accent-secondary)]">templ.ShowBinding(key)</code> - Show/hide element</li>
+						<li><code class="text-[var(--accent-secondary)]">templ.IfBinding(key)</code> - Conditional element</li>
+					</ul>
+				</div>
+				<div class="mt-4">
+					@components.CodeBlock(`<div { templ.Text("count") }>0</div>
+<input { templ.TwoWayBind("name") } />
+<div { templ.ClassBinding("isActive", "active") }></div>`, "templ", "bindings.templ")
+				</div>
+			</div>
 		</section>
 
 		<section id="layout-system" class="space-y-8">

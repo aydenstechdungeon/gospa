@@ -165,7 +165,17 @@ hm.AddHeadLink("canonical", "https://example.com")`, "go", "head.go").Render(ctx
 		if templ_7745c5c3_Err != nil {
 			return templ_7745c5c3_Err
 		}
-		templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 15, "</div></section><section id=\"layout-system\" class=\"space-y-8\"><h2 class=\"text-2xl font-bold border-b border-[var(--border)] pb-2\">Layout System</h2><p class=\"text-[var(--text-secondary)]\">GoSPA's layout system allows for deep nesting and server-side data loading.</p><div><h3 class=\"text-xl font-bold mb-4 mono italic\">templ.LayoutProps</h3>")
+		templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 15, "</div><div class=\"mt-8\"><h3 class=\"text-xl font-bold mb-4 mono italic\">Reactive Bindings</h3><p class=\"text-[var(--text-secondary)] mb-4\">Helpers for defining client-side reactive bindings in Templ templates.</p><div class=\"grid md:grid-cols-2 gap-6\"><ul class=\"space-y-2 text-sm text-[var(--text-secondary)]\"><li><code class=\"text-[var(--accent-secondary)]\">templ.Text(key)</code> - Bind text content</li><li><code class=\"text-[var(--accent-secondary)]\">templ.HTML(key)</code> - Bind inner HTML</li><li><code class=\"text-[var(--accent-secondary)]\">templ.Value(key)</code> - Bind input value</li><li><code class=\"text-[var(--accent-secondary)]\">templ.Checked(key)</code> - Bind checkbox state</li></ul><ul class=\"space-y-2 text-sm text-[var(--text-secondary)]\"><li><code class=\"text-[var(--accent-secondary)]\">templ.TwoWayBind(key)</code> - Two-way form binding</li><li><code class=\"text-[var(--accent-secondary)]\">templ.ClassBinding(key, class)</code> - Toggle CSS class</li><li><code class=\"text-[var(--accent-secondary)]\">templ.ShowBinding(key)</code> - Show/hide element</li><li><code class=\"text-[var(--accent-secondary)]\">templ.IfBinding(key)</code> - Conditional element</li></ul></div><div class=\"mt-4\">")
+		if templ_7745c5c3_Err != nil {
+			return templ_7745c5c3_Err
+		}
+		templ_7745c5c3_Err = components.CodeBlock(`<div { templ.Text("count") }>0</div>
+<input { templ.TwoWayBind("name") } />
+<div { templ.ClassBinding("isActive", "active") }></div>`, "templ", "bindings.templ").Render(ctx, templ_7745c5c3_Buffer)
+		if templ_7745c5c3_Err != nil {
+			return templ_7745c5c3_Err
+		}
+		templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 16, "</div></div></section><section id=\"layout-system\" class=\"space-y-8\"><h2 class=\"text-2xl font-bold border-b border-[var(--border)] pb-2\">Layout System</h2><p class=\"text-[var(--text-secondary)]\">GoSPA's layout system allows for deep nesting and server-side data loading.</p><div><h3 class=\"text-xl font-bold mb-4 mono italic\">templ.LayoutProps</h3>")
 		if templ_7745c5c3_Err != nil {
 			return templ_7745c5c3_Err
 		}
@@ -178,7 +188,7 @@ hm.AddHeadLink("canonical", "https://example.com")`, "go", "head.go").Render(ctx
 		if templ_7745c5c3_Err != nil {
 			return templ_7745c5c3_Err
 		}
-		templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 16, "</div><div><h3 class=\"text-xl font-bold mb-4 mono italic\">templ.LayoutLoader</h3><p class=\"text-[var(--text-secondary)] mb-4\">Interface for server-side layout data fetching (similar to SvelteKit +layout.server.ts).</p>")
+		templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 17, "</div><div><h3 class=\"text-xl font-bold mb-4 mono italic\">templ.LayoutLoader</h3><p class=\"text-[var(--text-secondary)] mb-4\">Interface for server-side layout data fetching (similar to SvelteKit +layout.server.ts).</p>")
 		if templ_7745c5c3_Err != nil {
 			return templ_7745c5c3_Err
 		}
@@ -189,7 +199,7 @@ func (l *MyLoader) Load(ctx context.Context, params map[string]string) (map[stri
 		if templ_7745c5c3_Err != nil {
 			return templ_7745c5c3_Err
 		}
-		templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 17, "</div></section></div>")
+		templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 18, "</div></section></div>")
 		if templ_7745c5c3_Err != nil {
 			return templ_7745c5c3_Err
 		}

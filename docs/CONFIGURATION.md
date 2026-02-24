@@ -38,21 +38,21 @@ app := gospa.New(gospa.Config{
 
 | Option | Type | Default | Description |
 |--------|------|---------|-------------|
-| `EnableWebSocket` | `bool` | `true` | Enable WebSocket support |
-| `WebSocketPath` | `string` | `"/_gospa/ws"` | WebSocket endpoint path |
-| `WebSocketMiddleware` | `fiber.Handler` | `nil` | Middleware before WebSocket upgrade |
-| `WSReconnectDelay` | `time.Duration` | `0` | Initial reconnect delay |
-| `WSMaxReconnect` | `int` | `0` | Max reconnect attempts (0 = unlimited) |
-| `WSHeartbeat` | `time.Duration` | `0` | Heartbeat interval |
+| `EnableWebSocket` | `bool` | `true` | Enable real-time state synchronization via WebSocket |
+| `WebSocketPath` | `string` | `"/_gospa/ws"` | Endpoint for WebSocket connections |
+| `WebSocketMiddleware` | `fiber.Handler` | `nil` | Middleware to run before WebSocket upgrade (for auth/sessions) |
+| `WSReconnectDelay` | `time.Duration` | `0` | Initial delay before reconnecting on failure |
+| `WSMaxReconnect` | `int` | `0` | Maximum number of reconnect attempts (0 for unlimited) |
+| `WSHeartbeat` | `time.Duration` | `0` | Interval for heartbeat messages to keep connection alive |
 
 ### Performance Options
 
 | Option | Type | Default | Description |
 |--------|------|---------|-------------|
-| `CompressState` | `bool` | `false` | Compress WebSocket messages |
-| `StateDiffing` | `bool` | `false` | Only send state diffs over WebSocket |
-| `CacheTemplates` | `bool` | `false` | Cache compiled templates |
-| `SimpleRuntime` | `bool` | `false` | Use lightweight runtime without DOMPurify |
+| `CompressState` | `bool` | `false` | Enable zlib compression for WebSocket messages |
+| `StateDiffing` | `bool` | `false` | Only send state diffs over WebSocket to save bandwidth |
+| `CacheTemplates` | `bool` | `false` | Enable template caching (recommended for production) |
+| `SimpleRuntime` | `bool` | `false` | Use lightweight ~11KB runtime without DOMPurify |
 
 ### Hydration Options
 

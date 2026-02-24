@@ -189,6 +189,63 @@ states.fromJSON({ count: 5, name: 'Restored' });`, "typescript", "statemap.ts")
 		</section>
 
 		<section class="space-y-6">
+			<h2 class="text-2xl font-bold" id="derived-async">DerivedAsync</h2>
+			<p class="text-[var(--text-secondary)]">
+				Async computed values with loading/error states.
+			</p>
+			@components.CodeBlock(`import { DerivedAsync, derivedAsync } from '@gospa/runtime';
+const userId = new Rune(1);
+const userDetails = new DerivedAsync(async () => {
+  const res = await fetch('/api/user/' + userId.get());
+  return res.json();
+});
+
+// Status
+console.log(userDetails.status);    // 'pending' | 'success' | 'error'
+console.log(userDetails.isPending); // boolean
+console.log(userDetails.value);     // T | undefined`, "typescript", "derived-async.ts")
+		</section>
+
+		<section class="space-y-6">
+			<h2 class="text-2xl font-bold" id="runeraw">RuneRaw</h2>
+			<p class="text-[var(--text-secondary)]">
+				Shallow reactive state without deep proxying. Updates require reassignment.
+			</p>
+			@components.CodeBlock(`import { RuneRaw } from '@gospa/runtime';
+const person = new RuneRaw({ name: 'John', age: 30 });
+
+// Update (must reassign entire value)
+person.value = { ...person.value, age: 31 };
+
+// Create snapshot (non-reactive copy)
+const snapshot = person.snapshot();`, "typescript", "runeraw.ts")
+		</section>
+
+		<section class="space-y-6">
+			<h2 class="text-2xl font-bold" id="preeffect">PreEffect</h2>
+			<p class="text-[var(--text-secondary)]">
+				Effect that runs BEFORE DOM updates. Useful for reading DOM state.
+			</p>
+			@components.CodeBlock(`import { PreEffect } from '@gospa/runtime';
+new PreEffect(() => {
+  const scrollY = window.scrollY; // Read before DOM changes
+});`, "typescript", "preeffect.ts")
+		</section>
+
+		<section class="space-y-6">
+			<h2 class="text-2xl font-bold" id="effectroot">EffectRoot</h2>
+			<p class="text-[var(--text-secondary)]">
+				Manual effect lifecycle control. Effect doesn't auto-dispose.
+			</p>
+			@components.CodeBlock(`import { EffectRoot } from '@gospa/runtime';
+const root = new EffectRoot(() => {
+  console.log('Running');
+});
+root.stop();
+root.dispose();`, "typescript", "effectroot.ts")
+		</section>
+
+		<section class="space-y-6">
 			<h2 class="text-2xl font-bold" id="resource">Resource</h2>
 			<p class="text-[var(--text-secondary)]">
 				Async data fetching with loading/error states.
@@ -220,7 +277,7 @@ await userResource.refetch();`, "typescript", "resource.ts")
 
 		<section class="space-y-6">
 			<h2 class="text-2xl font-bold" id="utility-functions">Utility Functions</h2>
-			@components.CodeBlock(`import { batch, untrack, watch, inspect } from '@gospa/runtime';
+			@components.CodeBlock(`import { batch, untrack, watch, watchPath, derivedPath, inspect } from '@gospa/runtime';
 
 // Batch multiple updates into single notification
 batch(() => {
@@ -240,6 +297,12 @@ effect(() => {
 const unsub = watch([a, b], (values, oldValues) => {
   console.log('Changed:', values, oldValues);
 });
+
+// Watch specific path
+watchPath(user, 'profile.name', (val) => console.log(val));
+
+// Derived value from path
+const name = derivedPath(user, 'profile.name');
 
 // Debug helper (dev only)
 inspect(count);

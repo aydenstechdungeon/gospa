@@ -147,7 +147,64 @@ states.fromJSON({ count: 5, name: 'Restored' });`, "typescript", "statemap.ts").
 		if templ_7745c5c3_Err != nil {
 			return templ_7745c5c3_Err
 		}
-		templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 6, "</section><section class=\"space-y-6\"><h2 class=\"text-2xl font-bold\" id=\"resource\">Resource</h2><p class=\"text-[var(--text-secondary)]\">Async data fetching with loading/error states.</p>")
+		templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 6, "</section><section class=\"space-y-6\"><h2 class=\"text-2xl font-bold\" id=\"derived-async\">DerivedAsync</h2><p class=\"text-[var(--text-secondary)]\">Async computed values with loading/error states.</p>")
+		if templ_7745c5c3_Err != nil {
+			return templ_7745c5c3_Err
+		}
+		templ_7745c5c3_Err = components.CodeBlock(`import { DerivedAsync, derivedAsync } from '@gospa/runtime';
+const userId = new Rune(1);
+const userDetails = new DerivedAsync(async () => {
+  const res = await fetch('/api/user/' + userId.get());
+  return res.json();
+});
+
+// Status
+console.log(userDetails.status);    // 'pending' | 'success' | 'error'
+console.log(userDetails.isPending); // boolean
+console.log(userDetails.value);     // T | undefined`, "typescript", "derived-async.ts").Render(ctx, templ_7745c5c3_Buffer)
+		if templ_7745c5c3_Err != nil {
+			return templ_7745c5c3_Err
+		}
+		templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 7, "</section><section class=\"space-y-6\"><h2 class=\"text-2xl font-bold\" id=\"runeraw\">RuneRaw</h2><p class=\"text-[var(--text-secondary)]\">Shallow reactive state without deep proxying. Updates require reassignment.</p>")
+		if templ_7745c5c3_Err != nil {
+			return templ_7745c5c3_Err
+		}
+		templ_7745c5c3_Err = components.CodeBlock(`import { RuneRaw } from '@gospa/runtime';
+const person = new RuneRaw({ name: 'John', age: 30 });
+
+// Update (must reassign entire value)
+person.value = { ...person.value, age: 31 };
+
+// Create snapshot (non-reactive copy)
+const snapshot = person.snapshot();`, "typescript", "runeraw.ts").Render(ctx, templ_7745c5c3_Buffer)
+		if templ_7745c5c3_Err != nil {
+			return templ_7745c5c3_Err
+		}
+		templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 8, "</section><section class=\"space-y-6\"><h2 class=\"text-2xl font-bold\" id=\"preeffect\">PreEffect</h2><p class=\"text-[var(--text-secondary)]\">Effect that runs BEFORE DOM updates. Useful for reading DOM state.</p>")
+		if templ_7745c5c3_Err != nil {
+			return templ_7745c5c3_Err
+		}
+		templ_7745c5c3_Err = components.CodeBlock(`import { PreEffect } from '@gospa/runtime';
+new PreEffect(() => {
+  const scrollY = window.scrollY; // Read before DOM changes
+});`, "typescript", "preeffect.ts").Render(ctx, templ_7745c5c3_Buffer)
+		if templ_7745c5c3_Err != nil {
+			return templ_7745c5c3_Err
+		}
+		templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 9, "</section><section class=\"space-y-6\"><h2 class=\"text-2xl font-bold\" id=\"effectroot\">EffectRoot</h2><p class=\"text-[var(--text-secondary)]\">Manual effect lifecycle control. Effect doesn't auto-dispose.</p>")
+		if templ_7745c5c3_Err != nil {
+			return templ_7745c5c3_Err
+		}
+		templ_7745c5c3_Err = components.CodeBlock(`import { EffectRoot } from '@gospa/runtime';
+const root = new EffectRoot(() => {
+  console.log('Running');
+});
+root.stop();
+root.dispose();`, "typescript", "effectroot.ts").Render(ctx, templ_7745c5c3_Buffer)
+		if templ_7745c5c3_Err != nil {
+			return templ_7745c5c3_Err
+		}
+		templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 10, "</section><section class=\"space-y-6\"><h2 class=\"text-2xl font-bold\" id=\"resource\">Resource</h2><p class=\"text-[var(--text-secondary)]\">Async data fetching with loading/error states.</p>")
 		if templ_7745c5c3_Err != nil {
 			return templ_7745c5c3_Err
 		}
@@ -177,11 +234,11 @@ await userResource.refetch();`, "typescript", "resource.ts").Render(ctx, templ_7
 		if templ_7745c5c3_Err != nil {
 			return templ_7745c5c3_Err
 		}
-		templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 7, "</section><section class=\"space-y-6\"><h2 class=\"text-2xl font-bold\" id=\"utility-functions\">Utility Functions</h2>")
+		templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 11, "</section><section class=\"space-y-6\"><h2 class=\"text-2xl font-bold\" id=\"utility-functions\">Utility Functions</h2>")
 		if templ_7745c5c3_Err != nil {
 			return templ_7745c5c3_Err
 		}
-		templ_7745c5c3_Err = components.CodeBlock(`import { batch, untrack, watch, inspect } from '@gospa/runtime';
+		templ_7745c5c3_Err = components.CodeBlock(`import { batch, untrack, watch, watchPath, derivedPath, inspect } from '@gospa/runtime';
 
 // Batch multiple updates into single notification
 batch(() => {
@@ -202,6 +259,12 @@ const unsub = watch([a, b], (values, oldValues) => {
   console.log('Changed:', values, oldValues);
 });
 
+// Watch specific path
+watchPath(user, 'profile.name', (val) => console.log(val));
+
+// Derived value from path
+const name = derivedPath(user, 'profile.name');
+
 // Debug helper (dev only)
 inspect(count);
 inspect(count).with((type, value) => {
@@ -210,7 +273,7 @@ inspect(count).with((type, value) => {
 		if templ_7745c5c3_Err != nil {
 			return templ_7745c5c3_Err
 		}
-		templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 8, "</section><section class=\"space-y-6\"><h2 class=\"text-2xl font-bold\" id=\"dom-bindings\">DOM Bindings</h2><p class=\"text-[var(--text-secondary)]\">Bind runes to DOM elements with automatic updates.</p>")
+		templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 12, "</section><section class=\"space-y-6\"><h2 class=\"text-2xl font-bold\" id=\"dom-bindings\">DOM Bindings</h2><p class=\"text-[var(--text-secondary)]\">Bind runes to DOM elements with automatic updates.</p>")
 		if templ_7745c5c3_Err != nil {
 			return templ_7745c5c3_Err
 		}
@@ -259,7 +322,7 @@ const { container, cleanup } = renderList(
 		if templ_7745c5c3_Err != nil {
 			return templ_7745c5c3_Err
 		}
-		templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 9, "</section><section class=\"space-y-6\"><h2 class=\"text-2xl font-bold\" id=\"navigation\">Navigation</h2><p class=\"text-[var(--text-secondary)]\">SPA-style navigation without full page reload.</p>")
+		templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 13, "</section><section class=\"space-y-6\"><h2 class=\"text-2xl font-bold\" id=\"navigation\">Navigation</h2><p class=\"text-[var(--text-secondary)]\">SPA-style navigation without full page reload.</p>")
 		if templ_7745c5c3_Err != nil {
 			return templ_7745c5c3_Err
 		}
@@ -295,7 +358,7 @@ const unsub2 = onAfterNavigate((path) => {
 		if templ_7745c5c3_Err != nil {
 			return templ_7745c5c3_Err
 		}
-		templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 10, "</section><section class=\"space-y-6\"><h2 class=\"text-2xl font-bold\" id=\"events\">Event Handling</h2><p class=\"text-[var(--text-secondary)]\">Event listeners with modifiers and delegation.</p>")
+		templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 14, "</section><section class=\"space-y-6\"><h2 class=\"text-2xl font-bold\" id=\"events\">Event Handling</h2><p class=\"text-[var(--text-secondary)]\">Event listeners with modifiers and delegation.</p>")
 		if templ_7745c5c3_Err != nil {
 			return templ_7745c5c3_Err
 		}
@@ -342,7 +405,7 @@ on(form, 'submit', (e) => {
 		if templ_7745c5c3_Err != nil {
 			return templ_7745c5c3_Err
 		}
-		templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 11, "</section><section class=\"space-y-6\"><h2 class=\"text-2xl font-bold\" id=\"websocket\">WebSocket Client</h2><p class=\"text-[var(--text-secondary)]\">Real-time state synchronization with server.</p>")
+		templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 15, "</section><section class=\"space-y-6\"><h2 class=\"text-2xl font-bold\" id=\"websocket\">WebSocket Client</h2><p class=\"text-[var(--text-secondary)]\">Real-time state synchronization with server.</p>")
 		if templ_7745c5c3_Err != nil {
 			return templ_7745c5c3_Err
 		}
@@ -385,7 +448,7 @@ syncBatch('user-form', {
 		if templ_7745c5c3_Err != nil {
 			return templ_7745c5c3_Err
 		}
-		templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 12, "</section><section class=\"space-y-6\"><h2 class=\"text-2xl font-bold\" id=\"transitions\">Transitions</h2><p class=\"text-[var(--text-secondary)]\">Built-in transitions for enter/exit animations.</p>")
+		templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 16, "</section><section class=\"space-y-6\"><h2 class=\"text-2xl font-bold\" id=\"transitions\">Transitions</h2><p class=\"text-[var(--text-secondary)]\">Built-in transitions for enter/exit animations.</p>")
 		if templ_7745c5c3_Err != nil {
 			return templ_7745c5c3_Err
 		}
@@ -409,7 +472,7 @@ setupTransitions();`, "typescript", "transitions.ts").Render(ctx, templ_7745c5c3
 		if templ_7745c5c3_Err != nil {
 			return templ_7745c5c3_Err
 		}
-		templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 13, "<h3 class=\"text-xl font-semibold mt-6\">HTML Transition Attributes</h3>")
+		templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 17, "<h3 class=\"text-xl font-semibold mt-6\">HTML Transition Attributes</h3>")
 		if templ_7745c5c3_Err != nil {
 			return templ_7745c5c3_Err
 		}
@@ -427,7 +490,7 @@ setupTransitions();`, "typescript", "transitions.ts").Render(ctx, templ_7745c5c3
 		if templ_7745c5c3_Err != nil {
 			return templ_7745c5c3_Err
 		}
-		templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 14, "</section><section class=\"space-y-6\"><h2 class=\"text-2xl font-bold\" id=\"init\">Runtime Initialization</h2>")
+		templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 18, "</section><section class=\"space-y-6\"><h2 class=\"text-2xl font-bold\" id=\"init\">Runtime Initialization</h2>")
 		if templ_7745c5c3_Err != nil {
 			return templ_7745c5c3_Err
 		}
@@ -473,7 +536,7 @@ callAction('counter', 'increment');`, "typescript", "init.ts").Render(ctx, templ
 		if templ_7745c5c3_Err != nil {
 			return templ_7745c5c3_Err
 		}
-		templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 15, "</section><section class=\"space-y-6\"><h2 class=\"text-2xl font-bold\" id=\"dom-attributes\">DOM Attributes Reference</h2><div class=\"overflow-x-auto\"><table class=\"w-full border-collapse\"><thead><tr class=\"border-b border-[var(--border)]\"><th class=\"text-left py-3 px-4 font-semibold\">Attribute</th><th class=\"text-left py-3 px-4 font-semibold\">Description</th></tr></thead> <tbody class=\"text-[var(--text-secondary)]\"><tr class=\"border-b border-[var(--border)]\"><td class=\"py-3 px-4\"><code class=\"text-[var(--accent-primary)]\">data-gospa-component</code></td><td class=\"py-3 px-4\">Component ID</td></tr><tr class=\"border-b border-[var(--border)]\"><td class=\"py-3 px-4\"><code class=\"text-[var(--accent-primary)]\">data-gospa-state</code></td><td class=\"py-3 px-4\">Initial state (JSON)</td></tr><tr class=\"border-b border-[var(--border)]\"><td class=\"py-3 px-4\"><code class=\"text-[var(--accent-primary)]\">data-gospa-local</code></td><td class=\"py-3 px-4\">Persist to localStorage</td></tr><tr class=\"border-b border-[var(--border)]\"><td class=\"py-3 px-4\"><code class=\"text-[var(--accent-primary)]\">data-gospa-hydrate</code></td><td class=\"py-3 px-4\">Hydration mode: immediate | lazy | visible | idle</td></tr><tr class=\"border-b border-[var(--border)]\"><td class=\"py-3 px-4\"><code class=\"text-[var(--accent-primary)]\">data-bind</code></td><td class=\"py-3 px-4\">State binding (key:type)</td></tr><tr class=\"border-b border-[var(--border)]\"><td class=\"py-3 px-4\"><code class=\"text-[var(--accent-primary)]\">data-model</code></td><td class=\"py-3 px-4\">Two-way binding (key)</td></tr><tr class=\"border-b border-[var(--border)]\"><td class=\"py-3 px-4\"><code class=\"text-[var(--accent-primary)]\">data-on</code></td><td class=\"py-3 px-4\">Event handler (event:action:args)</td></tr><tr class=\"border-b border-[var(--border)]\"><td class=\"py-3 px-4\"><code class=\"text-[var(--accent-primary)]\">data-transition</code></td><td class=\"py-3 px-4\">Transition type</td></tr><tr class=\"border-b border-[var(--border)]\"><td class=\"py-3 px-4\"><code class=\"text-[var(--accent-primary)]\">data-external</code></td><td class=\"py-3 px-4\">Disable SPA navigation for link</td></tr></tbody></table></div></section><section class=\"space-y-6\"><h2 class=\"text-2xl font-bold\" id=\"global\">Global API</h2><p class=\"text-[var(--text-secondary)]\">The runtime exposes a global <code class=\"text-[var(--accent-primary)]\">__GOSPA__</code> object for debugging.</p>")
+		templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 19, "</section><section class=\"space-y-6\"><h2 class=\"text-2xl font-bold\" id=\"dom-attributes\">DOM Attributes Reference</h2><div class=\"overflow-x-auto\"><table class=\"w-full border-collapse\"><thead><tr class=\"border-b border-[var(--border)]\"><th class=\"text-left py-3 px-4 font-semibold\">Attribute</th><th class=\"text-left py-3 px-4 font-semibold\">Description</th></tr></thead> <tbody class=\"text-[var(--text-secondary)]\"><tr class=\"border-b border-[var(--border)]\"><td class=\"py-3 px-4\"><code class=\"text-[var(--accent-primary)]\">data-gospa-component</code></td><td class=\"py-3 px-4\">Component ID</td></tr><tr class=\"border-b border-[var(--border)]\"><td class=\"py-3 px-4\"><code class=\"text-[var(--accent-primary)]\">data-gospa-state</code></td><td class=\"py-3 px-4\">Initial state (JSON)</td></tr><tr class=\"border-b border-[var(--border)]\"><td class=\"py-3 px-4\"><code class=\"text-[var(--accent-primary)]\">data-gospa-local</code></td><td class=\"py-3 px-4\">Persist to localStorage</td></tr><tr class=\"border-b border-[var(--border)]\"><td class=\"py-3 px-4\"><code class=\"text-[var(--accent-primary)]\">data-gospa-hydrate</code></td><td class=\"py-3 px-4\">Hydration mode: immediate | lazy | visible | idle</td></tr><tr class=\"border-b border-[var(--border)]\"><td class=\"py-3 px-4\"><code class=\"text-[var(--accent-primary)]\">data-bind</code></td><td class=\"py-3 px-4\">State binding (key:type)</td></tr><tr class=\"border-b border-[var(--border)]\"><td class=\"py-3 px-4\"><code class=\"text-[var(--accent-primary)]\">data-model</code></td><td class=\"py-3 px-4\">Two-way binding (key)</td></tr><tr class=\"border-b border-[var(--border)]\"><td class=\"py-3 px-4\"><code class=\"text-[var(--accent-primary)]\">data-on</code></td><td class=\"py-3 px-4\">Event handler (event:action:args)</td></tr><tr class=\"border-b border-[var(--border)]\"><td class=\"py-3 px-4\"><code class=\"text-[var(--accent-primary)]\">data-transition</code></td><td class=\"py-3 px-4\">Transition type</td></tr><tr class=\"border-b border-[var(--border)]\"><td class=\"py-3 px-4\"><code class=\"text-[var(--accent-primary)]\">data-external</code></td><td class=\"py-3 px-4\">Disable SPA navigation for link</td></tr></tbody></table></div></section><section class=\"space-y-6\"><h2 class=\"text-2xl font-bold\" id=\"global\">Global API</h2><p class=\"text-[var(--text-secondary)]\">The runtime exposes a global <code class=\"text-[var(--accent-primary)]\">__GOSPA__</code> object for debugging.</p>")
 		if templ_7745c5c3_Err != nil {
 			return templ_7745c5c3_Err
 		}
@@ -494,7 +557,7 @@ callAction('counter', 'increment');`, "typescript", "init.ts").Render(ctx, templ
 		if templ_7745c5c3_Err != nil {
 			return templ_7745c5c3_Err
 		}
-		templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 16, "</section></div>")
+		templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 20, "</section></div>")
 		if templ_7745c5c3_Err != nil {
 			return templ_7745c5c3_Err
 		}

@@ -38,15 +38,14 @@ go mod tidy
 ```
 myapp/
 ├── main.go                 # Application entry point
+├── gospa.yaml              # Application configuration
 ├── go.mod                  # Go dependencies
 ├── routes/                 # Route definitions
 │   ├── layout.templ        # Root layout
 │   ├── page.templ          # Home page
 │   └── generated_routes.go # Auto-generated routing
-├── generated/              # Auto-generated TypeScript
-│   ├── routes.ts           # Route definitions
-│   └── types.ts            # Type definitions
-└── static/                 # Static assets
+├── static/                 # Static assets
+└── .gospa/                 # Framework cache
 ```
 
 ## Development Workflow
@@ -102,8 +101,8 @@ import (
 templ CounterPage() {
 	<div data-gospa-component="counter">
 		<h1>Counter</h1>
-		<p data-gospa-bind="count">0</p>
-		<button data-gospa-on:click="increment">+1</button>
+		<p data-bind="text:count">0</p>
+		<button data-on="click:increment">+1</button>
 	</div>
 }
 
@@ -154,20 +153,23 @@ The runtime automatically handles DOM bindings:
 
 ```html
 <!-- Bind text content -->
-<p data-gospa-bind="count">0</p>
+<p data-bind="text:count">0</p>
 
 <!-- Bind input value -->
-<input data-gospa-bind:value="name" />
+<input data-bind="value:name" />
+
+<!-- Two-way binding -->
+<input data-model="name" />
 
 <!-- Event handlers -->
-<button data-gospa-on:click="increment">Click</button>
+<button data-on="click:increment">Click</button>
 
 <!-- Conditional rendering -->
-<div data-gospa-if="isVisible">Hidden content</div>
+<div data-bind="if:isVisible">Hidden content</div>
 
 <!-- List rendering -->
-<ul data-gospa-each="items">
-  <li data-gospa-each-item></li>
+<ul data-bind="list:items" data-item-name="todo">
+  <li>{ todo.text }</li>
 </ul>
 ```
 
@@ -363,23 +365,20 @@ blur(element, { from: 10, duration: 300 })
 
 ### Application Config
 
-Create `gospa.json`:
+Create `gospa.yaml`:
 
-```json
-{
-  "app": {
-    "name": "myapp",
-    "port": 3000
-  },
-  "build": {
-    "output": "dist",
-    "minify": true
-  },
-  "runtime": {
-    "mode": "full",
-    "websocket": true
-  }
-}
+```yaml
+app:
+  name: myapp
+  port: 3000
+
+performance:
+  compress_state: true
+  state_diffing: true
+
+runtime:
+  simple: false
+  websocket: true
 ```
 
 ### Runtime Selection
