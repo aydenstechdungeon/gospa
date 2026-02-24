@@ -109,32 +109,36 @@ templ Page() {
 			<p class="text-[var(--text-secondary)] mb-4">
 				Each plugin provides CLI commands for common tasks:
 			</p>
-			@components.CodeBlock(`# Tailwind CSS
-gospa tailwind:process    # Process CSS with Tailwind
-gospa tailwind:watch      # Watch and rebuild CSS
+			@components.CodeBlock(`# Tailwind CSS (via add command)
+gospa add tailwind        # Add Tailwind CSS to project
 
 # PostCSS
-gospa postcss:process     # Process CSS with PostCSS
-gospa postcss:watch       # Watch and rebuild CSS
+gospa postcss:config      # Generate PostCSS config (alias: pc)
+gospa postcss:init        # Initialize PostCSS (alias: pi)
 
 # Image Optimization
-gospa image:optimize      # Optimize all images
-gospa image:resize        # Generate responsive sizes
+gospa image:optimize      # Optimize all images (alias: io)
+gospa image:clean         # Clean optimized images (alias: ic)
+gospa image:sizes         # List image sizes (alias: is)
 
 # Form Validation
-gospa validation:generate # Generate types from schemas
-gospa validation:schema   # Create a new schema
+gospa validation:generate # Generate validation code (alias: vg)
+gospa validation:create   # Create schema file (alias: vc)
+gospa validation:list     # List all schemas (alias: vl)
 
 # SEO
-gospa seo:generate        # Generate sitemap and robots.txt
-gospa seo:meta            # Generate meta tags
-gospa seo:structured      # Generate JSON-LD
+gospa seo:generate        # Generate sitemap and robots.txt (alias: sg)
+gospa seo:meta            # Generate meta tags (alias: sm)
+gospa seo:structured      # Generate JSON-LD (alias: ss)
 
 # Authentication
-gospa auth:generate       # Generate auth handlers
-gospa auth:secret         # Generate JWT secret
-gospa auth:otp            # Generate TOTP secret
-gospa auth:backup         # Generate backup codes`, "bash", "terminal")
+gospa auth:generate       # Generate auth handlers (alias: ag)
+gospa auth:secret         # Generate JWT secret (alias: as)
+gospa auth:otp            # Generate TOTP secret (alias: ao)
+gospa auth:backup         # Generate backup codes (alias: ab)
+gospa auth:verify         # Verify OTP code (alias: av)
+
+# QR Code (programmatic API only - no CLI commands)`, "bash", "terminal")
 		</section>
 
 		<section class="space-y-6">

@@ -43,9 +43,14 @@ templ Page() {
 							<td class="px-6 py-4 text-[var(--text-secondary)]">Optimize all images in input directory</td>
 						</tr>
 						<tr>
-							<td class="px-6 py-4 mono text-[var(--accent-primary)] font-bold">gospa image:resize</td>
-							<td class="px-6 py-4 text-[var(--text-muted)]">ir</td>
-							<td class="px-6 py-4 text-[var(--text-secondary)]">Generate responsive image sizes</td>
+							<td class="px-6 py-4 mono text-[var(--accent-primary)] font-bold">gospa image:clean</td>
+							<td class="px-6 py-4 text-[var(--text-muted)]">ic</td>
+							<td class="px-6 py-4 text-[var(--text-secondary)]">Remove optimized images from output directory</td>
+						</tr>
+						<tr>
+							<td class="px-6 py-4 mono text-[var(--accent-primary)] font-bold">gospa image:sizes</td>
+							<td class="px-6 py-4 text-[var(--text-muted)]">is</td>
+							<td class="px-6 py-4 text-[var(--text-secondary)]">List configured image sizes</td>
 						</tr>
 					</tbody>
 				</table>
@@ -103,7 +108,7 @@ templ Page() {
 			<h2 class="text-2xl font-bold border-b border-[var(--border)] pb-2">Dependencies</h2>
 			<div class="rounded-xl border border-[var(--border)] bg-[var(--bg-secondary)] p-4">
 				<p class="text-[var(--text-secondary)] mb-3">Go packages (auto-installed):</p>
-				<code class="text-sm text-[var(--accent-primary)]">github.com/disintegration/imaging, github.com/chai2010/webp</code>
+				<code class="text-sm text-[var(--accent-primary)]">golang.org/x/image</code>
 			</div>
 		</section>
 	</div>

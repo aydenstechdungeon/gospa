@@ -125,8 +125,8 @@ plugins:
 **CLI Commands:**
 | Command | Alias | Description |
 |---------|-------|-------------|
-| `postcss:process` | `pp` | Process CSS once |
-| `postcss:watch` | `pw` | Watch and process CSS |
+| `postcss:config` | `pc` | Generate PostCSS configuration file |
+| `postcss:init` | `pi` | Initialize PostCSS with default plugins |
 
 **Dependencies:**
 - `postcss` (bun)
@@ -163,7 +163,8 @@ plugins:
 | Command | Alias | Description |
 |---------|-------|-------------|
 | `image:optimize` | `io` | Optimize all images |
-| `image:resize` | `ir` | Resize to specific widths |
+| `image:clean` | `ic` | Clean optimized images |
+| `image:sizes` | `is` | List image sizes |
 
 **Features:**
 - Build-time optimization (default)
@@ -195,7 +196,8 @@ plugins:
 | Command | Alias | Description |
 |---------|-------|-------------|
 | `validation:generate` | `vg` | Generate validation code |
-| `validation:schema` | `vs` | Generate Valibot schema |
+| `validation:create` | `vc` | Create schema file |
+| `validation:list` | `vl` | List all schemas |
 
 **Usage:**
 
@@ -491,13 +493,15 @@ dataURL, err := plugin.GenerateDataURL("https://example.com")
 | `LevelHigh` | 30% | High damage risk, logos/overlays |
 
 **Features:**
-- Pure Go implementation - no external dependencies
 - Multiple output formats: Image, PNG bytes, Base64, Data URL
 - Configurable error correction levels
 - Customizable size and colors
 - Built-in OTP/TOTP QR code generation
 - Functional options pattern for flexible configuration
 - Integrates with Auth plugin for 2FA flows
+
+**Dependencies:**
+- `github.com/skip2/go-qrcode` (go)
 
 ## Plugin Configuration
 

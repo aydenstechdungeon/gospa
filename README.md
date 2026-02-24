@@ -323,13 +323,13 @@ GoSPA includes a powerful plugin system for extending build and development work
 
 | Plugin | Description | Commands |
 |--------|-------------|----------|
-| **Tailwind** | CSS processing with Tailwind CSS v4 | `gospa tw:build`, `gospa tw:watch` |
-| **PostCSS** | Advanced CSS with plugins (autoprefixer, typography, forms) | `gospa postcss:process`, `gospa postcss:watch` |
-| **Image** | Image optimization and responsive variants | `gospa image:optimize`, `gospa image:resize` |
-| **Validation** | Form validation (Valibot client + Go validator server) | `gospa validation:generate`, `gospa validation:schema` |
-| **SEO** | Sitemap, robots.txt, meta tags, structured data | `gospa seo:generate`, `gospa seo:meta` |
-| **Auth** | OAuth2, JWT sessions, TOTP/OTP authentication | `gospa auth:generate`, `gospa auth:otp` |
-| **QRCode** | QR code generation with customizable options | `gospa qrcode:generate` |
+| **Tailwind** | CSS processing with Tailwind CSS v4 | `gospa add:tailwind` |
+| **PostCSS** | Advanced CSS with plugins (autoprefixer, typography, forms) | `gospa postcss:config` (alias: `pc`), `gospa postcss:init` (alias: `pi`) |
+| **Image** | Image optimization and responsive variants | `gospa image:optimize` (alias: `io`), `gospa image:clean` (alias: `ic`), `gospa image:sizes` (alias: `is`) |
+| **Validation** | Form validation (Valibot client + Go validator server) | `gospa validation:generate` (alias: `vg`), `gospa validation:create` (alias: `vc`), `gospa validation:list` (alias: `vl`) |
+| **SEO** | Sitemap, robots.txt, meta tags, structured data | `gospa seo:generate` (alias: `sg`), `gospa seo:meta` (alias: `sm`), `gospa seo:structured` (alias: `ss`) |
+| **Auth** | OAuth2, JWT sessions, TOTP/OTP authentication | `gospa auth:generate` (alias: `ag`), `gospa auth:secret` (alias: `as`), `gospa auth:otp` (alias: `ao`), `gospa auth:backup` (alias: `ab`), `gospa auth:verify` (alias: `av`) |
+| **QRCode** | QR code generation with customizable options | Programmatic API only (no CLI commands) |
 
 ### Configuration
 

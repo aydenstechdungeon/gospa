@@ -13,44 +13,25 @@ templ Page() {
 
 		<section class="space-y-6">
 			<h2 class="text-2xl font-bold border-b border-[var(--border)] pb-2">Installation</h2>
-			<p class="text-[var(--text-secondary)] mb-4">The Tailwind plugin is built into GoSPA. Enable it in your configuration:</p>
+			<p class="text-[var(--text-secondary)] mb-4">Add Tailwind CSS to your project using the add command:</p>
+			@components.CodeBlock(`gospa add tailwind`, "bash", "terminal")
+			<p class="text-[var(--text-secondary)] mt-4">
+				This command installs the required dependencies and configures PostCSS to use Tailwind. The plugin integrates automatically with the build process through hooks - no separate CLI commands needed.
+			</p>
+		</section>
+
+		<section class="space-y-6">
+			<h2 class="text-2xl font-bold border-b border-[var(--border)] pb-2">Configuration</h2>
+			<p class="text-[var(--text-secondary)] mb-4">Enable Tailwind in your gospa.yaml:</p>
 			@components.CodeBlock(`plugins:
   tailwind:
-    enabled: true
-    config: tailwind.config.js  # Optional: legacy config file`, "yaml", "gospa.yaml")
+    enabled: true`, "yaml", "gospa.yaml")
 		</section>
 
 		<section class="space-y-6">
 			<h2 class="text-2xl font-bold border-b border-[var(--border)] pb-2">CSS-First Configuration</h2>
 			<p class="text-[var(--text-secondary)] mb-4">Tailwind v4 uses CSS-first configuration with the @@theme directive:</p>
 			@components.CodeBlock("@import 'tailwindcss';\n\n@theme {\n  --font-display: 'Satoshi', 'sans-serif';\n  --breakpoint-3xl: 1920px;\n  --color-brand-500: oklch(0.84 0.18 117.33);\n  --ease-bounce: cubic-bezier(0.68, -0.55, 0.265, 1.55);\n}", "css", "styles.css")
-		</section>
-
-		<section class="space-y-6">
-			<h2 class="text-2xl font-bold border-b border-[var(--border)] pb-2">CLI Commands</h2>
-			<div class="rounded-3xl border border-[var(--border)] overflow-hidden">
-				<table class="w-full text-left text-sm">
-					<thead class="bg-[var(--bg-secondary)] text-[var(--text-muted)] uppercase tracking-wider">
-						<tr>
-							<th class="px-6 py-4 font-bold">Command</th>
-							<th class="px-6 py-4 font-bold">Alias</th>
-							<th class="px-6 py-4 font-bold">Description</th>
-						</tr>
-					</thead>
-					<tbody class="divide-y divide-[var(--border)]">
-						<tr>
-							<td class="px-6 py-4 mono text-[var(--accent-primary)] font-bold">gospa tailwind:process</td>
-							<td class="px-6 py-4 text-[var(--text-muted)]">tp</td>
-							<td class="px-6 py-4 text-[var(--text-secondary)]">Process CSS with Tailwind</td>
-						</tr>
-						<tr>
-							<td class="px-6 py-4 mono text-[var(--accent-primary)] font-bold">gospa tailwind:watch</td>
-							<td class="px-6 py-4 text-[var(--text-muted)]">tw</td>
-							<td class="px-6 py-4 text-[var(--text-secondary)]">Watch and rebuild CSS on changes</td>
-						</tr>
-					</tbody>
-				</table>
-			</div>
 		</section>
 
 		<section class="space-y-6">
