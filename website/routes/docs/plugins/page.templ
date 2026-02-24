@@ -1,0 +1,202 @@
+package plugins
+
+import "website/components"
+
+templ Page() {
+	<div class="space-y-12">
+		<header>
+			<h1 class="text-4xl font-bold tracking-tight mb-4 text-transparent bg-clip-text bg-gradient-to-r from-[var(--accent-primary)] to-[var(--accent-secondary)]">Plugin System</h1>
+			<p class="text-xl text-[var(--text-secondary)] leading-relaxed">
+				Extend GoSPA with powerful plugins for CSS processing, image optimization, form validation, SEO, and authentication.
+			</p>
+		</header>
+
+		<section class="space-y-6">
+			<h2 class="text-2xl font-bold border-b border-[var(--border)] pb-2">Overview</h2>
+			<p class="text-[var(--text-secondary)]">
+				GoSPA's plugin system allows you to extend the framework with additional functionality. Plugins can hook into the build process, add CLI commands, and provide runtime features.
+			</p>
+		</section>
+
+		<section class="space-y-6">
+			<h2 class="text-2xl font-bold border-b border-[var(--border)] pb-2">Built-in Plugins</h2>
+			<div class="grid gap-4 md:grid-cols-2">
+				@pluginCard("Tailwind CSS", "/docs/plugins/tailwind", "CSS framework with v4 support, CSS-first configuration, and JIT compilation.")
+				@pluginCard("PostCSS", "/docs/plugins/postcss", "Advanced CSS processing with autoprefixer, nesting, and Tailwind extensions.")
+				@pluginCard("Image Optimization", "/docs/plugins/image", "Responsive images with WebP conversion, lazy loading, and srcset generation.")
+				@pluginCard("Form Validation", "/docs/plugins/validation", "Client-side Valibot + server-side Go validator with TypeScript type generation.")
+				@pluginCard("SEO", "/docs/plugins/seo", "Sitemaps, robots.txt, meta tags, Open Graph, and JSON-LD structured data.")
+				@pluginCard("Authentication", "/docs/plugins/auth", "OAuth2 providers, JWT sessions, TOTP/OTP, and backup codes.")
+                @pluginCard("QR Code", "/docs/plugins/qrcode", "A QR Code generator.")
+			</div>
+		</section>
+
+		<section class="space-y-6">
+			<h2 class="text-2xl font-bold border-b border-[var(--border)] pb-2">Configuration</h2>
+			<p class="text-[var(--text-secondary)] mb-4">
+				Configure plugins in your <code class="mono text-[var(--accent-primary)]">gospa.yaml</code> file:
+			</p>
+			@components.CodeBlock(`plugins:
+  tailwind:
+    enabled: true
+    config: tailwind.config.js
+  postcss:
+    enabled: true
+    plugins:
+      - tailwindcss
+      - autoprefixer
+  image:
+    enabled: true
+    formats: [webp, jpeg, png]
+    sizes: [320, 640, 1280, 1920]
+  validation:
+    enabled: true
+    schemasDir: schemas
+  seo:
+    enabled: true
+    siteUrl: https://example.com
+  auth:
+    enabled: true
+    jwtSecret: "\${JWT_SECRET}"
+    providers: [google, github]`, "yaml", "gospa.yaml")
+		</section>
+
+		<section class="space-y-6">
+			<h2 class="text-2xl font-bold border-b border-[var(--border)] pb-2">Plugin Hooks</h2>
+			<p class="text-[var(--text-secondary)] mb-4">
+				Plugins can hook into various stages of the build and development lifecycle:
+			</p>
+			<div class="rounded-3xl border border-[var(--border)] overflow-hidden">
+				<table class="w-full text-left text-sm">
+					<thead class="bg-[var(--bg-secondary)] text-[var(--text-muted)] uppercase tracking-wider">
+						<tr>
+							<th class="px-6 py-4 font-bold">Hook</th>
+							<th class="px-6 py-4 font-bold">Description</th>
+						</tr>
+					</thead>
+					<tbody class="divide-y divide-[var(--border)]">
+						<tr>
+							<td class="px-6 py-4 mono text-[var(--accent-primary)] font-bold">BeforeGenerate</td>
+							<td class="px-6 py-4 text-[var(--text-secondary)]">Runs before route generation</td>
+						</tr>
+						<tr>
+							<td class="px-6 py-4 mono text-[var(--accent-primary)] font-bold">AfterGenerate</td>
+							<td class="px-6 py-4 text-[var(--text-secondary)]">Runs after route generation</td>
+						</tr>
+						<tr>
+							<td class="px-6 py-4 mono text-[var(--accent-primary)] font-bold">BeforeDev</td>
+							<td class="px-6 py-4 text-[var(--text-secondary)]">Runs before dev server starts</td>
+						</tr>
+						<tr>
+							<td class="px-6 py-4 mono text-[var(--accent-primary)] font-bold">AfterDev</td>
+							<td class="px-6 py-4 text-[var(--text-secondary)]">Runs after dev server starts</td>
+						</tr>
+						<tr>
+							<td class="px-6 py-4 mono text-[var(--accent-primary)] font-bold">BeforeBuild</td>
+							<td class="px-6 py-4 text-[var(--text-secondary)]">Runs before production build</td>
+						</tr>
+						<tr>
+							<td class="px-6 py-4 mono text-[var(--accent-primary)] font-bold">AfterBuild</td>
+							<td class="px-6 py-4 text-[var(--text-secondary)]">Runs after production build</td>
+						</tr>
+					</tbody>
+				</table>
+			</div>
+		</section>
+
+		<section class="space-y-6">
+			<h2 class="text-2xl font-bold border-b border-[var(--border)] pb-2">CLI Commands</h2>
+			<p class="text-[var(--text-secondary)] mb-4">
+				Each plugin provides CLI commands for common tasks:
+			</p>
+			@components.CodeBlock(`# Tailwind CSS
+gospa tailwind:process    # Process CSS with Tailwind
+gospa tailwind:watch      # Watch and rebuild CSS
+
+# PostCSS
+gospa postcss:process     # Process CSS with PostCSS
+gospa postcss:watch       # Watch and rebuild CSS
+
+# Image Optimization
+gospa image:optimize      # Optimize all images
+gospa image:resize        # Generate responsive sizes
+
+# Form Validation
+gospa validation:generate # Generate types from schemas
+gospa validation:schema   # Create a new schema
+
+# SEO
+gospa seo:generate        # Generate sitemap and robots.txt
+gospa seo:meta            # Generate meta tags
+gospa seo:structured      # Generate JSON-LD
+
+# Authentication
+gospa auth:generate       # Generate auth handlers
+gospa auth:secret         # Generate JWT secret
+gospa auth:otp            # Generate TOTP secret
+gospa auth:backup         # Generate backup codes`, "bash", "terminal")
+		</section>
+
+		<section class="space-y-6">
+			<h2 class="text-2xl font-bold border-b border-[var(--border)] pb-2">Creating Custom Plugins</h2>
+			<p class="text-[var(--text-secondary)] mb-4">
+				Create your own plugins by implementing the Plugin interface:
+			</p>
+			@components.CodeBlock(`package myplugin
+
+import "github.com/aydenstechdungeon/gospa/plugin"
+
+type MyPlugin struct{}
+
+func (p *MyPlugin) Name() string {
+    return "my-plugin"
+}
+
+func (p *MyPlugin) Init() error {
+    return nil
+}
+
+func (p *MyPlugin) Dependencies() []plugin.Dependency {
+    return []plugin.Dependency{
+        {Type: plugin.DepGo, Name: "github.com/example/pkg", Version: "v1.0.0"},
+        {Type: plugin.DepBun, Name: "some-npm-package", Version: "^2.0.0"},
+    }
+}
+
+func (p *MyPlugin) OnHook(hook plugin.Hook, ctx map[string]interface{}) error {
+    switch hook {
+    case plugin.BeforeBuild:
+        // Pre-build logic
+    case plugin.AfterBuild:
+        // Post-build logic
+    }
+    return nil
+}
+
+func (p *MyPlugin) Commands() []plugin.Command {
+    return []plugin.Command{
+        {
+            Name:    "myplugin:run",
+            Aliases: []string{"mp"},
+            Desc:    "Run my plugin",
+            Action:  p.runAction,
+        },
+    }
+}`, "go", "myplugin.go")
+		</section>
+
+		<section class="space-y-6">
+			<h2 class="text-2xl font-bold border-b border-[var(--border)] pb-2">External Plugins</h2>
+			<p class="text-[var(--text-secondary)]">
+				External plugins are cached in <code class="mono text-[var(--accent-primary)]">~/.gospa/plugins/</code> and can be installed from Git repositories or local paths.
+			</p>
+		</section>
+	</div>
+}
+
+templ pluginCard(title string, href string, description string) {
+	<a href={ templ.SafeURL(href) } class="block p-6 rounded-2xl border border-[var(--border)] bg-[var(--bg-secondary)] hover:border-[var(--accent-primary)] transition-all group">
+		<h3 class="text-lg font-bold mb-2 group-hover:text-[var(--accent-primary)] transition-colors">{ title }</h3>
+		<p class="text-sm text-[var(--text-muted)]">{ description }</p>
+	</a>
+}

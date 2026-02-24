@@ -1,0 +1,88 @@
+package tailwind
+
+import "website/components"
+
+templ Page() {
+	<div class="space-y-12">
+		<header>
+			<h1 class="text-4xl font-bold tracking-tight mb-4 text-transparent bg-clip-text bg-gradient-to-r from-[var(--accent-primary)] to-[var(--accent-secondary)]">Tailwind CSS Plugin</h1>
+			<p class="text-xl text-[var(--text-secondary)] leading-relaxed">
+				Utility-first CSS framework with Tailwind v4 support, CSS-first configuration, and JIT compilation.
+			</p>
+		</header>
+
+		<section class="space-y-6">
+			<h2 class="text-2xl font-bold border-b border-[var(--border)] pb-2">Installation</h2>
+			<p class="text-[var(--text-secondary)] mb-4">The Tailwind plugin is built into GoSPA. Enable it in your configuration:</p>
+			@components.CodeBlock(`plugins:
+  tailwind:
+    enabled: true
+    config: tailwind.config.js  # Optional: legacy config file`, "yaml", "gospa.yaml")
+		</section>
+
+		<section class="space-y-6">
+			<h2 class="text-2xl font-bold border-b border-[var(--border)] pb-2">CSS-First Configuration</h2>
+			<p class="text-[var(--text-secondary)] mb-4">Tailwind v4 uses CSS-first configuration with the @@theme directive:</p>
+			@components.CodeBlock("@import 'tailwindcss';\n\n@theme {\n  --font-display: 'Satoshi', 'sans-serif';\n  --breakpoint-3xl: 1920px;\n  --color-brand-500: oklch(0.84 0.18 117.33);\n  --ease-bounce: cubic-bezier(0.68, -0.55, 0.265, 1.55);\n}", "css", "styles.css")
+		</section>
+
+		<section class="space-y-6">
+			<h2 class="text-2xl font-bold border-b border-[var(--border)] pb-2">CLI Commands</h2>
+			<div class="rounded-3xl border border-[var(--border)] overflow-hidden">
+				<table class="w-full text-left text-sm">
+					<thead class="bg-[var(--bg-secondary)] text-[var(--text-muted)] uppercase tracking-wider">
+						<tr>
+							<th class="px-6 py-4 font-bold">Command</th>
+							<th class="px-6 py-4 font-bold">Alias</th>
+							<th class="px-6 py-4 font-bold">Description</th>
+						</tr>
+					</thead>
+					<tbody class="divide-y divide-[var(--border)]">
+						<tr>
+							<td class="px-6 py-4 mono text-[var(--accent-primary)] font-bold">gospa tailwind:process</td>
+							<td class="px-6 py-4 text-[var(--text-muted)]">tp</td>
+							<td class="px-6 py-4 text-[var(--text-secondary)]">Process CSS with Tailwind</td>
+						</tr>
+						<tr>
+							<td class="px-6 py-4 mono text-[var(--accent-primary)] font-bold">gospa tailwind:watch</td>
+							<td class="px-6 py-4 text-[var(--text-muted)]">tw</td>
+							<td class="px-6 py-4 text-[var(--text-secondary)]">Watch and rebuild CSS on changes</td>
+						</tr>
+					</tbody>
+				</table>
+			</div>
+		</section>
+
+		<section class="space-y-6">
+			<h2 class="text-2xl font-bold border-b border-[var(--border)] pb-2">Features</h2>
+			<div class="grid gap-4 md:grid-cols-2">
+				@featureCard("JIT Compilation", "On-demand utility generation for smaller bundle sizes.")
+				@featureCard("CSS-First Config", "Configure themes directly in CSS with @theme directive.")
+				@featureCard("Container Queries", "Built-in support for @container queries.")
+				@featureCard("3D Transforms", "rotate-x-*, translate-z-*, perspective-* utilities.")
+			</div>
+		</section>
+
+		<section class="space-y-6">
+			<h2 class="text-2xl font-bold border-b border-[var(--border)] pb-2">Usage Example</h2>
+			@components.CodeBlock(`<!-- In your Templ component -->
+templ MyComponent() {
+  <div class="flex flex-col items-center justify-center min-h-screen bg-gradient-to-br from-brand-500 to-purple-600">
+    <h1 class="text-4xl font-bold text-white drop-shadow-lg">
+      Hello, Tailwind v4!
+    </h1>
+    <button class="mt-4 px-6 py-2 bg-white text-brand-500 rounded-lg hover:scale-105 transition-transform">
+      Click me
+    </button>
+  </div>
+}`, "templ", "component.templ")
+		</section>
+	</div>
+}
+
+templ featureCard(title string, description string) {
+	<div class="p-4 rounded-xl border border-[var(--border)] bg-[var(--bg-secondary)]">
+		<h3 class="font-bold mb-1">{ title }</h3>
+		<p class="text-sm text-[var(--text-muted)]">{ description }</p>
+	</div>
+}

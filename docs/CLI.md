@@ -333,12 +333,120 @@ gospa add <feature>
 | Feature | Description |
 |---------|-------------|
 | `tailwind` | Adds Tailwind CSS support |
+| `postcss` | Adds PostCSS with Tailwind extensions |
+| `image` | Adds image optimization |
+| `validation` | Adds form validation (Valibot + Go validator) |
+| `seo` | Adds SEO optimization (sitemap, meta tags, JSON-LD) |
+| `auth` | Adds authentication (OAuth2, JWT, OTP) |
 
 ### Examples
 
 ```bash
 # Add Tailwind CSS
 gospa add tailwind
+
+# Add authentication
+gospa add auth
+
+# Add SEO optimization
+gospa add seo
+```
+
+---
+
+## Plugin Commands
+
+Plugins can provide custom CLI commands. Below are the commands provided by built-in plugins.
+
+### PostCSS Plugin
+
+| Command | Alias | Description |
+|---------|-------|-------------|
+| `postcss:process` | `pp` | Process CSS with PostCSS |
+| `postcss:watch` | `pw` | Watch and process CSS files |
+
+```bash
+# Process CSS once
+gospa postcss:process
+
+# Watch for changes
+gospa postcss:watch
+```
+
+### Image Plugin
+
+| Command | Alias | Description |
+|---------|-------|-------------|
+| `image:optimize` | `io` | Optimize images in a directory |
+| `image:resize` | `ir` | Resize images to specified dimensions |
+
+```bash
+# Optimize all images in static/
+gospa image:optimize
+
+# Resize images to specific widths
+gospa image:resize --widths 320,640,1280
+```
+
+### Validation Plugin
+
+| Command | Alias | Description |
+|---------|-------|-------------|
+| `validation:generate` | `vg` | Generate validation code from schema |
+| `validation:schema` | `vs` | Generate Valibot schema from JSON |
+
+```bash
+# Generate validation code
+gospa validation:generate
+
+# Generate schema from JSON
+gospa validation:schema schema.json
+```
+
+### SEO Plugin
+
+| Command | Alias | Description |
+|---------|-------|-------------|
+| `seo:generate` | `sg` | Generate SEO files (sitemap, robots.txt) |
+| `seo:meta` | `sm` | Generate meta tags for a page |
+| `seo:structured` | `ss` | Generate structured data (JSON-LD) |
+
+```bash
+# Generate sitemap and robots.txt
+gospa seo:generate
+
+# Generate meta tags for a page
+gospa seo:meta /about
+
+# Generate JSON-LD for Organization
+gospa seo:structured Organization
+```
+
+### Auth Plugin
+
+| Command | Alias | Description |
+|---------|-------|-------------|
+| `auth:generate` | `ag` | Generate authentication code |
+| `auth:secret` | `as` | Generate a secure JWT secret |
+| `auth:otp` | `ao` | Generate OTP secret and QR code URL |
+| `auth:backup` | `ab` | Generate backup codes for 2FA |
+| `auth:verify` | `av` | Verify an OTP code against a secret |
+
+```bash
+# Generate auth code
+gospa auth:generate
+
+# Generate JWT secret
+gospa auth:secret
+
+# Generate OTP setup for user
+gospa auth:otp user@example.com
+
+# Generate backup codes
+gospa auth:backup 10
+
+# Verify OTP code
+gospa auth:verify <secret> <code>
 ```
 
 ---
@@ -377,7 +485,67 @@ The CLI supports a plugin system with hooks for extending functionality.
 
 ### Built-in Plugins
 
-- **Tailwind Plugin**: Adds Tailwind CSS support via `gospa add tailwind`
+| Plugin | Description | Dependencies |
+|--------|-------------|--------------|
+| **Tailwind** | Tailwind CSS v4 support | `tailwindcss` (bun) |
+| **PostCSS** | PostCSS with Tailwind extensions | `postcss`, `@tailwindcss/postcss` (bun) |
+| **Image** | Image optimization (WebP, JPEG, PNG) | None (stdlib) |
+| **Validation** | Form validation (Valibot + Go validator) | `github.com/go-playground/validator/v10` (go), `valibot` (bun) |
+| **SEO** | SEO optimization (sitemap, meta, JSON-LD) | None (stdlib) |
+| **Auth** | Authentication (OAuth2, JWT, OTP) | `github.com/golang-jwt/jwt/v5`, `golang.org/x/oauth2`, `github.com/pquerna/otp` (go) |
+
+### Plugin Configuration
+
+Plugins can be configured via `gospa.yaml`:
+
+```yaml
+# gospa.yaml
+plugins:
+  tailwind:
+    input: ./styles/main.css
+    output: ./static/css/main.css
+  
+  image:
+    input: ./static/images
+    output: ./static/images/optimized
+    formats: [webp, jpeg]
+    widths: [320, 640, 1280]
+  
+  seo:
+    site_url: https://example.com
+    site_name: My GoSPA Site
+    generate_sitemap: true
+  
+  auth:
+    jwt_secret: ${JWT_SECRET}
+    jwt_expiry: 24
+    oauth_providers: [google, github]
+    otp_enabled: true
+```
+
+### Plugin Cache
+
+External plugins are cached in `~/.gospa/plugins/`. This allows plugins to be downloaded and reused across projects.
+
+### Creating Custom Plugins
+
+Plugins implement the `Plugin` interface:
+
+```go
+type Plugin interface {
+    Name() string
+    Init() error
+    Dependencies() []Dependency
+}
+
+type CLIPlugin interface {
+    Plugin
+    OnHook(hook Hook, ctx map[string]interface{}) error
+    Commands() []Command
+}
+```
+
+See [PLUGINS.md](./PLUGINS.md) for detailed plugin development guide.
 
 ---
 

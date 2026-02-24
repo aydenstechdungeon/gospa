@@ -2,7 +2,21 @@ package plugin
 
 import (
 	"fmt"
+	"os"
+	"path/filepath"
 )
+
+// getPluginCacheDir returns the directory where external plugins are cached.
+func getPluginCacheDir() string {
+	home, err := os.UserHomeDir()
+	if err != nil {
+		home = "."
+	}
+	return filepath.Join(home, ".gospa", "plugins")
+}
+
+// PluginCacheDir is the directory where external plugins are cached.
+var PluginCacheDir = getPluginCacheDir()
 
 // Hook represents a lifecycle event in GoSPA.
 type Hook string
@@ -22,10 +36,33 @@ const (
 	AfterBuild Hook = "after:build"
 )
 
+// DependencyType represents the type of dependency (Go or Bun/JS).
+type DependencyType string
+
+const (
+	// DepGo is a Go module dependency.
+	DepGo DependencyType = "go"
+	// DepBun is a Bun/JavaScript package dependency.
+	DepBun DependencyType = "bun"
+)
+
+// Dependency represents a plugin dependency.
+type Dependency struct {
+	// Type is the dependency type (go or bun).
+	Type DependencyType
+	// Name is the package name (e.g., "golang.org/x/oauth2" or "valibot").
+	Name string
+	// Version is the version constraint (e.g., "latest", "v1.2.3").
+	Version string
+}
+
 // Plugin is the base interface for all GoSPA extensions.
 type Plugin interface {
 	Name() string
 	Init() error
+	// Dependencies returns the list of dependencies required by this plugin.
+	// This includes both Go modules and Bun packages.
+	Dependencies() []Dependency
 }
 
 // CLIPlugin extends Plugin with CLI-specific functionality.

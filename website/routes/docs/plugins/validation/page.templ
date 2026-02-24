@@ -1,0 +1,147 @@
+package validation
+
+import "website/components"
+
+templ Page() {
+	<div class="space-y-12">
+		<header>
+			<h1 class="text-4xl font-bold tracking-tight mb-4 text-transparent bg-clip-text bg-gradient-to-r from-[var(--accent-primary)] to-[var(--accent-secondary)]">Form Validation Plugin</h1>
+			<p class="text-xl text-[var(--text-secondary)] leading-relaxed">
+				Isomorphic form validation with Valibot (client) and Go validator (server). Generates TypeScript types, Valibot schemas, and Go structs from JSON schemas.
+			</p>
+		</header>
+
+		<section class="space-y-6">
+			<h2 class="text-2xl font-bold border-b border-[var(--border)] pb-2">Why Valibot?</h2>
+			<div class="grid gap-4 md:grid-cols-3">
+				@statCard("~1.5KB", "Gzipped bundle size")
+				@statCard("Tree-shakeable", "Only import what you use")
+				@statCard("Standard Schema", "Compatible with any library")
+			</div>
+			<p class="text-[var(--text-secondary)]">Valibot is significantly smaller than Zod (~12KB) while providing the same validation capabilities. Perfect for client-side bundles.</p>
+		</section>
+
+		<section class="space-y-6">
+			<h2 class="text-2xl font-bold border-b border-[var(--border)] pb-2">Installation</h2>
+			@components.CodeBlock(`plugins:
+  validation:
+    enabled: true
+    schemas_dir: schemas
+    output_dir: generated
+    generate_types: true
+    generate_go: true`, "yaml", "gospa.yaml")
+		</section>
+
+		<section class="space-y-6">
+			<h2 class="text-2xl font-bold border-b border-[var(--border)] pb-2">CLI Commands</h2>
+			<div class="rounded-3xl border border-[var(--border)] overflow-hidden">
+				<table class="w-full text-left text-sm">
+					<thead class="bg-[var(--bg-secondary)] text-[var(--text-muted)] uppercase tracking-wider">
+						<tr>
+							<th class="px-6 py-4 font-bold">Command</th>
+							<th class="px-6 py-4 font-bold">Alias</th>
+							<th class="px-6 py-4 font-bold">Description</th>
+						</tr>
+					</thead>
+					<tbody class="divide-y divide-[var(--border)]">
+						<tr>
+							<td class="px-6 py-4 mono text-[var(--accent-primary)] font-bold">gospa validation:generate</td>
+							<td class="px-6 py-4 text-[var(--text-muted)]">vg</td>
+							<td class="px-6 py-4 text-[var(--text-secondary)]">Generate types and schemas from JSON schemas</td>
+						</tr>
+						<tr>
+							<td class="px-6 py-4 mono text-[var(--accent-primary)] font-bold">gospa validation:schema</td>
+							<td class="px-6 py-4 text-[var(--text-muted)]">vs</td>
+							<td class="px-6 py-4 text-[var(--text-secondary)]">Create a new validation schema</td>
+						</tr>
+					</tbody>
+				</table>
+			</div>
+		</section>
+
+		<section class="space-y-6">
+			<h2 class="text-2xl font-bold border-b border-[var(--border)] pb-2">Schema Definition</h2>
+			@components.CodeBlock(`{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "type": "object",
+  "properties": {
+    "email": {
+      "type": "string",
+      "format": "email",
+      "minLength": 5,
+      "maxLength": 255
+    },
+    "password": {
+      "type": "string",
+      "minLength": 8,
+      "maxLength": 100
+    },
+    "age": {
+      "type": "integer",
+      "minimum": 18,
+      "maximum": 120
+    }
+  },
+  "required": ["email", "password"]
+}`, "json", "schemas/user.json")
+		</section>
+
+		<section class="space-y-6">
+			<h2 class="text-2xl font-bold border-b border-[var(--border)] pb-2">Generated Output</h2>
+			<div class="grid gap-6 md:grid-cols-2">
+				<div>
+					<h3 class="font-bold mb-2 text-[var(--text-secondary)]">TypeScript Types</h3>
+					@components.CodeBlock(`export interface User {
+  email: string;
+  password: string;
+  age?: number;
+}`, "typescript", "generated/types.ts")
+				</div>
+				<div>
+					<h3 class="font-bold mb-2 text-[var(--text-secondary)]">Valibot Schema</h3>
+					@components.CodeBlock(`import * as v from 'valibot';
+
+export const UserSchema = v.object({
+  email: v.pipe(v.string(), v.email(), v.minLength(5), v.maxLength(255)),
+  password: v.pipe(v.string(), v.minLength(8), v.maxLength(100)),
+  age: v.optional(v.pipe(v.number(), v.minValue(18), v.maxValue(120)))
+});`, "typescript", "generated/schemas.ts")
+				</div>
+			</div>
+		</section>
+
+		<section class="space-y-6">
+			<h2 class="text-2xl font-bold border-b border-[var(--border)] pb-2">Server-side Validation</h2>
+			@components.CodeBlock(`type User struct {
+    Email    string ` + "`" + `validate:"required,email,min=5,max=255"` + "`" + `
+    Password string ` + "`" + `validate:"required,min=8,max=100"` + "`" + `
+    Age      int    ` + "`" + `validate:"omitempty,min=18,max=120"` + "`" + `
+}
+
+func ValidateUser(user User) error {
+    return validator.New().Struct(user)
+}`, "go", "generated/user.go")
+		</section>
+
+		<section class="space-y-6">
+			<h2 class="text-2xl font-bold border-b border-[var(--border)] pb-2">Dependencies</h2>
+			<div class="grid gap-4 md:grid-cols-2">
+				<div class="rounded-xl border border-[var(--border)] bg-[var(--bg-secondary)] p-4">
+					<p class="text-[var(--text-secondary)] mb-2 font-bold">Bun packages:</p>
+					<code class="text-sm text-[var(--accent-primary)]">valibot</code>
+				</div>
+				<div class="rounded-xl border border-[var(--border)] bg-[var(--bg-secondary)] p-4">
+					<p class="text-[var(--text-secondary)] mb-2 font-bold">Go packages:</p>
+					<code class="text-sm text-[var(--accent-primary)]">github.com/go-playground/validator/v10</code>
+				</div>
+			</div>
+		</section>
+	</div>
+}
+
+templ statCard(value string, description string) {
+	<div class="p-4 rounded-xl border border-[var(--border)] bg-[var(--bg-secondary)] text-center">
+		<div class="text-2xl font-bold text-[var(--accent-primary)]">{ value }</div>
+		<div class="text-sm text-[var(--text-muted)]">{ description }</div>
+	</div>
+}

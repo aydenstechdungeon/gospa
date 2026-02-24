@@ -41,6 +41,17 @@ templ SidebarContent(currentPath string) {
 			{Label: "Development Tools", Href: "/docs/devtools"},
 		}, currentPath)
 
+		@sidebarSection("Plugins", []NavItem{
+			{Label: "Overview", Href: "/docs/plugins"},
+			{Label: "Tailwind CSS", Href: "/docs/plugins/tailwind"},
+			{Label: "PostCSS", Href: "/docs/plugins/postcss"},
+			{Label: "Image Optimization", Href: "/docs/plugins/image"},
+			{Label: "Form Validation", Href: "/docs/plugins/validation"},
+			{Label: "SEO", Href: "/docs/plugins/seo"},
+			{Label: "Authentication", Href: "/docs/plugins/auth"},
+			{Label: "QR Code", Href: "/docs/plugins/qrcode"},
+		}, currentPath)
+
 		@sidebarSection("Reference", []NavItem{
 			{Label: "Go API", Href: "/docs/api"},
 			{Label: "Client Runtime API", Href: "/docs/client-runtime"},

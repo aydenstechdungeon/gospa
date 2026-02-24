@@ -22,6 +22,14 @@ func (p *TailwindPlugin) Init() error {
 	return nil
 }
 
+func (p *TailwindPlugin) Dependencies() []plugin.Dependency {
+	return []plugin.Dependency{
+		{Type: plugin.DepBun, Name: "tailwindcss", Version: "latest"},
+		{Type: plugin.DepBun, Name: "@tailwindcss/postcss", Version: "latest"},
+		{Type: plugin.DepBun, Name: "postcss", Version: "latest"},
+	}
+}
+
 func (p *TailwindPlugin) OnHook(hook plugin.Hook, ctx map[string]interface{}) error {
 	switch hook {
 	case plugin.BeforeDev:

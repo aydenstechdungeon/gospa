@@ -315,6 +315,81 @@ gospa dev             # Development server with hot reload
 gospa build           # Production build
 ```
 
+## Plugin Ecosystem
+
+GoSPA includes a powerful plugin system for extending build and development workflows.
+
+### Built-in Plugins
+
+| Plugin | Description | Commands |
+|--------|-------------|----------|
+| **Tailwind** | CSS processing with Tailwind CSS v4 | `gospa tw:build`, `gospa tw:watch` |
+| **PostCSS** | Advanced CSS with plugins (autoprefixer, typography, forms) | `gospa postcss:process`, `gospa postcss:watch` |
+| **Image** | Image optimization and responsive variants | `gospa image:optimize`, `gospa image:resize` |
+| **Validation** | Form validation (Valibot client + Go validator server) | `gospa validation:generate`, `gospa validation:schema` |
+| **SEO** | Sitemap, robots.txt, meta tags, structured data | `gospa seo:generate`, `gospa seo:meta` |
+| **Auth** | OAuth2, JWT sessions, TOTP/OTP authentication | `gospa auth:generate`, `gospa auth:otp` |
+
+### Configuration
+
+Plugins are configured in `gospa.yaml`:
+
+```yaml
+plugins:
+  tailwind:
+    input: ./styles/main.css
+    output: ./static/css/output.css
+  image:
+    input: ./images
+    output: ./static/images
+    formats: [webp, jpeg]
+    sizes: [320, 640, 1280, 1920]
+  auth:
+    jwt_secret: ${JWT_SECRET}
+    oauth:
+      google:
+        client_id: ${GOOGLE_CLIENT_ID}
+        client_secret: ${GOOGLE_CLIENT_SECRET}
+```
+
+### Plugin Hooks
+
+Plugins integrate at key lifecycle points:
+
+- `BeforeGenerate` / `AfterGenerate` — Code generation
+- `BeforeDev` / `AfterDev` — Development server
+- `BeforeBuild` / `AfterBuild` — Production build
+
+### Creating Custom Plugins
+
+```go
+package myplugin
+
+import "github.com/aydenstechdungeon/gospa/plugin"
+
+type MyPlugin struct{}
+
+func (p *MyPlugin) Name() string { return "my-plugin" }
+func (p *MyPlugin) Init() error { return nil }
+func (p *MyPlugin) Dependencies() []plugin.Dependency {
+    return []plugin.Dependency{
+        {Name: "some-go-package", Type: plugin.DepGo},
+        {Name: "some-bun-package", Type: plugin.DepBun},
+    }
+}
+func (p *MyPlugin) OnHook(hook plugin.Hook, ctx map[string]interface{}) error {
+    // Handle lifecycle hooks
+    return nil
+}
+func (p *MyPlugin) Commands() []plugin.Command {
+    return []plugin.Command{
+        {Name: "my-plugin:run", Short: "mp", Description: "Run my plugin"},
+    }
+}
+```
+
+See [`docs/PLUGINS.md`](docs/PLUGINS.md) for complete plugin documentation.
+
 ## Architecture
 
 ```

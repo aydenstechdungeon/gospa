@@ -2,17 +2,79 @@ package routes
 
 import "strings"
 
+// SEO configuration for GoSPA website
+const (
+	siteURL            = "https://github.com/aydenstechdungeon/gospa"
+	siteName           = "GoSPA"
+	defaultDescription = "Svelte-like Reactivity for Go. Build reactive SPAs with server-side rendering, real-time updates, and modern frontend tooling."
+	defaultImage       = "https://raw.githubusercontent.com/aydenstechdungeon/gospa/refs/heads/main/gospa1%20512.webp"
+)
+
 templ RootLayout(title string, children templ.Component, runtimePath string, path string, wsUrl string, debug bool, hydrationMode string, hydrationTimeout int) {
 	<!DOCTYPE html>
 	<html lang="en" class="dark" data-gospa-auto>
 		<head>
 			<meta charset="UTF-8" />
 			<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+			
+			<!-- Primary Meta Tags -->
 			<title>{ title } | GoSPA</title>
-			<meta name="description" content="Svelte-like Reactivity for Go. Build reactive SPAs with server-side rendering." />
+			<meta name="title" content={ title + " | GoSPA" } />
+			<meta name="description" content={ defaultDescription } />
+			<meta name="author" content="GoSPA Contributors" />
+			<meta name="keywords" content="Go, Golang, SPA, Single Page Application, SSR, Server-Side Rendering, Reactive, Svelte-like, Framework, Web Development" />
+			<meta name="robots" content="index, follow" />
+			<meta name="language" content="English" />
+			
+			<!-- Canonical URL -->
+			<link rel="canonical" href={ siteURL + path } />
 			
 			<!-- Favicon -->
 			<link rel="icon" type="image/x-icon" href="/static/gospa1-64.ico" />
+			<link rel="apple-touch-icon" sizes="64x64" href="/static/gospa1-64.webp" />
+			<link rel="apple-touch-icon" sizes="128x128" href="/static/gospa1-128.webp" />
+			<link rel="apple-touch-icon" sizes="256x256" href="/static/gospa1-256.webp" />
+			<link rel="apple-touch-icon" sizes="512x512" href="/static/gospa1-512.webp" />
+			
+			<!-- Open Graph / Facebook -->
+			<meta property="og:type" content="website" />
+			<meta property="og:url" content={ siteURL + path } />
+			<meta property="og:title" content={ title + " | GoSPA" } />
+			<meta property="og:description" content={ defaultDescription } />
+			<meta property="og:image" content={ defaultImage } />
+			<meta property="og:image:width" content="512" />
+			<meta property="og:image:height" content="512" />
+			<meta property="og:site_name" content={ siteName } />
+			<meta property="og:locale" content="en_US" />
+			
+			<!-- Twitter Card -->
+			<meta name="twitter:card" content="summary_large_image" />
+			<meta name="twitter:url" content={ siteURL + path } />
+			<meta name="twitter:title" content={ title + " | GoSPA" } />
+			<meta name="twitter:description" content={ defaultDescription } />
+			<meta name="twitter:image" content={ defaultImage } />
+			
+			<!-- JSON-LD Structured Data -->
+			<script type="application/ld+json">
+				{
+					"@context": "https://schema.org",
+					"@type": "SoftwareSourceCode",
+					"name": "GoSPA",
+					"description": "A lightweight Go framework for building high-performance, reactive single-page applications with server-side rendering.",
+					"url": "https://gospa.dev",
+					"codeRepository": "https://github.com/aydenstechdungeon/gospa",
+					"license": "https://opensource.org/licenses/MIT",
+					"programmingLanguage": {
+						"@type": "ComputerLanguage",
+						"name": "Go",
+						"url": "https://golang.org"
+					},
+					"author": {
+						"@type": "Organization",
+						"name": "GoSPA Contributors"
+					}
+				}
+			</script>
 			
 			<!-- Tailwind v4 -->
 			<script src="https://unpkg.com/@tailwindcss/browser@4"></script>

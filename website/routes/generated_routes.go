@@ -4,25 +4,33 @@
 package routes
 
 import (
-	docsrouting "website/routes/docs/routing"
-	docsstatemanagement "website/routes/docs/state-management"
-	"github.com/aydenstechdungeon/gospa/routing"
-	docscomponents "website/routes/docs/components"
 	docsparams "website/routes/docs/params"
-	docsruntime "website/routes/docs/runtime"
+	docspluginsauth "website/routes/docs/plugins/auth"
+	docspluginsqrcode "website/routes/docs/plugins/qrcode"
+	docspluginsvalidation "website/routes/docs/plugins/validation"
+	"github.com/aydenstechdungeon/gospa/routing"
 	docsclientruntime "website/routes/docs/client-runtime"
-	docsgetstarted "website/routes/docs/getstarted"
-	"website/routes/docs"
-	docsreactiveprimitives "website/routes/docs/reactive-primitives"
 	docsconfiguration "website/routes/docs/configuration"
-	docsremoteactions "website/routes/docs/remote-actions"
-	docssecurity "website/routes/docs/security"
-	docswebsocket "website/routes/docs/websocket"
-	"github.com/a-h/templ"
-	docsapi "website/routes/docs/api"
-	docscli "website/routes/docs/cli"
 	docsdevtools "website/routes/docs/devtools"
+	docsgetstarted "website/routes/docs/getstarted"
+	docspluginsseo "website/routes/docs/plugins/seo"
+	docsreactiveprimitives "website/routes/docs/reactive-primitives"
+	docsrouting "website/routes/docs/routing"
+	"github.com/a-h/templ"
+	docspluginsimage "website/routes/docs/plugins/image"
+	docspluginspostcss "website/routes/docs/plugins/postcss"
+	docsruntime "website/routes/docs/runtime"
+	docssecurity "website/routes/docs/security"
+	docsapi "website/routes/docs/api"
+	docsplugins "website/routes/docs/plugins"
+	docspluginstailwind "website/routes/docs/plugins/tailwind"
+	docsremoteactions "website/routes/docs/remote-actions"
+	docsstatemanagement "website/routes/docs/state-management"
+	docswebsocket "website/routes/docs/websocket"
+	docscli "website/routes/docs/cli"
+	docscomponents "website/routes/docs/components"
 	docserrors "website/routes/docs/errors"
+	"website/routes/docs"
 )
 
 func init() {
@@ -56,6 +64,30 @@ func init() {
 	})
 	routing.RegisterPage("/docs/params", func(props map[string]interface{}) templ.Component {
 		return docsparams.Page()
+	})
+	routing.RegisterPage("/docs/plugins/auth", func(props map[string]interface{}) templ.Component {
+		return docspluginsauth.Page()
+	})
+	routing.RegisterPage("/docs/plugins/image", func(props map[string]interface{}) templ.Component {
+		return docspluginsimage.Page()
+	})
+	routing.RegisterPage("/docs/plugins", func(props map[string]interface{}) templ.Component {
+		return docsplugins.Page()
+	})
+	routing.RegisterPage("/docs/plugins/postcss", func(props map[string]interface{}) templ.Component {
+		return docspluginspostcss.Page()
+	})
+	routing.RegisterPage("/docs/plugins/qrcode", func(props map[string]interface{}) templ.Component {
+		return docspluginsqrcode.Page()
+	})
+	routing.RegisterPage("/docs/plugins/seo", func(props map[string]interface{}) templ.Component {
+		return docspluginsseo.Page()
+	})
+	routing.RegisterPage("/docs/plugins/tailwind", func(props map[string]interface{}) templ.Component {
+		return docspluginstailwind.Page()
+	})
+	routing.RegisterPage("/docs/plugins/validation", func(props map[string]interface{}) templ.Component {
+		return docspluginsvalidation.Page()
 	})
 	routing.RegisterPage("/docs/reactive-primitives", func(props map[string]interface{}) templ.Component {
 		return docsreactiveprimitives.Page()

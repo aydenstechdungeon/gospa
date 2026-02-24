@@ -1,0 +1,182 @@
+package seo
+
+import "website/components"
+
+templ Page() {
+	<div class="space-y-12">
+		<header>
+			<h1 class="text-4xl font-bold tracking-tight mb-4 text-transparent bg-clip-text bg-gradient-to-r from-[var(--accent-primary)] to-[var(--accent-secondary)]">SEO Plugin</h1>
+			<p class="text-xl text-[var(--text-secondary)] leading-relaxed">
+				Search engine optimization with sitemap generation, meta tags, Open Graph, Twitter Cards, and JSON-LD structured data.
+			</p>
+		</header>
+
+		<section class="space-y-6">
+			<h2 class="text-2xl font-bold border-b border-[var(--border)] pb-2">Installation</h2>
+			@components.CodeBlock(`plugins:
+  seo:
+    enabled: true
+    site_url: https://example.com
+    site_name: "My GoSPA App"
+    site_description: "A modern web application"
+    generate_sitemap: true
+    generate_robots: true
+    structured_data: true`, "yaml", "gospa.yaml")
+		</section>
+
+		<section class="space-y-6">
+			<h2 class="text-2xl font-bold border-b border-[var(--border)] pb-2">CLI Commands</h2>
+			<div class="rounded-3xl border border-[var(--border)] overflow-hidden">
+				<table class="w-full text-left text-sm">
+					<thead class="bg-[var(--bg-secondary)] text-[var(--text-muted)] uppercase tracking-wider">
+						<tr>
+							<th class="px-6 py-4 font-bold">Command</th>
+							<th class="px-6 py-4 font-bold">Alias</th>
+							<th class="px-6 py-4 font-bold">Description</th>
+						</tr>
+					</thead>
+					<tbody class="divide-y divide-[var(--border)]">
+						<tr>
+							<td class="px-6 py-4 mono text-[var(--accent-primary)] font-bold">gospa seo:generate</td>
+							<td class="px-6 py-4 text-[var(--text-muted)]">sg</td>
+							<td class="px-6 py-4 text-[var(--text-secondary)]">Generate sitemap.xml and robots.txt</td>
+						</tr>
+						<tr>
+							<td class="px-6 py-4 mono text-[var(--accent-primary)] font-bold">gospa seo:meta</td>
+							<td class="px-6 py-4 text-[var(--text-muted)]">sm</td>
+							<td class="px-6 py-4 text-[var(--text-secondary)]">Generate meta tags for a page</td>
+						</tr>
+						<tr>
+							<td class="px-6 py-4 mono text-[var(--accent-primary)] font-bold">gospa seo:structured</td>
+							<td class="px-6 py-4 text-[var(--text-muted)]">ss</td>
+							<td class="px-6 py-4 text-[var(--text-secondary)]">Generate JSON-LD structured data</td>
+						</tr>
+					</tbody>
+				</table>
+			</div>
+		</section>
+
+		<section class="space-y-6">
+			<h2 class="text-2xl font-bold border-b border-[var(--border)] pb-2">Features</h2>
+			<div class="grid gap-4 md:grid-cols-2">
+				@featureCard("Sitemap.xml", "Auto-generate sitemap with lastmod, changefreq, priority.")
+				@featureCard("robots.txt", "Configure crawler access with allow/disallow rules.")
+				@featureCard("Meta Tags", "Title, description, keywords, canonical URLs.")
+				@featureCard("Open Graph", "Facebook/LinkedIn sharing with og:* tags.")
+				@featureCard("Twitter Cards", "Summary, summary_large_image, player cards.")
+				@featureCard("JSON-LD", "Schema.org structured data for rich results.")
+			</div>
+		</section>
+
+		<section class="space-y-6">
+			<h2 class="text-2xl font-bold border-b border-[var(--border)] pb-2">Generated Output</h2>
+			<div class="grid gap-6">
+				<div>
+					<h3 class="font-bold mb-2 text-[var(--text-secondary)]">sitemap.xml</h3>
+					@components.CodeBlock(`<?xml version="1.0" encoding="UTF-8"?>
+<urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">
+  <url>
+    <loc>https://example.com/</loc>
+    <lastmod>2024-01-15</lastmod>
+    <changefreq>weekly</changefreq>
+    <priority>1.0</priority>
+  </url>
+  <url>
+    <loc>https://example.com/about</loc>
+    <lastmod>2024-01-10</lastmod>
+    <changefreq>monthly</changefreq>
+    <priority>0.8</priority>
+  </url>
+</urlset>`, "xml", "static/sitemap.xml")
+				</div>
+				<div>
+					<h3 class="font-bold mb-2 text-[var(--text-secondary)]">robots.txt</h3>
+					@components.CodeBlock(`User-agent: *
+Allow: /
+Disallow: /admin/
+Disallow: /api/
+
+Sitemap: https://example.com/sitemap.xml`, "text", "static/robots.txt")
+				</div>
+			</div>
+		</section>
+
+		<section class="space-y-6">
+			<h2 class="text-2xl font-bold border-b border-[var(--border)] pb-2">Usage in Templates</h2>
+			@components.CodeBlock(`package main
+
+import "github.com/aydenstechdungeon/gospa/plugin/seo"
+
+templ Page() {
+  @@seo.Meta(seo.MetaParams{
+    Title:       "Home | My App",
+    Description: "Welcome to my awesome application",
+    Keywords:    []string{"gospa", "go", "spa"},
+    Canonical:   "https://example.com/",
+    OGImage:     "/images/og-home.png",
+  })
+  
+  @@seo.OpenGraph(seo.OGParams{
+    Type:        "website",
+    Title:       "Home | My App",
+    Description: "Welcome to my awesome application",
+    Image:       "/images/og-home.png",
+  })
+  
+  @@seo.TwitterCard(seo.TwitterParams{
+    Card:        "summary_large_image",
+    Title:       "Home | My App",
+    Description: "Welcome to my awesome application",
+    Image:       "/images/twitter-home.png",
+  })
+  
+  @@seo.StructuredData(seo.Organization{
+    Name:  "My App",
+    URL:   "https://example.com",
+    Logo:  "https://example.com/logo.png",
+  })
+  
+  <main>
+    <!-- Page content -->
+  </main>
+}`, "templ", "routes/page.templ")
+		</section>
+
+		<section class="space-y-6">
+			<h2 class="text-2xl font-bold border-b border-[var(--border)] pb-2">JSON-LD Structured Data</h2>
+			<p class="text-[var(--text-secondary)]">Supported schema types:</p>
+			<div class="grid gap-2 md:grid-cols-3">
+				@schemaBadge("Organization")
+				@schemaBadge("WebSite")
+				@schemaBadge("Article")
+				@schemaBadge("Product")
+				@schemaBadge("BreadcrumbList")
+				@schemaBadge("FAQPage")
+				@schemaBadge("HowTo")
+				@schemaBadge("LocalBusiness")
+				@schemaBadge("Person")
+			</div>
+		</section>
+
+		<section class="space-y-6">
+			<h2 class="text-2xl font-bold border-b border-[var(--border)] pb-2">Dependencies</h2>
+			<div class="rounded-xl border border-[var(--border)] bg-[var(--bg-secondary)] p-4">
+				<p class="text-[var(--text-secondary)] mb-3">Go packages (auto-installed):</p>
+				<code class="text-sm text-[var(--accent-primary)]">github.com/microcosm-cc/bluemonday (HTML sanitization)</code>
+			</div>
+		</section>
+	</div>
+}
+
+templ featureCard(title string, description string) {
+	<div class="p-4 rounded-xl border border-[var(--border)] bg-[var(--bg-secondary)]">
+		<h3 class="font-bold mb-1">{ title }</h3>
+		<p class="text-sm text-[var(--text-muted)]">{ description }</p>
+	</div>
+}
+
+templ schemaBadge(name string) {
+	<span class="inline-flex items-center px-3 py-1 rounded-full text-sm font-medium bg-[var(--accent-primary)]/10 text-[var(--accent-primary)] border border-[var(--accent-primary)]/20">
+		{ name }
+	</span>
+}
