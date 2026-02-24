@@ -183,6 +183,7 @@ Routes are defined by files in the `routes/` directory:
 | `about.templ` | `/about` | About page |
 | `blog/index.templ` | `/blog` | Blog index |
 | `blog/[slug].templ` | `/blog/:slug` | Dynamic route |
+| `(auth)/login.templ` | `/login` | Grouped route |
 | `layout.templ` | N/A | Layout wrapper |
 
 ### Layouts

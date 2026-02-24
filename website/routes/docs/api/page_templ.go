@@ -31,45 +31,165 @@ func Page() templ.Component {
 			templ_7745c5c3_Var1 = templ.NopComponent
 		}
 		ctx = templ.ClearChildren(ctx)
-		templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 1, "<div class=\"space-y-12\"><header><h1 class=\"text-4xl font-bold tracking-tight mb-4 text-transparent bg-clip-text bg-gradient-to-r from-[var(--accent-primary)] to-[var(--accent-secondary)]\">Go API Reference</h1><p class=\"text-xl text-[var(--text-secondary)] leading-relaxed\">Complete reference for the GoSPA framework's server-side API.</p></header><section class=\"space-y-8\"><div><h2 class=\"text-2xl font-bold mb-4 border-b border-[var(--border)] pb-2 italic mono\">gospa.New(config)</h2><p class=\"text-[var(--text-secondary)] mb-4\">Initializes a new GoSPA application instance.</p>")
+		templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 1, "<div class=\"space-y-12\"><header><h1 class=\"text-4xl font-bold tracking-tight mb-4 text-transparent bg-clip-text bg-gradient-to-r from-[var(--accent-primary)] to-[var(--accent-secondary)]\">Go API Reference</h1><p class=\"text-xl text-[var(--text-secondary)] leading-relaxed\">Complete reference for the GoSPA framework's server-side API.</p></header><nav class=\"flex flex-wrap gap-4 p-4 rounded-2xl bg-[var(--bg-secondary)] border border-[var(--border)]\"><a href=\"#app-initialization\" class=\"text-sm font-medium hover:text-[var(--accent-primary)] transition-colors\">App Initialization</a> <a href=\"#server-lifecycle\" class=\"text-sm font-medium hover:text-[var(--accent-primary)] transition-colors\">Server Lifecycle</a> <a href=\"#state-management\" class=\"text-sm font-medium hover:text-[var(--accent-primary)] transition-colors\">State Management</a> <a href=\"#websocket-messaging\" class=\"text-sm font-medium hover:text-[var(--accent-primary)] transition-colors\">WebSocket Messaging</a> <a href=\"#templ-utilities\" class=\"text-sm font-medium hover:text-[var(--accent-primary)] transition-colors\">Templ Utilities</a> <a href=\"#layout-system\" class=\"text-sm font-medium hover:text-[var(--accent-primary)] transition-colors\">Layout System</a></nav><section id=\"app-initialization\" class=\"space-y-8\"><h2 class=\"text-2xl font-bold border-b border-[var(--border)] pb-2\">App Initialization</h2><div><h3 class=\"text-xl font-bold mb-4 mono italic\">gospa.New(config)</h3><p class=\"text-[var(--text-secondary)] mb-4\">Initializes a new GoSPA application instance with the provided configuration.</p>")
 		if templ_7745c5c3_Err != nil {
 			return templ_7745c5c3_Err
 		}
 		templ_7745c5c3_Err = components.CodeBlock(`app := gospa.New(gospa.Config{
     RoutesDir: "./routes",
-    AppName:   "myapp",
+    AppName:   "GoSPA App",
     DevMode:   true,
 })`, "go", "main.go").Render(ctx, templ_7745c5c3_Buffer)
 		if templ_7745c5c3_Err != nil {
 			return templ_7745c5c3_Err
 		}
-		templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 2, "</div><div><h2 class=\"text-2xl font-bold mb-4 border-b border-[var(--border)] pb-2 italic mono\">app.Run(addr)</h2><p class=\"text-[var(--text-secondary)] mb-4\">Starts the HTTP server on the specified address.</p>")
+		templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 2, "</div><div><h3 class=\"text-xl font-bold mb-4 mono italic\">gospa.DefaultConfig()</h3><p class=\"text-[var(--text-secondary)] mb-4\">Returns a Config object with default values.</p>")
 		if templ_7745c5c3_Err != nil {
 			return templ_7745c5c3_Err
 		}
-		templ_7745c5c3_Err = components.CodeBlock(`log.Fatal(app.Run(":3000"))`, "go", "main.go").Render(ctx, templ_7745c5c3_Buffer)
+		templ_7745c5c3_Err = components.CodeBlock(`config := gospa.DefaultConfig()
+config.AppName = "My Custom App"
+app := gospa.New(config)`, "go", "main.go").Render(ctx, templ_7745c5c3_Buffer)
 		if templ_7745c5c3_Err != nil {
 			return templ_7745c5c3_Err
 		}
-		templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 3, "</div><div><h2 class=\"text-2xl font-bold mb-4 border-b border-[var(--border)] pb-2 italic mono\">gospa.NewRune(initialValue)</h2><p class=\"text-[var(--text-secondary)] mb-4\">Creates a new reactive state variable.</p>")
+		templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 3, "</div></section><section id=\"server-lifecycle\" class=\"space-y-8\"><h2 class=\"text-2xl font-bold border-b border-[var(--border)] pb-2\">Server Lifecycle</h2><div><h3 class=\"text-xl font-bold mb-4 mono italic\">app.Run(addr)</h3><p class=\"text-[var(--text-secondary)] mb-4\">Starts the HTTP server on the specified address.</p>")
 		if templ_7745c5c3_Err != nil {
 			return templ_7745c5c3_Err
 		}
-		templ_7745c5c3_Err = components.CodeBlock(`name := gospa.NewRune("World")`, "go", "main.go").Render(ctx, templ_7745c5c3_Buffer)
+		templ_7745c5c3_Err = components.CodeBlock(`app.Run(":3000")`, "go", "main.go").Render(ctx, templ_7745c5c3_Buffer)
 		if templ_7745c5c3_Err != nil {
 			return templ_7745c5c3_Err
 		}
-		templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 4, "</div><div><h2 class=\"text-2xl font-bold mb-4 border-b border-[var(--border)] pb-2 italic mono\">gospa.Derived(dependency, fn)</h2><p class=\"text-[var(--text-secondary)] mb-4\">Creates a reactive variable that depends on another variable.</p>")
+		templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 4, "</div><div><h3 class=\"text-xl font-bold mb-4 mono italic\">app.RunTLS(addr, cert, key)</h3><p class=\"text-[var(--text-secondary)] mb-4\">Starts the HTTPS server with the provided certificate and key files.</p>")
 		if templ_7745c5c3_Err != nil {
 			return templ_7745c5c3_Err
 		}
-		templ_7745c5c3_Err = components.CodeBlock(`greeting := gospa.Derived(name, func(n string) string {
-    return "Hello, " + n + "!"
+		templ_7745c5c3_Err = components.CodeBlock(`app.RunTLS(":443", "cert.pem", "key.pem")`, "go", "main.go").Render(ctx, templ_7745c5c3_Buffer)
+		if templ_7745c5c3_Err != nil {
+			return templ_7745c5c3_Err
+		}
+		templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 5, "</div><div><h3 class=\"text-xl font-bold mb-4 mono italic\">app.Shutdown()</h3><p class=\"text-[var(--text-secondary)] mb-4\">Gracefully shuts down the server.</p>")
+		if templ_7745c5c3_Err != nil {
+			return templ_7745c5c3_Err
+		}
+		templ_7745c5c3_Err = components.CodeBlock(`if err := app.Shutdown(); err != nil {
+    log.Printf("Shutdown error: %v", err)
+}`, "go", "main.go").Render(ctx, templ_7745c5c3_Buffer)
+		if templ_7745c5c3_Err != nil {
+			return templ_7745c5c3_Err
+		}
+		templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 6, "</div></section><section id=\"routing-middleware\" class=\"space-y-8\"><h2 class=\"text-2xl font-bold border-b border-[var(--border)] pb-2\">Routing & Middleware</h2><div><h3 class=\"text-xl font-bold mb-4 mono italic\">app.Use(handlers...)</h3><p class=\"text-[var(--text-secondary)] mb-4\">Adds middleware to the application (Fiber style).</p>")
+		if templ_7745c5c3_Err != nil {
+			return templ_7745c5c3_Err
+		}
+		templ_7745c5c3_Err = components.CodeBlock(`app.Use(func(c *fiber.Ctx) error {
+    log.Println("Request path:", c.Path())
+    return c.Next()
 })`, "go", "main.go").Render(ctx, templ_7745c5c3_Buffer)
 		if templ_7745c5c3_Err != nil {
 			return templ_7745c5c3_Err
 		}
-		templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 5, "</div></section><div class=\"rounded-3xl border border-[var(--border)] overflow-hidden\"><table class=\"w-full text-left text-sm\"><thead class=\"bg-[var(--bg-secondary)] text-[var(--text-muted)] uppercase tracking-wider\"><tr><th class=\"px-6 py-4 font-bold\">Config Option</th><th class=\"px-6 py-4 font-bold\">Type</th><th class=\"px-6 py-4 font-bold\">Description</th></tr></thead> <tbody class=\"divide-y divide-[var(--border)]\"><tr><td class=\"px-6 py-4 mono text-[var(--accent-primary)] font-bold\">RoutesDir</td><td class=\"px-6 py-4 text-[var(--text-muted)]\">string</td><td class=\"px-6 py-4 text-[var(--text-secondary)]\">Path to the directory containing Templ routes.</td></tr><tr><td class=\"px-6 py-4 mono text-[var(--accent-primary)] font-bold\">AppName</td><td class=\"px-6 py-4 text-[var(--text-muted)]\">string</td><td class=\"px-6 py-4 text-[var(--text-secondary)]\">Unique name for the application (used for state prefixing).</td></tr><tr><td class=\"px-6 py-4 mono text-[var(--accent-primary)] font-bold\">DevMode</td><td class=\"px-6 py-4 text-[var(--text-muted)]\">bool</td><td class=\"px-6 py-4 text-[var(--text-secondary)]\">Enable hot-reloading and debug logging.</td></tr><tr><td class=\"px-6 py-4 mono text-[var(--accent-primary)] font-bold\">StatePersistence</td><td class=\"px-6 py-4 text-[var(--text-muted)]\">bool</td><td class=\"px-6 py-4 text-[var(--text-secondary)]\">Whether to persist state in localStorage.</td></tr></tbody></table></div></div>")
+		templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 7, "</div><div><h3 class=\"text-xl font-bold mb-4 mono italic\">app.Get(path, handlers...)</h3><p class=\"text-[var(--text-secondary)] mb-4\">Registers a manual GET route (bypassing file-based routing).</p>")
+		if templ_7745c5c3_Err != nil {
+			return templ_7745c5c3_Err
+		}
+		templ_7745c5c3_Err = components.CodeBlock(`app.Get("/health", func(c *fiber.Ctx) error {
+    return c.SendString("OK")
+})`, "go", "main.go").Render(ctx, templ_7745c5c3_Buffer)
+		if templ_7745c5c3_Err != nil {
+			return templ_7745c5c3_Err
+		}
+		templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 8, "</div><div><h3 class=\"text-xl font-bold mb-4 mono italic\">app.Static(prefix, root)</h3><p class=\"text-[var(--text-secondary)] mb-4\">Registers a static file server.</p>")
+		if templ_7745c5c3_Err != nil {
+			return templ_7745c5c3_Err
+		}
+		templ_7745c5c3_Err = components.CodeBlock(`app.Static("/assets", "./assets")`, "go", "main.go").Render(ctx, templ_7745c5c3_Buffer)
+		if templ_7745c5c3_Err != nil {
+			return templ_7745c5c3_Err
+		}
+		templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 9, "</div></section><section id=\"state-management\" class=\"space-y-8\"><h2 class=\"text-2xl font-bold border-b border-[var(--border)] pb-2\">State Management</h2><div><h3 class=\"text-xl font-bold mb-4 mono italic\">gospa.NewRune(initialValue)</h3><p class=\"text-[var(--text-secondary)] mb-4\">Creates a new reactive state variable of any type.</p>")
+		if templ_7745c5c3_Err != nil {
+			return templ_7745c5c3_Err
+		}
+		templ_7745c5c3_Err = components.CodeBlock(`count := gospa.NewRune(0)
+name := gospa.NewRune("World")`, "go", "state.go").Render(ctx, templ_7745c5c3_Buffer)
+		if templ_7745c5c3_Err != nil {
+			return templ_7745c5c3_Err
+		}
+		templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 10, "</div><div><h3 class=\"text-xl font-bold mb-4 mono italic\">gospa.Derived(rune, fn)</h3><p class=\"text-[var(--text-secondary)] mb-4\">Creates a reactive variable that auto-updates when its source rune changes.</p>")
+		if templ_7745c5c3_Err != nil {
+			return templ_7745c5c3_Err
+		}
+		templ_7745c5c3_Err = components.CodeBlock(`doubled := gospa.Derived(count, func(v int) int {
+    return v * 2
+})`, "go", "state.go").Render(ctx, templ_7745c5c3_Buffer)
+		if templ_7745c5c3_Err != nil {
+			return templ_7745c5c3_Err
+		}
+		templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 11, "</div><div><h3 class=\"text-xl font-bold mb-4 mono italic\">gospa.Batch(fn)</h3><p class=\"text-[var(--text-secondary)] mb-4\">Groups multiple state updates into a single notification event.</p>")
+		if templ_7745c5c3_Err != nil {
+			return templ_7745c5c3_Err
+		}
+		templ_7745c5c3_Err = components.CodeBlock(`gospa.Batch(func() {
+    count.Set(10)
+    name.Set("GoSPA")
+})`, "go", "state.go").Render(ctx, templ_7745c5c3_Buffer)
+		if templ_7745c5c3_Err != nil {
+			return templ_7745c5c3_Err
+		}
+		templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 12, "</div></section><section id=\"websocket-messaging\" class=\"space-y-8\"><h2 class=\"text-2xl font-bold border-b border-[var(--border)] pb-2\">WebSocket Messaging</h2><div><h3 class=\"text-xl font-bold mb-4 mono italic\">app.Broadcast(message)</h3><p class=\"text-[var(--text-secondary)] mb-4\">Sends a raw byte message to all connected clients.</p>")
+		if templ_7745c5c3_Err != nil {
+			return templ_7745c5c3_Err
+		}
+		templ_7745c5c3_Err = components.CodeBlock(`app.Broadcast([]byte("system_update"))`, "go", "main.go").Render(ctx, templ_7745c5c3_Buffer)
+		if templ_7745c5c3_Err != nil {
+			return templ_7745c5c3_Err
+		}
+		templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 13, "</div><div><h3 class=\"text-xl font-bold mb-4 mono italic\">app.BroadcastState(key, value)</h3><p class=\"text-[var(--text-secondary)] mb-4\">Broadcasts a specific state update (key-value) to all clients.</p>")
+		if templ_7745c5c3_Err != nil {
+			return templ_7745c5c3_Err
+		}
+		templ_7745c5c3_Err = components.CodeBlock(`app.BroadcastState("online_users", userCount)`, "go", "main.go").Render(ctx, templ_7745c5c3_Buffer)
+		if templ_7745c5c3_Err != nil {
+			return templ_7745c5c3_Err
+		}
+		templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 14, "</div></section><section id=\"templ-utilities\" class=\"space-y-8\"><h2 class=\"text-2xl font-bold border-b border-[var(--border)] pb-2\">Templ Utilities</h2><p class=\"text-[var(--text-secondary)]\">The <code class=\"mono text-[var(--accent-primary)]\">templ</code> package provides specialized helpers for building GoSPA UI components.</p><div class=\"grid md:grid-cols-2 gap-6\"><div class=\"space-y-4\"><h3 class=\"text-lg font-bold mono\">Control Flow</h3><ul class=\"space-y-2 text-sm text-[var(--text-secondary)]\"><li><code class=\"text-[var(--accent-secondary)]\">templ.When(cond, comp)</code> - Conditional render</li><li><code class=\"text-[var(--accent-secondary)]\">templ.WhenElse(cond, ifT, ifF)</code> - If/Else render</li><li><code class=\"text-[var(--accent-secondary)]\">templ.For(items, fn)</code> - List rendering</li><li><code class=\"text-[var(--accent-secondary)]\">templ.ForKey(items, keyFn, fn)</code> - Keyed list rendering</li><li><code class=\"text-[var(--accent-secondary)]\">templ.Switch(cases...)</code> - Switch/Case rendering</li></ul></div><div class=\"space-y-4\"><h3 class=\"text-lg font-bold mono\">HTML Elements</h3><ul class=\"space-y-2 text-sm text-[var(--text-secondary)]\"><li><code class=\"text-[var(--accent-secondary)]\">templ.Raw(html)</code> - Unsafe raw HTML</li><li><code class=\"text-[var(--accent-secondary)]\">templ.Fragment(comps...)</code> - Group components</li><li><code class=\"text-[var(--accent-secondary)]\">templ.Head(comps...)</code> - Add to document head</li><li><code class=\"text-[var(--accent-secondary)]\">templ.RuntimeScript(src)</code> - Add GoSPA runtime</li><li><code class=\"text-[var(--accent-secondary)]\">templ.CSS(href)</code> - Add stylesheet link</li></ul></div></div><div class=\"mt-8\"><h3 class=\"text-xl font-bold mb-4 mono italic\">HeadManager</h3><p class=\"text-[var(--text-secondary)] mb-4\">Programmatically manage document head for SPA navigation.</p>")
+		if templ_7745c5c3_Err != nil {
+			return templ_7745c5c3_Err
+		}
+		templ_7745c5c3_Err = components.CodeBlock(`hm := templ.NewHeadManager()
+hm.SetHeadTitle("Product Details")
+hm.AddHeadMeta("description", "Premium product")
+hm.AddHeadLink("canonical", "https://example.com")`, "go", "head.go").Render(ctx, templ_7745c5c3_Buffer)
+		if templ_7745c5c3_Err != nil {
+			return templ_7745c5c3_Err
+		}
+		templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 15, "</div></section><section id=\"layout-system\" class=\"space-y-8\"><h2 class=\"text-2xl font-bold border-b border-[var(--border)] pb-2\">Layout System</h2><p class=\"text-[var(--text-secondary)]\">GoSPA's layout system allows for deep nesting and server-side data loading.</p><div><h3 class=\"text-xl font-bold mb-4 mono italic\">templ.LayoutProps</h3>")
+		if templ_7745c5c3_Err != nil {
+			return templ_7745c5c3_Err
+		}
+		templ_7745c5c3_Err = components.CodeBlock(`type LayoutProps struct {
+    Data     map[string]any
+    Children templ.Component
+    Params   map[string]string
+    Path     string
+}`, "go", "templ/layout.go").Render(ctx, templ_7745c5c3_Buffer)
+		if templ_7745c5c3_Err != nil {
+			return templ_7745c5c3_Err
+		}
+		templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 16, "</div><div><h3 class=\"text-xl font-bold mb-4 mono italic\">templ.LayoutLoader</h3><p class=\"text-[var(--text-secondary)] mb-4\">Interface for server-side layout data fetching (similar to SvelteKit +layout.server.ts).</p>")
+		if templ_7745c5c3_Err != nil {
+			return templ_7745c5c3_Err
+		}
+		templ_7745c5c3_Err = components.CodeBlock(`type MyLoader struct{}
+func (l *MyLoader) Load(ctx context.Context, params map[string]string) (map[string]any, error) {
+    return map[string]any{"user": fetchUser()}, nil
+}`, "go", "loader.go").Render(ctx, templ_7745c5c3_Buffer)
+		if templ_7745c5c3_Err != nil {
+			return templ_7745c5c3_Err
+		}
+		templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 17, "</div></section></div>")
 		if templ_7745c5c3_Err != nil {
 			return templ_7745c5c3_Err
 		}

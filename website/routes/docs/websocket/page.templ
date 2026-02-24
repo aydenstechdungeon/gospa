@@ -3,35 +3,133 @@ package websocket
 import "website/components"
 
 templ Page() {
-	<div id="overview" class="space-y-12">
+	<div class="space-y-12">
 		<header>
 			<h1 class="text-4xl font-bold tracking-tight mb-4 text-transparent bg-clip-text bg-gradient-to-r from-[var(--accent-primary)] to-[var(--accent-secondary)]">WebSocket Integration</h1>
 			<p class="text-xl text-[var(--text-secondary)] leading-relaxed">
-				Powering real-time, interactive experiences with built-in WebSocket support.
+				Powering real-time, interactive experiences with built-in WebSocket support and automatic state synchronization.
 			</p>
 		</header>
 
-		<section class="space-y-6">
-			<h2 id="websocket-hub" class="text-2xl font-bold">WebSocket Hub</h2>
+		<nav class="flex flex-wrap gap-4 p-4 rounded-2xl bg-[var(--bg-secondary)] border border-[var(--border)]">
+			<a href="#overview" class="text-sm font-medium hover:text-[var(--accent-primary)] transition-colors">Overview</a>
+			<a href="#server-api" class="text-sm font-medium hover:text-[var(--accent-primary)] transition-colors">Server API</a>
+			<a href="#client-api" class="text-sm font-medium hover:text-[var(--accent-primary)] transition-colors">Client API</a>
+			<a href="#configuration" class="text-sm font-medium hover:text-[var(--accent-primary)] transition-colors">Configuration</a>
+		</nav>
+
+		<section id="overview" class="space-y-6">
+			<h2 class="text-2xl font-bold">Overview</h2>
 			<p class="text-[var(--text-secondary)]">
-				GoSPA comes with a high-performance WebSocket hub out of the box. You don't need to configure anything to start sending and receiving real-time updates.
+				GoSPA's WebSocket implementation is designed for massive scale and low latency. It uses a binary-first protocol to synchronize reactive state (Runes) between the Go server and the TypeScript client.
 			</p>
-			@components.CodeBlock(`// Broadcast a custom message to all clients
-app.Broadcast([]byte("Hello, everyone!"))`, "go", "main.go")
-			<h3 id="broadcast" class="text-xl font-bold mt-8">Broadcast</h3>
+			<div class="grid md:grid-cols-2 gap-4">
+				<div class="p-6 rounded-2xl bg-[var(--bg-secondary)] border border-[var(--border)]">
+					<h3 class="font-bold mb-2">Real-time Sync</h3>
+					<p class="text-sm text-[var(--text-secondary)]">State changes on the server are instantly pushed to all connected clients, and vice versa.</p>
+				</div>
+				<div class="p-6 rounded-2xl bg-[var(--bg-secondary)] border border-[var(--border)]">
+					<h3 class="font-bold mb-2">Binary Protocol</h3>
+					<p class="text-sm text-[var(--text-secondary)]">Efficient state diffing and binary serialization minimize network bandwidth usage.</p>
+				</div>
+			</div>
 		</section>
 
-		<section class="space-y-6">
-			<h2 id="reconnection" class="text-2xl font-bold">Automatic Reconnection</h2>
-			<p class="text-[var(--text-secondary)]">
-				The Client Runtime automatically handles reconnections with exponential backoff, ensuring your users stay connected even with patchy network conditions.
-			</p>
+		<section id="server-api" class="space-y-6">
+			<h2 class="text-2xl font-bold border-b border-[var(--border)] pb-2">Server API</h2>
+			
+			<div>
+				<h3 class="text-xl font-bold mb-4 mono italic">app.Broadcast(message)</h3>
+				<p class="text-[var(--text-secondary)] mb-4">Sends a raw message to all connected clients.</p>
+				@components.CodeBlock(`app.Broadcast([]byte("reload"))`, "go", "main.go")
+			</div>
+
+			<div>
+				<h3 class="text-xl font-bold mb-4 mono italic">app.BroadcastState(key, value)</h3>
+				<p class="text-[var(--text-secondary)] mb-4">Broadcasts a specific state update. This is the preferred way to sync data.</p>
+				@components.CodeBlock(`app.BroadcastState("online_count", 42)`, "go", "main.go")
+			</div>
+
+			<div>
+				<h3 class="text-xl font-bold mb-4 mono italic">app.GetHub()</h3>
+				<p class="text-[var(--text-secondary)] mb-4">Returns the underlying WebSocket hub for advanced Room/Client management.</p>
+				@components.CodeBlock(`hub := app.GetHub()
+hub.SendTo("client-123", []byte("direct_message"))`, "go", "main.go")
+			</div>
+		</section>
+
+		<section id="client-api" class="space-y-6">
+			<h2 class="text-2xl font-bold border-b border-[var(--border)] pb-2">Client API</h2>
+
+			<div>
+				<h3 class="text-xl font-bold mb-4 mono italic">syncedRune(key, initialValue, client)</h3>
+				<p class="text-[var(--text-secondary)] mb-4">Creates a reactive state variable that is automatically synchronized with the server.</p>
+				@components.CodeBlock(`import { syncedRune, getWSClient } from '@gospa/runtime';
+
+const ws = getWSClient();
+const count = syncedRune('count', 0, ws);
+
+// Updating locally will sync to server
+count.update(n => n + 1);
+
+// Updates from server will update locally and trigger UI refreshes
+count.subscribe(v => console.log('Synced value:', v));`, "typescript", "state.ts")
+			</div>
+
+			<div>
+				<h3 class="text-xl font-bold mb-4 mono italic">WSClient</h3>
+				<p class="text-[var(--text-secondary)] mb-4">The core WebSocket client handling reconnections and messaging.</p>
+				@components.CodeBlock(`const ws = new WSClient({
+    url: 'ws://localhost:3000/_gospa/ws',
+    onConnect: () => console.log('Connected!'),
+    onMessage: (msg) => console.log('Message:', msg)
+});`, "typescript", "websocket.ts")
+			</div>
+		</section>
+
+		<section id="configuration" class="space-y-6">
+			<h2 class="text-2xl font-bold border-b border-[var(--border)] pb-2">Configuration</h2>
+			<p class="text-[var(--text-secondary)]">Fine-tune WebSocket behavior in <code class="mono">gospa.Config</code>.</p>
+			
+			<div class="rounded-xl border border-[var(--border)] overflow-hidden">
+				<table class="w-full text-left text-sm">
+					<thead class="bg-[var(--bg-secondary)] text-[var(--text-muted)] uppercase tracking-wider">
+						<tr>
+							<th class="px-4 py-3 font-bold">Option</th>
+							<th class="px-4 py-3 font-bold">Default</th>
+							<th class="px-4 py-3 font-bold">Description</th>
+						</tr>
+					</thead>
+					<tbody class="divide-y divide-[var(--border)] text-[var(--text-secondary)]">
+						<tr>
+							<td class="px-4 py-3 mono font-bold">WSReconnectDelay</td>
+							<td class="px-4 py-3">1s</td>
+							<td class="px-4 py-3">Initial delay before reconnection attempt.</td>
+						</tr>
+						<tr>
+							<td class="px-4 py-3 mono font-bold">WSMaxReconnect</td>
+							<td class="px-4 py-3">10</td>
+							<td class="px-4 py-3">Maximum number of reconnection attempts.</td>
+						</tr>
+						<tr>
+							<td class="px-4 py-3 mono font-bold">WSHeartbeat</td>
+							<td class="px-4 py-3">30s</td>
+							<td class="px-4 py-3">Interval for heartbeat ping/pong to keep connection alive.</td>
+						</tr>
+						<tr>
+							<td class="px-4 py-3 mono font-bold">CompressState</td>
+							<td class="px-4 py-3">false</td>
+							<td class="px-4 py-3">Enable GZIP compression for state updates.</td>
+						</tr>
+					</tbody>
+				</table>
+			</div>
 		</section>
 
 		<div class="bg-amber-500/5 border border-amber-500/20 p-6 rounded-2xl">
-			<h4 class="text-amber-500 font-bold mb-2">Did you know?</h4>
+			<h4 class="text-amber-500 font-bold mb-2">Power Tip: State Diffing</h4>
 			<p class="text-sm text-[var(--text-secondary)]">
-				GoSPA uses a binary-first protocol for state updates, significantly reducing the payload size compared to plain JSON over WebSockets.
+				Enable <code class="bg-[var(--bg-tertiary)] px-1 rounded">StateDiffing: true</code> in your config to send only the changed parts of large objects over the wire, optimizing performance for complex state maps.
 			</p>
 		</div>
 	</div>

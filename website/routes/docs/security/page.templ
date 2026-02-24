@@ -1,51 +1,79 @@
 package security
+ 
+import "website/components"
 
 templ Page() {
 	<div class="space-y-12">
 		<header>
 			<h1 class="text-4xl font-bold tracking-tight mb-4 text-transparent bg-clip-text bg-gradient-to-r from-[var(--accent-primary)] to-[var(--accent-secondary)]">Security</h1>
 			<p class="text-xl text-[var(--text-secondary)] leading-relaxed">
-				Built-in protections to keep your reactive applications safe.
+				Built-in protections and configurable security primitives to keep your reactive applications safe.
 			</p>
 		</header>
 
-		<section class="space-y-6">
+		<nav class="flex flex-wrap gap-4 p-4 rounded-2xl bg-[var(--bg-secondary)] border border-[var(--border)]">
+			<a href="#xss-protection" class="text-sm font-medium hover:text-[var(--accent-primary)] transition-colors">XSS Protection</a>
+			<a href="#csrf-protection" class="text-sm font-medium hover:text-[var(--accent-primary)] transition-colors">CSRF Protection</a>
+			<a href="#cors-security" class="text-sm font-medium hover:text-[var(--accent-primary)] transition-colors">CORS & Origins</a>
+			<a href="#security-headers" class="text-sm font-medium hover:text-[var(--accent-primary)] transition-colors">Security Headers</a>
+		</nav>
+
+		<section id="xss-protection" class="space-y-6">
 			<h2 class="text-2xl font-bold">XSS Protection</h2>
 			<p class="text-[var(--text-secondary)]">
 				GoSPA utilizes <code class="text-[var(--accent-secondary)]">DOMPurify</code> by default to sanitize all incoming state updates before they touch the DOM. This protects your application from Cross-Site Scripting (XSS) attacks.
 			</p>
-			<p class="text-[var(--text-secondary)]">
-				For performance-critical internal applications, you can opt-in to a Lite runtime that skips sanitization.
-			</p>
-		</section>
-
-		<section class="space-y-6">
-			<h2 class="text-2xl font-bold">Event Handler Security</h2>
-			<p class="text-[var(--text-secondary)]">
-				Inline event handlers like <code class="text-[var(--accent-secondary)]">onclick</code> are stripped during SPA navigation sanitization. This prevents XSS vectors where malicious JavaScript could be injected via event attributes.
-			</p>
-			<div class="bg-[var(--bg-secondary)] p-4 rounded-lg space-y-3">
-				<h4 class="font-semibold text-[var(--text-primary)]">Recommended Patterns</h4>
+			<div class="bg-blue-500/5 border border-blue-500/20 p-4 rounded-xl">
 				<p class="text-sm text-[var(--text-secondary)]">
-					<strong>Inside components:</strong> Use <code class="text-[var(--accent-secondary)]">data-on="click:handlerName"</code> within <code class="text-[var(--accent-secondary)]">data-gospa-component</code> elements.
-				</p>
-				<p class="text-sm text-[var(--text-secondary)]">
-					<strong>Outside components:</strong> Use <code class="text-[var(--accent-secondary)]">data-action="actionName"</code> with global event delegation in your root layout.
+					{ "For" } trusted environments, you can switch to the <code class="mono">SimpleRuntime</code> which uses a lightweight sanitizer for better performance. See <a href="/docs/runtime" class="text-[var(--accent-primary)] hover:underline">Runtime Selection</a> { "for" } details.
 				</p>
 			</div>
 		</section>
 
-		<section class="space-y-6">
-			<h2 class="text-2xl font-bold">State Isolation</h2>
+		<section id="csrf-protection" class="space-y-6">
+			<h2 class="text-2xl font-bold border-b border-[var(--border)] pb-2">CSRF Protection</h2>
 			<p class="text-[var(--text-secondary)]">
-				Each client session is isolated. Runes and State are bound to the specific user connection, ensuring that private data never leaks between sessions unless explicitly shared via a Global Rune.
+				GoSPA provides automatic Cross-Site Request Forgery (CSRF) protection for all state-changing operations and remote actions.
+			</p>
+			@components.CodeBlock(`app := gospa.New(gospa.Config{
+    EnableCSRF: true,  // Enable automatic protection
+})`, "go", "main.go")
+			<p class="text-sm text-[var(--text-secondary)]">
+				When enabled, the framework automatically manages CSRF tokens via cookies and header validation { "for" } all <code class="mono">POST</code>, <code class="mono">PUT</code>, and <code class="mono">DELETE</code> requests.
 			</p>
 		</section>
 
+		<section id="cors-security" class="space-y-6">
+			<h2 class="text-2xl font-bold border-b border-[var(--border)] pb-2">CORS & Allowed Origins</h2>
+			<p class="text-[var(--text-secondary)]">
+				Restrict which domains can interact with your application's API and WebSocket endpoints.
+			</p>
+			@components.CodeBlock(`app := gospa.New(gospa.Config{
+    AllowedOrigins: []string{
+        "https://myapp.com",
+        "https://api.myapp.com",
+    },
+})`, "go", "main.go")
+		</section>
+
+		<section id="security-headers" class="space-y-6">
+			<h2 class="text-2xl font-bold border-b border-[var(--border)] pb-2">Security Headers</h2>
+			<p class="text-[var(--text-secondary)]">
+				GoSPA automatically injects recommended security headers into every response:
+			</p>
+			<ul class="space-y-2 text-sm text-[var(--text-secondary)] list-disc list-inside ml-4">
+				<li><code class="mono font-bold">X-Content-Type-Options: nosniff</code></li>
+				<li><code class="mono font-bold">X-Frame-Options: DENY</code></li>
+				<li><code class="mono font-bold">X-XSS-Protection: 1; mode=block</code></li>
+				<li><code class="mono font-bold">Referrer-Policy: strict-origin-when-cross-origin</code></li>
+				<li><code class="mono font-bold">Content-Security-Policy</code> (Configurable via middleware)</li>
+			</ul>
+		</section>
+
 		<div class="bg-red-500/5 border border-red-500/20 p-6 rounded-2xl">
-			<h4 class="text-red-500 font-bold mb-2">Security Note</h4>
-			<p class="text-sm text-[var(--text-secondary)]">
-				Always validate inputs inside your Remote Actions on the server. Client-side sanitization is a secondary defense, not a replacement for server-side validation.
+			<h4 class="text-red-500 font-bold mb-2">Defense in Depth</h4>
+			<p class="text-sm text-[var(--text-secondary)] leading-relaxed">
+				Always validate and sanitize inputs inside your <strong>Remote Actions</strong> on the server. Client-side sanitization is a secondary defense layer designed to prevent malicious content from executing in the user's browser, not to validate the integrity of your business data.
 			</p>
 		</div>
 	</div>

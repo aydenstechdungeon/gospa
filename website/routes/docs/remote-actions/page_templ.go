@@ -31,32 +31,76 @@ func Page() templ.Component {
 			templ_7745c5c3_Var1 = templ.NopComponent
 		}
 		ctx = templ.ClearChildren(ctx)
-		templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 1, "<div id=\"overview\" class=\"space-y-12\"><header><h1 class=\"text-4xl font-bold tracking-tight mb-4 text-transparent bg-clip-text bg-gradient-to-r from-[var(--accent-primary)] to-[var(--accent-secondary)]\">Remote Actions</h1><p class=\"text-xl text-[var(--text-secondary)] leading-relaxed\">Type-safe server functions called directly from your Svelte-like templates.</p></header><section class=\"space-y-6\"><h2 id=\"defining-actions\" class=\"text-2xl font-bold\">Defining Actions</h2><p class=\"text-[var(--text-secondary)]\">Remote actions allow you to execute Go code on the server in response to client-side events. They are fully type-safe when used with the generated TypeScript bindings.</p>")
+		templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 1, "<div class=\"space-y-12\"><header><h1 class=\"text-4xl font-bold tracking-tight mb-4 text-transparent bg-clip-text bg-gradient-to-r from-[var(--accent-primary)] to-[var(--accent-secondary)]\">Remote Actions</h1><p class=\"text-xl text-[var(--text-secondary)] leading-relaxed\">Type-safe server functions called directly from your Svelte-like templates or client-side scripts.</p></header><nav class=\"flex flex-wrap gap-4 p-4 rounded-2xl bg-[var(--bg-secondary)] border border-[var(--border)]\"><a href=\"#defining\" class=\"text-sm font-medium hover:text-[var(--accent-primary)] transition-colors\">Defining Actions</a> <a href=\"#complex-input\" class=\"text-sm font-medium hover:text-[var(--accent-primary)] transition-colors\">Complex Inputs</a> <a href=\"#calling-template\" class=\"text-sm font-medium hover:text-[var(--accent-primary)] transition-colors\">Calling from Template</a> <a href=\"#calling-script\" class=\"text-sm font-medium hover:text-[var(--accent-primary)] transition-colors\">Calling from Script</a></nav><section id=\"defining\" class=\"space-y-6\"><h2 class=\"text-2xl font-bold border-b border-[var(--border)] pb-2\">Defining Actions</h2><p class=\"text-[var(--text-secondary)]\">Remote actions are registered globally using the <code class=\"mono text-[var(--accent-primary)]\">routing</code> package. They receive a context and an interface which contains the parsed JSON input from the client.</p>")
 		if templ_7745c5c3_Err != nil {
 			return templ_7745c5c3_Err
 		}
-		templ_7745c5c3_Err = components.CodeBlock(`// Server-side definition
-app.RegisterRemoteAction("sendMessage", func(c *gospa.Context, msg string) error {
-    fmt.Printf("Message received: %s\n", msg)
-    return nil
-})`, "go", "main.go").Render(ctx, templ_7745c5c3_Buffer)
+		templ_7745c5c3_Err = components.CodeBlock(`import "github.com/aydenstechdungeon/gospa/routing"
+
+func init() {
+    routing.RegisterRemoteAction("greet", func(ctx context.Context, input any) (any, error) {
+        name := input.(string)
+        return "Hello, " + name, nil
+    })
+}`, "go", "actions.go").Render(ctx, templ_7745c5c3_Buffer)
 		if templ_7745c5c3_Err != nil {
 			return templ_7745c5c3_Err
 		}
-		templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 2, "</section><section class=\"space-y-6\"><h2 id=\"calling-actions\" class=\"text-2xl font-bold\">Calling from Templates</h2><p class=\"text-[var(--text-secondary)]\">Use the <code class=\"text-[var(--accent-primary)]\">data-on</code> attribute to bind events to remote actions.</p>")
+		templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 2, "</section><section id=\"complex-input\" class=\"space-y-6\"><h2 class=\"text-2xl font-bold border-b border-[var(--border)] pb-2\">Complex Inputs & Validation</h2><p class=\"text-[var(--text-secondary)]\">Since inputs are passed as <code class=\"mono\">any</code>, you should use type assertions or a library like <code class=\"mono\">mitchellh/mapstructure</code> to map to your structs.</p>")
+		if templ_7745c5c3_Err != nil {
+			return templ_7745c5c3_Err
+		}
+		templ_7745c5c3_Err = components.CodeBlock(`type CreateUser struct {
+    Username string `+"`"+`json:"username"`+"`"+`
+    Email    string `+"`"+`json:"email"`+"`"+`
+}
+
+routing.RegisterRemoteAction("createUser", func(ctx context.Context, input any) (any, error) {
+    var data CreateUser
+    // Map input to struct...
+    if data.Username == "" {
+        return nil, errors.New("username required")
+    }
+    return "User " + data.Username + " created", nil
+})`, "go", "user.go").Render(ctx, templ_7745c5c3_Buffer)
+		if templ_7745c5c3_Err != nil {
+			return templ_7745c5c3_Err
+		}
+		templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 3, "</section><section id=\"calling-template\" class=\"space-y-6\"><h2 class=\"text-2xl font-bold border-b border-[var(--border)] pb-2\">Calling from Templates</h2><p class=\"text-[var(--text-secondary)]\">The easiest way to trigger a remote action is via the <code class=\"mono text-[var(--accent-primary)]\">data-on</code> attribute.</p>")
 		if templ_7745c5c3_Err != nil {
 			return templ_7745c5c3_Err
 		}
 		templ_7745c5c3_Err = components.CodeBlock(`<button 
-    data-on="click:remote:sendMessage('Hello Go!')"
-    class="btn-primary"
+    data-on="click:remote:greet('GoSPA User')"
+    class="px-4 py-2 bg-blue-600 rounded"
 >
-    Send Message
+    Greet Me
 </button>`, "templ", "page.templ").Render(ctx, templ_7745c5c3_Buffer)
 		if templ_7745c5c3_Err != nil {
 			return templ_7745c5c3_Err
 		}
-		templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 3, "</section><div id=\"optimistic-ui\" class=\"bg-blue-500/5 border border-blue-500/20 p-6 rounded-2xl\"><h4 class=\"text-blue-500 font-bold mb-2\">Power Feature: Optimistic UI</h4><p class=\"text-sm text-[var(--text-secondary)]\">GoSPA automatically handles state synchronization. When a remote action modifies server-side state, the client is updated instantly via WebSockets, giving you \"optimistic-like\" updates with zero effort.</p></div></div>")
+		templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 4, "</section><section id=\"calling-script\" class=\"space-y-6\"><h2 class=\"text-2xl font-bold border-b border-[var(--border)] pb-2\">Calling from Script</h2><p class=\"text-[var(--text-secondary)]\">You can also call remote actions programmatically using the <code class=\"mono text-[var(--accent-primary)]\">remote</code> function from the runtime.</p>")
+		if templ_7745c5c3_Err != nil {
+			return templ_7745c5c3_Err
+		}
+		templ_7745c5c3_Err = components.CodeBlock(`import { remote } from '@gospa/runtime';
+
+async function handleSignup() {
+    const result = await remote('createUser', {
+        username: 'ayden',
+        email: 'ayden@example.com'
+    });
+    
+    if (result.error) {
+        alert('Error: ' + result.error);
+    } else {
+        console.log('Success:', result.data);
+    }
+}`, "typescript", "signup.ts").Render(ctx, templ_7745c5c3_Buffer)
+		if templ_7745c5c3_Err != nil {
+			return templ_7745c5c3_Err
+		}
+		templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 5, "</section><div class=\"bg-amber-500/5 border border-amber-500/20 p-6 rounded-2xl\"><h4 class=\"text-amber-500 font-bold mb-2\">Security Note</h4><p class=\"text-sm text-[var(--text-secondary)]\">Remote actions are public endpoints. Always perform authentication and authorization checks inside your action functions using the provided <code class=\"mono\">context.Context</code>.</p></div></div>")
 		if templ_7745c5c3_Err != nil {
 			return templ_7745c5c3_Err
 		}
