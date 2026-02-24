@@ -235,6 +235,76 @@ type RouteMatch struct {
 | `*name` | Wildcard (greedy) | `/files/*path` matches `/files/a/b/c` |
 | `{name:regex}` | Regex constraint | `/users/{id:\\d+}` matches digits only |
 
+---
+
+## Route Groups
+
+Route groups allow you to organize routes into logical groups without affecting the URL path. This is useful for:
+
+- Grouping related routes together
+- Applying layouts to specific sections
+- Keeping feature areas separated
+
+### Syntax
+
+Route groups are created by wrapping a folder name in parentheses: `(name)`
+
+```
+routes/
+├── (marketing)/
+│   ├── about/
+│   │   └── page.templ      → /about
+│   └── contact/
+│       └── page.templ      → /contact
+├── (shop)/
+│   ├── products/
+│   │   └── page.templ      → /products
+│   └── cart/
+│       └── page.templ      → /cart
+└── page.templ              → /
+```
+
+### How It Works
+
+When a folder is named with parentheses:
+
+1. The folder name is **not** included in the URL path
+2. Routes inside the group behave as if they were at the parent level
+3. Multiple groups can exist at the same level
+
+### Example Structure
+
+```
+routes/
+├── (docs)/
+│   ├── layout.templ        → Layout for /docs/* routes
+│   ├── getting-started/
+│   │   └── page.templ      → /getting-started
+│   └── api/
+│       └── page.templ      → /api
+├── (auth)/
+│   ├── login/
+│   │   └── page.templ      → /login
+│   └── register/
+│       └── page.templ      → /register
+└── page.templ              → /
+```
+
+### Benefits
+
+1. **Organization**: Keep related routes together without URL bloat
+2. **Layouts**: Apply layouts to groups of routes
+3. **Clean URLs**: Maintain clean URL structures while organizing code
+
+### Comparison with Other Patterns
+
+| Pattern | URL Impact | Use Case |
+|---------|------------|----------|
+| `(name)` | Not included in URL | Organizational grouping |
+| `_name` | Becomes `:name` | Dynamic parameter |
+| `[name]` | Becomes `:name` | Dynamic parameter (bracket syntax) |
+| `name` | Included as `/name` | Static path segment |
+
 ### Methods
 
 | Method | Signature | Description |

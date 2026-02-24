@@ -121,8 +121,13 @@ func parseRoute(relPath, routesDir string) RouteInfo {
 		parts := strings.Split(dir, string(filepath.Separator))
 
 		// Build the package name from the path, converting _id to id
+		// and stripping route groups (name)
 		pkgParts := []string{}
 		for _, part := range parts {
+			// Skip route groups (name) - they don't affect package names
+			if strings.HasPrefix(part, "(") && strings.HasSuffix(part, ")") {
+				continue
+			}
 			if strings.HasPrefix(part, "_") {
 				// Convert _id to id for package name
 				pkgParts = append(pkgParts, strings.TrimPrefix(part, "_"))
@@ -274,6 +279,7 @@ func parseFunctionParams(paramsStr string) []FuncParam {
 }
 
 // filePathToURLPath converts a file path to a URL path.
+// Route groups (name) are stripped from the URL path entirely.
 func filePathToURLPath(dir, filename string) string {
 	// Handle root page
 	if dir == "." && filename == "page.templ" {
@@ -286,6 +292,11 @@ func filePathToURLPath(dir, filename string) string {
 
 	for _, part := range parts {
 		if part == "." || part == "" {
+			continue
+		}
+
+		// Skip route groups (name) - they organize routes without affecting URL
+		if strings.HasPrefix(part, "(") && strings.HasSuffix(part, ")") {
 			continue
 		}
 

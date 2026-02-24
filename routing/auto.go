@@ -208,13 +208,22 @@ func (r *Router) filePathToURLPath(relPath string, routeType RouteType) string {
 }
 
 // convertDynamicSegments converts [param] to :param, [...rest] to *rest,
-// and _param to :param (underscore prefix convention for Go-compatible directory names).
+// _param to :param (underscore prefix convention for Go-compatible directory names),
+// and strips (name) route groups (parentheses convention for organizational folders
+// that don't affect the URL path).
 func convertDynamicSegments(path string) string {
 	segments := strings.Split(path, "/")
 	result := make([]string, 0, len(segments))
 
 	for _, seg := range segments {
 		if seg == "" {
+			continue
+		}
+
+		// Check for route group (name) - strip from path entirely
+		// Route groups organize routes without affecting the URL
+		if strings.HasPrefix(seg, "(") && strings.HasSuffix(seg, ")") {
+			// Skip this segment - it's a route group
 			continue
 		}
 
