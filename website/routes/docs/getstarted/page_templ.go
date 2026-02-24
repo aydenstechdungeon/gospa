@@ -74,7 +74,7 @@ func Page() templ.Component {
 		if templ_7745c5c3_Err != nil {
 			return templ_7745c5c3_Err
 		}
-		templ_7745c5c3_Err = components.CodeBlock("go install github.com/a4bet/gospa/cmd/gospa@latest", "bash", "Terminal").Render(ctx, templ_7745c5c3_Buffer)
+		templ_7745c5c3_Err = components.CodeBlock("go install github.com/aydenstechdungeon/gospa/cmd/gospa@latest", "bash", "Terminal").Render(ctx, templ_7745c5c3_Buffer)
 		if templ_7745c5c3_Err != nil {
 			return templ_7745c5c3_Err
 		}
@@ -154,8 +154,8 @@ import (
 templ CounterPage() {
 	<div data-gospa-component="counter">
 		<h1>Counter</h1>
-		<p data-gospa-bind="count">0</p>
-		<button data-gospa-on:click="increment">+1</button>
+		<p data-bind="count">0</p>
+		<button data-on="click:increment">+1</button>
 	</div>
 }
 
@@ -196,21 +196,23 @@ count.update(v => v + 1)`, "typescript", "Client Runtime").Render(ctx, templ_774
 			return templ_7745c5c3_Err
 		}
 		templ_7745c5c3_Err = components.CodeBlock(`<!-- Bind text content -->
-<p data-gospa-bind="count">0</p>
+<p data-bind="count">0</p>
 
 <!-- Bind input value -->
-<input data-gospa-bind:value="name" />
+<input data-model="name" />
 
 <!-- Event handlers -->
-<button data-gospa-on:click="increment">Click</button>
+<button data-on="click:increment">Click</button>
 
-<!-- Conditional rendering -->
-<div data-gospa-if="isVisible">Hidden content</div>
+<!-- Conditional rendering (via template) -->
+if count > 5 {
+    <p>Big number!</p>
+}
 
-<!-- List rendering -->
-<ul data-gospa-each="items">
-  <li data-gospa-each-item></li>
-</ul>`, "html", "Template Bindings").Render(ctx, templ_7745c5c3_Buffer)
+<!-- List rendering (via template) -->
+for _, item := range items {
+    <li>{ item }</li>
+}`, "html", "Template Bindings").Render(ctx, templ_7745c5c3_Buffer)
 		if templ_7745c5c3_Err != nil {
 			return templ_7745c5c3_Err
 		}
@@ -293,14 +295,14 @@ const count = syncedRune('count', 0, ws)`, "typescript", "WebSocket Client").Ren
 		if templ_7745c5c3_Err != nil {
 			return templ_7745c5c3_Err
 		}
-		templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 17, "</section><section><h2 id=\"runtime-selection\" class=\"text-2xl font-bold mb-4\">Runtime Selection</h2><p class=\"text-[var(--text-secondary)] mb-4\">Choose between full and minimal runtime:</p><div class=\"grid sm:grid-cols-2 gap-4\"><div class=\"p-4 rounded-xl border border-[var(--border)] bg-[var(--bg-secondary)]\"><h3 class=\"font-bold text-[var(--accent-primary)] mb-2\">Full Runtime (~25KB)</h3><ul class=\"text-sm text-[var(--text-secondary)] space-y-1\"><li>DOMPurify sanitization</li><li>Full reactive primitives</li><li>WebSocket client</li><li>Transitions</li></ul></div><div class=\"p-4 rounded-xl border border-[var(--border)] bg-[var(--bg-secondary)]\"><h3 class=\"font-bold text-[var(--accent-secondary)] mb-2\">Minimal Runtime (~9.5KB)</h3><ul class=\"text-sm text-[var(--text-secondary)] space-y-1\"><li>Basic reactivity</li><li>No sanitization</li><li>No WebSocket</li><li>No transitions</li></ul></div></div></section><section><h2 id=\"cli-commands\" class=\"text-2xl font-bold mb-4\">CLI Commands</h2><div class=\"overflow-x-auto\"><table class=\"w-full text-sm\"><thead><tr class=\"border-b border-[var(--border)]\"><th class=\"text-left py-2 px-4\">Command</th><th class=\"text-left py-2 px-4\">Description</th></tr></thead> <tbody class=\"text-[var(--text-secondary)]\"><tr class=\"border-b border-[var(--border)]\"><td class=\"py-2 px-4\"><code class=\"text-[var(--accent-primary)]\">gospa create ")
+		templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 17, "</section><section><h2 id=\"runtime-selection\" class=\"text-2xl font-bold mb-4\">Runtime Selection</h2><p class=\"text-[var(--text-secondary)] mb-4\">Choose between full and minimal runtime:</p><div class=\"grid sm:grid-cols-2 gap-4\"><div class=\"p-4 rounded-xl border border-[var(--border)] bg-[var(--bg-secondary)]\"><h3 class=\"font-bold text-[var(--accent-primary)] mb-2\">Full Runtime (~25KB)</h3><ul class=\"text-sm text-[var(--text-secondary)] space-y-1\"><li>DOMPurify sanitization</li><li>Full reactive primitives</li><li>WebSocket client</li><li>Transitions</li><li>Recommended for public apps</li></ul></div><div class=\"p-4 rounded-xl border border-[var(--border)] bg-[var(--bg-secondary)]\"><h3 class=\"font-bold text-[var(--accent-secondary)] mb-2\">Simple Runtime (~9KB)</h3><ul class=\"text-sm text-[var(--text-secondary)] space-y-1\"><li>Basic HTML sanitization</li><li>Smaller bundle size</li><li>High performance</li><li>Perfect for internal tools</li><li>No dependencies</li></ul></div></div></section><section><h2 id=\"cli-commands\" class=\"text-2xl font-bold mb-4\">CLI Commands</h2><div class=\"overflow-x-auto\"><table class=\"w-full text-sm\"><thead><tr class=\"border-b border-[var(--border)]\"><th class=\"text-left py-2 px-4\">Command</th><th class=\"text-left py-2 px-4\">Description</th></tr></thead> <tbody class=\"text-[var(--text-secondary)]\"><tr class=\"border-b border-[var(--border)]\"><td class=\"py-2 px-4\"><code class=\"text-[var(--accent-primary)]\">gospa create ")
 		if templ_7745c5c3_Err != nil {
 			return templ_7745c5c3_Err
 		}
 		var templ_7745c5c3_Var6 string
 		templ_7745c5c3_Var6, templ_7745c5c3_Err = templ.JoinStringErrs("<name>")
 		if templ_7745c5c3_Err != nil {
-			return templ.Error{Err: templ_7745c5c3_Err, FileName: `routes/docs/getstarted/page.templ`, Line: 322, Col: 95}
+			return templ.Error{Err: templ_7745c5c3_Err, FileName: `routes/docs/getstarted/page.templ`, Line: 326, Col: 95}
 		}
 		_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ.EscapeString(templ_7745c5c3_Var6))
 		if templ_7745c5c3_Err != nil {
@@ -313,13 +315,13 @@ const count = syncedRune('count', 0, ws)`, "typescript", "WebSocket Client").Ren
 		var templ_7745c5c3_Var7 string
 		templ_7745c5c3_Var7, templ_7745c5c3_Err = templ.JoinStringErrs("for")
 		if templ_7745c5c3_Err != nil {
-			return templ.Error{Err: templ_7745c5c3_Err, FileName: `routes/docs/getstarted/page.templ`, Line: 331, Col: 42}
+			return templ.Error{Err: templ_7745c5c3_Err, FileName: `routes/docs/getstarted/page.templ`, Line: 335, Col: 42}
 		}
 		_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ.EscapeString(templ_7745c5c3_Var7))
 		if templ_7745c5c3_Err != nil {
 			return templ_7745c5c3_Err
 		}
-		templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 19, " production</td></tr><tr class=\"border-b border-[var(--border)]\"><td class=\"py-2 px-4\"><code class=\"text-[var(--accent-primary)]\">gospa generate</code></td><td class=\"py-2 px-4\">Generate routes and types</td></tr><tr><td class=\"py-2 px-4\"><code class=\"text-[var(--accent-primary)]\">gospa check</code></td><td class=\"py-2 px-4\">Type check project</td></tr></tbody></table></div></section><div class=\"p-8 rounded-3xl bg-gradient-to-br from-[var(--bg-tertiary)] to-[var(--bg-secondary)] border border-[var(--border)] shadow-xl mt-12\"><h3 id=\"next-steps\" class=\"text-xl font-bold mb-4\">Next Steps</h3><div class=\"grid sm:grid-cols-2 lg:grid-cols-3 gap-4\"><a href=\"/docs/reactive-primitives\" class=\"group p-4 rounded-xl border border-[var(--border)] bg-[var(--bg-primary)] hover:border-[var(--accent-primary)]/50 transition-all\"><div class=\"font-bold group-hover:text-[var(--accent-primary)] transition-colors\">Reactive Primitives →</div><div class=\"text-xs text-[var(--text-muted)] mt-1\">Learn about Rune, Derived, and Effect.</div></a> <a href=\"/docs/routing\" class=\"group p-4 rounded-xl border border-[var(--border)] bg-[var(--bg-primary)] hover:border-[var(--accent-primary)]/50 transition-all\"><div class=\"font-bold group-hover:text-[var(--accent-primary)] transition-colors\">Master Routing →</div><div class=\"text-xs text-[var(--text-muted)] mt-1\">Understand the file-based router.</div></a> <a href=\"/docs/client-runtime\" class=\"group p-4 rounded-xl border border-[var(--border)] bg-[var(--bg-primary)] hover:border-[var(--accent-primary)]/50 transition-all\"><div class=\"font-bold group-hover:text-[var(--accent-primary)] transition-colors\">Client Runtime →</div><div class=\"text-xs text-[var(--text-muted)] mt-1\">Full TypeScript API reference.</div></a> <a href=\"/docs/state-management\" class=\"group p-4 rounded-xl border border-[var(--border)] bg-[var(--bg-primary)] hover:border-[var(--accent-primary)]/50 transition-all\"><div class=\"font-bold group-hover:text-[var(--accent-primary)] transition-colors\">State Management →</div><div class=\"text-xs text-[var(--text-muted)] mt-1\">Server and client state patterns.</div></a> <a href=\"/docs/websocket\" class=\"group p-4 rounded-xl border border-[var(--border)] bg-[var(--bg-primary)] hover:border-[var(--accent-primary)]/50 transition-all\"><div class=\"font-bold group-hover:text-[var(--accent-primary)] transition-colors\">WebSocket Sync →</div><div class=\"text-xs text-[var(--text-muted)] mt-1\">Real-time state synchronization.</div></a> <a href=\"/docs/api\" class=\"group p-4 rounded-xl border border-[var(--border)] bg-[var(--bg-primary)] hover:border-[var(--accent-primary)]/50 transition-all\"><div class=\"font-bold group-hover:text-[var(--accent-primary)] transition-colors\">API Reference →</div><div class=\"text-xs text-[var(--text-muted)] mt-1\">Complete API documentation.</div></a></div></div></div>")
+		templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 19, " production</td></tr><tr class=\"border-b border-[var(--border)]\"><td class=\"py-2 px-4\"><code class=\"text-[var(--accent-primary)]\">gospa generate</code></td><td class=\"py-2 px-4\">Generate routes and types</td></tr><tr><td class=\"py-2 px-4\"><code class=\"text-[var(--accent-primary)]\">gospa version</code></td><td class=\"py-2 px-4\">Show GoSPA version</td></tr></tbody></table></div></section><div class=\"p-8 rounded-3xl bg-gradient-to-br from-[var(--bg-tertiary)] to-[var(--bg-secondary)] border border-[var(--border)] shadow-xl mt-12\"><h3 id=\"next-steps\" class=\"text-xl font-bold mb-4\">Next Steps</h3><div class=\"grid sm:grid-cols-2 lg:grid-cols-3 gap-4\"><a href=\"/docs/reactive-primitives\" class=\"group p-4 rounded-xl border border-[var(--border)] bg-[var(--bg-primary)] hover:border-[var(--accent-primary)]/50 transition-all\"><div class=\"font-bold group-hover:text-[var(--accent-primary)] transition-colors\">Reactive Primitives →</div><div class=\"text-xs text-[var(--text-muted)] mt-1\">Learn about Rune, Derived, and Effect.</div></a> <a href=\"/docs/routing\" class=\"group p-4 rounded-xl border border-[var(--border)] bg-[var(--bg-primary)] hover:border-[var(--accent-primary)]/50 transition-all\"><div class=\"font-bold group-hover:text-[var(--accent-primary)] transition-colors\">Master Routing →</div><div class=\"text-xs text-[var(--text-muted)] mt-1\">Understand the file-based router.</div></a> <a href=\"/docs/client-runtime\" class=\"group p-4 rounded-xl border border-[var(--border)] bg-[var(--bg-primary)] hover:border-[var(--accent-primary)]/50 transition-all\"><div class=\"font-bold group-hover:text-[var(--accent-primary)] transition-colors\">Client Runtime →</div><div class=\"text-xs text-[var(--text-muted)] mt-1\">Full TypeScript API reference.</div></a> <a href=\"/docs/state-management\" class=\"group p-4 rounded-xl border border-[var(--border)] bg-[var(--bg-primary)] hover:border-[var(--accent-primary)]/50 transition-all\"><div class=\"font-bold group-hover:text-[var(--accent-primary)] transition-colors\">State Management →</div><div class=\"text-xs text-[var(--text-muted)] mt-1\">Server and client state patterns.</div></a> <a href=\"/docs/websocket\" class=\"group p-4 rounded-xl border border-[var(--border)] bg-[var(--bg-primary)] hover:border-[var(--accent-primary)]/50 transition-all\"><div class=\"font-bold group-hover:text-[var(--accent-primary)] transition-colors\">WebSocket Sync →</div><div class=\"text-xs text-[var(--text-muted)] mt-1\">Real-time state synchronization.</div></a> <a href=\"/docs/api\" class=\"group p-4 rounded-xl border border-[var(--border)] bg-[var(--bg-primary)] hover:border-[var(--accent-primary)]/50 transition-all\"><div class=\"font-bold group-hover:text-[var(--accent-primary)] transition-colors\">API Reference →</div><div class=\"text-xs text-[var(--text-muted)] mt-1\">Complete API documentation.</div></a></div></div></div>")
 		if templ_7745c5c3_Err != nil {
 			return templ_7745c5c3_Err
 		}

@@ -20,7 +20,7 @@ The `Params` type is a map for storing route parameters with type-safe accessors
 ### Basic Usage
 
 ```go
-import "github.com/gospa/gospa/routing"
+import "github.com/aydenstechdungeon/gospa/routing"
 
 // Create params
 params := routing.Params{
@@ -191,28 +191,23 @@ Extract parameters from routes during matching.
 ### Creating an Extractor
 
 ```go
-extractor := routing.NewParamExtractor()
+// Create an extractor for a specific pattern
+extractor := routing.NewParamExtractor("/users/:id")
 
-// Add route pattern
-extractor.AddPattern("/users/:id")
-extractor.AddPattern("/posts/:postId/comments/:commentId")
-extractor.AddPattern("/files/*filepath")  // Wildcard
+// Match and extract
+params, ok := extractor.Extract("/users/123")
+if ok {
+    id := params.Get("id")  // "123"
+}
 ```
 
 ### Extracting Parameters
 
 ```go
-// Match and extract
-match := extractor.Match("/users/123")
-if match != nil {
-    params := match.Params
-    id := params.Get("id")  // "123"
-}
-
 // Match with wildcard
-match := extractor.Match("/files/docs/readme.txt")
-if match != nil {
-    params := match.Params
+extractor = routing.NewParamExtractor("/files/*filepath")
+params, ok = extractor.Extract("/files/docs/readme.txt")
+if ok {
     filepath := params.Get("filepath")  // "docs/readme.txt"
 }
 ```
@@ -324,32 +319,21 @@ Build URL paths with parameters.
 ### Creating a PathBuilder
 
 ```go
-builder := routing.NewPathBuilder()
-
-// Build from pattern
-path := builder.Build("/users/:id", routing.Params{
-    "id": "123",
-})
-// Result: "/users/123"
-
-// Build with multiple params
-path := builder.Build("/users/:userId/posts/:postId", routing.Params{
-    "userId":  "1",
-    "postId":  "42",
-})
+builder := routing.NewPathBuilder("/users/:userId/posts/:postId")
+builder.Param("userId", "1")
+builder.Param("postId", "42")
+path := builder.Build()
 // Result: "/users/1/posts/42"
 ```
 
 ### With Query Parameters
 
 ```go
-path := builder.BuildWithQuery("/search", routing.Params{
-    "q": "gospa",
-}, routing.QueryParams{
-    "page":  []string{"1"},
-    "sort":  []string{"desc"},
-})
-// Result: "/search?q=gospa&page=1&sort=desc"
+builder = routing.NewPathBuilder("/search")
+builder.Query("q", "gospa")
+builder.Query("page", "1")
+path = builder.Build()
+// Result: "/search?q=gospa&page=1"
 ```
 
 ### URL Encoding
@@ -382,48 +366,39 @@ import (
     "fmt"
     "net/url"
     
-    "github.com/gospa/gospa/routing"
+    "github.com/aydenstechdungeon/gospa/routing"
 )
 
 func main() {
     // Create param extractor
-    extractor := routing.NewParamExtractor()
-    extractor.AddPattern("/users/:id")
-    extractor.AddPattern("/posts/:postId/comments/:commentId")
-    extractor.AddPattern("/api/:version/*path")
+    extractor := routing.NewParamExtractor("/users/:id")
     
     // Match routes
-    match := extractor.Match("/users/123")
-    if match != nil {
-        fmt.Printf("Pattern: %s\n", match.Pattern)
-        fmt.Printf("User ID: %s\n", match.Params.Get("id"))
+    params, ok := extractor.Extract("/users/123")
+    if ok {
+        fmt.Printf("User ID: %s\n", params.Get("id"))
     }
     
     // Match with wildcard
-    match = extractor.Match("/api/v1/users/123/profile")
-    if match != nil {
-        fmt.Printf("Version: %s\n", match.Params.Get("version"))
-        fmt.Printf("Path: %s\n", match.Params.Get("path"))
+    extractor = routing.NewParamExtractor("/api/:version/*path")
+    params, ok = extractor.Extract("/api/v1/users/123/profile")
+    if ok {
+        fmt.Printf("Version: %s\n", params.Get("version"))
+        fmt.Printf("Path: %s\n", params.Get("path"))
     }
     
     // Build paths
-    builder := routing.NewPathBuilder()
-    
-    path := builder.Build("/users/:id/posts/:postId", routing.Params{
-        "id":     "1",
-        "postId": "42",
-    })
+    builder := routing.NewPathBuilder("/users/:id/posts/:postId")
+    builder.Param("id", "1")
+    builder.Param("postId", "42")
+    path := builder.Build()
     fmt.Println("Built path:", path)
     
     // With query params
-    queryParams := routing.NewQueryParamsFromMap(map[string][]string{
-        "page": {"1"},
-        "sort": {"desc"},
-    })
-    
-    fullPath := builder.BuildWithQuery("/search", routing.Params{
-        "q": "gospa",
-    }, queryParams)
+    builder = routing.NewPathBuilder("/search")
+    builder.Query("q", "gospa")
+    builder.Query("page", "1")
+    fullPath := builder.Build()
     fmt.Println("Full path:", fullPath)
     
     // Parse and use query params

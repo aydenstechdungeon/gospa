@@ -90,7 +90,7 @@ func DefaultConfig() *Config {
 		PreserveOriginals: true,
 		LazyLoadThreshold: 10240, // 10KB
 		Formats: FormatConfig{
-			WebP: true,
+			WebP: false, // Disabled by default - requires external library for encoding
 			AVIF: false, // Requires external tool
 			JPEG: true,
 			PNG:  true,
@@ -307,13 +307,9 @@ func (p *ImagePlugin) optimizeImage(srcPath, outPath string) error {
 		sizeOutPath := p.addSizeSuffix(outPath, size.Name)
 
 		// Save in each enabled format
-		if p.config.Formats.WebP {
-			// WebP requires golang.org/x/image/webp - save as PNG fallback
-			webpPath := sizeOutPath + ".webp"
-			if err := p.savePNG(resized, strings.Replace(webpPath, ".webp", "-webp.png", 1)); err != nil {
-				return err
-			}
-		}
+		// Note: WebP encoding is not supported by Go's standard library.
+		// For WebP support, use an external tool like sharp (npm) or cwebp.
+		// The WebP config option is reserved for future implementation.
 
 		if p.config.Formats.JPEG && ext != ".png" {
 			if err := p.saveJPEG(resized, sizeOutPath+".jpg", size.Quality); err != nil {

@@ -1,14 +1,21 @@
 package tailwind
 
 import (
+	"context"
 	"fmt"
 	"os"
 	"os/exec"
+	"sync"
 
 	"github.com/aydenstechdungeon/gospa/plugin"
 )
 
-type TailwindPlugin struct{}
+type TailwindPlugin struct {
+	mu      sync.Mutex
+	cmd     *exec.Cmd
+	cancel  context.CancelFunc
+	stopped bool
+}
 
 func New() *TailwindPlugin {
 	return &TailwindPlugin{}
@@ -34,14 +41,36 @@ func (p *TailwindPlugin) OnHook(hook plugin.Hook, ctx map[string]interface{}) er
 	switch hook {
 	case plugin.BeforeDev:
 		if p.isInstalled() {
-			go p.watch()
+			go p.watchWithContext()
 		}
+	case plugin.AfterDev:
+		// Graceful shutdown when dev server stops
+		p.Stop()
 	case plugin.BeforeBuild:
 		if p.isInstalled() {
 			return p.compile(true)
 		}
 	}
 	return nil
+}
+
+// Stop gracefully stops the Tailwind watcher.
+func (p *TailwindPlugin) Stop() {
+	p.mu.Lock()
+	defer p.mu.Unlock()
+
+	if p.stopped {
+		return
+	}
+	p.stopped = true
+
+	if p.cancel != nil {
+		p.cancel()
+	}
+	if p.cmd != nil && p.cmd.Process != nil {
+		p.cmd.Process.Kill()
+	}
+	fmt.Println("Tailwind: watcher stopped")
 }
 
 func (p *TailwindPlugin) Commands() []plugin.Command {
@@ -98,15 +127,33 @@ func (p *TailwindPlugin) install(args []string) error {
 	return nil
 }
 
-func (p *TailwindPlugin) watch() {
+func (p *TailwindPlugin) watchWithContext() {
+	p.mu.Lock()
+	if p.stopped {
+		p.mu.Unlock()
+		return
+	}
+	
+	ctx, cancel := context.WithCancel(context.Background())
+	p.cancel = cancel
+	p.mu.Unlock()
+	
 	fmt.Println("Tailwind: starting watcher...")
-	// Use the tailwind CLI to watch
-	// We assume its outputting to static/dist/app.css or similar
-	cmd := exec.Command("bunx", "@tailwindcss/cli", "-i", "./static/css/app.css", "-o", "./static/dist/app.css", "--watch")
+	
+	cmd := exec.CommandContext(ctx, "bunx", "@tailwindcss/cli", "-i", "./static/css/app.css", "-o", "./static/dist/app.css", "--watch")
 	cmd.Stdout = os.Stdout
 	cmd.Stderr = os.Stderr
+	
+	p.mu.Lock()
+	p.cmd = cmd
+	p.mu.Unlock()
+	
 	if err := cmd.Run(); err != nil {
-		fmt.Fprintf(os.Stderr, "Tailwind watcher failed: %v\n", err)
+		if ctx.Err() == context.Canceled {
+			fmt.Println("Tailwind: watcher stopped gracefully")
+		} else {
+			fmt.Fprintf(os.Stderr, "Tailwind watcher failed: %v\n", err)
+		}
 	}
 }
 

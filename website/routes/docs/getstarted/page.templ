@@ -39,7 +39,7 @@ templ Page() {
 			<p class="text-[var(--text-secondary)] mb-4">
 				The easiest way to start a new GoSPA project is by using our CLI tool.
 			</p>
-			@components.CodeBlock("go install github.com/a4bet/gospa/cmd/gospa@latest", "bash", "Terminal")
+			@components.CodeBlock("go install github.com/aydenstechdungeon/gospa/cmd/gospa@latest", "bash", "Terminal")
 		</section>
 
 		<section>
@@ -103,8 +103,8 @@ import (
 templ CounterPage() {
 	<div data-gospa-component="counter">
 		<h1>Counter</h1>
-		<p data-gospa-bind="count">0</p>
-		<button data-gospa-on:click="increment">+1</button>
+		<p data-bind="count">0</p>
+		<button data-on="click:increment">+1</button>
 	</div>
 }
 
@@ -144,21 +144,23 @@ count.update(v => v + 1)`, "typescript", "Client Runtime")
 			<p class="text-[var(--text-secondary)] mb-4">The runtime automatically handles DOM bindings via data attributes:</p>
 			<div class="grid gap-4">
 				@components.CodeBlock(`<!-- Bind text content -->
-<p data-gospa-bind="count">0</p>
+<p data-bind="count">0</p>
 
 <!-- Bind input value -->
-<input data-gospa-bind:value="name" />
+<input data-model="name" />
 
 <!-- Event handlers -->
-<button data-gospa-on:click="increment">Click</button>
+<button data-on="click:increment">Click</button>
 
-<!-- Conditional rendering -->
-<div data-gospa-if="isVisible">Hidden content</div>
+<!-- Conditional rendering (via template) -->
+if count > 5 {
+    <p>Big number!</p>
+}
 
-<!-- List rendering -->
-<ul data-gospa-each="items">
-  <li data-gospa-each-item></li>
-</ul>`, "html", "Template Bindings")
+<!-- List rendering (via template) -->
+for _, item := range items {
+    <li>{ item }</li>
+}`, "html", "Template Bindings")
 			</div>
 		</section>
 
@@ -293,15 +295,17 @@ const count = syncedRune('count', 0, ws)`, "typescript", "WebSocket Client")
 						<li>Full reactive primitives</li>
 						<li>WebSocket client</li>
 						<li>Transitions</li>
+						<li>Recommended for public apps</li>
 					</ul>
 				</div>
 				<div class="p-4 rounded-xl border border-[var(--border)] bg-[var(--bg-secondary)]">
-					<h3 class="font-bold text-[var(--accent-secondary)] mb-2">Minimal Runtime (~9.5KB)</h3>
+					<h3 class="font-bold text-[var(--accent-secondary)] mb-2">Simple Runtime (~9KB)</h3>
 					<ul class="text-sm text-[var(--text-secondary)] space-y-1">
-						<li>Basic reactivity</li>
-						<li>No sanitization</li>
-						<li>No WebSocket</li>
-						<li>No transitions</li>
+						<li>Basic HTML sanitization</li>
+						<li>Smaller bundle size</li>
+						<li>High performance</li>
+						<li>Perfect for internal tools</li>
+						<li>No dependencies</li>
 					</ul>
 				</div>
 			</div>
@@ -335,8 +339,8 @@ const count = syncedRune('count', 0, ws)`, "typescript", "WebSocket Client")
 							<td class="py-2 px-4">Generate routes and types</td>
 						</tr>
 						<tr>
-							<td class="py-2 px-4"><code class="text-[var(--accent-primary)]">gospa check</code></td>
-							<td class="py-2 px-4">Type check project</td>
+							<td class="py-2 px-4"><code class="text-[var(--accent-primary)]">gospa version</code></td>
+							<td class="py-2 px-4">Show GoSPA version</td>
 						</tr>
 					</tbody>
 				</table>

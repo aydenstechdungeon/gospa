@@ -429,8 +429,8 @@ router.RegisterToFiber(fiberApp *fiber.App)
 **Handler Type**
 
 ```go
-type Handler func(c *fiber.Ctx, params Params) error
-type Middleware func(Handler) Handler
+type Handler func(c *fiber.Ctx) error
+type Middleware func(c *fiber.Ctx) error
 ```
 
 ---
@@ -446,12 +446,14 @@ type Params map[string]string
 value := params.Get("id")
 value := params.GetDefault("id", "default")
 
-// Typed access
+// Typed access (returns (T, error))
 intVal, err := params.Int("count")
 int64Val, err := params.Int64("id")
 floatVal, err := params.Float64("price")
 boolVal, err := params.Bool("active")
-sliceVal, err := params.Slice("tags", ",")
+
+// Slice (for catch-all params, splits by '/')
+sliceVal := params.Slice("path")
 
 // Utility functions
 params := routing.ExtractParams(c *fiber.Ctx, paramKeys []string)
@@ -465,14 +467,19 @@ queryParams := routing.QueryParams(c *fiber.Ctx)
 Register page and layout components.
 
 ```go
+// Defined types
+// type ComponentFunc func(props map[string]interface{}) templ.Component
+// type LayoutFunc func(children templ.Component, props map[string]interface{}) templ.Component
+
 // Register page component
-routing.RegisterPage(path string, fn func(props map[string]interface{}) templ.Component)
+routing.RegisterPage(path string, fn ComponentFunc)
+routing.RegisterPageWithOptions(path string, fn ComponentFunc, opts RouteOptions)
 
 // Register layout component
-routing.RegisterLayout(path string, fn func(content templ.Component, props map[string]interface{}) templ.Component)
+routing.RegisterLayout(path string, fn LayoutFunc)
 
 // Register root layout
-routing.RegisterRootLayout(fn func(content templ.Component, props map[string]interface{}) templ.Component)
+routing.RegisterRootLayout(fn LayoutFunc)
 
 // Get registered components
 pageFunc := routing.GetPage(path string)
@@ -480,7 +487,7 @@ layoutFunc := routing.GetLayout(path string)
 rootLayoutFunc := routing.GetRootLayout()
 
 // Remote actions
-routing.RegisterRemoteAction(name string, fn func(ctx context.Context, input interface{}) (interface{}, error))
+routing.RegisterRemoteAction(name string, fn RemoteActionFunc)
 fn, ok := routing.GetRemoteAction(name string)
 ```
 

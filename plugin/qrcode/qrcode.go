@@ -6,12 +6,12 @@ package qrcode
 import (
 	"bytes"
 	"encoding/base64"
-	"fmt"
 	"image"
 	"image/color"
 	"image/png"
 
 	"github.com/aydenstechdungeon/gospa/plugin"
+	"github.com/skip2/go-qrcode"
 )
 
 // Level represents the error correction level.
@@ -102,7 +102,6 @@ func (p *QRCodePlugin) Init() error {
 
 // Dependencies returns the plugin dependencies.
 func (p *QRCodePlugin) Dependencies() []plugin.Dependency {
-	// No external dependencies - pure Go implementation
 	return nil
 }
 
@@ -166,65 +165,32 @@ func (p *QRCodePlugin) ForOTP(otpURL string, opts ...Option) (string, error) {
 	return p.GenerateDataURL(otpURL, opts...)
 }
 
+// toQrcodeLevel converts our Level to go-qrcode's RecoveryLevel.
+func (l Level) toQrcodeLevel() qrcode.RecoveryLevel {
+	switch l {
+	case LevelLow:
+		return qrcode.Low
+	case LevelMedium:
+		return qrcode.Medium
+	case LevelQuartile:
+		return qrcode.Quartile
+	case LevelHigh:
+		return qrcode.High
+	default:
+		return qrcode.Medium
+	}
+}
+
 // Generate generates a QR code image.
 func (qr *QRCode) Generate() (image.Image, error) {
-	// Encode the content to QR code matrix
-	matrix, err := encode(qr.Content, qr.Level)
-	if err != nil {
-		return nil, err
-	}
-
-	// Calculate module size
-	moduleSize := qr.Size / len(matrix)
-	if moduleSize < 1 {
-		moduleSize = 1
-	}
-
-	// Create image
-	img := image.NewRGBA(image.Rect(0, 0, qr.Size, qr.Size))
-
-	// Fill background
-	for y := 0; y < qr.Size; y++ {
-		for x := 0; x < qr.Size; x++ {
-			img.Set(x, y, qr.Background)
-		}
-	}
-
-	// Draw modules
-	offset := (qr.Size - moduleSize*len(matrix)) / 2
-	for y, row := range matrix {
-		for x, module := range row {
-			if module {
-				// Draw module
-				for dy := 0; dy < moduleSize; dy++ {
-					for dx := 0; dx < moduleSize; dx++ {
-						px := offset + x*moduleSize + dx
-						py := offset + y*moduleSize + dy
-						if px >= 0 && px < qr.Size && py >= 0 && py < qr.Size {
-							img.Set(px, py, qr.Foreground)
-						}
-					}
-				}
-			}
-		}
-	}
-
-	return img, nil
+	// Use the go-qrcode library which implements proper Reed-Solomon error correction
+	return qrcode.New(qr.Content, qr.Level.toQrcodeLevel())
 }
 
 // PNG generates a PNG-encoded QR code.
 func (qr *QRCode) PNG() ([]byte, error) {
-	img, err := qr.Generate()
-	if err != nil {
-		return nil, err
-	}
-
-	var buf bytes.Buffer
-	if err := png.Encode(&buf, img); err != nil {
-		return nil, err
-	}
-
-	return buf.Bytes(), nil
+	// Use the go-qrcode library for proper encoding with Reed-Solomon error correction
+	return qrcode.Encode(qr.Content, qr.Level.toQrcodeLevel(), qr.Size)
 }
 
 // Base64 generates a base64-encoded PNG QR code.
@@ -238,209 +204,84 @@ func (qr *QRCode) Base64() (string, error) {
 
 // DataURL generates a data URL for the QR code.
 func (qr *QRCode) DataURL() (string, error) {
-	base64, err := qr.Base64()
+	base64Data, err := qr.Base64()
 	if err != nil {
 		return "", err
 	}
-	return "data:image/png;base64," + base64, nil
+	return "data:image/png;base64," + base64Data, nil
 }
 
-// encode encodes content to a QR code matrix.
-func encode(content string, level Level) ([][]bool, error) {
-	// Determine version based on content length
-	version := getVersion(len(content), level)
-	if version == 0 {
-		return nil, fmt.Errorf("content too long")
+// GenerateWithLogo generates a QR code with a logo in the center.
+func (p *QRCodePlugin) GenerateWithLogo(content string, logo image.Image, opts ...Option) (image.Image, error) {
+	qr := p.NewQRCode(content, opts...)
+
+	// Generate base QR code
+	baseQR, err := qrcode.New(content, qr.Level.toQrcodeLevel())
+	if err != nil {
+		return nil, err
 	}
 
-	// Calculate matrix size (version 1 = 21x21, each version adds 4)
-	size := 21 + (version-1)*4
-
-	// Create matrix
-	matrix := make([][]bool, size)
-	for i := range matrix {
-		matrix[i] = make([]bool, size)
+	// If logo provided, overlay it
+	if logo != nil {
+		return overlayLogo(baseQR, logo, qr.Size)
 	}
 
-	// Add finder patterns
-	addFinderPattern(matrix, 0, 0)
-	addFinderPattern(matrix, size-7, 0)
-	addFinderPattern(matrix, 0, size-7)
-
-	// Add timing patterns
-	for i := 8; i < size-8; i++ {
-		matrix[6][i] = i%2 == 0
-		matrix[i][6] = i%2 == 0
-	}
-
-	// Add alignment patterns for version >= 2
-	if version >= 2 {
-		// Simplified: just add one alignment pattern
-		ax := size - 9
-		ay := size - 9
-		addAlignmentPattern(matrix, ax, ay)
-	}
-
-	// Encode data (simplified - just encode as bits)
-	data := encodeData(content, version, level)
-
-	// Place data in matrix
-	placeData(matrix, data, size)
-
-	return matrix, nil
+	return baseQR, nil
 }
 
-// getVersion returns the minimum QR version needed for the content.
-func getVersion(length int, level Level) int {
-	// Simplified capacity table (alphanumeric mode)
-	capacities := []int{
-		0, 25, 47, 77, 114, 154, 195, 224, 279, 335,
-		395, 468, 535, 619, 667, 758, 854, 938, 1046, 1153,
-	}
+// overlayLogo overlays a logo on the QR code.
+func overlayLogo(qr image.Image, logo image.Image, size int) (image.Image, error) {
+	// Create output image
+	output := image.NewRGBA(image.Rect(0, 0, size, size))
 
-	// Reduce capacity based on error correction level
-	factor := 1.0
-	switch level {
-	case LevelMedium:
-		factor = 0.85
-	case LevelQuartile:
-		factor = 0.70
-	case LevelHigh:
-		factor = 0.55
-	}
-
-	for v, cap := range capacities {
-		if int(float64(cap)*factor) >= length {
-			return v
+	// Draw QR code scaled to size
+	for y := 0; y < size; y++ {
+		for x := 0; x < size; x++ {
+			output.Set(x, y, qr.At(
+				x*qr.Bounds().Dx()/size,
+				y*qr.Bounds().Dy()/size,
+			))
 		}
 	}
-	return 0
-}
 
-// addFinderPattern adds a finder pattern at the given position.
-func addFinderPattern(matrix [][]bool, x, y int) {
-	// Outer border (7x7 black border with white inner)
-	for dy := 0; dy < 7; dy++ {
-		for dx := 0; dx < 7; dx++ {
-			if dy == 0 || dy == 6 || dx == 0 || dx == 6 ||
-				(dy >= 2 && dy <= 4 && dx >= 2 && dx <= 4) {
-				matrix[y+dy][x+dx] = true
+	// Calculate logo position (centered, max 20% of QR code size)
+	logoSize := size / 5
+	logoX := (size - logoSize) / 2
+	logoY := (size - logoSize) / 2
+
+	// Draw logo
+	for y := 0; y < logoSize; y++ {
+		for x := 0; x < logoSize; x++ {
+			px := logoX + x
+			py := logoY + y
+			if px >= 0 && px < size && py >= 0 && py < size {
+				// Scale logo coordinates
+				lx := x * logo.Bounds().Dx() / logoSize
+				ly := y * logo.Bounds().Dy() / logoSize
+				_, _, _, a := logo.At(lx, ly).RGBA()
+				if a > 0 {
+					output.Set(px, py, logo.At(lx, ly))
+				}
 			}
 		}
 	}
+
+	return output, nil
 }
 
-// addAlignmentPattern adds an alignment pattern at the given position.
-func addAlignmentPattern(matrix [][]bool, x, y int) {
-	for dy := -2; dy <= 2; dy++ {
-		for dx := -2; dx <= 2; dx++ {
-			if abs(dy) == 2 || abs(dx) == 2 || (dy == 0 && dx == 0) {
-				matrix[y+dy][x+dx] = true
-			}
-		}
-	}
-}
-
-// abs returns the absolute value.
-func abs(n int) int {
-	if n < 0 {
-		return -n
-	}
-	return n
-}
-
-// encodeData encodes content to bit stream.
-func encodeData(content string, version int, level Level) []bool {
-	// Simplified encoding - just convert to binary
-	var bits []bool
-
-	// Mode indicator (byte mode = 0100)
-	bits = append(bits, false, true, false, false)
-
-	// Character count (8 bits for version 1-9, 16 for 10+)
-	count := len(content)
-	if version < 10 {
-		for i := 7; i >= 0; i-- {
-			bits = append(bits, (count>>i)&1 == 1)
-		}
-	} else {
-		for i := 15; i >= 0; i-- {
-			bits = append(bits, (count>>i)&1 == 1)
-		}
+// GeneratePNGWithLogo generates a PNG QR code with a logo.
+func (p *QRCodePlugin) GeneratePNGWithLogo(content string, logo image.Image, opts ...Option) ([]byte, error) {
+	img, err := p.GenerateWithLogo(content, logo, opts...)
+	if err != nil {
+		return nil, err
 	}
 
-	// Data
-	for _, c := range content {
-		for i := 7; i >= 0; i-- {
-			bits = append(bits, (int(c)>>i)&1 == 1)
-		}
+	var buf bytes.Buffer
+	if err := png.Encode(&buf, img); err != nil {
+		return nil, err
 	}
 
-	// Terminator (0000)
-	bits = append(bits, false, false, false, false)
-
-	// Pad to byte boundary
-	for len(bits)%8 != 0 {
-		bits = append(bits, false)
-	}
-
-	return bits
-}
-
-// placeData places data bits in the matrix.
-func placeData(matrix [][]bool, data []bool, size int) {
-	// Zigzag pattern from bottom-right
-	x := size - 1
-	y := size - 1
-	dx := -1
-	bitIndex := 0
-
-	for x > 0 {
-		if x == 6 {
-			x-- // Skip timing pattern column
-		}
-
-		for y >= 0 && y < size {
-			// Skip if module is already set (finder pattern, etc.)
-			if !isReserved(matrix, x, y, size) && bitIndex < len(data) {
-				matrix[y][x] = data[bitIndex]
-				bitIndex++
-			}
-			if !isReserved(matrix, x+1, y, size) && bitIndex < len(data) {
-				matrix[y][x+1] = data[bitIndex]
-				bitIndex++
-			}
-			y -= dx
-		}
-		y += dx
-		if y < 0 {
-			y = 0
-		} else if y >= size {
-			y = size - 1
-		}
-		dx = -dx
-		x -= 2
-	}
-}
-
-// isReserved checks if a module is reserved for patterns.
-func isReserved(matrix [][]bool, x, y, size int) bool {
-	// Check bounds
-	if x < 0 || x >= size || y < 0 || y >= size {
-		return true
-	}
-
-	// Check finder patterns
-	if (x < 9 && y < 9) || (x < 9 && y >= size-8) || (x >= size-8 && y < 9) {
-		return true
-	}
-
-	// Check timing patterns
-	if x == 6 || y == 6 {
-		return true
-	}
-
-	return false
+	return buf.Bytes(), nil
 }
 
 // Package-level functions for convenience
@@ -476,6 +317,16 @@ func GenerateDataURL(content string, opts ...Option) (string, error) {
 // ForOTP generates a QR code for OTP/TOTP setup.
 func ForOTP(otpURL string, opts ...Option) (string, error) {
 	return defaultPlugin.ForOTP(otpURL, opts...)
+}
+
+// GenerateWithLogo generates a QR code with a logo in the center.
+func GenerateWithLogo(content string, logo image.Image, opts ...Option) (image.Image, error) {
+	return defaultPlugin.GenerateWithLogo(content, logo, opts...)
+}
+
+// GeneratePNGWithLogo generates a PNG QR code with a logo.
+func GeneratePNGWithLogo(content string, logo image.Image, opts ...Option) ([]byte, error) {
+	return defaultPlugin.GeneratePNGWithLogo(content, logo, opts...)
 }
 
 func init() {

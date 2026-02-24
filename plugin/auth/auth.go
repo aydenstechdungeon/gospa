@@ -6,6 +6,7 @@ import (
 	"crypto/hmac"
 	"crypto/rand"
 	"crypto/sha1"
+	"crypto/sha256"
 	"encoding/base32"
 	"encoding/hex"
 	"fmt"
@@ -103,9 +104,14 @@ type BackupCode struct {
 }
 
 // DefaultConfig returns the default auth configuration.
+// JWTSecret is generated randomly if not set - this is safer than a hardcoded default.
 func DefaultConfig() *Config {
+	// Generate a random JWT secret for development
+	// IMPORTANT: In production, always set JWT_SECRET explicitly via config or environment variable
+	randomSecret, _ := generateRandomSecret(32)
+
 	return &Config{
-		JWTSecret:       "change-me-in-production",
+		JWTSecret:       randomSecret,
 		JWTExpiry:       24,
 		Issuer:          "gospa-app",
 		OAuthProviders:  []string{},
@@ -116,6 +122,15 @@ func DefaultConfig() *Config {
 		BackupCodeCount: 10,
 		OutputDir:       "generated/auth",
 	}
+}
+
+// generateRandomSecret generates a cryptographically secure random secret.
+func generateRandomSecret(length int) (string, error) {
+	bytes := make([]byte, length)
+	if _, err := rand.Read(bytes); err != nil {
+		return "", fmt.Errorf("failed to generate random secret: %w", err)
+	}
+	return hex.EncodeToString(bytes), nil
 }
 
 // New creates a new Auth plugin.
@@ -808,10 +823,10 @@ func generateBackupCode() (string, error) {
 	return code[:4] + "-" + code[4:], nil
 }
 
-// HashBackupCode hashes a backup code for storage.
+// HashBackupCode hashes a backup code for storage using SHA256.
 func HashBackupCode(code string) string {
 	code = strings.ReplaceAll(code, "-", "")
-	h := sha1.New()
+	h := sha256.New()
 	h.Write([]byte(code))
 	return hex.EncodeToString(h.Sum(nil))
 }
@@ -1019,10 +1034,10 @@ func GenerateBackupCodes(count int) ([]string, error) {
 	return codes, nil
 }
 
-// HashBackupCode hashes a backup code.
+// HashBackupCode hashes a backup code using SHA256.
 func HashBackupCode(code string) string {
 	code = strings.ReplaceAll(code, "-", "")
-	h := sha1.New()
+	h := sha256.New()
 	h.Write([]byte(code))
 	return hex.EncodeToString(h.Sum(nil))
 }
