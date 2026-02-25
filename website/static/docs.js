@@ -1,8 +1,52 @@
 
-// Documentation functionality: Search and Dynamic ToC
+// Documentation functionality: Search, Dynamic ToC, and Mobile Navigation
 (function () {
     let searchIndex = null;
     let fuse = null;
+
+    // Mobile sidebar toggle functionality
+    window.toggleMobileSidebar = function() {
+        const sidebar = document.getElementById('mobile-sidebar');
+        const backdrop = document.getElementById('mobile-sidebar-backdrop');
+        
+        if (sidebar && backdrop) {
+            const isOpen = sidebar.classList.contains('open');
+            
+            if (isOpen) {
+                sidebar.classList.remove('open');
+                backdrop.classList.remove('open');
+                document.body.style.overflow = '';
+            } else {
+                sidebar.classList.add('open');
+                backdrop.classList.add('open');
+                document.body.style.overflow = 'hidden';
+            }
+        }
+    };
+
+    // Close mobile sidebar when clicking a link
+    document.addEventListener('click', (e) => {
+        const sidebar = document.getElementById('mobile-sidebar');
+        if (sidebar && sidebar.classList.contains('open')) {
+            if (e.target.closest('#mobile-sidebar a')) {
+                sidebar.classList.remove('open');
+                document.getElementById('mobile-sidebar-backdrop')?.classList.remove('open');
+                document.body.style.overflow = '';
+            }
+        }
+    });
+
+    // Close mobile sidebar on escape key
+    document.addEventListener('keydown', (e) => {
+        if (e.key === 'Escape') {
+            const sidebar = document.getElementById('mobile-sidebar');
+            if (sidebar && sidebar.classList.contains('open')) {
+                sidebar.classList.remove('open');
+                document.getElementById('mobile-sidebar-backdrop')?.classList.remove('open');
+                document.body.style.overflow = '';
+            }
+        }
+    });
 
     async function initSearch() {
         if (searchIndex) return;
