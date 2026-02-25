@@ -7,17 +7,14 @@ RUN apk add --no-cache git ca-certificates tzdata
 
 WORKDIR /build
 
-# Copy go.mod files first for caching
-COPY go.mod go.sum ./
-
-# Download dependencies
-RUN go mod download
-
-# Copy entire project (needed for replace directive)
+# Copy entire project first (needed for replace directive to resolve)
 COPY . .
 
-# Build the website binary
+# Download dependencies from website directory where the replace directive lives
 WORKDIR /build/website
+RUN go mod download
+
+# Build the website binary
 RUN CGO_ENABLED=0 GOOS=linux go build -ldflags="-s -w" -o /website .
 
 # Runtime stage
@@ -51,7 +48,7 @@ RUN chown -R appuser:appuser /app
 
 USER appuser
 
-# Expose port (Fly.io uses 8080 by default)
+# Expose port (Render uses 8080 by default)
 EXPOSE 8080
 
 # Health check
