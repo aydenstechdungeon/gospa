@@ -54,7 +54,7 @@ func main() {
 		app.Use(cacheMiddleware)
 	}
 
-	port := getEnvPort(":3000")
+	port := getEnvString("PORT", ":3000")
 	if err := app.Run(port); err != nil {
 		log.Fatal(err)
 	}
@@ -219,19 +219,6 @@ func getEnvString(key, defaultVal string) string {
 		return val
 	}
 	return defaultVal
-}
-
-// getEnvPort gets PORT env var and ensures it has colon prefix for Go's http.ListenAndServe
-func getEnvPort(defaultVal string) string {
-	val := os.Getenv("PORT")
-	if val == "" {
-		return defaultVal
-	}
-	// Add colon prefix if not present (Render sets PORT=8080, Go needs :8080)
-	if !strings.HasPrefix(val, ":") {
-		return ":" + val
-	}
-	return val
 }
 
 func getEnvBool(key string, defaultVal bool) bool {
