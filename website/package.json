@@ -1,0 +1,15 @@
+{
+	"name": "gospa-website",
+	"version": "1.0.0",
+	"private": true,
+	"type": "module",
+	"scripts": {
+		"css:build": "postcss styles/main.css -o static/css/main.css",
+		"css:watch": "postcss styles/main.css -o static/css/main.css --watch"
+	},
+	"devDependencies": {
+		"@tailwindcss/postcss": "^4.0.0",
+		"postcss": "^8.5.0",
+		"postcss-cli": "^11.0.0"
+	}
+}

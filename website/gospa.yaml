@@ -1,0 +1,12 @@
+# GoSPA configuration for website
+# Uses postcss plugin for Tailwind CSS v4 compilation
+
+plugins:
+  postcss:
+    enabled: true
+    # Input CSS file with Tailwind v4 directives
+    input: styles/main.css
+    # Output compiled CSS
+    output: static/css/main.css
+    # Enable watching in development
+    watch: true

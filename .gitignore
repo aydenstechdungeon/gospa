@@ -1,0 +1,64 @@
+# Binaries
+*.exe
+*.exe~
+*.dll
+*.so
+*.dylib
+gospa
+*.bin
+
+# Test binaries
+*.test
+
+# Output of go coverage
+*.out
+coverage.txt
+
+# Go workspace
+go.work
+
+# Dependency directories
+vendor/
+
+# Build artifacts
+dist/
+build/
+
+# IDE
+.idea/
+.vscode/
+*.swp
+*.swo
+*~
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Node/Bun
+node_modules/
+.bun/
+*.log
+
+# Environment
+.env
+.env.*
+!.env.example
+
+# Generated files (project-specific)
+generated/
+**/generated_routes.go
+**/*_templ.go
+
+# Temporary files
+tmp/
+temp/
+*.tmp
+
+# Debug
+debug
+__debug_bin*
+
+# Logs
+*.log
+logs/
