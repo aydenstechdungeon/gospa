@@ -1,47 +1,62 @@
-# Build stage - Optimized for both root and subdirectory contexts
+# Build stage
 # Usage: docker build -t gospa-website -f website/Dockerfile .
-# RENDER NOTE: For best results, set "Docker Build Context" to "." in Render settings.
+# RENDER NOTE: Set "Docker Build Context" to "." in Render settings.
 FROM golang:1.24-alpine AS builder
 
-# Install build dependencies
-RUN apk add --no-cache git ca-certificates tzdata curl bash unzip libc6-compat
+# 1. Install system dependencies
+# Bun on Alpine requires libstdc++ and gcompat for glibc compatibility
+RUN apk add --no-cache \
+    git \
+    ca-certificates \
+    tzdata \
+    curl \
+    bash \
+    unzip \
+    libstdc++ \
+    gcompat \
+    build-base
 
-# Install Bun (required for client and CSS builds)
+# 2. Install Bun (using the recommended Alpine-friendly method)
 RUN curl -fsSL https://bun.sh/install | bash
 ENV PATH="/root/.bun/bin:${PATH}"
 
+# Verify Bun installation immediately to catch errors early
+RUN bun --version
+
 WORKDIR /build
 
-# Copy all available source
+# 3. Copy source code
+# We copy everything because the website depends on the core gospa modules
 COPY . .
 
-# 1. Build or Install the gospa CLI tool
-# If we have the full repo context, build from local source.
-# Otherwise, install the latest version from GitHub.
-RUN if [ -d "./cmd/gospa" ]; then \
-    echo "Found GoSPA source, building CLI locally..." && \
-    go build -o /usr/local/bin/gospa ./cmd/gospa; \
-    else \
-    echo "GoSPA source not found in current context, installing from remote..." && \
-    go install github.com/aydenstechdungeon/gospa/cmd/gospa@latest && \
-    mv /go/bin/gospa /usr/local/bin/gospa; \
-    fi
+# 4. Build the gospa CLI tool
+# This tool coordinates the entire build process (templ, css, js, go)
+RUN go mod download
+RUN go build -o /usr/local/bin/gospa ./cmd/gospa
 
-# 2. Normalize and Build
-# We ensure that regardless of the context, the final artifacts are in /build/out
+# 5. Build the website
+WORKDIR /build/website
+
+# Ensure all JS dependencies are installed for the build plugins
+RUN bun install
+
+# Run the gospa build command
+# This will:
+# - Generate templ files
+# - Generate TypeScript types
+# - Build the client runtime using Bun
+# - Build the Go server binary
+# - Copy and compress static assets
+RUN gospa build -o dist
+
+# 6. Prepare runtime artifacts
+# We collect everything needed for runtime into a single 'out' folder
 RUN mkdir -p /build/out && \
-    if [ -d "website" ]; then \
-    echo "Building from root context..." && \
-    cd website && \
-    bun install && \
-    gospa build -o /build/out && \
-    cp -r routes components generated /build/out/ 2>/dev/null || true; \
-    else \
-    echo "Building from website context..." && \
-    bun install && \
-    gospa build -o /build/out && \
-    cp -r routes components generated /build/out/ 2>/dev/null || true; \
-    fi
+    cp dist/server /build/out/website && \
+    cp -r dist/static /build/out/static && \
+    cp -r routes /build/out/routes && \
+    cp -r components /build/out/components && \
+    cp -r generated /build/out/generated
 
 # Runtime stage
 FROM alpine:3.19
@@ -53,8 +68,8 @@ RUN adduser -D -g '' appuser
 
 WORKDIR /app
 
-# Copy artifacts from the normalized /build/out directory
-COPY --from=builder /build/out/server ./website
+# Copy the prepared artifacts
+COPY --from=builder /build/out/website ./website
 COPY --from=builder /build/out/static ./static
 COPY --from=builder /build/out/routes ./routes
 COPY --from=builder /build/out/components ./components
@@ -65,14 +80,15 @@ RUN chown -R appuser:appuser /app
 
 USER appuser
 
-# Expose port
+# Standard production environment variables
 EXPOSE 8080
 ENV PORT=8080
 ENV GOSPA_DEV=false
+ENV GOSPA_ENV=production
 
 # Health check
 HEALTHCHECK --interval=30s --timeout=3s --start-period=5s --retries=3 \
     CMD wget --no-verbose --tries=1 --spider http://localhost:8080/ || exit 1
 
-# Run the binary
+# Start the application
 CMD ["./website"]
