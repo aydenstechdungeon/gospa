@@ -19,7 +19,14 @@ type StateMap struct {
 	mu           sync.RWMutex
 	observables  map[string]Observable
 	unsubscribes map[string]Unsubscribe
-	OnChange     func(key string, value any) // Callback invoked when a state variable changes
+	// OnChange is invoked when any state variable changes.
+	// DEADLOCK WARNING: OnChange must NOT call back into StateMap.Add, StateMap.Remove,
+	// or any method that acquires sm.mu. It is invoked inside a goroutine spawned by
+	// SubscribeAny, which runs after the mutex is released — but if your handler triggers
+	// a synchronous chain that calls back into Add/Remove on the SAME StateMap, you will
+	// deadlock. Safe operations inside OnChange: read sm.Get(), send on channels, call
+	// external callbacks. Unsafe: sm.Add(), sm.Remove(), sm.AddAny().
+	OnChange func(key string, value any)
 }
 
 // NewStateMap creates a new state collection

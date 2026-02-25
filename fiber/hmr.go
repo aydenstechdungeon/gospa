@@ -77,7 +77,9 @@ type HMRFileWatcher struct {
 // NewHMRManager creates a new HMR manager.
 func NewHMRManager(config HMRConfig) *HMRManager {
 	if config.DebounceTime == 0 {
-		config.DebounceTime = 100 * time.Millisecond
+		// 500ms default: reduces polling CPU cost vs the old 100ms with negligible UX impact.
+		// For sub-100ms responsiveness, replace HMRFileWatcher with github.com/fsnotify/fsnotify.
+		config.DebounceTime = 500 * time.Millisecond
 	}
 
 	mgr := &HMRManager{
@@ -129,6 +131,8 @@ func (fw *HMRFileWatcher) Stop() {
 	}
 
 	close(fw.stopChan)
+	// Recreate channel so a subsequent Start() works without panicking
+	fw.stopChan = make(chan struct{})
 	fw.running = false
 }
 
@@ -291,20 +295,31 @@ func (mgr *HMRManager) UnregisterClient(conn *websocket.Conn) {
 }
 
 // Broadcast sends a message to all connected clients.
+// Failed connections are removed after iteration to avoid mutating the map under RLock.
 func (mgr *HMRManager) Broadcast(msg HMRMessage) {
-	mgr.clientsMu.RLock()
-	defer mgr.clientsMu.RUnlock()
-
 	data, err := json.Marshal(msg)
 	if err != nil {
 		return
 	}
 
+	// Collect failed connections under RLock — do NOT delete during iteration
+	mgr.clientsMu.RLock()
+	var failed []*websocket.Conn
 	for conn := range mgr.clients {
 		if err := conn.WriteMessage(websocket.TextMessage, data); err != nil {
+			failed = append(failed, conn)
+		}
+	}
+	mgr.clientsMu.RUnlock()
+
+	// Remove failed connections under write lock
+	if len(failed) > 0 {
+		mgr.clientsMu.Lock()
+		for _, conn := range failed {
 			conn.Close()
 			delete(mgr.clients, conn)
 		}
+		mgr.clientsMu.Unlock()
 	}
 }
 
@@ -429,7 +444,8 @@ func (mgr *HMRManager) generateHMRScript() string {
 	return `
 <script>
 (function() {
-	const ws = new WebSocket('ws://' + window.location.host + '/__hmr');
+	const wsProto = window.location.protocol === 'https:' ? 'wss://' : 'ws://';
+	const ws = new WebSocket(wsProto + window.location.host + '/__hmr');
 	
 	ws.onopen = function() {
 		console.log('[HMR] Connected');

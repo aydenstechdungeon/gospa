@@ -1,97 +1,116 @@
-# Development Tools & Error Overlay
+# Development Tools
 
-GoSPA includes an integrated suite of development tools to speed up the development cycle, including a powerful error overlay and a state inspector.
-
-## Error Overlay
-
-The error overlay provides a user-friendly interface for debugging server-side and client-side errors during development. It displays stack traces, source code snippets, and request information.
-
-### Configuration
-
-```go
-config := fiber.ErrorOverlayConfig{
-    Enabled:     true,
-    ShowStack:   true,
-    ShowRequest: true,
-    Theme:       "dark",
-    Editor:      "code", // Opens files in VS Code via vscode:// protocol
-}
-
-overlay := fiber.NewErrorOverlay(config)
-```
-
-### Usage
-
-The overlay is automatically triggered by the framework's error handlers in development mode. When an error occurs, GoSPA renders a full-page HTML overlay instead of a generic 500 error.
+GoSPA exposes debug utilities via the `window.__GOSPA__` global and several server-side helpers designed exclusively for **development mode**. Do not enable these in production.
 
 ---
 
-## State Inspector
+## Client-Side Debug Object
 
-The State Inspector allows you to monitor reactive state changes across your application in real-time.
-
-### Setup
-
-```go
-devTools := fiber.NewDevTools(fiber.DevConfig{
-    Enabled: true,
-    RoutesDir: "./routes",
-})
-
-// Add state inspector middleware
-app.Use(fiber.StateInspectorMiddleware(devTools, config))
-
-// Mount the dev panel UI
-app.Get("/_gospa/dev", devTools.DevPanelHandler())
-app.Get("/_gospa/dev/ws", devTools.DevToolsHandler()) // WS for real-time updates
-```
-
-### Features
-
-- **Live Change Log**: See every `Rune` or `StateMap` update as it happens on both server and client.
-- **Diff View**: Compare the "Before" and "After" state values.
-- **Source Tracking**: Identify whether a state change originated from the "server" (via remote actions or SSR) or the "client".
-- **Key Registry**: Browse all currently tracked reactive state keys.
-
----
-
-## Debug Middleware
-
-GoSPA provides a lightweight debug middleware that logs every request with its method, path, status, and processing time.
-
-```go
-app.Use(fiber.DebugMiddleware(devTools))
-```
-
-### Logging Format
-`[GET] /docs/api 200 1.2ms`
-
----
-
-## Client-Side Debugging
-
-The runtime exposes internal state via the `window.__GOSPA__` object when the auto-init attribute is present.
+When the `data-gospa-auto` attribute is present on `<html>`, the runtime exposes itself on `window.__GOSPA__`:
 
 ```html
 <html data-gospa-auto>
 ```
 
-From the browser console, you can inspect:
-- `__GOSPA__.components`: All active component instances.
-- `__GOSPA__.globalState`: The root `StateMap`.
-- `__GOSPA__.config`: Active runtime configuration.
+From the browser console you can inspect:
 
-### Manual Error Reporting
+```js
+// All active component instances (Map<string, ComponentInstance>)
+__GOSPA__.components
 
-You can manually trigger the error overlay from the client:
+// The root StateMap holding global state
+__GOSPA__.globalState
 
-```typescript
-import { displayError } from '@gospa/runtime';
+// The active runtime configuration
+__GOSPA__.config
 
-displayError({
-    message: "Custom validation failed",
-    type: "ValidationError",
-    file: "main.ts",
-    line: 42
-});
+// Functions
+__GOSPA__.init(options)
+__GOSPA__.createComponent(def, element?, isLocal?)
+__GOSPA__.destroyComponent(id)
+__GOSPA__.getComponent(id)
+__GOSPA__.getState(componentId, key)
+__GOSPA__.setState(componentId, key, value)
+__GOSPA__.callAction(componentId, action, ...args)
+__GOSPA__.bind(componentId, element, binding, key, options?)
+__GOSPA__.autoInit()
 ```
+
+---
+
+## HMR Integration
+
+During development the HMR system logs to the browser console:
+
+```
+[HMR] Connected
+[HMR] Update: routes/docs/page
+[HMR] Full reload required
+[HMR] Disconnected, reconnecting...
+```
+
+See [HMR.md](HMR.md) for full setup instructions.
+
+---
+
+## Server-Side Debug Logging
+
+The framework uses the standard `log` package for server-side output. Key log messages:
+
+| Message | Source | Meaning |
+|---------|--------|---------|
+| `Client connected: <id>` | `fiber/websocket.go` | WebSocket client registered |
+| `Client disconnected: <id>` | `fiber/websocket.go` | WebSocket client unregistered |
+| `Render error: <err>` | `gospa.go` | Template render failed |
+| `Streaming render error: <err>` | `gospa.go` | Streaming render failed |
+| `CRITICAL: crypto/rand.Read failed` | `fiber/websocket.go` | OS CSPRNG failure (should never happen) |
+| `[HMR] Client error: <msg>` | `fiber/hmr.go` | Client reported an HMR error |
+| `Failed to read initial message` | `fiber/websocket.go` | Client connected but timed out on auth |
+
+---
+
+## GOSPA_DEBUG Environment Variable
+
+`routing.RegisterPageWithOptions` previously emitted a debug print on every page registration; it has been removed. To re-enable verbose registration logging, set the `GOSPA_DEBUG` environment variable:
+
+```bash
+GOSPA_DEBUG=1 go run .
+```
+
+> **Note:** This env variable is a convention — individual packages must check it manually if you add custom debug output.
+
+---
+
+## Error Overlay (Planned)
+
+A full-page HTML error overlay for development mode is **planned** but not yet implemented. The `fiber.ErrorOverlayConfig` struct and `fiber.NewErrorOverlay()` function are reserved for a future release.
+
+---
+
+## State Inspector (Planned)
+
+The `fiber.DevTools`, `fiber.StateInspectorMiddleware`, `devTools.DevPanelHandler()`, and `devTools.DevToolsHandler()` APIs are **planned** but not yet implemented. For now, use the `window.__GOSPA__.globalState` object in the browser console to inspect live state.
+
+---
+
+## Request Logging
+
+`fiber.RequestLoggerMiddleware()` is a no-op placeholder. For request logging, use Fiber's built-in logger:
+
+```go
+import "github.com/gofiber/fiber/v2/middleware/logger"
+
+app.Fiber.Use(logger.New())
+```
+
+---
+
+## Recovery Middleware
+
+`fiber.RecoveryMiddleware()` catches panics and returns a 500 JSON response:
+
+```go
+app.Fiber.Use(fiber.RecoveryMiddleware())
+```
+
+Use this in all environments to prevent a single panicking goroutine from crashing the server.

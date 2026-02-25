@@ -1,146 +1,207 @@
 # Server-Sent Events (SSE)
 
-GoSPA provides first-class support for Server-Sent Events (SSE), enabling real-time, one-way push notifications from the server to the client. This is ideal for status updates, notifications, and real-time state synchronization without the overhead of WebSockets.
+GoSPA provides first-class support for Server-Sent Events (SSE) via the `fiber.SSEBroker`. SSE enables real-time, server-to-client push without the full bidirectionality of WebSockets — ideal for notifications, status updates, and live counters.
 
-## Server-Side (Go)
+---
 
-The SSE implementation is provided by the `fiber` package via the `SSEBroker`.
+## Server-Side API
 
-### Setup
+### `SSEConfig`
 
 ```go
-import (
-    "github.com/aydenstechdungeon/gospa/fiber"
-    "time"
-)
-
-func main() {
-    // 1. Create a broker
-    broker := fiber.NewSSEBroker(&fiber.SSEConfig{
-        EventBufferSize:   100,
-        HeartbeatInterval: 30 * time.Second,
-        OnConnect: func(client *fiber.SSEClient) {
-            fmt.Printf("Client connected: %s\n", client.ID)
-        },
-    })
-
-    app := fiber.New()
-
-    // 2. Setup SSE routes
-    fiber.SetupSSE(app, broker, "/_sse", nil)
+type SSEConfig struct {
+    // EventBufferSize is the channel buffer for pending events per client (default: 100)
+    EventBufferSize int
+    // HeartbeatInterval is how often a keepalive comment is sent (default: 30s; 0 = disable)
+    HeartbeatInterval time.Duration
+    // OnConnect is called when a client connects
+    OnConnect func(client *SSEClient)
+    // OnDisconnect is called when a client disconnects
+    OnDisconnect func(client *SSEClient)
 }
 ```
 
-### Broker API
+### `NewSSEBroker(config *SSEConfig) *SSEBroker`
 
-| Method | Description |
-|--------|-------------|
-| `NewSSEBroker(config)` | Creates a new broker instance. |
-| `Connect(clientID, metadata)` | Manually registers a client. |
-| `Disconnect(clientID)` | Removes a client. |
-| `Subscribe(clientID, topics...)` | Adds a client to specific topics. |
-| `Unsubscribe(clientID, topics...)` | Removes a client from topics. |
-| `Send(clientID, event)` | Sends an event to a specific client. |
-| `Broadcast(event)` | Sends an event to all connected clients. |
-| `BroadcastToTopic(topic, event)` | Sends an event to clients in a topic. |
+Creates a new SSE broker. Pass `nil` to use defaults.
 
-### SSEHelper
+### `SetupSSE(app *fiber.App, broker *SSEBroker, prefix string, middleware ...fiber.Handler)`
 
-A high-level helper for common notification patterns:
+Registers all SSE routes under a path prefix:
+
+| Route | Handler | Description |
+|-------|---------|-------------|
+| `GET  {prefix}/connect` | `SSEHandler` | Client opens EventSource connection |
+| `POST {prefix}/subscribe` | `SSESubscribeHandler` | Subscribe client to topics |
+| `POST {prefix}/unsubscribe` | `SSEUnsubscribeHandler` | Unsubscribe client from topics |
+
+```go
+broker := fiber.NewSSEBroker(&fiber.SSEConfig{
+    HeartbeatInterval: 30 * time.Second,
+    OnConnect: func(c *fiber.SSEClient) {
+        log.Printf("SSE client connected: %s", c.ID)
+    },
+})
+
+fiber.SetupSSE(app.Fiber, broker, "/_sse")
+```
+
+### `SSEClient`
+
+```go
+type SSEClient struct {
+    ID       string            // Unique client ID (UUID)
+    Topics   []string          // Currently subscribed topics
+    Metadata map[string]string // Arbitrary metadata (e.g. user ID, set on connect)
+}
+```
+
+### Broker Methods
+
+```go
+// Subscribe clientID to one or more topics
+broker.Subscribe(clientID string, topics ...string)
+
+// Unsubscribe clientID from one or more topics
+broker.Unsubscribe(clientID string, topics ...string)
+
+// Send an event to a single client
+broker.Send(clientID string, event SSEEvent) error
+
+// Broadcast an event to all connected clients
+broker.Broadcast(event SSEEvent)
+
+// Broadcast an event to all clients subscribed to a topic
+broker.BroadcastToTopic(topic string, event SSEEvent)
+
+// Disconnect a client
+broker.Disconnect(clientID string)
+```
+
+### `SSEEvent`
+
+```go
+type SSEEvent struct {
+    ID    string // Optional event ID (for client reconnect resume)
+    Event string // Event type (e.g. "notification", "update")
+    Data  any    // Payload — will be JSON-encoded
+    Retry int    // Optional retry delay (ms)
+}
+```
+
+### `SSEHelper` (High-Level)
 
 ```go
 helper := fiber.NewSSEHelper(broker)
 
-// Send a basic notification
+// Send a notification
 helper.Notify(clientID, map[string]string{"message": "Hello!"})
 
-// Broadcast to everyone
+// Broadcast to all clients
 helper.NotifyAll("System maintenance in 5 minutes")
 
-// Send state update
+// Send a state update
 helper.Update(clientID, "count", 42)
 
 // Send an alert
 helper.Alert(clientID, "warning", "Low disk space")
 
-// Report progress
+// Report progress (0–100)
 helper.Progress(clientID, 75, "Uploading...")
 ```
 
 ---
 
-## Client-Side (TypeScript)
+## Security
 
-The client runtime provides an `SSEClient` to consume events with automatic reconnection and heartbeat monitoring.
+> **IMPORTANT:** `SSESubscribeHandler` verifies that the target `clientId` is connected, but does **NOT** verify that the HTTP requester is that client. Any caller who knows another client's ID can subscribe it to arbitrary topics.
+>
+> Always place `SSESubscribeHandler` behind authentication middleware that validates the session identity matches the requested `clientId`:
+>
+> ```go
+> fiber.SetupSSE(app.Fiber, broker, "/_sse", myAuthMiddleware)
+> ```
 
-### Setup
+---
+
+## Client-Side
+
+The browser uses the native `EventSource` API to connect and receive events. GoSPA does not ship a client-side SSE wrapper — the native API is sufficient:
 
 ```typescript
-import { connectSSE } from '@gospa/runtime';
+const clientId = crypto.randomUUID();
 
-const sse = connectSSE('notifications', {
-  url: '/_sse/connect',
-  autoReconnect: true,
-  debug: true
+// Connect
+const es = new EventSource(`/_sse/connect?clientId=${clientId}`);
+
+// Generic message
+es.onmessage = (ev) => console.log('message:', ev.data);
+
+// Named event
+es.addEventListener('notification', (ev) => {
+    const data = JSON.parse(ev.data);
+    showToast(data.message);
+});
+
+es.addEventListener('error', () => {
+    console.warn('SSE connection lost, browser will reconnect automatically');
 });
 ```
 
-### Event Handling
+### Topic Subscription from Client
 
 ```typescript
-// Listen for generic messages
-sse.onMessage((ev) => {
-  console.log('Received:', ev.data);
+// Subscribe to topics after connecting
+await fetch('/_sse/subscribe', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ clientId, topics: ['alerts', 'updates'] }),
 });
-
-// Listen for custom event types
-sse.on('notification', (ev) => {
-  showToast(ev.data.message);
-});
-
-// Listen for state updates
-sse.on('update', (ev) => {
-  const { key, value } = ev.data;
-  console.log(`Update ${key} to ${value}`);
-});
-
-// Unsubscribe
-const unsub = sse.on('alert', handleAlert);
-unsub(); // Stop listening
 ```
 
-### Connection Management
+---
 
-```typescript
-sse.onStateChange((state) => {
-  console.log('Connection status:', state); // 'connecting', 'connected', 'disconnected', 'error'
-});
+## Full Example
 
-sse.disconnect();
-sse.connect();
+```go
+package main
+
+import (
+    "fmt"
+    "time"
+    "github.com/aydenstechdungeon/gospa"
+    "github.com/aydenstechdungeon/gospa/fiber"
+)
+
+func main() {
+    app := gospa.New(gospa.Config{RoutesDir: "./routes"})
+
+    broker := fiber.NewSSEBroker(&fiber.SSEConfig{
+        HeartbeatInterval: 30 * time.Second,
+        OnConnect: func(c *fiber.SSEClient) {
+            fmt.Printf("Client connected: %s\n", c.ID)
+        },
+    })
+
+    fiber.SetupSSE(app.Fiber, broker, "/_sse")
+
+    // Push an event from a background task
+    go func() {
+        for {
+            time.Sleep(5 * time.Second)
+            broker.Broadcast(fiber.SSEEvent{
+                Event: "tick",
+                Data:  map[string]int{"count": int(time.Now().Unix())},
+            })
+        }
+    }()
+
+    app.Listen(":3000")
+}
 ```
 
-### SSE Configuration
+---
 
-| Option | Default | Description |
-|--------|---------|-------------|
-| `url` | - | The SSE endpoint URL. |
-| `autoReconnect` | `true` | Automatically reconnect on failure. |
-| `maxRetries` | `5` | Maximum reconnection attempts. |
-| `reconnectDelay` | `1000` | Initial delay before reconnecting (ms). |
-| `heartbeatInterval` | `30000` | Expected heartbeat interval from server. |
-| `debug` | `false` | Enable verbose logging. |
+## Heartbeat
 
-### SSEManager (Advanced)
-
-If you need multiple SSE connections, you can use the `getSSEManager()` API:
-
-```typescript
-import { getSSEManager } from '@gospa/runtime';
-
-const manager = getSSEManager();
-manager.setDefaultConfig({ autoReconnect: true });
-
-const main = manager.client('main', { url: '/_sse/main' });
-const logs = manager.client('logs', { url: '/_sse/logs' });
-```
+When `HeartbeatInterval > 0`, the broker sends a comment line (`: heartbeat`) at the configured interval. This keeps proxies from closing idle connections. The browser `EventSource` ignores comment lines; they are invisible to `onmessage` handlers.

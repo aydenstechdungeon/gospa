@@ -63,29 +63,39 @@ type Config struct {
 	// WebSocketMiddleware allows injecting session/auth middleware before WebSocket upgrade.
 	WebSocketMiddleware fiberpkg.Handler
 
-	// New Performance Options
-	CompressState     bool // Compress WebSocket messages
-	StateDiffing      bool // Only send state diffs
-	CacheTemplates    bool // Cache compiled templates
-	SimpleRuntime     bool // Use lightweight runtime without DOMPurify
-	SimpleRuntimeSVGs bool // Allow SVG elements in simple runtime (security risk if content is untrusted)
+	// Performance Options
+	// NOTE: CompressState is planned but not yet implemented — setting this has no effect.
+	CompressState bool
+	// NOTE: StateDiffing is planned but not yet implemented — setting this has no effect.
+	StateDiffing   bool
+	CacheTemplates bool // Cache compiled templates (SSG only)
+	SimpleRuntime  bool // Use lightweight runtime without DOMPurify (~6KB smaller)
+	// SimpleRuntimeSVGs allows SVG elements in the simple runtime sanitizer.
+	// WARNING: Only enable if your content is fully trusted and never user-generated.
+	SimpleRuntimeSVGs bool
 
-	// New WebSocket Options
-	WSReconnectDelay time.Duration // Initial reconnect delay
-	WSMaxReconnect   int           // Max reconnect attempts
-	WSHeartbeat      time.Duration // Heartbeat interval
+	// WebSocket Options
+	// NOTE: WSReconnectDelay, WSMaxReconnect, WSHeartbeat are planned but not yet implemented.
+	// The client-side WebSocket reconnect logic uses its own defaults (1s delay, 10 max attempts, 30s heartbeat).
+	WSReconnectDelay time.Duration // Initial reconnect delay (planned)
+	WSMaxReconnect   int           // Max reconnect attempts (planned)
+	WSHeartbeat      time.Duration // Heartbeat interval (planned)
 
-	// New Hydration Options
-	HydrationMode    string // "immediate" | "lazy" | "visible"
-	HydrationTimeout int    // ms before force hydrate
+	// Hydration Options
+	// HydrationMode controls when components become interactive.
+	// Supported values: "immediate" | "lazy" | "visible" | "idle" (default: "immediate").
+	HydrationMode    string
+	HydrationTimeout int // ms before force hydrate (used with "visible" and "idle" modes)
 
-	// New Serialization Options
+	// Serialization Options
+	// NOTE: StateSerializer and StateDeserializer are planned but not yet implemented.
 	StateSerializer   StateSerializerFunc
 	StateDeserializer StateDeserializerFunc
 
 	// Routing Options
 	DisableSPA bool // Disable SPA navigation completely
-	SSR        bool // Global SSR mode
+	// NOTE: SSR (global SSR mode) is planned but not yet implemented — currently all pages are SSR by default.
+	SSR bool
 
 	// Remote Action Options
 	MaxRequestBodySize int    // Maximum allowed size for remote action request bodies
@@ -93,7 +103,10 @@ type Config struct {
 
 	// Security Options
 	AllowedOrigins []string // Allowed CORS origins
-	EnableCSRF     bool     // Enable automatic CSRF protection
+	EnableCSRF     bool     // Enable automatic CSRF protection (requires CSRFSetTokenMiddleware + CSRFTokenMiddleware)
+	// SSGCacheMaxEntries caps the SSG page cache size. Oldest entries are evicted when full.
+	// Default: 500. Set to -1 to disable eviction (unbounded, not recommended in production).
+	SSGCacheMaxEntries int
 }
 
 // DefaultConfig returns the default configuration.
@@ -156,7 +169,9 @@ type App struct {
 	StateMap *state.StateMap
 	// ssgCache stores pre-rendered SSG pages
 	ssgCache map[string][]byte
-	// ssgCacheMu protects ssgCache
+	// ssgCacheKeys tracks insertion order for FIFO eviction
+	ssgCacheKeys []string
+	// ssgCacheMu protects ssgCache and ssgCacheKeys
 	ssgCacheMu sync.RWMutex
 }
 
@@ -221,12 +236,13 @@ func New(config Config) *App {
 	}
 
 	app := &App{
-		Config:   config,
-		Router:   router,
-		Fiber:    fiberApp,
-		Hub:      hub,
-		StateMap: stateMap,
-		ssgCache: make(map[string][]byte),
+		Config:       config,
+		Router:       router,
+		Fiber:        fiberApp,
+		Hub:          hub,
+		StateMap:     stateMap,
+		ssgCache:     make(map[string][]byte),
+		ssgCacheKeys: make([]string, 0),
 	}
 
 	// Setup middleware
@@ -488,6 +504,19 @@ func (a *App) renderRoute(c *fiberpkg.Ctx, route *routing.Route) error {
 				log.Printf("Render error: %v", err)
 			}
 			a.ssgCacheMu.Lock()
+			// FIFO eviction: cap cache to SSGCacheMaxEntries (default 500; -1 = unbounded)
+			maxEntries := a.Config.SSGCacheMaxEntries
+			if maxEntries == 0 {
+				maxEntries = 500
+			}
+			if maxEntries > 0 && len(a.ssgCache) >= maxEntries && len(a.ssgCacheKeys) > 0 {
+				oldest := a.ssgCacheKeys[0]
+				a.ssgCacheKeys = a.ssgCacheKeys[1:]
+				delete(a.ssgCache, oldest)
+			}
+			if _, exists := a.ssgCache[cacheKey]; !exists {
+				a.ssgCacheKeys = append(a.ssgCacheKeys, cacheKey)
+			}
 			a.ssgCache[cacheKey] = buf.Bytes()
 			a.ssgCacheMu.Unlock()
 			return c.Send(buf.Bytes())

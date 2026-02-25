@@ -1,113 +1,149 @@
 # Hot Module Replacement (HMR)
 
-GoSPA features a built-in Hot Module Replacement (HMR) system that allows you to update code and styles in real-time without losing the application state.
-
-## How it Works
-
-The HMR system consists of three parts:
-1.  **Server Manager**: Watches for file changes and broadcasts updates to clients.
-2.  **Client Runtime**: Receives updates and applies them to the current page.
-3.  **State Preservation**: Saves and restores reactive state across updates.
+GoSPA includes a built-in Hot Module Replacement (HMR) system that watches files for changes and notifies connected browser clients in real-time — without losing application state.
 
 ---
 
-## Server-Side (Go)
+## How It Works
 
-The `HMRManager` orchestrates the update cycle.
+The HMR system has three parts:
 
-### Configuration
+1. **`HMRFileWatcher`** — polls the file system every 500ms for `.templ`, `.go`, `.ts`, `.js`, `.css`, `.html`, `.svelte`, `.vue`, `.jsx`, `.tsx` changes.
+2. **`HMRManager`** — debounces change events, determines the update type, and broadcasts `HMRMessage` payloads over WebSocket to connected clients.
+3. **Client script** — injected automatically by `HMRMiddleware`, connects over WebSocket and applies updates or triggers a full reload.
+
+> **Note:** The file watcher uses polling (not `fsnotify`). For faster feedback loops, set `DebounceTime` to a lower value or replace the watcher with an inotify-based solution.
+
+---
+
+## Server-Side API
+
+### `HMRConfig`
 
 ```go
-config := fiber.HMRConfig{
-    Enabled:      true,
-    WatchPaths:   []string{"./routes", "./islands", "./static"},
-    IgnorePaths:  []string{"node_modules", ".git"},
-    DebounceTime: 100 * time.Millisecond,
+type HMRConfig struct {
+    Enabled      bool          // Enable the HMR system
+    WatchPaths   []string      // Directories to watch (e.g. []string{"./routes", "./static"})
+    IgnorePaths  []string      // Path substrings to ignore (e.g. []string{"node_modules", ".git"})
+    DebounceTime time.Duration // Min time between two updates for the same file (default: 500ms)
+    BroadcastAll bool          // Broadcast all updates, not just matching clients (unused currently)
 }
-
-hmr := fiber.InitHMR(config)
-hmr.Start()
 ```
 
-### HMR Endpoint
+### `NewHMRManager(config HMRConfig) *HMRManager`
 
-To enable HMR, you must register the WebSocket endpoint:
+Creates a new HMR manager. Does not start watching; call `Start()` to begin.
+
+### `(*HMRManager) Start()`
+
+Starts the file watcher and the change-processing goroutine.
+
+### `(*HMRManager) Stop()`
+
+Stops the file watcher and closes the change channel. Safe to call multiple times.
+
+### `(*HMRManager) HMREndpoint() fiber.Handler`
+
+Returns a Fiber handler that upgrades WebSocket connections for HMR clients. Register this at `/__hmr`.
 
 ```go
 app.Get("/__hmr", hmr.HMREndpoint())
 ```
 
----
+### `(*HMRManager) HMRMiddleware() fiber.Handler`
 
-## Client-Side (TypeScript)
+Returns middleware that injects the HMR client script into HTML responses. Must be used **after** the route handlers so the body is available.
 
-The `HMRClient` manages the WebSocket connection and applies updates.
-
-### Manual Initialization
-
-```typescript
-import { initHMR } from '@gospa/runtime';
-
-const hmr = initHMR({
-    wsUrl: `ws://${window.location.host}/__hmr`,
-    reconnectInterval: 1000
-});
-
-hmr.onUpdate((msg) => {
-    console.log('Module updated:', msg.moduleId);
-});
+```go
+app.Use(hmr.HMRMiddleware())
 ```
 
-### Module Registration
+### State Preservation
 
-For a module to be hot-swappable, it must be registered:
+Clients can push state before a reload and retrieve it after:
 
-```typescript
-import { registerHMRModule, acceptHMR } from '@gospa/runtime';
+```go
+// Server: preserve module state sent from client
+hmr.PreserveState(moduleID string, state any)
 
-registerHMRModule('my-module', exports);
-acceptHMR('my-module');
+// Server: retrieve preserved state for a module
+state, exists := hmr.GetState(moduleID string)
+
+// Server: clear preserved state for a module
+hmr.ClearState(moduleID string)
 ```
 
----
+The client script sends `state-preserve` messages automatically via `window.__gospaPreserveState()` on `beforeunload`.
 
-## State Preservation
+### `InitHMR(config HMRConfig) *HMRManager`
 
-GoSPA can preserve your reactive state (`Rune`, `Derived`, etc.) across updates.
+Initializes and stores a global HMR manager instance.
 
-### Automatic Preservation
-If you use the standard `StateMap` and components, GoSPA automatically serializes the state before an update and restores it after the new module is loaded.
+### `GetHMR() *HMRManager`
 
-### Manual Preservation
-You can hook into the state preservation cycle:
-
-```typescript
-window.__gospaGetState = (id) => {
-    return { scrollY: window.scrollY };
-};
-
-window.__gospaSetState = (id, state) => {
-    window.scrollTo(0, state.scrollY);
-};
-```
+Returns the global HMR manager set by `InitHMR`.
 
 ---
 
-## CSS Hot Reloading
+## Message Types
 
-When a `.css` file is modified, the `CSSHMR` system identifies the corresponding `<link>` tag and forces a reload by appending a timestamp, avoiding a full page refresh.
+| Type | Direction | Meaning |
+|------|-----------|---------|
+| `connected` | Server → Client | Welcome message on connect |
+| `update` | Server → Client | A file changed; contains `path`, `moduleId`, `event`, `timestamp` |
+| `reload` | Server → Client | Full page reload required |
+| `error` | Server → Client | A server-side HMR error |
+| `state-preserve` | Client → Server | Client is saving module state before reload |
+| `state-request` | Client → Server | Client requests previously saved state |
+| `error` | Client → Server | Client-side HMR error logged to server |
 
-```typescript
-import { CSSHMR } from '@gospa/runtime';
+---
 
-// Automatically handled by HMRClient for registered styles
-CSSHMR.updateStyle('/static/css/main.css');
+## Complete Setup Example
+
+```go
+package main
+
+import (
+    "time"
+    "github.com/aydenstechdungeon/gospa"
+    "github.com/aydenstechdungeon/gospa/fiber"
+)
+
+func main() {
+    app := gospa.New(gospa.Config{
+        RoutesDir: "./routes",
+        DevMode:   true,
+    })
+
+    if app.Config.DevMode {
+        hmr := fiber.InitHMR(fiber.HMRConfig{
+            Enabled:      true,
+            WatchPaths:   []string{"./routes", "./static"},
+            IgnorePaths:  []string{"node_modules", ".git", "_templ.go"},
+            DebounceTime: 500 * time.Millisecond,
+        })
+        hmr.Start()
+        defer hmr.Stop()
+
+        // WebSocket endpoint for HMR clients
+        app.Fiber.Get("/__hmr", hmr.HMREndpoint())
+
+        // Inject HMR script into HTML pages
+        app.Fiber.Use(hmr.HMRMiddleware())
+    }
+
+    app.Listen(":3000")
+}
 ```
 
 ---
 
 ## Troubleshooting
 
-- **Full Page Reload**: If a module cannot be hot-swapped (e.g., changes to internal Go logic or complex dependency graphs), the HMR system will fall back to a full page reload.
-- **Connection Lost**: The client will attempt to reconnect with exponential backoff. If the server is restarted, the client refreshes the page to ensure synchronization.
-- **Console Logs**: Enable `debug: true` in `HMRClientConfig` to see the internal HMR event log in the browser console.
+| Symptom | Cause | Fix |
+|---------|-------|-----|
+| Full reload instead of hot update | `.go` or `.templ` file changed requiring rebuild | Expected — Go templates require re-render |
+| HMR doesn't connect over HTTPS | Script used `ws://` (now fixed — uses `wss://` on HTTPS) | Ensure you're on a recent GoSPA version |
+| Changes not detected | File not in `WatchPaths` or path matches `IgnorePaths` | Review config; check console for `[HMR] Connected` |
+| State lost across reload | `window.__gospaPreserveState` not implemented | Implement the state preservation hook |

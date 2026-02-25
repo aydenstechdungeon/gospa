@@ -289,8 +289,18 @@ func (b *SSEBroker) SSEHandler(clientIDFunc func(*fiber.Ctx) string) fiber.Handl
 }
 
 // SSESubscribeHandler returns a handler for subscribing to topics.
-// Security: Only allows subscription to topics for clients that are currently connected.
-// This prevents unauthorized clients from subscribing to topics they don't own.
+//
+// SECURITY WARNING: This handler verifies that the target clientId is connected,
+// but it does NOT verify that the requester IS that client.
+// Any authenticated user who knows another client's ID can subscribe that client
+// to arbitrary topics.
+//
+// To prevent cross-client topic injection, wrap this handler with authentication
+// middleware that validates req.ClientID against the session identity, e.g.:
+//
+//	sse.Post("/subscribe", authMw, broker.SSESubscribeHandler())
+//
+// Inside your authMw, reject if the session user ID doesn't match the clientId in the request body.
 func (b *SSEBroker) SSESubscribeHandler() fiber.Handler {
 	return func(c *fiber.Ctx) error {
 		var req struct {
@@ -302,8 +312,9 @@ func (b *SSEBroker) SSESubscribeHandler() fiber.Handler {
 			return c.Status(400).JSON(fiber.Map{"error": "invalid request"})
 		}
 
-		// Validate that the client exists and is currently connected
-		// This prevents unauthorized subscription to other clients' topics
+		// Validate that the client exists and is currently connected.
+		// NOTE: This is an existence check, not an identity check.
+		// See security warning in the function comment above.
 		if !b.clientExists(req.ClientID) {
 			return c.Status(404).JSON(fiber.Map{
 				"error": "client not found or not connected",

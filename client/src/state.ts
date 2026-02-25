@@ -165,12 +165,13 @@ export class Rune<T> implements Notifier, Disposable {
 			pendingNotifications.add(this);
 			return;
 		}
-		this.notify();
+		this.notify(oldValue);
 	}
 
-	notify(): void {
+	notify(prevValue?: T): void {
 		const value = this._value;
-		this._subscribers.forEach(fn => fn(value, this._value));
+		const old = prevValue !== undefined ? prevValue : value;
+		this._subscribers.forEach(fn => fn(value, old));
 	}
 
 	private _equal(a: T, b: T): boolean {
@@ -218,6 +219,8 @@ export class Derived<T> implements Notifier {
 	private readonly _compute: ComputeFn<T>;
 	private readonly _dependencies: Set<Rune<unknown>> = new Set();
 	private readonly _subscribers: Set<Subscriber<T>> = new Set();
+	// _depUnsubs tracks unsubscribe functions for each dep to prevent subscriber leaks
+	private readonly _depUnsubs: Map<Rune<unknown>, Unsubscribe> = new Map();
 	private _dirty: boolean = true;
 	private _disposed: boolean = false;
 
@@ -263,13 +266,25 @@ export class Derived<T> implements Notifier {
 			currentEffect = prevEffect;
 		}
 
-		// Subscribe to new dependencies
+		// Unsubscribe from deps that are no longer needed (B4 fix: prevents subscriber accumulation)
+		oldDeps.forEach(dep => {
+			if (!this._dependencies.has(dep)) {
+				const unsub = this._depUnsubs.get(dep);
+				if (unsub) {
+					unsub();
+					this._depUnsubs.delete(dep);
+				}
+			}
+		});
+
+		// Subscribe to new deps only
 		this._dependencies.forEach(dep => {
 			if (!oldDeps.has(dep)) {
-				dep.subscribe(() => {
+				const unsub = dep.subscribe(() => {
 					this._dirty = true;
 					this._notifySubscribers();
 				});
+				this._depUnsubs.set(dep, unsub);
 			}
 		});
 	}
@@ -283,11 +298,12 @@ export class Derived<T> implements Notifier {
 	}
 
 	notify(): void {
+		const prevValue = this._dirty ? undefined : this._value;
 		if (this._dirty) {
 			this._recompute();
 		}
 		const value = this._value;
-		this._subscribers.forEach(fn => fn(value, this._value));
+		this._subscribers.forEach(fn => fn(value, prevValue ?? value));
 	}
 
 	private trackDependency(): void {
@@ -298,6 +314,9 @@ export class Derived<T> implements Notifier {
 
 	dispose(): void {
 		this._disposed = true;
+		// Unsubscribe from all deps to prevent subscriber leaks
+		this._depUnsubs.forEach(unsub => unsub());
+		this._depUnsubs.clear();
 		this._dependencies.clear();
 		this._subscribers.clear();
 	}

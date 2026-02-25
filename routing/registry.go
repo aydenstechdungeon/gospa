@@ -2,7 +2,6 @@
 package routing
 
 import (
-	"fmt"
 	"sync"
 
 	"github.com/a-h/templ"
@@ -55,7 +54,6 @@ func (r *Registry) RegisterPage(path string, fn ComponentFunc) {
 
 // RegisterPageWithOptions registers a page component with specific options.
 func (r *Registry) RegisterPageWithOptions(path string, fn ComponentFunc, opts RouteOptions) {
-	fmt.Printf("Registering page: %s\n", path)
 	r.mu.Lock()
 	defer r.mu.Unlock()
 	r.pages[path] = fn

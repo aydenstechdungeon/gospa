@@ -125,7 +125,10 @@ func BrotliGzipMiddleware(config CompressionConfig) gofiber.Handler {
 			return err
 		}
 
-		// Check if response should be compressed
+		// PERFORMANCE NOTE: This middleware reads the full response body into memory before
+		// compressing. Streaming responses (written via SetBodyStreamWriter) will have an empty
+		// body here and are naturally skipped by the MinSize check below.
+		// For streaming endpoints, add them to config.SkipPaths to avoid the response interception overhead.
 		body := c.Response().Body()
 		if len(body) < config.MinSize {
 			return nil

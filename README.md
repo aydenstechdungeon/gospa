@@ -229,7 +229,8 @@ By default, the client runtime includes [DOMPurify](https://github.com/cure53/DO
 ```go
 app := gospa.New(gospa.Config{
     // ...
-    SimpleRuntime: true, 
+    SimpleRuntime: true,
+    // SimpleRuntimeSVGs: true, // ⚠️ Only enable for fully trusted content — allows SVG in sanitizer
 })
 ```
 
@@ -263,10 +264,18 @@ GoSPA comes with secure defaults, but robust configurations exist for production
 ```go
 app := gospa.New(gospa.Config{
     // ...
-    EnableCSRF: true,
     AllowedOrigins: []string{"https://myapp.com", "https://api.myapp.com"},
 })
 ```
+
+> **CSRF protection requires two middlewares** — one to issue the token cookie, one to validate it:
+>
+> ```go
+> app.Fiber.Use(fiber.CSRFSetTokenMiddleware()) // issues csrf_token cookie on GET
+> app.Fiber.Use(fiber.CSRFTokenMiddleware())    // validates X-CSRF-Token header on POST/PUT/DELETE
+> ```
+>
+> Setting `EnableCSRF: true` alone is not sufficient — you must wire both middlewares.
 
 ### Partial Hydration
 

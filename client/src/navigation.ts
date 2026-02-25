@@ -338,58 +338,56 @@ export async function navigate(path: string, options: NavigationOptions = {}): P
 		return false;
 	}
 
-	// Wait for any pending navigation
-	if (state.pendingNavigation) {
-		await state.pendingNavigation;
-	}
+	// Serialize navigations: chain onto the previous promise so concurrent
+	// calls don't interleave. Each call awaits the previous one before starting,
+	// eliminating the TOCTOU gap in the old nullable-pendingNavigation pattern.
+	const previous = state.pendingNavigation ?? Promise.resolve(true);
+	const current: Promise<boolean> = previous.then(async () => {
+		// Re-check path after waiting — a preceding navigation may have already served it
+		if (path === state.currentPath && !options.replace) {
+			return false;
+		}
 
-	state.isNavigating = true;
+		state.isNavigating = true;
+		beforeNavCallbacks.forEach(cb => cb(path));
 
-	// Notify before navigation
-	beforeNavCallbacks.forEach(cb => cb(path));
-
-	try {
-		state.pendingNavigation = (async () => {
+		try {
 			const data = await getPageData(path);
 
 			if (!data) {
-				// Fallback to full page load
 				window.location.href = path;
 				return false;
 			}
 
-			// Update browser history
 			if (options.replace) {
 				window.history.replaceState({ path }, '', path);
 			} else {
 				window.history.pushState({ path }, '', path);
 			}
 
-			// Update state
 			state.currentPath = path;
-
-			// Update DOM
 			await updateDOM(data);
 
-			// Scroll to top if requested
 			if (options.scrollToTop !== false) {
 				window.scrollTo(0, 0);
 			}
 
-			// Notify after navigation
 			afterNavCallbacks.forEach(cb => cb(path));
-
-			// Dispatch custom event for external scripts (e.g. documentation search/ToC)
 			document.dispatchEvent(new CustomEvent('gospa:navigated', { detail: { path } }));
 
 			return true;
-		})();
+		} finally {
+			state.isNavigating = false;
+			// Only clear the pending reference if it still points to this request
+			if (state.pendingNavigation === current) {
+				state.pendingNavigation = null;
+			}
+		}
+	});
 
-		return await state.pendingNavigation;
-	} finally {
-		state.isNavigating = false;
-		state.pendingNavigation = null;
-	}
+	// Store the chained promise so the next call can serialize onto it
+	state.pendingNavigation = current;
+	return current;
 }
 
 // Go back in history

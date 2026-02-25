@@ -93,22 +93,22 @@ type Config struct {
 	CacheTemplates bool // Cache compiled templates
 	SimpleRuntime  bool // Use lightweight runtime without DOMPurify
 
-	// WebSocket Options
-	WSReconnectDelay time.Duration // Initial reconnect delay
-	WSMaxReconnect   int           // Max reconnect attempts
-	WSHeartbeat      time.Duration // Heartbeat interval
+	// WebSocket Options — NOTE: WSReconnectDelay/WSMaxReconnect/WSHeartbeat are planned, not yet implemented.
+	WSReconnectDelay time.Duration
+	WSMaxReconnect   int
+	WSHeartbeat      time.Duration
 
 	// Hydration Options
-	HydrationMode    string // "immediate" | "lazy" | "visible" | "idle"
+	HydrationMode    string // "immediate" | "lazy" | "visible" | "idle" (default: "immediate")
 	HydrationTimeout int    // ms before force hydrate
 
-	// Serialization Options
+	// Serialization Options — NOTE: StateSerializer/StateDeserializer are planned, not yet implemented.
 	StateSerializer   StateSerializerFunc
 	StateDeserializer StateDeserializerFunc
 
 	// Routing Options
 	DisableSPA bool // Disable SPA navigation completely
-	SSR        bool // Global SSR mode
+	SSR        bool // NOTE: planned, not yet implemented
 
 	// Remote Action Options
 	MaxRequestBodySize int    // Maximum allowed size for remote action request bodies
@@ -116,18 +116,25 @@ type Config struct {
 
 	// Security Options
 	AllowedOrigins []string // Allowed CORS origins
-	EnableCSRF     bool     // Enable automatic CSRF protection
+	EnableCSRF     bool     // Enable CSRF (requires CSRFSetTokenMiddleware + CSRFTokenMiddleware)
+
+	// Cache Options
+	SSGCacheMaxEntries int // Max SSG cache entries (default 500; -1 = unbounded)
 }
 ```
 
 #### Key Options:
 - `RoutesFS`: Allows embedding routes using `go:embed`.
-- `CompressState`: Uses zlib compression for large state updates over WebSocket.
-- `StateDiffing`: Only sends the changed parts of the state to clients.
-- `SimpleRuntime`: Reduces client bundle size by ~6KB by removing DOMPurify. Use only if all content is trusted.
-- `HydrationMode`: Controls when components become interactive.
-- `SSR`: If true, all pages are rendered on the server even during SPA navigation.
+- `CompressState`: **Planned** — not yet implemented. Setting it has no effect.
+- `StateDiffing`: **Planned** — not yet implemented. Setting it has no effect.
+- `SimpleRuntime`: Reduces client bundle size by ~6KB by removing DOMPurify. **Only enable if all content is trusted.**
+- `SimpleRuntimeSVGs`: Allows SVG elements in the simple runtime sanitizer. **Security risk** — only enable for fully trusted content.
+- `HydrationMode`: Controls when components become interactive. Values: `"immediate"` (default), `"lazy"`, `"visible"`, `"idle"`.
+- `SSR`: **Planned** — not yet implemented.
+- `EnableCSRF`: Enables CSRF protection. Must wire up **both** `CSRFSetTokenMiddleware()` (issues cookie) **and** `CSRFTokenMiddleware()` (validates).
+- `SSGCacheMaxEntries`: Caps the SSG page cache with FIFO eviction. Default 500.
 
+```go
 // Default configuration
 config := gospa.DefaultConfig()
 
@@ -149,7 +156,7 @@ rune := state.NewRune[T](initial T)
 rune.Get() T
 rune.GetAny() any  // for Observable interface
 rune.ID() string   // returns unique internal ID
-rune.peek() T      // read without tracking
+// NOTE: rune.peek() does NOT exist — there is no non-tracking read on the server-side Rune.
 
 // Write
 rune.Set(value T)
@@ -587,7 +594,7 @@ app.Use(fiber.SPAMiddleware(config fiber.Config))
 app.Use(fiber.StateMiddleware(config fiber.Config))
 
 // Runtime script serving
-app.Get("/_gospa/runtime.js", fiber.RuntimeMiddleware())
+app.Get("/_gospa/runtime.js", fiber.RuntimeMiddleware(simple bool))
 app.Get("/_gospa/runtime.js", fiber.RuntimeMiddlewareWithContent(content []byte))
 
 // SPA navigation detection
@@ -600,13 +607,16 @@ app.Use(fiber.CORSMiddleware(allowedOrigins []string))
 // Security headers
 app.Use(fiber.SecurityHeadersMiddleware())
 
-// CSRF protection
+// CSRF protection — use BOTH middlewares:
+// 1. CSRFSetTokenMiddleware issues the cookie on GET responses
+// 2. CSRFTokenMiddleware validates the token on POST/PUT/DELETE/PATCH
+app.Use(fiber.CSRFSetTokenMiddleware()) // must come before CSRFTokenMiddleware
 app.Use(fiber.CSRFTokenMiddleware())
 
-// Compression placeholder
-app.Use(fiber.CompressionMiddleware())
+// Compression (Brotli + Gzip)
+app.Use(fiber.BrotliGzipMiddleware(fiber.DefaultCompressionConfig()))
 
-// Request logging placeholder
+// Request logging
 app.Use(fiber.RequestLoggerMiddleware())
 
 // Panic recovery
@@ -1043,8 +1053,7 @@ GoSPA.forward()
 GoSPA.go(-2)  // Go back 2
 
 // Prefetch
-GoSPA.prefetch('/blog')      // Prefetch data
-GoSPA.prefetch('/blog', { code: true })  // Prefetch JS only
+GoSPA.prefetch('/blog')      // Prefetch page into cache (30s TTL)
 
 // State
 GoSPA.getCurrentPath()
@@ -1274,3 +1283,104 @@ Components with client-only state (no server sync).
 ```
 
 Local state handlers run entirely in the browser without WebSocket communication.
+
+---
+
+## Islands & Partial Hydration
+
+See [ISLANDS.md](ISLANDS.md) for full documentation.
+
+```typescript
+import { initIslands, hydrateIsland, getIslandManager } from './island.ts';
+
+// Initialize — auto-discovers [data-gospa-island] elements
+const manager = initIslands({
+    moduleBasePath: '/islands',    // Where island JS files are served from
+    defaultTimeout: 30000,
+    debug: false,
+    moduleLoader: async (name) => import(`./islands/${name}`), // optional custom loader
+});
+
+// Manually hydrate a lazy island
+await hydrateIsland('Counter');  // by name or DOM id
+
+// Check status
+manager.isHydrated('counter-1');
+manager.getIslands();       // all discovered islands
+manager.discoverIslands();  // re-scan DOM (use after SPA nav)
+manager.destroy();          // clean up observers
+
+// Browser globals (available when island.ts is loaded)
+window.__GOSPA_ISLAND_MANAGER__.init(config)
+window.__GOSPA_ISLAND_MANAGER__.get()
+window.__GOSPA_ISLAND_MANAGER__.hydrate(name)
+
+// DOM event — fired on the island element after hydration
+element.addEventListener('gospa:hydrated', (ev) => {
+    console.log(ev.detail.island); // IslandElementData
+});
+```
+
+### Hydration Modes (via `data-gospa-mode`)
+
+| Mode | Trigger |
+|------|---------|
+| `immediate` | On discovery (default) |
+| `visible` | Enters viewport (IntersectionObserver) |
+| `idle` | Browser idle (requestIdleCallback) |
+| `interaction` | mouseenter / touchstart / focusin / click |
+| `lazy` | Manual call only |
+
+### Island Module Shape
+
+```typescript
+// Both default export and named export are supported.
+export default {
+    hydrate(element: Element, props: Record<string, unknown>, state: Record<string, unknown>) {
+        // Mount your UI here
+    }
+}
+// OR
+export function hydrate(element, props, state) { ... }
+export function mount(element, props, state) { ... }  // alias for hydrate
+```
+
+---
+
+## HMR (Hot Module Replacement)
+
+See [HMR.md](HMR.md) for full documentation.
+
+```go
+// Server setup
+hmr := fiber.InitHMR(fiber.HMRConfig{
+    Enabled:      true,
+    WatchPaths:   []string{"./routes", "./static"},
+    IgnorePaths:  []string{"node_modules", ".git"},
+    DebounceTime: 500 * time.Millisecond, // default
+})
+hmr.Start()
+defer hmr.Stop()
+
+// Register endpoints
+app.Get("/__hmr", hmr.HMREndpoint())  // WebSocket upgrades
+app.Use(hmr.HMRMiddleware())           // Inject client script into HTML
+
+// State preservation (for modules that need it)
+hmr.PreserveState(moduleID string, state any)
+state, exists := hmr.GetState(moduleID string)
+hmr.ClearState(moduleID string)
+
+// Global accessor
+hmr := fiber.GetHMR()
+```
+
+### HMRConfig Fields
+
+| Field | Type | Default | Description |
+|-------|------|---------|-------------|
+| `Enabled` | bool | false | Master switch |
+| `WatchPaths` | []string | — | Dirs to poll for changes |
+| `IgnorePaths` | []string | — | Path substrings to skip |
+| `DebounceTime` | Duration | 500ms | Min time between updates for same file |
+| `BroadcastAll` | bool | false | Broadcast to all clients regardless of path |

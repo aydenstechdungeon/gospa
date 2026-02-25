@@ -21,16 +21,44 @@ const (
 	pingPeriod = (pongWait * 9) / 10
 )
 
+// sessionEntry holds a session token and its expiry.
+type sessionEntry struct {
+	clientID  string
+	expiresAt time.Time
+}
+
+// SessionTTL is how long a session token remains valid (default 24 hours).
+const SessionTTL = 24 * time.Hour
+
 // SessionStore maps session tokens to client IDs for secure HTTP state sync.
 type SessionStore struct {
-	sessions map[string]string // token -> clientID
+	sessions map[string]sessionEntry // token -> entry
 	mu       sync.RWMutex
 }
 
-// NewSessionStore creates a new session store.
+// NewSessionStore creates a new session store with background pruning.
 func NewSessionStore() *SessionStore {
-	return &SessionStore{
-		sessions: make(map[string]string),
+	s := &SessionStore{
+		sessions: make(map[string]sessionEntry),
+	}
+	// Prune expired sessions every 30 minutes in the background
+	go s.pruneLoop()
+	return s
+}
+
+// pruneLoop removes expired sessions periodically.
+func (s *SessionStore) pruneLoop() {
+	ticker := time.NewTicker(30 * time.Minute)
+	defer ticker.Stop()
+	for range ticker.C {
+		s.mu.Lock()
+		now := time.Now()
+		for token, entry := range s.sessions {
+			if now.After(entry.expiresAt) {
+				delete(s.sessions, token)
+			}
+		}
+		s.mu.Unlock()
 	}
 }
 
@@ -39,22 +67,30 @@ func NewSessionStore() *SessionStore {
 func (s *SessionStore) CreateSession(clientID string) string {
 	token := generateSecureToken()
 	if token == "" {
-		// Random generation failed - this is a critical error
-		// Return empty string to indicate failure
 		return ""
 	}
 	s.mu.Lock()
-	s.sessions[token] = clientID
+	s.sessions[token] = sessionEntry{
+		clientID:  clientID,
+		expiresAt: time.Now().Add(SessionTTL),
+	}
 	s.mu.Unlock()
 	return token
 }
 
-// ValidateSession returns the client ID for a valid session token.
+// ValidateSession returns the client ID for a valid, non-expired session token.
 func (s *SessionStore) ValidateSession(token string) (string, bool) {
 	s.mu.RLock()
-	defer s.mu.RUnlock()
-	clientID, ok := s.sessions[token]
-	return clientID, ok
+	entry, ok := s.sessions[token]
+	s.mu.RUnlock()
+	if !ok {
+		return "", false
+	}
+	if time.Now().After(entry.expiresAt) {
+		s.RemoveSession(token)
+		return "", false
+	}
+	return entry.clientID, true
 }
 
 // RemoveSession removes a session token.
@@ -67,13 +103,16 @@ func (s *SessionStore) RemoveSession(token string) {
 // RemoveClientSessions removes all sessions for a client ID.
 func (s *SessionStore) RemoveClientSessions(clientID string) {
 	s.mu.Lock()
-	for token, id := range s.sessions {
-		if id == clientID {
+	for token, entry := range s.sessions {
+		if entry.clientID == clientID {
 			delete(s.sessions, token)
 		}
 	}
 	s.mu.Unlock()
 }
+
+// Global session store for HTTP state sync.
+var globalSessionStore = NewSessionStore()
 
 // generateSecureToken generates a cryptographically secure random token.
 // Returns an empty string if random generation fails (which should never happen
@@ -81,16 +120,11 @@ func (s *SessionStore) RemoveClientSessions(clientID string) {
 func generateSecureToken() string {
 	b := make([]byte, 32)
 	if _, err := rand.Read(b); err != nil {
-		// This should never happen on modern systems. If it does, log and return
-		// empty string - callers should handle this case appropriately.
 		log.Printf("CRITICAL: crypto/rand.Read failed: %v", err)
 		return ""
 	}
 	return hex.EncodeToString(b)
 }
-
-// Global session store for HTTP state sync.
-var globalSessionStore = NewSessionStore()
 
 // ClientStateStore persists client state by client ID for session restoration.
 type ClientStateStore struct {
@@ -194,8 +228,9 @@ func (h *WSHub) Run() {
 			h.mu.Lock()
 			if existing, ok := h.Clients[client.ID]; ok && existing == client {
 				delete(h.Clients, client.ID)
+				// Use guarded Close() to prevent double-close panics
+				client.Close()
 			}
-			close(client.Send)
 			h.mu.Unlock()
 			log.Printf("Client disconnected: %s", client.ID)
 
@@ -206,16 +241,20 @@ func (h *WSHub) Run() {
 				select {
 				case client.Send <- message:
 				default:
-					close(client.Send)
+					// Buffer full — mark for removal; do NOT close channel here.
+					// Unregister will handle closing via client.Close().
 					toRemove = append(toRemove, client.ID)
 				}
 			}
 			h.mu.RUnlock()
-			// Safely delete clients with write lock after iteration
+			// Safely remove and close stale clients with write lock
 			if len(toRemove) > 0 {
 				h.mu.Lock()
 				for _, id := range toRemove {
-					delete(h.Clients, id)
+					if c, ok := h.Clients[id]; ok {
+						delete(h.Clients, id)
+						c.Close()
+					}
 				}
 				h.mu.Unlock()
 			}
@@ -282,6 +321,12 @@ func NewWSClient(id string, conn *websocket.Conn) *WSClient {
 	return client
 }
 
+// maxWSMessageSize is the maximum WebSocket message size we accept (64KB).
+const maxWSMessageSize = 64 * 1024
+
+// maxActionNameLen is the maximum length of an action name field.
+const maxActionNameLen = 256
+
 // ReadPump pumps messages from the WebSocket connection to the hub.
 func (c *WSClient) ReadPump(hub *WSHub, onMessage func(*WSClient, WSMessage)) {
 	defer func() {
@@ -289,6 +334,8 @@ func (c *WSClient) ReadPump(hub *WSHub, onMessage func(*WSClient, WSMessage)) {
 		_ = c.Conn.Close()
 	}()
 
+	// Limit inbound message size to prevent DoS attacks
+	c.Conn.SetReadLimit(maxWSMessageSize)
 	_ = c.Conn.SetReadDeadline(time.Now().Add(pongWait))
 	c.Conn.SetPongHandler(func(string) error {
 		_ = c.Conn.SetReadDeadline(time.Now().Add(pongWait))
@@ -305,6 +352,11 @@ func (c *WSClient) ReadPump(hub *WSHub, onMessage func(*WSClient, WSMessage)) {
 		if err := json.Unmarshal(message, &msg); err != nil {
 			c.SendError("Invalid message format")
 			continue
+		}
+
+		// Sanitize field lengths to prevent injection via long strings
+		if len(msg.Action) > maxActionNameLen {
+			msg.Action = msg.Action[:maxActionNameLen]
 		}
 
 		onMessage(c, msg)
@@ -436,6 +488,8 @@ type WebSocketConfig struct {
 }
 
 // DefaultWebSocketConfig returns default WebSocket configuration.
+// NOTE: The caller is responsible for starting the hub with `go hub.Run()` before
+// registering the handler. gospa.New() does this automatically when EnableWebSocket is true.
 func DefaultWebSocketConfig() WebSocketConfig {
 	return WebSocketConfig{
 		Hub:        NewWSHub(),
@@ -444,17 +498,19 @@ func DefaultWebSocketConfig() WebSocketConfig {
 }
 
 // WebSocketHandler creates a WebSocket handler.
+// IMPORTANT: The Hub in config must already be running (go hub.Run()) before calling this.
+// gospa.New() ensures this when EnableWebSocket is true. If you call this directly,
+// start the hub yourself: go config.Hub.Run()
 func WebSocketHandler(config WebSocketConfig) fiber.Handler {
 	// Apply defaults for nil config values
 	if config.Hub == nil {
 		config.Hub = NewWSHub()
+		// When creating a default hub here, start it since caller didn't
+		go config.Hub.Run()
 	}
 	if config.GenerateID == nil {
 		config.GenerateID = generateComponentID
 	}
-
-	// Start the hub
-	go config.Hub.Run()
 
 	return websocket.New(func(c *websocket.Conn) {
 		var sessionID string

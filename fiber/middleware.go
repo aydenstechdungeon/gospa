@@ -2,6 +2,7 @@ package fiber
 
 import (
 	"crypto/rand"
+	"encoding/hex"
 	"encoding/json"
 	"fmt"
 	"strings"
@@ -124,7 +125,47 @@ func RuntimeMiddlewareWithContent(runtimeContent []byte) gofiber.Handler {
 	}
 }
 
-// CSRFTokenMiddleware provides CSRF protection.
+// CSRFSetTokenMiddleware issues and rotates the CSRF cookie on safe HTTP methods.
+// Use this alongside CSRFTokenMiddleware: the setter runs on GETs to plant the token,
+// the validator runs on mutating methods to verify it.
+func CSRFSetTokenMiddleware() gofiber.Handler {
+	return func(c *gofiber.Ctx) error {
+		// Only issue tokens on safe methods
+		if c.Method() != "GET" && c.Method() != "HEAD" {
+			return c.Next()
+		}
+
+		// Issue a token if one doesn't exist yet
+		if c.Cookies("csrf_token") == "" {
+			token, err := generateCSRFToken()
+			if err != nil {
+				// Non-critical: skip token issuance, don't block the request
+				return c.Next()
+			}
+			c.Cookie(&gofiber.Cookie{
+				Name:     "csrf_token",
+				Value:    token,
+				HTTPOnly: false, // Must be readable by JS to set the X-CSRF-Token header
+				SameSite: "Strict",
+				Secure:   c.Protocol() == "https",
+			})
+		}
+
+		return c.Next()
+	}
+}
+
+// generateCSRFToken creates a random CSRF token.
+func generateCSRFToken() (string, error) {
+	b := make([]byte, 32)
+	if _, err := rand.Read(b); err != nil {
+		return "", err
+	}
+	return hex.EncodeToString(b), nil
+}
+
+// CSRFTokenMiddleware validates CSRF tokens on mutating requests.
+// IMPORTANT: Use CSRFSetTokenMiddleware() as well so the token is actually issued.
 func CSRFTokenMiddleware() gofiber.Handler {
 	return func(c *gofiber.Ctx) error {
 		// Skip for GET, HEAD, OPTIONS
@@ -293,11 +334,12 @@ func SPANavigationMiddleware() gofiber.Handler {
 		// the main content, title, and head elements with proper attributes
 		// The client-side will parse and extract these
 		body := c.Response().Body()
-		bodyStr := string(body)
 
-		// Add data-gospa-head attribute to head elements that should be updated
-		// This is a simple implementation - in production you'd want more sophisticated parsing
-		// For now, we just ensure the response is sent as-is and let the client parse it
+		// Guard: streaming responses have empty body at this point — skip
+		if len(body) == 0 {
+			return nil
+		}
+		bodyStr := string(body)
 
 		// Set a custom header to indicate this is a partial response
 		c.Set("X-GoSPA-Partial", "true")
@@ -318,24 +360,36 @@ func IsSPANavigation(c *gofiber.Ctx) bool {
 }
 
 // CORSMiddleware handles CORS for API routes.
+// SECURITY: When "*" is in allowedOrigins, Access-Control-Allow-Origin is set to "*"
+// WITHOUT Allow-Credentials (the two are mutually exclusive per the CORS spec).
+// Credentialed access is only enabled for explicitly named origins.
 func CORSMiddleware(allowedOrigins []string) gofiber.Handler {
 	return func(c *gofiber.Ctx) error {
 		origin := c.Get("Origin")
 
-		// Check if origin is allowed
-		allowed := false
+		// Determine if wildcard is configured
+		wildcard := false
+		exactMatch := false
 		for _, o := range allowedOrigins {
-			if o == "*" || o == origin {
-				allowed = true
+			if o == "*" {
+				wildcard = true
+			} else if o == origin {
+				exactMatch = true
 				break
 			}
 		}
 
-		if allowed {
+		if exactMatch {
+			// Explicit origin match: allow credentials
 			c.Set("Access-Control-Allow-Origin", origin)
+			c.Set("Access-Control-Allow-Credentials", "true")
 			c.Set("Access-Control-Allow-Methods", "GET,POST,PUT,DELETE,PATCH,OPTIONS")
 			c.Set("Access-Control-Allow-Headers", "Content-Type,Authorization,X-CSRF-Token")
-			c.Set("Access-Control-Allow-Credentials", "true")
+		} else if wildcard {
+			// Wildcard: cannot combine with Allow-Credentials
+			c.Set("Access-Control-Allow-Origin", "*")
+			c.Set("Access-Control-Allow-Methods", "GET,POST,PUT,DELETE,PATCH,OPTIONS")
+			c.Set("Access-Control-Allow-Headers", "Content-Type,Authorization,X-CSRF-Token")
 		}
 
 		// Handle preflight
