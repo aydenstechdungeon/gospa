@@ -433,7 +433,10 @@ func handleDevCommand(printer *cli.ColorPrinter) {
 		case "--port", "-p":
 			if i+1 < len(args) {
 				var port int
-				fmt.Sscanf(args[i+1], "%d", &port)
+				if _, err := fmt.Sscanf(args[i+1], "%d", &port); err != nil {
+					printer.Error("Invalid port: %s", args[i+1])
+					os.Exit(1)
+				}
 				config.Port = port
 				i++
 			}

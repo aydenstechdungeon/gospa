@@ -75,14 +75,6 @@ func GenerateWithConfig(config *GenerateConfig) error {
 	return generateRoutesWithConfig(config)
 }
 
-func generateTypes() error {
-	config := &GenerateConfig{
-		InputDir:  ".",
-		OutputDir: "./generated",
-	}
-	return generateTypesWithConfig(config)
-}
-
 func generateTypesWithConfig(config *GenerateConfig) error {
 	// Create output directory
 	if err := os.MkdirAll(config.OutputDir, 0755); err != nil {
@@ -116,14 +108,6 @@ func generateTypesWithConfig(config *GenerateConfig) error {
 	}
 
 	return nil
-}
-
-func generateRoutes() error {
-	config := &GenerateConfig{
-		InputDir:  "./routes",
-		OutputDir: "./generated",
-	}
-	return generateRoutesWithConfig(config)
 }
 
 func generateRoutesWithConfig(config *GenerateConfig) error {
