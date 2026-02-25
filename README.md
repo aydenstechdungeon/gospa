@@ -1,4 +1,5 @@
-# GoSPA ![gospa1 64](https://github.com/user-attachments/assets/3c823ad8-8e76-4850-9a4f-4d6faa71ed7c) 
+# GoSPA 
+![gospa1 64](https://github.com/user-attachments/assets/3c823ad8-8e76-4850-9a4f-4d6faa71ed7c) 
 
 A Go framework for building reactive SPAs with server-side rendering. Brings Svelte-like reactivity to Go using Fiber and Templ.
 
