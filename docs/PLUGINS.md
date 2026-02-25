@@ -800,7 +800,7 @@ version: 1.0.0
 description: My custom GoSPA plugin
 author: Your Name
 repository: github.com/user/gospa-plugin-name
-gospa_version: ">=0.1.0"
+gospa_version: ">=0.1.3"
 ```
 
 3. Build as shared library:

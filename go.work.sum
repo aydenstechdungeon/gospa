@@ -1,5 +1,5 @@
 github.com/a-h/parse v0.0.0-20250122154542-74294addb73e/go.mod h1:3mnrkvGpurZ4ZrTDbYU84xhwXW2TjTKShSwjRi2ihfQ=
-github.com/aydenstechdungeon/gospa v0.1.0/go.mod h1:glzSnafhdlxeAzyDJSXvIInkEKd0nAr9f4GljKuDi/w=
+github.com/aydenstechdungeon/gospa v0.1.3/go.mod h1:glzSnafhdlxeAzyDJSXvIInkEKd0nAr9f4GljKuDi/w=
 github.com/cenkalti/backoff/v4 v4.3.0/go.mod h1:Y3VNntkOUPxTVeUxJ/G5vcM//AlwfmyYozVcomhLiZE=
 github.com/cli/browser v1.3.0/go.mod h1:HH8s+fOAxjhQoBUAsKuPCbqUuxZDhQ2/aD+SzsEfBTk=
 github.com/davecgh/go-spew v1.1.1/go.mod h1:J7Y8YcW2NihsgmVo/mv3lAwl/skON4iLHjSsI+c5H38=
