@@ -39,7 +39,7 @@ func Page() templ.Component {
 gospa dev
 
 # With options
-gospa dev --port 3000 --watch ./routes,./components
+gospa dev --port 3000 --routes ./routes --components ./components
 
 # Hot reload behavior:
 // - Template changes (.templ) -> Full page reload
@@ -133,29 +133,26 @@ if (import.meta.env.DEV) {
 		if templ_7745c5c3_Err != nil {
 			return templ_7745c5c3_Err
 		}
-		templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 6, "</div><div><h2 class=\"text-2xl font-bold mb-4 border-b border-[var(--border)] pb-2 italic mono\">Build Analysis</h2><p class=\"text-[var(--text-secondary)] mb-4\">Analyze bundle size and dependencies.</p>")
+		templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 6, "</div><div><h2 class=\"text-2xl font-bold mb-4 border-b border-[var(--border)] pb-2 italic mono\">State Analysis</h2><p class=\"text-[var(--text-secondary)] mb-4\">Analyze reactive state usage and memory savings.</p>")
 		if templ_7745c5c3_Err != nil {
 			return templ_7745c5c3_Err
 		}
 		templ_7745c5c3_Err = components.CodeBlock(`# Analyze production build
-gospa build --analyze
+# Analyze state usage and potential savings
+gospa prune --dry-run --verbose
 
 # Output includes:
-# - Bundle size breakdown
-# - Dependency tree
-# - Unused code detection
-# - Optimization suggestions
+# - Used vs Unused state variables
+# - Source file locations
+# - Estimated memory savings
+# - Dependency tree analysis
 
 # Example output:
-# Bundle Analysis
-# ================
-# Total size: 245 KB
-# 
-# Runtime:     45 KB (18%)
-# State:       32 KB (13%)
-# DOM:         28 KB (11%)
-# WebSocket:   18 KB (7%)
-# Your code:  122 KB (50%)`, "bash", "cli/build.go").Render(ctx, templ_7745c5c3_Buffer)
+# === State Pruning Summary ===
+# Total state variables: 42
+# Used state variables:  38
+# Would prune variables:  4
+# Estimated savings:     512 bytes`, "bash", "cli/build.go").Render(ctx, templ_7745c5c3_Buffer)
 		if templ_7745c5c3_Err != nil {
 			return templ_7745c5c3_Err
 		}
