@@ -13,7 +13,7 @@ import (
 )
 
 // Version is the current version of GoSPA
-const Version = "0.1.0"
+const Version = "0.1.1"
 
 func main() {
 	// Register built-in plugins
