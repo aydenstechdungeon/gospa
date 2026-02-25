@@ -7,12 +7,16 @@ RUN apk add --no-cache git ca-certificates tzdata
 
 WORKDIR /build
 
-# Copy entire project first (needed for replace directive to work)
+# Copy go.work and go.mod files first for caching
+COPY go.work go.mod go.sum ./
+COPY website/go.mod website/go.sum ./website/
+
+# Copy the entire gospa source
 COPY . .
 
-# Download dependencies and build
-WORKDIR /build/website
-RUN go mod download && CGO_ENABLED=0 GOOS=linux go build -ldflags="-s -w" -o /website .
+# Build using go.work - the workspace handles multi-module resolution
+RUN go mod download && \
+    CGO_ENABLED=0 GOOS=linux go build -ldflags="-s -w" -o /website ./website
 
 # Runtime stage
 FROM alpine:3.19

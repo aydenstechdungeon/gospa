@@ -8,8 +8,6 @@ require (
 	github.com/gofiber/fiber/v2 v2.52.11
 )
 
-replace github.com/aydenstechdungeon/gospa => ../
-
 require (
 	github.com/andybalholm/brotli v1.1.0 // indirect
 	github.com/fasthttp/websocket v1.5.3 // indirect
