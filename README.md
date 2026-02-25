@@ -162,9 +162,11 @@ routes/
 ├ about/
 │   └ page.templ       → /about
 ├ (auth)/              → Grouped routes
-│   ├ layout.templ     → Layout for /auth/*
-│   ├ login.templ      → /login
-│   └ register.templ   → /register
+│   ├ layout.templ
+│   ├ login/
+│   │   └ page.templ   → /login
+│   └ register/
+│       └ page.templ   → /register
 ├ blog/
 │   ├── layout.templ   → Layout for /blog/*
 │   └ [id]/
