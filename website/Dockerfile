@@ -1,72 +1,78 @@
-# Build stage - must be built from project root
+# Build stage - Optimized for both root and subdirectory contexts
 # Usage: docker build -t gospa-website -f website/Dockerfile .
-# RENDER NOTE: Set "Docker Build Context" to "." (repository root) in your Render service settings.
+# RENDER NOTE: For best results, set "Docker Build Context" to "." in Render settings.
 FROM golang:1.24-alpine AS builder
 
 # Install build dependencies
-# We need bun for the client runtime and CSS builds, plus standard tools
 RUN apk add --no-cache git ca-certificates tzdata curl bash unzip libc6-compat
 
-# Install Bun
+# Install Bun (required for client and CSS builds)
 RUN curl -fsSL https://bun.sh/install | bash
 ENV PATH="/root/.bun/bin:${PATH}"
 
 WORKDIR /build
 
-# Copy everything for building
+# Copy all available source
 COPY . .
 
-# Build the gospa CLI tool from source
-# This ensures we use the local version with all its features and plugins
-RUN go mod download
-RUN go build -o /usr/local/bin/gospa ./cmd/gospa
+# 1. Build or Install the gospa CLI tool
+# If we have the full repo context, build from local source.
+# Otherwise, install the latest version from GitHub.
+RUN if [ -d "./cmd/gospa" ]; then \
+    echo "Found GoSPA source, building CLI locally..." && \
+    go build -o /usr/local/bin/gospa ./cmd/gospa; \
+    else \
+    echo "GoSPA source not found in current context, installing from remote..." && \
+    go install github.com/aydenstechdungeon/gospa/cmd/gospa@latest && \
+    mv /go/bin/gospa /usr/local/bin/gospa; \
+    fi
 
-# Install Node dependencies for client and website
-# This is required for Tailwind/PostCSS and Client Runtime building
-WORKDIR /build/client
-RUN bun install
-
-WORKDIR /build/website
-RUN bun install
-
-# Build the website for production
-# This command generates templates, builds the client JS, and compiles the Go binary
-RUN gospa build -o dist
+# 2. Normalize and Build
+# We ensure that regardless of the context, the final artifacts are in /build/out
+RUN mkdir -p /build/out && \
+    if [ -d "website" ]; then \
+    echo "Building from root context..." && \
+    cd website && \
+    bun install && \
+    gospa build -o /build/out && \
+    cp -r routes components generated /build/out/ 2>/dev/null || true; \
+    else \
+    echo "Building from website context..." && \
+    bun install && \
+    gospa build -o /build/out && \
+    cp -r routes components generated /build/out/ 2>/dev/null || true; \
+    fi
 
 # Runtime stage
-# Using a slim alpine image for the final container
 FROM alpine:3.19
 
 RUN apk add --no-cache ca-certificates tzdata
 
-# Create non-root user for security
+# Create non-root user
 RUN adduser -D -g '' appuser
 
 WORKDIR /app
 
-# Copy the build artifacts from the builder stage
-# gospa build puts everything in the output directory (dist)
-COPY --from=builder /build/website/dist/server ./website
-COPY --from=builder /build/website/dist/static ./static
+# Copy artifacts from the normalized /build/out directory
+COPY --from=builder /build/out/server ./website
+COPY --from=builder /build/out/static ./static
+COPY --from=builder /build/out/routes ./routes
+COPY --from=builder /build/out/components ./components
+COPY --from=builder /build/out/generated ./generated
 
-# Copy directories needed by GoSPA at runtime (for scanning)
-COPY --from=builder /build/website/routes ./routes
-COPY --from=builder /build/website/components ./components
-COPY --from=builder /build/website/generated ./generated
-
-# Ensure appuser owns the app directory
+# Set ownership
 RUN chown -R appuser:appuser /app
 
 USER appuser
 
-# Render and other platforms often use the PORT environment variable
+# Expose port
 EXPOSE 8080
 ENV PORT=8080
 ENV GOSPA_DEV=false
 
-# Health check to ensure the server is responding
+# Health check
 HEALTHCHECK --interval=30s --timeout=3s --start-period=5s --retries=3 \
     CMD wget --no-verbose --tries=1 --spider http://localhost:8080/ || exit 1
 
-# Run the GoSPA application
+# Run the binary
 CMD ["./website"]
