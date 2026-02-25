@@ -41,8 +41,8 @@ type BenchmarkStats struct {
 func main() {
 	// Get absolute path to server binary
 	cwd, _ := os.Getwd()
-	serverPath := cwd + "/../examples/counter/dist/server"
-	serverDir := cwd + "/../examples/counter"
+	serverPath := cwd + "/../website/dist/server"
+	serverDir := cwd + "/../website"
 
 	if _, err := os.Stat(serverPath); os.IsNotExist(err) {
 		fmt.Printf("Server binary not found at: %s\n", serverPath)
@@ -386,7 +386,7 @@ func main() {
 	fmt.Printf("┌─────────────────────────────────────────────────────────────────────────────────────────────────────┐\n")
 	fmt.Printf("│  %s %-20s Peak RPS: %10.2f                                              │\n", performanceEmoji, performanceClass, bestRPS.stats.RequestsPerSecond)
 	fmt.Printf("├─────────────────────────────────────────────────────────────────────────────────────────────────────┤\n")
-	fmt.Printf("│  Server: GoSPA v0.1.0 with Fiber v2.52.11                                                          │\n")
+	fmt.Printf("│  Server: GoSPA v0.1.3 with Fiber v2.52.11                                                          │\n")
 	fmt.Printf("│  Endpoint: GET / (HTML Page with Server-Side Rendering)                                            │\n")
 	fmt.Printf("│  Test Configuration: Gradual load increase from 1 to 200 concurrent connections                    │\n")
 	fmt.Printf("└─────────────────────────────────────────────────────────────────────────────────────────────────────┘\n")

@@ -22,6 +22,10 @@ templ Page() {
 │   ├── page.templ            # Home page (/)
 │   ├── about/
 │   │   └── page.templ        # About page (/about)
+│   ├── (auth)/              → Grouped routes
+│   │   ├ layout.templ     → Layout for /auth/*
+│   │   ├ login.templ      → /login
+│   │   └ register.templ   → /register
 │   ├── blog/
 │   │   ├── layout.templ      # Blog layout
 │   │   ├── page.templ        # Blog index (/blog)
