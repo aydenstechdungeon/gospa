@@ -353,17 +353,17 @@ func (b *SSEBroker) SSEUnsubscribeHandler() fiber.Handler {
 func writeSSEEvent(c *fiber.Ctx, event SSEEvent) error {
 	// Write event ID if present
 	if event.ID != "" {
-		c.Write([]byte(fmt.Sprintf("id: %s\n", event.ID)))
+		_, _ = c.Write([]byte(fmt.Sprintf("id: %s\n", event.ID)))
 	}
 
 	// Write event name if present
 	if event.Event != "" {
-		c.Write([]byte(fmt.Sprintf("event: %s\n", event.Event)))
+		_, _ = c.Write([]byte(fmt.Sprintf("event: %s\n", event.Event)))
 	}
 
 	// Write retry if present
 	if event.Retry > 0 {
-		c.Write([]byte(fmt.Sprintf("retry: %d\n", event.Retry)))
+		_, _ = c.Write([]byte(fmt.Sprintf("retry: %d\n", event.Retry)))
 	}
 
 	// Write data
@@ -381,7 +381,7 @@ func writeSSEEvent(c *fiber.Ctx, event SSEEvent) error {
 		dataStr = string(data)
 	}
 
-	c.Write([]byte(fmt.Sprintf("data: %s\n\n", dataStr)))
+	_, _ = c.Write([]byte(fmt.Sprintf("data: %s\n\n", dataStr)))
 
 	return nil
 }

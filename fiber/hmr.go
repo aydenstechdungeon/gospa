@@ -152,7 +152,7 @@ func (fw *HMRFileWatcher) watch() {
 // checkFiles checks for file modifications.
 func (fw *HMRFileWatcher) checkFiles(modTimes map[string]time.Time) {
 	for _, watchPath := range fw.paths {
-		filepath.Walk(watchPath, func(path string, info os.FileInfo, err error) error {
+		_ = filepath.Walk(watchPath, func(path string, info os.FileInfo, err error) error {
 			if err != nil || info.IsDir() {
 				return nil
 			}
@@ -360,7 +360,7 @@ func (mgr *HMRManager) sendWelcome(c *websocket.Conn) {
 		Timestamp: time.Now().UnixMilli(),
 	}
 	data, _ := json.Marshal(msg)
-	c.WriteMessage(websocket.TextMessage, data)
+	_ = c.WriteMessage(websocket.TextMessage, data)
 }
 
 // handleClientMessage handles messages from clients.
@@ -388,7 +388,7 @@ func (mgr *HMRManager) handleClientMessage(c *websocket.Conn, data map[string]an
 					Timestamp: time.Now().UnixMilli(),
 				}
 				data, _ := json.Marshal(msg)
-				c.WriteMessage(websocket.TextMessage, data)
+				_ = c.WriteMessage(websocket.TextMessage, data)
 			}
 		}
 
@@ -426,7 +426,7 @@ func (mgr *HMRManager) HMRMiddleware() fiber.Handler {
 
 // generateHMRScript generates the client-side HMR script.
 func (mgr *HMRManager) generateHMRScript() string {
-	return fmt.Sprintf(`
+	return `
 <script>
 (function() {
 	const ws = new WebSocket('ws://' + window.location.host + '/__hmr');
@@ -485,7 +485,7 @@ func (mgr *HMRManager) generateHMRScript() string {
 	});
 })();
 </script>
-`)
+`
 }
 
 // Start begins HMR operation.

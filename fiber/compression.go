@@ -155,10 +155,10 @@ func BrotliGzipMiddleware(config CompressionConfig) gofiber.Handler {
 		var encoding string
 
 		if useBrotli {
-			compressed = compressBrotli(body, brotliWriterPool)
+			compressed = compressBrotli(body, &brotliWriterPool)
 			encoding = "br"
 		} else if useGzip {
-			compressed = compressGzip(body, gzipWriterPool)
+			compressed = compressGzip(body, &gzipWriterPool)
 			encoding = "gzip"
 		}
 
@@ -181,7 +181,7 @@ func BrotliGzipMiddleware(config CompressionConfig) gofiber.Handler {
 }
 
 // compressBrotli compresses data using Brotli with writer pool.
-func compressBrotli(data []byte, pool sync.Pool) []byte {
+func compressBrotli(data []byte, pool *sync.Pool) []byte {
 	writer := pool.Get().(*brotli.Writer)
 	defer pool.Put(writer)
 
@@ -202,7 +202,7 @@ func compressBrotli(data []byte, pool sync.Pool) []byte {
 }
 
 // compressGzip compresses data using Gzip with writer pool.
-func compressGzip(data []byte, pool sync.Pool) []byte {
+func compressGzip(data []byte, pool *sync.Pool) []byte {
 	writer := pool.Get().(*gzip.Writer)
 	defer pool.Put(writer)
 
@@ -225,8 +225,6 @@ func compressGzip(data []byte, pool sync.Pool) []byte {
 // StaticCompressionMiddleware serves pre-compressed static files.
 // This is more efficient than on-the-fly compression for static assets.
 type StaticCompressionMiddleware struct {
-	// Cache stores compressed versions of files
-	cache sync.Map
 	// Config compression configuration
 	config CompressionConfig
 }

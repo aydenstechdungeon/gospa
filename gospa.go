@@ -210,8 +210,7 @@ func New(config Config) *App {
 	// Create WebSocket hub (always enabled by default - WebSocket is a core feature)
 	// Note: Go can't distinguish between "unset" and "explicitly false" for bools,
 	// so we always create the hub. Users who don't want WebSocket can simply not use it.
-	var hub *fiber.WSHub
-	hub = fiber.NewWSHub()
+	hub := fiber.NewWSHub()
 	go hub.Run()
 
 	// Create state map
@@ -545,11 +544,6 @@ runtime.init({
 		_, _ = fmt.Fprint(w, `</body></html>`)
 		w.Flush()
 	})
-
-	if a.Config.CacheTemplates && opts.Strategy == routing.StrategySSG {
-		// Read back out since we rendered into the stream directly? Wait, body stream writer doesn't allow easy caching.
-		// For SSG, we should render to a buffer first instead of streaming.
-	}
 
 	return nil
 }

@@ -103,7 +103,7 @@ func main() {
 
 	if !ready {
 		fmt.Println("❌ Server failed to start within 3 seconds")
-		cmd.Process.Kill()
+		_ = cmd.Process.Kill()
 		os.Exit(1)
 	}
 	fmt.Println("✅ Server is ready!")
@@ -159,8 +159,8 @@ func main() {
 	// Shutdown server
 	fmt.Println()
 	fmt.Println("🛑 Shutting down server...")
-	cmd.Process.Kill()
-	cmd.Wait()
+	_ = cmd.Process.Kill()
+	_ = cmd.Wait()
 
 	// Print detailed results table
 	fmt.Println()

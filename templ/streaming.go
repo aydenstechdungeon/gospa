@@ -53,14 +53,12 @@ func NewStreamRenderer(config StreamRendererConfig) *StreamRenderer {
 
 // StreamWriter handles writing streamed content.
 type StreamWriter struct {
-	w            io.Writer
-	flusher      interface{ Flush() error }
-	chunks       chan StreamChunk
-	done         chan struct{}
-	err          error
-	mu           sync.Mutex
-	wroteHeader  bool
-	pendingChunk strings.Builder
+	w       io.Writer
+	flusher interface{ Flush() error }
+	chunks  chan StreamChunk
+	done    chan struct{}
+	err     error
+	mu      sync.Mutex
 }
 
 // NewStreamWriter creates a new stream writer.
@@ -360,7 +358,7 @@ func Suspense(loader func() (templ.Component, error), fallback templ.Component) 
 				return err
 			}
 		}
-		w.Write([]byte(`</div>`))
+		_, _ = w.Write([]byte(`</div>`))
 
 		// Start async loading
 		go func() {

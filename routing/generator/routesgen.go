@@ -238,7 +238,7 @@ func (g *RouteTypeScriptGenerator) generateRouteBuilder(sb *strings.Builder) {
 				}
 				sb.WriteString(fmt.Sprintf("%s: string | number", param))
 			}
-			sb.WriteString(fmt.Sprintf(" }): string {\n"))
+			sb.WriteString(" }): string {\n")
 			sb.WriteString(fmt.Sprintf("  return buildRoute(%q, params);\n", route.URLPath))
 			sb.WriteString("}\n\n")
 		} else {
@@ -437,9 +437,9 @@ func (g *RouteTypeScriptGenerator) pathToName(path string) string {
 		if strings.HasPrefix(part, ":") {
 			// Dynamic segment - use "By" prefix
 			name.WriteString("By")
-			name.WriteString(strings.Title(strings.TrimPrefix(part, ":")))
+			name.WriteString(toTitle(strings.TrimPrefix(part, ":")))
 		} else {
-			name.WriteString(strings.Title(part))
+			name.WriteString(toTitle(part))
 		}
 	}
 
@@ -463,7 +463,7 @@ func (g *RouteTypeScriptGenerator) pathToFuncName(path string) string {
 		if i == 0 {
 			name.WriteString(strings.ToLower(part[:1]) + part[1:])
 		} else {
-			name.WriteString(strings.Title(part))
+			name.WriteString(toTitle(part))
 		}
 	}
 
@@ -487,4 +487,11 @@ func (g *RouteTypeScriptGenerator) formatStringArray(arr []string) string {
 	}
 	sb.WriteString("]")
 	return sb.String()
+}
+
+func toTitle(s string) string {
+	if s == "" {
+		return ""
+	}
+	return strings.ToUpper(s[:1]) + s[1:]
 }

@@ -307,13 +307,6 @@ func (w *DevWatcher) checkDir(dir string) {
 	}
 }
 
-func startServer(ctx context.Context) *exec.Cmd {
-	return startServerWithConfig(ctx, &DevConfig{
-		Port: 3000,
-		Host: "localhost",
-	})
-}
-
 func startServerWithConfig(ctx context.Context, config *DevConfig) *exec.Cmd {
 	// Build and run the server
 	args := []string{"run", "."}

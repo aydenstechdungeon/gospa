@@ -173,9 +173,9 @@ func (l Level) toQrcodeLevel() qrcode.RecoveryLevel {
 	case LevelMedium:
 		return qrcode.Medium
 	case LevelQuartile:
-		return qrcode.Quartile
-	case LevelHigh:
 		return qrcode.High
+	case LevelHigh:
+		return qrcode.Highest
 	default:
 		return qrcode.Medium
 	}
@@ -184,7 +184,11 @@ func (l Level) toQrcodeLevel() qrcode.RecoveryLevel {
 // Generate generates a QR code image.
 func (qr *QRCode) Generate() (image.Image, error) {
 	// Use the go-qrcode library which implements proper Reed-Solomon error correction
-	return qrcode.New(qr.Content, qr.Level.toQrcodeLevel())
+	q, err := qrcode.New(qr.Content, qr.Level.toQrcodeLevel())
+	if err != nil {
+		return nil, err
+	}
+	return q.Image(qr.Size), nil
 }
 
 // PNG generates a PNG-encoded QR code.
@@ -223,10 +227,10 @@ func (p *QRCodePlugin) GenerateWithLogo(content string, logo image.Image, opts .
 
 	// If logo provided, overlay it
 	if logo != nil {
-		return overlayLogo(baseQR, logo, qr.Size)
+		return overlayLogo(baseQR.Image(qr.Size), logo, qr.Size)
 	}
 
-	return baseQR, nil
+	return baseQR.Image(qr.Size), nil
 }
 
 // overlayLogo overlays a logo on the QR code.

@@ -205,7 +205,7 @@ func (p *PostCSSPlugin) Stop() {
 	if p.cmd != nil && p.cmd.Process != nil {
 		// Try graceful shutdown first with SIGINT, then force kill
 		if err := p.cmd.Process.Signal(os.Interrupt); err != nil {
-			p.cmd.Process.Kill()
+			_ = p.cmd.Process.Kill()
 		}
 	}
 	fmt.Println("PostCSS: watcher stopped")

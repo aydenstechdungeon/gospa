@@ -120,7 +120,7 @@ func (p *TailwindPlugin) Stop() {
 	if p.cmd != nil && p.cmd.Process != nil {
 		// Try graceful shutdown first with SIGTERM, then SIGKILL
 		if err := p.cmd.Process.Signal(os.Interrupt); err != nil {
-			p.cmd.Process.Kill()
+			_ = p.cmd.Process.Kill()
 		}
 	}
 	fmt.Println("Tailwind: watcher stopped")
