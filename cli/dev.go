@@ -16,7 +16,7 @@ import (
 )
 
 // Dev starts the development server with hot reload.
-func Dev() {
+func Dev(config *DevConfig) {
 	fmt.Println("Starting development server...")
 
 	// Check if we're in a GoSPA project
@@ -35,13 +35,18 @@ func Dev() {
 	_ = regenerateTempl()
 	runGenerate()
 
+	// Use defaults if config is nil
+	if config == nil {
+		config = &DevConfig{
+			Port:          3000,
+			Host:          "localhost",
+			RoutesDir:     "./routes",
+			ComponentsDir: "./components",
+		}
+	}
+
 	// Use startDevWithConfig which handles restart logic properly
-	err := startDevWithConfig(&DevConfig{
-		Port:          3000,
-		Host:          "localhost",
-		RoutesDir:     "./routes",
-		ComponentsDir: "./components",
-	})
+	err := startDevWithConfig(config)
 	if err != nil {
 		fmt.Fprintf(os.Stderr, "Error: %v\n", err)
 		os.Exit(1)
@@ -373,7 +378,7 @@ func regenerateTempl() error {
 
 func runGenerate() {
 	// Run the generate command
-	Generate()
+	Generate(nil)
 }
 
 func isGoSPAProject() bool {

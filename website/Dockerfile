@@ -15,9 +15,11 @@ COPY website/go.mod website/go.sum ./website/
 COPY . .
 
 # Build using go.work - the workspace handles multi-module resolution
-RUN go mod download && \
-    CGO_ENABLED=0 GOOS=linux go build -ldflags="-s -w" -o /website ./website
+# RUN go mod download && \
+#     CGO_ENABLED=0 GOOS=linux go build -ldflags="-s -w" -o /website ./website
 
+RUN go mod download && \
+    go run github.com/aydenstechdungeon/gospa/cmd/gospa@latest build -o website
 # Runtime stage
 FROM alpine:3.19
 

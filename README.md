@@ -318,6 +318,10 @@ gospa dev             # Development server with hot reload
 gospa build           # Production build
 ```
 
+Run any command with `--help` (e.g., `gospa build --help`) to see all available options and flags.
+
+For more details, see the [CLI Reference](https://gospa.dev/docs/cli).
+
 ## Plugin Ecosystem
 
 GoSPA includes a powerful plugin system for extending build and development workflows.

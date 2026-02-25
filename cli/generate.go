@@ -15,32 +15,46 @@ import (
 )
 
 // Generate generates TypeScript types and routes from Go templates.
-func Generate() {
+func Generate(config *GenerateConfig) {
 	// Trigger BeforeGenerate hook
-	if err := plugin.TriggerHook(plugin.BeforeGenerate, nil); err != nil {
+	if err := plugin.TriggerHook(plugin.BeforeGenerate, map[string]interface{}{"config": config}); err != nil {
 		fmt.Fprintf(os.Stderr, "Warning: BeforeGenerate hook failed: %v\n", err)
 	}
 
+	// Use defaults if config is nil
+	if config == nil {
+		config = &GenerateConfig{
+			InputDir:  ".",
+			OutputDir: "./generated",
+		}
+	}
+
 	// Generate Go route registry (e.g., generated_routes.go)
-	if err := routing_generator.Generate("./routes"); err != nil {
+	routesDir := filepath.Join(config.InputDir, "routes")
+	if _, err := os.Stat(routesDir); os.IsNotExist(err) {
+		// Try current directory if routesDir doesn't exist
+		routesDir = config.InputDir
+	}
+
+	if err := routing_generator.Generate(routesDir); err != nil {
 		fmt.Fprintf(os.Stderr, "Error generating Go routes: %v\n", err)
 		os.Exit(1)
 	}
 
 	// Generate TypeScript types from Go state structs
-	if err := generateTypes(); err != nil {
+	if err := generateTypesWithConfig(config); err != nil {
 		fmt.Fprintf(os.Stderr, "Error generating types: %v\n", err)
 		os.Exit(1)
 	}
 
 	// Generate route definitions for TypeScript
-	if err := generateRoutes(); err != nil {
+	if err := generateRoutesWithConfig(config); err != nil {
 		fmt.Fprintf(os.Stderr, "Error generating routes: %v\n", err)
 		os.Exit(1)
 	}
 
 	// Trigger AfterGenerate hook
-	_ = plugin.TriggerHook(plugin.AfterGenerate, nil)
+	_ = plugin.TriggerHook(plugin.AfterGenerate, map[string]interface{}{"config": config})
 
 	fmt.Println("✓ Generated Go routes, TypeScript types, and TS routes")
 }

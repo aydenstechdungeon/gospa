@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"os"
 	"path/filepath"
+	"runtime"
 
 	"github.com/aydenstechdungeon/gospa/cli"
 	"github.com/aydenstechdungeon/gospa/plugin"
@@ -28,19 +29,14 @@ func main() {
 
 	cmd := os.Args[1]
 	switch cmd {
-	case "generate", "gen":
-		cli.Generate()
-	case "create":
-		if len(os.Args) < 3 {
-			printer.Error("Project name required")
-			printer.Info("Usage: gospa create <project-name> [options]")
-			os.Exit(1)
-		}
-		createProject(os.Args[2], printer)
 	case "dev":
-		cli.Dev()
+		handleDevCommand(printer)
 	case "build":
-		cli.Build()
+		handleBuildCommand(printer)
+	case "generate", "gen":
+		handleGenerateCommand(printer)
+	case "create":
+		handleCreateCommand(printer)
 	case "add":
 		if len(os.Args) < 3 {
 			printer.Error("Feature name required")
@@ -101,18 +97,20 @@ func printUsage(printer *cli.ColorPrinter) {
 		fmt.Printf("    %-20s %s\n", printer.Cyan(c.cmd), printer.Dim(c.desc))
 	}
 
+	fmt.Printf("\n%s\n", printer.Dim("Use 'gospa <command> --help' for more information on a command."))
+
 	fmt.Printf("\n%s\n\n", printer.Bold("EXAMPLES"))
 	fmt.Printf("    gospa create myapp\n")
 	fmt.Printf("    cd myapp && gospa dev\n")
-	fmt.Printf("    gospa build\n")
+	fmt.Printf("    gospa build -o ./dist\n")
 	fmt.Println()
 }
 
-func createProject(name string, printer *cli.ColorPrinter) {
-	printer.Title("Creating GoSPA project: %s", name)
+func createProject(config *cli.ProjectConfig, printer *cli.ColorPrinter) {
+	printer.Title("Creating GoSPA project: %s", config.Name)
 
 	// Create project directory in current directory
-	projectPath := name
+	projectPath := config.OutputDir
 	printer.Step(1, 5, "Creating project directory")
 	if err := os.MkdirAll(projectPath, 0755); err != nil {
 		printer.Error("Failed to create project directory: %v", err)
@@ -145,7 +143,7 @@ require (
 	github.com/a-h/templ v0.2.543
 	github.com/gofiber/fiber/v2 v2.51.0
 )
-`, name)
+`, config.Module)
 	if err := os.WriteFile(filepath.Join(projectPath, "go.mod"), []byte(goMod), 0644); err != nil {
 		printer.Error("Failed to create go.mod: %v", err)
 		os.Exit(1)
@@ -159,14 +157,14 @@ import (
 	"log"
 
 	"github.com/aydenstechdungeon/gospa"
-	_ "` + name + `/routes" // Import routes to trigger init()
+	_ "` + config.Module + `/routes" // Import routes to trigger init()
 )
 
 func main() {
 	app := gospa.New(gospa.Config{
 		RoutesDir:   "./routes",
 		DevMode:     true,
-		AppName:     "` + name + `",
+		AppName:     "` + config.Name + `",
 	})
 
 	if err := app.Run(":3000"); err != nil {
@@ -204,7 +202,7 @@ templ Layout(title string, children templ.Component) {
 
 templ Page() {
 	<div>
-		<h1>Welcome to ` + name + `</h1>
+		<h1>Welcome to ` + config.Name + `</h1>
 		<p>Your GoSPA application is ready!</p>
 	</div>
 }
@@ -214,16 +212,37 @@ templ Page() {
 		os.Exit(1)
 	}
 
+	// Create Dockerfile if requested
+	if config.WithDocker {
+		dockerfile := `FROM golang:1.21-alpine AS builder
+WORKDIR /app
+COPY go.mod go.sum ./
+RUN go mod download
+COPY . .
+RUN go build -o main .
+
+FROM alpine:latest
+WORKDIR /root/
+COPY --from=builder /app/main .
+COPY --from=builder /app/static ./static
+EXPOSE 3000
+CMD ["./main"]
+`
+		if err := os.WriteFile(filepath.Join(projectPath, "Dockerfile"), []byte(dockerfile), 0644); err != nil {
+			printer.Error("Failed to create Dockerfile: %v", err)
+		}
+	}
+
 	// Success message
 	fmt.Println()
-	printer.Success("Project '%s' created successfully!", name)
+	printer.Success("Project '%s' created successfully!", config.Name)
 	fmt.Println()
 	printer.Bold("Next steps:")
 	fmt.Printf("    cd %s\n", projectPath)
 	fmt.Println("    go mod tidy")
 	fmt.Println("    templ generate")
 	fmt.Println("    gospa generate")
-	fmt.Println("    go run ../../cmd/gospa")
+	fmt.Printf("    go run .\n")
 	fmt.Println()
 }
 
@@ -342,6 +361,222 @@ func handleStateTreeCommand(printer *cli.ColorPrinter) {
 	}
 
 	cli.StateTree(stateFile, usedPaths, jsonOut)
+}
+
+// handleBuildCommand handles the build command.
+func handleBuildCommand(printer *cli.ColorPrinter) {
+	config := &cli.BuildConfig{
+		OutputDir:    "dist",
+		Platform:     runtime.GOOS,
+		Arch:         runtime.GOARCH,
+		StaticAssets: true,
+		Minify:       true,
+		Compress:     true,
+		Env:          "production",
+	}
+
+	// Parse flags
+	args := os.Args[2:]
+	for i := 0; i < len(args); i++ {
+		switch args[i] {
+		case "--output", "-o":
+			if i+1 < len(args) {
+				config.OutputDir = args[i+1]
+				i++
+			}
+		case "--platform", "-p":
+			if i+1 < len(args) {
+				config.Platform = args[i+1]
+				i++
+			}
+		case "--arch", "-a":
+			if i+1 < len(args) {
+				config.Arch = args[i+1]
+				i++
+			}
+		case "--env", "-e":
+			if i+1 < len(args) {
+				config.Env = args[i+1]
+				i++
+			}
+		case "--no-minify":
+			config.Minify = false
+		case "--no-compress":
+			config.Compress = false
+		case "--no-static":
+			config.StaticAssets = false
+		case "--all":
+			cli.BuildAll()
+			return
+		case "--help", "-h":
+			printBuildUsage(printer)
+			return
+		}
+	}
+
+	cli.Build(config)
+}
+
+// handleDevCommand handles the dev command.
+func handleDevCommand(printer *cli.ColorPrinter) {
+	config := &cli.DevConfig{
+		Port:          3000,
+		Host:          "localhost",
+		RoutesDir:     "./routes",
+		ComponentsDir: "./components",
+	}
+
+	// Parse flags
+	args := os.Args[2:]
+	for i := 0; i < len(args); i++ {
+		switch args[i] {
+		case "--port", "-p":
+			if i+1 < len(args) {
+				var port int
+				fmt.Sscanf(args[i+1], "%d", &port)
+				config.Port = port
+				i++
+			}
+		case "--host", "-H":
+			if i+1 < len(args) {
+				config.Host = args[i+1]
+				i++
+			}
+		case "--routes", "-r":
+			if i+1 < len(args) {
+				config.RoutesDir = args[i+1]
+				i++
+			}
+		case "--components", "-c":
+			if i+1 < len(args) {
+				config.ComponentsDir = args[i+1]
+				i++
+			}
+		case "--help", "-h":
+			printDevUsage(printer)
+			return
+		}
+	}
+
+	cli.Dev(config)
+}
+
+// handleGenerateCommand handles the generate command.
+func handleGenerateCommand(printer *cli.ColorPrinter) {
+	// For now, generate doesn't take many flags, but we can add InputDir/OutputDir
+	config := &cli.GenerateConfig{
+		InputDir:  ".",
+		OutputDir: "./generated",
+	}
+
+	args := os.Args[2:]
+	for i := 0; i < len(args); i++ {
+		switch args[i] {
+		case "--input", "-i":
+			if i+1 < len(args) {
+				config.InputDir = args[i+1]
+				i++
+			}
+		case "--output", "-o":
+			if i+1 < len(args) {
+				config.OutputDir = args[i+1]
+				i++
+			}
+		case "--help", "-h":
+			printGenerateUsage(printer)
+			return
+		}
+	}
+
+	cli.Generate(config)
+}
+
+// handleCreateCommand handles the create command.
+func handleCreateCommand(printer *cli.ColorPrinter) {
+	if len(os.Args) < 3 {
+		printer.Error("Project name required")
+		printer.Info("Usage: gospa create <project-name> [options]")
+		os.Exit(1)
+	}
+
+	name := os.Args[2]
+	config := &cli.ProjectConfig{
+		Name:      name,
+		Module:    name,
+		OutputDir: name,
+		WithGit:   true,
+	}
+
+	args := os.Args[3:]
+	for i := 0; i < len(args); i++ {
+		switch args[i] {
+		case "--module", "-m":
+			if i+1 < len(args) {
+				config.Module = args[i+1]
+				i++
+			}
+		case "--output", "-o":
+			if i+1 < len(args) {
+				config.OutputDir = args[i+1]
+				i++
+			}
+		case "--no-git":
+			config.WithGit = false
+		case "--docker":
+			config.WithDocker = true
+		case "--help", "-h":
+			printCreateUsage(printer)
+			return
+		}
+	}
+
+	createProject(config, printer) // Note: this still uses the local createProject helper
+}
+
+// printBuildUsage prints usage for the build command.
+func printBuildUsage(printer *cli.ColorPrinter) {
+	printer.Info("Usage: gospa build [options]")
+	fmt.Println("\nOptions:")
+	fmt.Println("  --output, -o <dir>     Output directory (default: dist)")
+	fmt.Println("  --platform, -p <os>    Target platform (default: current)")
+	fmt.Println("  --arch, -a <arch>      Target architecture (default: current)")
+	fmt.Println("  --env, -e <env>        Build environment (default: production)")
+	fmt.Println("  --no-minify            Disable minification")
+	fmt.Println("  --no-compress          Disable pre-compression")
+	fmt.Println("  --no-static            Do not copy static assets")
+	fmt.Println("  --all                  Build for all platforms")
+	fmt.Println("  --help, -h             Show this help message")
+}
+
+// printDevUsage prints usage for the dev command.
+func printDevUsage(printer *cli.ColorPrinter) {
+	printer.Info("Usage: gospa dev [options]")
+	fmt.Println("\nOptions:")
+	fmt.Println("  --port, -p <port>      Server port (default: 3000)")
+	fmt.Println("  --host, -H <host>      Server host (default: localhost)")
+	fmt.Println("  --routes, -r <dir>     Routes directory (default: ./routes)")
+	fmt.Println("  --components, -c <dir> Components directory (default: ./components)")
+	fmt.Println("  --help, -h             Show this help message")
+}
+
+// printGenerateUsage prints usage for the generate command.
+func printGenerateUsage(printer *cli.ColorPrinter) {
+	printer.Info("Usage: gospa generate [options]")
+	fmt.Println("\nOptions:")
+	fmt.Println("  --input, -i <dir>      Input directory (default: .)")
+	fmt.Println("  --output, -o <dir>     Output directory (default: ./generated)")
+	fmt.Println("  --help, -h             Show this help message")
+}
+
+// printCreateUsage prints usage for the create command.
+func printCreateUsage(printer *cli.ColorPrinter) {
+	printer.Info("Usage: gospa create <name> [options]")
+	fmt.Println("\nOptions:")
+	fmt.Println("  --module, -m <name>    Go module name (default: <name>)")
+	fmt.Println("  --output, -o <dir>     Output directory (default: <name>)")
+	fmt.Println("  --no-git               Skip .gitignore creation")
+	fmt.Println("  --docker               Add Dockerfile")
+	fmt.Println("  --help, -h             Show this help message")
 }
 
 // printPruneUsage prints usage for the prune command.

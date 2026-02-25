@@ -27,14 +27,18 @@ go install github.com/aydenstechdungeon/gospa/cmd/gospa@latest
 Creates a new GoSPA project with all necessary files and directory structure.
 
 ```bash
-gospa create <project-name>
+gospa create <project-name> [options]
 ```
 
-### Arguments
+### Options
 
-| Argument | Required | Description |
-|----------|----------|-------------|
-| `<project-name>` | Yes | Name of the project (used for directory and module) |
+| Flag | Short | Default | Description |
+|------|-------|---------|-------------|
+| `--module` | `-m` | `<project-name>` | Go module name for the project |
+| `--output` | `-o` | `<project-name>` | Output directory for the project |
+| `--no-git` | - | `false` | Skip creation of `.gitignore` file |
+| `--docker` | - | `false` | Add a default `Dockerfile` to the project |
+| `--help` | `-h` | - | Show help for this command |
 
 ### Generated Project Structure
 
@@ -104,8 +108,18 @@ gospa dev
 Starts the development server with hot reload. Watches for file changes and automatically regenerates templates.
 
 ```bash
-gospa dev
+gospa dev [options]
 ```
+
+### Options
+
+| Flag | Short | Default | Description |
+|------|-------|---------|-------------|
+| `--port` | `-p` | `3000` | Server port |
+| `--host` | `-H` | `localhost` | Server host |
+| `--routes` | `-r` | `./routes` | Routes directory to watch |
+| `--components` | `-c` | `./components` | Components directory to watch |
+| `--help` | `-h` | - | Show help for this command |
 
 ### Behavior
 
@@ -163,8 +177,22 @@ gospa dev
 Builds the application for production deployment.
 
 ```bash
-gospa build
+gospa build [options]
 ```
+
+### Options
+
+| Flag | Short | Default | Description |
+|------|-------|---------|-------------|
+| `--output` | `-o` | `dist` | Output directory for built files |
+| `--platform` | `-p` | `runtime.GOOS` | Target platform (OS) |
+| `--arch` | `-a` | `runtime.GOARCH` | Target architecture |
+| `--env` | `-e` | `production` | Build environment |
+| `--no-minify` | - | `false` | Disable JavaScript minification |
+| `--no-compress` | - | `false` | Disable asset pre-compression (gzip) |
+| `--no-static` | - | `false` | Skip copying static assets |
+| `--all` | - | `false` | Build for all platforms (linux/darwin/windows, amd64/arm64) |
+| `--help` | `-h` | - | Show help for this command |
 
 ### Build Process
 
@@ -224,10 +252,16 @@ gospa build
 Generates TypeScript route definitions and types from Go source code.
 
 ```bash
-gospa generate
-# or
-gospa gen
+gospa generate [options]
 ```
+
+### Options
+
+| Flag | Short | Default | Description |
+|------|-------|---------|-------------|
+| `--input` | `-i` | `.` | Input directory to scan |
+| `--output` | `-o` | `./generated` | Output directory for generated files |
+| `--help` | `-h` | - | Show help for this command |
 
 ### What Gets Generated
 

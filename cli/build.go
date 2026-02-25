@@ -25,7 +25,7 @@ type BuildConfig struct {
 }
 
 // Build builds the application for production.
-func Build() {
+func Build(config *BuildConfig) {
 	fmt.Println("Building for production...")
 
 	// Check if we're in a GoSPA project
@@ -34,15 +34,17 @@ func Build() {
 		os.Exit(1)
 	}
 
-	// Run build with default config
-	config := &BuildConfig{
-		OutputDir:    "dist",
-		Platform:     runtime.GOOS,
-		Arch:         runtime.GOARCH,
-		StaticAssets: true,
-		Minify:       true,
-		Compress:     true,
-		Env:          "production",
+	// Use defaults if config is nil
+	if config == nil {
+		config = &BuildConfig{
+			OutputDir:    "dist",
+			Platform:     runtime.GOOS,
+			Arch:         runtime.GOARCH,
+			StaticAssets: true,
+			Minify:       true,
+			Compress:     true,
+			Env:          "production",
+		}
 	}
 
 	// Trigger BeforeBuild hook
@@ -345,7 +347,7 @@ func Watch() {
 	fmt.Println("Building and watching for changes...")
 
 	// Initial build
-	Build()
+	Build(nil)
 
 	// Start watcher
 	watcher := NewDevWatcher("./routes", "./components", "./lib", "./static")
@@ -362,7 +364,7 @@ func Watch() {
 		select {
 		case event := <-watcher.Events:
 			fmt.Printf("\nFile changed: %s\n", event.File)
-			Build()
+			Build(nil)
 			fmt.Println("✓ Rebuilt")
 		case err := <-watcher.Errors:
 			fmt.Fprintf(os.Stderr, "Watcher error: %v\n", err)
