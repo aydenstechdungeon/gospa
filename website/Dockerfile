@@ -7,17 +7,23 @@ RUN apk add --no-cache git ca-certificates tzdata
 
 WORKDIR /build
 
-# Copy go.mod files first for caching
+# Copy root go.mod first (gospa module)
 COPY go.mod go.sum ./
 
-# Download dependencies
+# Copy website go.mod (website module with replace directive)
+COPY website/go.mod website/go.sum ./website/
+
+# Download root dependencies
 RUN go mod download
 
-# Copy entire project (needed for replace directive)
+# Download website dependencies
+WORKDIR /build/website
+RUN go mod download
+
+# Copy entire project (needed for replace directive to work)
 COPY . .
 
 # Build the website binary
-WORKDIR /build/website
 RUN CGO_ENABLED=0 GOOS=linux go build -ldflags="-s -w" -o /website .
 
 # Runtime stage
