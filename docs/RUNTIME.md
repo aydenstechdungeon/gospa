@@ -37,6 +37,7 @@ The simple runtime uses a basic HTML sanitizer for higher performance. Use this 
 - Smaller bundle size
 - All core features (WebSocket, Navigation, Transitions)
 - Higher performance
+- Optional SVG/math element support via `SimpleRuntimeSVGs` config
 
 **Size:**
 - Uncompressed: 1.7 KB (wrapper) + 7.6 KB (core) = 9.3 KB total
@@ -47,6 +48,20 @@ The simple runtime uses a basic HTML sanitizer for higher performance. Use this 
 - Applications where you control all HTML content
 - Performance-critical applications
 - No user-generated content
+
+**SVG Support:**
+
+By default, the simple runtime strips SVG and math elements for security (they can contain malicious event handlers). If your application needs SVGs and you control all content, enable them with:
+
+```go
+app := gospa.New(gospa.Config{
+    RoutesDir:        "./routes",
+    SimpleRuntime:    true,
+    SimpleRuntimeSVGs: true,  // Allow SVG/math elements
+})
+```
+
+> ⚠️ **Security Warning**: Only enable `SimpleRuntimeSVGs` if you control ALL HTML content. SVG elements can contain embedded JavaScript and event handlers that could execute malicious code. Never enable this option when rendering user-generated content.
 
 ---
 

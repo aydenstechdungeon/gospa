@@ -3,17 +3,61 @@
 //
 // This file includes all features including WebSocket, Navigation, Transitions
 
-import { simpleSanitizer } from './sanitize-simple.ts';
+import { createSimpleSanitizer, simpleSanitizer } from './sanitize-simple.ts';
 import { setSanitizer } from './dom.ts';
+import {
+	init as coreInit,
+	type RuntimeConfig,
+	createComponent,
+	destroyComponent,
+	getComponent,
+	getState,
+	setState,
+	callAction,
+	bind,
+	autoInit,
+	getWebSocket,
+	getNavigation,
+	getTransitions,
+} from './runtime-core.ts';
 
-// Set up the simple HTML sanitizer for this runtime version (performance over security)
+// Set up the default simple HTML sanitizer (will be reconfigured if SVGs are enabled)
 setSanitizer(simpleSanitizer);
+
+// Track if we've configured the sanitizer
+let sanitizerConfigured = false;
+
+// Extended init that configures sanitizer based on options
+function init(options: RuntimeConfig = {}): void {
+	// Configure sanitizer before core init if SVGs are enabled
+	if (options.simpleRuntimeSVGs && !sanitizerConfigured) {
+		const svgAwareSanitizer = createSimpleSanitizer({ allowSVGs: true, allowMath: true });
+		setSanitizer(svgAwareSanitizer);
+		sanitizerConfigured = true;
+		if (options.debug) {
+			console.warn('GoSPA: SVG/math elements enabled in simple runtime sanitizer. WARNING: This is a security risk for untrusted content.');
+		}
+	}
+	
+	// Call core init
+	coreInit(options);
+}
 
 // Core exports (re-exported from runtime-core for convenience)
 export {
-    init, createComponent, destroyComponent, getComponent, getState, setState, callAction, bind, autoInit,
-    getWebSocket, getNavigation, getTransitions
-} from './runtime-core.ts';
+	init,
+	createComponent,
+	destroyComponent,
+	getComponent,
+	getState,
+	setState,
+	callAction,
+	bind,
+	autoInit,
+	getWebSocket,
+	getNavigation,
+	getTransitions,
+};
 
 export {
     Rune, Derived, Effect, StateMap, batch, effect, watch,

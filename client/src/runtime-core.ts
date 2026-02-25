@@ -42,6 +42,8 @@ export interface RuntimeConfig {
 		mode?: 'immediate' | 'lazy' | 'visible' | 'idle';
 		timeout?: number;
 	};
+	/** Allow SVG elements in simple runtime sanitizer (WARNING: security risk for untrusted content) */
+	simpleRuntimeSVGs?: boolean;
 }
 
 // Global component registry

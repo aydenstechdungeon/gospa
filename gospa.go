@@ -64,10 +64,11 @@ type Config struct {
 	WebSocketMiddleware fiberpkg.Handler
 
 	// New Performance Options
-	CompressState  bool // Compress WebSocket messages
-	StateDiffing   bool // Only send state diffs
-	CacheTemplates bool // Cache compiled templates
-	SimpleRuntime  bool // Use lightweight runtime without DOMPurify
+	CompressState     bool // Compress WebSocket messages
+	StateDiffing      bool // Only send state diffs
+	CacheTemplates    bool // Cache compiled templates
+	SimpleRuntime     bool // Use lightweight runtime without DOMPurify
+	SimpleRuntimeSVGs bool // Allow SVG elements in simple runtime (security risk if content is untrusted)
 
 	// New WebSocket Options
 	WSReconnectDelay time.Duration // Initial reconnect delay
@@ -533,12 +534,13 @@ import * as runtime from '%s';
 runtime.init({
 	wsUrl: '%s',
 	debug: %v,
+	simpleRuntimeSVGs: %v,
 	hydration: {
 		mode: '%s',
 		timeout: %d
 	}
 });
-</script>`, runtimePath, wsUrl, devMode, a.Config.HydrationMode, a.Config.HydrationTimeout)
+</script>`, runtimePath, wsUrl, devMode, a.Config.SimpleRuntimeSVGs, a.Config.HydrationMode, a.Config.HydrationTimeout)
 
 		_, _ = fmt.Fprint(w, `</body></html>`)
 		w.Flush()

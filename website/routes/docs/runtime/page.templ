@@ -107,6 +107,18 @@ templ Page() {
 				<p class="text-yellow-500 font-semibold">⚠️ Warning</p>
 				<p class="text-[var(--text-secondary)]">The simple runtime does NOT provide complete XSS protection. Only use it when you control all content or have other sanitization measures in place.</p>
 			</div>
+
+			<h3 class="text-xl font-semibold text-[var(--text-primary)] mt-6">SVG Support</h3>
+			<p class="text-[var(--text-secondary)]">By default, the simple sanitizer removes SVG and math elements for security. To enable SVG support:</p>
+			@components.CodeBlock(`app := gospa.New(gospa.Config{
+    RoutesDir:         "./routes",
+    SimpleRuntime:     true,
+    SimpleRuntimeSVGs: true,  // Allow SVG/math elements
+})`, "go", "main.go")
+			<div class="bg-red-500/10 border border-red-500/30 rounded-lg p-4 mt-4">
+				<p class="text-red-500 font-semibold">⚠️ Security Warning</p>
+				<p class="text-[var(--text-secondary)]">SVG elements can contain embedded JavaScript and event handlers (e.g., &lt;svg onload="alert('xss')"&gt;). Only enable <code class="bg-[var(--bg-tertiary)] px-1 rounded">SimpleRuntimeSVGs</code> { "if" } you completely trust all HTML content. Never enable when rendering user-generated content. This option has no effect when using the full runtime.</p>
+			</div>
 		</section>
 
 		<section class="space-y-4">

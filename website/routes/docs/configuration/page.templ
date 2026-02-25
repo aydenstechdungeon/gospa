@@ -105,6 +105,7 @@ templ Page() {
 						<tr><td class="px-4 py-2 font-mono text-[var(--accent-primary)]">StateDiffing</td><td class="px-4 py-2">bool</td><td class="px-4 py-2">false</td><td class="px-4 py-2">Only send state diffs over WebSocket</td></tr>
 						<tr><td class="px-4 py-2 font-mono text-[var(--accent-primary)]">CacheTemplates</td><td class="px-4 py-2">bool</td><td class="px-4 py-2">false</td><td class="px-4 py-2">Cache compiled templates</td></tr>
 						<tr><td class="px-4 py-2 font-mono text-[var(--accent-primary)]">SimpleRuntime</td><td class="px-4 py-2">bool</td><td class="px-4 py-2">false</td><td class="px-4 py-2">Use lightweight runtime without DOMPurify</td></tr>
+						<tr><td class="px-4 py-2 font-mono text-[var(--accent-primary)]">SimpleRuntimeSVGs</td><td class="px-4 py-2">bool</td><td class="px-4 py-2">false</td><td class="px-4 py-2">Allow SVG/math in simple runtime (security risk)</td></tr>
 					</tbody>
 				</table>
 			</div>
@@ -230,6 +231,18 @@ app := gospa.New(gospa.Config{
 			</ul>
 			@components.CodeBlock(`HydrationMode: "visible",  // Hydrate when scrolled into view
 HydrationTimeout: 2000,   // Force hydrate after 2 seconds`, "go", "main.go")
+
+			<h3 class="text-xl font-semibold text-[var(--text-primary)] mt-6">SimpleRuntimeSVGs</h3>
+			<p class="text-[var(--text-secondary)] mb-2">Allow SVG and math elements in the simple runtime sanitizer. Only enable when you control ALL HTML content:</p>
+			@components.CodeBlock(`app := gospa.New(gospa.Config{
+    RoutesDir:        "./routes",
+    SimpleRuntime:    true,
+    SimpleRuntimeSVGs: true,  // Allow SVG/math in simple runtime
+})`, "go", "main.go")
+			<div class="bg-red-500/10 border border-red-500/30 rounded-lg p-4 mt-4">
+				<p class="text-red-500 font-semibold">⚠️ Security Warning</p>
+				<p class="text-[var(--text-secondary)]">SVG elements can contain embedded JavaScript and event handlers (e.g., &lt;svg onload="alert('xss')"&gt;). Only enable this option if you completely trust all HTML content being rendered. Never enable when rendering user-generated content. This option has no effect when using the full runtime (SimpleRuntime: false).</p>
+			</div>
 		</section>
 
 		<section class="space-y-4">

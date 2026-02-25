@@ -53,6 +53,7 @@ app := gospa.New(gospa.Config{
 | `StateDiffing` | `bool` | `false` | Only send state diffs over WebSocket to save bandwidth |
 | `CacheTemplates` | `bool` | `false` | Enable template caching (recommended for production) |
 | `SimpleRuntime` | `bool` | `false` | Use lightweight ~11KB runtime without DOMPurify |
+| `SimpleRuntimeSVGs` | `bool` | `false` | Allow SVG/math elements in simple runtime (security risk for untrusted content) |
 
 ### Hydration Options
 
@@ -241,6 +242,17 @@ SimpleRuntime: true,  // ~30% smaller runtime, no DOMPurify
 ```
 
 See [Runtime Selection Guide](./RUNTIME.md) for details.
+
+### SimpleRuntimeSVGs
+
+Allow SVG and math elements in the simple runtime sanitizer. **Only use when you control ALL HTML content.**
+
+```go
+SimpleRuntime:    true,
+SimpleRuntimeSVGs: true,  // Allow SVG/math elements in simple runtime
+```
+
+> ⚠️ **Security Warning**: SVG elements can contain embedded JavaScript and event handlers (e.g., `<svg onload="alert('xss')">`). Only enable this option if you completely trust all HTML content being rendered. Never enable when rendering user-generated content. This option has no effect when using the full runtime (when `SimpleRuntime: false`).
 
 ### HydrationMode
 
