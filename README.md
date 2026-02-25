@@ -450,4 +450,4 @@ See [`docs/PLUGINS.md`](docs/PLUGINS.md) for complete plugin documentation.
 
 ## License
 
-(Apache License 2.0)[LICENSE]
+[Apache License 2.0](LICENSE)
