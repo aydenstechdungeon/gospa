@@ -12,55 +12,23 @@ type NavSection struct {
 	Items []NavItem
 }
 
-// Desktop sidebar - visible on lg screens and up
 templ Sidebar(currentPath string) {
 	<aside class="w-64 flex-shrink-0 hidden lg:block border-r border-[var(--border)] h-[calc(100vh-4rem)] sticky top-16 overflow-y-auto p-6 custom-scrollbar">
 		@SidebarContent(currentPath)
 	</aside>
 }
 
-// Mobile sidebar drawer - triggered by menu button in docs layout
-templ MobileSidebar(currentPath string, isOpen bool) {
-	<!-- Mobile sidebar backdrop -->
-	<div 
-		id="mobile-sidebar-backdrop"
-		class={ "lg:hidden fixed inset-0 z-40 bg-black/50 drawer-backdrop " + openClass(isOpen) }
-		onclick="toggleMobileSidebar()"
-		aria-hidden="true"
-	></div>
-	
-	<!-- Mobile sidebar drawer -->
-	<aside 
-		id="mobile-sidebar"
-		class={ "lg:hidden fixed left-0 top-0 z-50 h-full w-72 max-w-[85vw] bg-[var(--bg-primary)] border-r border-[var(--border)] overflow-y-auto p-4 sm:p-6 mobile-drawer " + openClass(isOpen) }
-		aria-label="Documentation navigation"
-	>
-		<!-- Close button -->
-		<button 
-			onclick="toggleMobileSidebar()"
-			class="absolute top-4 right-4 p-2 rounded-lg hover:bg-[var(--bg-tertiary)] transition-colors touch-target"
-			aria-label="Close navigation"
-		>
-			<svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="text-[var(--text-secondary)]"><path d="M18 6 6 18"/><path d="m6 6 12 12"/></svg>
-		</button>
-		
-		<div class="mt-8">
-			@SidebarContent(currentPath)
-		</div>
-	</aside>
-}
-
 templ SidebarContent(currentPath string) {
-	<div class="space-y-6 sm:space-y-8">
+	<div class="space-y-8">
 		<button 
 			data-action="open-search"
-			class="w-full flex items-center justify-between px-3 py-2.5 sm:py-2 mb-4 sm:mb-6 rounded-xl bg-[var(--bg-secondary)] border border-[var(--border)] text-sm text-[var(--text-secondary)] hover:border-[var(--accent-primary)]/50 transition-all group touch-target"
+			class="w-full flex items-center justify-between px-3 py-2 mb-6 rounded-xl bg-[var(--bg-secondary)] border border-[var(--border)] text-sm text-[var(--text-secondary)] hover:border-[var(--accent-primary)]/50 transition-all group"
 		>
 			<div class="flex items-center gap-2">
 				<svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="text-[var(--text-muted)] group-hover:text-[var(--accent-primary)]"><circle cx="11" cy="11" r="8"></circle><path d="m21 21-4.3-4.3"></path></svg>
 				<span>Search docs...</span>
 			</div>
-			<kbd class="hidden sm:inline text-[10px] font-sans opacity-50 px-1.5 py-0.5 rounded border border-[var(--border)] bg-[var(--bg-primary)]">⌘K</kbd>
+			<kbd class="text-[10px] font-sans opacity-50 px-1.5 py-0.5 rounded border border-[var(--border)] bg-[var(--bg-primary)]">⌘K</kbd>
 		</button>
 
 		@sidebarSection("Getting Started", []NavItem{
@@ -119,13 +87,13 @@ templ SidebarContent(currentPath string) {
 
 templ sidebarSection(title string, items []NavItem, currentPath string) {
 	<div>
-		<h4 class="text-xs font-bold uppercase tracking-widest text-[var(--text-muted)] mb-3 sm:mb-4">{ title }</h4>
-		<ul class="space-y-0.5 sm:space-y-1">
+		<h4 class="text-xs font-bold uppercase tracking-widest text-[var(--text-muted)] mb-4">{ title }</h4>
+		<ul class="space-y-1">
 			for _, item := range items {
 				<li>
 					<a 
 						href={ templ.SafeURL(item.Href) } 
-						class={ "block py-2 px-3 rounded-lg text-sm transition-all touch-target " + activeClass(isPathActive(currentPath, item.Href)) }
+						class={ "block py-2 px-3 rounded-lg text-sm transition-all " + activeClass(isPathActive(currentPath, item.Href)) }
 					>
 						{ item.Label }
 					</a>
@@ -140,13 +108,6 @@ func activeClass(active bool) string {
 		return "bg-[var(--accent-primary)]/10 text-[var(--accent-primary)] font-semibold border-l-2 border-[var(--accent-primary)] rounded-l-none"
 	}
 	return "text-[var(--text-secondary)] hover:text-[var(--text-primary)] hover:bg-[var(--bg-tertiary)]"
-}
-
-func openClass(isOpen bool) string {
-	if isOpen {
-		return "open"
-	}
-	return ""
 }
 
 func isPathActive(currentPath, targetPath string) bool {

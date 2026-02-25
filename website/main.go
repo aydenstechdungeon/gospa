@@ -34,6 +34,7 @@ func main() {
 		CompressState:    true,     // Compress WebSocket messages
 		StateDiffing:     true,     // Only send state diffs
 		EnableWebSocket:  true,
+		SimpleRuntime:    true,
 		WSHeartbeat:      30 * time.Second,
 		WSReconnectDelay: 1 * time.Second,
 		WSMaxReconnect:   5,
