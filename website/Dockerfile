@@ -7,24 +7,12 @@ RUN apk add --no-cache git ca-certificates tzdata
 
 WORKDIR /build
 
-# Copy root go.mod first (gospa module)
-COPY go.mod go.sum ./
-
-# Copy website go.mod (website module with replace directive)
-COPY website/go.mod website/go.sum ./website/
-
-# Download root dependencies
-RUN go mod download
-
-# Download website dependencies
-WORKDIR /build/website
-RUN go mod download
-
-# Copy entire project (needed for replace directive to work)
+# Copy entire project first (needed for replace directive to work)
 COPY . .
 
-# Build the website binary
-RUN CGO_ENABLED=0 GOOS=linux go build -ldflags="-s -w" -o /website .
+# Download dependencies and build
+WORKDIR /build/website
+RUN go mod download && CGO_ENABLED=0 GOOS=linux go build -ldflags="-s -w" -o /website .
 
 # Runtime stage
 FROM alpine:3.19
