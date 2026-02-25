@@ -7,22 +7,33 @@ templ Page() {
 		<header>
 			<h1 class="text-4xl font-bold tracking-tight mb-4 text-transparent bg-clip-text bg-gradient-to-r from-[var(--accent-primary)] to-[var(--accent-secondary)]">PostCSS Plugin</h1>
 			<p class="text-xl text-[var(--text-secondary)] leading-relaxed">
-				Advanced CSS processing with PostCSS, Tailwind CSS extensions, and autoprefixer support.
+				Advanced CSS processing with PostCSS and Tailwind CSS v4 integration.
 			</p>
 		</header>
 
 		<section class="space-y-6">
 			<h2 class="text-2xl font-bold border-b border-[var(--border)] pb-2">Installation</h2>
-			<p class="text-[var(--text-secondary)] mb-4">Enable the PostCSS plugin in your configuration:</p>
+			<p class="text-[var(--text-secondary)] mb-4">Add PostCSS to your project using the add command:</p>
+			@components.CodeBlock(`gospa add:postcss`, "bash", "terminal")
+			<p class="text-[var(--text-secondary)] mt-4">
+				This command installs PostCSS dependencies and creates a starter configuration file. The plugin integrates automatically with the build process through lifecycle hooks.
+			</p>
+		</section>
+
+		<section class="space-y-6">
+			<h2 class="text-2xl font-bold border-b border-[var(--border)] pb-2">Configuration</h2>
+			<p class="text-[var(--text-secondary)] mb-4">Configure PostCSS in your gospa.yaml:</p>
 			@components.CodeBlock(`plugins:
   postcss:
-    enabled: true
-    config: postcss.config.js
-    extensions:
+    input: ./styles/main.css      # Input CSS file (default: ./styles/main.css)
+    output: ./static/css/main.css # Output CSS file (default: ./static/css/main.css)
+    watch: true                   # Watch for changes in dev (default: true)
+    minify: true                  # Minify in production (default: true)
+    sourceMap: false              # Generate source maps (default: false)
+    plugins:                      # Additional Tailwind plugins
       - typography
       - forms
-      - aspect-ratio
-      - line-clamp`, "yaml", "gospa.yaml")
+      - aspect-ratio`, "yaml", "gospa.yaml")
 		</section>
 
 		<section class="space-y-6">
@@ -38,14 +49,24 @@ templ Page() {
 					</thead>
 					<tbody class="divide-y divide-[var(--border)]">
 						<tr>
+							<td class="px-6 py-4 mono text-[var(--accent-primary)] font-bold">gospa add:postcss</td>
+							<td class="px-6 py-4 text-[var(--text-muted)]">ap</td>
+							<td class="px-6 py-4 text-[var(--text-secondary)]">Install PostCSS deps and create config</td>
+						</tr>
+						<tr>
+							<td class="px-6 py-4 mono text-[var(--accent-primary)] font-bold">gospa postcss:build</td>
+							<td class="px-6 py-4 text-[var(--text-muted)]">pb</td>
+							<td class="px-6 py-4 text-[var(--text-secondary)]">Build CSS for production</td>
+						</tr>
+						<tr>
+							<td class="px-6 py-4 mono text-[var(--accent-primary)] font-bold">gospa postcss:watch</td>
+							<td class="px-6 py-4 text-[var(--text-muted)]">pw</td>
+							<td class="px-6 py-4 text-[var(--text-secondary)]">Watch and rebuild CSS on changes</td>
+						</tr>
+						<tr>
 							<td class="px-6 py-4 mono text-[var(--accent-primary)] font-bold">gospa postcss:config</td>
 							<td class="px-6 py-4 text-[var(--text-muted)]">pc</td>
 							<td class="px-6 py-4 text-[var(--text-secondary)]">Generate PostCSS configuration file</td>
-						</tr>
-						<tr>
-							<td class="px-6 py-4 mono text-[var(--accent-primary)] font-bold">gospa postcss:init</td>
-							<td class="px-6 py-4 text-[var(--text-muted)]">pi</td>
-							<td class="px-6 py-4 text-[var(--text-secondary)]">Initialize PostCSS with default plugins</td>
 						</tr>
 					</tbody>
 				</table>
@@ -53,22 +74,32 @@ templ Page() {
 		</section>
 
 		<section class="space-y-6">
-			<h2 class="text-2xl font-bold border-b border-[var(--border)] pb-2">Built-in Extensions</h2>
-			<div class="grid gap-4 md:grid-cols-2">
-				@extensionCard("Typography", "@tailwindcss/typography", "Beautiful typographic defaults with prose classes.")
-				@extensionCard("Forms", "@tailwindcss/forms", "Form element styling and normalization.")
-				@extensionCard("Aspect Ratio", "@tailwindcss/aspect-ratio", "Aspect ratio utilities for responsive media.")
-				@extensionCard("Line Clamp", "@tailwindcss/line-clamp", "Truncate text with line-clamp utilities.")
-				@extensionCard("Autoprefixer", "autoprefixer", "Automatic vendor prefixing for CSS.")
+			<h2 class="text-2xl font-bold border-b border-[var(--border)] pb-2">Lifecycle Hooks</h2>
+			<div class="grid gap-4 md:grid-cols-3">
+				@hookCard("BeforeDev", "Starts PostCSS in watch mode")
+				@hookCard("BeforeBuild", "Builds minified CSS for production")
+				@hookCard("AfterDev", "Stops the watch process gracefully")
 			</div>
 		</section>
 
 		<section class="space-y-6">
-			<h2 class="text-2xl font-bold border-b border-[var(--border)] pb-2">PostCSS Configuration</h2>
+			<h2 class="text-2xl font-bold border-b border-[var(--border)] pb-2">Available Plugins</h2>
+			<div class="grid gap-4 md:grid-cols-2">
+				@extensionCard("Typography", "tailwindcss/typography", "Beautiful typographic defaults with prose classes.")
+				@extensionCard("Forms", "tailwindcss/forms", "Form element styling and normalization.")
+				@extensionCard("Aspect Ratio", "tailwindcss/aspect-ratio", "Aspect ratio utilities for responsive media.")
+			</div>
+			<p class="text-sm text-[var(--text-muted)] mt-4">
+				Note: Container queries and line-clamp are built into Tailwind v4 and don't require separate plugins.
+			</p>
+		</section>
+
+		<section class="space-y-6">
+			<h2 class="text-2xl font-bold border-b border-[var(--border)] pb-2">Generated Configuration</h2>
+			<p class="text-[var(--text-secondary)] mb-4">The plugin generates a postcss.config.js file:</p>
 			@components.CodeBlock(`export default {
   plugins: {
-    'tailwindcss': {},
-    'autoprefixer': {},
+    '@tailwindcss/postcss': {},
     '@tailwindcss/typography': {},
     '@tailwindcss/forms': {},
     '@tailwindcss/aspect-ratio': {},
@@ -78,21 +109,27 @@ templ Page() {
 
 		<section class="space-y-6">
 			<h2 class="text-2xl font-bold border-b border-[var(--border)] pb-2">Usage Example</h2>
-			@components.CodeBlock(`/* Input CSS */
+			@components.CodeBlock(`/* Input CSS with Tailwind v4 syntax */
+@import 'tailwindcss';
+
+@theme {
+  --font-display: 'Inter', sans-serif;
+  --color-brand-500: oklch(0.7 0.2 150);
+}
+
+/* Use prose classes from typography plugin */
 .article {
   @apply prose prose-lg dark:prose-invert;
 }
 
+/* Use form classes from forms plugin */
 .form-input {
   @apply form-input rounded-lg border-gray-300;
 }
 
+/* Aspect ratio is built into Tailwind v4 */
 .video-container {
   @apply aspect-video w-full;
-}
-
-.truncated {
-  @apply line-clamp-3;
 }`, "css", "styles.css")
 		</section>
 
@@ -100,7 +137,7 @@ templ Page() {
 			<h2 class="text-2xl font-bold border-b border-[var(--border)] pb-2">Dependencies</h2>
 			<div class="rounded-xl border border-[var(--border)] bg-[var(--bg-secondary)] p-4">
 				<p class="text-[var(--text-secondary)] mb-3">Bun packages (auto-installed):</p>
-				<code class="text-sm text-[var(--accent-primary)]">autoprefixer, @tailwindcss/typography, @tailwindcss/forms, @tailwindcss/aspect-ratio, @tailwindcss/line-clamp</code>
+				<code class="text-sm text-[var(--accent-primary)]">postcss-cli, tailwindcss/postcss, tailwindcss/typography, tailwindcss/forms, tailwindcss/aspect-ratio</code>
 			</div>
 		</section>
 	</div>
@@ -110,6 +147,13 @@ templ extensionCard(name string, pkg string, description string) {
 	<div class="p-4 rounded-xl border border-[var(--border)] bg-[var(--bg-secondary)]">
 		<h3 class="font-bold mb-1">{ name }</h3>
 		<code class="text-xs text-[var(--text-muted)] block mb-2">{ pkg }</code>
+		<p class="text-sm text-[var(--text-muted)]">{ description }</p>
+	</div>
+}
+
+templ hookCard(name string, description string) {
+	<div class="p-4 rounded-xl border border-[var(--border)] bg-[var(--bg-secondary)]">
+		<h3 class="font-bold mb-1 text-[var(--accent-primary)]">{ name }</h3>
 		<p class="text-sm text-[var(--text-muted)]">{ description }</p>
 	</div>
 }

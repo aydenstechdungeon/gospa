@@ -69,23 +69,38 @@ type Dependency struct {
 
 ### Tailwind CSS
 
-Adds Tailwind CSS v4 support with CSS-first configuration.
+Adds Tailwind CSS v4 support with CSS-first configuration, content scanning, and watch mode.
 
 **Installation:**
 ```bash
 gospa add tailwind
+# or
+gospa add:tailwind
 ```
 
 **Configuration (`gospa.yaml`):**
 ```yaml
 plugins:
   tailwind:
-    input: ./styles/main.css
-    output: ./static/css/main.css
+    input: ./styles/main.css      # Input CSS file (default: ./styles/main.css)
+    output: ./static/css/main.css # Output CSS file (default: ./static/css/main.css)
+    content:                      # Content paths for class scanning
+      - ./routes/**/*.templ
+      - ./components/**/*.templ
+      - ./views/**/*.go
+    minify: true                  # Minify in production (default: true)
 ```
 
+**CLI Commands:**
+| Command | Alias | Description |
+|---------|-------|-------------|
+| `add:tailwind` | `at` | Install Tailwind deps and create starter files |
+| `tailwind:build` | `tb` | Build CSS for production (with minification) |
+| `tailwind:watch` | `tw` | Watch and rebuild CSS on changes |
+
 **Usage:**
-Create `styles/main.css`:
+1. Run `gospa add:tailwind` to install dependencies and create starter files
+2. Create `styles/main.css`:
 ```css
 @import 'tailwindcss';
 
@@ -94,45 +109,82 @@ Create `styles/main.css`:
     --color-primary: oklch(0.6 0.2 250);
 }
 ```
+3. The plugin automatically runs during `gospa dev` (watch mode) and `gospa build` (production)
+
+**Lifecycle Hooks:**
+- `BeforeDev`: Starts Tailwind CLI in watch mode
+- `BeforeBuild`: Builds minified CSS for production
+- `AfterDev`: Stops the watch process gracefully
 
 **Dependencies:**
-- `tailwindcss` (bun)
+- `@tailwindcss/cli` (bun) - Tailwind CSS v4 CLI
 
 ---
 
 ### PostCSS
 
-PostCSS processing with Tailwind CSS extensions.
+PostCSS processing with Tailwind CSS v4 integration and additional plugins.
 
 **Installation:**
 ```bash
 gospa add postcss
+# or
+gospa add:postcss
 ```
 
 **Configuration:**
 ```yaml
 plugins:
   postcss:
-    input: ./styles/main.css
-    output: ./static/css/main.css
-    plugins:
-      - typography
-      - forms
-      - aspect-ratio
-      - line-clamp
+    input: ./styles/main.css      # Input CSS file (default: ./styles/main.css)
+    output: ./static/css/main.css # Output CSS file (default: ./static/css/main.css)
+    watch: true                   # Watch mode in dev (default: true)
+    minify: true                  # Minify in production (default: true)
+    source_map: false             # Generate source maps (default: false)
+    plugins:                      # PostCSS plugins to enable
+      - typography                # @tailwindcss/typography
+      - forms                     # @tailwindcss/forms
+      - aspect-ratio              # @tailwindcss/aspect-ratio
 ```
 
 **CLI Commands:**
 | Command | Alias | Description |
 |---------|-------|-------------|
+| `add:postcss` | `ap` | Install PostCSS deps and create config |
+| `postcss:build` | `pb` | Build CSS for production |
+| `postcss:watch` | `pw` | Watch and rebuild CSS on changes |
 | `postcss:config` | `pc` | Generate PostCSS configuration file |
-| `postcss:init` | `pi` | Initialize PostCSS with default plugins |
+
+**Usage:**
+1. Run `gospa add:postcss` to install dependencies and create `postcss.config.js`
+2. The plugin automatically processes CSS during `gospa dev` and `gospa build`
+
+**Generated `postcss.config.js`:**
+```javascript
+export default {
+  plugins: {
+    '@tailwindcss/postcss': {},
+    '@tailwindcss/typography': {},
+    '@tailwindcss/forms': {},
+    '@tailwindcss/aspect-ratio': {},
+  },
+};
+```
+
+**Lifecycle Hooks:**
+- `BeforeDev`: Starts PostCSS in watch mode
+- `BeforeBuild`: Processes CSS for production
+- `AfterDev`: Stops the watch process gracefully
 
 **Dependencies:**
 - `postcss` (bun)
+- `postcss-cli` (bun)
 - `@tailwindcss/postcss` (bun)
 - `@tailwindcss/typography` (bun, optional)
 - `@tailwindcss/forms` (bun, optional)
+- `@tailwindcss/aspect-ratio` (bun, optional)
+
+**Note:** Container queries and line-clamp are built into Tailwind CSS v4, so separate plugins are no longer needed for those features.
 
 ---
 

@@ -323,8 +323,8 @@ GoSPA includes a powerful plugin system for extending build and development work
 
 | Plugin | Description | Commands |
 |--------|-------------|----------|
-| **Tailwind** | CSS processing with Tailwind CSS v4 | `gospa add:tailwind` |
-| **PostCSS** | Advanced CSS with plugins (autoprefixer, typography, forms) | `gospa postcss:config` (alias: `pc`), `gospa postcss:init` (alias: `pi`) |
+| **Tailwind** | CSS processing with Tailwind CSS v4 | `gospa add:tailwind` (alias: `at`), `gospa tailwind:build` (alias: `tb`), `gospa tailwind:watch` (alias: `tw`) |
+| **PostCSS** | Advanced CSS with plugins (autoprefixer, typography, forms) | `gospa add:postcss` (alias: `ap`), `gospa postcss:build` (alias: `pb`), `gospa postcss:watch` (alias: `pw`), `gospa postcss:config` (alias: `pc`) |
 | **Image** | Image optimization and responsive variants | `gospa image:optimize` (alias: `io`), `gospa image:clean` (alias: `ic`), `gospa image:sizes` (alias: `is`) |
 | **Validation** | Form validation (Valibot client + Go validator server) | `gospa validation:generate` (alias: `vg`), `gospa validation:create` (alias: `vc`), `gospa validation:list` (alias: `vl`) |
 | **SEO** | Sitemap, robots.txt, meta tags, structured data | `gospa seo:generate` (alias: `sg`), `gospa seo:meta` (alias: `sm`), `gospa seo:structured` (alias: `ss`) |
