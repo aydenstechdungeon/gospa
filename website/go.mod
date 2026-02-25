@@ -2,8 +2,6 @@ module website
 
 go 1.24.0
 
-replace github.com/aydenstechdungeon/gospa => ..
-
 require (
 	github.com/a-h/templ v0.3.977
 	github.com/aydenstechdungeon/gospa v0.1.0
