@@ -67,8 +67,9 @@ func cacheMiddleware(c *fiber.Ctx) error {
 	// Apply cache headers for static assets
 	isStatic := strings.HasPrefix(path, "/static/")
 	isImage := isImageFile(path)
+	isFont := isFontFile(path)
 
-	if isStatic || isImage {
+	if isStatic || isImage || isFont {
 		// Special handling for docs search index - aggressive caching with immutable
 		if strings.HasSuffix(path, "/docs_search_index.json") {
 			c.Set("Cache-Control", "public, max-age=31536000, immutable")
@@ -87,8 +88,8 @@ func cacheMiddleware(c *fiber.Ctx) error {
 			return c.Next()
 		}
 
-		// Static assets with content hash: 1 year cache, immutable
-		if hasContentHash(path) {
+		// Fonts and static assets with content hash: 1 year cache, immutable
+		if isFont || hasContentHash(path) {
 			c.Set("Cache-Control", "public, max-age=31536000, immutable")
 		} else if isImage {
 			// Image files without hash: 1 week cache with revalidation
@@ -138,6 +139,12 @@ func isImageFile(path string) bool {
 		}
 	}
 	return false
+}
+
+// isFontFile checks if the path is a font file
+func isFontFile(path string) bool {
+	lower := strings.ToLower(path)
+	return strings.HasSuffix(lower, ".woff2")
 }
 
 // hasContentHash checks if filename contains a content hash pattern

@@ -79,12 +79,9 @@ templ RootLayout(title string, children templ.Component, runtimePath string, pat
 			<!-- Compiled Tailwind CSS -->
 			<link rel="stylesheet" href="/static/css/main.css" />
 			
-			<!-- Google Fonts - Optimized with display=swap for no FOIT -->
-			<link rel="preconnect" href="https://fonts.googleapis.com" />
-			<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
-			<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500;600&display=swap" rel="stylesheet" />
-			<!-- Preload critical Inter font for faster initial render -->
-			<link rel="preload" href="https://fonts.gstatic.com/s/inter/v13/UcCO3FwrK3iLTeHuS_fvQtMwCp50KnMw2boKoduKmMEVuLyfAZ9hiJ-Ek-_EeA.woff2" as="font" type="font/woff2" crossorigin />
+			<!-- Self-hosted fonts for better performance and LCP -->
+			<link rel="preload" href="/static/fonts/InterVariable.woff2" as="font" type="font/woff2" crossorigin="anonymous" />
+			<link rel="preload" href="/static/fonts/JetBrainsMono-Regular.woff2" as="font" type="font/woff2" crossorigin="anonymous" />
 			
 			<script src="/static/docs.js" defer></script>
 			
