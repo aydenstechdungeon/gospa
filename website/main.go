@@ -54,7 +54,13 @@ func main() {
 		app.Use(cacheMiddleware)
 	}
 
-	port := getEnvString("PORT", ":3000")
+	port := os.Getenv("PORT")
+	if port == "" {
+		port = ":3000"
+	} else if !strings.HasPrefix(port, ":") {
+		port = ":" + port
+	}
+
 	if err := app.Run(port); err != nil {
 		log.Fatal(err)
 	}
@@ -219,13 +225,6 @@ func isAlphanumeric(s string) bool {
 		}
 	}
 	return true
-}
-
-func getEnvString(key, defaultVal string) string {
-	if val := os.Getenv(key); val != "" {
-		return val
-	}
-	return defaultVal
 }
 
 func getEnvBool(key string, defaultVal bool) bool {
