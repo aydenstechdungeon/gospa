@@ -8,6 +8,7 @@ require (
 	github.com/fsnotify/fsnotify v1.9.0
 	github.com/gofiber/fiber/v2 v2.52.11
 	github.com/gofiber/websocket/v2 v2.2.1
+	github.com/redis/go-redis/v9 v9.18.0
 	github.com/skip2/go-qrcode v0.0.0-20200617195104-da1b6568686e
 	golang.org/x/image v0.36.0
 )
@@ -21,7 +22,6 @@ require (
 	github.com/mattn/go-colorable v0.1.13 // indirect
 	github.com/mattn/go-isatty v0.0.20 // indirect
 	github.com/mattn/go-runewidth v0.0.16 // indirect
-	github.com/redis/go-redis/v9 v9.18.0 // indirect
 	github.com/rivo/uniseg v0.2.0 // indirect
 	github.com/savsgio/gotils v0.0.0-20230208104028-c358bd845dee // indirect
 	github.com/valyala/bytebufferpool v1.0.0 // indirect

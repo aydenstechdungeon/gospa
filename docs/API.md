@@ -36,10 +36,6 @@ app.RegisterRoutes()  // Registers Fiber routes
 app.Use(middleware)   // Adds global middleware
 group := app.Group("/api") // Creates route group
 
-// Real-time
-app.HandleSSE("/_sse", broker)
-app.HandleWS("/_ws", config)
-
 // Access internals
 hub := app.GetHub()
 router := app.GetRouter()
@@ -93,10 +89,10 @@ type Config struct {
 	CacheTemplates bool // Cache compiled templates
 	SimpleRuntime  bool // Use lightweight runtime without DOMPurify
 
-	// WebSocket Options — NOTE: WSReconnectDelay/WSMaxReconnect/WSHeartbeat are planned, not yet implemented.
-	WSReconnectDelay time.Duration
-	WSMaxReconnect   int
-	WSHeartbeat      time.Duration
+	// WebSocket Options
+	WSReconnectDelay time.Duration // Initial reconnect delay (default 1s), passed to client runtime
+	WSMaxReconnect   int           // Max reconnect attempts (default 10), passed to client runtime
+	WSHeartbeat      time.Duration // Heartbeat ping interval (default 30s), passed to client runtime
 
 	// Hydration Options
 	HydrationMode    string // "immediate" | "lazy" | "visible" | "idle" (default: "immediate")
@@ -135,6 +131,9 @@ type Config struct {
 - `SimpleRuntime`: Reduces client bundle size by ~6KB by removing DOMPurify. **Only enable if all content is trusted.**
 - `SimpleRuntimeSVGs`: Allows SVG elements in the simple runtime sanitizer. **Security risk** — only enable for fully trusted content.
 - `HydrationMode`: Controls when components become interactive. Values: `"immediate"` (default), `"lazy"`, `"visible"`, `"idle"`.
+- `WSReconnectDelay`: Initial reconnect delay passed to the client WebSocket runtime. Default: 1s.
+- `WSMaxReconnect`: Maximum reconnect attempts passed to the client. Default: 10.
+- `WSHeartbeat`: Heartbeat ping interval passed to the client. Default: 30s.
 - `SSR`: **Planned** — not yet implemented.
 - `EnableCSRF`: Enables CSRF protection. Must wire up **both** `CSRFSetTokenMiddleware()` (issues cookie) **and** `CSRFTokenMiddleware()` (validates).
 - `SSGCacheMaxEntries`: Caps the SSG page cache with FIFO eviction. Default 500.

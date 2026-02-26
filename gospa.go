@@ -13,6 +13,7 @@ import (
 	"log"
 	"net/http"
 	"os"
+	"strings"
 	"sync"
 
 	"time"
@@ -75,12 +76,11 @@ type Config struct {
 	// WARNING: Only enable if your content is fully trusted and never user-generated.
 	SimpleRuntimeSVGs bool
 
-	// WebSocket Options
-	// NOTE: WSReconnectDelay, WSMaxReconnect, WSHeartbeat are planned but not yet implemented.
-	// The client-side WebSocket reconnect logic uses its own defaults (1s delay, 10 max attempts, 30s heartbeat).
-	WSReconnectDelay time.Duration // Initial reconnect delay (planned)
-	WSMaxReconnect   int           // Max reconnect attempts (planned)
-	WSHeartbeat      time.Duration // Heartbeat interval (planned)
+	// WebSocket Options — these values are passed directly to the client runtime's init() call.
+	// Defaults: WSReconnectDelay=1s, WSMaxReconnect=10, WSHeartbeat=30s.
+	WSReconnectDelay time.Duration // Initial reconnect delay (default 1s)
+	WSMaxReconnect   int           // Max reconnect attempts (default 10)
+	WSHeartbeat      time.Duration // Heartbeat ping interval (default 30s)
 
 	// Hydration Options
 	// HydrationMode controls when components become interactive.
@@ -318,6 +318,26 @@ func (a *App) setupMiddleware() {
 	spaConfig.DevMode = a.Config.DevMode
 	spaConfig.RuntimeScript = a.Config.RuntimeScript
 	a.Fiber.Use(fiber.SPAMiddleware(spaConfig))
+
+	// DevMode error overlay: for HTML-accepting requests that error, render the
+	// rich HTML overlay instead of a plain JSON error.
+	if a.Config.DevMode {
+		overlay := fiber.NewErrorOverlay(fiber.DefaultErrorOverlayConfig())
+		a.Fiber.Use(func(c *fiberpkg.Ctx) error {
+			err := c.Next()
+			if err == nil {
+				return nil
+			}
+			accept := string(c.Request().Header.Peek("Accept"))
+			if strings.Contains(accept, "text/html") {
+				overlayHTML := overlay.RenderOverlay(err, nil)
+				c.Status(fiberpkg.StatusInternalServerError)
+				c.Set("Content-Type", "text/html; charset=utf-8")
+				return c.SendString(overlayHTML)
+			}
+			return err
+		})
+	}
 }
 
 // setupRoutes configures the routes.
@@ -511,6 +531,19 @@ func (a *App) renderRoute(c *fiberpkg.Ctx, route *routing.Route) error {
 	// Look up the root layout
 	rootLayoutFunc := routing.GetRootLayout()
 	if rootLayoutFunc != nil {
+		// Compute WS reconnect config with defaults for root layout props
+		wsRD := int(a.Config.WSReconnectDelay.Milliseconds())
+		if wsRD <= 0 {
+			wsRD = 1000
+		}
+		wsMR := a.Config.WSMaxReconnect
+		if wsMR <= 0 {
+			wsMR = 10
+		}
+		wsHB := int(a.Config.WSHeartbeat.Milliseconds())
+		if wsHB <= 0 {
+			wsHB = 30000
+		}
 		props := map[string]interface{}{
 			"appName":          a.Config.AppName,
 			"runtimePath":      a.getRuntimePath(),
@@ -519,6 +552,9 @@ func (a *App) renderRoute(c *fiberpkg.Ctx, route *routing.Route) error {
 			"wsUrl":            a.getWSUrl(c),
 			"hydrationMode":    a.Config.HydrationMode,
 			"hydrationTimeout": a.Config.HydrationTimeout,
+			"wsReconnectDelay": wsRD,
+			"wsMaxReconnect":   wsMR,
+			"wsHeartbeat":      wsHB,
 		}
 		for k, v := range params {
 			props[k] = v
@@ -568,6 +604,20 @@ func (a *App) renderRoute(c *fiberpkg.Ctx, route *routing.Route) error {
 	appName := a.Config.AppName
 	devMode := a.Config.DevMode
 
+	// Compute WS reconnect config with defaults
+	wsReconnectDelay := int(a.Config.WSReconnectDelay.Milliseconds())
+	if wsReconnectDelay <= 0 {
+		wsReconnectDelay = 1000
+	}
+	wsMaxReconnect := a.Config.WSMaxReconnect
+	if wsMaxReconnect <= 0 {
+		wsMaxReconnect = 10
+	}
+	wsHeartbeat := int(a.Config.WSHeartbeat.Milliseconds())
+	if wsHeartbeat <= 0 {
+		wsHeartbeat = 30000
+	}
+
 	c.Context().SetBodyStreamWriter(func(w *bufio.Writer) {
 		// Write HTML wrapper with main tag for SPA navigation
 		_, _ = fmt.Fprint(w, `<!DOCTYPE html><html lang="en" data-gospa-auto><head><meta charset="UTF-8"><meta name="viewport" content="width=device-width, initial-scale=1.0"><title>`)
@@ -591,12 +641,15 @@ runtime.init({
 	wsUrl: '%s',
 	debug: %v,
 	simpleRuntimeSVGs: %v,
+	wsReconnectDelay: %d,
+	wsMaxReconnect: %d,
+	wsHeartbeat: %d,
 	hydration: {
 		mode: '%s',
 		timeout: %d
 	}
 });
-</script>`, runtimePath, wsUrl, devMode, a.Config.SimpleRuntimeSVGs, a.Config.HydrationMode, a.Config.HydrationTimeout)
+</script>`, runtimePath, wsUrl, devMode, a.Config.SimpleRuntimeSVGs, wsReconnectDelay, wsMaxReconnect, wsHeartbeat, a.Config.HydrationMode, a.Config.HydrationTimeout)
 
 		_, _ = fmt.Fprint(w, `</body></html>`)
 		w.Flush()

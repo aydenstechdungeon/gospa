@@ -5,7 +5,9 @@ import (
 	"encoding/hex"
 	"encoding/json"
 	"fmt"
+	"log"
 	"strings"
+	"time"
 
 	"github.com/a-h/templ"
 	"github.com/aydenstechdungeon/gospa/embed"
@@ -401,12 +403,20 @@ func CORSMiddleware(allowedOrigins []string) gofiber.Handler {
 	}
 }
 
-// RequestLoggerMiddleware logs requests.
+// RequestLoggerMiddleware logs requests with method, path, status code, and duration.
+// Output format: [METHOD] /path STATUS duration
+// For structured logging, use Fiber's built-in logger middleware instead.
 func RequestLoggerMiddleware() gofiber.Handler {
 	return func(c *gofiber.Ctx) error {
-		// Log request details
-		// In production, use a proper logging library
-		return c.Next()
+		start := time.Now()
+		err := c.Next()
+		log.Printf("[%s] %s %d %v",
+			c.Method(),
+			c.Path(),
+			c.Response().StatusCode(),
+			time.Since(start),
+		)
+		return err
 	}
 }
 

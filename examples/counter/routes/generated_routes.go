@@ -17,10 +17,10 @@ func init() {
 	// Register layouts
 	routing.RegisterLayout("/", func(children templ.Component, props map[string]interface{}) templ.Component {
 		return Layout(func() string {
-		if v, ok := props["title"].(string); ok {
-			return v
-		}
-		return ""
-	}(), children)
+			if v, ok := props["title"].(string); ok {
+				return v
+			}
+			return ""
+		}(), children)
 	})
 }
