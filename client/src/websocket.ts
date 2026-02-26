@@ -9,21 +9,23 @@ export type ConnectionState = 'connecting' | 'connected' | 'disconnecting' | 'di
 export type MessageType = 'init' | 'update' | 'sync' | 'error' | 'ping' | 'pong' | 'action';
 
 export interface StateMessage {
-	type: MessageType;
+	type: string | 'init' | 'update' | 'sync' | 'error' | 'ping' | 'pong' | 'action' | 'patch' | 'compressed';
 	componentId?: string;
 	action?: string;
 	data?: Record<string, unknown>;
 	payload?: Record<string, unknown>;
 	state?: Record<string, unknown>; // Server global state from SendState()
 	diff?: Record<string, unknown>;
+	patch?: Record<string, unknown>;
+	compressed?: boolean;
 	error?: string;
 	timestamp?: number;
 	sessionToken?: string;
 	clientId?: string;
+	key?: string;
+	value?: unknown;
+	success?: boolean;
 }
-
-// Valid message types for validation
-const VALID_MESSAGE_TYPES: Set<string> = new Set(['init', 'update', 'sync', 'error', 'ping', 'pong', 'action']);
 
 // Validate WebSocket message structure
 function validateMessage(raw: unknown): StateMessage | null {
@@ -33,16 +35,20 @@ function validateMessage(raw: unknown): StateMessage | null {
 
 	const msg = raw as Record<string, unknown>;
 
-	// Required: type field must be a valid message type
-	if (typeof msg.type !== 'string' || !VALID_MESSAGE_TYPES.has(msg.type)) {
+	// Required: type field must be a string
+	if (typeof msg.type !== 'string') {
 		return null;
 	}
 
 	// Validate optional fields have correct types
-	const validated: StateMessage = { type: msg.type as MessageType };
+	const validated: StateMessage = { type: msg.type as any };
 
 	if (typeof msg.componentId === 'string') validated.componentId = msg.componentId;
 	if (typeof msg.action === 'string') validated.action = msg.action;
+	if (typeof msg.key === 'string') validated.key = msg.key;
+	if (msg.value !== undefined) validated.value = msg.value;
+	if (typeof msg.success === 'boolean') validated.success = msg.success;
+
 	if (msg.data && typeof msg.data === 'object' && !Array.isArray(msg.data)) {
 		validated.data = msg.data as Record<string, unknown>;
 	}
@@ -55,6 +61,10 @@ function validateMessage(raw: unknown): StateMessage | null {
 	if (msg.diff && typeof msg.diff === 'object' && !Array.isArray(msg.diff)) {
 		validated.diff = msg.diff as Record<string, unknown>;
 	}
+	if (msg.patch && typeof msg.patch === 'object' && !Array.isArray(msg.patch)) {
+		validated.patch = msg.patch as Record<string, unknown>;
+	}
+	if (typeof msg.compressed === 'boolean') validated.compressed = msg.compressed;
 	if (typeof msg.error === 'string') validated.error = msg.error;
 	if (typeof msg.timestamp === 'number') validated.timestamp = msg.timestamp;
 	if (typeof msg.sessionToken === 'string') validated.sessionToken = msg.sessionToken;
@@ -324,7 +334,9 @@ export class WSClient {
 			// SECURITY: Validate message structure before processing
 			const message = validateMessage(raw);
 			if (!message) {
-				console.warn('[GoSPA] Received invalid WebSocket message, ignoring');
+				// We use console.debug to avoid spamming the console when developers 
+				// broadcast custom non-JSON messages via app.Broadcast()
+				console.debug('[GoSPA] Received invalid WebSocket message, ignoring:', raw);
 				return;
 			}
 

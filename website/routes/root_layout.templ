@@ -79,9 +79,7 @@ templ RootLayout(title string, children templ.Component, runtimePath string, pat
 			<!-- Compiled Tailwind CSS -->
 			<link rel="stylesheet" href="/static/css/main.css" />
 			
-			<!-- Self-hosted fonts for better performance and LCP -->
-			<link rel="preload" href="/static/fonts/InterVariable.woff2" as="font" type="font/woff2" crossorigin="anonymous" />
-			<link rel="preload" href="/static/fonts/JetBrainsMono-Regular.woff2" as="font" type="font/woff2" crossorigin="anonymous" />
+			<!-- Self-hosted fonts are loaded via main.css, preloading removed to prevent unused warnings -->
 			
 			<script src="/static/docs.js" defer></script>
 			

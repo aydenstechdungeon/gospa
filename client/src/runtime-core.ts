@@ -136,6 +136,12 @@ function handleServerMessage(message: StateMessage): void {
 				}
 			}
 			break;
+		case 'patch':
+			if (message.patch) {
+				const diffObj = message.patch as Record<string, unknown>;
+				globalState.fromJSON(diffObj);
+			}
+			break;
 		case 'update':
 			if (message.componentId && message.diff) {
 				const component = components.get(message.componentId);
@@ -145,6 +151,15 @@ function handleServerMessage(message: StateMessage): void {
 		case 'sync':
 			if (message.data) {
 				globalState.fromJSON(message.data);
+			} else if (message.key !== undefined && message.value !== undefined) {
+				const scopedKey = message.key as string;
+				const componentId = message.componentId as string;
+				if (componentId) {
+					const component = components.get(componentId);
+					if (component) component.states.set(scopedKey, message.value);
+				} else {
+					globalState.set(scopedKey, message.value);
+				}
 			}
 			break;
 		case 'error':
