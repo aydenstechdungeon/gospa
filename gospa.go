@@ -7,6 +7,7 @@ import (
 	"bytes"
 	"context"
 	"crypto/sha256"
+	"encoding/binary"
 	"fmt"
 	"io"
 	"io/fs"
@@ -182,6 +183,26 @@ func (a *App) getWSUrl(c *fiberpkg.Ctx) string {
 type ssgEntry struct {
 	html      []byte
 	createdAt time.Time
+}
+
+// encodeSsgEntry encodes an SSG entry into bytes for external storage.
+func encodeSsgEntry(entry ssgEntry) []byte {
+	buf := make([]byte, 8+len(entry.html))
+	binary.LittleEndian.PutUint64(buf[0:8], uint64(entry.createdAt.UnixNano()))
+	copy(buf[8:], entry.html)
+	return buf
+}
+
+// decodeSsgEntry decodes bytes into an SSG entry.
+func decodeSsgEntry(data []byte) (ssgEntry, bool) {
+	if len(data) < 8 {
+		return ssgEntry{}, false
+	}
+	createdAtNano := binary.LittleEndian.Uint64(data[0:8])
+	return ssgEntry{
+		html:      data[8:],
+		createdAt: time.Unix(0, int64(createdAtNano)),
+	}, true
 }
 
 // isrSemaphore limits concurrent ISR background revalidations.
@@ -501,14 +522,23 @@ func (a *App) renderRoute(c *fiberpkg.Ctx, route *routing.Route) error {
 
 	// Quick SSG cache check — serve without building layout chain.
 	if a.Config.CacheTemplates && effStrategy == routing.StrategySSG {
-		a.ssgCacheMu.RLock()
-		if entry, ok := a.ssgCache[cacheKey]; ok {
+		var entry ssgEntry
+		var hit bool
+		if a.Config.Storage != nil && !a.Config.Prefork {
+			if data, err := a.Config.Storage.Get("gospa:ssg:" + cacheKey); err == nil {
+				entry, hit = decodeSsgEntry(data)
+			}
+		} else {
+			a.ssgCacheMu.RLock()
+			entry, hit = a.ssgCache[cacheKey]
 			a.ssgCacheMu.RUnlock()
+		}
+
+		if hit {
 			c.Set("Content-Type", "text/html")
 			c.Set("Cache-Control", "public, max-age=31536000, immutable")
 			return c.Send(entry.html)
 		}
-		a.ssgCacheMu.RUnlock()
 	}
 
 	// Quick ISR cache check — serve from cache (possibly stale) without rebuild.
@@ -522,9 +552,17 @@ func (a *App) renderRoute(c *fiberpkg.Ctx, route *routing.Route) error {
 			ttlSec = 1
 		}
 
-		a.ssgCacheMu.RLock()
-		entry, hit := a.ssgCache[cacheKey]
-		a.ssgCacheMu.RUnlock()
+		var entry ssgEntry
+		var hit bool
+		if a.Config.Storage != nil && !a.Config.Prefork {
+			if data, err := a.Config.Storage.Get("gospa:ssg:" + cacheKey); err == nil {
+				entry, hit = decodeSsgEntry(data)
+			}
+		} else {
+			a.ssgCacheMu.RLock()
+			entry, hit = a.ssgCache[cacheKey]
+			a.ssgCacheMu.RUnlock()
+		}
 
 		if hit {
 			age := time.Since(entry.createdAt)
@@ -560,9 +598,18 @@ func (a *App) renderRoute(c *fiberpkg.Ctx, route *routing.Route) error {
 
 	// Quick PPR shell check.
 	if a.Config.CacheTemplates && effStrategy == routing.StrategyPPR {
-		a.pprShellMu.RLock()
-		shell, shellHit := a.pprShellCache[cacheKey]
-		a.pprShellMu.RUnlock()
+		var shell []byte
+		var shellHit bool
+		if a.Config.Storage != nil && !a.Config.Prefork {
+			if data, err := a.Config.Storage.Get("gospa:ppr:" + cacheKey); err == nil {
+				shell = data
+				shellHit = true
+			}
+		} else {
+			a.pprShellMu.RLock()
+			shell, shellHit = a.pprShellCache[cacheKey]
+			a.pprShellMu.RUnlock()
+		}
 
 		if shellHit {
 			result, err := a.applyPPRSlots(route, shell, c.Path(), opts)
@@ -647,9 +694,16 @@ func (a *App) renderRoute(c *fiberpkg.Ctx, route *routing.Route) error {
 				var shellOk bool
 				for i := 0; i < 100; i++ {
 					time.Sleep(10 * time.Millisecond)
-					a.pprShellMu.RLock()
-					shellHTML, shellOk = a.pprShellCache[cacheKey]
-					a.pprShellMu.RUnlock()
+					if a.Config.Storage != nil && !a.Config.Prefork {
+						if data, err := a.Config.Storage.Get("gospa:ppr:" + cacheKey); err == nil {
+							shellHTML = data
+							shellOk = true
+						}
+					} else {
+						a.pprShellMu.RLock()
+						shellHTML, shellOk = a.pprShellCache[cacheKey]
+						a.pprShellMu.RUnlock()
+					}
 					if shellOk {
 						break
 					}
@@ -878,6 +932,12 @@ func (a *App) buildPageHTML(ctx context.Context, route *routing.Route, params ma
 
 // storeSsgEntry writes html into the shared ssgCache with FIFO eviction.
 func (a *App) storeSsgEntry(key string, html []byte) {
+	if a.Config.Storage != nil && !a.Config.Prefork {
+		entry := ssgEntry{html: html, createdAt: time.Now()}
+		_ = a.Config.Storage.Set("gospa:ssg:"+key, encodeSsgEntry(entry), 0)
+		return
+	}
+
 	a.ssgCacheMu.Lock()
 	defer a.ssgCacheMu.Unlock()
 	maxEntries := a.Config.SSGCacheMaxEntries
@@ -897,6 +957,11 @@ func (a *App) storeSsgEntry(key string, html []byte) {
 
 // storePprShell writes a PPR static shell into the pprShellCache with FIFO eviction.
 func (a *App) storePprShell(key string, shell []byte) {
+	if a.Config.Storage != nil && !a.Config.Prefork {
+		_ = a.Config.Storage.Set("gospa:ppr:"+key, shell, 0)
+		return
+	}
+
 	a.pprShellMu.Lock()
 	defer a.pprShellMu.Unlock()
 	maxEntries := a.Config.SSGCacheMaxEntries

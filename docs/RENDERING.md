@@ -49,7 +49,9 @@ routing.RegisterPageWithOptions("/about", aboutPage, routing.RouteOptions{
 ```go
 app := gospa.New(gospa.Config{
     CacheTemplates:     true,
-    SSGCacheMaxEntries: 500, // FIFO eviction at 500 entries (default)
+    SSGCacheMaxEntries: 500, // FIFO eviction at 500 entries (default for in-memory)
+    // Optional: Configure an external store like Redis to share cache across processes
+    Storage: redisstore.NewStore(redisClient),
 })
 ```
 
@@ -91,7 +93,7 @@ app := gospa.New(gospa.Config{
 | Cache hit, age ≥ TTL | Serve stale cache immediately; background goroutine re-renders and updates cache |
 | Multiple simultaneous stale requests | Only **one** background goroutine is launched (deduplicated via `sync.Map`) |
 
-> **Prefork warning:** ISR cache is in-memory and per-process. With `Prefork: true` each child process maintains its own cache. TTL-based revalidation still works correctly per process, but cache entries are not shared between processes. For shared ISR, implement an external cache via a middleware plugin.
+> **Prefork warning:** By default, ISR cache is in-memory and per-process. With `Prefork: true` each child process maintains its own cache. TTL-based revalidation still works correctly per process, but cache entries are not shared between processes. For shared ISR, configure an external `Storage` backend (e.g., Redis).
 
 ---
 
@@ -238,7 +240,9 @@ All three caching strategies (SSG, ISR, PPR shells) share a unified **FIFO evict
 
 ## Interaction with Prefork
 
-In Prefork mode (`Prefork: true`), each child process has its own independent in-memory cache. Cache entries are not shared between processes. ISR TTLs fire independently per process. There is no current support for a shared external PPR/ISR cache — consider a CDN with `s-maxage` / `stale-while-revalidate` headers for edge caching in that scenario.
+In Prefork mode (`Prefork: true`), if no external `Storage` is configured, each child process has its own independent in-memory cache. Cache entries are not shared between processes. ISR TTLs fire independently per process.
+
+To support shared SSG, ISR, and PPR caching across Prefork child processes or horizontally scaled clusters, configure the `Storage` option in `gospa.Config` with a distributed backend such as Redis. This ensures consistent cache hits and dedicates a single background revalidation per route across the entire cluster.
 
 ---
 

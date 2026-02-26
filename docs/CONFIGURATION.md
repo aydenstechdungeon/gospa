@@ -82,7 +82,7 @@ app := gospa.New(gospa.Config{
 | Option | Type | Default | Description |
 |--------|------|---------|-------------|
 | `Prefork` | `bool` | `false` | Enables Fiber Prefork. WARNING: Without external storage, state is isolated per process. |
-| `Storage` | `store.Storage` | `memory` | External Key-Value store (e.g., Redis) for Session and ClientState. |
+| `Storage` | `store.Storage` | `memory` | External Key-Value store (e.g., Redis) for Session, ClientState, and caching of SSG/ISR/PPR pages. |
 | `PubSub` | `store.PubSub` | `memory` | External messaging broker (e.g., Redis PubSub) for WebSocket broadcasting. |
 
 ### Remote Action Options
@@ -310,7 +310,7 @@ SSR: true,
 
 ### Prefork, Storage, and PubSub
 
-Used for horizontal scaling and multi-core utilization via Fiber's `Prefork`. If `Prefork: true` is enabled, you **must** provide external implementations for `Storage` and `PubSub` (e.g. Redis), otherwise state and WebSockets will be isolated to individual child processes.
+Used for horizontal scaling and multi-core utilization via Fiber's `Prefork`. If `Prefork: true` is enabled, you **must** provide external implementations for `Storage` and `PubSub` (e.g. Redis), otherwise state and WebSockets will be isolated to individual child processes. This also enables a shared global cache for SSG, ISR, and PPR pages across processes.
 
 ```go
 import "github.com/aydenstechdungeon/gospa/store/redis"

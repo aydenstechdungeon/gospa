@@ -78,7 +78,9 @@ routing.RegisterPageWithOptions("/dashboard", dashboardPage, routing.RouteOption
 // Enable caching in config
 app := gospa.New(gospa.Config{
     CacheTemplates:     true,
-    SSGCacheMaxEntries: 500, // default; -1 = unbounded
+    SSGCacheMaxEntries: 500, // default for in-memory
+    // Optional: Configure an external store like Redis to share cache across processes
+    Storage: redisstore.NewStore(redisClient),
 })`, "go", "main.go")
 		</section>
 
@@ -129,6 +131,16 @@ app := gospa.New(gospa.Config{
 						</tr>
 					</tbody>
 				</table>
+			</div>
+			
+			<div class="mt-8">
+				<h3 class="text-xl font-semibold mb-2" id="isr-prefork">Interaction with Prefork</h3>
+				<p class="text-[var(--text-secondary)]">
+					In Prefork mode (<code class="text-[var(--accent-primary)]">Prefork: true</code>), if no external `Storage` is configured, each child process has its own independent in-memory cache. Cache entries are not shared between processes. ISR TTLs fire independently per process.
+				</p>
+				<p class="text-[var(--text-secondary)] mt-4">
+					To support shared SSG, ISR, and PPR caching across Prefork child processes or horizontally scaled clusters, configure the <code class="text-[var(--accent-primary)]">Storage</code> option in <code class="text-[var(--accent-primary)]">gospa.Config</code> with a distributed backend such as Redis. This ensures consistent cache hits and dedicates a single background revalidation per route across the entire cluster.
+				</p>
 			</div>
 		</section>
 

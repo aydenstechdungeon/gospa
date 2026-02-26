@@ -1,9 +1,9 @@
 package fiber
 
 import (
-	"github.com/aydenstechdungeon/gospa/state"
 	"encoding/json"
 	"fmt"
+	"github.com/aydenstechdungeon/gospa/state"
 	"log"
 	"os"
 	"path/filepath"
