@@ -10,6 +10,7 @@ import (
 	"sync"
 	"time"
 
+	"github.com/aydenstechdungeon/gospa/store"
 	"github.com/gofiber/fiber/v2"
 	"github.com/gofiber/fiber/v2/middleware/cors"
 )
@@ -54,6 +55,8 @@ type SSEBroker struct {
 	onConnect func(*SSEClient)
 	// onDisconnect is called when a client disconnects
 	onDisconnect func(*SSEClient)
+	// pubsub backend for distributed environments
+	pubsub store.PubSub
 }
 
 // SSEConfig holds SSE broker configuration.
@@ -66,6 +69,8 @@ type SSEConfig struct {
 	OnConnect func(*SSEClient)
 	// OnDisconnect is called when a client disconnects
 	OnDisconnect func(*SSEClient)
+	// PubSub backend for distributed environments
+	PubSub store.PubSub
 }
 
 // NewSSEBroker creates a new SSE broker.
@@ -79,14 +84,61 @@ func NewSSEBroker(config *SSEConfig) *SSEBroker {
 	if config.HeartbeatInterval == 0 {
 		config.HeartbeatInterval = 30 * time.Second
 	}
+	if config.PubSub == nil {
+		config.PubSub = store.NewMemoryPubSub()
+	}
 
-	return &SSEBroker{
+	b := &SSEBroker{
 		clients:           make(map[string]*SSEClient),
 		eventBufferSize:   config.EventBufferSize,
 		heartbeatInterval: config.HeartbeatInterval,
 		onConnect:         config.OnConnect,
 		onDisconnect:      config.OnDisconnect,
+		pubsub:            config.PubSub,
 	}
+
+	// Subscribe to distributed events
+	_ = b.pubsub.Subscribe("gospa:sse", func(message []byte) {
+		var sseMsg struct {
+			Target string   `json:"target"` // "all", "topic:xyz", "client:xyz"
+			Event  SSEEvent `json:"event"`
+		}
+		if err := json.Unmarshal(message, &sseMsg); err != nil {
+			return
+		}
+
+		b.mutex.RLock()
+		defer b.mutex.RUnlock()
+
+		if sseMsg.Target == "all" {
+			for _, client := range b.clients {
+				select {
+				case client.Channel <- sseMsg.Event:
+				default:
+				}
+			}
+		} else if len(sseMsg.Target) > 6 && sseMsg.Target[:6] == "topic:" {
+			topic := sseMsg.Target[6:]
+			for _, client := range b.clients {
+				if client.Topics[topic] {
+					select {
+					case client.Channel <- sseMsg.Event:
+					default:
+					}
+				}
+			}
+		} else if len(sseMsg.Target) > 7 && sseMsg.Target[:7] == "client:" {
+			clientID := sseMsg.Target[7:]
+			if client, exists := b.clients[clientID]; exists {
+				select {
+				case client.Channel <- sseMsg.Event:
+				default:
+				}
+			}
+		}
+	})
+
+	return b
 }
 
 // Connect registers a new SSE client.
@@ -155,55 +207,32 @@ func (b *SSEBroker) Unsubscribe(clientID string, topics ...string) {
 
 // Send sends an event to a specific client.
 func (b *SSEBroker) Send(clientID string, event SSEEvent) bool {
-	b.mutex.RLock()
-	defer b.mutex.RUnlock()
-
-	if client, exists := b.clients[clientID]; exists {
-		select {
-		case client.Channel <- event:
-			return true
-		default:
-			// Channel full, event dropped
-			return false
-		}
-	}
-	return false
+	data, _ := json.Marshal(map[string]interface{}{
+		"target": "client:" + clientID,
+		"event":  event,
+	})
+	_ = b.pubsub.Publish("gospa:sse", data)
+	return true
 }
 
 // Broadcast sends an event to all connected clients.
 func (b *SSEBroker) Broadcast(event SSEEvent) int {
-	b.mutex.RLock()
-	defer b.mutex.RUnlock()
-
-	sent := 0
-	for _, client := range b.clients {
-		select {
-		case client.Channel <- event:
-			sent++
-		default:
-			// Channel full, skip
-		}
-	}
-	return sent
+	data, _ := json.Marshal(map[string]interface{}{
+		"target": "all",
+		"event":  event,
+	})
+	_ = b.pubsub.Publish("gospa:sse", data)
+	return 0 // Distributed, local count meaningless
 }
 
 // BroadcastToTopic sends an event to clients subscribed to a topic.
 func (b *SSEBroker) BroadcastToTopic(topic string, event SSEEvent) int {
-	b.mutex.RLock()
-	defer b.mutex.RUnlock()
-
-	sent := 0
-	for _, client := range b.clients {
-		if client.Topics[topic] {
-			select {
-			case client.Channel <- event:
-				sent++
-			default:
-				// Channel full, skip
-			}
-		}
-	}
-	return sent
+	data, _ := json.Marshal(map[string]interface{}{
+		"target": "topic:" + topic,
+		"event":  event,
+	})
+	_ = b.pubsub.Publish("gospa:sse", data)
+	return 0
 }
 
 // ClientCount returns the number of connected clients.

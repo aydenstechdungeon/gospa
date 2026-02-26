@@ -42,9 +42,11 @@ func Page() templ.Component {
 │   ├── about/
 │   │   └── page.templ        # About page (/about)
 │   ├── (auth)/              → Grouped routes
-│   │   ├ layout.templ     → Layout for /auth/*
-│   │   ├ login.templ      → /login
-│   │   └ register.templ   → /register
+│   │   ├ layout.templ
+│   │   ├ login/
+│   │   │   └── page.templ   → /login
+│   │   └ register/
+│   │       └ page.templ   → /register
 │   ├── blog/
 │   │   ├── layout.templ      # Blog layout
 │   │   ├── page.templ        # Blog index (/blog)
@@ -66,7 +68,7 @@ func Page() templ.Component {
 		var templ_7745c5c3_Var2 string
 		templ_7745c5c3_Var2, templ_7745c5c3_Err = templ.JoinStringErrs("for")
 		if templ_7745c5c3_Err != nil {
-			return templ.Error{Err: templ_7745c5c3_Err, FileName: `routes/docs/routing/page.templ`, Line: 45, Col: 75}
+			return templ.Error{Err: templ_7745c5c3_Err, FileName: `routes/docs/routing/page.templ`, Line: 47, Col: 75}
 		}
 		_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ.EscapeString(templ_7745c5c3_Var2))
 		if templ_7745c5c3_Err != nil {
@@ -79,7 +81,7 @@ func Page() templ.Component {
 		var templ_7745c5c3_Var3 string
 		templ_7745c5c3_Var3, templ_7745c5c3_Err = templ.JoinStringErrs("for")
 		if templ_7745c5c3_Err != nil {
-			return templ.Error{Err: templ_7745c5c3_Err, FileName: `routes/docs/routing/page.templ`, Line: 49, Col: 86}
+			return templ.Error{Err: templ_7745c5c3_Err, FileName: `routes/docs/routing/page.templ`, Line: 51, Col: 86}
 		}
 		_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ.EscapeString(templ_7745c5c3_Var3))
 		if templ_7745c5c3_Err != nil {

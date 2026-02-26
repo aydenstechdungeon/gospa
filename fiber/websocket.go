@@ -10,6 +10,7 @@ import (
 	"time"
 
 	"github.com/aydenstechdungeon/gospa/state"
+	"github.com/aydenstechdungeon/gospa/store"
 	"github.com/gofiber/fiber/v2"
 	"github.com/gofiber/websocket/v2"
 )
@@ -23,8 +24,8 @@ const (
 
 // sessionEntry holds a session token and its expiry.
 type sessionEntry struct {
-	clientID  string
-	expiresAt time.Time
+	ClientID  string    `json:"clientId"`
+	ExpiresAt time.Time `json:"expiresAt"`
 }
 
 // SessionTTL is how long a session token remains valid (default 24 hours).
@@ -32,33 +33,13 @@ const SessionTTL = 24 * time.Hour
 
 // SessionStore maps session tokens to client IDs for secure HTTP state sync.
 type SessionStore struct {
-	sessions map[string]sessionEntry // token -> entry
-	mu       sync.RWMutex
+	storage store.Storage
 }
 
-// NewSessionStore creates a new session store with background pruning.
-func NewSessionStore() *SessionStore {
-	s := &SessionStore{
-		sessions: make(map[string]sessionEntry),
-	}
-	// Prune expired sessions every 30 minutes in the background
-	go s.pruneLoop()
-	return s
-}
-
-// pruneLoop removes expired sessions periodically.
-func (s *SessionStore) pruneLoop() {
-	ticker := time.NewTicker(30 * time.Minute)
-	defer ticker.Stop()
-	for range ticker.C {
-		s.mu.Lock()
-		now := time.Now()
-		for token, entry := range s.sessions {
-			if now.After(entry.expiresAt) {
-				delete(s.sessions, token)
-			}
-		}
-		s.mu.Unlock()
+// NewSessionStore creates a new session store.
+func NewSessionStore(storage store.Storage) *SessionStore {
+	return &SessionStore{
+		storage: storage,
 	}
 }
 
@@ -69,50 +50,49 @@ func (s *SessionStore) CreateSession(clientID string) string {
 	if token == "" {
 		return ""
 	}
-	s.mu.Lock()
-	s.sessions[token] = sessionEntry{
-		clientID:  clientID,
-		expiresAt: time.Now().Add(SessionTTL),
+	entry := sessionEntry{
+		ClientID:  clientID,
+		ExpiresAt: time.Now().Add(SessionTTL),
 	}
-	s.mu.Unlock()
+	bytes, err := json.Marshal(entry)
+	if err == nil {
+		_ = s.storage.Set(token, bytes, SessionTTL)
+	}
 	return token
 }
 
 // ValidateSession returns the client ID for a valid, non-expired session token.
 func (s *SessionStore) ValidateSession(token string) (string, bool) {
-	s.mu.RLock()
-	entry, ok := s.sessions[token]
-	s.mu.RUnlock()
-	if !ok {
+	bytes, err := s.storage.Get(token)
+	if err != nil {
 		return "", false
 	}
-	if time.Now().After(entry.expiresAt) {
+	var entry sessionEntry
+	if err := json.Unmarshal(bytes, &entry); err != nil {
+		return "", false
+	}
+	if time.Now().After(entry.ExpiresAt) {
 		s.RemoveSession(token)
 		return "", false
 	}
-	return entry.clientID, true
+	return entry.ClientID, true
 }
 
 // RemoveSession removes a session token.
 func (s *SessionStore) RemoveSession(token string) {
-	s.mu.Lock()
-	delete(s.sessions, token)
-	s.mu.Unlock()
+	_ = s.storage.Delete(token)
 }
 
 // RemoveClientSessions removes all sessions for a client ID.
+// NOTE: Depending on the storage backend, this might not be easily achievable without secondary indices.
+// For KV-only stores, this operation shouldn't be relied upon.
 func (s *SessionStore) RemoveClientSessions(clientID string) {
-	s.mu.Lock()
-	for token, entry := range s.sessions {
-		if entry.clientID == clientID {
-			delete(s.sessions, token)
-		}
-	}
-	s.mu.Unlock()
+	// Not practically supported in KV stores without key scanning.
+	// Since sessions expire naturally through TTL, this is a no-op for now.
 }
 
-// Global session store for HTTP state sync.
-var globalSessionStore = NewSessionStore()
+// Global session store for HTTP state sync. Defaulting to in-memory.
+var globalSessionStore = NewSessionStore(store.NewMemoryStorage())
 
 // generateSecureToken generates a cryptographically secure random token.
 // Returns an empty string if random generation fails (which should never happen
@@ -128,41 +108,55 @@ func generateSecureToken() string {
 
 // ClientStateStore persists client state by client ID for session restoration.
 type ClientStateStore struct {
-	states map[string]*state.StateMap
-	mu     sync.RWMutex
+	storage store.Storage
 }
 
 // NewClientStateStore creates a new client state store.
-func NewClientStateStore() *ClientStateStore {
+func NewClientStateStore(storage store.Storage) *ClientStateStore {
 	return &ClientStateStore{
-		states: make(map[string]*state.StateMap),
+		storage: storage,
 	}
 }
 
 // Save saves a client's state.
 func (s *ClientStateStore) Save(clientID string, sm *state.StateMap) {
-	s.mu.Lock()
-	s.states[clientID] = sm
-	s.mu.Unlock()
+	bytes, err := sm.MarshalJSON()
+	if err == nil {
+		_ = s.storage.Set("state:"+clientID, bytes, SessionTTL)
+	}
 }
 
 // Get retrieves a client's state.
 func (s *ClientStateStore) Get(clientID string) (*state.StateMap, bool) {
-	s.mu.RLock()
-	defer s.mu.RUnlock()
-	sm, ok := s.states[clientID]
-	return sm, ok
+	bytes, err := s.storage.Get("state:" + clientID)
+	if err != nil {
+		return nil, false
+	}
+	sm := state.NewStateMap()
+	var raw map[string]interface{}
+	if err := json.Unmarshal(bytes, &raw); err != nil {
+		return nil, false
+	}
+	for k, v := range raw {
+		r := state.NewRune(v)
+		sm.Add(k, r)
+	}
+	return sm, true
 }
 
 // Remove removes a client's state.
 func (s *ClientStateStore) Remove(clientID string) {
-	s.mu.Lock()
-	delete(s.states, clientID)
-	s.mu.Unlock()
+	_ = s.storage.Delete("state:" + clientID)
 }
 
-// Global client state store for session persistence.
-var globalClientStateStore = NewClientStateStore()
+// Global client state store for session persistence. Defaulting to in-memory.
+var globalClientStateStore = NewClientStateStore(store.NewMemoryStorage())
+
+// InitStores updates the global stores to use the provided storage backend.
+func InitStores(storage store.Storage) {
+	globalSessionStore = NewSessionStore(storage)
+	globalClientStateStore = NewClientStateStore(storage)
+}
 
 // WSClient represents a connected WebSocket client.
 type WSClient struct {
@@ -199,16 +193,48 @@ type WSHub struct {
 	Unregister chan *WSClient
 	Broadcast  chan []byte
 	mu         sync.RWMutex
+	pubsub     store.PubSub
 }
 
 // NewWSHub creates a new WebSocket hub.
-func NewWSHub() *WSHub {
-	return &WSHub{
+func NewWSHub(pubsub store.PubSub) *WSHub {
+	if pubsub == nil {
+		pubsub = store.NewMemoryPubSub()
+	}
+	h := &WSHub{
 		Clients:    make(map[string]*WSClient),
 		Register:   make(chan *WSClient),
 		Unregister: make(chan *WSClient),
 		Broadcast:  make(chan []byte, 256),
+		pubsub:     pubsub,
 	}
+
+	// Subscribe to a global broadcast channel for state syncing across processes
+	_ = h.pubsub.Subscribe("gospa:broadcast", func(message []byte) {
+		h.mu.RLock()
+		defer h.mu.RUnlock()
+
+		var msgData map[string]interface{}
+		var sessionID string
+		// Best effort parse to restrict session scope
+		if err := json.Unmarshal(message, &msgData); err == nil {
+			if sid, ok := msgData["_sessionID"].(string); ok {
+				sessionID = sid
+			}
+		}
+
+		for _, client := range h.Clients {
+			if sessionID == "" || client.SessionID == sessionID {
+				select {
+				case client.Send <- message:
+				default:
+					// Client buffer full
+				}
+			}
+		}
+	})
+
+	return h
 }
 
 // Run starts the hub's main loop.
@@ -235,29 +261,9 @@ func (h *WSHub) Run() {
 			log.Printf("Client disconnected: %s", client.ID)
 
 		case message := <-h.Broadcast:
-			h.mu.RLock()
-			var toRemove []string
-			for _, client := range h.Clients {
-				select {
-				case client.Send <- message:
-				default:
-					// Buffer full — mark for removal; do NOT close channel here.
-					// Unregister will handle closing via client.Close().
-					toRemove = append(toRemove, client.ID)
-				}
-			}
-			h.mu.RUnlock()
-			// Safely remove and close stale clients with write lock
-			if len(toRemove) > 0 {
-				h.mu.Lock()
-				for _, id := range toRemove {
-					if c, ok := h.Clients[id]; ok {
-						delete(h.Clients, id)
-						c.Close()
-					}
-				}
-				h.mu.Unlock()
-			}
+			// Instead of directly sending to local clients, publish to the PubSub system.
+			// The PubSub subscription handler will broadcast it locally.
+			_ = h.pubsub.Publish("gospa:broadcast", message)
 		}
 	}
 }
@@ -492,7 +498,7 @@ type WebSocketConfig struct {
 // registering the handler. gospa.New() does this automatically when EnableWebSocket is true.
 func DefaultWebSocketConfig() WebSocketConfig {
 	return WebSocketConfig{
-		Hub:        NewWSHub(),
+		Hub:        NewWSHub(nil),
 		GenerateID: generateComponentID,
 	}
 }
@@ -504,7 +510,7 @@ func DefaultWebSocketConfig() WebSocketConfig {
 func WebSocketHandler(config WebSocketConfig) fiber.Handler {
 	// Apply defaults for nil config values
 	if config.Hub == nil {
-		config.Hub = NewWSHub()
+		config.Hub = NewWSHub(nil)
 		// When creating a default hub here, start it since caller didn't
 		go config.Hub.Run()
 	}
@@ -596,9 +602,18 @@ func WebSocketHandler(config WebSocketConfig) fiber.Handler {
 			client.State = restoredState
 		} else {
 			// Setup differential sync for the first time for this state
+			var saveMutex sync.Mutex
+			var saveTimer *time.Timer
 			client.State.OnChange = func(key string, value any) {
-				// Save state to persistent store safely
-				globalClientStateStore.Save(sessionID, client.State)
+				// Save state to persistent store safely, debounced
+				saveMutex.Lock()
+				if saveTimer != nil {
+					saveTimer.Stop()
+				}
+				saveTimer = time.AfterFunc(100*time.Millisecond, func() {
+					globalClientStateStore.Save(sessionID, client.State)
+				})
+				saveMutex.Unlock()
 
 				// Parse componentId and local key for Svelte updates
 				componentID := ""
@@ -608,19 +623,18 @@ func WebSocketHandler(config WebSocketConfig) fiber.Handler {
 					localKey = key[dotIdx+1:]
 				}
 
-				// Broadcast state change to all clients sharing this session ID
-				config.Hub.mu.RLock()
-				for _, hubClient := range config.Hub.Clients {
-					if hubClient.SessionID == sessionID {
-						_ = hubClient.SendJSON(map[string]interface{}{
-							"type":        "sync",
-							"componentId": componentID,
-							"key":         localKey,
-							"value":       value,
-						})
-					}
+				// Broadcast state change to all clients sharing this session ID via pubsub
+				syncMsg := map[string]interface{}{
+					"type":        "sync",
+					"componentId": componentID,
+					"key":         localKey,
+					"value":       value,
+					"_sessionID":  sessionID,
 				}
-				config.Hub.mu.RUnlock()
+				data, err := json.Marshal(syncMsg)
+				if err == nil {
+					_ = config.Hub.pubsub.Publish("gospa:broadcast", data)
+				}
 			}
 			globalClientStateStore.Save(sessionID, client.State)
 		}

@@ -152,6 +152,27 @@ templ Page() {
 		</section>
 
 		<section class="space-y-4">
+			<h2 class="text-2xl font-semibold text-[var(--text-primary)]">Distributed & Scaling Options</h2>
+			<div class="overflow-x-auto">
+				<table class="w-full text-sm border border-[var(--border)] rounded-lg">
+					<thead class="bg-[var(--bg-tertiary)]">
+						<tr>
+							<th class="px-4 py-2 text-left font-semibold">Option</th>
+							<th class="px-4 py-2 text-left font-semibold">Type</th>
+							<th class="px-4 py-2 text-left font-semibold">Default</th>
+							<th class="px-4 py-2 text-left font-semibold">Description</th>
+						</tr>
+					</thead>
+					<tbody class="divide-y divide-[var(--border)]">
+						<tr><td class="px-4 py-2 font-mono text-[var(--accent-primary)]">Prefork</td><td class="px-4 py-2">bool</td><td class="px-4 py-2">false</td><td class="px-4 py-2">Enables Fiber Prefork</td></tr>
+						<tr><td class="px-4 py-2 font-mono text-[var(--accent-primary)]">Storage</td><td class="px-4 py-2">store.Storage</td><td class="px-4 py-2">memory</td><td class="px-4 py-2">External Key-Value store (e.g. Redis) for Sessions/State</td></tr>
+						<tr><td class="px-4 py-2 font-mono text-[var(--accent-primary)]">PubSub</td><td class="px-4 py-2">store.PubSub</td><td class="px-4 py-2">memory</td><td class="px-4 py-2">External broker (e.g. Redis PubSub) for broadcasts</td></tr>
+					</tbody>
+				</table>
+			</div>
+		</section>
+
+		<section class="space-y-4">
 			<h2 class="text-2xl font-semibold text-[var(--text-primary)]">Remote Action Options</h2>
 			<div class="overflow-x-auto">
 				<table class="w-full text-sm border border-[var(--border)] rounded-lg">
@@ -243,6 +264,16 @@ HydrationTimeout: 2000,   // Force hydrate after 2 seconds`, "go", "main.go")
 				<p class="text-red-500 font-semibold">⚠️ Security Warning</p>
 				<p class="text-[var(--text-secondary)]">SVG elements can contain embedded JavaScript and event handlers (e.g., &lt;svg onload="alert('xss')"&gt;). Only enable this option if you completely trust all HTML content being rendered. Never enable when rendering user-generated content. This option has no effect when using the full runtime (SimpleRuntime: false).</p>
 			</div>
+
+			<h3 class="text-xl font-semibold text-[var(--text-primary)] mt-6">Prefork, Storage, and PubSub</h3>
+			<p class="text-[var(--text-secondary)] mb-2">Used for horizontal scaling and multi-core utilization via Fiber's Prefork. If Prefork is enabled, you MUST provide external implementations for Storage and PubSub (e.g. Redis), otherwise state and WebSockets will be isolated to individual child processes.</p>
+			@components.CodeBlock(`import "github.com/aydenstechdungeon/gospa/store/redis"
+
+app := gospa.New(gospa.Config{
+    Prefork: true,
+    Storage: redis.NewStore(rdb),
+    PubSub:  redis.NewPubSub(rdb),
+})`, "go", "main.go")
 		</section>
 
 		<section class="space-y-4">
@@ -269,9 +300,12 @@ HydrationTimeout: 2000,   // Force hydrate after 2 seconds`, "go", "main.go")
     WSHeartbeat:     30 * time.Second,
 })`, "go", "main.go")
 
-			<h3 class="text-xl font-semibold text-[var(--text-primary)] mt-6">High-Performance</h3>
+			<h3 class="text-xl font-semibold text-[var(--text-primary)] mt-6">High-Performance (Cluster Mode via Prefork)</h3>
 			@components.CodeBlock(`app := gospa.New(gospa.Config{
     DevMode:         false,
+    Prefork:         true,
+    Storage:         redis.NewStore(rdb),
+    PubSub:          redis.NewPubSub(rdb),
     SimpleRuntime:   true,   // No DOMPurify - only if you control all content!
     CompressState:   true,
     StateDiffing:    true,

@@ -120,6 +120,11 @@ type Config struct {
 
 	// Cache Options
 	SSGCacheMaxEntries int // Max SSG cache entries (default 500; -1 = unbounded)
+
+	// Distributed & Scaling Options
+	Prefork bool          // Enables Fiber Prefork. WARNING: If true, you MUST use external Storage/PubSub to share state.
+	Storage store.Storage // External Key-Value store (e.g., Redis) for Session and ClientState. Default is memory.
+	PubSub  store.PubSub  // External messaging broker (e.g., Redis PubSub) for WebSocket broadcasting. Default is memory.
 }
 ```
 
@@ -133,6 +138,7 @@ type Config struct {
 - `SSR`: **Planned** — not yet implemented.
 - `EnableCSRF`: Enables CSRF protection. Must wire up **both** `CSRFSetTokenMiddleware()` (issues cookie) **and** `CSRFTokenMiddleware()` (validates).
 - `SSGCacheMaxEntries`: Caps the SSG page cache with FIFO eviction. Default 500.
+- `Prefork`, `Storage`, `PubSub`: Used for horizontal scaling. See `store/redis` for the Redis implementation.
 
 ```go
 // Default configuration

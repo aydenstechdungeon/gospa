@@ -22,6 +22,7 @@ import (
 	"github.com/aydenstechdungeon/gospa/fiber"
 	"github.com/aydenstechdungeon/gospa/routing"
 	"github.com/aydenstechdungeon/gospa/state"
+	"github.com/aydenstechdungeon/gospa/store"
 	fiberpkg "github.com/gofiber/fiber/v2"
 	"github.com/gofiber/fiber/v2/middleware/compress"
 	"github.com/gofiber/fiber/v2/middleware/filesystem"
@@ -107,6 +108,16 @@ type Config struct {
 	// SSGCacheMaxEntries caps the SSG page cache size. Oldest entries are evicted when full.
 	// Default: 500. Set to -1 to disable eviction (unbounded, not recommended in production).
 	SSGCacheMaxEntries int
+
+	// Prefork enables Fiber's prefork mode.
+	// WARNING: If enabled without an external Storage/PubSub backend like Redis, in-memory state and WebSockets will be isolated per-process.
+	Prefork bool
+
+	// Storage defines the external storage backend for sessions and state. Defaults to in-memory.
+	Storage store.Storage
+
+	// PubSub defines the messaging backend for multi-process broadcasting. Defaults to in-memory.
+	PubSub store.PubSub
 }
 
 // DefaultConfig returns the default configuration.
@@ -204,6 +215,22 @@ func New(config Config) *App {
 		config.MaxRequestBodySize = 4 * 1024 * 1024
 	}
 
+	if config.Storage == nil {
+		if config.Prefork {
+			log.Println("WARNING: Prefork is enabled with in-memory Storage. Sessions and State will be isolated per process!")
+		}
+		config.Storage = store.NewMemoryStorage()
+	}
+	if config.PubSub == nil {
+		if config.Prefork {
+			log.Println("WARNING: Prefork is enabled with in-memory PubSub. WebSocket broadcasts will be isolated per process!")
+		}
+		config.PubSub = store.NewMemoryPubSub()
+	}
+
+	// Update global stores (Optional: This is a side effect but keeps existing semantics working)
+	fiber.InitStores(config.Storage)
+
 	// Create router
 	var routerSource interface{}
 	if config.RoutesFS != nil {
@@ -216,6 +243,7 @@ func New(config Config) *App {
 	// Create Fiber app
 	fiberConfig := fiberpkg.Config{
 		AppName: config.AppName,
+		Prefork: config.Prefork,
 	}
 	if config.DevMode {
 		fiberConfig.EnablePrintRoutes = true
@@ -225,7 +253,7 @@ func New(config Config) *App {
 	// Create WebSocket hub (always enabled by default - WebSocket is a core feature)
 	// Note: Go can't distinguish between "unset" and "explicitly false" for bools,
 	// so we always create the hub. Users who don't want WebSocket can simply not use it.
-	hub := fiber.NewWSHub()
+	hub := fiber.NewWSHub(config.PubSub)
 	go hub.Run()
 
 	// Create state map

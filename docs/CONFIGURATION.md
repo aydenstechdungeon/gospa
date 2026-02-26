@@ -69,6 +69,14 @@ app := gospa.New(gospa.Config{
 | `DisableSPA` | `bool` | `false` | Disable SPA navigation completely |
 | `SSR` | `bool` | `false` | Global SSR mode |
 
+### Distributed & Scaling Options
+
+| Option | Type | Default | Description |
+|--------|------|---------|-------------|
+| `Prefork` | `bool` | `false` | Enables Fiber Prefork. WARNING: Without external storage, state is isolated per process. |
+| `Storage` | `store.Storage` | `memory` | External Key-Value store (e.g., Redis) for Session and ClientState. |
+| `PubSub` | `store.PubSub` | `memory` | External messaging broker (e.g., Redis PubSub) for WebSocket broadcasting. |
+
 ### Remote Action Options
 
 | Option | Type | Default | Description |
@@ -290,6 +298,20 @@ Enable global Server-Side Rendering mode.
 
 ```go
 SSR: true,
+```
+
+### Prefork, Storage, and PubSub
+
+Used for horizontal scaling and multi-core utilization via Fiber's `Prefork`. If `Prefork: true` is enabled, you **must** provide external implementations for `Storage` and `PubSub` (e.g. Redis), otherwise state and WebSockets will be isolated to individual child processes.
+
+```go
+import "github.com/aydenstechdungeon/gospa/store/redis"
+
+app := gospa.New(gospa.Config{
+    Prefork: true,
+    Storage: redis.NewStore(rdb),
+    PubSub:  redis.NewPubSub(rdb),
+})
 ```
 
 ### MaxRequestBodySize
