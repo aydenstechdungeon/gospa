@@ -35,7 +35,7 @@ RUN if [ -f "cmd/gospa/main.go" ]; then \
     go build -o /usr/local/bin/gospa ./cmd/gospa; \
     else \
     echo "Local GoSPA source not found in context, installing via go install..." && \
-    go install github.com/aydenstechdungeon/gospa/cmd/gospa@latest && \
+    GOPROXY=direct go install github.com/aydenstechdungeon/gospa/cmd/gospa@latest && \
     cp /go/bin/gospa /usr/local/bin/gospa; \
     fi
 
