@@ -178,6 +178,6 @@ func PrintBanner() {
      /_/             	
 `
 	fmt.Println(printer.colorize(cyan, banner))
-	fmt.Printf("%s %s\n", printer.Dim("A modern SPA framework for Go"), printer.Dim("v0.1.3"))
+	fmt.Printf("%s %s\n", printer.Dim("A modern SPA framework for Go"), printer.Dim("v0.1.4"))
 	fmt.Println()
 }
