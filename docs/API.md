@@ -84,8 +84,8 @@ type Config struct {
 	WebSocketMiddleware fiberpkg.Handler
 
 	// Performance Options
-	CompressState  bool // Compress WebSocket messages
-	StateDiffing   bool // Only send state diffs
+	CompressState  bool // Gzip-compress outbound state payloads; client must decompress via DecompressionStream
+	StateDiffing   bool // Only send changed state keys (patch messages) after the initial full snapshot
 	CacheTemplates bool // Cache compiled templates
 	SimpleRuntime  bool // Use lightweight runtime without DOMPurify
 
@@ -98,9 +98,9 @@ type Config struct {
 	HydrationMode    string // "immediate" | "lazy" | "visible" | "idle" (default: "immediate")
 	HydrationTimeout int    // ms before force hydrate
 
-	// Serialization Options — NOTE: StateSerializer/StateDeserializer are planned, not yet implemented.
-	StateSerializer   StateSerializerFunc
-	StateDeserializer StateDeserializerFunc
+	// Serialization Options
+	StateSerializer   StateSerializerFunc // Custom serialization for outbound state
+	StateDeserializer StateDeserializerFunc // Custom deserialization for inbound state
 
 	// Routing Options
 	DisableSPA bool // Disable SPA navigation completely
@@ -126,8 +126,9 @@ type Config struct {
 
 #### Key Options:
 - `RoutesFS`: Allows embedding routes using `go:embed`.
-- `CompressState`: **Planned** — not yet implemented. Setting it has no effect.
-- `StateDiffing`: **Planned** — not yet implemented. Setting it has no effect.
+- `CompressState`: Enables gzip+base64 compression of outbound WebSocket state payloads. Client decodes with the `DecompressionStream` browser API.
+- `StateDiffing`: Sends only changed state keys as `"patch"` WebSocket messages after the initial full snapshot — reduces bandwidth for large states.
+- `StateSerializer` / `StateDeserializer`: Custom hooks replacing JSON for WebSocket state encoding/decoding.
 - `SimpleRuntime`: Reduces client bundle size by ~6KB by removing DOMPurify. **Only enable if all content is trusted.**
 - `SimpleRuntimeSVGs`: Allows SVG elements in the simple runtime sanitizer. **Security risk** — only enable for fully trusted content.
 - `HydrationMode`: Controls when components become interactive. Values: `"immediate"` (default), `"lazy"`, `"visible"`, `"idle"`.

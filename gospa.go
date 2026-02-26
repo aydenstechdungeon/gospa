@@ -66,9 +66,12 @@ type Config struct {
 	WebSocketMiddleware fiberpkg.Handler
 
 	// Performance Options
-	// NOTE: CompressState is planned but not yet implemented — setting this has no effect.
+	// CompressState enables gzip compression of outbound WebSocket state payloads.
+	// The client receives a { type:"compressed", data: "<base64>", compressed: true }
+	// envelope and must decompress using the DecompressionStream browser API.
 	CompressState bool
-	// NOTE: StateDiffing is planned but not yet implemented — setting this has no effect.
+	// StateDiffing enables delta-only "patch" WebSocket messages for state syncs.
+	// Only changed state keys are transmitted after the initial full snapshot.
 	StateDiffing   bool
 	CacheTemplates bool // Cache compiled templates (SSG only)
 	SimpleRuntime  bool // Use lightweight runtime without DOMPurify (~6KB smaller)
@@ -89,7 +92,8 @@ type Config struct {
 	HydrationTimeout int // ms before force hydrate (used with "visible" and "idle" modes)
 
 	// Serialization Options
-	// NOTE: StateSerializer and StateDeserializer are planned but not yet implemented.
+	// StateSerializer overrides JSON for outbound WebSocket state serialization.
+	// StateDeserializer overrides JSON for inbound WebSocket state deserialization.
 	StateSerializer   StateSerializerFunc
 	StateDeserializer StateDeserializerFunc
 
@@ -361,7 +365,11 @@ func (a *App) setupRoutes() {
 			handlers = append(handlers, a.Config.WebSocketMiddleware)
 		}
 		handlers = append(handlers, fiber.WebSocketHandler(fiber.WebSocketConfig{
-			Hub: a.Hub,
+			Hub:           a.Hub,
+			CompressState: a.Config.CompressState,
+			StateDiffing:  a.Config.StateDiffing,
+			Serializer:    a.Config.StateSerializer,
+			Deserializer:  a.Config.StateDeserializer,
 		}))
 		a.Fiber.Get(a.Config.WebSocketPath, handlers...)
 	}

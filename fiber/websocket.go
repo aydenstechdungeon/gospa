@@ -1,9 +1,13 @@
 package fiber
 
 import (
+	"bytes"
+	"compress/gzip"
 	"crypto/rand"
+	"encoding/base64"
 	"encoding/hex"
 	"encoding/json"
+	"fmt"
 	"log"
 	"strings"
 	"sync"
@@ -167,6 +171,14 @@ type WSClient struct {
 	State     *state.StateMap
 	mu        sync.Mutex
 	closed    bool
+	// optional features wired from WebSocketConfig at creation time
+	compress     bool
+	stateDiffing bool
+	serializer   func(interface{}) ([]byte, error)
+	deserializer func([]byte, interface{}) error
+	// lastSentState holds the snapshot used for StateDiffing
+	lastSentStateMu sync.Mutex
+	lastSentState   map[string]interface{}
 }
 
 // WSMessage represents a WebSocket message.
@@ -439,14 +451,51 @@ func (c *WSClient) SendError(message string) {
 }
 
 // SendState sends the current state to the client.
+// When StateDiffing is enabled it only sends keys that changed since the last
+// successful send — using a "patch" message type that the client merges into
+// its local state rather than replacing it wholesale.
+// When CompressState is enabled the payload JSON is gzip-compressed and
+// base64-encoded, with a "compressed":true flag so the client can decompress.
 func (c *WSClient) SendState() {
-	stateJSON, err := c.State.ToJSON()
+	stateMap := c.State.ToMap()
+	if c.stateDiffing {
+		c.lastSentStateMu.Lock()
+		prev := c.lastSentState
+		c.lastSentStateMu.Unlock()
+		if prev != nil {
+			diff := computeStateDiff(prev, stateMap)
+			if len(diff) == 0 {
+				return // nothing changed
+			}
+			c.sendEncodedPayload(map[string]interface{}{
+				"type":  "patch",
+				"patch": diff,
+			})
+			c.lastSentStateMu.Lock()
+			c.lastSentState = stateMap
+			c.lastSentStateMu.Unlock()
+			return
+		}
+		// First send — fall through to full snapshot
+		c.lastSentStateMu.Lock()
+		c.lastSentState = stateMap
+		c.lastSentStateMu.Unlock()
+	}
+
+	var stateJSON []byte
+	var err error
+	if c.serializer != nil {
+		stateJSON, err = c.serializer(stateMap)
+	} else {
+		var s string
+		s, err = c.State.ToJSON()
+		stateJSON = []byte(s)
+	}
 	if err != nil {
 		c.SendError("Failed to serialize state")
 		return
 	}
-
-	_ = c.SendJSON(map[string]interface{}{
+	c.sendEncodedPayload(map[string]interface{}{
 		"type":  "init",
 		"state": json.RawMessage(stateJSON),
 	})
@@ -454,18 +503,82 @@ func (c *WSClient) SendState() {
 
 // SendInitWithSession sends the initial state with a session token for HTTP state sync.
 func (c *WSClient) SendInitWithSession(sessionToken string) {
-	stateJSON, err := c.State.ToJSON()
+	stateMap := c.State.ToMap()
+	if c.stateDiffing {
+		c.lastSentStateMu.Lock()
+		c.lastSentState = stateMap
+		c.lastSentStateMu.Unlock()
+	}
+
+	var stateJSON []byte
+	var err error
+	if c.serializer != nil {
+		stateJSON, err = c.serializer(stateMap)
+	} else {
+		var s string
+		s, err = c.State.ToJSON()
+		stateJSON = []byte(s)
+	}
 	if err != nil {
 		c.SendError("Failed to serialize state")
 		return
 	}
-
-	_ = c.SendJSON(map[string]interface{}{
+	c.sendEncodedPayload(map[string]interface{}{
 		"type":         "init",
 		"state":        json.RawMessage(stateJSON),
 		"sessionToken": sessionToken,
 		"clientId":     c.SessionID,
 	})
+}
+
+// sendEncodedPayload marshals msg and optionally gzip-compresses it before
+// queueing on the Send channel.
+func (c *WSClient) sendEncodedPayload(msg map[string]interface{}) {
+	if c.compress {
+		data, err := json.Marshal(msg)
+		if err != nil {
+			c.SendError(fmt.Sprintf("state encode error: %v", err))
+			return
+		}
+		compressed, err := compressBytes(data)
+		if err != nil {
+			c.SendError(fmt.Sprintf("state compress error: %v", err))
+			return
+		}
+		_ = c.SendJSON(map[string]interface{}{
+			"type":       "compressed",
+			"data":       base64.StdEncoding.EncodeToString(compressed),
+			"compressed": true,
+		})
+		return
+	}
+	_ = c.SendJSON(msg)
+}
+
+// compressBytes gzip-compresses data and returns the compressed bytes.
+func compressBytes(data []byte) ([]byte, error) {
+	var buf bytes.Buffer
+	gw := gzip.NewWriter(&buf)
+	if _, err := gw.Write(data); err != nil {
+		return nil, err
+	}
+	if err := gw.Close(); err != nil {
+		return nil, err
+	}
+	return buf.Bytes(), nil
+}
+
+// computeStateDiff returns only the keys where newState differs from prevState,
+// plus any keys present in newState but absent from prevState.
+func computeStateDiff(prev, next map[string]interface{}) map[string]interface{} {
+	diff := make(map[string]interface{})
+	for k, nv := range next {
+		pv, exists := prev[k]
+		if !exists || fmt.Sprintf("%v", pv) != fmt.Sprintf("%v", nv) {
+			diff[k] = nv
+		}
+	}
+	return diff
 }
 
 // Close closes the client connection.
@@ -491,6 +604,17 @@ type WebSocketConfig struct {
 	OnMessage func(*WSClient, WSMessage)
 	// GenerateID generates a client ID.
 	GenerateID func() string
+	// CompressState enables gzip compression of outbound state payloads.
+	// The client receives { type:'compressed', data: '<base64>', compressed:true }
+	// and must decompress using the DecompressionStream browser API.
+	CompressState bool
+	// StateDiffing enables delta-only 'patch' messages instead of full state syncs.
+	// When enabled only changed keys are broadcast after the initial snapshot.
+	StateDiffing bool
+	// Serializer overrides JSON for outbound state serialization.
+	Serializer func(interface{}) ([]byte, error)
+	// Deserializer overrides JSON for inbound state deserialization.
+	Deserializer func([]byte, interface{}) error
 }
 
 // DefaultWebSocketConfig returns default WebSocket configuration.
@@ -534,6 +658,11 @@ func WebSocketHandler(config WebSocketConfig) fiber.Handler {
 		// Create client with placeholder session (will be updated after auth)
 		client := NewWSClient(connID, c)
 		client.SessionID = "" // Will be set after session validation
+		// Wire optional features from config
+		client.compress = config.CompressState
+		client.stateDiffing = config.StateDiffing
+		client.serializer = config.Serializer
+		client.deserializer = config.Deserializer
 
 		// Register client
 		config.Hub.Register <- client
@@ -700,16 +829,22 @@ func DefaultMessageHandler(client *WSClient, msg WSMessage) {
 
 	switch msg.Type {
 	case "init":
-		stateJSON, _ := client.State.ToJSON()
+		stateStr, _ := client.State.ToJSON()
 		sendResponse(map[string]interface{}{
 			"type":        "init",
 			"componentId": msg.ComponentID,
-			"state":       json.RawMessage(stateJSON),
+			"state":       json.RawMessage([]byte(stateStr)),
 		})
 
 	case "update":
 		var update WSStateUpdate
-		if err := json.Unmarshal(msg.Payload, &update); err != nil {
+		var unmarshalErr error
+		if client.deserializer != nil {
+			unmarshalErr = client.deserializer(msg.Payload, &update)
+		} else {
+			unmarshalErr = json.Unmarshal(msg.Payload, &update)
+		}
+		if unmarshalErr != nil {
 			sendResponse(map[string]interface{}{
 				"type":  "error",
 				"error": "Invalid update payload",
