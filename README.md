@@ -15,7 +15,7 @@ A Go framework for building reactive SPAs with server-side rendering. Brings Sve
 - **Lightweight Runtime** — ~11KB for the simple runtime, ~17KB for the full runtime with DOMPurify.
 - **Remote Actions** — Type-safe server functions callable directly from the client.
 - **Security** — Built-in CSRF protection, customizable CORS origins, and strict XSS prevention.
-- **Rendering Modes** — Seamlessly mix CSR, SSR, and SSG per-page rendering strategies.
+- **Rendering Modes** — Mix SSR, SSG, ISR, and PPR per-page rendering strategies.
 
 ## Installation
 
@@ -283,6 +283,53 @@ app := gospa.New(gospa.Config{
 >
 > Setting `EnableCSRF: true` alone is not sufficient — you must wire both middlewares.
 
+### Rendering Strategies
+
+GoSPA supports four per-page rendering strategies:
+
+| Strategy | When to Use |
+|----------|-------------|
+| `StrategySSR` | Auth-gated pages, per-user content, real-time data (default) |
+| `StrategySSG` | Fully static: marketing, docs, landing pages |
+| `StrategyISR` | Mostly static, refresh every N minutes (stale-while-revalidate) |
+| `StrategyPPR` | Static shell with dynamic inner sections (app dashboards) |
+
+Select a strategy per-page in your `init()`:
+
+```go
+import (
+    "time"
+    "github.com/aydenstechdungeon/gospa/routing"
+)
+
+func init() {
+    // ISR: serve stale, revalidate in background every 5 minutes
+    routing.RegisterPageWithOptions("/pricing", pricingPage, routing.RouteOptions{
+        Strategy:        routing.StrategyISR,
+        RevalidateAfter: 5 * time.Minute,
+    })
+
+    // PPR: cache nav/footer shell, re-render feed slot per-request
+    routing.RegisterPageWithOptions("/dashboard", dashboardPage, routing.RouteOptions{
+        Strategy:     routing.StrategyPPR,
+        DynamicSlots: []string{"feed"},
+    })
+    routing.RegisterSlot("/dashboard", "feed", feedSlot)
+}
+```
+
+Enable caching in your app config:
+
+```go
+app := gospa.New(gospa.Config{
+    CacheTemplates:         true,
+    DefaultRenderStrategy:  routing.StrategyISR,  // app-wide fallback
+    DefaultRevalidateAfter: 10 * time.Minute,
+})
+```
+
+See [`docs/RENDERING.md`](docs/RENDERING.md) for full documentation.
+
 ### Partial Hydration
 
 Opt out of reactivity for static content:
@@ -458,6 +505,9 @@ See [`docs/PLUGINS.md`](docs/PLUGINS.md) for complete plugin documentation.
 | Language | Go | HTML | JS | JS/TS |
 | Runtime Size | <15KB* | ~14KB | ~15KB | Varies |
 | SSR | ✅ | ✅ | ❌ | ✅ |
+| SSG | ✅ | ❌ | ❌ | ✅ |
+| ISR | ✅ | ❌ | ❌ | ✅ |
+| PPR | ✅ | ❌ | ❌ | ✅ |
 | Type Safety | ✅ | ❌ | ❌ | ✅ |
 | WebSocket | ✅ | ❌ | ❌ | ✅ |
 | File Routing | ✅ | ❌ | ❌ | ✅ |

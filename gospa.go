@@ -15,15 +15,15 @@ import (
 	"os"
 	"strings"
 	"sync"
-
 	"time"
 
-	"github.com/a-h/templ"
+	templ "github.com/a-h/templ"
 	"github.com/aydenstechdungeon/gospa/embed"
 	"github.com/aydenstechdungeon/gospa/fiber"
 	"github.com/aydenstechdungeon/gospa/routing"
 	"github.com/aydenstechdungeon/gospa/state"
 	"github.com/aydenstechdungeon/gospa/store"
+	templpkg "github.com/aydenstechdungeon/gospa/templ"
 	fiberpkg "github.com/gofiber/fiber/v2"
 	"github.com/gofiber/fiber/v2/middleware/compress"
 	"github.com/gofiber/fiber/v2/middleware/filesystem"
@@ -102,6 +102,14 @@ type Config struct {
 	// NOTE: SSR (global SSR mode) is planned but not yet implemented — currently all pages are SSR by default.
 	SSR bool
 
+	// Rendering Strategy Defaults
+	// DefaultRenderStrategy sets the fallback strategy for pages that do not
+	// explicitly call RegisterPageWithOptions. Defaults to StrategySSR.
+	DefaultRenderStrategy routing.RenderStrategy
+	// DefaultRevalidateAfter is the ISR TTL used when a page uses StrategyISR
+	// but does not set RouteOptions.RevalidateAfter. Zero means revalidate every request.
+	DefaultRevalidateAfter time.Duration
+
 	// Remote Action Options
 	MaxRequestBodySize int    // Maximum allowed size for remote action request bodies
 	RemotePrefix       string // Prefix for remote action endpoints (default "/_gospa/remote")
@@ -109,7 +117,7 @@ type Config struct {
 	// Security Options
 	AllowedOrigins []string // Allowed CORS origins
 	EnableCSRF     bool     // Enable automatic CSRF protection (requires CSRFSetTokenMiddleware + CSRFTokenMiddleware)
-	// SSGCacheMaxEntries caps the SSG page cache size. Oldest entries are evicted when full.
+	// SSGCacheMaxEntries caps the SSG/ISR/PPR page cache size. Oldest entries are evicted when full.
 	// Default: 500. Set to -1 to disable eviction (unbounded, not recommended in production).
 	SSGCacheMaxEntries int
 
@@ -170,6 +178,15 @@ func (a *App) getWSUrl(c *fiberpkg.Ctx) string {
 	return protocol + string(c.Request().Host()) + a.Config.WebSocketPath
 }
 
+// ssgEntry holds a cached HTML page and when it was generated.
+type ssgEntry struct {
+	html      []byte
+	createdAt time.Time
+}
+
+// isrSemaphore limits concurrent ISR background revalidations.
+var isrSemaphore = make(chan struct{}, 10)
+
 // App is the main GoSPA application.
 type App struct {
 	// Config is the application configuration.
@@ -182,12 +199,22 @@ type App struct {
 	Hub *fiber.WSHub
 	// StateMap is the global state map.
 	StateMap *state.StateMap
-	// ssgCache stores pre-rendered SSG pages
-	ssgCache map[string][]byte
-	// ssgCacheKeys tracks insertion order for FIFO eviction
+	// ssgCache stores pre-rendered SSG and ISR pages.
+	ssgCache map[string]ssgEntry
+	// ssgCacheKeys tracks insertion order for FIFO eviction.
 	ssgCacheKeys []string
-	// ssgCacheMu protects ssgCache and ssgCacheKeys
+	// ssgCacheMu protects ssgCache and ssgCacheKeys.
 	ssgCacheMu sync.RWMutex
+	// isrRevalidating guards against duplicate background revalidations.
+	isrRevalidating sync.Map
+	// pprShellCache stores cached static shells for PPR pages.
+	pprShellCache map[string][]byte
+	// pprShellKeys tracks insertion order for PPR shell FIFO eviction.
+	pprShellKeys []string
+	// pprShellMu protects pprShellCache and pprShellKeys.
+	pprShellMu sync.RWMutex
+	// pprShellBuilding guards against duplicate PPR shell builds under concurrent load.
+	pprShellBuilding sync.Map
 }
 
 // New creates a new GoSPA application.
@@ -268,13 +295,15 @@ func New(config Config) *App {
 	}
 
 	app := &App{
-		Config:       config,
-		Router:       router,
-		Fiber:        fiberApp,
-		Hub:          hub,
-		StateMap:     stateMap,
-		ssgCache:     make(map[string][]byte),
-		ssgCacheKeys: make([]string, 0),
+		Config:        config,
+		Router:        router,
+		Fiber:         fiberApp,
+		Hub:           hub,
+		StateMap:      stateMap,
+		ssgCache:      make(map[string]ssgEntry),
+		ssgCacheKeys:  make([]string, 0),
+		pprShellCache: make(map[string][]byte),
+		pprShellKeys:  make([]string, 0),
 	}
 
 	// Setup middleware
@@ -458,142 +487,195 @@ func (a *App) RegisterRoutes() error {
 
 // renderRoute renders a route with its layout chain.
 func (a *App) renderRoute(c *fiberpkg.Ctx, route *routing.Route) error {
-	// Check SSG cache
-	opts := routing.GetRouteOptions(route.Path)
 	cacheKey := c.Path()
-	if a.Config.CacheTemplates && opts.Strategy == routing.StrategySSG {
+	opts := routing.GetRouteOptions(route.Path)
+
+	// Resolve effective strategy (per-page opts override config default).
+	effStrategy := opts.Strategy
+	if effStrategy == "" {
+		effStrategy = a.Config.DefaultRenderStrategy
+	}
+	if effStrategy == "" {
+		effStrategy = routing.StrategySSR
+	}
+
+	// Quick SSG cache check — serve without building layout chain.
+	if a.Config.CacheTemplates && effStrategy == routing.StrategySSG {
 		a.ssgCacheMu.RLock()
-		if cached, ok := a.ssgCache[cacheKey]; ok {
+		if entry, ok := a.ssgCache[cacheKey]; ok {
 			a.ssgCacheMu.RUnlock()
 			c.Set("Content-Type", "text/html")
-			return c.Send(cached)
+			c.Set("Cache-Control", "public, max-age=31536000, immutable")
+			return c.Send(entry.html)
 		}
 		a.ssgCacheMu.RUnlock()
 	}
 
-	// Get layout chain
+	// Quick ISR cache check — serve from cache (possibly stale) without rebuild.
+	if a.Config.CacheTemplates && effStrategy == routing.StrategyISR {
+		ttl := opts.RevalidateAfter
+		if ttl == 0 {
+			ttl = a.Config.DefaultRevalidateAfter
+		}
+		ttlSec := int(ttl.Seconds())
+		if ttlSec <= 0 {
+			ttlSec = 1
+		}
+
+		a.ssgCacheMu.RLock()
+		entry, hit := a.ssgCache[cacheKey]
+		a.ssgCacheMu.RUnlock()
+
+		if hit {
+			age := time.Since(entry.createdAt)
+			if ttl > 0 && age >= ttl {
+				// Stale: serve cached, kick off background revalidation.
+				if _, alreadyRunning := a.isrRevalidating.LoadOrStore(cacheKey, true); !alreadyRunning {
+					// Capture values for goroutine closure.
+					routeSnap := route
+					go func() {
+						defer a.isrRevalidating.Delete(cacheKey)
+						// Limit concurrent revalidations with semaphore
+						select {
+						case isrSemaphore <- struct{}{}:
+							defer func() { <-isrSemaphore }()
+						default:
+							// Too many concurrent revalidations, skip this one
+							return
+						}
+						freshHTML, err := a.buildPageHTML(context.Background(), routeSnap, nil)
+						if err != nil {
+							log.Printf("ISR background render error for %s: %v", cacheKey, err)
+							return
+						}
+						a.storeSsgEntry(cacheKey, freshHTML)
+					}()
+				}
+			}
+			c.Set("Content-Type", "text/html")
+			c.Set("Cache-Control", fmt.Sprintf("public, s-maxage=%d, stale-while-revalidate=%d", ttlSec, ttlSec))
+			return c.Send(entry.html)
+		}
+	}
+
+	// Quick PPR shell check.
+	if a.Config.CacheTemplates && effStrategy == routing.StrategyPPR {
+		a.pprShellMu.RLock()
+		shell, shellHit := a.pprShellCache[cacheKey]
+		a.pprShellMu.RUnlock()
+
+		if shellHit {
+			result, err := a.applyPPRSlots(route, shell, c.Path(), opts)
+			if err != nil {
+				log.Printf("PPR slot error: %v", err)
+			}
+			c.Set("Content-Type", "text/html")
+			c.Set("Cache-Control", "no-store")
+			return c.Send(result)
+		}
+	}
+
+	// ── Build layout chain & full component tree ─────────────────────────
 	layouts := a.Router.ResolveLayoutChain(route)
-
-	// Get params
 	_, params := a.Router.Match(c.Path())
-
-	// Create base context
 	ctx := c.Context()
 
-	// Build the page content from inside out
-	var content templ.Component
+	content := a.buildPageContent(route, params, c.Path())
+	content = a.wrapWithLayouts(content, layouts, params, c.Path())
 
-	// Look up the page component in the registry
-	pageFunc := routing.GetPage(route.Path)
-	if pageFunc != nil {
-		// Call the page component function with props
-		props := map[string]interface{}{
-			"path": c.Path(),
-		}
-		// Flatten params into props (e.g., props["id"] instead of props["params"]["id"])
-		for k, v := range params {
-			props[k] = v
-		}
-		content = pageFunc(props)
-	} else {
-		// Fallback to placeholder if no component registered
-		content = templ.ComponentFunc(func(ctx context.Context, w io.Writer) error {
-			_, _ = fmt.Fprintf(w, `<div data-gospa-page="%s">Page: %s</div>`, route.Path, route.Path)
-			return nil
-		})
-	}
-
-	// Wrap with layouts from innermost to outermost
-	for i := len(layouts) - 1; i >= 0; i-- {
-		layout := layouts[i]
-
-		// Look up the layout component in the registry
-		layoutFunc := routing.GetLayout(layout.Path)
-		if layoutFunc != nil {
-			// Use the registered layout function
-			props := map[string]interface{}{
-				"path": c.Path(),
-			}
-			// Flatten params into props
-			for k, v := range params {
-				props[k] = v
-			}
-			content = layoutFunc(content, props)
-		} else {
-			// Fallback to wrapper div
-			children := content
-			content = templ.ComponentFunc(func(ctx context.Context, w io.Writer) error {
-				_, _ = fmt.Fprintf(w, `<div data-gospa-layout="%s">`, layout.Path)
-				if err := children.Render(ctx, w); err != nil {
-					return err
-				}
-				_, _ = fmt.Fprint(w, `</div>`)
-				return nil
-			})
-		}
-	}
-
-	// Render the full page
 	c.Set("Content-Type", "text/html")
 
-	// Look up the root layout
 	rootLayoutFunc := routing.GetRootLayout()
 	if rootLayoutFunc != nil {
-		// Compute WS reconnect config with defaults for root layout props
-		wsRD := int(a.Config.WSReconnectDelay.Milliseconds())
-		if wsRD <= 0 {
-			wsRD = 1000
-		}
-		wsMR := a.Config.WSMaxReconnect
-		if wsMR <= 0 {
-			wsMR = 10
-		}
-		wsHB := int(a.Config.WSHeartbeat.Milliseconds())
-		if wsHB <= 0 {
-			wsHB = 30000
-		}
-		props := map[string]interface{}{
-			"appName":          a.Config.AppName,
-			"runtimePath":      a.getRuntimePath(),
-			"path":             c.Path(),
-			"debug":            a.Config.DevMode,
-			"wsUrl":            a.getWSUrl(c),
-			"hydrationMode":    a.Config.HydrationMode,
-			"hydrationTimeout": a.Config.HydrationTimeout,
-			"wsReconnectDelay": wsRD,
-			"wsMaxReconnect":   wsMR,
-			"wsHeartbeat":      wsHB,
-		}
-		for k, v := range params {
-			props[k] = v
-		}
+		rootProps := a.buildRootLayoutProps(c, params)
+		wrappedContent := rootLayoutFunc(content, rootProps)
 
-		wrappedContent := rootLayoutFunc(content, props)
-
-		if a.Config.CacheTemplates && opts.Strategy == routing.StrategySSG {
+		// ─── SSG ─────────────────────────────────────────────────────────
+		if a.Config.CacheTemplates && effStrategy == routing.StrategySSG {
 			var buf bytes.Buffer
 			if err := wrappedContent.Render(ctx, &buf); err != nil {
-				log.Printf("Render error: %v", err)
+				log.Printf("SSG render error: %v", err)
+				return c.Status(fiberpkg.StatusInternalServerError).SendString("Render error")
 			}
-			a.ssgCacheMu.Lock()
-			// FIFO eviction: cap cache to SSGCacheMaxEntries (default 500; -1 = unbounded)
-			maxEntries := a.Config.SSGCacheMaxEntries
-			if maxEntries == 0 {
-				maxEntries = 500
-			}
-			if maxEntries > 0 && len(a.ssgCache) >= maxEntries && len(a.ssgCacheKeys) > 0 {
-				oldest := a.ssgCacheKeys[0]
-				a.ssgCacheKeys = a.ssgCacheKeys[1:]
-				delete(a.ssgCache, oldest)
-			}
-			if _, exists := a.ssgCache[cacheKey]; !exists {
-				a.ssgCacheKeys = append(a.ssgCacheKeys, cacheKey)
-			}
-			a.ssgCache[cacheKey] = buf.Bytes()
-			a.ssgCacheMu.Unlock()
+			a.storeSsgEntry(cacheKey, buf.Bytes())
+			c.Set("Cache-Control", "public, max-age=31536000, immutable")
 			return c.Send(buf.Bytes())
 		}
 
+		// ─── ISR (cache miss) ─────────────────────────────────────────────
+		if a.Config.CacheTemplates && effStrategy == routing.StrategyISR {
+			ttl := opts.RevalidateAfter
+			if ttl == 0 {
+				ttl = a.Config.DefaultRevalidateAfter
+			}
+			ttlSec := int(ttl.Seconds())
+			if ttlSec <= 0 {
+				ttlSec = 1
+			}
+			var buf bytes.Buffer
+			if err := wrappedContent.Render(ctx, &buf); err != nil {
+				log.Printf("ISR render error: %v", err)
+				return c.Status(fiberpkg.StatusInternalServerError).SendString("Render error")
+			}
+			a.storeSsgEntry(cacheKey, buf.Bytes())
+			c.Set("Cache-Control", fmt.Sprintf("public, s-maxage=%d, stale-while-revalidate=%d", ttlSec, ttlSec))
+			return c.Send(buf.Bytes())
+		}
+
+		// ─── PPR (shell miss) ─────────────────────────────────────────────
+		if a.Config.CacheTemplates && effStrategy == routing.StrategyPPR {
+			// Use sync.Map for deduplication to prevent thundering herd
+			if _, alreadyBuilding := a.pprShellBuilding.LoadOrStore(cacheKey, true); !alreadyBuilding {
+				defer a.pprShellBuilding.Delete(cacheKey)
+				shellCtx := templpkg.WithPPRShellBuild(context.Background())
+				var shellBuf bytes.Buffer
+				if err := wrappedContent.Render(shellCtx, &shellBuf); err != nil {
+					log.Printf("PPR shell render error: %v", err)
+					return c.Status(fiberpkg.StatusInternalServerError).SendString("Render error")
+				}
+				a.storePprShell(cacheKey, shellBuf.Bytes())
+				result, err := a.applyPPRSlots(route, shellBuf.Bytes(), c.Path(), opts)
+				if err != nil {
+					log.Printf("PPR slot error: %v", err)
+					return c.Status(fiberpkg.StatusInternalServerError).SendString("Render error")
+				}
+				c.Set("Cache-Control", "no-store")
+				return c.Send(result)
+			} else {
+				// Another goroutine is building; poll briefly then check cache
+				var shellHTML []byte
+				var shellOk bool
+				for i := 0; i < 100; i++ {
+					time.Sleep(10 * time.Millisecond)
+					a.pprShellMu.RLock()
+					shellHTML, shellOk = a.pprShellCache[cacheKey]
+					a.pprShellMu.RUnlock()
+					if shellOk {
+						break
+					}
+				}
+				if shellOk {
+					result, err := a.applyPPRSlots(route, shellHTML, c.Path(), opts)
+					if err != nil {
+						log.Printf("PPR slot error: %v", err)
+						return c.Status(fiberpkg.StatusInternalServerError).SendString("Render error")
+					}
+					c.Set("Cache-Control", "no-store")
+					return c.Send(result)
+				}
+				// Shell still not ready, fall back to SSR (render inline)
+				var fallbackBuf bytes.Buffer
+				if err := wrappedContent.Render(c.Context(), &fallbackBuf); err != nil {
+					log.Printf("PPR fallback render error: %v", err)
+					return c.Status(fiberpkg.StatusInternalServerError).SendString("Render error")
+				}
+				c.Set("Cache-Control", "no-store")
+				return c.Send(fallbackBuf.Bytes())
+			}
+		}
+
+		// ─── SSR (default) ────────────────────────────────────────────────
+		c.Set("Cache-Control", "no-store")
 		c.Context().SetBodyStreamWriter(func(w *bufio.Writer) {
 			if err := wrappedContent.Render(ctx, w); err != nil {
 				log.Printf("Streaming render error: %v", err)
@@ -603,6 +685,7 @@ func (a *App) renderRoute(c *fiberpkg.Ctx, route *routing.Route) error {
 		return nil
 	}
 
+	// No root layout registered — minimal fallback HTML wrapper.
 	protocol := "ws://"
 	if c.Secure() {
 		protocol = "wss://"
@@ -612,7 +695,6 @@ func (a *App) renderRoute(c *fiberpkg.Ctx, route *routing.Route) error {
 	appName := a.Config.AppName
 	devMode := a.Config.DevMode
 
-	// Compute WS reconnect config with defaults
 	wsReconnectDelay := int(a.Config.WSReconnectDelay.Milliseconds())
 	if wsReconnectDelay <= 0 {
 		wsReconnectDelay = 1000
@@ -626,23 +708,16 @@ func (a *App) renderRoute(c *fiberpkg.Ctx, route *routing.Route) error {
 		wsHeartbeat = 30000
 	}
 
+	c.Set("Cache-Control", "no-store")
 	c.Context().SetBodyStreamWriter(func(w *bufio.Writer) {
-		// Write HTML wrapper with main tag for SPA navigation
 		_, _ = fmt.Fprint(w, `<!DOCTYPE html><html lang="en" data-gospa-auto><head><meta charset="UTF-8"><meta name="viewport" content="width=device-width, initial-scale=1.0"><title>`)
 		_, _ = fmt.Fprint(w, appName)
 		_, _ = fmt.Fprint(w, `</title></head><body><div id="app" data-gospa-root><main>`)
-
-		// Render content
 		if err := content.Render(ctx, w); err != nil {
 			log.Printf("Streaming render error: %v", err)
 		}
-
-		// Close wrapper
 		_, _ = fmt.Fprint(w, `</main></div>`)
-
-		// Inject runtime script
 		_, _ = fmt.Fprintf(w, `<script src="%s" type="module"></script>`, runtimePath)
-
 		_, _ = fmt.Fprintf(w, `<script type="module">
 import * as runtime from '%s';
 runtime.init({
@@ -658,15 +733,221 @@ runtime.init({
 	}
 });
 </script>`, runtimePath, wsUrl, devMode, a.Config.SimpleRuntimeSVGs, wsReconnectDelay, wsMaxReconnect, wsHeartbeat, a.Config.HydrationMode, a.Config.HydrationTimeout)
-
 		_, _ = fmt.Fprint(w, `</body></html>`)
 		w.Flush()
 	})
-
 	return nil
 }
 
+// buildPageContent builds the innermost page templ.Component for a route.
+func (a *App) buildPageContent(route *routing.Route, params map[string]string, path string) templ.Component {
+	pageFunc := routing.GetPage(route.Path)
+	if pageFunc != nil {
+		props := map[string]interface{}{"path": path}
+		for k, v := range params {
+			props[k] = v
+		}
+		return pageFunc(props)
+	}
+	return templ.ComponentFunc(func(ctx context.Context, w io.Writer) error {
+		_, _ = fmt.Fprintf(w, `<div data-gospa-page="%s">Page: %s</div>`, route.Path, route.Path)
+		return nil
+	})
+}
+
+// wrapWithLayouts wraps a component with every layout in the chain (innermost → outermost).
+func (a *App) wrapWithLayouts(content templ.Component, layouts []*routing.Route, params map[string]string, path string) templ.Component {
+	for i := len(layouts) - 1; i >= 0; i-- {
+		layout := layouts[i]
+		layoutFunc := routing.GetLayout(layout.Path)
+		if layoutFunc != nil {
+			props := map[string]interface{}{"path": path}
+			for k, v := range params {
+				props[k] = v
+			}
+			content = layoutFunc(content, props)
+		} else {
+			children := content
+			lp := layout.Path
+			content = templ.ComponentFunc(func(ctx context.Context, w io.Writer) error {
+				_, _ = fmt.Fprintf(w, `<div data-gospa-layout="%s">`, lp)
+				if err := children.Render(ctx, w); err != nil {
+					return err
+				}
+				_, _ = fmt.Fprint(w, `</div>`)
+				return nil
+			})
+		}
+	}
+	return content
+}
+
+// buildRootLayoutProps assembles the props map expected by the root layout function.
+func (a *App) buildRootLayoutProps(c *fiberpkg.Ctx, params map[string]string) map[string]interface{} {
+	wsRD := int(a.Config.WSReconnectDelay.Milliseconds())
+	if wsRD <= 0 {
+		wsRD = 1000
+	}
+	wsMR := a.Config.WSMaxReconnect
+	if wsMR <= 0 {
+		wsMR = 10
+	}
+	wsHB := int(a.Config.WSHeartbeat.Milliseconds())
+	if wsHB <= 0 {
+		wsHB = 30000
+	}
+	props := map[string]interface{}{
+		"appName":          a.Config.AppName,
+		"runtimePath":      a.getRuntimePath(),
+		"path":             c.Path(),
+		"debug":            a.Config.DevMode,
+		"wsUrl":            a.getWSUrl(c),
+		"hydrationMode":    a.Config.HydrationMode,
+		"hydrationTimeout": a.Config.HydrationTimeout,
+		"wsReconnectDelay": wsRD,
+		"wsMaxReconnect":   wsMR,
+		"wsHeartbeat":      wsHB,
+	}
+	for k, v := range params {
+		props[k] = v
+	}
+	return props
+}
+
+// buildPageHTML renders a complete page to bytes using a background context.
+// It is called by the ISR background revalidation goroutine.
+// params may be nil for pages without dynamic segments.
+func (a *App) buildPageHTML(ctx context.Context, route *routing.Route, params map[string]string) ([]byte, error) {
+	layouts := a.Router.ResolveLayoutChain(route)
+	if params == nil {
+		params = map[string]string{}
+	}
+
+	// Build a synthetic path (no query string needed for revalidation).
+	path := route.Path
+
+	content := a.buildPageContent(route, params, path)
+	content = a.wrapWithLayouts(content, layouts, params, path)
+
+	rootLayoutFunc := routing.GetRootLayout()
+	if rootLayoutFunc == nil {
+		// No root layout: render just the inner content.
+		var buf bytes.Buffer
+		if err := content.Render(ctx, &buf); err != nil {
+			return nil, err
+		}
+		return buf.Bytes(), nil
+	}
+
+	// Build minimal root props (no live Fiber ctx available in background goroutine).
+	wsRD := int(a.Config.WSReconnectDelay.Milliseconds())
+	if wsRD <= 0 {
+		wsRD = 1000
+	}
+	wsMR := a.Config.WSMaxReconnect
+	if wsMR <= 0 {
+		wsMR = 10
+	}
+	wsHB := int(a.Config.WSHeartbeat.Milliseconds())
+	if wsHB <= 0 {
+		wsHB = 30000
+	}
+	rootProps := map[string]interface{}{
+		"appName":          a.Config.AppName,
+		"runtimePath":      a.getRuntimePath(),
+		"path":             path,
+		"debug":            false,
+		"wsUrl":            a.Config.WebSocketPath,
+		"hydrationMode":    a.Config.HydrationMode,
+		"hydrationTimeout": a.Config.HydrationTimeout,
+		"wsReconnectDelay": wsRD,
+		"wsMaxReconnect":   wsMR,
+		"wsHeartbeat":      wsHB,
+	}
+	for k, v := range params {
+		rootProps[k] = v
+	}
+
+	wrapped := rootLayoutFunc(content, rootProps)
+	var buf bytes.Buffer
+	if err := wrapped.Render(ctx, &buf); err != nil {
+		return nil, err
+	}
+	return buf.Bytes(), nil
+}
+
+// storeSsgEntry writes html into the shared ssgCache with FIFO eviction.
+func (a *App) storeSsgEntry(key string, html []byte) {
+	a.ssgCacheMu.Lock()
+	defer a.ssgCacheMu.Unlock()
+	maxEntries := a.Config.SSGCacheMaxEntries
+	if maxEntries == 0 {
+		maxEntries = 500
+	}
+	if maxEntries > 0 && len(a.ssgCache) >= maxEntries && len(a.ssgCacheKeys) > 0 {
+		oldest := a.ssgCacheKeys[0]
+		a.ssgCacheKeys = a.ssgCacheKeys[1:]
+		delete(a.ssgCache, oldest)
+	}
+	if _, exists := a.ssgCache[key]; !exists {
+		a.ssgCacheKeys = append(a.ssgCacheKeys, key)
+	}
+	a.ssgCache[key] = ssgEntry{html: html, createdAt: time.Now()}
+}
+
+// storePprShell writes a PPR static shell into the pprShellCache with FIFO eviction.
+func (a *App) storePprShell(key string, shell []byte) {
+	a.pprShellMu.Lock()
+	defer a.pprShellMu.Unlock()
+	maxEntries := a.Config.SSGCacheMaxEntries
+	if maxEntries == 0 {
+		maxEntries = 500
+	}
+	if maxEntries > 0 && len(a.pprShellCache) >= maxEntries && len(a.pprShellKeys) > 0 {
+		oldest := a.pprShellKeys[0]
+		a.pprShellKeys = a.pprShellKeys[1:]
+		delete(a.pprShellCache, oldest)
+	}
+	if _, exists := a.pprShellCache[key]; !exists {
+		a.pprShellKeys = append(a.pprShellKeys, key)
+	}
+	a.pprShellCache[key] = shell
+}
+
+// applyPPRSlots renders each named dynamic slot and splices it into the static
+// shell by replacing <!--gospa-slot:name--> placeholders.
+func (a *App) applyPPRSlots(route *routing.Route, shell []byte, path string, opts routing.RouteOptions) ([]byte, error) {
+	_, params := a.Router.Match(path)
+	if params == nil {
+		params = map[string]string{}
+	}
+
+	result := shell
+	for _, slotName := range opts.DynamicSlots {
+		slotFn := routing.GetSlot(route.Path, slotName)
+		if slotFn == nil {
+			continue
+		}
+		slotProps := map[string]interface{}{"path": path}
+		for k, v := range params {
+			slotProps[k] = v
+		}
+		var slotBuf bytes.Buffer
+		if err := slotFn(slotProps).Render(context.Background(), &slotBuf); err != nil {
+			log.Printf("PPR slot %q render error: %v", slotName, err)
+			continue
+		}
+		placeholder := []byte(templpkg.SlotPlaceholder(slotName))
+		open := []byte(fmt.Sprintf(`<div data-gospa-slot="%s">`, slotName))
+		close := []byte(`</div>`)
+		replacement := append(open, append(slotBuf.Bytes(), close...)...)
+		result = bytes.ReplaceAll(result, placeholder, replacement)
+	}
+	return result, nil
+}
+
 // Run starts the application on the given address.
+
 func (a *App) Run(addr string) error {
 	// Scan routes if not already done
 	if len(a.Router.GetRoutes()) == 0 {

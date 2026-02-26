@@ -1,13 +1,13 @@
 package fiber
 
 import (
+	"github.com/aydenstechdungeon/gospa/state"
 	"encoding/json"
 	"fmt"
 	"html"
 	"runtime/debug"
 
-	"github.com/aydenstechdungeon/gospa/state"
-	"github.com/gofiber/fiber/v2"
+	fiberpkg "github.com/gofiber/fiber/v2"
 )
 
 // ErrorCode represents an error code.
@@ -71,15 +71,15 @@ func (e *AppError) WithRecover(recover bool) *AppError {
 
 // Common errors.
 var (
-	ErrInternal     = NewAppError(ErrorCodeInternal, "Internal server error", fiber.StatusInternalServerError)
-	ErrNotFound     = NewAppError(ErrorCodeNotFound, "Resource not found", fiber.StatusNotFound)
-	ErrBadRequest   = NewAppError(ErrorCodeBadRequest, "Bad request", fiber.StatusBadRequest)
-	ErrUnauthorized = NewAppError(ErrorCodeUnauthorized, "Unauthorized", fiber.StatusUnauthorized)
-	ErrForbidden    = NewAppError(ErrorCodeForbidden, "Forbidden", fiber.StatusForbidden)
-	ErrConflict     = NewAppError(ErrorCodeConflict, "Conflict", fiber.StatusConflict)
-	ErrValidation   = NewAppError(ErrorCodeValidation, "Validation error", fiber.StatusBadRequest)
-	ErrTimeout      = NewAppError(ErrorCodeTimeout, "Request timeout", fiber.StatusRequestTimeout)
-	ErrUnavailable  = NewAppError(ErrorCodeUnavailable, "Service unavailable", fiber.StatusServiceUnavailable)
+	ErrInternal     = NewAppError(ErrorCodeInternal, "Internal server error", fiberpkg.StatusInternalServerError)
+	ErrNotFound     = NewAppError(ErrorCodeNotFound, "Resource not found", fiberpkg.StatusNotFound)
+	ErrBadRequest   = NewAppError(ErrorCodeBadRequest, "Bad request", fiberpkg.StatusBadRequest)
+	ErrUnauthorized = NewAppError(ErrorCodeUnauthorized, "Unauthorized", fiberpkg.StatusUnauthorized)
+	ErrForbidden    = NewAppError(ErrorCodeForbidden, "Forbidden", fiberpkg.StatusForbidden)
+	ErrConflict     = NewAppError(ErrorCodeConflict, "Conflict", fiberpkg.StatusConflict)
+	ErrValidation   = NewAppError(ErrorCodeValidation, "Validation error", fiberpkg.StatusBadRequest)
+	ErrTimeout      = NewAppError(ErrorCodeTimeout, "Request timeout", fiberpkg.StatusRequestTimeout)
+	ErrUnavailable  = NewAppError(ErrorCodeUnavailable, "Service unavailable", fiberpkg.StatusServiceUnavailable)
 )
 
 // ErrorHandlerConfig holds error handler configuration.
@@ -89,9 +89,9 @@ type ErrorHandlerConfig struct {
 	// StateKey is the context key for state
 	StateKey string
 	// CustomErrorPages maps error codes to custom handlers
-	CustomErrorPages map[ErrorCode]func(*fiber.Ctx, *AppError) error
+	CustomErrorPages map[ErrorCode]func(*fiberpkg.Ctx, *AppError) error
 	// OnError is called when an error occurs
-	OnError func(*fiber.Ctx, *AppError)
+	OnError func(*fiberpkg.Ctx, *AppError)
 	// RecoverState attempts to recover state on error
 	RecoverState bool
 }
@@ -102,22 +102,22 @@ func DefaultErrorHandlerConfig() ErrorHandlerConfig {
 		DevMode:          false,
 		StateKey:         "gospa.state",
 		RecoverState:     true,
-		CustomErrorPages: make(map[ErrorCode]func(*fiber.Ctx, *AppError) error),
+		CustomErrorPages: make(map[ErrorCode]func(*fiberpkg.Ctx, *AppError) error),
 	}
 }
 
 // ErrorHandler creates a Fiber error handler.
-func ErrorHandler(config ErrorHandlerConfig) fiber.ErrorHandler {
-	return func(c *fiber.Ctx, err error) error {
+func ErrorHandler(config ErrorHandlerConfig) fiberpkg.ErrorHandler {
+	return func(c *fiberpkg.Ctx, err error) error {
 		// Convert to AppError
 		var appErr *AppError
 		switch e := err.(type) {
 		case *AppError:
 			appErr = e
-		case *fiber.Error:
+		case *fiberpkg.Error:
 			appErr = NewAppError(ErrorCodeInternal, e.Message, e.Code)
 		default:
-			appErr = NewAppError(ErrorCodeInternal, err.Error(), fiber.StatusInternalServerError)
+			appErr = NewAppError(ErrorCodeInternal, err.Error(), fiberpkg.StatusInternalServerError)
 			if config.DevMode {
 				appErr = appErr.WithStack(string(debug.Stack()))
 			}
@@ -147,7 +147,7 @@ func ErrorHandler(config ErrorHandlerConfig) fiber.ErrorHandler {
 		accept := string(c.Request().Header.Peek("Accept"))
 		if accept != "" && len(accept) >= 4 && accept[:4] == "appl" && len(accept) >= 16 && accept[:16] == "application/json" {
 			// JSON response
-			return c.Status(appErr.StatusCode).JSON(fiber.Map{
+			return c.Status(appErr.StatusCode).JSON(fiberpkg.Map{
 				"error":   appErr.Code,
 				"message": appErr.Message,
 				"details": appErr.Details,
@@ -174,7 +174,7 @@ func escapeJS(s string) string {
 }
 
 // renderErrorPage renders an error page.
-func renderErrorPage(c *fiber.Ctx, appErr *AppError, stateData map[string]interface{}, devMode bool) error {
+func renderErrorPage(c *fiberpkg.Ctx, appErr *AppError, stateData map[string]interface{}, devMode bool) error {
 	c.Set("Content-Type", "text/html; charset=utf-8")
 
 	// Escape all user-controlled values to prevent XSS
@@ -261,16 +261,16 @@ func renderErrorPage(c *fiber.Ctx, appErr *AppError, stateData map[string]interf
 }
 
 // NotFoundHandler creates a 404 handler.
-func NotFoundHandler() fiber.Handler {
-	return func(c *fiber.Ctx) error {
-		return NewAppError(ErrorCodeNotFound, "Page not found: "+c.Path(), fiber.StatusNotFound).
+func NotFoundHandler() fiberpkg.Handler {
+	return func(c *fiberpkg.Ctx) error {
+		return NewAppError(ErrorCodeNotFound, "Page not found: "+c.Path(), fiberpkg.StatusNotFound).
 			WithRecover(true)
 	}
 }
 
 // ValidationError creates a validation error.
 func ValidationError(field, message string) *AppError {
-	return NewAppError(ErrorCodeValidation, "Validation failed", fiber.StatusBadRequest).
+	return NewAppError(ErrorCodeValidation, "Validation failed", fiberpkg.StatusBadRequest).
 		WithDetails(map[string]interface{}{
 			"field":   field,
 			"message": message,
@@ -283,13 +283,13 @@ func ValidationErrors(errors map[string]string) *AppError {
 	for field, msg := range errors {
 		details[field] = msg
 	}
-	return NewAppError(ErrorCodeValidation, "Validation failed", fiber.StatusBadRequest).
+	return NewAppError(ErrorCodeValidation, "Validation failed", fiberpkg.StatusBadRequest).
 		WithDetails(details)
 }
 
 // PanicHandler creates a panic recovery handler.
-func PanicHandler(config ErrorHandlerConfig) fiber.Handler {
-	return func(c *fiber.Ctx) error {
+func PanicHandler(config ErrorHandlerConfig) fiberpkg.Handler {
+	return func(c *fiberpkg.Ctx) error {
 		defer func() {
 			if r := recover(); r != nil {
 				var err error
@@ -302,7 +302,7 @@ func PanicHandler(config ErrorHandlerConfig) fiber.Handler {
 					err = fmt.Errorf("%v", v)
 				}
 
-				appErr := NewAppError(ErrorCodeInternal, err.Error(), fiber.StatusInternalServerError).
+				appErr := NewAppError(ErrorCodeInternal, err.Error(), fiberpkg.StatusInternalServerError).
 					WithRecover(true)
 
 				if config.DevMode {

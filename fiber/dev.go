@@ -1,6 +1,7 @@
 package fiber
 
 import (
+	"github.com/aydenstechdungeon/gospa/state"
 	"encoding/json"
 	"fmt"
 	"log"
@@ -10,9 +11,8 @@ import (
 	"sync"
 	"time"
 
-	"github.com/aydenstechdungeon/gospa/state"
-	"github.com/gofiber/fiber/v2"
-	"github.com/gofiber/websocket/v2"
+	fiberpkg "github.com/gofiber/fiber/v2"
+	websocket "github.com/gofiber/websocket/v2"
 )
 
 // DevConfig holds development configuration.
@@ -297,7 +297,7 @@ func (d *DevTools) broadcastStateChange(entry StateLogEntry) {
 }
 
 // DevToolsHandler creates a WebSocket handler for dev tools.
-func (d *DevTools) DevToolsHandler() fiber.Handler {
+func (d *DevTools) DevToolsHandler() fiberpkg.Handler {
 	return websocket.New(func(c *websocket.Conn) {
 		clientID := generateComponentID()
 
@@ -372,8 +372,8 @@ func (d *DevTools) sendStateKeys(c *websocket.Conn) {
 }
 
 // DevPanelHandler creates a handler for the dev panel UI.
-func (d *DevTools) DevPanelHandler() fiber.Handler {
-	return func(c *fiber.Ctx) error {
+func (d *DevTools) DevPanelHandler() fiberpkg.Handler {
+	return func(c *fiberpkg.Ctx) error {
 		html := devPanelHTML()
 		c.Set("Content-Type", "text/html; charset=utf-8")
 		return c.SendString(html)
@@ -572,8 +572,8 @@ func devPanelHTML() string {
 }
 
 // DebugMiddleware logs requests and state changes.
-func DebugMiddleware(devTools *DevTools) fiber.Handler {
-	return func(c *fiber.Ctx) error {
+func DebugMiddleware(devTools *DevTools) fiberpkg.Handler {
+	return func(c *fiberpkg.Ctx) error {
 		start := time.Now()
 
 		err := c.Next()
@@ -586,8 +586,8 @@ func DebugMiddleware(devTools *DevTools) fiber.Handler {
 }
 
 // StateInspectorMiddleware inspects state changes.
-func StateInspectorMiddleware(devTools *DevTools, config Config) fiber.Handler {
-	return func(c *fiber.Ctx) error {
+func StateInspectorMiddleware(devTools *DevTools, config Config) fiberpkg.Handler {
+	return func(c *fiberpkg.Ctx) error {
 		// Get state before
 		var beforeState map[string]interface{}
 		if stateMap, ok := c.Locals(config.StateKey).(*state.StateMap); ok && stateMap != nil {

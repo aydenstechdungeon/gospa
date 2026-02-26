@@ -1,0 +1,5 @@
+run:
+  # Pin Go version to match go.mod, preventing pre-release toolchain typecheck failures.
+  # The system uses go1.26.0-X (pre-release) which does not satisfy the `go1.26` build
+  # tag in vendored crypto, cascading into false-positive fiber/v2 typecheck errors.
+  go: "1.24"

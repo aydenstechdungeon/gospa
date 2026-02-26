@@ -13,6 +13,7 @@ import (
 	_ "website/routes" // Import routes to trigger init()
 
 	"github.com/aydenstechdungeon/gospa"
+	"github.com/aydenstechdungeon/gospa/routing"
 	"github.com/gofiber/fiber/v2"
 )
 
@@ -27,18 +28,20 @@ func main() {
 	devMode := getEnvBool("GOSPA_DEV", false)
 
 	app := gospa.New(gospa.Config{
-		RoutesDir:        "./routes",
-		DevMode:          devMode,
-		AppName:          "GoSPA Documentation",
-		CacheTemplates:   !devMode, // Enable template caching in production
-		CompressState:    true,     // Compress WebSocket messages
-		StateDiffing:     true,     // Only send state diffs
-		EnableWebSocket:  true,
-		SimpleRuntime:    false,
-		WSHeartbeat:      30 * time.Second,
-		WSReconnectDelay: 1 * time.Second,
-		WSMaxReconnect:   5,
-		HydrationMode:    "immediate",
+		RoutesDir:             "./routes",
+		DevMode:               devMode,
+		AppName:               "GoSPA Documentation",
+		CacheTemplates:        !devMode,            // Enable template caching in production
+		DefaultRenderStrategy: routing.StrategySSG, // Make the entire docs site static by default
+		SSGCacheMaxEntries:    -1,                  // Cache all pages without eviction
+		CompressState:         true,                // Compress WebSocket messages
+		StateDiffing:          true,                // Only send state diffs
+		EnableWebSocket:       true,
+		SimpleRuntime:         false,
+		WSHeartbeat:           30 * time.Second,
+		WSReconnectDelay:      1 * time.Second,
+		WSMaxReconnect:        5,
+		HydrationMode:         "lazy",
 	})
 
 	// Legacy redirects after documentation restructuring

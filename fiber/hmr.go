@@ -11,7 +11,7 @@ import (
 	"time"
 
 	"github.com/gofiber/fiber/v2"
-	"github.com/gofiber/websocket/v2"
+	websocket "github.com/gofiber/websocket/v2"
 )
 
 // HMRConfig configures the HMR system.
@@ -34,6 +34,7 @@ type HMRManager struct {
 	moduleStates map[string]any
 	stateMu      sync.RWMutex
 	changeChan   chan HMRFileChangeEvent
+	stopOnce     sync.Once
 }
 
 // HMRFileChangeEvent represents a file change event.
@@ -516,7 +517,9 @@ func (mgr *HMRManager) Stop() {
 	if mgr.fileWatcher != nil {
 		mgr.fileWatcher.Stop()
 	}
-	close(mgr.changeChan)
+	mgr.stopOnce.Do(func() {
+		close(mgr.changeChan)
+	})
 }
 
 // Global HMR manager

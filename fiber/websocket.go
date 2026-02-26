@@ -16,7 +16,7 @@ import (
 	"github.com/aydenstechdungeon/gospa/state"
 	"github.com/aydenstechdungeon/gospa/store"
 	"github.com/gofiber/fiber/v2"
-	"github.com/gofiber/websocket/v2"
+	websocket "github.com/gofiber/websocket/v2"
 )
 
 const (

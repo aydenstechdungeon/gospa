@@ -548,6 +548,7 @@ Register page and layout components.
 // Defined types
 // type ComponentFunc func(props map[string]interface{}) templ.Component
 // type LayoutFunc func(children templ.Component, props map[string]interface{}) templ.Component
+// type SlotFunc func(props map[string]interface{}) templ.Component
 
 // Register page component
 routing.RegisterPage(path string, fn ComponentFunc)
@@ -567,6 +568,10 @@ rootLayoutFunc := routing.GetRootLayout()
 // Remote actions
 routing.RegisterRemoteAction(name string, fn RemoteActionFunc)
 fn, ok := routing.GetRemoteAction(name string)
+
+// PPR slot registration
+routing.RegisterSlot(pagePath string, slotName string, fn SlotFunc)
+slotFn := routing.GetSlot(pagePath string, slotName string)
 ```
 
 ---
@@ -575,10 +580,27 @@ fn, ok := routing.GetRemoteAction(name string)
 
 ```go
 type RouteOptions struct {
-    Strategy   RenderStrategy // SSR, CSR, SSG
-    Prerender  bool
-    CacheTTL   time.Duration
+    // Strategy controls how the page is rendered and cached.
+    // Values: StrategySSR (default), StrategySSG, StrategyISR, StrategyPPR.
+    Strategy   RenderStrategy
+
+    // ISR only: duration after which the cached page is considered stale.
+    // On a stale hit, the old page is returned immediately and a background
+    // goroutine re-renders and updates the cache (stale-while-revalidate).
+    // Zero means always revalidate (behaves like SSR).
+    RevalidateAfter time.Duration
+
+    // PPR only: names of dynamic slots excluded from the cached static shell.
+    // Each name must match a SlotFunc registered via RegisterSlot for this path.
+    DynamicSlots []string
 }
+
+const (
+    StrategySSR RenderStrategy = "ssr" // fresh render per request (default)
+    StrategySSG RenderStrategy = "ssg" // render once, cache forever
+    StrategyISR RenderStrategy = "isr" // render once, revalidate after TTL
+    StrategyPPR RenderStrategy = "ppr" // static shell + per-request dynamic slots
+)
 
 // Get options for route
 opts := routing.GetRouteOptions(path string)

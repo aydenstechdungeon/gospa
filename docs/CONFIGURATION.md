@@ -51,9 +51,17 @@ app := gospa.New(gospa.Config{
 |--------|------|---------|-------------|
 | `CompressState` | `bool` | `false` | Enable zlib compression for WebSocket messages |
 | `StateDiffing` | `bool` | `false` | Only send state diffs over WebSocket to save bandwidth |
-| `CacheTemplates` | `bool` | `false` | Enable template caching (recommended for production) |
+| `CacheTemplates` | `bool` | `false` | Enable template caching for SSG, ISR, and PPR pages (recommended for production) |
 | `SimpleRuntime` | `bool` | `false` | Use lightweight ~11KB runtime without DOMPurify |
 | `SimpleRuntimeSVGs` | `bool` | `false` | Allow SVG/math elements in simple runtime (security risk for untrusted content) |
+| `SSGCacheMaxEntries` | `int` | `500` | FIFO eviction limit shared by SSG, ISR, and PPR shell caches. `-1` = unbounded. |
+
+### Rendering Strategy Options
+
+| Option | Type | Default | Description |
+|--------|------|---------|-------------|
+| `DefaultRenderStrategy` | `routing.RenderStrategy` | `""` (StrategySSR) | Fallback strategy for pages that don't explicitly call `RegisterPageWithOptions` |
+| `DefaultRevalidateAfter` | `time.Duration` | `0` | ISR TTL fallback for ISR pages that don't set `RouteOptions.RevalidateAfter` |
 
 ### Hydration Options
 
@@ -235,7 +243,7 @@ StateDiffing: true,
 
 ### CacheTemplates
 
-Cache compiled templates in memory. Improves performance for SSG pages.
+Cache compiled templates in memory. Enables SSG, ISR, and PPR page caching. Required for all three strategies to operate; without it every request is rendered fresh (SSR behaviour).
 
 ```go
 CacheTemplates: true,
@@ -387,6 +395,11 @@ func main() {
         StateDiffing:   true,
         CacheTemplates: true,
         SimpleRuntime:  false,  // Use full runtime with DOMPurify
+        
+        // Rendering Strategy Defaults
+        DefaultRenderStrategy:  routing.StrategyISR,
+        DefaultRevalidateAfter: 10 * time.Minute,
+        SSGCacheMaxEntries:     1000,
         
         // Hydration
         HydrationMode:    "visible",

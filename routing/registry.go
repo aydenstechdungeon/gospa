@@ -3,6 +3,7 @@ package routing
 
 import (
 	"sync"
+	"time"
 
 	"github.com/a-h/templ"
 )
@@ -17,14 +18,36 @@ type LayoutFunc func(children templ.Component, props map[string]interface{}) tem
 type RenderStrategy string
 
 const (
+	// StrategySSR renders fresh on every request (default).
 	StrategySSR RenderStrategy = "ssr"
+	// StrategySSG renders once and caches forever (FIFO eviction via SSGCacheMaxEntries).
 	StrategySSG RenderStrategy = "ssg"
+	// StrategyISR renders once, then revalidates in the background after RevalidateAfter elapses
+	// (stale-while-revalidate). Requires CacheTemplates: true.
+	StrategyISR RenderStrategy = "isr"
+	// StrategyPPR renders a static shell once and streams only named DynamicSlots
+	// per-request. Requires CacheTemplates: true.
+	StrategyPPR RenderStrategy = "ppr"
 )
 
 // RouteOptions holds page-level options like rendering strategy.
 type RouteOptions struct {
 	Strategy RenderStrategy
+
+	// ISR: duration after which the cached page is considered stale.
+	// On a stale request the old page is served immediately and a background
+	// goroutine re-renders and updates the cache (stale-while-revalidate).
+	// Zero means "always revalidate" which behaves identically to SSR.
+	RevalidateAfter time.Duration
+
+	// PPR: names of dynamic slots that are excluded from the cached static shell
+	// and re-rendered per-request. Each name must match a slot registered with
+	// RegisterSlot for this page path.
+	DynamicSlots []string
 }
+
+// SlotFunc returns a templ.Component for a named PPR dynamic slot.
+type SlotFunc func(props map[string]interface{}) templ.Component
 
 // Registry holds registered page and layout components.
 type Registry struct {
@@ -33,6 +56,8 @@ type Registry struct {
 	pageOptions map[string]RouteOptions
 	layouts     map[string]LayoutFunc
 	rootLayout  LayoutFunc
+	// slots maps pagePath → slotName → SlotFunc for PPR.
+	slots map[string]map[string]SlotFunc
 }
 
 // globalRegistry is the default global registry.
@@ -44,6 +69,7 @@ func NewRegistry() *Registry {
 		pages:       make(map[string]ComponentFunc),
 		pageOptions: make(map[string]RouteOptions),
 		layouts:     make(map[string]LayoutFunc),
+		slots:       make(map[string]map[string]SlotFunc),
 	}
 }
 
@@ -121,6 +147,26 @@ func (r *Registry) HasLayout(path string) bool {
 	return ok
 }
 
+// RegisterSlot registers a PPR dynamic slot component for a page path.
+func (r *Registry) RegisterSlot(pagePath, slotName string, fn SlotFunc) {
+	r.mu.Lock()
+	defer r.mu.Unlock()
+	if r.slots[pagePath] == nil {
+		r.slots[pagePath] = make(map[string]SlotFunc)
+	}
+	r.slots[pagePath][slotName] = fn
+}
+
+// GetSlot returns the SlotFunc for a named PPR slot on a page path.
+func (r *Registry) GetSlot(pagePath, slotName string) SlotFunc {
+	r.mu.RLock()
+	defer r.mu.RUnlock()
+	if m := r.slots[pagePath]; m != nil {
+		return m[slotName]
+	}
+	return nil
+}
+
 // Global registry functions
 
 // RegisterPage registers a page component in the global registry (default SSR).
@@ -171,6 +217,16 @@ func HasPage(path string) bool {
 // HasLayout checks if a layout is registered in the global registry.
 func HasLayout(path string) bool {
 	return globalRegistry.HasLayout(path)
+}
+
+// RegisterSlot registers a PPR dynamic slot in the global registry.
+func RegisterSlot(pagePath, slotName string, fn SlotFunc) {
+	globalRegistry.RegisterSlot(pagePath, slotName, fn)
+}
+
+// GetSlot returns a PPR slot from the global registry.
+func GetSlot(pagePath, slotName string) SlotFunc {
+	return globalRegistry.GetSlot(pagePath, slotName)
 }
 
 // GetGlobalRegistry returns the global registry.

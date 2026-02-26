@@ -5,17 +5,17 @@ import (
 	"time"
 
 	"github.com/aydenstechdungeon/gospa/store"
-	"github.com/redis/go-redis/v9"
+	goredis "github.com/redis/go-redis/v9"
 )
 
 // Store provides a Redis-backed implementation of the store.Storage interface.
 type Store struct {
-	client *redis.Client
+	client *goredis.Client
 	ctx    context.Context
 }
 
 // NewStore creates a new Redis storage.
-func NewStore(client *redis.Client) *Store {
+func NewStore(client *goredis.Client) *Store {
 	return &Store{
 		client: client,
 		ctx:    context.Background(), // Can be injected externally or derived
@@ -25,7 +25,7 @@ func NewStore(client *redis.Client) *Store {
 // Get retrieves a key from Redis.
 func (s *Store) Get(key string) ([]byte, error) {
 	val, err := s.client.Get(s.ctx, key).Bytes()
-	if err == redis.Nil {
+	if err == goredis.Nil {
 		return nil, store.ErrNotFound
 	}
 	return val, err
@@ -43,12 +43,12 @@ func (s *Store) Delete(key string) error {
 
 // PubSub provides a Redis-backed implementation of the store.PubSub interface.
 type PubSub struct {
-	client *redis.Client
+	client *goredis.Client
 	ctx    context.Context
 }
 
 // NewPubSub creates a new Redis PubSub.
-func NewPubSub(client *redis.Client) *PubSub {
+func NewPubSub(client *goredis.Client) *PubSub {
 	return &PubSub{
 		client: client,
 		ctx:    context.Background(),
