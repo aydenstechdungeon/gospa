@@ -47,16 +47,16 @@ async function getDOMPurify(): Promise<typeof import('dompurify').default> {
 	if (domPurifyInstance) {
 		return domPurifyInstance;
 	}
-	
+
 	if (domPurifyPromise) {
 		return domPurifyPromise;
 	}
-	
+
 	domPurifyPromise = import('dompurify').then(module => {
 		domPurifyInstance = module.default;
 		return domPurifyInstance;
 	});
-	
+
 	return domPurifyPromise;
 }
 
@@ -75,8 +75,9 @@ export async function sanitize(html: string): Promise<string> {
  */
 export function sanitizeSync(html: string): string {
 	if (!domPurifyInstance) {
-		console.warn('[gospa] sanitizeSync called before DOMPurify loaded, returning original HTML');
-		return html;
+		console.warn('[gospa] sanitizeSync: DOMPurify not loaded');
+		// Escape basic HTML entities as fallback
+		return html.replace(/[&<>"']/g, (m) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[m]!));
 	}
 	return domPurifyInstance.sanitize(html, PURIFY_CONFIG) as string;
 }

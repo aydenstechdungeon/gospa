@@ -179,6 +179,10 @@ type WSClient struct {
 	// lastSentState holds the snapshot used for StateDiffing
 	lastSentStateMu sync.Mutex
 	lastSentState   map[string]interface{}
+	// Rate limiting
+	actionMu         sync.Mutex
+	actionTokens     float64
+	actionLastRefill time.Time
 }
 
 // WSMessage represents a WebSocket message.
@@ -330,11 +334,13 @@ func (h *WSHub) ClientCount() int {
 // NewWSClient creates a new WebSocket client.
 func NewWSClient(id string, conn *websocket.Conn) *WSClient {
 	client := &WSClient{
-		ID:     id,
-		Conn:   conn,
-		Send:   make(chan []byte, 256),
-		State:  state.NewStateMap(),
-		closed: false,
+		ID:               id,
+		Conn:             conn,
+		Send:             make(chan []byte, 256),
+		State:            state.NewStateMap(),
+		closed:           false,
+		actionTokens:     10.0,
+		actionLastRefill: time.Now(),
 	}
 	return client
 }
@@ -886,6 +892,26 @@ func DefaultMessageHandler(client *WSClient, msg WSMessage) {
 		})
 
 	case "action":
+		client.actionMu.Lock()
+		now := time.Now()
+		elapsed := now.Sub(client.actionLastRefill).Seconds()
+		client.actionTokens += elapsed * 5.0 // refill at 5 actions/sec
+		if client.actionTokens > 10.0 {
+			client.actionTokens = 10.0
+		}
+		client.actionLastRefill = now
+
+		if client.actionTokens < 1.0 {
+			client.actionMu.Unlock()
+			sendResponse(map[string]interface{}{
+				"type":  "error",
+				"error": "Rate limit exceeded",
+			})
+			return
+		}
+		client.actionTokens -= 1.0
+		client.actionMu.Unlock()
+
 		action := msg.Action
 		if action == "" {
 			sendResponse(map[string]interface{}{

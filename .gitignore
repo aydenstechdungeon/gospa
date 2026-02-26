@@ -49,6 +49,7 @@ node_modules/
 generated/
 **/generated_routes.go
 **/*_templ.go
+lint.json
 
 # Temporary files
 tmp/

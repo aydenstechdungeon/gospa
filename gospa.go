@@ -267,6 +267,12 @@ func New(config Config) *App {
 		config.MaxRequestBodySize = 4 * 1024 * 1024
 	}
 
+	if config.SSGCacheMaxEntries == 0 {
+		config.SSGCacheMaxEntries = 500
+	} else if config.SSGCacheMaxEntries < 0 || config.SSGCacheMaxEntries > 10000 {
+		config.SSGCacheMaxEntries = 10000
+	}
+
 	if config.Storage == nil {
 		if config.Prefork {
 			log.Println("WARNING: Prefork is enabled with in-memory Storage. Sessions and State will be isolated per process!")
@@ -294,11 +300,14 @@ func New(config Config) *App {
 
 	// Create Fiber app
 	fiberConfig := fiberpkg.Config{
-		AppName: config.AppName,
-		Prefork: config.Prefork,
+		AppName:      config.AppName,
+		Prefork:      config.Prefork,
+		ServerHeader: "GoSPA",
 	}
 	if config.DevMode {
+		log.Println("WARNING: DevMode is enabled. This exposes detailed stack traces and should be disabled in production.")
 		fiberConfig.EnablePrintRoutes = true
+		fiberConfig.ServerHeader = "GoSPA/" + Version
 	}
 	fiberApp := fiberpkg.New(fiberConfig)
 
@@ -437,6 +446,11 @@ func (a *App) setupRoutes() {
 		var input interface{}
 		// Only parse if body is not empty
 		if len(c.Body()) > 0 {
+			if !strings.Contains(c.Get("Content-Type"), "application/json") {
+				return c.Status(fiberpkg.StatusUnsupportedMediaType).JSON(fiberpkg.Map{
+					"error": "Unsupported Media Type: expected application/json",
+				})
+			}
 			if len(c.Body()) > a.Config.MaxRequestBodySize {
 				return c.Status(fiberpkg.StatusRequestEntityTooLarge).JSON(fiberpkg.Map{
 					"error": "Request body too large",
@@ -465,7 +479,8 @@ func (a *App) setupRoutes() {
 	// Static files
 	if _, err := os.Stat(a.Config.StaticDir); err == nil {
 		a.Fiber.Use(a.Config.StaticPrefix, filesystem.New(filesystem.Config{
-			Root: http.Dir(a.Config.StaticDir),
+			Root:   http.Dir(a.Config.StaticDir),
+			MaxAge: 31536000,
 		}))
 		// Serve favicon from static dir if requested at root
 		a.Fiber.Get("/favicon.ico", func(c *fiberpkg.Ctx) error {

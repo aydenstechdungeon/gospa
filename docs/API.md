@@ -129,8 +129,8 @@ type Config struct {
 - `CompressState`: Enables gzip+base64 compression of outbound WebSocket state payloads. Client decodes with the `DecompressionStream` browser API.
 - `StateDiffing`: Sends only changed state keys as `"patch"` WebSocket messages after the initial full snapshot — reduces bandwidth for large states.
 - `StateSerializer` / `StateDeserializer`: Custom hooks replacing JSON for WebSocket state encoding/decoding.
-- `SimpleRuntime`: Reduces client bundle size by ~6KB by removing DOMPurify. **Only enable if all content is trusted.**
-- `SimpleRuntimeSVGs`: Allows SVG elements in the simple runtime sanitizer. **Security risk** — only enable for fully trusted content.
+- `SimpleRuntime`: Reduces client bundle size by ~6KB by removing DOMPurify. ⚠️ Security Risk: Only enable SimpleRuntime for fully trusted content.
+- `SimpleRuntimeSVGs`: Allows SVG elements in the simple runtime sanitizer. ⚠️ Security Risk: Only enable SimpleRuntimeSVGs for fully trusted content.
 - `HydrationMode`: Controls when components become interactive. Values: `"immediate"` (default), `"lazy"`, `"visible"`, `"idle"`.
 - `WSReconnectDelay`: Initial reconnect delay passed to the client WebSocket runtime. Default: 1s.
 - `WSMaxReconnect`: Maximum reconnect attempts passed to the client. Default: 10.

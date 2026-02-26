@@ -175,8 +175,21 @@ func (pe *ParamExtractor) buildRegex() {
 		// Dynamic parameter
 		if strings.HasPrefix(seg, ":") {
 			paramName := seg[1:]
+			pattern := "([^/]+)"
+
+			// Custom regex validation support (e.g., :id<[0-9]+>)
+			if startIdx := strings.Index(paramName, "<"); startIdx != -1 && strings.HasSuffix(paramName, ">") {
+				customPattern := paramName[startIdx+1 : len(paramName)-1]
+				// Validate the custom regex pattern
+				if _, err := regexp.Compile(customPattern); err == nil {
+					pattern = "(" + customPattern + ")"
+				}
+				// If invalid, fall back to default pattern "([^/]+)"
+				paramName = paramName[:startIdx]
+			}
+
 			pe.params = append(pe.params, paramName)
-			regexParts = append(regexParts, "([^/]+)")
+			regexParts = append(regexParts, pattern)
 			continue
 		}
 

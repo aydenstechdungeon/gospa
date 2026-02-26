@@ -82,23 +82,16 @@ export interface WebSocketConfig {
 	onOpen?: () => void;
 	onClose?: (event: CloseEvent) => void;
 	onError?: (error: Event) => void;
+	onConnectionFailed?: (error: Error) => void;
 	onMessage?: (message: StateMessage) => void;
 }
 
 // Helper functions for session persistence
 function loadSession(): SessionData | null {
 	try {
-		const name = SESSION_COOKIE_KEY + '=';
-		const ca = document.cookie.split(';');
-		for (let i = 0; i < ca.length; i++) {
-			let c = ca[i];
-			while (c.charAt(0) === ' ') {
-				c = c.substring(1);
-			}
-			if (c.indexOf(name) === 0) {
-				const val = decodeURIComponent(c.substring(name.length, c.length));
-				return JSON.parse(val) as SessionData;
-			}
+		const saved = sessionStorage.getItem(SESSION_COOKIE_KEY);
+		if (saved) {
+			return JSON.parse(saved) as SessionData;
 		}
 	} catch (e) {
 		console.warn('[GoSPA] Failed to load session:', e);
@@ -108,16 +101,8 @@ function loadSession(): SessionData | null {
 
 function saveSession(data: SessionData): void {
 	try {
-		const d = new Date();
-		// Set to expire in 7 days
-		d.setTime(d.getTime() + (7 * 24 * 60 * 60 * 1000));
-		const expires = "expires=" + d.toUTCString();
-		const val = encodeURIComponent(JSON.stringify(data));
-		let cookieStr = `${SESSION_COOKIE_KEY}=${val};${expires};path=/;SameSite=Strict`;
-		if (window.location.protocol === 'https:') {
-			cookieStr += ';Secure';
-		}
-		document.cookie = cookieStr;
+		// Store in sessionStorage for client-side access
+		sessionStorage.setItem(SESSION_COOKIE_KEY, JSON.stringify(data));
 	} catch (e) {
 		console.warn('[GoSPA] Failed to save session:', e);
 	}
@@ -125,7 +110,7 @@ function saveSession(data: SessionData): void {
 
 function clearSession(): void {
 	try {
-		document.cookie = `${SESSION_COOKIE_KEY}=;expires=Thu, 01 Jan 1970 00:00:00 UTC;path=/;`;
+		sessionStorage.removeItem(SESSION_COOKIE_KEY);
 	} catch (e) {
 		console.warn('[GoSPA] Failed to clear session:', e);
 	}
@@ -152,12 +137,32 @@ export class WSClient {
 			onOpen: () => { },
 			onClose: () => { },
 			onError: () => { },
+			onConnectionFailed: () => { },
 			onMessage: () => { },
 			...config
 		};
 		this.connectionState = new Rune<ConnectionState>('disconnected');
-		// Load existing session on construction
 		this.sessionData = loadSession();
+
+		try {
+			const savedQueue = sessionStorage.getItem('gospa_ws_queue');
+			if (savedQueue) {
+				this.messageQueue = JSON.parse(savedQueue) || [];
+				sessionStorage.removeItem('gospa_ws_queue');
+			}
+		} catch (e) {
+			console.warn('[GoSPA] Failed to restore message queue:', e);
+		}
+
+		window.addEventListener('beforeunload', () => {
+			if (this.messageQueue.length > 0) {
+				try {
+					sessionStorage.setItem('gospa_ws_queue', JSON.stringify(this.messageQueue));
+				} catch (e) {
+					console.warn('[GoSPA] Failed to persist message queue:', e);
+				}
+			}
+		});
 	}
 
 	get state(): ConnectionState {
@@ -219,6 +224,8 @@ export class WSClient {
 
 				if (this.config.reconnect && this.reconnectAttempts < this.config.maxReconnectAttempts) {
 					this.scheduleReconnect();
+				} else {
+					this.config.onConnectionFailed(new Error('Max reconnect attempts reached'));
 				}
 			};
 
@@ -247,6 +254,8 @@ export class WSClient {
 
 	private scheduleReconnect(): void {
 		this.reconnectAttempts++;
+		// Cap the delay at 5x the interval for fast initial retries, 
+		// even though total attempts may be much higher.
 		const delay = this.config.reconnectInterval * Math.min(this.reconnectAttempts, 5);
 
 		setTimeout(() => {

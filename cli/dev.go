@@ -32,7 +32,9 @@ func Dev(config *DevConfig) {
 
 	// Initial generation
 	fmt.Println("Generating files...")
-	_ = regenerateTempl()
+	if err := regenerateTempl(); err != nil {
+		fmt.Fprintf(os.Stderr, "Warning: templ regeneration failed: %v\n", err)
+	}
 	runGenerate()
 
 	// Use defaults if config is nil
@@ -261,9 +263,10 @@ func (w *DevWatcher) scanDir(dir string) error {
 }
 
 func (w *DevWatcher) checkDir(dir string) {
-	_ = filepath.Walk(dir, func(path string, info os.FileInfo, err error) error {
+	err := filepath.Walk(dir, func(path string, info os.FileInfo, err error) error {
 		if err != nil {
-			return nil // Ignore errors
+			fmt.Fprintf(os.Stderr, "Warning: watcher error accessing %s: %v\n", path, err)
+			return nil // Ignore errors and continue
 		}
 
 		if info.IsDir() {
@@ -298,6 +301,9 @@ func (w *DevWatcher) checkDir(dir string) {
 
 		return nil
 	})
+	if err != nil {
+		fmt.Fprintf(os.Stderr, "Warning: watcher directory walk error: %v\n", err)
+	}
 
 	// Check for deleted files
 	for path := range w.fileTimes {
@@ -407,7 +413,6 @@ type DevServer struct {
 	config   *DevConfig
 	watcher  *DevWatcher
 	server   *exec.Cmd
-	clients  map[string]bool
 	reloadCh chan HotReload
 }
 
@@ -415,7 +420,6 @@ type DevServer struct {
 func NewDevServer(config *DevConfig) *DevServer {
 	return &DevServer{
 		config:   config,
-		clients:  make(map[string]bool),
 		reloadCh: make(chan HotReload, 100),
 	}
 }

@@ -144,9 +144,14 @@ export function transitionIn(node: HTMLElement, fn: TransitionFn, params: any) {
     activeTransitions.add(node);
 
     const config = fn(node, params);
-    const duration = config.duration || 400;
+    const duration = config.duration ?? 400;
     const delay = config.delay || 0;
     const css = config.css || (() => '');
+
+    if (duration === 0 && delay === 0) {
+        activeTransitions.delete(node);
+        return;
+    }
 
     const originalStyle = node.getAttribute('style') || '';
 
@@ -179,9 +184,15 @@ export function transitionOut(node: HTMLElement, fn: TransitionFn, params: any, 
     activeTransitions.add(node);
 
     const config = fn(node, params);
-    const duration = config.duration || 400;
+    const duration = config.duration ?? 400;
     const delay = config.delay || 0;
     const css = config.css || (() => '');
+
+    if (duration === 0 && delay === 0) {
+        activeTransitions.delete(node);
+        onComplete();
+        return;
+    }
 
     const name = `gospa-transition-${Math.random().toString(36).substring(2, 9)}`;
     const keyframes = `
