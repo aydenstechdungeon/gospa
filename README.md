@@ -370,6 +370,8 @@ myapp/
 ## API Reference
 
 See [`docs/API.md`](docs/API.md) for complete API documentation.
+[`docs/llms/llms.txt`](docs/llms/llms.txt)
+[`docs/llms/llms-full.md`](docs/llms/llms-full.md)
 
 ## CLI
 
