@@ -5,9 +5,13 @@ import { Rune, Derived, Effect, StateMap, batch, effect, watch, type Unsubscribe
 import { bindElement, bindTwoWay, renderIf, renderList, registerBinding, unregisterBinding } from './dom.ts';
 import { on, offAll, debounce, throttle, delegate, onKey, keys, transformers } from './events.ts';
 import type { StateMessage } from './websocket.ts';
+import { remote, remoteAction, configureRemote, getRemotePrefix, type RemoteOptions, type RemoteResult } from './remote.ts';
 
 // Re-export StateMessage for convenience
 export type { StateMessage };
+
+// Re-export remote action types
+export type { RemoteOptions, RemoteResult };
 
 // Component definition
 export interface ComponentDefinition {
@@ -105,7 +109,11 @@ export function init(options: RuntimeConfig = {}): void {
 		setState,
 		callAction,
 		bind,
-		autoInit
+		autoInit,
+		remote,
+		remoteAction,
+		configureRemote,
+		getRemotePrefix
 	};
 }
 
@@ -426,7 +434,9 @@ function setupBindings(root: Element | Document = document): void {
 export {
 	Rune, Derived, Effect, StateMap, batch, effect, watch,
 	bindElement, bindTwoWay, renderIf, renderList, registerBinding, unregisterBinding,
-	on, offAll, debounce, throttle, delegate, onKey, keys, transformers
+	on, offAll, debounce, throttle, delegate, onKey, keys, transformers,
+	// Remote actions
+	remote, remoteAction, configureRemote, getRemotePrefix
 };
 
 // Lazy module loaders

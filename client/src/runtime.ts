@@ -21,12 +21,14 @@ if (typeof window !== 'undefined') {
 
 import {
 	init, createComponent, destroyComponent, getComponent, getState, setState, callAction, bind, autoInit,
-	getWebSocket, getNavigation, getTransitions
+	getWebSocket, getNavigation, getTransitions,
+	remote, remoteAction, configureRemote, getRemotePrefix
 } from './runtime-core.ts';
 
 export {
 	init, createComponent, destroyComponent, getComponent, getState, setState, callAction, bind, autoInit,
-	getWebSocket, getNavigation, getTransitions
+	getWebSocket, getNavigation, getTransitions,
+	remote, remoteAction, configureRemote, getRemotePrefix
 };
 
 export {
@@ -38,6 +40,7 @@ export {
 // Export types
 export type { ComponentDefinition, ComponentInstance, RuntimeConfig } from './runtime-core.ts';
 export type { Unsubscribe } from './state.ts';
+export type { RemoteOptions, RemoteResult } from './remote.ts';
 
 // Direct imports for full-featured runtime (backward compatibility)
 import { Rune, Derived, Effect, StateMap, batch, effect, watch, type Unsubscribe } from './state.ts';
