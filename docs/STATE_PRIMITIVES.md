@@ -7,7 +7,7 @@ Server-side reactive primitives for GoSPA, mirroring Svelte's rune system for se
 The `state` package provides Svelte rune-like reactive primitives for Go. These primitives enable reactive state management on the server side, with automatic change notification and dependency tracking.
 
 ```go
-import "github.com/a4bet/gospa/state"
+import "github.com/aydenstechdungeon/gospa/state"
 ```
 
 ## Core Types
@@ -698,7 +698,7 @@ package main
 
 import (
     "fmt"
-    "github.com/a4bet/gospa/state"
+    "github.com/aydenstechdungeon/gospa/state"
 )
 
 func main() {

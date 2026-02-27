@@ -295,7 +295,7 @@ These are set in `renderRoute` before writing the response body.
 
 ### 7.1 `docs/RENDERING.md` (new file)
 
-Create `/home/a4bet/gospa/docs/RENDERING.md` with:
+Create `/home/aydenstechdungeon/gospa/docs/RENDERING.md` with:
 
 - Overview table: SSR / SSG / ISR / PPR comparison
 - When to use each strategy
