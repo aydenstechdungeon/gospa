@@ -5,6 +5,7 @@ import (
 	"encoding/hex"
 	"encoding/json"
 	"fmt"
+	"html/template"
 	"log"
 	"strings"
 	"time"
@@ -86,7 +87,9 @@ func StateMiddleware(config Config) gofiber.Handler {
 			return err
 		}
 
-		stateScript := `<script>window.__GOSPA_STATE__ = ` + stateJSON + `;</script>`
+		// Escape the JSON for safe injection into JavaScript to prevent XSS
+		escapedStateJSON := template.JSEscapeString(stateJSON)
+		stateScript := `<script>window.__GOSPA_STATE__ = ` + escapedStateJSON + `;</script>`
 		if config.DevMode {
 			stateScript += `<script src="` + config.RuntimeScript + `" type="module"></script>`
 		}

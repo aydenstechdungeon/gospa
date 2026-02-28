@@ -4,6 +4,7 @@ package cli
 import (
 	"fmt"
 	"os"
+	"os/exec"
 	"path/filepath"
 	"strings"
 )
@@ -419,7 +420,27 @@ temp/
 
 func getGitUsername() string {
 	// Try to get git username from git config
-	// For now, return a default
+	cmd := exec.Command("git", "config", "user.name")
+	if output, err := cmd.Output(); err == nil {
+		username := strings.TrimSpace(string(output))
+		if username != "" {
+			return username
+		}
+	}
+
+	// Try git config user.email as fallback
+	cmd = exec.Command("git", "config", "user.email")
+	if output, err := cmd.Output(); err == nil {
+		email := strings.TrimSpace(string(output))
+		if email != "" {
+			// Extract username from email (part before @)
+			if atIndex := strings.Index(email, "@"); atIndex > 0 {
+				return email[:atIndex]
+			}
+		}
+	}
+
+	// Fallback to default
 	return "yourusername"
 }
 

@@ -580,11 +580,31 @@ func computeStateDiff(prev, next map[string]interface{}) map[string]interface{} 
 	diff := make(map[string]interface{})
 	for k, nv := range next {
 		pv, exists := prev[k]
-		if !exists || fmt.Sprintf("%v", pv) != fmt.Sprintf("%v", nv) {
+		if !exists || !deepEqual(pv, nv) {
 			diff[k] = nv
 		}
 	}
 	return diff
+}
+
+// deepEqual compares two values for equality using JSON marshaling for reliability.
+// This handles complex types better than fmt.Sprintf comparison.
+func deepEqual(a, b interface{}) bool {
+	// Fast path: check if they are identical
+	if a == b {
+		return true
+	}
+
+	// Use JSON marshaling for deep comparison
+	aJSON, err1 := json.Marshal(a)
+	bJSON, err2 := json.Marshal(b)
+
+	if err1 != nil || err2 != nil {
+		// Fallback to string comparison if marshaling fails
+		return fmt.Sprintf("%v", a) == fmt.Sprintf("%v", b)
+	}
+
+	return bytes.Equal(aJSON, bJSON)
 }
 
 // Close closes the client connection.

@@ -162,9 +162,17 @@ func (fw *HMRFileWatcher) checkFiles(modTimes map[string]time.Time) {
 				return nil
 			}
 
-			// Check ignore patterns
+			// Check ignore patterns - use path matching instead of partial string match
 			for _, ignore := range fw.ignore {
-				if strings.Contains(path, ignore) {
+				if matched, err := filepath.Match(ignore, filepath.Base(path)); err == nil && matched {
+					return nil
+				}
+				// Also check if the path contains the ignore pattern as a directory component
+				if strings.Contains(filepath.Clean(path), string(filepath.Separator)+ignore+string(filepath.Separator)) {
+					return nil
+				}
+				// Check if the ignore pattern matches at the start of the path
+				if strings.HasPrefix(filepath.Clean(path), ignore+string(filepath.Separator)) {
 					return nil
 				}
 			}

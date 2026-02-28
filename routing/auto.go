@@ -10,6 +10,7 @@ import (
 	"regexp"
 	"sort"
 	"strings"
+	"sync"
 )
 
 // RouteType represents the type of route.
@@ -44,6 +45,10 @@ type Route struct {
 	Layout *Route
 	// Middleware is the middleware chain for this route
 	Middleware []string
+	// regexCache stores the compiled regex pattern for this route (computed once)
+	regexCache *regexp.Regexp
+	// regexOnce ensures regex is compiled only once
+	regexOnce sync.Once
 }
 
 // Router manages all routes.
@@ -471,24 +476,28 @@ func (r *Router) GetLayouts() []*Route {
 }
 
 // RouteRegex returns a regex pattern for the route.
+// The regex is compiled once and cached for performance.
 func (r *Route) RouteRegex() *regexp.Regexp {
-	pattern := r.Path
+	r.regexOnce.Do(func() {
+		pattern := r.Path
 
-	// Escape special regex characters
-	pattern = regexp.QuoteMeta(pattern)
+		// Escape special regex characters
+		pattern = regexp.QuoteMeta(pattern)
 
-	// Replace :param with capture group
-	paramPattern := `([^/]+)`
-	pattern = regexp.MustCompile(`:[a-zA-Z_][a-zA-Z0-9_]*`).ReplaceAllString(pattern, paramPattern)
+		// Replace :param with capture group
+		paramPattern := `([^/]+)`
+		pattern = regexp.MustCompile(`:[a-zA-Z_][a-zA-Z0-9_]*`).ReplaceAllString(pattern, paramPattern)
 
-	// Replace *param with capture group for catch-all
-	catchAllPattern := `(.*)`
-	pattern = regexp.MustCompile(`\*[a-zA-Z_][a-zA-Z0-9_]*`).ReplaceAllString(pattern, catchAllPattern)
+		// Replace *param with capture group for catch-all
+		catchAllPattern := `(.*)`
+		pattern = regexp.MustCompile(`\*[a-zA-Z_][a-zA-Z0-9_]*`).ReplaceAllString(pattern, catchAllPattern)
 
-	// Anchor the pattern
-	pattern = "^" + pattern + "$"
+		// Anchor the pattern
+		pattern = "^" + pattern + "$"
 
-	return regexp.MustCompile(pattern)
+		r.regexCache = regexp.MustCompile(pattern)
+	})
+	return r.regexCache
 }
 
 // String returns a string representation of the route.

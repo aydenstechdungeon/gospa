@@ -380,6 +380,13 @@ func (b *SSEBroker) SSEUnsubscribeHandler() fiber.Handler {
 			return c.Status(400).JSON(fiber.Map{"error": "invalid request"})
 		}
 
+		// Validate that the client exists and is currently connected
+		if !b.clientExists(req.ClientID) {
+			return c.Status(404).JSON(fiber.Map{
+				"error": "client not found or not connected",
+			})
+		}
+
 		b.Unsubscribe(req.ClientID, req.Topics...)
 
 		return c.JSON(fiber.Map{
