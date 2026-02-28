@@ -372,7 +372,14 @@ func CORSMiddleware(allowedOrigins []string) gofiber.Handler {
 	return func(c *gofiber.Ctx) error {
 		origin := c.Get("Origin")
 
-		// Determine if wildcard is configured
+		// Handle null Origin header (e.g., from file:// URLs or some mobile apps)
+		// Security: null Origin is treated as a distinct origin, not a wildcard match
+		if origin == "" {
+			// No Origin header present (same-origin request or non-browser client)
+			return c.Next()
+		}
+
+		// Determine if wildcard is configured and check for exact match
 		wildcard := false
 		exactMatch := false
 		for _, o := range allowedOrigins {
@@ -384,18 +391,25 @@ func CORSMiddleware(allowedOrigins []string) gofiber.Handler {
 			}
 		}
 
+		// Always set Vary: Origin to prevent CDN caching issues with CORS
+		// This ensures caches store separate responses per origin
+		c.Set("Vary", "Origin")
+
 		if exactMatch {
 			// Explicit origin match: allow credentials
 			c.Set("Access-Control-Allow-Origin", origin)
 			c.Set("Access-Control-Allow-Credentials", "true")
 			c.Set("Access-Control-Allow-Methods", "GET,POST,PUT,DELETE,PATCH,OPTIONS")
 			c.Set("Access-Control-Allow-Headers", "Content-Type,Authorization,X-CSRF-Token")
+			c.Set("Access-Control-Expose-Headers", "X-GoSPA-Partial")
 		} else if wildcard {
-			// Wildcard: cannot combine with Allow-Credentials
+			// Wildcard: cannot combine with Allow-Credentials per CORS spec
 			c.Set("Access-Control-Allow-Origin", "*")
 			c.Set("Access-Control-Allow-Methods", "GET,POST,PUT,DELETE,PATCH,OPTIONS")
 			c.Set("Access-Control-Allow-Headers", "Content-Type,Authorization,X-CSRF-Token")
+			c.Set("Access-Control-Expose-Headers", "X-GoSPA-Partial")
 		}
+		// If no match and no wildcard, don't set CORS headers (browser will block)
 
 		// Handle preflight
 		if c.Method() == "OPTIONS" {

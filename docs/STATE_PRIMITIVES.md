@@ -497,14 +497,18 @@ stateMap.OnChange = func(key string, value any) {
 func Batch(fn func())
 ```
 
-Executes function. For server safety, notifications are pass-through (not deferred globally).
+Executes function within a batch context. Server-side batching ensures proper synchronization ordering but does NOT defer notifications (unlike client-side). Notifications are dispatched synchronously for thread safety.
+
+> **Server vs Client Behavior Difference:**
+> - **Server (Go)**: `Batch()` executes synchronously with immediate notifications. Used for grouping related updates for atomicity and proper lock ordering.
+> - **Client (TypeScript)**: `batch()` defers notifications to the next microtask, coalescing multiple updates into a single DOM render.
 
 **Example:**
 ```go
 state.Batch(func() {
     count.Set(1)
     name.Set("updated")
-    // Notifications happen immediately for server safety
+    // Notifications dispatched immediately for server thread safety
 })
 ```
 
@@ -516,6 +520,15 @@ func BatchResult[T any](fn func() T) T
 
 Batch with return value.
 
+**Example:**
+```go
+result := state.BatchResult(func() int {
+    count.Set(10)
+    multiplier.Set(2)
+    return count.Get() * multiplier.Get()
+})
+```
+
 ### BatchError
 
 ```go
@@ -523,6 +536,17 @@ func BatchError(fn func() error) error
 ```
 
 Batch with error return.
+
+**Example:**
+```go
+err := state.BatchError(func() error {
+    if err := validate(data); err != nil {
+        return err
+    }
+    count.Set(data.Count)
+    name.Set(data.Name)
+    return nil
+})
 
 ---
 

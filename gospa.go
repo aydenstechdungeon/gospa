@@ -267,12 +267,15 @@ func New(config Config) *App {
 		config.MaxRequestBodySize = 4 * 1024 * 1024
 	}
 
-	// SSGCacheMaxEntries: 0 means use default (500), negative means unlimited (-1),
-	// positive values are capped at 10000 to prevent memory issues
+	// SSGCacheMaxEntries controls SSG/ISR/PPR cache size:
+	//   - 0 or unset: use default of 500 entries (recommended for most apps)
+	//   - -1: unlimited entries (no eviction) - NOT recommended in production
+	//   - 1-10000: use specified value (values >10000 are capped at 10000)
+	// Note: There is no "disable cache" option. To disable, use SSR strategy instead.
 	if config.SSGCacheMaxEntries == 0 {
 		config.SSGCacheMaxEntries = 500
 	} else if config.SSGCacheMaxEntries < 0 {
-		// -1 means unlimited (no eviction), keep as-is
+		// Normalize all negative values to -1 for "unlimited"
 		config.SSGCacheMaxEntries = -1
 	} else if config.SSGCacheMaxEntries > 10000 {
 		config.SSGCacheMaxEntries = 10000

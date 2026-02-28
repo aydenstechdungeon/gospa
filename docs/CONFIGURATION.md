@@ -81,7 +81,7 @@ app := gospa.New(gospa.Config{
 
 | Option | Type | Default | Description |
 |--------|------|---------|-------------|
-| `Prefork` | `bool` | `false` | Enables Fiber Prefork. WARNING: Without external storage, state is isolated per process. |
+| `Prefork` | `bool` | `false` | Enables Fiber Prefork. **CRITICAL**: Without external storage, state is isolated per process. |
 | `Storage` | `store.Storage` | `memory` | External Key-Value store (e.g., Redis) for Session, ClientState, and caching of SSG/ISR/PPR pages. |
 | `PubSub` | `store.PubSub` | `memory` | External messaging broker (e.g., Redis PubSub) for WebSocket broadcasting. |
 
@@ -310,17 +310,29 @@ SSR: true,
 
 ### Prefork, Storage, and PubSub
 
-Used for horizontal scaling and multi-core utilization via Fiber's `Prefork`. If `Prefork: true` is enabled, you **must** provide external implementations for `Storage` and `PubSub` (e.g. Redis), otherwise state and WebSockets will be isolated to individual child processes. This also enables a shared global cache for SSG, ISR, and PPR pages across processes.
+Used for horizontal scaling and multi-core utilization via Fiber's `Prefork`.
+
+> **⚠️ CRITICAL WARNING: Prefork Requires External Storage**
+>
+> When `Prefork: true` is enabled, GoSPA spawns multiple worker processes. Each process has **isolated memory**, meaning:
+> - In-memory sessions are NOT shared between workers (users may lose login state)
+> - WebSocket broadcasts only reach clients connected to the same worker
+> - CSRF tokens stored in memory will fail validation across workers
+> - SSG/ISR/PPR page caches are duplicated per worker instead of shared
+>
+> **You MUST provide external Storage and PubSub implementations** (e.g., Redis) when using Prefork:
 
 ```go
 import "github.com/aydenstechdungeon/gospa/store/redis"
 
 app := gospa.New(gospa.Config{
     Prefork: true,
-    Storage: redis.NewStore(rdb),
-    PubSub:  redis.NewPubSub(rdb),
+    Storage: redis.NewStore(rdb),    // Required: shared session/state storage
+    PubSub:  redis.NewPubSub(rdb),   // Required: cross-worker WebSocket broadcasts
 })
 ```
+
+Without external storage, your application will exhibit unpredictable behavior in production as requests are routed to different workers.
 
 ### MaxRequestBodySize
 

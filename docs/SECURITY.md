@@ -14,6 +14,75 @@ GoSPA incorporates several fundamental security practices by design:
 
 - **Cross-Site Scripting (XSS) Protection**: Client-side states and UI reactivity use DOMPurify to effectively sanitize any injected HTML layout payloads unless explicitly opted out (`SimpleRuntimeSVGs` configuration).
 - **Cross-Site Request Forgery (CSRF)**: Framework provides optional Double-Submit-Cookie strategies for authenticating mutable state requests.
+
+## CSRF Protection Setup
+
+GoSPA uses a **two-middleware pattern** for CSRF protection. You must configure both middleware correctly:
+
+### 1. CSRFSetTokenMiddleware (GET/HEAD requests)
+This middleware sets the CSRF cookie and token for safe (read-only) requests:
+
+```go
+app.Use(gospa.CSRFSetTokenMiddleware(gospa.CSRFConfig{
+    CookieName:     "csrf_token",
+    CookieHTTPOnly: true,
+    CookieSecure:   true,  // Use true in production with HTTPS
+    CookieSameSite: "Strict",
+}))
+```
+
+### 2. CSRFTokenMiddleware (POST/PUT/DELETE/PATCH)
+This middleware validates the CSRF token on mutating requests:
+
+```go
+app.Use(gospa.CSRFTokenMiddleware(gospa.CSRFConfig{
+    TokenLookup:    "header:X-CSRF-Token",
+    CookieName:     "csrf_token",
+    CookieHTTPOnly: true,
+    CookieSecure:   true,
+}))
+```
+
+### Important: Middleware Order Matters
+
+Place `CSRFSetTokenMiddleware` BEFORE `CSRFTokenMiddleware`:
+
+```go
+// CORRECT: Set token first, then validate
+app.Use(gospa.CSRFSetTokenMiddleware(csrfConfig))  // Sets cookie on GET
+app.Use(gospa.CSRFTokenMiddleware(csrfConfig))     // Validates on POST/PUT/DELETE
+
+// INCORRECT: Don't reverse the order!
+// app.Use(gospa.CSRFTokenMiddleware(csrfConfig))   // Validation will fail
+// app.Use(gospa.CSRFSetTokenMiddleware(csrfConfig))
+```
+
+### Prefork Mode Warning
+
+When using Prefork mode (`Prefork: true`), each worker process has **isolated memory**. CSRF tokens stored in memory will not be shared across workers, causing validation failures. You must use an external session store (Redis, database) for CSRF state in Prefork deployments.
+
+### Client-Side Integration
+
+Fetch the CSRF token from the cookie and include it in requests:
+
+```javascript
+// Get token from cookie
+const csrfToken = document.cookie
+  .split('; ')
+  .find(row => row.startsWith('csrf_token='))
+  ?.split('=')[1];
+
+// Include in request headers
+fetch('/api/action', {
+  method: 'POST',
+  headers: {
+    'X-CSRF-Token': csrfToken,
+    'Content-Type': 'application/json',
+  },
+  body: JSON.stringify(data)
+});
+```
+
 - **Data Encapsulation**: Server states synchronize differentially while validating scopes. Ensure proper RBAC authorization on all sensitive payload actions via custom Handlers or Plugins.
 
 ## Configuration Hardening Guidelines

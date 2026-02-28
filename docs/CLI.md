@@ -15,9 +15,10 @@ go install github.com/aydenstechdungeon/gospa/cmd/gospa@latest
 | `create` | - | Create a new GoSPA project |
 | `dev` | - | Start development server with hot reload |
 | `build` | - | Build for production |
-| `generate` | `gen` | Generate route registration code |
+| `generate` | - | Generate route registration code |
 | `prune` | - | Remove unused state from state stores |
 | `add` | - | Add a feature (e.g., tailwind) |
+| `clean` | - | Remove build artifacts and generated files |
 | `version` | `-v`, `--version` | Show GoSPA version |
 | `help` | `-h`, `--help` | Show help message |
 
@@ -346,11 +347,8 @@ export function buildPath(route: Route, params: Record<string, string>): string;
 ### Examples
 
 ```bash
-# Generate once
+# Generate route code from .templ files
 gospa generate
-
-# Short alias
-gospa gen
 ```
 
 ---

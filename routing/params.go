@@ -77,18 +77,36 @@ func ParamsFromJSON(data []byte) (Params, error) {
 }
 
 // Int returns a parameter as an int.
+// Returns error if the parameter doesn't exist or cannot be parsed.
 func (p Params) Int(key string) (int, error) {
-	val := p[key]
-	if val == "" {
+	val, ok := p[key]
+	if !ok {
 		return 0, fmt.Errorf("parameter %s not found", key)
 	}
 	return strconv.Atoi(val)
 }
 
+// IntOk returns a parameter as an int with an existence check.
+// Returns (value, true, nil) if found and valid.
+// Returns (0, false, nil) if not found.
+// Returns (0, true, error) if found but invalid.
+func (p Params) IntOk(key string) (int, bool, error) {
+	val, ok := p[key]
+	if !ok {
+		return 0, false, nil
+	}
+	i, err := strconv.Atoi(val)
+	if err != nil {
+		return 0, true, err
+	}
+	return i, true, nil
+}
+
 // IntDefault returns a parameter as an int with a default.
+// Returns defaultValue if the parameter doesn't exist or cannot be parsed.
 func (p Params) IntDefault(key string, defaultValue int) int {
-	val := p[key]
-	if val == "" {
+	val, ok := p[key]
+	if !ok {
 		return defaultValue
 	}
 	i, err := strconv.Atoi(val)
@@ -100,29 +118,68 @@ func (p Params) IntDefault(key string, defaultValue int) int {
 
 // Int64 returns a parameter as an int64.
 func (p Params) Int64(key string) (int64, error) {
-	val := p[key]
-	if val == "" {
+	val, ok := p[key]
+	if !ok {
 		return 0, fmt.Errorf("parameter %s not found", key)
 	}
 	return strconv.ParseInt(val, 10, 64)
 }
 
+// Int64Ok returns a parameter as an int64 with an existence check.
+func (p Params) Int64Ok(key string) (int64, bool, error) {
+	val, ok := p[key]
+	if !ok {
+		return 0, false, nil
+	}
+	i, err := strconv.ParseInt(val, 10, 64)
+	if err != nil {
+		return 0, true, err
+	}
+	return i, true, nil
+}
+
 // Float64 returns a parameter as a float64.
 func (p Params) Float64(key string) (float64, error) {
-	val := p[key]
-	if val == "" {
+	val, ok := p[key]
+	if !ok {
 		return 0, fmt.Errorf("parameter %s not found", key)
 	}
 	return strconv.ParseFloat(val, 64)
 }
 
+// Float64Ok returns a parameter as a float64 with an existence check.
+func (p Params) Float64Ok(key string) (float64, bool, error) {
+	val, ok := p[key]
+	if !ok {
+		return 0, false, nil
+	}
+	f, err := strconv.ParseFloat(val, 64)
+	if err != nil {
+		return 0, true, err
+	}
+	return f, true, nil
+}
+
 // Bool returns a parameter as a bool.
 func (p Params) Bool(key string) (bool, error) {
-	val := p[key]
-	if val == "" {
+	val, ok := p[key]
+	if !ok {
 		return false, fmt.Errorf("parameter %s not found", key)
 	}
 	return strconv.ParseBool(val)
+}
+
+// BoolOk returns a parameter as a bool with an existence check.
+func (p Params) BoolOk(key string) (bool, bool, error) {
+	val, ok := p[key]
+	if !ok {
+		return false, false, nil
+	}
+	b, err := strconv.ParseBool(val)
+	if err != nil {
+		return false, true, err
+	}
+	return b, true, nil
 }
 
 // Slice returns a parameter as a slice (for catch-all params).
@@ -284,6 +341,19 @@ func (qp *QueryParams) Int(key string) (int, error) {
 	return strconv.Atoi(val)
 }
 
+// IntOk returns a query parameter as an int with an existence check.
+func (qp *QueryParams) IntOk(key string) (int, bool, error) {
+	val := qp.values.Get(key)
+	if val == "" {
+		return 0, false, nil
+	}
+	i, err := strconv.Atoi(val)
+	if err != nil {
+		return 0, true, err
+	}
+	return i, true, nil
+}
+
 // IntDefault returns a query parameter as an int with a default.
 func (qp *QueryParams) IntDefault(key string, defaultValue int) int {
 	val := qp.values.Get(key)
@@ -304,6 +374,19 @@ func (qp *QueryParams) Bool(key string) (bool, error) {
 		return false, fmt.Errorf("query parameter %s not found", key)
 	}
 	return strconv.ParseBool(val)
+}
+
+// BoolOk returns a query parameter as a bool with an existence check.
+func (qp *QueryParams) BoolOk(key string) (bool, bool, error) {
+	val := qp.values.Get(key)
+	if val == "" {
+		return false, false, nil
+	}
+	b, err := strconv.ParseBool(val)
+	if err != nil {
+		return false, true, err
+	}
+	return b, true, nil
 }
 
 // BoolDefault returns a query parameter as a bool with a default.

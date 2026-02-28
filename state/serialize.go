@@ -39,6 +39,16 @@ func NewStateMap() *StateMap {
 
 // Add adds an observable to the state collection
 func (sm *StateMap) Add(name string, obs Observable) *StateMap {
+	// Capture all data needed for value transfer before acquiring lock
+	// This ensures we have everything we need before entering critical section
+	var existingValue any
+	var hasExisting bool
+	var settable Settable
+	var isSettable bool
+
+	// Check if the observable is settable upfront (doesn't need lock)
+	settable, isSettable = obs.(Settable)
+
 	sm.mu.Lock()
 
 	// Clear out old subscription if one exists
@@ -47,8 +57,6 @@ func (sm *StateMap) Add(name string, obs Observable) *StateMap {
 	}
 
 	// Capture existing value while holding the lock
-	var existingValue any
-	var hasExisting bool
 	if existing, ok := sm.observables[name]; ok {
 		existingValue = existing.GetAny()
 		hasExisting = true
@@ -78,18 +86,16 @@ func (sm *StateMap) Add(name string, obs Observable) *StateMap {
 	sm.mu.Unlock()
 
 	// Transfer value from existing observable if the new one is Settable
-	// This happens outside the lock to avoid deadlocks if SetAny triggers callbacks
-	if hasExisting {
-		if settable, isSettable := obs.(Settable); isSettable {
-			// Use a non-blocking set to avoid deadlocks
-			func() {
-				defer func() {
-					// Recover from any panics during SetAny to prevent crashes
-					_ = recover()
-				}()
-				_ = settable.SetAny(existingValue)
+	// This happens entirely outside the lock to avoid deadlocks if SetAny triggers callbacks
+	if hasExisting && isSettable {
+		// Use a non-blocking set to avoid deadlocks
+		func() {
+			defer func() {
+				// Recover from any panics during SetAny to prevent crashes
+				_ = recover()
 			}()
-		}
+			_ = settable.SetAny(existingValue)
+		}()
 	}
 
 	return sm
