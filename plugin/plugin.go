@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"os"
 	"path/filepath"
+	"sync"
 )
 
 // getPluginCacheDir returns the directory where external plugins are cached.
@@ -82,20 +83,36 @@ type Command struct {
 	Action      func(args []string) error
 }
 
-var registry []Plugin
+// registry is the global plugin registry protected by a mutex for thread-safety.
+var (
+	registry   []Plugin
+	registryMu sync.RWMutex
+)
 
 // Register registers a plugin with GoSPA.
+// This function is thread-safe and can be called from multiple goroutines.
 func Register(p Plugin) {
+	registryMu.Lock()
+	defer registryMu.Unlock()
 	registry = append(registry, p)
 }
 
 // GetPlugins returns all registered plugins.
+// This function is thread-safe and returns a copy of the registry.
 func GetPlugins() []Plugin {
-	return registry
+	registryMu.RLock()
+	defer registryMu.RUnlock()
+	// Return a copy to prevent external modification
+	result := make([]Plugin, len(registry))
+	copy(result, registry)
+	return result
 }
 
 // GetCLIPlugins returns all registered CLI plugins.
+// This function is thread-safe.
 func GetCLIPlugins() []CLIPlugin {
+	registryMu.RLock()
+	defer registryMu.RUnlock()
 	var cliPlugins []CLIPlugin
 	for _, p := range registry {
 		if cp, ok := p.(CLIPlugin); ok {

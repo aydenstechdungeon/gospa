@@ -3,13 +3,14 @@ package fiber
 import (
 	"encoding/json"
 	"fmt"
-	"github.com/aydenstechdungeon/gospa/state"
 	"log"
 	"os"
 	"path/filepath"
 	"strings"
 	"sync"
 	"time"
+
+	"github.com/aydenstechdungeon/gospa/state"
 
 	fiberpkg "github.com/gofiber/fiber/v2"
 	websocket "github.com/gofiber/websocket/v2"
@@ -107,8 +108,22 @@ func (w *FileWatcher) Stop() {
 	close(w.stop)
 }
 
+// isPathSafe checks if the path is within the allowed directory to prevent path traversal.
+func isPathSafe(path, baseDir string) bool {
+	cleanPath := filepath.Clean(path)
+	cleanBase := filepath.Clean(baseDir)
+	// Ensure the cleaned path starts with the cleaned base directory
+	return strings.HasPrefix(cleanPath, cleanBase+string(filepath.Separator)) || cleanPath == cleanBase
+}
+
 // watchDir watches a directory for changes.
 func (w *FileWatcher) watchDir(dir string) {
+	// SECURITY: Validate the directory is not outside the intended path
+	if !isPathSafe(dir, w.config.RoutesDir) && !isPathSafe(dir, w.config.ComponentsDir) {
+		log.Printf("[GoSPA] FileWatcher: skipping unsafe directory path: %s", dir)
+		return
+	}
+
 	// Get initial file states
 	fileStates := make(map[string]time.Time)
 	_ = filepath.Walk(dir, func(path string, info os.FileInfo, err error) error {

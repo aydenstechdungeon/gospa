@@ -376,6 +376,13 @@ export async function navigate(path: string, options: NavigationOptions = {}): P
 			document.dispatchEvent(new CustomEvent('gospa:navigated', { detail: { path } }));
 
 			return true;
+		} catch (error) {
+			// BUG FIX: Ensure navigation state is cleared on error
+			// Otherwise isNavigating flag gets stuck, blocking future navigations
+			console.error('[GoSPA] Navigation error:', error);
+			state.isNavigating = false;
+			state.pendingNavigation = null;
+			return false;
 		} finally {
 			state.isNavigating = false;
 			// Only clear the pending reference if it still points to this request

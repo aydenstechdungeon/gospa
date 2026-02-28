@@ -358,7 +358,11 @@ export class WSClient {
 				if (pending) {
 					this.pendingRequests.delete(id);
 					if (message.type === 'error') {
-						pending.reject(new Error(message.error || 'Unknown error'));
+						// SECURITY: Sanitize error message to prevent XSS via malicious server
+						const sanitizedError = message.error
+							? message.error.replace(/[<>\"']/g, '')
+							: 'Unknown error';
+						pending.reject(new Error(sanitizedError));
 					} else {
 						pending.resolve(message.data);
 					}

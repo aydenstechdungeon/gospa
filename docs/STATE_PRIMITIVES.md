@@ -526,6 +526,69 @@ Batch with error return.
 
 ---
 
+## Auto-Batching (Client-Side)
+
+The client-side state system automatically batches rapid synchronous updates to minimize DOM reflows and improve performance. When multiple state changes occur within the same event loop tick, they are automatically coalesced into a single update.
+
+### How It Works
+
+```javascript
+const count = new GoSPA.Rune(0);
+
+// These three updates will be batched into a single DOM update
+count.set(1);
+count.set(2);
+count.set(3);
+// DOM only updates once with the final value (3)
+```
+
+### When Batching Occurs
+
+Auto-batching triggers for:
+- Multiple `set()` calls in the same synchronous block
+- Rapid updates within event handlers
+- State changes during component initialization
+
+### Disabling Batching
+
+For cases where immediate updates are required, you can flush the batch queue:
+
+```javascript
+// Force immediate sync
+GoSPA.flushBatch();
+
+// Or use the low-level API for synchronous updates
+GoSPA.scheduleUpdate(() => {
+    // This runs immediately, bypassing batch
+});
+```
+
+### Performance Benefits
+
+- **Reduced DOM Reflows**: Multiple state changes result in a single DOM update
+- **Better Frame Rates**: Batched updates prevent layout thrashing
+- **Server Sync Efficiency**: WebSocket messages are debounced during batch operations
+
+### Comparison: With vs Without Batching
+
+```javascript
+// Without batching - 3 DOM updates, 3 WebSocket messages
+for (let i = 0; i < 3; i++) {
+    count.set(i);
+}
+
+// With batching - 1 DOM update, 1 WebSocket message
+GoSPA.batch(() => {
+    for (let i = 0; i < 3; i++) {
+        count.set(i);
+    }
+});
+```
+
+> **Note**: Server-side batching behavior differs from client-side. The Go `Batch()` function provides pass-through semantics for thread safety, while the client-side auto-batching uses microtask-based deferred updates for performance.
+
+---
+
 ## Serialization
 
 ### SerializeState

@@ -46,6 +46,7 @@ func (sm *StateMap) Add(name string, obs Observable) *StateMap {
 		unsub()
 	}
 
+	// Capture existing value while holding the lock
 	var existingValue any
 	var hasExisting bool
 	if existing, ok := sm.observables[name]; ok {
@@ -61,16 +62,33 @@ func (sm *StateMap) Add(name string, obs Observable) *StateMap {
 		handler := sm.OnChange
 		sm.mu.RUnlock()
 		if handler != nil {
-			handler(name, v)
+			// PERFORMANCE: Use goroutine to prevent blocking state updates
+			// The handler (e.g., WebSocket broadcast) may perform I/O operations
+			// that shouldn't delay the state notification chain
+			go func(h func(string, any), key string, value any) {
+				defer func() {
+					// Recover from panics in handler to prevent crashing the application
+					_ = recover()
+				}()
+				h(key, value)
+			}(handler, name, v)
 		}
 	})
 
 	sm.mu.Unlock()
 
 	// Transfer value from existing observable if the new one is Settable
+	// This happens outside the lock to avoid deadlocks if SetAny triggers callbacks
 	if hasExisting {
 		if settable, isSettable := obs.(Settable); isSettable {
-			_ = settable.SetAny(existingValue)
+			// Use a non-blocking set to avoid deadlocks
+			func() {
+				defer func() {
+					// Recover from any panics during SetAny to prevent crashes
+					_ = recover()
+				}()
+				_ = settable.SetAny(existingValue)
+			}()
 		}
 	}
 

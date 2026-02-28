@@ -10,9 +10,29 @@ let runeId = 0;
 let effectId = 0;
 let batchDepth = 0;
 let pendingNotifications: Set<Notifier> = new Set();
+let autoBatchScheduled = false;
 
 interface Notifier {
 	notify(): void;
+}
+
+/**
+ * Schedule automatic batch flush for the next microtask.
+ * This enables auto-batching of rapid synchronous state updates
+ * without requiring manual batch() calls.
+ */
+function scheduleAutoBatch(): void {
+	if (autoBatchScheduled || batchDepth > 0) return;
+	autoBatchScheduled = true;
+	
+	queueMicrotask(() => {
+		autoBatchScheduled = false;
+		if (batchDepth === 0 && pendingNotifications.size > 0) {
+			const pending = [...pendingNotifications];
+			pendingNotifications.clear();
+			pending.forEach(n => n.notify());
+		}
+	});
 }
 
 // === Disposal Tracking for Memory Management ===
@@ -165,7 +185,9 @@ export class Rune<T> implements Notifier, Disposable {
 			pendingNotifications.add(this);
 			return;
 		}
-		this.notify(oldValue);
+		// Auto-batch: schedule notification for next microtask if not already scheduled
+		pendingNotifications.add(this);
+		scheduleAutoBatch();
 	}
 
 	notify(prevValue?: T): void {
@@ -608,12 +630,14 @@ export class RuneRaw<T> implements Notifier {
 		return () => this._subscribers.delete(fn);
 	}
 
-	private _notifySubscribers(oldValue: T): void {
+	private _notifySubscribers(_oldValue: T): void {
 		if (batchDepth > 0) {
 			pendingNotifications.add(this);
 			return;
 		}
-		this.notify();
+		// Auto-batch: schedule notification for next microtask if not already scheduled
+		pendingNotifications.add(this);
+		scheduleAutoBatch();
 	}
 
 	notify(): void {

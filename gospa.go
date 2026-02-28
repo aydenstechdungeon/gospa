@@ -267,9 +267,14 @@ func New(config Config) *App {
 		config.MaxRequestBodySize = 4 * 1024 * 1024
 	}
 
+	// SSGCacheMaxEntries: 0 means use default (500), negative means unlimited (-1),
+	// positive values are capped at 10000 to prevent memory issues
 	if config.SSGCacheMaxEntries == 0 {
 		config.SSGCacheMaxEntries = 500
-	} else if config.SSGCacheMaxEntries < 0 || config.SSGCacheMaxEntries > 10000 {
+	} else if config.SSGCacheMaxEntries < 0 {
+		// -1 means unlimited (no eviction), keep as-is
+		config.SSGCacheMaxEntries = -1
+	} else if config.SSGCacheMaxEntries > 10000 {
 		config.SSGCacheMaxEntries = 10000
 	}
 
@@ -368,6 +373,9 @@ func (a *App) setupMiddleware() {
 	}
 
 	if a.Config.EnableCSRF {
+		// CSRF token setter must come BEFORE protection middleware
+		// to ensure tokens are set on GET/HEAD requests before POST validation
+		a.Fiber.Use(fiber.CSRFSetTokenMiddleware())
 		a.Fiber.Use(fiber.CSRFTokenMiddleware())
 	}
 
@@ -959,6 +967,7 @@ func (a *App) storeSsgEntry(key string, html []byte) {
 	if maxEntries == 0 {
 		maxEntries = 500
 	}
+	// Only evict if maxEntries > 0 (-1 means unlimited)
 	if maxEntries > 0 && len(a.ssgCache) >= maxEntries && len(a.ssgCacheKeys) > 0 {
 		oldest := a.ssgCacheKeys[0]
 		a.ssgCacheKeys = a.ssgCacheKeys[1:]
@@ -983,6 +992,7 @@ func (a *App) storePprShell(key string, shell []byte) {
 	if maxEntries == 0 {
 		maxEntries = 500
 	}
+	// Only evict if maxEntries > 0 (-1 means unlimited)
 	if maxEntries > 0 && len(a.pprShellCache) >= maxEntries && len(a.pprShellKeys) > 0 {
 		oldest := a.pprShellKeys[0]
 		a.pprShellKeys = a.pprShellKeys[1:]

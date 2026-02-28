@@ -9,6 +9,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"log"
+	"reflect"
 	"strings"
 	"sync"
 	"time"
@@ -25,6 +26,98 @@ const (
 	// Send pings to peer with this period.
 	pingPeriod = (pongWait * 9) / 10
 )
+
+// ConnectionRateLimiter implements per-IP rate limiting for WebSocket connections
+// to prevent DoS attacks. Uses token bucket algorithm with burst capacity.
+type ConnectionRateLimiter struct {
+	mu      sync.RWMutex
+	buckets map[string]*rateBucket // IP -> bucket
+	// Configurable limits
+	maxTokens       float64       // Maximum burst (default: 5)
+	refillRate      float64       // Tokens per second (default: 0.2 = 1 per 5 sec)
+	cleanupInterval time.Duration // How often to clean stale entries (default: 1 min)
+}
+
+type rateBucket struct {
+	tokens     float64
+	lastRefill time.Time
+}
+
+// Global connection rate limiter (singleton)
+var globalConnRateLimiter = NewConnectionRateLimiter()
+
+// NewConnectionRateLimiter creates a rate limiter with sensible defaults.
+func NewConnectionRateLimiter() *ConnectionRateLimiter {
+	rl := &ConnectionRateLimiter{
+		buckets:         make(map[string]*rateBucket),
+		maxTokens:       5.0,         // Allow burst of 5 connections
+		refillRate:      0.2,         // 1 connection per 5 seconds sustained
+		cleanupInterval: time.Minute, // Cleanup stale entries every minute
+	}
+	// Start cleanup goroutine
+	go rl.cleanupLoop()
+	return rl
+}
+
+// Allow checks if a connection from the given IP is allowed.
+// Returns true if the connection should be accepted.
+func (rl *ConnectionRateLimiter) Allow(ip string) bool {
+	rl.mu.Lock()
+	defer rl.mu.Unlock()
+
+	now := time.Now()
+	bucket, exists := rl.buckets[ip]
+
+	if !exists {
+		// First connection from this IP
+		rl.buckets[ip] = &rateBucket{
+			tokens:     rl.maxTokens - 1, // Consume 1 token
+			lastRefill: now,
+		}
+		return true
+	}
+
+	// Refill tokens based on elapsed time
+	elapsed := now.Sub(bucket.lastRefill).Seconds()
+	bucket.tokens += elapsed * rl.refillRate
+	if bucket.tokens > rl.maxTokens {
+		bucket.tokens = rl.maxTokens
+	}
+	bucket.lastRefill = now
+
+	// Check if we can consume a token
+	if bucket.tokens >= 1.0 {
+		bucket.tokens -= 1.0
+		return true
+	}
+
+	return false
+}
+
+// GetIPFromContext extracts the client IP from the Fiber context.
+// Uses Fiber's built-in IP extraction which handles X-Forwarded-For
+// based on the app's Proxy settings (TrustedProxies, etc).
+func GetIPFromContext(c *fiber.Ctx) string {
+	return c.IP()
+}
+
+// cleanupLoop periodically removes stale rate limit entries to prevent memory leaks.
+func (rl *ConnectionRateLimiter) cleanupLoop() {
+	ticker := time.NewTicker(rl.cleanupInterval)
+	defer ticker.Stop()
+
+	for range ticker.C {
+		rl.mu.Lock()
+		now := time.Now()
+		for ip, bucket := range rl.buckets {
+			// Remove entries that haven't been used in 10 minutes
+			if now.Sub(bucket.lastRefill) > 10*time.Minute {
+				delete(rl.buckets, ip)
+			}
+		}
+		rl.mu.Unlock()
+	}
+}
 
 // sessionEntry holds a session token and its expiry.
 type sessionEntry struct {
@@ -341,6 +434,7 @@ func NewWSClient(id string, conn *websocket.Conn) *WSClient {
 		closed:           false,
 		actionTokens:     10.0,
 		actionLastRefill: time.Now(),
+		lastSentState:    make(map[string]interface{}), // Initialize to prevent nil pointer
 	}
 	return client
 }
@@ -587,23 +681,106 @@ func computeStateDiff(prev, next map[string]interface{}) map[string]interface{} 
 	return diff
 }
 
-// deepEqual compares two values for equality using JSON marshaling for reliability.
-// This handles complex types better than fmt.Sprintf comparison.
+// deepEqual compares two values for equality with optimized paths for common types.
+// Uses fast path for primitives and type-specific comparisons, avoiding expensive
+// JSON marshaling except as final fallback for complex nested structures.
 func deepEqual(a, b interface{}) bool {
-	// Fast path: check if they are identical
+	// Fast path: identical pointers or simple equality
 	if a == b {
 		return true
 	}
 
-	// Use JSON marshaling for deep comparison
-	aJSON, err1 := json.Marshal(a)
-	bJSON, err2 := json.Marshal(b)
-
-	if err1 != nil || err2 != nil {
-		// Fallback to string comparison if marshaling fails
-		return fmt.Sprintf("%v", a) == fmt.Sprintf("%v", b)
+	// Handle nil cases
+	if a == nil || b == nil {
+		return a == b
 	}
 
+	// Type check - different types can't be equal
+	typeA, typeB := fmt.Sprintf("%T", a), fmt.Sprintf("%T", b)
+	if typeA != typeB {
+		return false
+	}
+
+	// Fast paths for common primitive types
+	switch av := a.(type) {
+	case string:
+		bv, ok := b.(string)
+		return ok && av == bv
+	case int:
+		bv, ok := b.(int)
+		return ok && av == bv
+	case int64:
+		bv, ok := b.(int64)
+		return ok && av == bv
+	case float64:
+		bv, ok := b.(float64)
+		return ok && av == bv
+	case bool:
+		bv, ok := b.(bool)
+		return ok && av == bv
+	case []byte:
+		bv, ok := b.([]byte)
+		return ok && bytes.Equal(av, bv)
+	case map[string]interface{}:
+		bv, ok := b.(map[string]interface{})
+		if !ok || len(av) != len(bv) {
+			return false
+		}
+		for k, v := range av {
+			if bvVal, exists := bv[k]; !exists || !deepEqual(v, bvVal) {
+				return false
+			}
+		}
+		return true
+	case []interface{}:
+		bv, ok := b.([]interface{})
+		if !ok || len(av) != len(bv) {
+			return false
+		}
+		for i := range av {
+			if !deepEqual(av[i], bv[i]) {
+				return false
+			}
+		}
+		return true
+	}
+
+	// Reflection-based comparison for slices of other types
+	av := reflect.ValueOf(a)
+	bv := reflect.ValueOf(b)
+
+	switch av.Kind() {
+	case reflect.Slice, reflect.Array:
+		if av.Len() != bv.Len() {
+			return false
+		}
+		for i := 0; i < av.Len(); i++ {
+			if !deepEqual(av.Index(i).Interface(), bv.Index(i).Interface()) {
+				return false
+			}
+		}
+		return true
+	case reflect.Map:
+		if av.Len() != bv.Len() {
+			return false
+		}
+		for _, key := range av.MapKeys() {
+			aVal := av.MapIndex(key)
+			bVal := bv.MapIndex(key)
+			if !bVal.IsValid() || !deepEqual(aVal.Interface(), bVal.Interface()) {
+				return false
+			}
+		}
+		return true
+	}
+
+	// Final fallback: JSON comparison for complex nested structures
+	aJSON, err1 := json.Marshal(a)
+	bJSON, err2 := json.Marshal(b)
+	if err1 != nil || err2 != nil {
+		// String comparison as last resort
+		return fmt.Sprintf("%v", a) == fmt.Sprintf("%v", b)
+	}
 	return bytes.Equal(aJSON, bJSON)
 }
 
@@ -1009,11 +1186,21 @@ func callConnectHandlers(client *WSClient) {
 }
 
 // WebSocketUpgradeMiddleware upgrades HTTP connections to WebSocket.
+// It also enforces per-IP rate limiting to prevent connection DoS attacks.
 func WebSocketUpgradeMiddleware() fiber.Handler {
 	return func(c *fiber.Ctx) error {
 		// Check if WebSocket upgrade request
 		if string(c.Request().Header.Peek("Upgrade")) != "websocket" {
 			return c.Next()
+		}
+
+		// SECURITY: Apply per-IP rate limiting for WebSocket connections
+		clientIP := GetIPFromContext(c)
+		if !globalConnRateLimiter.Allow(clientIP) {
+			log.Printf("WebSocket connection rate limit exceeded for IP: %s", clientIP)
+			return c.Status(fiber.StatusTooManyRequests).JSON(fiber.Map{
+				"error": "Rate limit exceeded. Please try again later.",
+			})
 		}
 
 		// WebSocket upgrade will be handled by the websocket handler

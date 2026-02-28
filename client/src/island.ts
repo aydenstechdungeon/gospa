@@ -252,6 +252,7 @@ export class IslandManager {
 
 	/**
 	 * Hydrate a single island.
+	 * Throws on error to allow proper error propagation to callers.
 	 */
 	async hydrateIsland(island: IslandElementData): Promise<IslandHydrationResult> {
 		if (this.hydrated.has(island.id)) {
@@ -286,7 +287,11 @@ export class IslandManager {
 			return { id: island.id, name: island.name, success: true };
 		} catch (error) {
 			this.log('Failed to hydrate island:', island.name, error);
-			return { id: island.id, name: island.name, success: false, error: error as Error };
+			// Mark as hydrated even on error to prevent infinite retry loops
+			// but keep track that it failed
+			this.hydrated.add(island.id);
+			// Re-throw to propagate error to queue and callers
+			throw error;
 		}
 	}
 

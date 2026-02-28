@@ -16,6 +16,7 @@ go install github.com/aydenstechdungeon/gospa/cmd/gospa@latest
 | `dev` | - | Start development server with hot reload |
 | `build` | - | Build for production |
 | `generate` | `gen` | Generate route registration code |
+| `prune` | - | Remove unused state from state stores |
 | `add` | - | Add a feature (e.g., tailwind) |
 | `version` | `-v`, `--version` | Show GoSPA version |
 | `help` | `-h`, `--help` | Show help message |
@@ -481,6 +482,61 @@ gospa auth:backup 10
 
 # Verify OTP code
 gospa auth:verify <secret> <code>
+```
+
+---
+
+## `gospa prune`
+
+Removes unused component state from state stores to prevent memory leaks in long-running applications. This is particularly important for applications using WebSocket state synchronization with high component churn.
+
+```bash
+gospa prune [options]
+```
+
+### Options
+
+| Flag | Short | Default | Description |
+|------|-------|---------|-------------|
+| `--dry-run` | `-d` | `false` | Show what would be pruned without removing |
+| `--older-than` | `-o` | `1h` | Remove state older than duration (e.g., `30m`, `2h`, `1d`) |
+| `--all` | `-a` | `false` | Remove all state (use with caution) |
+| `--store` | `-s` | `all` | Target specific store: `session`, `client`, or `all` |
+| `--help` | `-h` | - | Show help for this command |
+
+### When to Use
+
+- **Memory Management**: Long-running servers with many short-lived components
+- **WebSocket Cleanup**: Remove stale WebSocket connection state
+- **Session Cleanup**: Clean up expired or abandoned session data
+- **Before Deployments**: Clean slate for major version updates
+
+### Examples
+
+```bash
+# Dry run to see what would be pruned
+gospa prune --dry-run
+
+# Prune state older than 2 hours
+gospa prune --older-than 2h
+
+# Prune only session store
+gospa prune --store session
+
+# Prune everything (dangerous - use with caution)
+gospa prune --all
+```
+
+### Automatic Pruning
+
+For production applications, consider enabling automatic pruning in your app configuration:
+
+```go
+app := gospa.New(gospa.Config{
+    EnableStatePrune:    true,
+    StatePruneInterval: 30 * time.Minute,
+    StatePruneMaxAge:   2 * time.Hour,
+})
 ```
 
 ---
