@@ -13,8 +13,11 @@
   ],
   "scripts": {
     "typecheck": "tsc --noEmit",
+    "test": "bun test",
+    "test:watch": "bun test --watch",
     "build": "bun build ./src/runtime.ts ./src/runtime-simple.ts ./src/runtime-core.ts ./src/runtime-micro.ts --outdir ./dist --target browser --minify --splitting --format esm",
-    "build:embed": "bun run build && cp -r ./dist/* ../embed/"
+    "build:embed": "bun run build && cp -r ./dist/* ../embed/",
+    "build:empty": "rm -r ../embed/*.js && bun run build:embed"
   },
   "devDependencies": {
     "@types/dompurify": "^3.2.0",

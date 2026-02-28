@@ -14,6 +14,7 @@ A Go framework for building reactive SPAs with server-side rendering. Brings Sve
 - **Type Safety** — Compile-time template validation with Templ
 - **Lightweight Runtime** — ~11KB for the simple runtime, ~17KB for the full runtime with DOMPurify.
 - **Remote Actions** — Type-safe server functions callable directly from the client.
+- **Error Handling** — Global error boundaries, panic recovery, and error overlay in dev mode.
 - **Security** — Built-in CSRF protection, customizable CORS origins, and strict XSS prevention.
 - **Rendering Modes** — Mix SSR, SSG, ISR, and PPR per-page rendering strategies.
 
