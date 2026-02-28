@@ -21,6 +21,8 @@ export interface RemoteResult<T = unknown> {
 	data?: T;
 	/** Error message if the call failed */
 	error?: string;
+	/** Error code for programmatic handling */
+	code?: string;
 	/** HTTP status code */
 	status: number;
 	/** Whether the request was successful */
@@ -108,28 +110,34 @@ export async function remote<T = unknown>(
 		// Parse response body
 		let data: T | undefined;
 		let error: string | undefined;
+		let code: string | undefined;
 
 		const contentType = response.headers.get('content-type');
 		if (contentType?.includes('application/json')) {
 			try {
 				const json = await response.json();
+				code = json.code;
 				if (!response.ok) {
 					error = json.error || `HTTP ${response.status}`;
 				} else {
-					data = json as T;
+					// Handle wrapped response format: { data: ..., code: "SUCCESS" }
+					data = json.data !== undefined ? json.data : json as T;
 				}
 			} catch (parseErr) {
 				error = parseErr instanceof Error
 					? `Invalid JSON: ${parseErr.message}`
 					: 'Invalid JSON response';
+				code = 'PARSE_ERROR';
 			}
 		} else if (!response.ok) {
 			error = `HTTP ${response.status}: ${response.statusText}`;
+			code = 'HTTP_ERROR';
 		}
 
 		return {
 			data,
 			error,
+			code,
 			status: response.status,
 			ok: response.ok,
 		};
@@ -140,12 +148,14 @@ export async function remote<T = unknown>(
 			if (err.name === 'AbortError') {
 				return {
 					error: 'Request timeout',
+					code: 'TIMEOUT',
 					status: 0,
 					ok: false,
 				};
 			}
 			return {
 				error: err.message,
+				code: 'NETWORK_ERROR',
 				status: 0,
 				ok: false,
 			};
@@ -153,6 +163,7 @@ export async function remote<T = unknown>(
 
 		return {
 			error: 'Unknown error',
+			code: 'UNKNOWN_ERROR',
 			status: 0,
 			ok: false,
 		};

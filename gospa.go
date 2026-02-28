@@ -451,6 +451,7 @@ func (a *App) setupRoutes() {
 		if !ok {
 			return c.Status(fiberpkg.StatusNotFound).JSON(fiberpkg.Map{
 				"error": "Remote action not found",
+				"code":  "ACTION_NOT_FOUND",
 			})
 		}
 
@@ -460,16 +461,19 @@ func (a *App) setupRoutes() {
 			if !strings.Contains(c.Get("Content-Type"), "application/json") {
 				return c.Status(fiberpkg.StatusUnsupportedMediaType).JSON(fiberpkg.Map{
 					"error": "Unsupported Media Type: expected application/json",
+					"code":  "INVALID_CONTENT_TYPE",
 				})
 			}
 			if len(c.Body()) > a.Config.MaxRequestBodySize {
 				return c.Status(fiberpkg.StatusRequestEntityTooLarge).JSON(fiberpkg.Map{
 					"error": "Request body too large",
+					"code":  "REQUEST_TOO_LARGE",
 				})
 			}
 			if err := c.BodyParser(&input); err != nil {
 				return c.Status(fiberpkg.StatusBadRequest).JSON(fiberpkg.Map{
 					"error": "Invalid input JSON",
+					"code":  "INVALID_JSON",
 				})
 			}
 		}
@@ -478,13 +482,17 @@ func (a *App) setupRoutes() {
 		if err != nil {
 			// Log the actual error internally for debugging
 			log.Printf("Remote action %q error: %v", name, err)
-			// Return generic error to client to avoid information disclosure
+			// Return error with code for programmatic handling
 			return c.Status(fiberpkg.StatusInternalServerError).JSON(fiberpkg.Map{
-				"error": "Internal server error",
+				"error": err.Error(),
+				"code":  "ACTION_FAILED",
 			})
 		}
 
-		return c.JSON(result)
+		return c.JSON(fiberpkg.Map{
+			"data": result,
+			"code": "SUCCESS",
+		})
 	})
 
 	// Static files

@@ -16,6 +16,7 @@ templ Page() {
 			<a href="#complex-input" class="text-sm font-medium hover:text-[var(--accent-primary)] transition-colors">Complex Inputs</a>
 			<a href="#calling-template" class="text-sm font-medium hover:text-[var(--accent-primary)] transition-colors">Calling from Template</a>
 			<a href="#calling-script" class="text-sm font-medium hover:text-[var(--accent-primary)] transition-colors">Calling from Script</a>
+			<a href="#csrf-protection" class="text-sm font-medium hover:text-[var(--accent-primary)] transition-colors">CSRF Protection</a>
 		</nav>
 
 		<section id="defining" class="space-y-6">
@@ -56,14 +57,23 @@ routing.RegisterRemoteAction("createUser", func(ctx context.Context, input any) 
 		<section id="calling-template" class="space-y-6">
 			<h2 class="text-2xl font-bold border-b border-[var(--border)] pb-2">Calling from Templates</h2>
 			<p class="text-[var(--text-secondary)]">
-				The easiest way to trigger a remote action is via the <code class="mono text-[var(--accent-primary)]">data-on</code> attribute.
+				Trigger remote actions programmatically via JavaScript event handlers.
 			</p>
 			@components.CodeBlock(`<button 
-    data-on="click:remote:greet('GoSPA User')"
+    onclick="handleGreet()"
     class="px-4 py-2 bg-blue-600 rounded"
 >
     Greet Me
-</button>`, "templ", "page.templ")
+</button>
+
+<script>
+async function handleGreet() {
+    const result = await remote('greet', 'GoSPA User');
+    if (result.ok) {
+        console.log(result.data);
+    }
+}
+</script>`, "templ", "page.templ")
 		</section>
 
 		<section id="calling-script" class="space-y-6">
@@ -87,10 +97,28 @@ async function handleSignup() {
 }`, "typescript", "signup.ts")
 		</section>
 
+		<section id="csrf-protection" class="space-y-6">
+			<h2 class="text-2xl font-bold border-b border-[var(--border)] pb-2">CSRF Protection</h2>
+			<p class="text-[var(--text-secondary)]">
+				When CSRF protection is enabled in your app configuration, remote actions require a valid CSRF token. The token is automatically set as a cookie by the middleware.
+			</p>
+			@components.CodeBlock(`// Server configuration
+app := gospa.New(gospa.Config{
+    EnableCSRF: true,
+})
+
+// Middleware setup (required)
+app.Use(fiber.CSRFSetTokenMiddleware())  // Issues csrf_token cookie
+app.Use(fiber.CSRFTokenMiddleware())       // Validates X-CSRF-Token header`, "go", "csrf.go")
+			<p class="text-[var(--text-secondary)]">
+				The client automatically reads the <code class="mono">csrf_token</code> cookie and sends it as the <code class="mono">X-CSRF-Token</code> header with each remote action request.
+			</p>
+		</section>
+
 		<div class="bg-amber-500/5 border border-amber-500/20 p-6 rounded-2xl">
 			<h4 class="text-amber-500 font-bold mb-2">Security Note</h4>
 			<p class="text-sm text-[var(--text-secondary)]">
-				Remote actions are public endpoints. Always perform authentication and authorization checks inside your action functions using the provided <code class="mono">context.Context</code>.
+				Remote actions are public endpoints. Always perform authentication and authorization checks inside your action functions using the provided <code class="mono">context.Context</code>. Extract session information from the context and validate permissions before executing sensitive operations.
 			</p>
 		</div>
 	</div>

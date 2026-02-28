@@ -242,13 +242,29 @@ app := gospa.New(gospa.Config{
 
 ### Remote Actions
 
-Remote Actions allow you to Define type-safe server functions that can be invoked seamlessly from the client without manually managing HTTP endpoints.
+Remote Actions allow you to define type-safe server functions that can be invoked seamlessly from the client without manually managing HTTP endpoints.
 
 ```go
+import (
+    "context"
+    "github.com/aydenstechdungeon/gospa/routing"
+)
+
 // Register on server
 routing.RegisterRemoteAction("saveData", func(ctx context.Context, input interface{}) (interface{}, error) {
+    // Type assert input to access data
+    data, ok := input.(map[string]interface{})
+    if !ok {
+        return nil, errors.New("invalid input")
+    }
+    
     // Process data securely on the server
-    return map[string]string{"status": "success"}, nil
+    id, _ := data["id"].(float64) // JSON numbers parse as float64
+    
+    return map[string]interface{}{
+        "status": "success",
+        "id":     int(id),
+    }, nil
 })
 
 // Configure endpoint restrictions
@@ -258,9 +274,21 @@ app := gospa.New(gospa.Config{
 })
 ```
 
-```javascript
+```typescript
 // Call from client
-const result = await GoSPA.callAction('saveData', { id: 123 });
+import { remote } from '@gospa/runtime';
+
+const result = await remote('saveData', { id: 123 });
+
+if (result.ok) {
+    console.log('Success:', result.data);
+} else {
+    console.error('Error:', result.error, 'Code:', result.code);
+    // Handle specific error codes programmatically
+    if (result.code === 'ACTION_NOT_FOUND') {
+        console.error('Action does not exist');
+    }
+}
 ```
 
 ### Application Security

@@ -193,34 +193,54 @@ func GetUser(c *fiber.Ctx) error {
 			<p class="text-[var(--text-secondary)]">
 				Define server functions that can be called from the client.
 			</p>
-			@components.CodeBlock(`// routes/actions.go
+		@components.CodeBlock(`// routes/actions.go
 package routes
 
-import "github.com/aydenstechdungeon/gospa"
+import (
+	"context"
+	"errors"
+	"github.com/aydenstechdungeon/gospa/routing"
+)
+
+type UpdateUserInput struct {
+	ID   int    `json:"id"`
+	Name string `json:"name"`
+}
+
+type User struct {
+	ID   int    `json:"id"`
+	Name string `json:"name"`
+}
 
 // Define remote action
 func init() {
-	gospa.Remote("updateUser", func(c *fiber.Ctx, input UpdateUserInput) (User, error) {
-		// Validate input
-		if input.Name == "" {
-			return User{}, errors.New("name required")
+	routing.RegisterRemoteAction("updateUser", func(ctx context.Context, input interface{}) (interface{}, error) {
+		// Type assert input to map
+		data, ok := input.(map[string]interface{})
+		if !ok {
+			return nil, errors.New("invalid input")
 		}
+		
+		// Extract and validate fields
+		name, _ := data["name"].(string)
+		if name == "" {
+			return nil, errors.New("name required")
+		}
+		
+		id, _ := data["id"].(float64) // JSON numbers parse as float64
 		
 		// Update user
 		user := User{
-			ID:   input.ID,
-			Name: input.Name,
+			ID:   int(id),
+			Name: name,
 		}
-		
-		// Broadcast update to connected clients
-		gospa.Broadcast("userUpdated", user)
 		
 		return user, nil
 	})
 }`, "go", "remote.go")
 
-			<h3 class="text-xl font-semibold mt-8">Client-Side Call</h3>
-			@components.CodeBlock(`import { remote } from '@gospa/runtime';
+		<h3 class="text-xl font-semibold mt-8">Client-Side Call</h3>
+		@components.CodeBlock(`import { remote } from '@gospa/runtime';
 
 // Call remote action
 const result = await remote('updateUser', {
@@ -229,7 +249,7 @@ const result = await remote('updateUser', {
 });
 
 if (result.ok) {
-	console.log('Updated:', result.value);
+	console.log('Updated:', result.data);
 } else {
 	console.error('Error:', result.error);
 }`, "typescript", "remote_client.ts")
