@@ -5,7 +5,7 @@ go 1.25.7
 replace github.com/aydenstechdungeon/gospa => ../../
 
 require (
-	github.com/aydenstechdungeon/gospa v0.1.4.2
+	github.com/aydenstechdungeon/gospa v0.1.5
 	github.com/redis/go-redis/v9 v9.18.0
 )
 
