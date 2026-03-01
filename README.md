@@ -5,6 +5,8 @@
 
 A Go framework for building reactive SPAs with server-side rendering. Brings Svelte-like reactivity to Go using Fiber and Templ.
 
+-# Pushing to master/main will stop once framework is stable or if other people start working on it.
+
 ## Features
 
 - **Reactive Primitives** — `Rune[T]`, `Derived[T]`, `Effect` - Svelte-like reactivity in Go

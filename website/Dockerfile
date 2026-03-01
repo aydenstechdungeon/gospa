@@ -51,6 +51,8 @@ RUN if [ -d "website" ]; then \
     /usr/local/bin/gospa build -o dist; \
     else \
     echo "Context: Website Directory. Building current directory..." && \
+    go mod edit -dropreplace github.com/aydenstechdungeon/gospa && \
+    go mod tidy && \
     bun install && \
     /usr/local/bin/gospa build -o dist; \
     fi
