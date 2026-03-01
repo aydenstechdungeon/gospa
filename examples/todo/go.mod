@@ -2,7 +2,7 @@ module todo
 
 go 1.24.0
 
-require github.com/aydenstechdungeon/gospa v0.1.5
+require github.com/aydenstechdungeon/gospa v0.1.6
 
 require (
 	github.com/a-h/templ v0.3.977 // indirect
