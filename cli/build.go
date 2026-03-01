@@ -87,6 +87,15 @@ func BuildWithConfig(config *BuildConfig) error {
 		return fmt.Errorf("failed to build client runtime: %w", err)
 	}
 
+	// Step 3.5: Ensure dependencies are tidied after generation
+	fmt.Println("Tidying module dependencies...")
+	tidyCmd := exec.Command("go", "mod", "tidy")
+	tidyCmd.Stdout = os.Stdout
+	tidyCmd.Stderr = os.Stderr
+	if err := tidyCmd.Run(); err != nil {
+		return fmt.Errorf("failed to tidy module dependencies: %w", err)
+	}
+
 	// Step 4: Build Go binary
 	fmt.Println("Building Go binary...")
 	if err := buildGoBinary(config); err != nil {
