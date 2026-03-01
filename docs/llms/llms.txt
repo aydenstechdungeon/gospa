@@ -3,7 +3,7 @@
 # Official website: https://gospa.onrender.com/
 # Website's Docs: https://gospa.onrender.com/docs
 # Framework: Go-based SPA with Svelte-like reactivity, Templ SSR, TypeScript client runtime
-# Version: 0.1.5 (latest supported)
+# Version: 0.1.6 (latest supported)
 
 ## Primary Entry Points
 

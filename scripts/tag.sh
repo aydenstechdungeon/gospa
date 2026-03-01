@@ -15,16 +15,23 @@ OLD_TAG=$(git tag --sort=-v:refname | head -n 1)
 if [ -n "$OLD_TAG" ] && [ "$NEW_TAG" != "$OLD_TAG" ]; then
     echo "Bumping version from $OLD_TAG to $NEW_TAG..."
     
-    # Find files containing the old tag, excluding specific ones
-    # We also exclude .git directory implicitly by using git grep
-    files=$(git grep -l "$OLD_TAG" | grep -v "website/components/benchmarks.templ" | grep -v "tests/benchmark.txt" | grep -v "scripts/tag.sh" || true)
+    OLD_VERSION="${OLD_TAG#v}"
+    NEW_VERSION="${NEW_TAG#v}"
     
-    if [ -n "$files" ]; then
+    # Find files containing either the tag or the version without the v
+    files_with_v=$(git grep -l "$OLD_TAG" | grep -v "website/components/benchmarks.templ" | grep -v "tests/benchmark.txt" | grep -v "scripts/tag.sh" || true)
+    files_without_v=$(git grep -l "$OLD_VERSION" | grep -v "website/components/benchmarks.templ" | grep -v "tests/benchmark.txt" | grep -v "scripts/tag.sh" || true)
+    
+    all_files=$(echo -e "$files_with_v\n$files_without_v" | sort | uniq | grep -v '^$')
+    
+    if [ -n "$all_files" ]; then
         echo "Updating references in:"
-        echo "$files"
-        for f in $files; do
-            # Use a different delimiter for sed just in case but / should be fine for tags
+        echo "$all_files"
+        for f in $all_files; do
+            # Replace tag with tag (e.g. v0.0.1 -> v0.0.2)
             sed -i "s/$OLD_TAG/$NEW_TAG/g" "$f"
+            # Replace version with version (e.g. 0.0.1 -> 0.0.2)
+            sed -i "s/$OLD_VERSION/$NEW_VERSION/g" "$f"
         done
         
         git add .
