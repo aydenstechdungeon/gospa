@@ -11,7 +11,6 @@ import (
 	"time"
 
 	"github.com/aydenstechdungeon/gospa/state"
-
 	fiberpkg "github.com/gofiber/fiber/v2"
 	websocket "github.com/gofiber/websocket/v2"
 )

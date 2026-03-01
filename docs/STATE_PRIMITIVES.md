@@ -486,6 +486,7 @@ stateMap.OnChange = func(key string, value any) {
     fmt.Printf("State changed: %s = %v\n", key, value)
 }
 ```
+> **Note for OnChange:** The `OnChange` callback runs as a background goroutine entirely outside the `StateMap` mutex bounds, meaning it is **100% safe** to call `Add()`, `Remove()`, `Set()`, or `Clear()` on the very same `StateMap` without risking a deadlock.
 
 ---
 
@@ -705,6 +706,12 @@ func ParseMessage(data []byte) (*StateMessage, error)
 ```
 
 Parses JSON message.
+
+### Sync Limitations
+
+When using WebSocket state synchronization between client and server, keep the following limitations in mind:
+- **Max Message Size:** Messages are strictly limited to `64KB`. Payload states larger than this will cause the WebSocket connection to close with an error. Use `StateDiffing` in `gospa.Config` to mitigate this for large objects.
+- **Circular References:** The built-in state JSON serialization does **not** support circular references in your structs/maps. Attempting to sync circular state will result in serialization failures.
 
 ---
 

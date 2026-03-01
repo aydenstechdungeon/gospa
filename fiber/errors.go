@@ -3,10 +3,10 @@ package fiber
 import (
 	"encoding/json"
 	"fmt"
-	"github.com/aydenstechdungeon/gospa/state"
 	"html"
 	"runtime/debug"
 
+	"github.com/aydenstechdungeon/gospa/state"
 	fiberpkg "github.com/gofiber/fiber/v2"
 )
 

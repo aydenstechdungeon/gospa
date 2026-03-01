@@ -44,6 +44,9 @@ app := gospa.New(gospa.Config{
 | `WSReconnectDelay` | `time.Duration` | `0` | Initial delay before reconnecting on failure |
 | `WSMaxReconnect` | `int` | `0` | Maximum number of reconnect attempts (0 for unlimited) |
 | `WSHeartbeat` | `time.Duration` | `0` | Interval for heartbeat messages to keep connection alive |
+| `WSMaxMessageSize` | `int` | `65536` | Maximum payload size for WebSocket messages (default 64KB) |
+| `WSConnRateLimit` | `float64` | `0.2` | Refilling rate in connections per second for WebSocket upgrades |
+| `WSConnBurst` | `float64` | `5.0` | Burst capacity for WebSocket connection upgrades |
 
 ### Performance Options
 
@@ -55,6 +58,7 @@ app := gospa.New(gospa.Config{
 | `SimpleRuntime` | `bool` | `false` | Use lightweight ~11KB runtime without DOMPurify |
 | `SimpleRuntimeSVGs` | `bool` | `false` | Allow SVG/math elements in simple runtime (security risk for untrusted content) |
 | `SSGCacheMaxEntries` | `int` | `500` | FIFO eviction limit shared by SSG, ISR, and PPR shell caches. `-1` = unbounded. |
+| `SSGCacheTTL` | `time.Duration` | `0` | Expiration time for SSG cache entries. `0` means cache forever. |
 
 ### Rendering Strategy Options
 
@@ -224,6 +228,14 @@ Interval for sending heartbeat/ping messages to keep the connection alive.
 ```go
 WSHeartbeat: 30 * time.Second,
 ```
+
+### Rate Limiting (Built-in)
+
+GoSPA includes an automatic, non-configurable token bucket rate limiter for WebSocket upgrades to prevent DoS attacks. The default limits are:
+- **Burst Capacity:** 5 concurrent connection requests per IP
+- **Refill Rate:** 0.2 tokens per second (1 connection allowed every 5 seconds)
+
+If an IP exceeds this limit, they will receive a `429 Too Many Requests` response.
 
 ### CompressState
 

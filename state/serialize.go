@@ -64,8 +64,11 @@ func (sm *StateMap) Add(name string, obs Observable) *StateMap {
 
 	sm.observables[name] = obs
 
+	// Subscribe outside the lock to prevent immediate callback deadlock
+	sm.mu.Unlock()
+
 	// Subscribe to changes to trigger differential sync pushes
-	sm.unsubscribes[name] = obs.SubscribeAny(func(v any) {
+	unsub := obs.SubscribeAny(func(v any) {
 		sm.mu.RLock()
 		handler := sm.OnChange
 		sm.mu.RUnlock()
@@ -83,6 +86,8 @@ func (sm *StateMap) Add(name string, obs Observable) *StateMap {
 		}
 	})
 
+	sm.mu.Lock()
+	sm.unsubscribes[name] = unsub
 	sm.mu.Unlock()
 
 	// Transfer value from existing observable if the new one is Settable

@@ -203,13 +203,13 @@ import (
 )
 
 type UpdateUserInput struct {
-	ID   int    `json:"id"`
-	Name string `json:"name"`
+	ID   int    `+"`"+`json:"id"`+"`"+`
+	Name string `+"`"+`json:"name"`+"`"+`
 }
 
 type User struct {
-	ID   int    `json:"id"`
-	Name string `json:"name"`
+	ID   int    `+"`"+`json:"id"`+"`"+`
+	Name string `+"`"+`json:"name"`+"`"+`
 }
 
 // Define remote action

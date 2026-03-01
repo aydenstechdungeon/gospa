@@ -10,7 +10,7 @@ import (
 	"sync"
 	"time"
 
-	"github.com/gofiber/fiber/v2"
+	fiberpkg "github.com/gofiber/fiber/v2"
 	websocket "github.com/gofiber/websocket/v2"
 )
 
@@ -425,15 +425,15 @@ func (mgr *HMRManager) handleClientMessage(c *websocket.Conn, data map[string]an
 }
 
 // HMREndpoint returns a Fiber handler for HMR WebSocket.
-func (mgr *HMRManager) HMREndpoint() fiber.Handler {
+func (mgr *HMRManager) HMREndpoint() fiberpkg.Handler {
 	return websocket.New(func(c *websocket.Conn) {
 		mgr.HandleWebSocket(c)
 	})
 }
 
 // HMRMiddleware returns middleware that adds HMR script to HTML responses.
-func (mgr *HMRManager) HMRMiddleware() fiber.Handler {
-	return func(c *fiber.Ctx) error {
+func (mgr *HMRManager) HMRMiddleware() fiberpkg.Handler {
+	return func(c *fiberpkg.Ctx) error {
 		// Only process HTML responses
 		if !strings.Contains(string(c.Response().Header.Peek("Content-Type")), "text/html") {
 			return c.Next()

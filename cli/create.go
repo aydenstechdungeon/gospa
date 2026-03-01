@@ -160,7 +160,9 @@ func main() {
 }
 
 func createHomePage(config *ProjectConfig) error {
-	content := `package main
+	content := fmt.Sprintf(`package routes
+
+import "%s/components"
 
 templ Page() {
 	<div class="container mx-auto px-4 py-8">
@@ -170,7 +172,7 @@ templ Page() {
 		</p>
 		
 		<div class="bg-white rounded-lg shadow p-6">
-			@Counter()
+			@components.Counter()
 		</div>
 		
 		<div class="mt-8 grid grid-cols-1 md:grid-cols-3 gap-4">
@@ -189,16 +191,16 @@ templ Page() {
 		</div>
 	</div>
 }
-`
+`, config.Module)
 
 	path := filepath.Join(config.OutputDir, "routes", "page.templ")
 	return os.WriteFile(path, []byte(content), 0644)
 }
 
 func createLayout(config *ProjectConfig) error {
-	content := `package main
+	content := `package routes
 
-import "github.com/aydenstechdungeon/gospa/templ"
+import gospatempl "github.com/aydenstechdungeon/gospa/templ"
 
 templ Layout(title string) {
 	<!DOCTYPE html>
@@ -208,7 +210,7 @@ templ Layout(title string) {
 		<meta name="viewport" content="width=device-width, initial-scale=1.0"/>
 		<title>{ title }</title>
 		<link rel="stylesheet" href="/static/css/style.css"/>
-		@templ.RuntimeScript()
+		@gospatempl.RuntimeScript("/_gospa/runtime.js")
 	</head>
 	<body class="bg-gray-100 min-h-screen">
 		<nav class="bg-white shadow-sm">
@@ -229,7 +231,7 @@ templ Layout(title string) {
 }
 
 func createCounterComponent(config *ProjectConfig) error {
-	content := `package main
+	content := `package components
 
 templ Counter() {
 	<div 
@@ -268,6 +270,13 @@ templ Counter() {
 
 func createStateFile(config *ProjectConfig) error {
 	content := `package lib
+
+// GlobalCounter is a global state for the counter
+var GlobalCounter = struct {
+	Count int
+}{
+	Count: 0,
+}
 
 // AppState holds application-wide state.
 type AppState struct {

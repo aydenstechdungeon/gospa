@@ -68,9 +68,12 @@ routing.RegisterPageWithOptions("/dashboard", dashboardPage, routing.RouteOption
 		<section class="space-y-6">
 			<h2 class="text-2xl font-bold" id="ssg">SSG — Static Site Generation</h2>
 			<p class="text-[var(--text-secondary)]">
-				The page is rendered <strong>once</strong> on first request and cached forever (until evicted by FIFO policy or server restart).
-				Subsequent requests are served instantly from the in-memory cache with a long-lived CDN-friendly header.
+				The page is rendered <strong>once</strong> on first request and cached until <code class="font-mono text-[var(--accent-primary)]">SSGCacheTTL</code> expires or it is evicted by FIFO policy or server restart. Subsequent requests are served instantly from the in-memory cache.
 			</p>
+			<div class="p-4 mt-4 mb-4 rounded-xl border border-amber-500/20 bg-amber-500/5 text-sm text-[var(--text-secondary)]">
+				<strong class="text-amber-500 font-bold block mb-1">⚠️ Cache Forever Warning</strong>
+				If <code class="font-mono text-[var(--accent-primary)]">SSGCacheTTL</code> is set to 0 (default), SSG entries do not automatically expire. If you use SSG for content that changes over time (like user profiles or dashboards), your server memory will grow unbounded. We highly recommend adding a TTL or using <a href="#isr" class="text-[var(--accent-primary)] hover:underline">ISR</a> instead for dynamic pathways.
+			</div>
 			@components.CodeBlock(`routing.RegisterPageWithOptions("/about", aboutPage, routing.RouteOptions{
     Strategy: routing.StrategySSG,
 })
@@ -79,6 +82,7 @@ routing.RegisterPageWithOptions("/dashboard", dashboardPage, routing.RouteOption
 app := gospa.New(gospa.Config{
     CacheTemplates:     true,
     SSGCacheMaxEntries: 500, // default for in-memory
+    SSGCacheTTL:        1 * time.Hour, // optional cache expiration
     // Optional: Configure an external store like Redis to share cache across processes
     Storage: redisstore.NewStore(redisClient),
 })`, "go", "main.go")

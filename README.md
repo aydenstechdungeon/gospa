@@ -389,8 +389,8 @@ myapp/
 │   ├── page.templ
 │   └ about/
 │       └ page.templ
-├ components/          # Reusable .templ components
-├ lib/                 # Shared Go code
+├ components/          # Reusable .templ components (optional)
+├ lib/                 # Shared Go code (optional)
 │   └ state.go         # App state
 ├ main.go
 └ go.mod

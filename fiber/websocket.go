@@ -17,6 +17,7 @@ import (
 	"github.com/aydenstechdungeon/gospa/state"
 	"github.com/aydenstechdungeon/gospa/store"
 	"github.com/gofiber/fiber/v2"
+	fiberpkg "github.com/gofiber/fiber/v2"
 	websocket "github.com/gofiber/websocket/v2"
 )
 
@@ -41,6 +42,14 @@ type ConnectionRateLimiter struct {
 type rateBucket struct {
 	tokens     float64
 	lastRefill time.Time
+}
+
+// SetConnectionRateLimiter configures the global connection rate limiter
+func SetConnectionRateLimiter(maxTokens float64, refillRate float64) {
+	globalConnRateLimiter.mu.Lock()
+	defer globalConnRateLimiter.mu.Unlock()
+	globalConnRateLimiter.maxTokens = maxTokens
+	globalConnRateLimiter.refillRate = refillRate
 }
 
 // Global connection rate limiter (singleton)
@@ -97,7 +106,7 @@ func (rl *ConnectionRateLimiter) Allow(ip string) bool {
 // GetIPFromContext extracts the client IP from the Fiber context.
 // Uses Fiber's built-in IP extraction which handles X-Forwarded-For
 // based on the app's Proxy settings (TrustedProxies, etc).
-func GetIPFromContext(c *fiber.Ctx) string {
+func GetIPFromContext(c *fiberpkg.Ctx) string {
 	return c.IP()
 }
 
@@ -818,6 +827,8 @@ type WebSocketConfig struct {
 	Serializer func(interface{}) ([]byte, error)
 	// Deserializer overrides JSON for inbound state deserialization.
 	Deserializer func([]byte, interface{}) error
+	// WSMaxMessageSize limits the maximum payload size for WebSocket messages.
+	WSMaxMessageSize int
 }
 
 // DefaultWebSocketConfig returns default WebSocket configuration.
@@ -834,7 +845,7 @@ func DefaultWebSocketConfig() WebSocketConfig {
 // IMPORTANT: The Hub in config must already be running (go hub.Run()) before calling this.
 // gospa.New() ensures this when EnableWebSocket is true. If you call this directly,
 // start the hub yourself: go config.Hub.Run()
-func WebSocketHandler(config WebSocketConfig) fiber.Handler {
+func WebSocketHandler(config WebSocketConfig) fiberpkg.Handler {
 	// Apply defaults for nil config values
 	if config.Hub == nil {
 		config.Hub = NewWSHub(nil)
@@ -846,6 +857,9 @@ func WebSocketHandler(config WebSocketConfig) fiber.Handler {
 	}
 
 	return websocket.New(func(c *websocket.Conn) {
+		if config.WSMaxMessageSize > 0 {
+			c.SetReadLimit(int64(config.WSMaxMessageSize))
+		}
 		var sessionID string
 		var sessionToken string
 		var restoredState *state.StateMap
@@ -1187,8 +1201,8 @@ func callConnectHandlers(client *WSClient) {
 
 // WebSocketUpgradeMiddleware upgrades HTTP connections to WebSocket.
 // It also enforces per-IP rate limiting to prevent connection DoS attacks.
-func WebSocketUpgradeMiddleware() fiber.Handler {
-	return func(c *fiber.Ctx) error {
+func WebSocketUpgradeMiddleware() fiberpkg.Handler {
+	return func(c *fiberpkg.Ctx) error {
 		// Check if WebSocket upgrade request
 		if string(c.Request().Header.Peek("Upgrade")) != "websocket" {
 			return c.Next()

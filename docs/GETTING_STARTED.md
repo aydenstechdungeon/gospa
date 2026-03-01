@@ -44,6 +44,8 @@ myapp/
 │   ├── layout.templ        # Root layout
 │   ├── page.templ          # Home page
 │   └── generated_routes.go # Auto-generated routing
+├── components/             # Reusable .templ components (optional)
+├── lib/                    # Shared Go code (optional)
 ├── static/                 # Static assets
 └── .gospa/                 # Framework cache
 ```

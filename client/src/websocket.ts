@@ -134,7 +134,7 @@ export class WSClient {
 	private heartbeatTimer: ReturnType<typeof setInterval> | null = null;
 	private messageQueue: StateMessage[] = [];
 	private connectionState: Rune<ConnectionState>;
-	private pendingRequests = new Map<string, { resolve: (value: unknown) => void; reject: (error: Error) => void }>();
+	private pendingRequests = new Map<string, { resolve: (value: unknown) => void; reject: (error: Error) => void; timeout: ReturnType<typeof setTimeout> }>();
 	private requestId = 0;
 	private sessionData: SessionData | null = null;
 
@@ -310,20 +310,21 @@ export class WSClient {
 			const id = `req_${++this.requestId}`;
 			message.data = { ...message.data, _requestId: id };
 
-			this.pendingRequests.set(id, {
-				resolve: resolve as (value: unknown) => void,
-				reject
-			});
-
-			this.send(message);
-
 			// Timeout after 30 seconds
-			setTimeout(() => {
+			const timeout = setTimeout(() => {
 				if (this.pendingRequests.has(id)) {
 					this.pendingRequests.delete(id);
 					reject(new Error('Request timeout'));
 				}
 			}, 30000);
+
+			this.pendingRequests.set(id, {
+				resolve: resolve as (value: unknown) => void,
+				reject,
+				timeout
+			});
+
+			this.send(message);
 		});
 	}
 
@@ -356,6 +357,7 @@ export class WSClient {
 				const id = message.data._responseId as string;
 				const pending = this.pendingRequests.get(id);
 				if (pending) {
+					clearTimeout(pending.timeout);
 					this.pendingRequests.delete(id);
 					if (message.type === 'error') {
 						// SECURITY: Sanitize error message to prevent XSS via malicious server

@@ -12,6 +12,7 @@ import (
 
 	"github.com/aydenstechdungeon/gospa/store"
 	"github.com/gofiber/fiber/v2"
+	fiberpkg "github.com/gofiber/fiber/v2"
 	"github.com/gofiber/fiber/v2/middleware/cors"
 )
 
@@ -265,8 +266,8 @@ func (b *SSEBroker) GetClientsByTopic(topic string) []*SSEClient {
 }
 
 // SSEHandler returns a Fiber handler for SSE connections.
-func (b *SSEBroker) SSEHandler(clientIDFunc func(*fiber.Ctx) string) fiber.Handler {
-	return func(c *fiber.Ctx) error {
+func (b *SSEBroker) SSEHandler(clientIDFunc func(*fiberpkg.Ctx) string) fiberpkg.Handler {
+	return func(c *fiberpkg.Ctx) error {
 		// Set SSE headers
 		c.Set("Content-Type", "text/event-stream")
 		c.Set("Cache-Control", "no-cache")
@@ -330,8 +331,8 @@ func (b *SSEBroker) SSEHandler(clientIDFunc func(*fiber.Ctx) string) fiber.Handl
 //	sse.Post("/subscribe", authMw, broker.SSESubscribeHandler())
 //
 // Inside your authMw, reject if the session user ID doesn't match the clientId in the request body.
-func (b *SSEBroker) SSESubscribeHandler() fiber.Handler {
-	return func(c *fiber.Ctx) error {
+func (b *SSEBroker) SSESubscribeHandler() fiberpkg.Handler {
+	return func(c *fiberpkg.Ctx) error {
 		var req struct {
 			ClientID string   `json:"clientId"`
 			Topics   []string `json:"topics"`
@@ -345,14 +346,14 @@ func (b *SSEBroker) SSESubscribeHandler() fiber.Handler {
 		// NOTE: This is an existence check, not an identity check.
 		// See security warning in the function comment above.
 		if !b.clientExists(req.ClientID) {
-			return c.Status(404).JSON(fiber.Map{
+			return c.Status(404).JSON(fiberpkg.Map{
 				"error": "client not found or not connected",
 			})
 		}
 
 		b.Subscribe(req.ClientID, req.Topics...)
 
-		return c.JSON(fiber.Map{
+		return c.JSON(fiberpkg.Map{
 			"success": true,
 			"topics":  req.Topics,
 		})
@@ -369,8 +370,8 @@ func (b *SSEBroker) clientExists(clientID string) bool {
 }
 
 // SSEUnsubscribeHandler returns a handler for unsubscribing from topics.
-func (b *SSEBroker) SSEUnsubscribeHandler() fiber.Handler {
-	return func(c *fiber.Ctx) error {
+func (b *SSEBroker) SSEUnsubscribeHandler() fiberpkg.Handler {
+	return func(c *fiberpkg.Ctx) error {
 		var req struct {
 			ClientID string   `json:"clientId"`
 			Topics   []string `json:"topics"`
@@ -382,14 +383,14 @@ func (b *SSEBroker) SSEUnsubscribeHandler() fiber.Handler {
 
 		// Validate that the client exists and is currently connected
 		if !b.clientExists(req.ClientID) {
-			return c.Status(404).JSON(fiber.Map{
+			return c.Status(404).JSON(fiberpkg.Map{
 				"error": "client not found or not connected",
 			})
 		}
 
 		b.Unsubscribe(req.ClientID, req.Topics...)
 
-		return c.JSON(fiber.Map{
+		return c.JSON(fiberpkg.Map{
 			"success": true,
 			"topics":  req.Topics,
 		})
@@ -397,7 +398,7 @@ func (b *SSEBroker) SSEUnsubscribeHandler() fiber.Handler {
 }
 
 // writeSSEEvent writes an SSE event to the response.
-func writeSSEEvent(c *fiber.Ctx, event SSEEvent) error {
+func writeSSEEvent(c *fiberpkg.Ctx, event SSEEvent) error {
 	// Write event ID if present
 	if event.ID != "" {
 		_, _ = c.Write([]byte(fmt.Sprintf("id: %s\n", event.ID)))
@@ -445,7 +446,7 @@ func generateClientID() string {
 }
 
 // SetupSSE sets up SSE routes on a Fiber app.
-func SetupSSE(app *fiber.App, broker *SSEBroker, basePath string, corsConfig *cors.Config) {
+func SetupSSE(app *fiberpkg.App, broker *SSEBroker, basePath string, corsConfig *cors.Config) {
 	// Create router group
 	sse := app.Group(basePath)
 
@@ -455,7 +456,7 @@ func SetupSSE(app *fiber.App, broker *SSEBroker, basePath string, corsConfig *co
 	}
 
 	// SSE connection endpoint
-	sse.Get("/connect", broker.SSEHandler(func(c *fiber.Ctx) string {
+	sse.Get("/connect", broker.SSEHandler(func(c *fiberpkg.Ctx) string {
 		return c.Query("clientId", "")
 	}))
 
@@ -466,8 +467,8 @@ func SetupSSE(app *fiber.App, broker *SSEBroker, basePath string, corsConfig *co
 	sse.Post("/unsubscribe", broker.SSEUnsubscribeHandler())
 
 	// Stats endpoint
-	sse.Get("/stats", func(c *fiber.Ctx) error {
-		return c.JSON(fiber.Map{
+	sse.Get("/stats", func(c *fiberpkg.Ctx) error {
+		return c.JSON(fiberpkg.Map{
 			"clientCount": broker.ClientCount(),
 		})
 	})

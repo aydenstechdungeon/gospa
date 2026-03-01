@@ -80,6 +80,11 @@ keys := states.Keys()
 // Clear all
 states.Clear()`, "go", "statemap.go")
 
+			<div class="p-4 mt-4 rounded-xl border border-[var(--accent-primary)]/20 bg-[var(--accent-primary)]/5 text-sm text-[var(--text-secondary)]">
+				<strong class="text-[var(--accent-primary)] font-bold block mb-1">ℹ️ Concurrency Safe</strong>
+				The <code class="font-mono text-[var(--accent-primary)]">OnChange</code> callback runs as a background goroutine isolated from the state maps mutex locks. It is completely safe to call <code class="font-mono text-[var(--accent-primary)]">Set()</code>, <code class="font-mono text-[var(--accent-primary)]">Delete()</code>, or <code class="font-mono text-[var(--accent-primary)]">Clear()</code> on the same StateMap backwards!
+			</div>
+
 			<h3 class="text-xl font-semibold mt-8" id="serialization">Serialization</h3>
 			<p class="text-[var(--text-secondary)]">
 				StateMap can serialize to JSON { "for" } client hydration.
@@ -223,6 +228,15 @@ serverCount.set(10);  // Sends update to server
 
 // Server updates are received automatically
 // No manual refresh needed`, "typescript", "synced.ts")
+
+			<div class="p-4 mt-4 rounded-xl border border-amber-500/20 bg-amber-500/5 text-sm text-[var(--text-secondary)]">
+				<strong class="text-amber-500 font-bold block mb-1">⚠️ Sync Constraints</strong>
+				When syncing state over WebSocket:
+				<ul class="list-disc list-inside mt-2 space-y-1">
+					<li><strong>Payload Size:</strong> Single messages cannot exceed 64KB. Enable <code class="font-mono text-[var(--accent-primary)]">CompressState</code> or <code class="font-mono text-[var(--accent-primary)]">StateDiffing</code> to minimize bandwidth.</li>
+					<li><strong>Circular References:</strong> JSON serialization will fail if your state objects contain circular references. Ensure your structures are acyclic.</li>
+				</ul>
+			</div>
 
 			<h3 class="text-xl font-semibold mt-8" id="websocket-config">WebSocket Configuration</h3>
 			@components.CodeBlock(`import { WSClient } from '@gospa/runtime';

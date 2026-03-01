@@ -83,8 +83,16 @@ templ Page() {
 						<tr><td class="px-4 py-2 font-mono text-[var(--accent-primary)]">WSReconnectDelay</td><td class="px-4 py-2">time.Duration</td><td class="px-4 py-2">0</td><td class="px-4 py-2">Initial reconnect delay</td></tr>
 						<tr><td class="px-4 py-2 font-mono text-[var(--accent-primary)]">WSMaxReconnect</td><td class="px-4 py-2">int</td><td class="px-4 py-2">0</td><td class="px-4 py-2">Max reconnect attempts (0 = unlimited)</td></tr>
 						<tr><td class="px-4 py-2 font-mono text-[var(--accent-primary)]">WSHeartbeat</td><td class="px-4 py-2">time.Duration</td><td class="px-4 py-2">0</td><td class="px-4 py-2">Heartbeat interval</td></tr>
+						<tr><td class="px-4 py-2 font-mono text-[var(--accent-primary)]">WSMaxMessageSize</td><td class="px-4 py-2">int</td><td class="px-4 py-2">65536</td><td class="px-4 py-2">Max WebSocket payload size in bytes</td></tr>
+						<tr><td class="px-4 py-2 font-mono text-[var(--accent-primary)]">WSConnRateLimit</td><td class="px-4 py-2">float64</td><td class="px-4 py-2">0.2</td><td class="px-4 py-2">Websocket connection refill rate per sec</td></tr>
+						<tr><td class="px-4 py-2 font-mono text-[var(--accent-primary)]">WSConnBurst</td><td class="px-4 py-2">float64</td><td class="px-4 py-2">5.0</td><td class="px-4 py-2">Websocket connection burst capacity</td></tr>
 					</tbody>
 				</table>
+			</div>
+			
+			<div class="mt-4 p-4 rounded-xl bg-blue-500/5 border border-blue-500/20 text-sm text-[var(--text-secondary)]">
+				<h4 class="font-bold mb-1 text-[var(--text-primary)]">ℹ️ Built-in Rate Limiting</h4>
+				To prevent DoS attacks, GoSPA applies a fixed token-bucket rate limiter to all WebSocket connection upgrades per-IP. The limits allow a burst of <code class="font-mono text-[var(--accent-primary)]">WSConnBurst</code> connections, dropping sequentially until the <code class="font-mono text-[var(--accent-primary)]">WSConnRateLimit</code> recovers. If a client exceeds this, they receive an HTTP 429 Too Many Requests.
 			</div>
 		</section>
 

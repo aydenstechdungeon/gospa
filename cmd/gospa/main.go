@@ -4,7 +4,6 @@ package main
 import (
 	"fmt"
 	"os"
-	"path/filepath"
 	"runtime"
 
 	"github.com/aydenstechdungeon/gospa/cli"
@@ -13,7 +12,7 @@ import (
 )
 
 // Version is the current version of GoSPA
-const Version = "0.1.1"
+const Version = "0.1.5"
 
 func main() {
 	// Register built-in plugins
@@ -103,146 +102,6 @@ func printUsage(printer *cli.ColorPrinter) {
 	fmt.Printf("    gospa create myapp\n")
 	fmt.Printf("    cd myapp && gospa dev\n")
 	fmt.Printf("    gospa build -o ./dist\n")
-	fmt.Println()
-}
-
-func createProject(config *cli.ProjectConfig, printer *cli.ColorPrinter) {
-	printer.Title("Creating GoSPA project: %s", config.Name)
-
-	// Create project directory in current directory
-	projectPath := config.OutputDir
-	printer.Step(1, 5, "Creating project directory")
-	if err := os.MkdirAll(projectPath, 0755); err != nil {
-		printer.Error("Failed to create project directory: %v", err)
-		os.Exit(1)
-	}
-
-	// Create subdirectories
-	printer.Step(2, 5, "Creating directory structure")
-	dirs := []string{
-		filepath.Join(projectPath, "routes"),
-		filepath.Join(projectPath, "components"),
-		filepath.Join(projectPath, "lib"),
-		filepath.Join(projectPath, "static"),
-	}
-	for _, dir := range dirs {
-		if err := os.MkdirAll(dir, 0755); err != nil {
-			printer.Error("Failed to create directory %s: %v", dir, err)
-			os.Exit(1)
-		}
-	}
-
-	// Create go.mod
-	printer.Step(3, 5, "Generating go.mod")
-	goMod := fmt.Sprintf(`module %s
-
-go 1.21
-
-require (
-	github.com/aydenstechdungeon/gospa v0.1.0
-	github.com/a-h/templ v0.2.543
-	github.com/gofiber/fiber/v2 v2.51.0
-)
-`, config.Module)
-	if err := os.WriteFile(filepath.Join(projectPath, "go.mod"), []byte(goMod), 0644); err != nil {
-		printer.Error("Failed to create go.mod: %v", err)
-		os.Exit(1)
-	}
-
-	// Create main.go
-	printer.Step(4, 5, "Generating main.go")
-	mainGo := `package main
-
-import (
-	"log"
-
-	"github.com/aydenstechdungeon/gospa"
-	_ "` + config.Module + `/routes" // Import routes to trigger init()
-)
-
-func main() {
-	app := gospa.New(gospa.Config{
-		RoutesDir:   "./routes",
-		DevMode:     true,
-		AppName:     "` + config.Name + `",
-	})
-
-	if err := app.Run(":3000"); err != nil {
-		log.Fatal(err)
-	}
-}
-`
-	if err := os.WriteFile(filepath.Join(projectPath, "main.go"), []byte(mainGo), 0644); err != nil {
-		printer.Error("Failed to create main.go: %v", err)
-		os.Exit(1)
-	}
-
-	// Create routes/layout.templ
-	printer.Step(5, 5, "Generating route templates")
-	layoutTempl := `package routes
-
-import "github.com/a-h/templ"
-
-templ Layout(title string, children templ.Component) {
-	<nav>
-		<a href="/">Home</a>
-	</nav>
-	<div>
-		@templ.Component(children)
-	</div>
-}
-`
-	if err := os.WriteFile(filepath.Join(projectPath, "routes", "layout.templ"), []byte(layoutTempl), 0644); err != nil {
-		printer.Error("Failed to create layout.templ: %v", err)
-		os.Exit(1)
-	}
-
-	// Create routes/page.templ
-	pageTempl := `package routes
-
-templ Page() {
-	<div>
-		<h1>Welcome to ` + config.Name + `</h1>
-		<p>Your GoSPA application is ready!</p>
-	</div>
-}
-`
-	if err := os.WriteFile(filepath.Join(projectPath, "routes", "page.templ"), []byte(pageTempl), 0644); err != nil {
-		printer.Error("Failed to create page.templ: %v", err)
-		os.Exit(1)
-	}
-
-	// Create Dockerfile if requested
-	if config.WithDocker {
-		dockerfile := `FROM golang:1.21-alpine AS builder
-WORKDIR /app
-COPY go.mod go.sum ./
-RUN go mod download
-COPY . .
-RUN go build -o main .
-
-FROM alpine:latest
-WORKDIR /root/
-COPY --from=builder /app/main .
-COPY --from=builder /app/static ./static
-EXPOSE 3000
-CMD ["./main"]
-`
-		if err := os.WriteFile(filepath.Join(projectPath, "Dockerfile"), []byte(dockerfile), 0644); err != nil {
-			printer.Error("Failed to create Dockerfile: %v", err)
-		}
-	}
-
-	// Success message
-	fmt.Println()
-	printer.Success("Project '%s' created successfully!", config.Name)
-	fmt.Println()
-	printer.Bold("Next steps:")
-	fmt.Printf("    cd %s\n", projectPath)
-	fmt.Println("    go mod tidy")
-	fmt.Println("    templ generate")
-	fmt.Println("    gospa generate")
-	fmt.Printf("    go run .\n")
 	fmt.Println()
 }
 
@@ -533,7 +392,24 @@ func handleCreateCommand(printer *cli.ColorPrinter) {
 		}
 	}
 
-	createProject(config, printer) // Note: this still uses the local createProject helper
+	printer.Title("Creating GoSPA project: %s", config.Name)
+
+	if err := cli.CreateProjectWithConfig(config); err != nil {
+		printer.Error("Failed to create project: %v", err)
+		os.Exit(1)
+	}
+
+	// Success message
+	fmt.Println()
+	printer.Success("Project '%s' created successfully!", config.Name)
+	fmt.Println()
+	printer.Bold("Next steps:")
+	fmt.Printf("    cd %s\n", config.OutputDir)
+	fmt.Println("    go mod tidy")
+	fmt.Println("    templ generate")
+	fmt.Println("    gospa generate")
+	fmt.Printf("    go run .\n")
+	fmt.Println()
 }
 
 // printBuildUsage prints usage for the build command.

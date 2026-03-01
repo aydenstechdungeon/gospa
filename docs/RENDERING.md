@@ -36,7 +36,9 @@ routing.RegisterPageWithOptions("/dashboard", dashboardPage, routing.RouteOption
 
 ## SSG — Static Site Generation
 
-The page is rendered **once** on first request and cached forever (until evicted by FIFO policy or server restart). Subsequent requests are served instantly from the in-memory cache.
+The page is rendered **once** on first request and cached until `SSGCacheTTL` expires or it is evicted by FIFO policy or server restart. Subsequent requests are served instantly from the in-memory cache.
+
+> **Warning:** If `SSGCacheTTL` is set to `0` (the default), SSG caches forever without expiring, making it susceptible to stale content and memory pressure over time. **For most use-cases, we strongly recommend using ISR (Incremental Static Regeneration) instead**, which provides the exact same performance but allows pages to expire.
 
 ```go
 routing.RegisterPageWithOptions("/about", aboutPage, routing.RouteOptions{
@@ -50,6 +52,7 @@ routing.RegisterPageWithOptions("/about", aboutPage, routing.RouteOptions{
 app := gospa.New(gospa.Config{
     CacheTemplates:     true,
     SSGCacheMaxEntries: 500, // FIFO eviction at 500 entries (default for in-memory)
+    SSGCacheTTL:        1 * time.Hour, // Optional expiration time for static pages
     // Optional: Configure an external store like Redis to share cache across processes
     Storage: redisstore.NewStore(redisClient),
 })

@@ -39,7 +39,7 @@ type StateSerializerFunc func(interface{}) ([]byte, error)
 type StateDeserializerFunc func([]byte, interface{}) error
 
 // Version is the current version of GoSPA.
-const Version = "0.1.3"
+const Version = "0.1.5"
 
 // Config holds the application configuration.
 type Config struct {
@@ -86,6 +86,13 @@ type Config struct {
 	WSMaxReconnect   int           // Max reconnect attempts (default 10)
 	WSHeartbeat      time.Duration // Heartbeat ping interval (default 30s)
 
+	// WSMaxMessageSize limits the maximum payload size for WebSocket messages (default 64KB).
+	WSMaxMessageSize int
+	// WSConnRateLimit sets the refilling rate in connections per second for WebSocket upgrades (default 0.2).
+	WSConnRateLimit float64
+	// WSConnBurst sets the burst capacity for WebSocket connection upgrades (default 5.0).
+	WSConnBurst float64
+
 	// Hydration Options
 	// HydrationMode controls when components become interactive.
 	// Supported values: "immediate" | "lazy" | "visible" | "idle" (default: "immediate").
@@ -121,6 +128,8 @@ type Config struct {
 	// SSGCacheMaxEntries caps the SSG/ISR/PPR page cache size. Oldest entries are evicted when full.
 	// Default: 500. Set to -1 to disable eviction (unbounded, not recommended in production).
 	SSGCacheMaxEntries int
+	// SSGCacheTTL sets an expiration time for SSG cache entries. If zero, they never expire.
+	SSGCacheTTL time.Duration
 
 	// Prefork enables Fiber's prefork mode.
 	// WARNING: If enabled without an external Storage/PubSub backend like Redis, in-memory state and WebSockets will be isolated per-process.
@@ -281,6 +290,18 @@ func New(config Config) *App {
 		config.SSGCacheMaxEntries = 10000
 	}
 
+	if config.WSMaxMessageSize == 0 {
+		config.WSMaxMessageSize = 64 * 1024
+	}
+	if config.WSConnRateLimit == 0 {
+		config.WSConnRateLimit = 0.2
+	}
+	if config.WSConnBurst == 0 {
+		config.WSConnBurst = 5.0
+	}
+	// Configure global rate limiter
+	fiber.SetConnectionRateLimiter(config.WSConnBurst, config.WSConnRateLimit)
+
 	if config.Storage == nil {
 		if config.Prefork {
 			log.Println("WARNING: Prefork is enabled with in-memory Storage. Sessions and State will be isolated per process!")
@@ -435,11 +456,12 @@ func (a *App) setupRoutes() {
 			handlers = append(handlers, a.Config.WebSocketMiddleware)
 		}
 		handlers = append(handlers, fiber.WebSocketHandler(fiber.WebSocketConfig{
-			Hub:           a.Hub,
-			CompressState: a.Config.CompressState,
-			StateDiffing:  a.Config.StateDiffing,
-			Serializer:    a.Config.StateSerializer,
-			Deserializer:  a.Config.StateDeserializer,
+			Hub:              a.Hub,
+			CompressState:    a.Config.CompressState,
+			StateDiffing:     a.Config.StateDiffing,
+			Serializer:       a.Config.StateSerializer,
+			Deserializer:     a.Config.StateDeserializer,
+			WSMaxMessageSize: a.Config.WSMaxMessageSize,
 		}))
 		a.Fiber.Get(a.Config.WebSocketPath, handlers...)
 	}
@@ -543,6 +565,9 @@ func (a *App) RegisterRoutes() error {
 // renderRoute renders a route with its layout chain.
 func (a *App) renderRoute(c *fiberpkg.Ctx, route *routing.Route) error {
 	cacheKey := c.Path()
+	if query := string(c.Request().URI().QueryString()); len(query) > 0 {
+		cacheKey += "?" + query
+	}
 	opts := routing.GetRouteOptions(route.Path)
 
 	// Resolve effective strategy (per-page opts override config default).
@@ -706,8 +731,13 @@ func (a *App) renderRoute(c *fiberpkg.Ctx, route *routing.Route) error {
 		// ─── PPR (shell miss) ─────────────────────────────────────────────
 		if a.Config.CacheTemplates && effStrategy == routing.StrategyPPR {
 			// Use sync.Map for deduplication to prevent thundering herd
-			if _, alreadyBuilding := a.pprShellBuilding.LoadOrStore(cacheKey, true); !alreadyBuilding {
-				defer a.pprShellBuilding.Delete(cacheKey)
+			done := make(chan struct{})
+			actual, loaded := a.pprShellBuilding.LoadOrStore(cacheKey, done)
+			if !loaded {
+				defer func() {
+					close(done)
+					a.pprShellBuilding.Delete(cacheKey)
+				}()
 				shellCtx := templpkg.WithPPRShellBuild(context.Background())
 				var shellBuf bytes.Buffer
 				if err := wrappedContent.Render(shellCtx, &shellBuf); err != nil {
@@ -723,24 +753,21 @@ func (a *App) renderRoute(c *fiberpkg.Ctx, route *routing.Route) error {
 				c.Set("Cache-Control", "no-store")
 				return c.Send(result)
 			} else {
-				// Another goroutine is building; poll briefly then check cache
+				// Another goroutine is building; wait for it to finish
+				waitChan := actual.(chan struct{})
+				<-waitChan
+
 				var shellHTML []byte
 				var shellOk bool
-				for i := 0; i < 100; i++ {
-					time.Sleep(10 * time.Millisecond)
-					if a.Config.Storage != nil && !a.Config.Prefork {
-						if data, err := a.Config.Storage.Get("gospa:ppr:" + cacheKey); err == nil {
-							shellHTML = data
-							shellOk = true
-						}
-					} else {
-						a.pprShellMu.RLock()
-						shellHTML, shellOk = a.pprShellCache[cacheKey]
-						a.pprShellMu.RUnlock()
+				if a.Config.Storage != nil && !a.Config.Prefork {
+					if data, err := a.Config.Storage.Get("gospa:ppr:" + cacheKey); err == nil {
+						shellHTML = data
+						shellOk = true
 					}
-					if shellOk {
-						break
-					}
+				} else {
+					a.pprShellMu.RLock()
+					shellHTML, shellOk = a.pprShellCache[cacheKey]
+					a.pprShellMu.RUnlock()
 				}
 				if shellOk {
 					result, err := a.applyPPRSlots(route, shellHTML, c.Path(), opts)
@@ -988,6 +1015,14 @@ func (a *App) storeSsgEntry(key string, html []byte) {
 		a.ssgCacheKeys = append(a.ssgCacheKeys, key)
 	}
 	a.ssgCache[key] = ssgEntry{html: html, createdAt: time.Now()}
+
+	if a.Config.SSGCacheTTL > 0 {
+		time.AfterFunc(a.Config.SSGCacheTTL, func() {
+			a.ssgCacheMu.Lock()
+			defer a.ssgCacheMu.Unlock()
+			delete(a.ssgCache, key)
+		})
+	}
 }
 
 // storePprShell writes a PPR static shell into the pprShellCache with FIFO eviction.
