@@ -1,4 +1,5 @@
 # Build artifacts
+website
 website.bin
 *.exe
 *.exe~
@@ -19,8 +20,11 @@ tests/
 .git/
 .gitignore
 
-# Node/Bun (not used but ignore if present)
+# Node/Bun/GoSPA Build Artifacts
 node_modules/
+dist/
+generated/
+tmp_build
 bun.lock
 
 # Binary output

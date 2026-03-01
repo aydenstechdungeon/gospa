@@ -25,7 +25,8 @@ WORKDIR /build
 
 # 3. Copy source and clean previous build artifacts to ensure fresh build
 COPY . .
-RUN rm -rf website/dist dist website/generated generated website/node_modules node_modules
+RUN rm -rf dist generated node_modules && \
+    if [ -d "website" ]; then rm -rf website/dist website/generated website/node_modules; fi
 
 # 4. Handle GoSPA CLI
 # Detect context: if we have the full repo, build locally. Otherwise, install from remote.
