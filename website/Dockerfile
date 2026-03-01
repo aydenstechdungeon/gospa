@@ -44,6 +44,8 @@ RUN if [ -f "cmd/gospa/main.go" ]; then \
 RUN if [ -d "website" ]; then \
     echo "Context: Repository Root. Building website subdirectory..." && \
     cd website && \
+    go mod edit -replace github.com/aydenstechdungeon/gospa=../ && \
+    go mod tidy && \
     bun install && \
     /usr/local/bin/gospa build -o dist; \
     else \
