@@ -1,0 +1,311 @@
+package routes
+
+templ Page() {
+	<div
+		class="min-h-screen py-8 px-4"
+		data-gospa-component="todo-app"
+		data-gospa-state='{"todos":[],"filter":"all","inputValue":""}'
+	>
+		<div class="glass-card max-w-2xl mx-auto rounded-3xl overflow-hidden">
+			<!-- Header -->
+			<div class="px-8 pt-8 pb-6 text-center border-b border-white/10">
+				<h1 class="text-4xl font-bold bg-gradient-to-r from-cyan-400 to-violet-400 bg-clip-text text-transparent mb-2" style="font-family: 'Space Grotesk', sans-serif;">
+					Tasks
+				</h1>
+				<p class="text-slate-400 text-sm">Stay organized, get things done</p>
+			</div>
+
+			<!-- Input Section -->
+			<div class="px-6 py-4 border-b border-white/10">
+				<div class="flex gap-3">
+					<input
+						type="text"
+						id="todo-input"
+						class="glow-input flex-1 px-5 py-4 bg-slate-800/50 border border-slate-700 rounded-2xl text-white placeholder-slate-500 outline-none transition-all duration-200 focus:border-cyan-500/50"
+						placeholder="What needs to be done?"
+						data-bind="inputValue"
+						onkeydown="if(event.key==='Enter'){addTodo()}"
+						autocomplete="off"
+					/>
+					<button
+						class="px-6 py-4 bg-gradient-to-r from-cyan-500 to-violet-500 hover:from-cyan-400 hover:to-violet-400 text-white font-semibold rounded-2xl transition-all duration-200 active:scale-95 shadow-lg shadow-cyan-500/25"
+						onclick="addTodo()"
+					>
+						<svg xmlns="http://www.w3.org/2000/svg" class="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+							<path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4" />
+						</svg>
+					</button>
+				</div>
+			</div>
+
+			<!-- Filter Tabs -->
+			<div class="px-6 py-4 border-b border-white/10">
+				<div class="flex justify-center gap-6">
+					<button
+						class="filter-tab text-sm font-medium text-slate-400 hover:text-white transition-colors duration-200"
+						data-filter="all"
+						onclick="setFilter('all')"
+					>
+						All
+					</button>
+					<button
+						class="filter-tab text-sm font-medium text-slate-400 hover:text-white transition-colors duration-200"
+						data-filter="active"
+						onclick="setFilter('active')"
+					>
+						Active
+					</button>
+					<button
+						class="filter-tab text-sm font-medium text-slate-400 hover:text-white transition-colors duration-200"
+						data-filter="completed"
+						onclick="setFilter('completed')"
+					>
+						Completed
+					</button>
+				</div>
+			</div>
+
+			<!-- Todo List -->
+			<div class="min-h-[300px] max-h-[500px] overflow-y-auto" id="todo-list-container">
+				<div id="todo-list" class="divide-y divide-white/5">
+					<!-- Empty State -->
+					<div id="empty-state" class="empty-state flex flex-col items-center justify-center py-16 text-center">
+						<div class="w-24 h-24 mb-6 rounded-full bg-slate-800/50 flex items-center justify-center">
+							<svg xmlns="http://www.w3.org/2000/svg" class="h-10 w-10 text-slate-600" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+								<path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2m-6 9l2 2 4-4" />
+							</svg>
+						</div>
+						<p class="text-slate-500 text-lg font-medium">No tasks yet</p>
+						<p class="text-slate-600 text-sm mt-1">Add a task to get started</p>
+					</div>
+				</div>
+			</div>
+
+			<!-- Footer -->
+			<div class="px-6 py-4 border-t border-white/10 bg-slate-900/30">
+				<div class="flex items-center justify-between">
+					<span class="text-sm text-slate-400">
+						<span id="items-left">0</span> items left
+					</span>
+					<div class="flex items-center gap-4">
+						<button
+							id="toggle-all-btn"
+							class="text-sm text-slate-500 hover:text-cyan-400 transition-colors duration-200 hidden"
+							onclick="toggleAll()"
+						>
+							Mark all complete
+						</button>
+						<button
+							id="clear-completed-btn"
+							class="text-sm text-slate-500 hover:text-violet-400 transition-colors duration-200 hidden"
+							onclick="clearCompleted()"
+						>
+							Clear completed
+						</button>
+					</div>
+				</div>
+			</div>
+		</div>
+	</div>
+
+	<script>
+		// Generate unique ID for todos
+		function generateId() {
+			return Date.now().toString(36) + Math.random().toString(36).substr(2, 9);
+		}
+
+		// Add a new todo
+		function addTodo() {
+			const state = __GOSPA__.getState('todo-app');
+			if (!state) return;
+
+			const input = document.getElementById('todo-input');
+			const text = input.value.trim();
+			
+			if (!text) return;
+
+			const newTodo = {
+				id: generateId(),
+				text: text,
+				completed: false,
+				createdAt: Date.now()
+			};
+
+			const todos = state.get('todos') || [];
+			state.set('todos', [...todos, newTodo]);
+			state.set('inputValue', '');
+			input.value = '';
+		}
+
+		// Toggle todo completion
+		function toggleTodo(id) {
+			const state = __GOSPA__.getState('todo-app');
+			if (!state) return;
+
+			const todos = state.get('todos') || [];
+			const updated = todos.map(t => 
+				t.id === id ? { ...t, completed: !t.completed } : t
+			);
+			state.set('todos', updated);
+		}
+
+		// Delete a todo
+		function deleteTodo(id) {
+			const state = __GOSPA__.getState('todo-app');
+			if (!state) return;
+
+			const todos = state.get('todos') || [];
+			state.set('todos', todos.filter(t => t.id !== id));
+		}
+
+		// Set filter
+		function setFilter(filter) {
+			const state = __GOSPA__.getState('todo-app');
+			if (!state) return;
+			state.set('filter', filter);
+		}
+
+		// Toggle all todos
+		function toggleAll() {
+			const state = __GOSPA__.getState('todo-app');
+			if (!state) return;
+
+			const todos = state.get('todos') || [];
+			const allCompleted = todos.every(t => t.completed);
+			state.set('todos', todos.map(t => ({ ...t, completed: !allCompleted })));
+		}
+
+		// Clear completed todos
+		function clearCompleted() {
+			const state = __GOSPA__.getState('todo-app');
+			if (!state) return;
+
+			const todos = state.get('todos') || [];
+			state.set('todos', todos.filter(t => !t.completed));
+		}
+
+		// Render todo item HTML
+		function renderTodoItem(todo) {
+			return `
+				<div class="todo-item group flex items-center gap-4 px-6 py-4 hover:bg-white/5 transition-colors duration-200" data-id="${todo.id}">
+					<label class="relative flex items-center cursor-pointer">
+						<input
+							type="checkbox"
+							class="todo-checkbox sr-only"
+							${todo.completed ? 'checked' : ''}
+							onchange="toggleTodo('${todo.id}')"
+						/>
+						<div class="checkbox-visual w-6 h-6 rounded-lg border-2 border-slate-600 flex items-center justify-center transition-all duration-200 hover:border-cyan-500/50 ${todo.completed ? 'bg-gradient-to-br from-cyan-500 to-violet-500 border-transparent' : ''}">
+							${todo.completed ? '<svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4 text-white" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M5 13l4 4L19 7" /></svg>' : ''}
+						</div>
+					</label>
+					<span class="todo-text flex-1 text-slate-200 font-medium ${todo.completed ? 'completed' : ''}">${escapeHtml(todo.text)}</span>
+					<button
+						class="opacity-0 group-hover:opacity-100 p-2 text-slate-500 hover:text-red-400 hover:bg-red-400/10 rounded-lg transition-all duration-200"
+						onclick="deleteTodo('${todo.id}')"
+						aria-label="Delete todo"
+					>
+						<svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+							<path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
+						</svg>
+					</button>
+				</div>
+			`;
+		}
+
+		// Escape HTML to prevent XSS
+		function escapeHtml(text) {
+			const div = document.createElement('div');
+			div.textContent = text;
+			return div.innerHTML;
+		}
+
+		// Update UI based on state
+		function updateUI() {
+			const state = __GOSPA__.getState('todo-app');
+			if (!state) return;
+
+			const todos = state.get('todos') || [];
+			const filter = state.get('filter') || 'all';
+
+			// Filter todos
+			const filteredTodos = todos.filter(t => {
+				if (filter === 'active') return !t.completed;
+				if (filter === 'completed') return t.completed;
+				return true;
+			});
+
+			// Update filter tabs
+			document.querySelectorAll('.filter-tab').forEach(tab => {
+				tab.classList.toggle('active', tab.dataset.filter === filter);
+				tab.classList.toggle('text-white', tab.dataset.filter === filter);
+			});
+
+			// Update todo list
+			const todoList = document.getElementById('todo-list');
+			const emptyState = document.getElementById('empty-state');
+
+			if (filteredTodos.length === 0) {
+				todoList.innerHTML = `
+					<div id="empty-state" class="empty-state flex flex-col items-center justify-center py-16 text-center">
+						<div class="w-24 h-24 mb-6 rounded-full bg-slate-800/50 flex items-center justify-center">
+							<svg xmlns="http://www.w3.org/2000/svg" class="h-10 w-10 text-slate-600" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+								<path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2m-6 9l2 2 4-4" />
+							</svg>
+						</div>
+						<p class="text-slate-500 text-lg font-medium">${filter === 'completed' ? 'No completed tasks' : filter === 'active' ? 'No active tasks' : 'No tasks yet'}</p>
+						<p class="text-slate-600 text-sm mt-1">${filter === 'completed' ? 'Complete some tasks to see them here' : 'Add a task to get started'}</p>
+					</div>
+				`;
+			} else {
+				todoList.innerHTML = filteredTodos.map(renderTodoItem).join('');
+			}
+
+			// Update footer
+			const activeCount = todos.filter(t => !t.completed).length;
+			const completedCount = todos.filter(t => t.completed).length;
+			
+			document.getElementById('items-left').textContent = activeCount;
+			
+			const toggleAllBtn = document.getElementById('toggle-all-btn');
+			toggleAllBtn.style.display = todos.length > 0 ? 'inline-block' : 'none';
+			toggleAllBtn.textContent = activeCount === 0 ? 'Mark all incomplete' : 'Mark all complete';
+
+			const clearCompletedBtn = document.getElementById('clear-completed-btn');
+			clearCompletedBtn.style.display = completedCount > 0 ? 'inline-block' : 'none';
+		}
+
+		// Subscribe to state changes
+		document.addEventListener('DOMContentLoaded', function() {
+			const state = __GOSPA__.getState('todo-app');
+			if (!state) return;
+
+			// Initial render
+			updateUI();
+
+			// Subscribe to changes
+			state.subscribe('todos', updateUI);
+			state.subscribe('filter', updateUI);
+
+			// Load from localStorage
+			try {
+				const saved = localStorage.getItem('gospa-todos');
+				if (saved) {
+					const todos = JSON.parse(saved);
+					state.set('todos', todos);
+				}
+			} catch (e) {
+				console.warn('Failed to load todos:', e);
+			}
+
+			// Subscribe to todos for persistence
+			state.subscribe('todos', function(todos) {
+				try {
+					localStorage.setItem('gospa-todos', JSON.stringify(todos));
+				} catch (e) {
+					console.warn('Failed to save todos:', e);
+				}
+			});
+		});
+	</script>
+}
