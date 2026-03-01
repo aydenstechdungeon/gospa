@@ -7,6 +7,7 @@ import (
 	"fmt"
 	"os"
 	"path/filepath"
+	"sort"
 	"strings"
 
 	"github.com/aydenstechdungeon/gospa/plugin"
@@ -243,7 +244,16 @@ func (p *ValidationPlugin) generateTypes(schema Schema, outputDir string) error 
 	sb.WriteString("// Do not edit manually\n\n")
 
 	sb.WriteString(fmt.Sprintf("export interface %s {\n", schema.Name))
-	for name, field := range schema.Fields {
+
+	// Sort keys for deterministic output
+	var keys []string
+	for name := range schema.Fields {
+		keys = append(keys, name)
+	}
+	sort.Strings(keys)
+
+	for _, name := range keys {
+		field := schema.Fields[name]
 		tsType := p.goTypeToTS(field.Type)
 		optional := ""
 		if !field.Required {
@@ -265,7 +275,16 @@ func (p *ValidationPlugin) generateValibotSchema(schema Schema, outputDir string
 	sb.WriteString("import * as v from 'valibot';\n\n")
 
 	sb.WriteString(fmt.Sprintf("export const %sSchema = v.object({\n", schema.Name))
-	for name, field := range schema.Fields {
+
+	// Sort keys for deterministic output
+	var keys []string
+	for name := range schema.Fields {
+		keys = append(keys, name)
+	}
+	sort.Strings(keys)
+
+	for _, name := range keys {
+		field := schema.Fields[name]
 		validator := p.fieldToValibot(field)
 		if field.Required {
 			sb.WriteString(fmt.Sprintf("  %s: %s,\n", name, validator))
@@ -289,7 +308,16 @@ func (p *ValidationPlugin) generateGoValidation(schema Schema, outputDir string)
 	sb.WriteString("package validation\n\n")
 
 	sb.WriteString(fmt.Sprintf("type %s struct {\n", schema.Name))
-	for name, field := range schema.Fields {
+
+	// Sort keys for deterministic output
+	var keys []string
+	for name := range schema.Fields {
+		keys = append(keys, name)
+	}
+	sort.Strings(keys)
+
+	for _, name := range keys {
+		field := schema.Fields[name]
 		goType := p.tsTypeToGo(field.Type)
 		tags := p.generateValidateTags(field)
 		sb.WriteString(fmt.Sprintf("  %s %s `json:\"%s\" validate:\"%s\"`\n",

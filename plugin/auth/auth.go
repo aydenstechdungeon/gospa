@@ -10,6 +10,7 @@ import (
 	"encoding/base32"
 	"encoding/hex"
 	"fmt"
+	"math"
 	"os"
 	"path/filepath"
 	"strconv"
@@ -752,7 +753,7 @@ func GenerateOTPURL(secret, account, issuer string) string {
 	u := url.URL{
 		Scheme: "otpauth",
 		Host:   "totp",
-		Path:   fmt.Sprintf("%s:%s", issuer, account),
+		Path:   fmt.Sprintf("/%s:%s", issuer, account),
 	}
 	q := u.Query()
 	q.Set("secret", strings.TrimSuffix(secret, "="))
@@ -962,7 +963,7 @@ func (p *AuthPlugin) generateBackupCodes(count int) error {
 
 // verifyOTP verifies an OTP code.
 func (p *AuthPlugin) verifyOTP(secret, code string) error {
-	if VerifyOTP(secret, code) {
+	if p.VerifyOTP(secret, code) {
 		fmt.Println("✓ Code is valid")
 		return nil
 	}
@@ -986,16 +987,16 @@ func (p *AuthPlugin) GenerateOTPURL(secret, account, issuer string) string {
 }
 
 // VerifyOTP verifies a TOTP code.
-func VerifyOTP(secret, code string) bool {
+func (p *AuthPlugin) VerifyOTP(secret, code string) bool {
 	secret = strings.ToUpper(strings.ReplaceAll(secret, " ", ""))
 	key, err := base32.StdEncoding.DecodeString(secret)
 	if err != nil {
 		return false
 	}
 
-	now := time.Now().Unix() / int64(30)
+	now := time.Now().Unix() / int64(p.config.OTPPeriod)
 	for i := -1; i <= 1; i++ {
-		if generateOTP(key, now+int64(i)) == code {
+		if p.generateOTP(key, now+int64(i)) == code {
 			return true
 		}
 	}
@@ -1003,7 +1004,7 @@ func VerifyOTP(secret, code string) bool {
 }
 
 // generateOTP generates a TOTP code.
-func generateOTP(key []byte, counter int64) string {
+func (p *AuthPlugin) generateOTP(key []byte, counter int64) string {
 	mac := hmac.New(sha1.New, key)
 	mac.Write([]byte{
 		byte(counter >> 56), byte(counter >> 48), byte(counter >> 40),
@@ -1017,9 +1018,9 @@ func generateOTP(key []byte, counter int64) string {
 		(int(hash[offset+1]) << 16) |
 		(int(hash[offset+2]) << 8) |
 		int(hash[offset+3])
-	code = code % 1000000
+	code = code % int(math.Pow10(p.config.OTPDigits))
 
-	return fmt.Sprintf("%06d", code)
+	return fmt.Sprintf(fmt.Sprintf("%%0%dd", p.config.OTPDigits), code)
 }
 
 // GenerateBackupCodes generates backup codes.

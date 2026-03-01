@@ -463,18 +463,8 @@ export default {
 		content += "    'postcss-nested': {},\n"
 	}
 
-	// Tailwind CSS extensions
-	if p.config.Plugins.Typography {
-		content += "    '@tailwindcss/typography': {},\n"
-	}
-
-	if p.config.Plugins.Forms {
-		content += "    '@tailwindcss/forms': {},\n"
-	}
-
-	if p.config.Plugins.AspectRatio {
-		content += "    '@tailwindcss/aspect-ratio': {},\n"
-	}
+	// Tailwind CSS extensions (no longer PostCSS plugins in v4)
+	// Typography, Forms, AspectRatio are now loaded via @plugin in CSS
 
 	// Autoprefixer
 	if p.config.Plugins.Autoprefixer {
@@ -515,7 +505,7 @@ func (p *PostCSSPlugin) generateMainCSS(cssPath string) error {
 /* Your custom styles below */
 `
 
-	// Add plugin-specific comments
+	// Add plugin-specific comments and @plugin imports
 	if p.config.Plugins.Typography {
 		content += `
 
@@ -523,6 +513,7 @@ func (p *PostCSSPlugin) generateMainCSS(cssPath string) error {
    prose, prose-sm, prose-lg, prose-xl, prose-2xl
    prose-headings, prose-lead, prose-img, etc.
 */
+@plugin "@tailwindcss/typography";
 `
 	}
 
@@ -532,6 +523,7 @@ func (p *PostCSSPlugin) generateMainCSS(cssPath string) error {
 /* Forms plugin enabled - form elements styled automatically
    Use form-input, form-textarea, form-select, form-checkbox, form-radio
 */
+@plugin "@tailwindcss/forms";
 `
 	}
 
@@ -541,6 +533,7 @@ func (p *PostCSSPlugin) generateMainCSS(cssPath string) error {
 /* Aspect Ratio plugin enabled - use aspect-{ratio} classes
    aspect-video, aspect-square, aspect-[4/3], etc.
 */
+@plugin "@tailwindcss/aspect-ratio";
 `
 	}
 

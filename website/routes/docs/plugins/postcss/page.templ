@@ -100,9 +100,6 @@ templ Page() {
 			@components.CodeBlock(`export default {
   plugins: {
     '@tailwindcss/postcss': {},
-    '@tailwindcss/typography': {},
-    '@tailwindcss/forms': {},
-    '@tailwindcss/aspect-ratio': {},
   },
 }`, "javascript", "postcss.config.js")
 		</section>
@@ -111,6 +108,10 @@ templ Page() {
 			<h2 class="text-2xl font-bold border-b border-[var(--border)] pb-2">Usage Example</h2>
 			@components.CodeBlock(`/* Input CSS with Tailwind v4 syntax */
 @import 'tailwindcss';
+
+@plugin "@tailwindcss/typography";
+@plugin "@tailwindcss/forms";
+@plugin "@tailwindcss/aspect-ratio";
 
 @theme {
   --font-display: 'Inter', sans-serif;
