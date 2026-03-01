@@ -41,6 +41,8 @@ func Page() templ.Component {
 ├── routes/           # File-based routing & UI templates
 │   ├── layout.templ  # Shared root layout
 │   └── page.templ    # Home page template
+├── components/       # Reusable .templ components (optional)
+├── lib/              # Shared Go code (optional)
 ├── static/           # Public assets (images, CSS, JS)
 ├── generated/        # Auto-generated TypeScript bindings
 └── gospa.json        # Optional project configuration`, "plaintext", "File Structure").Render(ctx, templ_7745c5c3_Buffer)
