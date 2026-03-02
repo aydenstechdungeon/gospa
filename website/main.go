@@ -10,7 +10,7 @@ import (
 	"sync"
 	"time"
 
-	_ "website/routes" // Import routes to trigger init()
+	_ "github.com/aydenstechdungeon/gospa/website/routes" // Import routes to trigger init()
 
 	"github.com/aydenstechdungeon/gospa"
 	"github.com/aydenstechdungeon/gospa/routing"

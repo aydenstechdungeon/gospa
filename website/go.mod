@@ -2,13 +2,13 @@ module github.com/aydenstechdungeon/gospa/website
 
 go 1.26.0
 
-replace github.com/aydenstechdungeon/gospa => ../
-
 require (
 	github.com/a-h/templ v0.3.1001
-	github.com/aydenstechdungeon/gospa v0.0.6
+	github.com/aydenstechdungeon/gospa v0.1.6
 	github.com/gofiber/fiber/v2 v2.52.12
 )
+
+replace github.com/aydenstechdungeon/gospa => ../
 
 require (
 	github.com/andybalholm/brotli v1.1.0 // indirect
