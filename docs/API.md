@@ -333,10 +333,10 @@ sm.AddAny(key string, value any) error // Adds plain value as auto-rune
 obs, ok := sm.Get(key string)
 
 // Remove
-sm.Remove(key string)
+sm.Remove(key string) *StateMap
 
 // Iteration
-sm.ForEach(func(key string, value Observable) { ... })
+sm.ForEach(func(key string, value any) { ... })
 
 // Conversion
 m := sm.ToMap() // returns map[string]any
@@ -346,8 +346,8 @@ json, err := sm.ToJSON()
 data, err := sm.MarshalJSON()
 sm.FromJSON(data []byte)
 
-// Diff
-diff := sm.Diff(other *StateMap) *StateDiff
+// Diff - returns comparison between two StateMaps
+diff := sm.Diff(other *StateMap) *StateMapComparison
 
 // OnChange callback
 sm.OnChange = func(key string, value any) { ... }
@@ -391,10 +391,19 @@ type StateSnapshot struct {
     Timestamp   int64
 }
 
+type StateMapComparison struct {
+    Added   map[string]interface{} `json:"added"`
+    Removed map[string]interface{} `json:"removed"`
+    Changed map[string]interface{} `json:"changed"`
+}
+
+// StateDiff represents a single key change (used in messaging)
 type StateDiff struct {
-    Added   map[string]interface{}
-    Removed map[string]interface{}
-    Changed map[string]interface{}
+    ComponentID string      `json:"componentId"`
+    Key         string      `json:"key"`
+    OldValue    interface{} `json:"oldValue,omitempty"`
+    NewValue    interface{} `json:"newValue"`
+    Timestamp   int64       `json:"timestamp"`
 }
 
 // Constructors
@@ -444,7 +453,7 @@ layouts := router.ResolveLayoutChain(route *Route)
 ```go
 type Route struct {
     Path       string            // URL path
-    FilePath   string            // Source .templ file
+    File       string            // Source .templ file
     Params     []string          // Dynamic param names
     IsCatchAll bool              // [...rest] route
     Type       RouteType         // page, layout, error, api
@@ -622,9 +631,6 @@ opts := routing.GetRouteOptions(path string)
 // SPA middleware - initializes state and component ID
 app.Use(fiber.SPAMiddleware(config fiber.Config))
 
-// State injection into HTML responses
-app.Use(fiber.StateMiddleware(config fiber.Config))
-
 // Runtime script serving
 app.Get("/_gospa/runtime.js", fiber.RuntimeMiddleware(simple bool))
 app.Get("/_gospa/runtime.js", fiber.RuntimeMiddlewareWithContent(content []byte))
@@ -644,15 +650,6 @@ app.Use(fiber.SecurityHeadersMiddleware())
 // 2. CSRFTokenMiddleware validates the token on POST/PUT/DELETE/PATCH
 app.Use(fiber.CSRFSetTokenMiddleware()) // must come before CSRFTokenMiddleware
 app.Use(fiber.CSRFTokenMiddleware())
-
-// Compression (Brotli + Gzip)
-app.Use(fiber.BrotliGzipMiddleware(fiber.DefaultCompressionConfig()))
-
-// Request logging
-app.Use(fiber.RequestLoggerMiddleware())
-
-// Panic recovery
-app.Use(fiber.RecoveryMiddleware())
 ```
 
 ---

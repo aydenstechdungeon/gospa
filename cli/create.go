@@ -115,10 +115,10 @@ func createProject(config *ProjectConfig) error {
 func createGoMod(config *ProjectConfig) error {
 	content := fmt.Sprintf(`module %s
 
-go 1.24.0
+go 1.26.0
 
 require (
-	github.com/a-h/templ v0.3.977
+	github.com/a-h/templ v0.3.1001
 	github.com/aydenstechdungeon/gospa v0.1.7
 )
 `, config.Module)
@@ -131,15 +131,21 @@ func createMainGo(config *ProjectConfig) error {
 	content := fmt.Sprintf(`package main
 
 import (
+	"context"
 	"log"
 
 	"%s/lib"
 	_ "%s/routes" // Import routes to trigger init()
 
 	"github.com/aydenstechdungeon/gospa"
+	"github.com/aydenstechdungeon/gospa/routing"
 )
 
 func main() {
+	routing.RegisterRemoteAction("Hello", func(ctx context.Context, input interface{}) (interface{}, error) {
+		return "World", nil
+	})
+
 	app := gospa.New(gospa.Config{
 		RoutesDir: "./routes",
 		DevMode:   true,
@@ -255,6 +261,14 @@ templ Counter() {
 				data-on="click:increment"
 			>
 				+
+			</button>
+		</div>
+		<div class="mt-4 flex flex-col items-center gap-2">
+			<button 
+				class="px-4 py-2 bg-blue-500 text-white rounded hover:bg-blue-600"
+				onclick="GoSPA.remote('Hello').then(res => alert(res.data))"
+			>
+				Test Remote Action
 			</button>
 		</div>
 		<p class="mt-4 text-gray-600">

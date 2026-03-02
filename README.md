@@ -55,6 +55,7 @@ go mod init myapp
 package main
 
 import (
+    "context"
     "log"
     _ "myapp/routes" // Import routes to trigger init()
     

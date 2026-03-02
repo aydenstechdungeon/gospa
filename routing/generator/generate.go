@@ -374,6 +374,8 @@ func generateCode(routes []RouteInfo, routesDir string) (string, error) {
 	imports := make(map[string]string) // importPath -> packageName
 	imports["github.com/a-h/templ"] = "templ"
 	imports["github.com/aydenstechdungeon/gospa/routing"] = "routing"
+	imports["context"] = ""
+	imports["io"] = ""
 
 	// Get module path from go.mod
 	modulePath, moduleRoot := getModuleInfo(routesDir)
@@ -439,7 +441,24 @@ func generateCode(routes []RouteInfo, routesDir string) (string, error) {
 			}
 			// Generate function call with proper parameters
 			callArgs := generateLayoutCallArgsWithPackage(route)
-			fmt.Fprintf(&sb, "\t\treturn %s\n", callArgs)
+
+			// Wrap layout call to pass children via context if it doesn't accept children directly
+			hasChildren := false
+			for _, p := range route.Params {
+				if p.Type == "templ.Component" {
+					hasChildren = true
+					break
+				}
+			}
+
+			if !hasChildren {
+				sb.WriteString("\t\treturn templ.ComponentFunc(func(ctx context.Context, w io.Writer) error {\n")
+				sb.WriteString("\t\t\tctx = templ.WithChildren(ctx, children)\n")
+				fmt.Fprintf(&sb, "\t\t\treturn %s.Render(ctx, w)\n", callArgs)
+				sb.WriteString("\t\t})\n")
+			} else {
+				fmt.Fprintf(&sb, "\t\treturn %s\n", callArgs)
+			}
 			sb.WriteString("\t})\n")
 		}
 	}

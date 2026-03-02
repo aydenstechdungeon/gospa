@@ -4,6 +4,7 @@ package state
 
 import (
 	"encoding/json"
+	"fmt"
 	"reflect"
 	"sync"
 	"time"
@@ -117,6 +118,99 @@ func (sm *StateMap) Get(name string) (Observable, bool) {
 	defer sm.mu.RUnlock()
 	r, ok := sm.observables[name]
 	return r, ok
+}
+
+// Remove removes an observable from the state collection.
+// Returns the StateMap for method chaining.
+func (sm *StateMap) Remove(name string) *StateMap {
+	sm.mu.Lock()
+	defer sm.mu.Unlock()
+
+	// Unsubscribe if there's an active subscription
+	if unsub, ok := sm.unsubscribes[name]; ok {
+		unsub()
+		delete(sm.unsubscribes, name)
+	}
+
+	delete(sm.observables, name)
+	return sm
+}
+
+// StateMapComparison represents a diff between two StateMaps
+// with added, removed, and changed keys.
+type StateMapComparison struct {
+	Added   map[string]interface{} `json:"added"`
+	Removed map[string]interface{} `json:"removed"`
+	Changed map[string]interface{} `json:"changed"`
+}
+
+// Diff computes the difference between this StateMap and another.
+// Returns a StateMapComparison containing added, removed, and changed keys.
+func (sm *StateMap) Diff(other *StateMap) *StateMapComparison {
+	if other == nil {
+		return &StateMapComparison{
+			Added:   sm.ToMap(),
+			Removed: make(map[string]interface{}),
+			Changed: make(map[string]interface{}),
+		}
+	}
+
+	sm.mu.RLock()
+	other.mu.RLock()
+	defer sm.mu.RUnlock()
+	defer other.mu.RUnlock()
+
+	added := make(map[string]interface{})
+	removed := make(map[string]interface{})
+	changed := make(map[string]interface{})
+
+	// Find added and changed keys
+	for name, obs := range sm.observables {
+		value := obs.GetAny()
+		if otherObs, ok := other.observables[name]; ok {
+			// Key exists in both, check if changed
+			otherValue := otherObs.GetAny()
+			if !deepEqualValues(value, otherValue) {
+				changed[name] = value
+			}
+		} else {
+			// Key only in sm (added)
+			added[name] = value
+		}
+	}
+
+	// Find removed keys
+	for name, obs := range other.observables {
+		if _, ok := sm.observables[name]; !ok {
+			removed[name] = obs.GetAny()
+		}
+	}
+
+	return &StateMapComparison{
+		Added:   added,
+		Removed: removed,
+		Changed: changed,
+	}
+}
+
+// deepEqualValues compares two values for equality.
+// Helper for Diff method.
+func deepEqualValues(a, b interface{}) bool {
+	if a == nil && b == nil {
+		return true
+	}
+	if a == nil || b == nil {
+		return false
+	}
+
+	// Use JSON marshaling for reliable comparison
+	aJSON, err1 := json.Marshal(a)
+	bJSON, err2 := json.Marshal(b)
+	if err1 != nil || err2 != nil {
+		// Fallback to string comparison
+		return fmt.Sprintf("%v", a) == fmt.Sprintf("%v", b)
+	}
+	return string(aJSON) == string(bJSON)
 }
 
 // ForEach iterates over all observables in the state map

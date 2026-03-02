@@ -113,11 +113,11 @@ func pathToURL(path string) string {
 	// Convert routes/docs/path/page.templ to /docs/path
 	path = strings.TrimPrefix(path, "routes/docs/")
 	path = strings.TrimSuffix(path, "/page.templ")
-	
+
 	if path == "" {
 		return "/docs"
 	}
-	
+
 	return "/docs/" + path
 }
 
@@ -190,16 +190,16 @@ func cleanTemplContent(content string) string {
 	content = regexp.MustCompile(`import\s+"[^"]+"`).ReplaceAllString(content, "")
 	content = regexp.MustCompile(`templ\s+\w+\([^)]*\)\s*\{`).ReplaceAllString(content, "")
 	content = regexp.MustCompile(`@\w+\([^)]*\)`).ReplaceAllString(content, "")
-	
+
 	// Remove Go code blocks from content
 	content = regexp.MustCompile(`@components\.CodeBlock\([^)]+\)`).ReplaceAllString(content, "")
-	
+
 	// Remove HTML tags but keep content
 	content = stripHTML(content)
-	
+
 	// Clean up whitespace
 	content = regexp.MustCompile(`\s+`).ReplaceAllString(content, " ")
-	
+
 	return strings.TrimSpace(content)
 }
 
@@ -207,17 +207,17 @@ func stripHTML(html string) string {
 	// Remove HTML tags
 	re := regexp.MustCompile(`<[^>]+>`)
 	text := re.ReplaceAllString(html, " ")
-	
+
 	// Clean up entities
-	text = strings.ReplaceAll(text, "<", "<")
-	text = strings.ReplaceAll(text, ">", ">")
-	text = strings.ReplaceAll(text, "&", "&")
-	text = strings.ReplaceAll(text, """, `"`)
-	text = strings.ReplaceAll(text, "'", "'")
+	text = strings.ReplaceAll(text, "&lt;", "<")
+	text = strings.ReplaceAll(text, "&gt;", ">")
+	text = strings.ReplaceAll(text, "&amp;", "&")
+	text = strings.ReplaceAll(text, "&quot;", `"`)
+	text = strings.ReplaceAll(text, "&#39;", "'")
 	text = strings.ReplaceAll(text, "&nbsp;", " ")
-	
+
 	// Clean up whitespace
 	text = regexp.MustCompile(`\s+`).ReplaceAllString(text, " ")
-	
+
 	return strings.TrimSpace(text)
 }
