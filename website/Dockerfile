@@ -2,7 +2,7 @@
 # Usage: docker build -t gospa-website -f website/Dockerfile .
 # RENDER NOTE: While this Dockerfile is now "context-agnostic", for best performance,
 # set "Docker Build Context" to "." in Render settings.
-FROM golang:1.24-alpine AS builder
+FROM golang:1.26-alpine AS builder
 
 # 1. Install system dependencies
 # Bun on Alpine requires libstdc++ and gcompat for glibc compatibility
