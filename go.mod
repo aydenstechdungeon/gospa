@@ -2,8 +2,6 @@ module github.com/aydenstechdungeon/gospa
 
 go 1.24.0
 
-replace github.com/aydenstechdungeon/gospa => ../
-
 require (
 	github.com/a-h/templ v0.3.977
 	github.com/andybalholm/brotli v1.1.0
@@ -34,3 +32,5 @@ require (
 	go.uber.org/atomic v1.11.0 // indirect
 	golang.org/x/sys v0.34.0 // indirect
 )
+
+replace github.com/aydenstechdungeon/gospa => ../
