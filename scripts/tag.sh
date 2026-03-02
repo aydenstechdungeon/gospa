@@ -18,21 +18,21 @@ if [ -n "$OLD_TAG" ] && [ "$NEW_TAG" != "$OLD_TAG" ]; then
     OLD_VERSION="${OLD_TAG#v}"
     NEW_VERSION="${NEW_TAG#v}"
     
-    # Find files containing either the tag or the version without the v
-    files_with_v=$(git grep -l "$OLD_TAG" | grep -v "website/components/benchmarks.templ" | grep -v "tests/benchmark.txt" | grep -v "scripts/tag.sh" || true)
-    files_without_v=$(git grep -l "$OLD_VERSION" | grep -v "website/components/benchmarks.templ" | grep -v "tests/benchmark.txt" | grep -v "scripts/tag.sh" || true)
+    # Find files (excluding binaries) containing either the tag or the version without the v
+    files_with_v=$(git grep -Il "$OLD_TAG" | grep -v "website/components/benchmarks.templ" | grep -v "tests/benchmark.txt" | grep -v "scripts/tag.sh" || true)
+    files_without_v=$(git grep -Il "$OLD_VERSION" | grep -v "website/components/benchmarks.templ" | grep -v "tests/benchmark.txt" | grep -v "scripts/tag.sh" || true)
     
     all_files=$(echo -e "$files_with_v\n$files_without_v" | sort | uniq | grep -v '^$')
     
     if [ -n "$all_files" ]; then
         echo "Updating references in:"
         echo "$all_files"
-        echo "$all_files" | while IFS= read -r f; do
+        while IFS= read -r f; do
             # Replace tag with tag (e.g. v0.0.1 -> v0.0.2)
             sed -i "s/$OLD_TAG/$NEW_TAG/g" "$f"
             # Replace version with version (e.g. 0.0.1 -> 0.0.2)
             sed -i "s/$OLD_VERSION/$NEW_VERSION/g" "$f"
-        done
+        done <<< "$all_files"
         
         git add .
         git commit -m "chore: bump version to $NEW_TAG" || echo "No changes to commit"
