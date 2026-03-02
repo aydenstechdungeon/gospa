@@ -27,7 +27,7 @@ if [ -n "$OLD_TAG" ] && [ "$NEW_TAG" != "$OLD_TAG" ]; then
     if [ -n "$all_files" ]; then
         echo "Updating references in:"
         echo "$all_files"
-        for f in $all_files; do
+        echo "$all_files" | while IFS= read -r f; do
             # Replace tag with tag (e.g. v0.0.1 -> v0.0.2)
             sed -i "s/$OLD_TAG/$NEW_TAG/g" "$f"
             # Replace version with version (e.g. 0.0.1 -> 0.0.2)
