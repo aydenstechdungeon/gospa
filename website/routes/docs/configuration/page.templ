@@ -153,6 +153,8 @@ templ Page() {
 					</thead>
 					<tbody class="divide-y divide-[var(--border)]">
 						<tr><td class="px-4 py-2 font-mono text-[var(--accent-primary)]">DisableSPA</td><td class="px-4 py-2">bool</td><td class="px-4 py-2">false</td><td class="px-4 py-2">Disable SPA navigation completely</td></tr>
+						<tr><td class="px-4 py-2 font-mono text-[var(--accent-primary)]">IgnoredExtensions</td><td class="px-4 py-2">[]string</td><td class="px-4 py-2">nil</td><td class="px-4 py-2">List of file extensions the SPA router should ignore (overwrites default)</td></tr>
+						<tr><td class="px-4 py-2 font-mono text-[var(--accent-primary)]">AppendIgnoredExtensions</td><td class="px-4 py-2">[]string</td><td class="px-4 py-2">nil</td><td class="px-4 py-2">List of file extensions to add to the default list</td></tr>
 						<tr><td class="px-4 py-2 font-mono text-[var(--accent-primary)]">SSR</td><td class="px-4 py-2">bool</td><td class="px-4 py-2">false</td><td class="px-4 py-2">Global SSR mode</td></tr>
 					</tbody>
 				</table>
@@ -260,6 +262,16 @@ app := gospa.New(gospa.Config{
 			</ul>
 			@components.CodeBlock(`HydrationMode: "visible",  // Hydrate when scrolled into view
 HydrationTimeout: 2000,   // Force hydrate after 2 seconds`, "go", "main.go")
+			
+			<h3 class="text-xl font-semibold text-[var(--text-primary)] mt-6">IgnoredExtensions & AppendIgnoredExtensions</h3>
+			<p class="text-[var(--text-secondary)] mb-2">Customize which file extensions the SPA router ignores. Use <code class="bg-[var(--bg-tertiary)] px-1 rounded">IgnoredExtensions</code> to **replace** the default list, or <code class="bg-[var(--bg-tertiary)] px-1 rounded">AppendIgnoredExtensions</code> to **add** to it:</p>
+			@components.CodeBlock(`app := gospa.New(gospa.Config{
+    // Replace default list completely
+    IgnoredExtensions: []string{"pdf", "docx", "custom"},
+    
+    // OR just add to default list
+    AppendIgnoredExtensions: []string{"bak", "tmp"},
+})`, "go", "main.go")
 
 			<h3 class="text-xl font-semibold text-[var(--text-primary)] mt-6">SimpleRuntimeSVGs</h3>
 			<p class="text-[var(--text-secondary)] mb-2">Allow SVG and math elements in the simple runtime sanitizer. Only enable when you control ALL HTML content:</p>

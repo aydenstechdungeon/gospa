@@ -1,0 +1,10 @@
+{
+    "name": "gospa",
+    "version": "0.1.6",
+    "private": true,
+    "scripts": {
+        "check": "cd client && bun check",
+        "format": "cd client && bun format",
+        "lint": "cd client && bun lint"
+    }
+}

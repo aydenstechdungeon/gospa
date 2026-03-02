@@ -140,6 +140,13 @@ type Config struct {
 
 	// PubSub defines the messaging backend for multi-process broadcasting. Defaults to in-memory.
 	PubSub store.PubSub
+
+	// IgnoredExtensions is a list of file extensions that the SPA router should ignore.
+	// If nil, a default list of common non-HTML extensions is used.
+	IgnoredExtensions []string
+
+	// AppendIgnoredExtensions is a list of file extensions to add to the default list.
+	AppendIgnoredExtensions []string
 }
 
 // DefaultConfig returns the default configuration.
@@ -912,16 +919,18 @@ func (a *App) buildRootLayoutProps(c *fiberpkg.Ctx, params map[string]string) ma
 		wsHB = 30000
 	}
 	props := map[string]interface{}{
-		"appName":          a.Config.AppName,
-		"runtimePath":      a.getRuntimePath(),
-		"path":             c.Path(),
-		"debug":            a.Config.DevMode,
-		"wsUrl":            a.getWSUrl(c),
-		"hydrationMode":    a.Config.HydrationMode,
-		"hydrationTimeout": a.Config.HydrationTimeout,
-		"wsReconnectDelay": wsRD,
-		"wsMaxReconnect":   wsMR,
-		"wsHeartbeat":      wsHB,
+		"appName":           a.Config.AppName,
+		"runtimePath":       a.getRuntimePath(),
+		"path":              c.Path(),
+		"debug":             a.Config.DevMode,
+		"wsUrl":             a.getWSUrl(c),
+		"hydrationMode":     a.Config.HydrationMode,
+		"hydrationTimeout":  a.Config.HydrationTimeout,
+		"wsReconnectDelay":  wsRD,
+		"wsMaxReconnect":    wsMR,
+		"wsHeartbeat":       wsHB,
+		"ignoredExtensions": a.Config.IgnoredExtensions,
+		"appendExtensions":  a.Config.AppendIgnoredExtensions,
 	}
 	for k, v := range params {
 		props[k] = v

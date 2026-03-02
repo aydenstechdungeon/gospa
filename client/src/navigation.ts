@@ -33,6 +33,47 @@ export function onAfterNavigate(cb: NavigationCallback): () => void {
 	return () => afterNavCallbacks.delete(cb);
 }
 
+// Common file extensions that should be ignored by the SPA router
+let IGNORED_EXTENSIONS = [
+	// Text & Documents
+	'txt', 'md', 'pdf', 'csv', 'docx?', 'xlsx?', 'pptx?', 'rtf', 'ods', 'odt', 'odp',
+	// Data & Config
+	'json', 'xml', 'sql', 'sqlite', 'db', 'yaml', 'yml', 'toml',
+	// Images
+	'png', 'jpe?g', 'gif', 'svg', 'webp', 'avif', 'ico', 'bmp', 'tiff?',
+	// Audio
+	'mp3', 'wav', 'ogg', 'm4a', 'flac', 'aac', 'opus',
+	// Video
+	'mp4', 'webm', 'mov', 'mkv', 'avi', 'wmv', 'ogv', 'm4v',
+	// Archives
+	'zip', 'tar', 'gz', '7z', 'rar', 'bz2', 'xz', 'tgz', 'br', 'zst', 'lz', 'lzma',
+	// Executables & Packages
+	'iso', 'dmg', 'bin', 'exe', 'msi', 'appimage', 'deb', 'rpm', 'apk', 'jar',
+	// Web Assets
+	'js', 'mjs', 'cjs', 'ts', 'css', 'wasm', 'map',
+	// Fonts
+	'woff2?', 'ttf', 'otf', 'eot',
+];
+
+let IGNORED_EXTENSIONS_REGEX = new RegExp(`\\.(${IGNORED_EXTENSIONS.join('|')})$`, 'i');
+
+/**
+ * Configure the ignored extensions for the SPA router
+ */
+export function setIgnoredExtensions(extensions: string[]): void {
+	if (!extensions || extensions.length === 0) return;
+	IGNORED_EXTENSIONS = extensions;
+	IGNORED_EXTENSIONS_REGEX = new RegExp(`\\.(${IGNORED_EXTENSIONS.join('|')})$`, 'i');
+}
+
+/**
+ * Append to the current list of ignored extensions
+ */
+export function appendIgnoredExtensions(extensions: string[]): void {
+	if (!extensions || extensions.length === 0) return;
+	setIgnoredExtensions([...IGNORED_EXTENSIONS, ...extensions]);
+}
+
 // Check if a link is internal (same origin)
 function isInternalLink(link: HTMLAnchorElement): boolean {
 	const href = link.getAttribute('href');
@@ -44,7 +85,9 @@ function isInternalLink(link: HTMLAnchorElement): boolean {
 	if (href.startsWith('http://') || href.startsWith('https://') || href.startsWith('//')) {
 		try {
 			const url = new URL(href, window.location.origin);
-			return url.origin === window.location.origin;
+			if (url.origin !== window.location.origin) {
+				return false;
+			}
 		} catch {
 			return false;
 		}
@@ -54,6 +97,12 @@ function isInternalLink(link: HTMLAnchorElement): boolean {
 	if (link.hasAttribute('data-external') ||
 		link.hasAttribute('download') ||
 		link.getAttribute('target') === '_blank') {
+		return false;
+	}
+
+	// Ignore common file extensions that aren't HTML routes
+	const urlObj = new URL(href, window.location.origin);
+	if (IGNORED_EXTENSIONS_REGEX.test(urlObj.pathname)) {
 		return false;
 	}
 
@@ -480,6 +529,17 @@ export function initNavigation(): void {
 
 	// Setup popstate handler
 	window.addEventListener('popstate', handlePopState);
+
+	// Check for global configuration
+	const config = (window as any).__GOSPA_CONFIG__;
+	if (config) {
+		if (config.ignoredExtensions) {
+			setIgnoredExtensions(config.ignoredExtensions);
+		}
+		if (config.appendExtensions) {
+			appendIgnoredExtensions(config.appendExtensions);
+		}
+	}
 
 	// Mark as SPA-enabled
 	document.documentElement.setAttribute('data-gospa-spa', 'true');

@@ -103,8 +103,10 @@ type Config struct {
 	StateDeserializer StateDeserializerFunc // Custom deserialization for inbound state
 
 	// Routing Options
-	DisableSPA bool // Disable SPA navigation completely
-	SSR        bool // NOTE: planned, not yet implemented
+	DisableSPA               bool     // Disable SPA navigation completely
+	IgnoredExtensions        []string // List of file extensions to always ignore (overrides default)
+	AppendIgnoredExtensions  []string // List of file extensions to add to default ignored list
+	SSR                      bool     // NOTE: planned, not yet implemented
 
 	// Remote Action Options
 	MaxRequestBodySize int    // Maximum allowed size for remote action request bodies
@@ -136,6 +138,8 @@ type Config struct {
 - `WSMaxReconnect`: Maximum reconnect attempts passed to the client. Default: 10.
 - `WSHeartbeat`: Heartbeat ping interval passed to the client. Default: 30s.
 - `SSR`: **Planned** — not yet implemented.
+- `IgnoredExtensions`: Completely replaces the default list of file extensions ignored by the SPA router.
+- `AppendIgnoredExtensions`: Adds to the default list of file extensions ignored by the SPA router.
 - `EnableCSRF`: Enables CSRF protection. Must wire up **both** `CSRFSetTokenMiddleware()` (issues cookie) **and** `CSRFTokenMiddleware()` (validates).
 - `SSGCacheMaxEntries`: Caps the SSG page cache with FIFO eviction. Default 500.
 - `Prefork`, `Storage`, `PubSub`: Used for horizontal scaling. See `store/redis` for the Redis implementation.

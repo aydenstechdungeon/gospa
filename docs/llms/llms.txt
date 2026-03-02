@@ -145,7 +145,7 @@
 ## CLI & Build System
 
 [CLI.md](docs/CLI.md)
-  - All CLI commands: create, dev, build, generate, add, check, lint
+  - All CLI commands: create, dev, build, generate, add, check, lint, format
   - Plugin commands, global flags
   - Environment variables, configuration file format
 
@@ -211,6 +211,8 @@ gospa.Config{
     SimpleRuntime:   true/false,      // Use simple runtime (no DOMPurify)
     CacheTemplates:  true/false,      // Enable template caching
     Prefork:         true/false,      // Enable prefork mode
+    IgnoredExtensions: []string{},    // Overwrite default SPA ignored files
+    AppendIgnoredExtensions: []string{}, // Add to default SPA ignored files
     WebSocket: WebSocketConfig{
         Enabled:     true,
         Path:        "/ws",
