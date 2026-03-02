@@ -22,13 +22,13 @@ templ SidebarContent(currentPath string) {
 	<div class="space-y-8">
 		<button 
 			data-action="open-search"
-			class="w-full flex items-center justify-between px-3 py-2 mb-6 rounded-xl bg-[var(--bg-secondary)] border border-[var(--border)] text-sm text-[var(--text-secondary)] hover:border-[var(--accent-primary)]/50 transition-all group"
+			class="w-full flex items-center justify-between px-3 py-2 mb-6 rounded-none bg-bg-secondary border border-border-main text-sm text-text-secondary hover:border-accent-primary transition-all group"
 		>
 			<div class="flex items-center gap-2">
-				<svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="text-[var(--text-muted)] group-hover:text-[var(--accent-primary)]"><circle cx="11" cy="11" r="8"></circle><path d="m21 21-4.3-4.3"></path></svg>
-				<span>Search docs...</span>
+				<svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="square" class="text-text-muted group-hover:text-accent-primary"><circle cx="11" cy="11" r="8"></circle><path d="m21 21-4.3-4.3"></path></svg>
+				<span class="font-mono text-[10px] uppercase tracking-widest">Search docs...</span>
 			</div>
-			<kbd class="text-[10px] font-sans opacity-50 px-1.5 py-0.5 rounded border border-[var(--border)] bg-[var(--bg-primary)]">⌘K</kbd>
+			<kbd class="text-[10px] font-mono opacity-50 px-1.5 py-0.5 rounded-none border border-border-main bg-bg-primary">⌘K</kbd>
 		</button>
 
 		@sidebarSection("Getting Started", []NavItem{
@@ -92,14 +92,14 @@ templ SidebarContent(currentPath string) {
 }
 
 templ sidebarSection(title string, items []NavItem, currentPath string) {
-	<div>
-		<h4 class="text-xs font-bold uppercase tracking-widest text-[var(--text-muted)] mb-4">{ title }</h4>
-		<ul class="space-y-1">
+	<div class="mb-8">
+		<h4 class="text-[10px] font-mono font-bold uppercase tracking-[0.2em] text-text-muted mb-4 border-b border-border-main pb-2">{ title }</h4>
+		<ul class="space-y-0 text-sm">
 			for _, item := range items {
 				<li>
 					<a 
 						href={ templ.SafeURL(item.Href) } 
-						class={ "block py-2 px-3 rounded-lg text-sm transition-all " + activeClass(isPathActive(currentPath, item.Href)) }
+						class={ "block py-2 px-3 rounded-none transition-all font-mono text-xs hover:pl-5 " + activeClass(isPathActive(currentPath, item.Href)) }
 					>
 						{ item.Label }
 					</a>
@@ -111,9 +111,9 @@ templ sidebarSection(title string, items []NavItem, currentPath string) {
 
 func activeClass(active bool) string {
 	if active {
-		return "bg-[var(--accent-primary)]/10 text-[var(--accent-primary)] font-semibold border-l-2 border-[var(--accent-primary)] rounded-l-none"
+		return "bg-accent-primary/5 text-accent-primary font-bold border-l-2 border-accent-primary pl-4"
 	}
-	return "text-[var(--text-secondary)] hover:text-[var(--text-primary)] hover:bg-[var(--bg-tertiary)]"
+	return "text-text-secondary hover:text-white hover:bg-bg-tertiary border-l-2 border-transparent"
 }
 
 func isPathActive(currentPath, targetPath string) bool {

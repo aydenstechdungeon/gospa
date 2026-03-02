@@ -1,6 +1,25 @@
 @import "tailwindcss";
 
-/* Font Face declarations */
+@theme {
+	--font-sans: 'Inter', system-ui, -apple-system, sans-serif;
+	--font-mono: 'JetBrains Mono', monospace;
+	--font-display: 'JetBrains Mono', monospace;
+
+	--color-bg-primary: #050505;
+	--color-bg-secondary: #0f0f0f;
+	--color-bg-tertiary: #191919;
+
+	--color-text-primary: #ffffff;
+	--color-text-secondary: #aaaaaa;
+	--color-text-muted: #555555;
+
+	--color-accent-primary: #ff3c00;
+	--color-accent-secondary: #ff7f00;
+
+	--color-border-main: #242424;
+	--color-border-subtle: #161616;
+}
+
 @font-face {
 	font-family: 'Inter';
 	font-style: normal;
@@ -41,69 +60,98 @@
 	src: url('/static/fonts/JetBrainsMono-Bold.woff2') format('woff2');
 }
 
-/* Custom CSS variables for GoSPA website - matches var(--name) usage in HTML */
+/* Custom CSS variables for retro-compatibility */
 :root {
-	/* Background colors */
-	--bg-primary: #0a0a0f;
-	--bg-secondary: #12121a;
-	--bg-tertiary: #1a1a24;
-
-	/* Text colors */
-	--text-primary: #e4e4e7;
-	--text-secondary: #a1a1aa;
-	--text-muted: #71717a;
-
-	/* Accent colors */
-	--accent-primary: #22d3ee;
-	--accent-secondary: #a78bfa;
-	--accent-success: #22c55e;
-	--accent-warning: #f59e0b;
-
-	/* Border color */
-	--border: #27272a;
-
-	/* Font families */
-	--font-sans: 'Inter', system-ui, -apple-system, sans-serif;
-	--font-mono: 'JetBrains Mono', monospace;
+	--bg-primary: var(--color-bg-primary);
+	--bg-secondary: var(--color-bg-secondary);
+	--bg-tertiary: var(--color-bg-tertiary);
+	--text-primary: var(--color-text-primary);
+	--text-secondary: var(--color-text-secondary);
+	--text-muted: var(--color-text-muted);
+	--accent-primary: var(--color-accent-primary);
+	--accent-secondary: var(--color-accent-secondary);
+	--border: var(--color-border-main);
 }
 
-/* Base styles */
 body {
 	font-family: var(--font-sans);
-	background-color: var(--bg-primary);
-	color: var(--text-primary);
+	background-color: var(--color-bg-primary);
+	color: var(--color-text-primary);
 	-webkit-font-smoothing: antialiased;
 	scrollbar-gutter: stable;
+	selection-background-color: var(--color-accent-primary);
+	selection-color: #fff;
+}
+
+::selection {
+	background-color: var(--color-accent-primary);
+	color: #fff;
 }
 
 .mono {
 	font-family: var(--font-mono);
 }
 
-/* Custom scrollbar */
+.mono-display {
+	font-family: var(--font-display);
+	text-transform: uppercase;
+	letter-spacing: -0.05em;
+}
+
 ::-webkit-scrollbar {
-	width: 8px;
-	height: 8px;
+	width: 6px;
+	height: 6px;
 }
 
 ::-webkit-scrollbar-track {
-	background: var(--bg-primary);
+	background: var(--color-bg-primary);
+	border-left: 1px solid var(--color-border-main);
 }
 
 ::-webkit-scrollbar-thumb {
-	background: var(--border);
-	border-radius: 4px;
+	background: var(--color-border-main);
+	border-radius: 0px;
 }
 
 ::-webkit-scrollbar-thumb:hover {
-	background: var(--text-muted);
+	background: var(--color-accent-primary);
 }
 
-/* Grid background */
+/* Hard geometric tech grid */
 .grid-bg {
 	background-image:
-		linear-gradient(to right, var(--border) 1px, transparent 1px),
-		linear-gradient(to bottom, var(--border) 1px, transparent 1px);
-	background-size: 40px 40px;
-	mask-image: radial-gradient(ellipse 60% 50% at 50% 0%, #000 70%, transparent 100%);
+		linear-gradient(to right, var(--color-border-subtle) 1px, transparent 1px),
+		linear-gradient(to bottom, var(--color-border-subtle) 1px, transparent 1px);
+	background-size: 32px 32px;
+	mask-image: linear-gradient(to bottom, #000 0%, transparent 80%);
+}
+
+.tech-panel {
+	border: 1px solid var(--color-border-main);
+	background-color: var(--color-bg-secondary);
+	position: relative;
+}
+
+.tech-panel::before {
+	content: '';
+	position: absolute;
+	top: -1px;
+	left: -1px;
+	width: 8px;
+	height: 1px;
+	background-color: var(--color-accent-primary);
+}
+
+.tech-panel::after {
+	content: '';
+	position: absolute;
+	top: -1px;
+	left: -1px;
+	width: 1px;
+	height: 8px;
+	background-color: var(--color-accent-primary);
+}
+
+.glow-text {
+	text-shadow: 0 0 20px rgba(255, 60, 0, 0.5);
 }
