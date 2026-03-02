@@ -11,6 +11,7 @@ import (
 	"encoding/hex"
 	"fmt"
 	"math"
+	"net/url"
 	"os"
 	"path/filepath"
 	"strconv"
@@ -18,7 +19,14 @@ import (
 	"time"
 
 	"github.com/aydenstechdungeon/gospa/plugin"
+	"github.com/gofiber/fiber/v2"
+	"github.com/golang-jwt/jwt/v5"
+	"golang.org/x/oauth2"
 )
+
+// TOTP aliases for backward compatibility and documentation consistency.
+func (p *AuthPlugin) EnableTOTP() fiber.Handler { return p.EnableOTPHandler() }
+func (p *AuthPlugin) VerifyTOTP() fiber.Handler { return p.VerifyOTPHandler() }
 
 // AuthPlugin provides authentication capabilities.
 type AuthPlugin struct {
@@ -97,11 +105,185 @@ type OTPConfig struct {
 	Account string
 }
 
+// User represents an authenticated user.
+type User struct {
+	ID    string `json:"id"`
+	Email string `json:"email"`
+	Role  string `json:"role"`
+}
+
+// Claims represents JWT claims.
+type Claims struct {
+	UserID string `json:"user_id"`
+	Email  string `json:"email"`
+	Role   string `json:"role"`
+	jwt.RegisteredClaims
+}
+
 // BackupCode represents a backup code for 2FA.
 type BackupCode struct {
 	Code   string
 	Used   bool
 	UsedAt *time.Time
+}
+
+// CreateToken creates a new JWT token.
+func (p *AuthPlugin) CreateToken(userID, email, role string) (string, error) {
+	claims := Claims{
+		UserID: userID,
+		Email:  email,
+		Role:   role,
+		RegisteredClaims: jwt.RegisteredClaims{
+			ExpiresAt: jwt.NewNumericDate(time.Now().Add(time.Duration(p.config.JWTExpiry) * time.Hour)),
+			IssuedAt:  jwt.NewNumericDate(time.Now()),
+			Issuer:    p.config.Issuer,
+		},
+	}
+	token := jwt.NewWithClaims(jwt.SigningMethodHS256, claims)
+	return token.SignedString([]byte(p.config.JWTSecret))
+}
+
+// ValidateToken validates a JWT token and returns the claims.
+func (p *AuthPlugin) ValidateToken(tokenString string) (*Claims, error) {
+	token, err := jwt.ParseWithClaims(tokenString, &Claims{}, func(token *jwt.Token) (interface{}, error) {
+		return []byte(p.config.JWTSecret), nil
+	})
+	if err != nil {
+		return nil, err
+	}
+	if claims, ok := token.Claims.(*Claims); ok && token.Valid {
+		return claims, nil
+	}
+	return nil, fmt.Errorf("invalid token")
+}
+
+// RequireAuth returns a middleware that requires authentication.
+func (p *AuthPlugin) RequireAuth() fiber.Handler {
+	return func(c *fiber.Ctx) error {
+		authHeader := c.Get("Authorization")
+		if authHeader == "" {
+			return c.Status(fiber.StatusUnauthorized).JSON(fiber.Map{"error": "missing authorization header"})
+		}
+
+		tokenString := strings.TrimPrefix(authHeader, "Bearer ")
+		claims, err := p.ValidateToken(tokenString)
+		if err != nil {
+			return c.Status(fiber.StatusUnauthorized).JSON(fiber.Map{"error": "invalid token"})
+		}
+
+		c.Locals("user", &User{
+			ID:    claims.UserID,
+			Email: claims.Email,
+			Role:  claims.Role,
+		})
+		return c.Next()
+	}
+}
+
+// OAuthRedirect returns a handler that redirects to an OAuth provider.
+func (p *AuthPlugin) OAuthRedirect(providerName string) fiber.Handler {
+	return func(c *fiber.Ctx) error {
+		provider, err := p.getProvider(providerName)
+		if err != nil {
+			return c.Status(fiber.StatusBadRequest).JSON(fiber.Map{"error": err.Error()})
+		}
+
+		conf := &oauth2.Config{
+			ClientID:     provider.ClientID,
+			ClientSecret: provider.ClientSecret,
+			Endpoint: oauth2.Endpoint{
+				AuthURL:  provider.AuthURL,
+				TokenURL: provider.TokenURL,
+			},
+			Scopes: provider.Scopes,
+		}
+
+		url := conf.AuthCodeURL("state")
+		return c.Redirect(url)
+	}
+}
+
+// OAuthCallback returns a handler that handles the OAuth callback.
+func (p *AuthPlugin) OAuthCallback(providerName string) fiber.Handler {
+	return func(c *fiber.Ctx) error {
+		code := c.Query("code")
+		if code == "" {
+			return c.Status(fiber.StatusBadRequest).JSON(fiber.Map{"error": "missing code"})
+		}
+
+		provider, err := p.getProvider(providerName)
+		if err != nil {
+			return c.Status(fiber.StatusBadRequest).JSON(fiber.Map{"error": err.Error()})
+		}
+
+		conf := &oauth2.Config{
+			ClientID:     provider.ClientID,
+			ClientSecret: provider.ClientSecret,
+			Endpoint: oauth2.Endpoint{
+				AuthURL:  provider.AuthURL,
+				TokenURL: provider.TokenURL,
+			},
+			Scopes: provider.Scopes,
+		}
+
+		token, err := conf.Exchange(c.Context(), code)
+		if err != nil {
+			return c.Status(fiber.StatusInternalServerError).JSON(fiber.Map{"error": "token exchange failed"})
+		}
+
+		// In a real app, you'd fetch user info from provider.UserURL here
+		// For now, we'll just return the token
+		return c.JSON(token)
+	}
+}
+
+// EnableOTPHandler returns a handler that generates OTP setup info.
+func (p *AuthPlugin) EnableOTPHandler() fiber.Handler {
+	return func(c *fiber.Ctx) error {
+		user := c.Locals("user").(*User)
+		if user == nil {
+			return c.Status(fiber.StatusUnauthorized).JSON(fiber.Map{"error": "unauthorized"})
+		}
+
+		secret, url, err := p.GenerateOTP(user.Email)
+		if err != nil {
+			return c.Status(fiber.StatusInternalServerError).JSON(fiber.Map{"error": "failed to generate OTP"})
+		}
+
+		return c.JSON(fiber.Map{
+			"secret":  secret,
+			"qr_code": url,
+		})
+	}
+}
+
+// VerifyOTPHandler returns a handler that verifies an OTP code.
+func (p *AuthPlugin) VerifyOTPHandler() fiber.Handler {
+	return func(c *fiber.Ctx) error {
+		var req struct {
+			Secret string `json:"secret"`
+			Code   string `json:"code"`
+		}
+		if err := c.BodyParser(&req); err != nil {
+			return c.Status(fiber.StatusBadRequest).JSON(fiber.Map{"error": "invalid request"})
+		}
+
+		if p.VerifyOTP(req.Secret, req.Code) {
+			return c.JSON(fiber.Map{"success": true})
+		}
+		return c.Status(fiber.StatusUnauthorized).JSON(fiber.Map{"success": false, "error": "invalid OTP code"})
+	}
+}
+
+// getProvider returns provider by name.
+func (p *AuthPlugin) getProvider(name string) (*OAuthProvider, error) {
+	providers := p.getEnabledProviders()
+	for _, pr := range providers {
+		if strings.EqualFold(pr.Name, name) {
+			return &pr, nil
+		}
+	}
+	return nil, fmt.Errorf("provider %s not found or enabled", name)
 }
 
 // DefaultConfig returns the default auth configuration.
@@ -982,8 +1164,29 @@ func (p *AuthPlugin) GenerateOTPSecret() (string, error) {
 
 // GenerateOTPURL generates the otpauth:// URL.
 func (p *AuthPlugin) GenerateOTPURL(secret, account, issuer string) string {
-	return fmt.Sprintf("otpauth://totp/%s:%s?secret=%s&issuer=%s&digits=%d&period=%d",
-		issuer, account, secret, issuer, p.config.OTPDigits, p.config.OTPPeriod)
+	u := url.URL{
+		Scheme: "otpauth",
+		Host:   "totp",
+		Path:   fmt.Sprintf("/%s:%s", issuer, account),
+	}
+	q := u.Query()
+	q.Set("secret", strings.TrimSuffix(secret, "="))
+	q.Set("issuer", issuer)
+	q.Set("algorithm", "SHA1")
+	q.Set("digits", fmt.Sprintf("%d", p.config.OTPDigits))
+	q.Set("period", fmt.Sprintf("%d", p.config.OTPPeriod))
+	u.RawQuery = q.Encode()
+	return u.String()
+}
+
+// GenerateOTP generates an OTP secret and URL for 2FA setup.
+func (p *AuthPlugin) GenerateOTP(account string) (string, string, error) {
+	secret, err := p.GenerateOTPSecret()
+	if err != nil {
+		return "", "", err
+	}
+	url := p.GenerateOTPURL(secret, account, p.config.OTPIssuer)
+	return secret, url, nil
 }
 
 // VerifyOTP verifies a TOTP code.

@@ -160,7 +160,7 @@ function onTelegramAuth(user) {
 			<div class="grid gap-4 md:grid-cols-2">
 				@featureCard("JWT Sessions", "Stateless authentication with configurable expiry.")
 				@featureCard("OAuth2 Flow", "Complete authorization code flow with PKCE support.")
-				@featureCard("TOTP/OTP", "Time-based One-Time Password (RFC 6238).")
+				@featureCard("OTP", "Time-based One-Time Password (RFC 6238).")
 				@featureCard("QR Codes", "Generate QR code URLs for authenticator apps.")
 				@featureCard("Backup Codes", "One-time recovery codes for 2FA bypass.")
 				@featureCard("Session Management", "Login, logout, refresh token rotation.")
@@ -195,24 +195,24 @@ func main() {
         return c.JSON(user)
     })
     
-    // TOTP setup
-    app.Post("/auth/2fa/enable", authPlugin.EnableTOTP())
-    app.Post("/auth/2fa/verify", authPlugin.VerifyTOTP())
+    // OTP setup
+    app.Post("/auth/2fa/enable", authPlugin.EnableOTPHandler())
+    app.Post("/auth/2fa/verify", authPlugin.VerifyOTPHandler())
     
     app.Listen(":3000")
 }`, "go", "main.go")
 		</section>
 
 		<section class="space-y-6">
-			<h2 class="text-2xl font-bold border-b border-[var(--border)] pb-2">TOTP Setup Flow</h2>
+			<h2 class="text-2xl font-bold border-b border-[var(--border)] pb-2">OTP Setup Flow</h2>
 			@components.CodeBlock(`// 1. Generate secret and QR code URL
-secret, qrURL, err := auth.GenerateTOTPSecret("user@example.com", "MyApp")
+secret, qrURL, err := auth.GenerateOTPSecret() // or authPlugin.GenerateOTP("user@example.com")
 // qrURL = otpauth://totp/MyApp:user@example.com?secret=XXX&issuer=MyApp
 
 // 2. User scans QR code with authenticator app (Google Authenticator, Authy, etc.)
 
-// 3. Verify TOTP code
-valid := auth.VerifyTOTP(secret, userProvidedCode)
+// 3. Verify OTP code
+valid := auth.VerifyOTP(secret, userProvidedCode)
 
 // 4. Generate backup codes
 backupCodes := auth.GenerateBackupCodes(10) // 10 codes
@@ -232,8 +232,8 @@ POST /auth/logout              - Logout and clear session
 POST /auth/refresh             - Refresh JWT token
 
 # 2FA Routes
-POST /auth/2fa/enable          - Enable TOTP for user
-POST /auth/2fa/verify          - Verify TOTP code
+POST /auth/2fa/enable          - Enable OTP for user
+POST /auth/2fa/verify          - Verify OTP code
 POST /auth/2fa/backup          - Use backup code for recovery
 POST /auth/2fa/disable         - Disable 2FA`, "text", "routes")
 		</section>

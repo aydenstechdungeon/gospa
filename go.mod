@@ -8,9 +8,11 @@ require (
 	github.com/fsnotify/fsnotify v1.9.0
 	github.com/gofiber/fiber/v2 v2.52.11
 	github.com/gofiber/websocket/v2 v2.2.1
+	github.com/golang-jwt/jwt/v5 v5.3.1
 	github.com/redis/go-redis/v9 v9.18.0
 	github.com/skip2/go-qrcode v0.0.0-20200617195104-da1b6568686e
 	golang.org/x/image v0.36.0
+	golang.org/x/oauth2 v0.35.0
 )
 
 require (

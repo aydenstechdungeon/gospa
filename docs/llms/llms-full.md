@@ -7070,12 +7070,12 @@ plugins:
 export default {
   plugins: {
     '@tailwindcss/postcss': {},
-    '@tailwindcss/typography': {},
-    '@tailwindcss/forms': {},
-    '@tailwindcss/aspect-ratio': {},
   },
 };
 ```
+
+**Note on Tailwind v4 Plugins:**
+Typography, forms, and aspect-ratio plugins are no longer added via `postcss.config.js`. Instead, they are automatically added to your `styles/main.css` via the `@plugin` directive when enabled in the GoSPA PostCSS configuration.
 
 **Lifecycle Hooks:**
 - `BeforeDev`: Starts PostCSS in watch mode

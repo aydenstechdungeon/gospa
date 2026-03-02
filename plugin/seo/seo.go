@@ -3,16 +3,53 @@
 package seo
 
 import (
+	"context"
 	"encoding/json"
 	"fmt"
 	"html"
+	"io"
 	"os"
 	"path/filepath"
 	"strings"
 	"time"
 
+	"github.com/a-h/templ"
 	"github.com/aydenstechdungeon/gospa/plugin"
 )
+
+// MetaParams represents parameters for the Meta component.
+type MetaParams struct {
+	Title       string
+	Description string
+	Keywords    []string
+	Canonical   string
+	OGImage     string
+}
+
+// OGParams represents parameters for the OpenGraph component.
+type OGParams struct {
+	Type        string
+	Title       string
+	Description string
+	Image       string
+	URL         string
+}
+
+// TwitterParams represents parameters for the TwitterCard component.
+type TwitterParams struct {
+	Card        string
+	Title       string
+	Description string
+	Image       string
+	Site        string
+}
+
+// Organization represents JSON-LD Organization data.
+type Organization struct {
+	Name string `json:"name"`
+	URL  string `json:"url"`
+	Logo string `json:"logo"`
+}
 
 // SEOPlugin provides SEO optimization capabilities.
 type SEOPlugin struct {
@@ -55,8 +92,8 @@ type Config struct {
 	RoutesDir string `yaml:"routes_dir" json:"routesDir"`
 }
 
-// PageSEO represents SEO metadata for a page.
-type PageSEO struct {
+// MetaConfig represents SEO metadata for a page.
+type MetaConfig struct {
 	Path        string   `json:"path"`
 	Title       string   `json:"title"`
 	Description string   `json:"description"`
@@ -70,8 +107,19 @@ type PageSEO struct {
 	Priority    float64  `json:"priority"`
 }
 
-// StructuredData represents JSON-LD structured data.
-type StructuredData struct {
+// PageSEO is an alias for MetaConfig.
+type PageSEO = MetaConfig
+
+// ArticleData represents article-specific metadata for JSON-LD.
+type ArticleData struct {
+	Headline      string `json:"headline"`
+	Author        string `json:"author"`
+	DatePublished string `json:"datePublished"`
+	Image         string `json:"image"`
+}
+
+// RawStructuredData represents JSON-LD structured data.
+type RawStructuredData struct {
 	Type       string                 `json:"@type"`
 	Context    string                 `json:"@context"`
 	Properties map[string]interface{} `json:"-"`
@@ -92,12 +140,86 @@ func DefaultConfig() *Config {
 	}
 }
 
+// Meta returns a component with meta tags.
+func Meta(p MetaParams) templ.Component {
+	return templ.ComponentFunc(func(ctx context.Context, w io.Writer) error {
+		var sb strings.Builder
+		sb.WriteString(fmt.Sprintf("<title>%s</title>\n", html.EscapeString(p.Title)))
+		sb.WriteString(fmt.Sprintf("<meta name=\"description\" content=\"%s\">\n", html.EscapeString(p.Description)))
+		if len(p.Keywords) > 0 {
+			sb.WriteString(fmt.Sprintf("<meta name=\"keywords\" content=\"%s\">\n", html.EscapeString(strings.Join(p.Keywords, ", "))))
+		}
+		if p.Canonical != "" {
+			sb.WriteString(fmt.Sprintf("<link rel=\"canonical\" href=\"%s\">\n", p.Canonical))
+		}
+		if p.OGImage != "" {
+			sb.WriteString(fmt.Sprintf("<meta property=\"og:image\" content=\"%s\">\n", html.EscapeString(p.OGImage)))
+		}
+		_, err := w.Write([]byte(sb.String()))
+		return err
+	})
+}
+
+// OpenGraph returns a component with Open Graph tags.
+func OpenGraph(p OGParams) templ.Component {
+	return templ.ComponentFunc(func(ctx context.Context, w io.Writer) error {
+		var sb strings.Builder
+		sb.WriteString(fmt.Sprintf("<meta property=\"og:type\" content=\"%s\">\n", html.EscapeString(p.Type)))
+		sb.WriteString(fmt.Sprintf("<meta property=\"og:title\" content=\"%s\">\n", html.EscapeString(p.Title)))
+		sb.WriteString(fmt.Sprintf("<meta property=\"og:description\" content=\"%s\">\n", html.EscapeString(p.Description)))
+		sb.WriteString(fmt.Sprintf("<meta property=\"og:url\" content=\"%s\">\n", p.URL))
+		if p.Image != "" {
+			sb.WriteString(fmt.Sprintf("<meta property=\"og:image\" content=\"%s\">\n", html.EscapeString(p.Image)))
+		}
+		_, err := w.Write([]byte(sb.String()))
+		return err
+	})
+}
+
+// TwitterCard returns a component with Twitter Card tags.
+func TwitterCard(p TwitterParams) templ.Component {
+	return templ.ComponentFunc(func(ctx context.Context, w io.Writer) error {
+		var sb strings.Builder
+		sb.WriteString(fmt.Sprintf("<meta name=\"twitter:card\" content=\"%s\">\n", html.EscapeString(p.Card)))
+		sb.WriteString(fmt.Sprintf("<meta name=\"twitter:title\" content=\"%s\">\n", html.EscapeString(p.Title)))
+		sb.WriteString(fmt.Sprintf("<meta name=\"twitter:description\" content=\"%s\">\n", html.EscapeString(p.Description)))
+		if p.Image != "" {
+			sb.WriteString(fmt.Sprintf("<meta name=\"twitter:image\" content=\"%s\">\n", html.EscapeString(p.Image)))
+		}
+		if p.Site != "" {
+			sb.WriteString(fmt.Sprintf("<meta name=\"twitter:site\" content=\"%s\">\n", html.EscapeString(p.Site)))
+		}
+		_, err := w.Write([]byte(sb.String()))
+		return err
+	})
+}
+
+var defaultPlugin = New(DefaultConfig())
+
+// StructuredData generates JSON-LD structured data.
+func StructuredData(data any) templ.Component {
+	return templ.ComponentFunc(func(ctx context.Context, w io.Writer) error {
+		jsonData, err := json.MarshalIndent(data, "", "  ")
+		if err != nil {
+			return err
+		}
+		_, err = w.Write([]byte(fmt.Sprintf("<script type=\"application/ld+json\">\n%s\n</script>\n", string(jsonData))))
+		return err
+	})
+}
+
+// MetaTags generates meta tags using the default plugin.
+func MetaTags(config MetaConfig) string {
+	return defaultPlugin.GeneratePageMeta(config)
+}
+
 // New creates a new SEO plugin.
 func New(cfg *Config) *SEOPlugin {
 	if cfg == nil {
 		cfg = DefaultConfig()
 	}
-	return &SEOPlugin{config: cfg}
+	p := &SEOPlugin{config: cfg}
+	return p
 }
 
 // Name returns the plugin name.
