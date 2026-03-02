@@ -34,6 +34,53 @@ templ Page() {
 		</section>
 
 		<section>
+			<h2 id="layouts" class="text-2xl font-bold mb-4">Layout Files</h2>
+			<p class="text-[var(--text-secondary)] mb-4">
+				GoSPA supports two types of layout files:
+			</p>
+			<div class="overflow-x-auto mb-4">
+				<table class="w-full text-left border-collapse">
+					<thead>
+						<tr class="border-b border-[var(--border)]">
+							<th class="py-2 pr-4 font-bold">File</th>
+							<th class="py-2 pr-4 font-bold">Purpose</th>
+							<th class="py-2 font-bold">Scope</th>
+						</tr>
+					</thead>
+					<tbody class="text-[var(--text-secondary)]">
+						<tr class="border-b border-[var(--border)]">
+							<td class="py-2 pr-4"><code class="bg-[var(--bg-tertiary)] px-1.5 py-0.5 rounded">root_layout.templ</code></td>
+							<td class="py-2 pr-4">Outer HTML shell (<code class="bg-[var(--bg-tertiary)] px-1 rounded">&lt;html&gt;</code>, <code class="bg-[var(--bg-tertiary)] px-1 rounded">&lt;head&gt;</code>, <code class="bg-[var(--bg-tertiary)] px-1 rounded">&lt;body&gt;</code>)</td>
+							<td class="py-2">Entire application</td>
+						</tr>
+						<tr>
+							<td class="py-2 pr-4"><code class="bg-[var(--bg-tertiary)] px-1.5 py-0.5 rounded">layout.templ</code></td>
+							<td class="py-2 pr-4">Nested layouts for sections</td>
+							<td class="py-2">Route segment and children</td>
+						</tr>
+					</tbody>
+				</table>
+			</div>
+			<p class="text-[var(--text-secondary)] mb-4">
+				<strong>root_layout.templ</strong> — Place at <code class="bg-[var(--bg-tertiary)] px-1.5 py-0.5 rounded">routes/root_layout.templ</code> to define the outermost HTML document. 
+				Must include the GoSPA runtime script. Only one root layout exists per app.
+			</p>
+			<p class="text-[var(--text-secondary)] mb-4">
+				<strong>layout.templ</strong> — Regular layouts that wrap pages. Create in subdirectories (e.g., <code class="bg-[var(--bg-tertiary)] px-1.5 py-0.5 rounded">routes/blog/layout.templ</code>) 
+				to wrap all pages in that section. Multiple nested layouts are supported.
+			</p>
+			@components.CodeBlock(`routes/
+├── root_layout.templ     # (Optional) Wraps entire app (Requires routing.RegisterRootLayout())
+├── layout.templ          # Optional root wrapper
+├── page.templ            # Home page
+├── about/
+│   └── page.templ        # About page
+└── dashboard/
+    ├── layout.templ      # Dashboard sidebar/header
+    └── page.templ        # Dashboard home`, "plaintext", "Layout Hierarchy Example")
+		</section>
+
+		<section>
 			<h2 id="generated-dir" class="text-2xl font-bold mb-4">The `generated/` Directory</h2>
 			<p class="text-[var(--text-secondary)] mb-4">
 				GoSPA automatically synchronizes your Go types and routes with TypeScript. 

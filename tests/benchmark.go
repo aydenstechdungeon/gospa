@@ -93,7 +93,7 @@ func main() {
 		time.Sleep(100 * time.Millisecond)
 		resp, err := http.Get(baseURL + "/")
 		if err == nil {
-			resp.Body.Close()
+			_ = resp.Body.Close()
 			if resp.StatusCode == 200 {
 				ready = true
 				break
@@ -502,7 +502,7 @@ func makeRequest(url string, results chan<- RequestResult) {
 		}
 		return
 	}
-	defer resp.Body.Close()
+	defer func() { _ = resp.Body.Close() }()
 
 	// Read body to ensure complete request
 	body, err := io.ReadAll(resp.Body)

@@ -261,19 +261,19 @@ func compressFileGzip(path string) error {
 	if err != nil {
 		return err
 	}
-	defer input.Close()
+	defer func() { _ = input.Close() }()
 
 	output, err := os.Create(path + ".gz")
 	if err != nil {
 		return err
 	}
-	defer output.Close()
+	defer func() { _ = output.Close() }()
 
 	writer, err := gzip.NewWriterLevel(output, gzip.BestCompression)
 	if err != nil {
 		return err
 	}
-	defer writer.Close()
+	defer func() { _ = writer.Close() }()
 
 	_, err = io.Copy(writer, input)
 	return err

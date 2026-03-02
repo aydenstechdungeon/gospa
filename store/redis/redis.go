@@ -71,7 +71,7 @@ func (p *PubSub) Subscribe(channel string, handler func(message []byte)) error {
 	}
 
 	go func() {
-		defer pubsub.Close()
+		defer func() { _ = pubsub.Close() }()
 		ch := pubsub.Channel()
 		for msg := range ch {
 			handler([]byte(msg.Payload))

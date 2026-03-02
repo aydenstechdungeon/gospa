@@ -1,0 +1,322 @@
+# GoSPA Documentation Index for LLMs
+# Repository: https://github.com/aydenstechdungeon/gospa/
+# Official website: https://gospa.onrender.com/
+# Website's Docs: https://gospa.onrender.com/docs
+# Framework: Go-based SPA with Svelte-like reactivity, Templ SSR, TypeScript client runtime
+# Version: 0.1.6 (latest supported)
+
+## Primary Entry Points
+
+[GETTING_STARTED.md](docs/GETTING_STARTED.md)
+  - Installation, project creation, first page tutorial
+  - Client-side reactivity overview, routing basics, state management intro
+  - CLI commands summary, troubleshooting common issues
+
+[API.md](docs/API.md)
+  - Comprehensive API reference: App, State, Routing, Fiber, Templ, Client Runtime
+  - Configuration options, WebSocket Hub, middleware reference
+  - Code examples for all major API surfaces
+
+[README.md](README.md)
+  - Framework overview, quick start, feature highlights
+  - Architecture summary, basic usage patterns
+
+[TODO_APP_EXAMPLE.md](docs/TODO_APP_EXAMPLE.md)
+  - Comprehensive todo app tutorial
+  - Reactive state management, derived values, real-time sync
+  - Design systems, animations, and transitions reference
+
+## Core Concepts
+
+### State Management
+
+[STATE_PRIMITIVES.md](docs/STATE_PRIMITIVES.md)
+  - Go server-side reactive primitives: Rune[T], Derived[T], Effect
+  - StateMap collection, batch updates, serialization
+  - Thread-safe implementations, comparison with client-side primitives
+
+[STATE_PRUNING.md](docs/STATE_PRUNING.md)
+  - StatePruner for automatic stale state cleanup
+  - PrunerConfig options, interaction with WebSocket state sync
+
+[CLIENT_RUNTIME.md](docs/CLIENT_RUNTIME.md)
+  - Complete TypeScript runtime API (Rune, Derived, Effect, StateMap)
+  - DOM bindings, event handling, WebSocket client, transitions
+  - Navigation API, Resource pattern, error handling
+
+### Routing System
+
+[PARAMS.md](docs/PARAMS.md)
+  - Params type with type-safe accessors (GetInt, GetBool, GetSlice)
+  - QueryParams handling, ParamExtractor for route matching
+  - Route groups (parentheses syntax), PathBuilder for URL construction
+
+[routing/auto.go](routing/auto.go)
+  - File-based routing implementation, directory scanning
+  - Route registration, layout resolution
+
+[routing/layout.go](routing/layout.go)
+  - Layout chain management, nested layout resolution
+  - Layout wrapping logic
+
+### Component System
+
+[COMPONENT_SYSTEM.md](docs/COMPONENT_SYSTEM.md)
+  - BaseComponent architecture, ComponentTree
+  - Lifecycle hooks (OnMount, OnUpdate, OnDestroy)
+  - Props validation with PropSchema, bindable properties
+
+[ISLANDS.md](docs/ISLANDS.md)
+  - Islands Architecture for partial hydration
+  - Hydration modes: immediate, visible, idle, interaction, lazy
+  - Priority queue, Streaming SSR, DOM attributes reference
+
+### Rendering Strategies
+
+[RENDERING.md](docs/RENDERING.md)
+  - Four strategies: SSR (default), SSG, ISR, PPR
+  - Per-page strategy selection, caching behavior
+  - Cache sizing, eviction policies, Prefork interaction
+
+[templ/](templ/)
+  - Templ integration for server-side rendering
+  - DynamicSlot for PPR, component helpers
+
+## Configuration & Runtime
+
+[CONFIGURATION.md](docs/CONFIGURATION.md)
+  - Complete gospa.Config reference
+  - Basic options, state management config, WebSocket settings
+  - Performance tuning, hydration modes, security options
+  - Distributed/scaling configuration (Prefork, Storage)
+
+[RUNTIME.md](docs/RUNTIME.md)
+  - Runtime selection: Full vs Simple runtime
+  - Security considerations, size comparison
+  - DOMPurify vs basic sanitizer trade-offs
+
+[PLUGINS.md](docs/PLUGINS.md)
+  - Plugin architecture with lifecycle hooks
+  - Built-in plugins: Tailwind, PostCSS, Image, Validation, SEO, Auth, QR Code
+  - Custom plugin creation, external plugin management
+
+## Real-Time & Communication
+
+[SSE.md](docs/SSE.md)
+  - Server-Sent Events via SSEBroker
+  - Topic subscription, heartbeat configuration
+  - Security considerations for subscribe handlers
+
+[fiber/websocket.go](fiber/websocket.go)
+  - WebSocket Hub implementation
+  - Client connection management, message routing
+  - State synchronization over WebSocket
+
+[store/pubsub.go](store/pubsub.go)
+  - Pub/sub pattern for cross-component communication
+  - Event broadcasting, subscription management
+
+## Development Tools
+
+[DEV_TOOLS.md](docs/DEV_TOOLS.md)
+  - Client-side debug object (window.__GOSPA__)
+  - HMR integration, server-side debug logging
+  - Error Overlay, State Inspector panel
+  - Request logging, recovery middleware
+
+[HMR.md](docs/HMR.md)
+  - Hot Module Replacement system
+  - HMRConfig options, file watcher configuration
+  - State preservation across reloads, message types
+
+## Error Handling & Security
+
+[ERROR_HANDLING.md](docs/ERROR_HANDLING.md)
+  - AppError structured errors with ErrorCode
+  - ErrorHandler middleware, custom error pages
+  - Validation errors, panic recovery
+  - Helper functions: IsAppError, AsAppError, WrapError
+
+[SECURITY.md](docs/SECURITY.md)
+  - Supported versions, security features (XSS, CSRF)
+  - Configuration hardening guidelines
+  - Vulnerability reporting policy
+
+## CLI & Build System
+
+[CLI.md](docs/CLI.md)
+  - All CLI commands: create, dev, build, generate, add, check, lint
+  - Plugin commands, global flags
+  - Environment variables, configuration file format
+
+[cli/](cli/)
+  - CLI implementation: build.go, create.go, dev.go, generate.go
+  - Command structure, flag parsing
+
+## Client-Side Implementation
+
+[client/src/](client/src/)
+  - runtime.ts: Main runtime exports
+  - runtime-core.ts: Core reactivity implementation
+  - state.ts: StateMap and Rune implementations
+  - dom.ts: DOM binding and manipulation
+  - events.ts: Event handling and delegation
+  - websocket.ts: WebSocket client
+  - navigation.ts: SPA navigation
+  - hmr.ts: Hot module replacement client
+  - transition.ts: Animation transitions
+  - streaming.ts: Streaming SSR support
+
+## Examples & Starter Components
+
+[examples/counter/](examples/counter/)
+  - Basic counter application with state management
+  - Layout.templ, page.templ patterns
+
+[examples/todo/](examples/todo/)
+  - Advanced todo application with complex state
+  - Derived values, effects, and local persistence
+
+[component/starter/](component/starter/)
+  - Starter components: Alert, Button, Card, Input, Modal, Skeleton
+  - Go component definitions with Templ templates
+
+## Architecture Documentation
+
+[plans/](plans/)
+  - gospa-architecture.md: High-level architecture decisions
+  - framework-enhancement-plan.md: Future enhancements
+  - plugin-system-enhancement.md: Plugin system roadmap
+  - ssg-isr-ppr-rendering-plan.md: Rendering strategy evolution
+  - audit-fixes-plan.md: Security and reliability audit
+  - prefork-session-storage-plan.md: Distributed scaling plan
+  - runtime-performance-optimization-plan.md: Performance roadmap
+  - unimplemented-tools-plan.md: Missing utility functions
+  - website-plan.md: Documentation site roadmap
+  - website-performance-optimization.md: Docs site speed plan
+
+## Documentation Website
+
+[website/](website/)
+  - Built using GoSPA itself
+  - Demonstrates production-grade usage: SSG, lazy hydration, caching
+  - File-based routing, nested layouts, search integration
+
+## Key Configuration Quick Reference
+
+### Essential Config Options
+gospa.Config{
+    RoutesDir:       "./routes",      // Route templates location
+    DevMode:         true/false,      // Development mode
+    SimpleRuntime:   true/false,      // Use simple runtime (no DOMPurify)
+    CacheTemplates:  true/false,      // Enable template caching
+    Prefork:         true/false,      // Enable prefork mode
+    WebSocket: WebSocketConfig{
+        Enabled:     true,
+        Path:        "/ws",
+    },
+}
+
+### File-Based Routing Conventions
+- page.templ        -> /
+- about.templ       -> /about
+- [id].templ        -> /:id (dynamic)
+- [...slug].templ   -> /*slug (catch-all)
+- (group)/          -> Route groups (no URL prefix)
+- layout.templ      -> Layout wrapper for directory
+
+### Hydration Modes (data-gospa-mode)
+- immediate  -> Hydrate on discovery (default)
+- visible    -> Hydrate when in viewport
+- idle       -> Hydrate when browser idle
+- interaction -> Hydrate on first user event
+- lazy       -> Manual hydration only
+
+### State Primitive Equivalents
+| Concept     | Go Server              | TypeScript Client      |
+|-------------|------------------------|------------------------|
+| Basic State | state.NewRune[T](val)  | new Rune<T>(val)       |
+| Computed    | state.NewDerived(fn)   | new Derived<T>(fn)     |
+| Side Effect | state.NewEffect(fn)    | new Effect(fn)         |
+| Collection  | state.NewStateMap()    | new StateMap()         |
+| Batch       | state.Batch(fn)        | batch(fn)              |
+
+## Dependencies & Integration Points
+
+### Required
+- Go 1.24+
+- github.com/gofiber/fiber/v2 (HTTP framework)
+- github.com/a-h/templ (HTML templating)
+
+### Optional/Plugin
+- Bun (JavaScript runtime for tooling)
+- Tailwind CSS v4 (via plugin)
+- DOMPurify (full runtime only)
+
+### Client Runtime Exports
+Runtime exposes: Rune, Derived, Effect, StateMap, batch, 
+bindElement, renderIf, renderList, on, delegate, debounce, throttle,
+getWebSocket, syncedRune, getNavigation, navigate, fade, fly, slide, scale
+
+## Common Patterns Reference
+
+### Route Handler with State
+func MyPage() templ.Component {
+    sm := state.NewStateMap()
+    sm.AddAny("count", 0)
+    return MyTemplate(sm)
+}
+
+### Dynamic Route with Params
+templ BlogPage(params routing.Params) {
+    <h1>Post: { params.Get("slug") }</h1>
+}
+
+### Client State Binding
+// data-bind="text:count"        - One-way text binding
+// data-bind="value:name"        - Value binding
+// data-model="name"             - Two-way binding
+// data-on="click:increment"     - Event handler
+
+### Effect with Cleanup
+effect := state.NewEffect(func() state.CleanupFunc {
+    // Setup
+    return func() {
+        // Cleanup
+    }
+})
+
+## Documentation File Summary
+
+Total documentation files: 19
+- API.md (33518 bytes)          - Core API reference
+- CLI.md (16801 bytes)          - CLI commands
+- CLIENT_RUNTIME.md (36230 bytes) - TypeScript runtime
+- COMPONENT_SYSTEM.md (12728 bytes) - Component architecture
+- CONFIGURATION.md (14827 bytes) - Config options
+- DEV_TOOLS.md (7516 bytes)     - Development tools
+- ERROR_HANDLING.md (10238 bytes) - Error patterns
+- GETTING_STARTED.md (9967 bytes) - Quick start
+- HMR.md (4925 bytes)           - Hot reload
+- ISLANDS.md (7147 bytes)       - Islands architecture
+- PARAMS.md (12116 bytes)       - Route parameters
+- PLUGINS.md (20454 bytes)      - Plugin system
+- RENDERING.md (10323 bytes)     - Rendering strategies
+- RUNTIME.md (6479 bytes)       - Runtime selection
+- SECURITY.md (4093 bytes)      - Security policy
+- SSE.md (5658 bytes)           - Server-sent events
+- STATE_PRIMITIVES.md (17173 bytes) - State primitives
+- STATE_PRUNING.md (2901 bytes) - State pruning
+- TODO_APP_EXAMPLE.md (7398 bytes) - Todo app tutorial
+
+Architecture Plans (10):
+- audit-fixes-plan.md (9806 bytes)
+- framework-enhancement-plan.md (22856 bytes)
+- gospa-architecture.md (16279 bytes)
+- plugin-system-enhancement.md (9914 bytes)
+- prefork-session-storage-plan.md (4013 bytes)
+- runtime-performance-optimization-plan.md (17950 bytes)
+- ssg-isr-ppr-rendering-plan.md (13890 bytes)
+- unimplemented-tools-plan.md (12435 bytes)
+- website-performance-optimization.md (8266 bytes)
+- website-plan.md (15487 bytes)

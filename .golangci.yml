@@ -1,3 +1,4 @@
+version: 2
 run:
   # Pin Go version to match go.mod, preventing pre-release toolchain typecheck failures.
   # The system uses go1.26.0-X (pre-release) which does not satisfy the `go1.26` build

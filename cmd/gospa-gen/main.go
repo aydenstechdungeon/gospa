@@ -69,7 +69,7 @@ func watch(routesDir string) {
 	if err != nil {
 		log.Fatal(err)
 	}
-	defer watcher.Close()
+	defer func() { _ = watcher.Close() }()
 
 	// Add all subdirectories to watcher
 	err = filepath.Walk(routesDir, func(path string, info os.FileInfo, err error) error {

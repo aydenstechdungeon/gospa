@@ -41,7 +41,8 @@ myapp/
 ├── gospa.yaml              # Application configuration
 ├── go.mod                  # Go dependencies
 ├── routes/                 # Route definitions
-│   ├── layout.templ        # Root layout
+│   ├── root_layout.templ   # Root HTML shell (optional)
+│   ├── layout.templ        # Root-level layout (optional)
 │   ├── page.templ          # Home page
 │   └── generated_routes.go # Auto-generated routing
 ├── components/             # Reusable .templ components (optional)
@@ -49,6 +50,34 @@ myapp/
 ├── static/                 # Static assets
 └── .gospa/                 # Framework cache
 ```
+
+#### Layout Files
+
+GoSPA uses two types of layout files with different purposes:
+
+| File | Purpose | Scope |
+|------|---------|-------|
+| `root_layout.templ` | Outer HTML shell (`<html>`, `<head>`, `<body>`) | Entire application |
+| `layout.templ` | Nested layouts for sections | Route segment and children |
+
+**`root_layout.templ`** — Place this at `routes/root_layout.templ` to define the outermost HTML document structure. It must include the GoSPA runtime script and is registered specially via `routing.RegisterRootLayout()`. Only one root layout exists per app.
+
+**`layout.templ`** — Regular layouts that wrap pages. Create these in subdirectories (e.g., `routes/blog/layout.templ`) to wrap all pages in that section. Multiple nested layouts are supported.
+
+**Layout Hierarchy Example:**
+```
+routes/
+├── root_layout.templ     # Wraps entire app
+├── layout.templ          # Optional: additional root wrapper
+├── page.templ            # Home page
+├── about/
+│   └── page.templ        # About page (wrapped by root_layout)
+└── dashboard/
+    ├── layout.templ      # Dashboard sidebar/header
+    └── page.templ        # Dashboard home
+```
+
+In this example, the dashboard page is wrapped first by `dashboard/layout.templ`, then by `root_layout.templ`.
 
 ## Development Workflow
 

@@ -113,8 +113,8 @@ func (sw *StreamWriter) processChunks() {
 			sw.mu.Unlock()
 			continue
 		}
-		fmt.Fprintf(sw.w, "<script>__GOSPA_STREAM__(%s)</script>\n", string(data))
-		sw.Flush()
+		_, _ = fmt.Fprintf(sw.w, "<script>__GOSPA_STREAM__(%s)</script>\n", string(data))
+		_ = sw.Flush()
 		sw.mu.Unlock()
 	}
 }
@@ -140,7 +140,7 @@ func (sr *StreamRenderer) StreamComponent(
 	opts StreamOptions,
 ) error {
 	sw := NewStreamWriter(w, flusher, sr.bufferSize)
-	defer sw.Close()
+	defer func() { _ = sw.Close() }()
 
 	// Write streaming preamble
 	if err := sr.writePreamble(sw); err != nil {
@@ -339,7 +339,7 @@ func Deferred(name string, placeholder templ.Component, loader func() (templ.Com
 		}
 
 		// Add deferred loading marker
-		fmt.Fprintf(w, `<script data-gospa-deferred="%s"></script>`, name)
+		_, _ = fmt.Fprintf(w, `<script data-gospa-deferred="%s"></script>`, name)
 
 		return nil
 	})
@@ -352,7 +352,7 @@ func Suspense(loader func() (templ.Component, error), fallback templ.Component) 
 		id := fmt.Sprintf("suspense-%d", time.Now().UnixNano())
 
 		// Render fallback with wrapper
-		fmt.Fprintf(w, `<div id="%s" data-gospa-suspense="loading">`, id)
+		_, _ = fmt.Fprintf(w, `<div id="%s" data-gospa-suspense="loading">`, id)
 		if fallback != nil {
 			if err := fallback.Render(ctx, w); err != nil {
 				return err
@@ -365,18 +365,18 @@ func Suspense(loader func() (templ.Component, error), fallback templ.Component) 
 			content, err := loader()
 			if err != nil {
 				// Stream error
-				fmt.Fprintf(w, `<script>__GOSPA_STREAM__({type:'error',id:'%s',content:'%s'})</script>`, id, err.Error())
+				_, _ = fmt.Fprintf(w, `<script>__GOSPA_STREAM__({type:'error',id:'%s',content:'%s'})</script>`, id, err.Error())
 				return
 			}
 
 			var buf strings.Builder
 			if err := content.Render(ctx, &buf); err != nil {
-				fmt.Fprintf(w, `<script>__GOSPA_STREAM__({type:'error',id:'%s',content:'%s'})</script>`, id, err.Error())
+				_, _ = fmt.Fprintf(w, `<script>__GOSPA_STREAM__({type:'error',id:'%s',content:'%s'})</script>`, id, err.Error())
 				return
 			}
 
 			// Stream loaded content
-			fmt.Fprintf(w, `<script>__GOSPA_STREAM__({type:'html',id:'%s',content:'%s'})</script>`, id, buf.String())
+			_, _ = fmt.Fprintf(w, `<script>__GOSPA_STREAM__({type:'html',id:'%s',content:'%s'})</script>`, id, buf.String())
 		}()
 
 		return nil

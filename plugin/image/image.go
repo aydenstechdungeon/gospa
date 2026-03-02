@@ -278,7 +278,7 @@ func (p *ImagePlugin) optimizeImage(srcPath, outPath string) error {
 	if err != nil {
 		return fmt.Errorf("failed to open image: %w", err)
 	}
-	defer file.Close()
+	defer func() { _ = file.Close() }()
 
 	// Decode image
 	var img image.Image
@@ -378,7 +378,7 @@ func (p *ImagePlugin) saveJPEG(img image.Image, path string, quality int) error 
 	if err != nil {
 		return err
 	}
-	defer file.Close()
+	defer func() { _ = file.Close() }()
 
 	return jpeg.Encode(file, img, &jpeg.Options{Quality: quality})
 }
@@ -389,7 +389,7 @@ func (p *ImagePlugin) savePNG(img image.Image, path string) error {
 	if err != nil {
 		return err
 	}
-	defer file.Close()
+	defer func() { _ = file.Close() }()
 
 	return png.Encode(file, img)
 }
@@ -423,13 +423,13 @@ func copyFile(src, dst string) error {
 	if err != nil {
 		return err
 	}
-	defer source.Close()
+	defer func() { _ = source.Close() }()
 
 	destination, err := os.Create(dst)
 	if err != nil {
 		return err
 	}
-	defer destination.Close()
+	defer func() { _ = destination.Close() }()
 
 	_, err = io.Copy(destination, source)
 	return err

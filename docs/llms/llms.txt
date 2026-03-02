@@ -21,6 +21,11 @@
   - Framework overview, quick start, feature highlights
   - Architecture summary, basic usage patterns
 
+[TODO_APP_EXAMPLE.md](docs/TODO_APP_EXAMPLE.md)
+  - Comprehensive todo app tutorial
+  - Reactive state management, derived values, real-time sync
+  - Design systems, animations, and transitions reference
+
 ## Core Concepts
 
 ### State Management
@@ -168,6 +173,10 @@
   - Basic counter application with state management
   - Layout.templ, page.templ patterns
 
+[examples/todo/](examples/todo/)
+  - Advanced todo application with complex state
+  - Derived values, effects, and local persistence
+
 [component/starter/](component/starter/)
   - Starter components: Alert, Button, Card, Input, Modal, Skeleton
   - Go component definitions with Templ templates
@@ -179,6 +188,19 @@
   - framework-enhancement-plan.md: Future enhancements
   - plugin-system-enhancement.md: Plugin system roadmap
   - ssg-isr-ppr-rendering-plan.md: Rendering strategy evolution
+  - audit-fixes-plan.md: Security and reliability audit
+  - prefork-session-storage-plan.md: Distributed scaling plan
+  - runtime-performance-optimization-plan.md: Performance roadmap
+  - unimplemented-tools-plan.md: Missing utility functions
+  - website-plan.md: Documentation site roadmap
+  - website-performance-optimization.md: Docs site speed plan
+
+## Documentation Website
+
+[website/](website/)
+  - Built using GoSPA itself
+  - Demonstrates production-grade usage: SSG, lazy hydration, caching
+  - File-based routing, nested layouts, search integration
 
 ## Key Configuration Quick Reference
 
@@ -222,7 +244,7 @@ gospa.Config{
 ## Dependencies & Integration Points
 
 ### Required
-- Go 1.21+
+- Go 1.24+
 - github.com/gofiber/fiber/v2 (HTTP framework)
 - github.com/a-h/templ (HTML templating)
 
@@ -266,22 +288,35 @@ effect := state.NewEffect(func() state.CleanupFunc {
 
 ## Documentation File Summary
 
-Total documentation files: 18
-- API.md (33448 bytes)          - Core API reference
-- CLI.md (14991 bytes)          - CLI commands
+Total documentation files: 19
+- API.md (33518 bytes)          - Core API reference
+- CLI.md (16801 bytes)          - CLI commands
 - CLIENT_RUNTIME.md (36230 bytes) - TypeScript runtime
 - COMPONENT_SYSTEM.md (12728 bytes) - Component architecture
-- CONFIGURATION.md (13471 bytes) - Config options
-- DEV_TOOLS.md (7500 bytes)     - Development tools
+- CONFIGURATION.md (14827 bytes) - Config options
+- DEV_TOOLS.md (7516 bytes)     - Development tools
 - ERROR_HANDLING.md (10238 bytes) - Error patterns
-- GETTING_STARTED.md (9770 bytes) - Quick start
-- HMR.md (4899 bytes)           - Hot reload
-- ISLANDS.md (7131 bytes)       - Islands architecture
-- PARAMS.md (11914 bytes)       - Route parameters
-- PLUGINS.md (20262 bytes)      - Plugin system
-- RENDERING.md (9850 bytes)     - Rendering strategies
-- RUNTIME.md (6475 bytes)       - Runtime selection
-- SECURITY.md (2061 bytes)      - Security policy
-- SSE.md (5650 bytes)           - Server-sent events
-- STATE_PRIMITIVES.md (13687 bytes) - State primitives
-- STATE_PRUNING.md (2897 bytes) - State pruning
+- GETTING_STARTED.md (9967 bytes) - Quick start
+- HMR.md (4925 bytes)           - Hot reload
+- ISLANDS.md (7147 bytes)       - Islands architecture
+- PARAMS.md (12116 bytes)       - Route parameters
+- PLUGINS.md (20454 bytes)      - Plugin system
+- RENDERING.md (10323 bytes)     - Rendering strategies
+- RUNTIME.md (6479 bytes)       - Runtime selection
+- SECURITY.md (4093 bytes)      - Security policy
+- SSE.md (5658 bytes)           - Server-sent events
+- STATE_PRIMITIVES.md (17173 bytes) - State primitives
+- STATE_PRUNING.md (2901 bytes) - State pruning
+- TODO_APP_EXAMPLE.md (7398 bytes) - Todo app tutorial
+
+Architecture Plans (10):
+- audit-fixes-plan.md (9806 bytes)
+- framework-enhancement-plan.md (22856 bytes)
+- gospa-architecture.md (16279 bytes)
+- plugin-system-enhancement.md (9914 bytes)
+- prefork-session-storage-plan.md (4013 bytes)
+- runtime-performance-optimization-plan.md (17950 bytes)
+- ssg-isr-ppr-rendering-plan.md (13890 bytes)
+- unimplemented-tools-plan.md (12435 bytes)
+- website-performance-optimization.md (8266 bytes)
+- website-plan.md (15487 bytes)

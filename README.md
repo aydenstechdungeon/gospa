@@ -388,7 +388,9 @@ Opt out of reactivity for static content:
 ```
 myapp/
 ├ routes/              # Auto-routed .templ files
-│   ├── page.templ
+│   ├── root_layout.templ  # Root HTML shell (optional)
+│   ├── layout.templ       # Root-level layout (optional)
+│   ├── page.templ         # Home page
 │   └ about/
 │       └ page.templ
 ├ components/          # Reusable .templ components (optional)
@@ -397,6 +399,33 @@ myapp/
 ├ main.go
 └ go.mod
 ```
+
+### Layout Files
+
+GoSPA supports two types of layout files:
+
+| File | Purpose | Scope |
+|------|---------|-------|
+| `root_layout.templ` | Outer HTML shell with `<html>`, `<head>`, `<body>` | Entire application |
+| `layout.templ` | Nested layouts for sections | Route segment and children |
+
+**`root_layout.templ`** — The outermost wrapper for your app. Must include the HTML document structure and GoSPA runtime script. There can only be one root layout (at `routes/root_layout.templ`). Requires `routing.RegisterRootLayout()`.
+
+**`layout.templ`** — Regular layouts that wrap pages within a route segment. You can have multiple nested layouts (e.g., `routes/blog/layout.templ` wraps all `/blog/*` pages).
+
+```
+routes/
+├── root_layout.templ     # (Optional) Wraps entire app (Requires routing.RegisterRootLayout())
+├── layout.templ          # Optional root-level layout
+├── page.templ            # Home page (/)
+├── about/
+│   └── page.templ        # About page (/about)
+└── blog/
+    ├── layout.templ      # Wraps all blog pages
+    └── page.templ        # Blog index (/blog)
+```
+
+If no `root_layout.templ` exists, GoSPA provides a minimal default HTML wrapper.
 
 ## API Reference
 

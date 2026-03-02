@@ -795,7 +795,7 @@ func (a *App) renderRoute(c *fiberpkg.Ctx, route *routing.Route) error {
 			if err := wrappedContent.Render(ctx, w); err != nil {
 				log.Printf("Streaming render error: %v", err)
 			}
-			w.Flush()
+			_ = w.Flush()
 		})
 		return nil
 	}
@@ -849,7 +849,7 @@ runtime.init({
 });
 </script>`, runtimePath, wsUrl, devMode, a.Config.SimpleRuntimeSVGs, wsReconnectDelay, wsMaxReconnect, wsHeartbeat, a.Config.HydrationMode, a.Config.HydrationTimeout)
 		_, _ = fmt.Fprint(w, `</body></html>`)
-		w.Flush()
+		_ = w.Flush()
 	})
 	return nil
 }

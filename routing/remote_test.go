@@ -140,7 +140,7 @@ func TestRemoteActionWithContext(t *testing.T) {
 	ctx, cancel := context.WithCancel(context.Background())
 	cancel()
 
-	result, err = fn(ctx, nil)
+	_, err = fn(ctx, nil)
 	if err == nil {
 		t.Error("Expected context cancelled error")
 	}

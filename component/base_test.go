@@ -111,23 +111,24 @@ func TestBaseComponentSetSlot(t *testing.T) {
 }
 
 func TestBaseComponentContext(t *testing.T) {
-	ctx := context.WithValue(context.Background(), "key", "value")
+	type contextKey string
+	ctx := context.WithValue(context.Background(), contextKey("key"), "value")
 	c := NewBaseComponent("comp-1", "test", WithContext(ctx))
 
 	if c.Context() == nil {
 		t.Error("Expected context to be set")
 	}
 
-	if c.Context().Value("key") != "value" {
-		t.Errorf("Expected context value 'value', got %v", c.Context().Value("key"))
+	if c.Context().Value(contextKey("key")) != "value" {
+		t.Errorf("Expected context value 'value', got %v", c.Context().Value(contextKey("key")))
 	}
 
 	// Test SetContext
-	newCtx := context.WithValue(context.Background(), "key", "new-value")
+	newCtx := context.WithValue(context.Background(), contextKey("key"), "new-value")
 	c.SetContext(newCtx)
 
-	if c.Context().Value("key") != "new-value" {
-		t.Errorf("Expected updated context value 'new-value', got %v", c.Context().Value("key"))
+	if c.Context().Value(contextKey("key")) != "new-value" {
+		t.Errorf("Expected updated context value 'new-value', got %v", c.Context().Value(contextKey("key")))
 	}
 }
 
@@ -274,7 +275,7 @@ func TestComponentTreeLifecycleHooks(t *testing.T) {
 	// Create a child to test destroy
 	child := NewBaseComponent("child", "child")
 	root.AddChild(child)
-	tree.Remove("child") // This should trigger any destroy hooks
+	_ = tree.Remove("child") // This should trigger any destroy hooks
 }
 
 func TestComponentTreeWalk(t *testing.T) {

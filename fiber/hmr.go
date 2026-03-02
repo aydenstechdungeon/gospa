@@ -325,7 +325,7 @@ func (mgr *HMRManager) Broadcast(msg HMRMessage) {
 	if len(failed) > 0 {
 		mgr.clientsMu.Lock()
 		for _, conn := range failed {
-			conn.Close()
+			_ = conn.Close()
 			delete(mgr.clients, conn)
 		}
 		mgr.clientsMu.Unlock()

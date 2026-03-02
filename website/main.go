@@ -52,6 +52,14 @@ func main() {
 		return c.Redirect("/docs/client-runtime/overview", fiber.StatusMovedPermanently)
 	})
 
+	// LLM support routes
+	app.Get("/llms.txt", func(c *fiber.Ctx) error {
+		return c.SendFile("./static/llms.txt")
+	})
+	app.Get("/llms-full.md", func(c *fiber.Ctx) error {
+		return c.SendFile("./static/llms-full.md")
+	})
+
 	// Add cache headers middleware for static assets and pages
 	if !devMode {
 		app.Use(cacheMiddleware)
