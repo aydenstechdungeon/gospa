@@ -1,0 +1,33 @@
+package routing
+
+import "github.com/aydenstechdungeon/gospa/website/components"
+
+templ Page() {
+	<div class="space-y-12">
+		<header>
+			<h1 class="text-4xl font-bold tracking-tight mb-4">Routing API</h1>
+			<p class="text-xl text-[var(--text-secondary)] leading-relaxed">
+				File-based routing, manual routes, parameters, and registry.
+			</p>
+		</header>
+
+		<section id="router" class="space-y-8">
+			<h2 class="text-2xl font-bold border-b border-[var(--border)] pb-2">Router</h2>
+			<p class="text-[var(--text-secondary)]">File-based router that scans <code class="mono">.templ</code> files.</p>
+			@components.CodeBlock(`router := routing.NewRouter(routesDir)
+err := router.Scan()
+route, params := router.Match(path)`, "go", "routing.go")
+		</section>
+
+		<section id="params" class="space-y-8">
+			<h2 class="text-2xl font-bold border-b border-[var(--border)] pb-2">Route Parameters</h2>
+			@components.CodeBlock(`value := params.Get("id")
+intVal, err := params.Int("count")`, "go", "params.go")
+		</section>
+
+		<div class="flex justify-between mt-16 pt-8 border-t border-[var(--border)]">
+			<a href="/docs/api/state" class="text-[var(--text-secondary)] hover:text-[var(--accent-primary)]">← State API</a>
+			<a href="/docs/api/fiber" class="text-[var(--accent-primary)]">Fiber API →</a>
+		</div>
+	</div>
+}

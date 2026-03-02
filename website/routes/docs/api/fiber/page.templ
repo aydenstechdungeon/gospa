@@ -1,0 +1,32 @@
+package fiberapi
+
+import "github.com/aydenstechdungeon/gospa/website/components"
+
+templ Page() {
+	<div class="space-y-12">
+		<header>
+			<h1 class="text-4xl font-bold tracking-tight mb-4">Fiber Integration API</h1>
+			<p class="text-xl text-[var(--text-secondary)] leading-relaxed">
+				Middleware, WebSocket hub, session management, and actions.
+			</p>
+		</header>
+
+		<section id="middleware" class="space-y-8">
+			<h2 class="text-2xl font-bold border-b border-[var(--border)] pb-2">Middleware</h2>
+			@components.CodeBlock(`app.Use(fiber.SPAMiddleware(config))
+app.Use(fiber.StateMiddleware(config))`, "go", "middleware.go")
+		</section>
+
+		<section id="websocket" class="space-y-8">
+			<h2 class="text-2xl font-bold border-b border-[var(--border)] pb-2">WebSocket Hub</h2>
+			@components.CodeBlock(`hub := fiber.NewWSHub()
+go hub.Run()
+hub.Broadcast <- []byte(message)`, "go", "websocket.go")
+		</section>
+
+		<div class="flex justify-between mt-16 pt-8 border-t border-[var(--border)]">
+			<a href="/docs/api/routing" class="text-[var(--text-secondary)] hover:text-[var(--accent-primary)]">← Routing API</a>
+			<a href="/docs/api/client" class="text-[var(--accent-primary)]">Client API →</a>
+		</div>
+	</div>
+}

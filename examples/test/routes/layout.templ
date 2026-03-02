@@ -1,0 +1,26 @@
+package routes
+
+import gospatempl "github.com/aydenstechdungeon/gospa/templ"
+
+templ Layout(title string) {
+	<!DOCTYPE html>
+	<html lang="en">
+	<head>
+		<meta charset="UTF-8"/>
+		<meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+		<title>{ title }</title>
+		<link rel="stylesheet" href="/static/css/style.css"/>
+		@gospatempl.RuntimeScript("/_gospa/runtime.js")
+	</head>
+	<body class="bg-gray-100 min-h-screen">
+		<nav class="bg-white shadow-sm">
+			<div class="container mx-auto px-4 py-3">
+				<a href="/" class="text-xl font-bold text-gray-800">GoSPA</a>
+			</div>
+		</nav>
+		<main>
+			{ children... }
+		</main>
+	</body>
+	</html>
+}

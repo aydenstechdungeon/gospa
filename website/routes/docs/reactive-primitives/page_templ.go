@@ -8,8 +8,6 @@ package reactiveprimitives
 import "github.com/a-h/templ"
 import templruntime "github.com/a-h/templ/runtime"
 
-import "github.com/aydenstechdungeon/gospa/website/components"
-
 func Page() templ.Component {
 	return templruntime.GeneratedTemplate(func(templ_7745c5c3_Input templruntime.GeneratedComponentInput) (templ_7745c5c3_Err error) {
 		templ_7745c5c3_W, ctx := templ_7745c5c3_Input.Writer, templ_7745c5c3_Input.Context
@@ -31,370 +29,46 @@ func Page() templ.Component {
 			templ_7745c5c3_Var1 = templ.NopComponent
 		}
 		ctx = templ.ClearChildren(ctx)
-		templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 1, "<div class=\"space-y-12\"><header><h1 class=\"text-4xl font-bold tracking-tight mb-4 text-transparent bg-clip-text bg-gradient-to-r from-[var(--accent-primary)] to-[var(--accent-secondary)]\">Reactive Primitives</h1><p class=\"text-xl text-[var(--text-secondary)] leading-relaxed\">GoSPA provides reactive primitives for both server-side Go and client-side TypeScript. These primitives form the foundation of the framework's reactivity system.</p></header><section class=\"space-y-6\"><h2 class=\"text-2xl font-bold\">Overview</h2><p class=\"text-[var(--text-secondary)]\">The reactivity system consists of three core primitives: <code class=\"text-[var(--accent-primary)]\">Rune</code> ")
+		templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 1, "<div class=\"space-y-12\"><header><h1 class=\"text-4xl font-bold tracking-tight mb-4 text-transparent bg-clip-text bg-gradient-to-r from-[var(--accent-primary)] to-[var(--accent-secondary)]\">Reactive Primitives</h1><p class=\"text-xl text-[var(--text-secondary)] leading-relaxed\">GoSPA provides reactive primitives for both server-side Go and client-side TypeScript. These primitives form the foundation of the framework's reactivity system.</p></header><section class=\"space-y-6\"><h2 class=\"text-2xl font-bold\">Core Primitives</h2><p class=\"text-[var(--text-secondary)]\">The reactivity system consists of three core primitives: Rune ")
 		if templ_7745c5c3_Err != nil {
 			return templ_7745c5c3_Err
 		}
 		var templ_7745c5c3_Var2 string
 		templ_7745c5c3_Var2, templ_7745c5c3_Err = templ.JoinStringErrs("for")
 		if templ_7745c5c3_Err != nil {
-			return templ.Error{Err: templ_7745c5c3_Err, FileName: `routes/docs/reactive-primitives/page.templ`, Line: 17, Col: 123}
+			return templ.Error{Err: templ_7745c5c3_Err, FileName: `routes/docs/reactive-primitives/page.templ`, Line: 15, Col: 73}
 		}
 		_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ.EscapeString(templ_7745c5c3_Var2))
 		if templ_7745c5c3_Err != nil {
 			return templ_7745c5c3_Err
 		}
-		templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 2, " state, <code class=\"text-[var(--accent-primary)]\">Derived</code> ")
+		templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 2, " state, Derived ")
 		if templ_7745c5c3_Err != nil {
 			return templ_7745c5c3_Err
 		}
 		var templ_7745c5c3_Var3 string
 		templ_7745c5c3_Var3, templ_7745c5c3_Err = templ.JoinStringErrs("for")
 		if templ_7745c5c3_Err != nil {
-			return templ.Error{Err: templ_7745c5c3_Err, FileName: `routes/docs/reactive-primitives/page.templ`, Line: 17, Col: 198}
+			return templ.Error{Err: templ_7745c5c3_Err, FileName: `routes/docs/reactive-primitives/page.templ`, Line: 15, Col: 98}
 		}
 		_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ.EscapeString(templ_7745c5c3_Var3))
 		if templ_7745c5c3_Err != nil {
 			return templ_7745c5c3_Err
 		}
-		templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 3, " computed values, and <code class=\"text-[var(--accent-primary)]\">Effect</code> ")
+		templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 3, " computed values, and Effect ")
 		if templ_7745c5c3_Err != nil {
 			return templ_7745c5c3_Err
 		}
 		var templ_7745c5c3_Var4 string
 		templ_7745c5c3_Var4, templ_7745c5c3_Err = templ.JoinStringErrs("for")
 		if templ_7745c5c3_Err != nil {
-			return templ.Error{Err: templ_7745c5c3_Err, FileName: `routes/docs/reactive-primitives/page.templ`, Line: 17, Col: 286}
+			return templ.Error{Err: templ_7745c5c3_Err, FileName: `routes/docs/reactive-primitives/page.templ`, Line: 15, Col: 136}
 		}
 		_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ.EscapeString(templ_7745c5c3_Var4))
 		if templ_7745c5c3_Err != nil {
 			return templ_7745c5c3_Err
 		}
-		templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 4, " side effects.</p><div class=\"grid md:grid-cols-3 gap-4\"><div class=\"p-6 rounded-2xl bg-[var(--bg-secondary)] border border-[var(--border)]\"><div class=\"w-10 h-10 rounded-xl bg-[var(--accent-primary)]/10 flex items-center justify-center text-[var(--accent-primary)] mb-4\"><svg xmlns=\"http://www.w3.org/2000/svg\" width=\"20\" height=\"20\" viewBox=\"0 0 24 24\" fill=\"none\" stroke=\"currentColor\" stroke-width=\"2\" stroke-linecap=\"round\" stroke-linejoin=\"round\"><path d=\"M21 16V8a2 2 0 0 0-1-1.73l-7-4a2 2 0 0 0-2 0l-7 4A2 2 0 0 0 3 8v8a2 2 0 0 0 1 1.73l7 4a2 2 0 0 0 2 0l7-4A2 2 0 0 0 21 16z\"></path></svg></div><h3 class=\"font-bold mb-2\">Rune</h3><p class=\"text-sm text-[var(--text-secondary)]\">Reactive state container that notifies subscribers on change.</p></div><div class=\"p-6 rounded-2xl bg-[var(--bg-secondary)] border border-[var(--border)]\"><div class=\"w-10 h-10 rounded-xl bg-[var(--accent-secondary)]/10 flex items-center justify-center text-[var(--accent-secondary)] mb-4\"><svg xmlns=\"http://www.w3.org/2000/svg\" width=\"20\" height=\"20\" viewBox=\"0 0 24 24\" fill=\"none\" stroke=\"currentColor\" stroke-width=\"2\" stroke-linecap=\"round\" stroke-linejoin=\"round\"><path d=\"m18 16 4-4-4-4\"></path><path d=\"m6 8-4 4 4 4\"></path><path d=\"m14.5 4-5 16\"></path></svg></div><h3 class=\"font-bold mb-2\">Derived</h3><p class=\"text-sm text-[var(--text-secondary)]\">Computed values that auto-update when dependencies change.</p></div><div class=\"p-6 rounded-2xl bg-[var(--bg-secondary)] border border-[var(--border)]\"><div class=\"w-10 h-10 rounded-xl bg-amber-500/10 flex items-center justify-center text-amber-500 mb-4\"><svg xmlns=\"http://www.w3.org/2000/svg\" width=\"20\" height=\"20\" viewBox=\"0 0 24 24\" fill=\"none\" stroke=\"currentColor\" stroke-width=\"2\" stroke-linecap=\"round\" stroke-linejoin=\"round\"><path d=\"M13 2 3 14h9l-1 8 10-12h-9l1-8z\"></path></svg></div><h3 class=\"font-bold mb-2\">Effect</h3><p class=\"text-sm text-[var(--text-secondary)]\">Side effects that run in response to state changes.</p></div></div></section><section class=\"space-y-6\"><h2 class=\"text-2xl font-bold\" id=\"go-server\">Go Server-Side Primitives</h2><p class=\"text-[var(--text-secondary)]\">Server-side primitives are thread-safe and designed for concurrent access in Go handlers and components.</p><h3 class=\"text-xl font-semibold mt-8\" id=\"go-rune\">Rune</h3>")
-		if templ_7745c5c3_Err != nil {
-			return templ_7745c5c3_Err
-		}
-		templ_7745c5c3_Err = components.CodeBlock(`import "github.com/aydenstechdungeon/gospa"
-
-// Create a new rune with initial value
-count := gospa.NewRune(0)
-
-// Get value
-value := count.Get()
-
-// Set value
-count.Set(5)
-
-// Update with function
-count.Update(func(v int) int {
-    return v + 1
-})
-
-// Subscribe to changes
-unsubscribe := count.Subscribe(func(newValue, oldValue int) {
-    log.Printf("Changed from %d to %d", oldValue, newValue)
-})
-
-// Unsubscribe when done
-unsubscribe()`, "go", "rune.go").Render(ctx, templ_7745c5c3_Buffer)
-		if templ_7745c5c3_Err != nil {
-			return templ_7745c5c3_Err
-		}
-		templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 5, "<h3 class=\"text-xl font-semibold mt-8\" id=\"go-derived\">Derived</h3>")
-		if templ_7745c5c3_Err != nil {
-			return templ_7745c5c3_Err
-		}
-		templ_7745c5c3_Err = components.CodeBlock(`import "github.com/aydenstechdungeon/gospa"
-
-// Create derived value from a rune
-count := gospa.NewRune(5)
-doubled := gospa.Derived(count, func(v int) int {
-    return v * 2
-})
-
-fmt.Println(doubled.Get()) // 10
-
-// Derived from multiple runes
-a := gospa.NewRune(10)
-b := gospa.NewRune(20)
-sum := gospa.Derived2(a, b, func(a, b int) int {
-    return a + b
-})
-
-fmt.Println(sum.Get()) // 30`, "go", "derived.go").Render(ctx, templ_7745c5c3_Buffer)
-		if templ_7745c5c3_Err != nil {
-			return templ_7745c5c3_Err
-		}
-		templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 6, "<h3 class=\"text-xl font-semibold mt-8\" id=\"go-effect\">Effect</h3>")
-		if templ_7745c5c3_Err != nil {
-			return templ_7745c5c3_Err
-		}
-		templ_7745c5c3_Err = components.CodeBlock(`import "github.com/aydenstechdungeon/gospa"
-
-count := gospa.NewRune(0)
-
-// Create effect that runs on changes
-effect := gospa.Effect(count, func(v int) {
-    log.Printf("Count is now: %d", v)
-})
-
-// Effect with cleanup
-effect := gospa.Effect(count, func(v int) func() {
-    log.Printf("Count changed to: %d", v)
-    return func() {
-        log.Println("Cleanup before next run")
-    }
-})
-
-// Dispose effect when done
-effect.Dispose()`, "go", "effect.go").Render(ctx, templ_7745c5c3_Buffer)
-		if templ_7745c5c3_Err != nil {
-			return templ_7745c5c3_Err
-		}
-		templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 7, "<h3 class=\"text-xl font-semibold mt-8\" id=\"go-statemap\">StateMap</h3>")
-		if templ_7745c5c3_Err != nil {
-			return templ_7745c5c3_Err
-		}
-		templ_7745c5c3_Err = components.CodeBlock(`import "github.com/aydenstechdungeon/gospa"
-
-states := gospa.NewStateMap()
-
-// Set values
-states.Set("count", 0)
-states.Set("name", "GoSPA")
-
-// Get values
-countRune := states.Get("count")
-if countRune != nil {
-    fmt.Println(countRune.Get())
-}
-
-// Serialize for client
-json := states.ToJSON()
-
-// Deserialize from client
-states.FromJSON(jsonString)
-
-// Batch updates
-states.Batch(func(m *gospa.StateMap) {
-    m.Set("a", 1)
-    m.Set("b", 2)
-})`, "go", "statemap.go").Render(ctx, templ_7745c5c3_Buffer)
-		if templ_7745c5c3_Err != nil {
-			return templ_7745c5c3_Err
-		}
-		templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 8, "<h3 class=\"text-xl font-semibold mt-8\" id=\"go-batch\">Batch Updates</h3>")
-		if templ_7745c5c3_Err != nil {
-			return templ_7745c5c3_Err
-		}
-		templ_7745c5c3_Err = components.CodeBlock(`import "github.com/aydenstechdungeon/gospa"
-
-a := gospa.NewRune(1)
-b := gospa.NewRune(2)
-
-// Batch multiple updates - subscribers notified once
-gospa.Batch(func() {
-    a.Set(10)
-    b.Set(20)
-})`, "go", "batch.go").Render(ctx, templ_7745c5c3_Buffer)
-		if templ_7745c5c3_Err != nil {
-			return templ_7745c5c3_Err
-		}
-		templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 9, "</section><section class=\"space-y-6\"><h2 class=\"text-2xl font-bold\" id=\"ts-client\">TypeScript Client Primitives</h2><p class=\"text-[var(--text-secondary)]\">Client primitives mirror the server API and integrate with the browser runtime.</p><h3 class=\"text-xl font-semibold mt-8\" id=\"ts-rune\">Rune</h3>")
-		if templ_7745c5c3_Err != nil {
-			return templ_7745c5c3_Err
-		}
-		templ_7745c5c3_Err = components.CodeBlock(`import { Rune, rune } from '@gospa/runtime';
-
-// Create
-const count = new Rune(0);
-const name = rune('initial'); // factory function
-
-// Read
-console.log(count.value);  // 0
-console.log(count.get());  // 0
-
-// Write
-count.value = 1;
-count.set(2);
-count.update(n => n + 1);
-
-// Subscribe
-const unsubscribe = count.subscribe((value, oldValue) => {
-  console.log('Changed:', oldValue, '->', value);
-});
-
-// Cleanup
-unsubscribe();`, "typescript", "rune.ts").Render(ctx, templ_7745c5c3_Buffer)
-		if templ_7745c5c3_Err != nil {
-			return templ_7745c5c3_Err
-		}
-		templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 10, "<h3 class=\"text-xl font-semibold mt-8\" id=\"ts-derived\">Derived</h3>")
-		if templ_7745c5c3_Err != nil {
-			return templ_7745c5c3_Err
-		}
-		templ_7745c5c3_Err = components.CodeBlock(`import { Derived, derived } from '@gospa/runtime';
-
-const count = new Rune(5);
-
-// Create derived
-const doubled = new Derived(() => count.get() * 2);
-const summary = derived(() => 'Count: ' + count.get());
-
-// Read
-console.log(doubled.value); // 10
-
-// Subscribe
-doubled.subscribe(v => console.log('Doubled:', v));
-
-// Cleanup
-doubled.dispose();`, "typescript", "derived.ts").Render(ctx, templ_7745c5c3_Buffer)
-		if templ_7745c5c3_Err != nil {
-			return templ_7745c5c3_Err
-		}
-		templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 11, "<h3 class=\"text-xl font-semibold mt-8\" id=\"ts-effect\">Effect</h3>")
-		if templ_7745c5c3_Err != nil {
-			return templ_7745c5c3_Err
-		}
-		templ_7745c5c3_Err = components.CodeBlock(`import { Effect, effect } from '@gospa/runtime';
-
-const count = new Rune(0);
-
-// Create effect
-const myEffect = new Effect(() => {
-  console.log('Count changed:', count.get());
-  
-  // Optional cleanup
-  return () => {
-    console.log('Cleanup before next run');
-  };
-});
-
-// Control
-myEffect.pause();   // Stop reacting
-myEffect.resume();  // Resume
-myEffect.dispose(); // Permanent cleanup`, "typescript", "effect.ts").Render(ctx, templ_7745c5c3_Buffer)
-		if templ_7745c5c3_Err != nil {
-			return templ_7745c5c3_Err
-		}
-		templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 12, "<h3 class=\"text-xl font-semibold mt-8\" id=\"ts-utilities\">Utility Functions</h3>")
-		if templ_7745c5c3_Err != nil {
-			return templ_7745c5c3_Err
-		}
-		templ_7745c5c3_Err = components.CodeBlock(`import { batch, untrack, watch, inspect } from '@gospa/runtime';
-
-// Batch updates - single notification
-batch(() => {
-  a.set(10);
-  b.set(20);
-});
-
-// Untrack - don't track dependency
-effect(() => {
-  console.log('Count:', count.get());
-  untrack(() => {
-    console.log('Untracked:', other.get()); // Not a dependency
-  });
-});
-
-// Watch multiple sources
-const unsub = watch([a, b], (values, oldValues) => {
-  console.log('Changed:', values, oldValues);
-});
-
-// Debug (dev only)
-inspect(count);
-inspect(count).with((type, value) => {
-  if (type === 'update') console.log('Updated:', value);
-});`, "typescript", "utilities.ts").Render(ctx, templ_7745c5c3_Buffer)
-		if templ_7745c5c3_Err != nil {
-			return templ_7745c5c3_Err
-		}
-		templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 13, "</section><section class=\"space-y-6\"><h2 class=\"text-2xl font-bold\" id=\"advanced\">Advanced Types</h2><h3 class=\"text-xl font-semibold mt-8\" id=\"resource\">Resource</h3><p class=\"text-[var(--text-secondary)]\">Async data fetching with loading/error states.</p>")
-		if templ_7745c5c3_Err != nil {
-			return templ_7745c5c3_Err
-		}
-		templ_7745c5c3_Err = components.CodeBlock(`import { resourceReactive } from '@gospa/runtime';
-
-const userId = new Rune(1);
-
-// Reactive resource - refetches when userId changes
-const userResource = resourceReactive(
-  [userId],
-  async () => {
-    const res = await fetch('/api/user/' + userId.get());
-    return res.json();
-  }
-);
-
-// Status
-console.log(userResource.status);     // 'idle' | 'pending' | 'success' | 'error'
-console.log(userResource.isPending);  // boolean
-console.log(userResource.data);       // T | undefined
-console.log(userResource.error);      // Error | undefined
-
-// Refetch
-await userResource.refetch();`, "typescript", "resource.ts").Render(ctx, templ_7745c5c3_Buffer)
-		if templ_7745c5c3_Err != nil {
-			return templ_7745c5c3_Err
-		}
-		templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 14, "<h3 class=\"text-xl font-semibold mt-8\" id=\"runeraw\">RuneRaw</h3><p class=\"text-[var(--text-secondary)]\">Shallow reactive state - only top-level changes tracked.</p>")
-		if templ_7745c5c3_Err != nil {
-			return templ_7745c5c3_Err
-		}
-		templ_7745c5c3_Err = components.CodeBlock(`import { RuneRaw } from '@gospa/runtime';
-
-// Shallow reactivity
-const person = new RuneRaw({ name: 'Zeno', nested: { age: 30 } });
-
-// This does NOT trigger updates
-person.value.nested.age = 31;
-
-// This DOES trigger updates (top-level reassignment)
-person.value = { ...person.value, name: 'New Name' };`, "typescript", "runeraw.ts").Render(ctx, templ_7745c5c3_Buffer)
-		if templ_7745c5c3_Err != nil {
-			return templ_7745c5c3_Err
-		}
-		templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 15, "<h3 class=\"text-xl font-semibold mt-8\" id=\"preeffect\">PreEffect</h3><p class=\"text-[var(--text-secondary)]\">Effect that runs before DOM updates.</p>")
-		if templ_7745c5c3_Err != nil {
-			return templ_7745c5c3_Err
-		}
-		templ_7745c5c3_Err = components.CodeBlock(`import { PreEffect } from '@gospa/runtime';
-
-// Runs before DOM updates
-const preEffect = new PreEffect(() => {
-  // Read scroll position before DOM changes
-  const scrollY = window.scrollY;
-  console.log('Scroll position:', scrollY);
-});`, "typescript", "preeffect.ts").Render(ctx, templ_7745c5c3_Buffer)
-		if templ_7745c5c3_Err != nil {
-			return templ_7745c5c3_Err
-		}
-		templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 16, "<h3 class=\"text-xl font-semibold mt-8\" id=\"effectroot\">EffectRoot</h3><p class=\"text-[var(--text-secondary)]\">Non-tracked effect scope with manual cleanup.</p>")
-		if templ_7745c5c3_Err != nil {
-			return templ_7745c5c3_Err
-		}
-		templ_7745c5c3_Err = components.CodeBlock(`import { EffectRoot } from '@gospa/runtime';
-
-// Non-tracked scope
-const cleanup = EffectRoot(() => {
-  // Effects created here are not auto-tracked
-  const e1 = new Effect(() => { /* ... */ });
-  const e2 = new Effect(() => { /* ... */ });
-  
-  // Return cleanup for all
-  return () => {
-    e1.dispose();
-    e2.dispose();
-  };
-});
-
-// Manual cleanup
-cleanup();`, "typescript", "effectroot.ts").Render(ctx, templ_7745c5c3_Buffer)
-		if templ_7745c5c3_Err != nil {
-			return templ_7745c5c3_Err
-		}
-		templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 17, "</section><section class=\"space-y-6\"><h2 class=\"text-2xl font-bold\" id=\"api-reference\">API Reference</h2><h3 class=\"text-xl font-semibold mt-8\">Go Rune Methods</h3><div class=\"overflow-x-auto\"><table class=\"w-full border-collapse\"><thead><tr class=\"border-b border-[var(--border)]\"><th class=\"text-left py-3 px-4 font-semibold\">Method</th><th class=\"text-left py-3 px-4 font-semibold\">Signature</th><th class=\"text-left py-3 px-4 font-semibold\">Description</th></tr></thead> <tbody class=\"text-[var(--text-secondary)]\"><tr class=\"border-b border-[var(--border)]\"><td class=\"py-3 px-4\"><code class=\"text-[var(--accent-primary)]\">Get()</code></td><td class=\"py-3 px-4\"><code>T</code></td><td class=\"py-3 px-4\">Get current value (thread-safe)</td></tr><tr class=\"border-b border-[var(--border)]\"><td class=\"py-3 px-4\"><code class=\"text-[var(--accent-primary)]\">Set()</code></td><td class=\"py-3 px-4\"><code>func(T)</code></td><td class=\"py-3 px-4\">Set new value and notify subscribers</td></tr><tr class=\"border-b border-[var(--border)]\"><td class=\"py-3 px-4\"><code class=\"text-[var(--accent-primary)]\">Update()</code></td><td class=\"py-3 px-4\"><code>func(func(T) T)</code></td><td class=\"py-3 px-4\">Update using function</td></tr><tr class=\"border-b border-[var(--border)]\"><td class=\"py-3 px-4\"><code class=\"text-[var(--accent-primary)]\">Subscribe()</code></td><td class=\"py-3 px-4\"><code>func(func(T, T)) func()</code></td><td class=\"py-3 px-4\">Subscribe to changes, returns unsubscribe</td></tr></tbody></table></div><h3 class=\"text-xl font-semibold mt-8\">TypeScript Rune Methods</h3><div class=\"overflow-x-auto\"><table class=\"w-full border-collapse\"><thead><tr class=\"border-b border-[var(--border)]\"><th class=\"text-left py-3 px-4 font-semibold\">Property/Method</th><th class=\"text-left py-3 px-4 font-semibold\">Type</th><th class=\"text-left py-3 px-4 font-semibold\">Description</th></tr></thead> <tbody class=\"text-[var(--text-secondary)]\"><tr class=\"border-b border-[var(--border)]\"><td class=\"py-3 px-4\"><code class=\"text-[var(--accent-primary)]\">value</code></td><td class=\"py-3 px-4\"><code>T</code></td><td class=\"py-3 px-4\">Get/set value directly</td></tr><tr class=\"border-b border-[var(--border)]\"><td class=\"py-3 px-4\"><code class=\"text-[var(--accent-primary)]\">get()</code></td><td class=\"py-3 px-4\"><code>() => T</code></td><td class=\"py-3 px-4\">Get value (tracks dependencies)</td></tr><tr class=\"border-b border-[var(--border)]\"><td class=\"py-3 px-4\"><code class=\"text-[var(--accent-primary)]\">set()</code></td><td class=\"py-3 px-4\"><code>(v: T) => void</code></td><td class=\"py-3 px-4\">Set new value</td></tr><tr class=\"border-b border-[var(--border)]\"><td class=\"py-3 px-4\"><code class=\"text-[var(--accent-primary)]\">update()</code></td><td class=\"py-3 px-4\"><code>(fn: (v: T) => T) => void</code></td><td class=\"py-3 px-4\">Update using function</td></tr><tr class=\"border-b border-[var(--border)]\"><td class=\"py-3 px-4\"><code class=\"text-[var(--accent-primary)]\">subscribe()</code></td><td class=\"py-3 px-4\"><code>(fn: Subscriber) => Unsubscribe</code></td><td class=\"py-3 px-4\">Subscribe to changes</td></tr></tbody></table></div></section><div class=\"bg-gradient-to-r from-[var(--bg-secondary)] to-[var(--bg-tertiary)] p-8 rounded-3xl border border-[var(--border)] shadow-inner\"><h3 class=\"text-lg font-bold mb-4\">Why \"Runes\"?</h3><p class=\"text-sm text-[var(--text-secondary)] leading-relaxed\">Inspired by Svelte 5's terminology, Runes in GoSPA represent magical symbols that imbue your data with reactive properties. They are the building blocks of an interactive UI that responds naturally to user input and server events. The name reflects their power to transform ordinary values into reactive state.</p></div></div>")
+		templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 4, " side effects.</p><div class=\"grid md:grid-cols-3 gap-4\"><div class=\"p-6 rounded-2xl bg-[var(--bg-secondary)] border border-[var(--border)]\"><div class=\"w-10 h-10 rounded-xl bg-[var(--accent-primary)]/10 flex items-center justify-center text-[var(--accent-primary)] mb-4\"><svg xmlns=\"http://www.w3.org/2000/svg\" width=\"20\" height=\"20\" viewBox=\"0 0 24 24\" fill=\"none\" stroke=\"currentColor\" stroke-width=\"2\" stroke-linecap=\"round\" stroke-linejoin=\"round\"><path d=\"M21 16V8a2 2 0 0 0-1-1.73l-7-4a2 2 0 0 0-2 0l-7 4A2 2 0 0 0 3 8v8a2 2 0 0 0 1 1.73l7 4a2 2 0 0 0 2 0l7-4A2 2 0 0 0 21 16z\"></path></svg></div><h3 class=\"font-bold mb-2\">Rune</h3><p class=\"text-sm text-[var(--text-secondary)]\">Reactive state container that notifies subscribers on change.</p></div><div class=\"p-6 rounded-2xl bg-[var(--bg-secondary)] border border-[var(--border)]\"><div class=\"w-10 h-10 rounded-xl bg-[var(--accent-secondary)]/10 flex items-center justify-center text-[var(--accent-secondary)] mb-4\"><svg xmlns=\"http://www.w3.org/2000/svg\" width=\"20\" height=\"20\" viewBox=\"0 0 24 24\" fill=\"none\" stroke=\"currentColor\" stroke-width=\"2\" stroke-linecap=\"round\" stroke-linejoin=\"round\"><path d=\"m18 16 4-4-4-4\"></path><path d=\"m6 8-4 4 4 4\"></path><path d=\"m14.5 4-5 16\"></path></svg></div><h3 class=\"font-bold mb-2\">Derived</h3><p class=\"text-sm text-[var(--text-secondary)]\">Computed values that auto-update when dependencies change.</p></div><div class=\"p-6 rounded-2xl bg-[var(--bg-secondary)] border border-[var(--border)]\"><div class=\"w-10 h-10 rounded-xl bg-amber-500/10 flex items-center justify-center text-amber-500 mb-4\"><svg xmlns=\"http://www.w3.org/2000/svg\" width=\"20\" height=\"20\" viewBox=\"0 0 24 24\" fill=\"none\" stroke=\"currentColor\" stroke-width=\"2\" stroke-linecap=\"round\" stroke-linejoin=\"round\"><path d=\"M13 2 3 14h9l-1 8 10-12h-9l1-8z\"></path></svg></div><h3 class=\"font-bold mb-2\">Effect</h3><p class=\"text-sm text-[var(--text-secondary)]\">Side effects that run in response to state changes.</p></div></div></section><section class=\"space-y-6\"><h2 class=\"text-2xl font-bold\">Topics</h2><div class=\"grid md:grid-cols-2 gap-4\"><a href=\"/docs/reactive-primitives/go\" class=\"p-6 rounded-2xl bg-[var(--bg-secondary)] border border-[var(--border)] hover:border-[var(--accent-primary)]/50 transition-all group\"><h3 class=\"font-bold mb-2 group-hover:text-[var(--accent-primary)]\">Go Primitives</h3><p class=\"text-sm text-[var(--text-secondary)]\">Thread-safe server-side primitives: Rune, Derived, Effect, and StateMap.</p></a> <a href=\"/docs/reactive-primitives/ts\" class=\"p-6 rounded-2xl bg-[var(--bg-secondary)] border border-[var(--border)] hover:border-[var(--accent-primary)]/50 transition-all group\"><h3 class=\"font-bold mb-2 group-hover:text-[var(--accent-primary)]\">TypeScript Primitives</h3><p class=\"text-sm text-[var(--text-secondary)]\">Client-side primitives that mirror the server API with DOM integration.</p></a> <a href=\"/docs/reactive-primitives/advanced\" class=\"p-6 rounded-2xl bg-[var(--bg-secondary)] border border-[var(--border)] hover:border-[var(--accent-primary)]/50 transition-all group\"><h3 class=\"font-bold mb-2 group-hover:text-[var(--accent-primary)]\">Advanced Types</h3><p class=\"text-sm text-[var(--text-secondary)]\">Resource, RuneRaw, PreEffect, EffectRoot, and complete API reference.</p></a></div></section></div>")
 		if templ_7745c5c3_Err != nil {
 			return templ_7745c5c3_Err
 		}

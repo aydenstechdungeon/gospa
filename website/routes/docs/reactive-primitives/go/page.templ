@@ -1,0 +1,134 @@
+package golang
+
+import "github.com/aydenstechdungeon/gospa/website/components"
+
+templ Page() {
+	<div class="space-y-12">
+		<header>
+			<h1 class="text-4xl font-bold tracking-tight mb-4">Go Primitives</h1>
+			<p class="text-xl text-[var(--text-secondary)] leading-relaxed">
+				Server-side reactive primitives that are thread-safe and designed for concurrent access in Go handlers and components.
+			</p>
+		</header>
+
+		<section class="space-y-6">
+			<h2 class="text-2xl font-bold" id="rune">Rune</h2>
+			@components.CodeBlock(`import "github.com/aydenstechdungeon/gospa"
+
+// Create a new rune with initial value
+count := gospa.NewRune(0)
+
+// Get value
+value := count.Get()
+
+// Set value
+count.Set(5)
+
+// Update with function
+count.Update(func(v int) int {
+    return v + 1
+})
+
+// Subscribe to changes
+unsubscribe := count.Subscribe(func(newValue, oldValue int) {
+    log.Printf("Changed from %d to %d", oldValue, newValue)
+})
+
+// Unsubscribe when done
+unsubscribe()`, "go", "rune.go")
+		</section>
+
+		<section class="space-y-6">
+			<h2 class="text-2xl font-bold" id="derived">Derived</h2>
+			@components.CodeBlock(`import "github.com/aydenstechdungeon/gospa"
+
+// Create derived value from a rune
+count := gospa.NewRune(5)
+doubled := gospa.Derived(count, func(v int) int {
+    return v * 2
+})
+
+fmt.Println(doubled.Get()) // 10
+
+// Derived from multiple runes
+a := gospa.NewRune(10)
+b := gospa.NewRune(20)
+sum := gospa.Derived2(a, b, func(a, b int) int {
+    return a + b
+})
+
+fmt.Println(sum.Get()) // 30`, "go", "derived.go")
+		</section>
+
+		<section class="space-y-6">
+			<h2 class="text-2xl font-bold" id="effect">Effect</h2>
+			@components.CodeBlock(`import "github.com/aydenstechdungeon/gospa"
+
+count := gospa.NewRune(0)
+
+// Create effect that runs on changes
+effect := gospa.Effect(count, func(v int) {
+    log.Printf("Count is now: %d", v)
+})
+
+// Effect with cleanup
+effect := gospa.Effect(count, func(v int) func() {
+    log.Printf("Count changed to: %d", v)
+    return func() {
+        log.Println("Cleanup before next run")
+    }
+})
+
+// Dispose effect when done
+effect.Dispose()`, "go", "effect.go")
+		</section>
+
+		<section class="space-y-6">
+			<h2 class="text-2xl font-bold" id="statemap">StateMap</h2>
+			@components.CodeBlock(`import "github.com/aydenstechdungeon/gospa"
+
+states := gospa.NewStateMap()
+
+// Set values
+states.Set("count", 0)
+states.Set("name", "GoSPA")
+
+// Get values
+countRune := states.Get("count")
+if countRune != nil {
+    fmt.Println(countRune.Get())
+}
+
+// Serialize for client
+json := states.ToJSON()
+
+// Deserialize from client
+states.FromJSON(jsonString)
+
+// Batch updates
+states.Batch(func(m *gospa.StateMap) {
+    m.Set("a", 1)
+    m.Set("b", 2)
+})`, "go", "statemap.go")
+		</section>
+
+		<section class="space-y-6">
+			<h2 class="text-2xl font-bold" id="batch">Batch Updates</h2>
+			@components.CodeBlock(`import "github.com/aydenstechdungeon/gospa"
+
+a := gospa.NewRune(1)
+b := gospa.NewRune(2)
+
+// Batch multiple updates - subscribers notified once
+gospa.Batch(func() {
+    a.Set(10)
+    b.Set(20)
+})`, "go", "batch.go")
+		</section>
+
+		<div class="flex justify-between pt-6 border-t border-[var(--border)]">
+			<a href="/docs/reactive-primitives" class="text-sm text-[var(--text-secondary)] hover:text-[var(--accent-primary)]">← Back to Overview</a>
+			<a href="/docs/reactive-primitives/ts" class="text-sm text-[var(--accent-primary)] hover:underline">TypeScript Primitives →</a>
+		</div>
+	</div>
+}

@@ -1,0 +1,177 @@
+package patterns
+
+import "github.com/aydenstechdungeon/gospa/website/components"
+
+templ Page() {
+	<div class="space-y-12">
+		<header>
+			<h1 class="text-4xl font-bold tracking-tight mb-4">State Patterns</h1>
+			<p class="text-xl text-[var(--text-secondary)] leading-relaxed">
+				Common patterns for managing state in real-world applications.
+			</p>
+		</header>
+
+		<section class="space-y-6">
+			<h2 class="text-2xl font-bold" id="form-state">Form State</h2>
+			@components.CodeBlock(`import { Rune, derived } from '@gospa/runtime';
+
+// Form state
+const form = new Rune({
+  email: '',
+  password: '',
+  remember: false
+});
+
+// Validation
+const errors = derived(() => {
+  const errs: Record<string, string> = {};
+  const f = form.get();
+  
+  if (!f.email.includes('@')) {
+    errs.email = 'Invalid email';
+  }
+  if (f.password.length < 8) {
+    errs.password = 'Password too short';
+  }
+  
+  return errs;
+});
+
+// Submit handler
+async function submit() {
+  if (Object.keys(errors.get()).length > 0) return;
+  
+  const response = await fetch('/api/login', {
+    method: 'POST',
+    body: JSON.stringify(form.get())
+  });
+  
+  // Handle response
+}`, "typescript", "form.ts")
+		</section>
+
+		<section class="space-y-6">
+			<h2 class="text-2xl font-bold" id="async-state">Async State</h2>
+			@components.CodeBlock(`import { resourceReactive, Rune } from '@gospa/runtime';
+
+const userId = new Rune(1);
+
+// Resource - async data with status
+const userResource = resourceReactive(
+  [userId],
+  async () => {
+    const res = await fetch('/api/user/' + userId.get());
+    return res.json();
+  }
+);
+
+// Status tracking
+console.log(userResource.status);     // 'idle' | 'pending' | 'success' | 'error'
+console.log(userResource.isPending);  // boolean
+console.log(userResource.data);       // T | undefined
+console.log(userResource.error);      // Error | undefined
+
+// Refetch
+await userResource.refetch();`, "typescript", "async.ts")
+		</section>
+
+		<section class="space-y-6">
+			<h2 class="text-2xl font-bold" id="global-state">Global State</h2>
+			@components.CodeBlock(`// store.svelte.ts
+import { Rune, derived } from '@gospa/runtime';
+
+// Global store
+export const user = new Rune<User | null>(null);
+export const theme = new Rune<'light' | 'dark'>('light');
+
+// Derived from global
+export const isAuthenticated = derived(() => user.get() !== null);
+export const userName = derived(() => user.get()?.name ?? 'Guest');
+
+// Actions
+export function login(userData: User) {
+  user.set(userData);
+}
+
+export function logout() {
+  user.set(null);
+}
+
+export function toggleTheme() {
+  theme.update(t => t === 'light' ? 'dark' : 'light');
+}`, "typescript", "global.ts")
+		</section>
+
+		<section class="space-y-6">
+			<h2 class="text-2xl font-bold" id="utilities">Utility Functions</h2>
+			
+			<div class="grid md:grid-cols-2 gap-4">
+				<div class="p-4 rounded-xl bg-[var(--bg-secondary)] border border-[var(--border)]">
+					<h4 class="font-mono text-sm text-[var(--accent-primary)] mb-2">batch(fn)</h4>
+					<p class="text-sm text-[var(--text-secondary)]">Combine multiple updates into single notification.</p>
+				</div>
+				<div class="p-4 rounded-xl bg-[var(--bg-secondary)] border border-[var(--border)]">
+					<h4 class="font-mono text-sm text-[var(--accent-primary)] mb-2">untrack(fn)</h4>
+					<p class="text-sm text-[var(--text-secondary)]">Read values without creating dependencies.</p>
+				</div>
+				<div class="p-4 rounded-xl bg-[var(--bg-secondary)] border border-[var(--border)]">
+					<h4 class="font-mono text-sm text-[var(--accent-primary)] mb-2">watch(sources, fn)</h4>
+					<p class="text-sm text-[var(--text-secondary)]">Watch multiple sources for changes.</p>
+				</div>
+				<div class="p-4 rounded-xl bg-[var(--bg-secondary)] border border-[var(--border)]">
+					<h4 class="font-mono text-sm text-[var(--accent-primary)] mb-2">inspect(value)</h4>
+					<p class="text-sm text-[var(--text-secondary)]">Debug reactive values (dev only).</p>
+				</div>
+			</div>
+
+			@components.CodeBlock(`import { batch, untrack, watch, inspect } from '@gospa/runtime';
+
+const a = new Rune(1);
+const b = new Rune(2);
+
+// Batch - single notification
+batch(() => {
+  a.set(10);
+  b.set(20);
+});
+
+// Untrack - don't track dependency
+effect(() => {
+  console.log('A:', a.get());
+  untrack(() => {
+    console.log('B (untracked):', b.get());
+  });
+  // Only re-runs when a changes, not b
+});
+
+// Watch multiple sources
+const unsub = watch([a, b], (values, oldValues) => {
+  console.log('Changed:', { from: oldValues, to: values });
+});
+
+// Debug (dev only)
+inspect(a);
+inspect(a).with((type, value) => {
+  if (type === 'update') {
+    console.log('Updated to:', value);
+  }
+});`, "typescript", "utilities.ts")
+		</section>
+
+		<div class="bg-gradient-to-r from-[var(--bg-secondary)] to-[var(--bg-tertiary)] p-8 rounded-3xl border border-[var(--border)] shadow-inner">
+			<h3 class="text-lg font-bold mb-4">Best Practices</h3>
+			<ul class="space-y-2 text-sm text-[var(--text-secondary)]">
+				<li>• <strong>Server as source of truth</strong> - Use synced runes for shared state</li>
+				<li>• <strong>Derive when possible</strong> - Use derived instead of duplicating state</li>
+				<li>• <strong>Batch updates</strong> - Use batch() for multiple related changes</li>
+				<li>• <strong>Clean up effects</strong> - Dispose effects when components unmount</li>
+				<li>• <strong>Keep state minimal</strong> - Store only what's needed</li>
+			</ul>
+		</div>
+
+		<div class="flex justify-between pt-6 border-t border-[var(--border)]">
+			<a href="/docs/state-management/sync" class="text-sm text-[var(--text-secondary)] hover:text-[var(--accent-primary)]">← Synchronization</a>
+			<a href="/docs/state-management" class="text-sm text-[var(--accent-primary)] hover:underline">Back to Overview →</a>
+		</div>
+	</div>
+}

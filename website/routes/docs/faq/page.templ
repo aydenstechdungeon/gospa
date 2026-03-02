@@ -1,0 +1,180 @@
+package faq
+
+import "github.com/aydenstechdungeon/gospa/website/components"
+
+templ Page() {
+	<div class="space-y-12">
+		<header>
+			<h1 class="text-4xl font-bold tracking-tight mb-4">FAQ & Troubleshooting</h1>
+			<p class="text-xl text-[var(--text-secondary)] leading-relaxed">
+				Common questions and solutions to frequent issues.
+			</p>
+		</header>
+
+		<div class="flex flex-wrap gap-2 p-4 rounded-2xl bg-[var(--bg-secondary)] border border-[var(--border)]">
+			<a href="#general" class="text-sm font-medium hover:text-[var(--accent-primary)] transition-colors">General</a>
+			<a href="#errors" class="text-sm font-medium hover:text-[var(--accent-primary)] transition-colors">Common Errors</a>
+			<a href="#websocket" class="text-sm font-medium hover:text-[var(--accent-primary)] transition-colors">WebSocket</a>
+			<a href="#performance" class="text-sm font-medium hover:text-[var(--accent-primary)] transition-colors">Performance</a>
+			<a href="#deployment" class="text-sm font-medium hover:text-[var(--accent-primary)] transition-colors">Deployment</a>
+		</div>
+
+		<section id="general" class="space-y-6">
+			<h2 class="text-2xl font-bold border-b border-[var(--border)] pb-2">General Questions</h2>
+			
+			@faqItem("What is GoSPA?", `
+				GoSPA is a modern framework for building reactive single-page applications using Go and Templ. 
+				It brings Svelte-like reactivity to the Go ecosystem with server-side rendering and automatic hydration.
+			`)
+			
+			@faqItem("Do I need to know JavaScript?", `
+				You can build most of your application in Go using Templ templates. However, for advanced client-side 
+				interactivity, you'll need to write some TypeScript/JavaScript using the GoSPA runtime.
+			`)
+			
+			@faqItem("Is GoSPA production-ready?", `
+				GoSPA is currently in Alpha. While stable enough for documentation projects and prototypes, 
+				APIs may change. We recommend evaluating it for production use cases and providing feedback.
+			`)
+		</section>
+
+		<section id="errors" class="space-y-6">
+			<h2 class="text-2xl font-bold border-b border-[var(--border)] pb-2">Common Errors</h2>
+			
+			@errorCard(
+				"WebSocket connection fails",
+				"Check your AllowedOrigins configuration. In production, WebSocket connections will fail if the origin isn't whitelisted.",
+				`app := gospa.New(gospa.Config{
+    AllowedOrigins: []string{"https://myapp.com"},
+})`,
+			)
+			
+			@errorCard(
+				"Hydration mismatch errors",
+				"Ensure your server and client render identical HTML. Common causes include using Math.random() or Date.now() during render.",
+				`// Bad: Different content on server vs client
+<span>{ fmt.Sprintf("%d", rand.Int()) }</span>
+
+// Good: Use reactive state instead
+<span data-bind="randomValue">0</span>`,
+			)
+			
+			@errorCard(
+				"Build fails with 'templ not found'",
+				"Make sure you have the Templ CLI installed and have run 'templ generate' before building.",
+				`go install github.com/a-h/templ/cmd/templ@latest
+cd website && templ generate`,
+			)
+			
+			@errorCard(
+				"State not syncing between clients",
+				"Ensure WebSocket is enabled and you're using BroadcastState() or synced runes.",
+				`// Server-side
+app.BroadcastState("counter", newValue)
+
+// Or use synced runes on client
+const count = syncedRune('counter', 0, wsClient)`,
+			)
+		</section>
+
+		<section id="websocket" class="space-y-6">
+			<h2 class="text-2xl font-bold border-b border-[var(--border)] pb-2">WebSocket Issues</h2>
+			
+			@faqItem("Why do WebSocket connections drop immediately?", `
+				This usually happens when the WebSocket upgrade fails. Check:
+				• CORS settings - ensure AllowedOrigins includes your domain
+				• Middleware order - WS middleware should be added before routes
+				• Proxy configuration - if behind Nginx/Apache, enable WebSocket proxying
+			`)
+			
+			@faqItem("How do I debug WebSocket messages?", `
+				Enable debug mode in your config and check browser DevTools Network tab:
+			`)
+			@components.CodeBlock(`app := gospa.New(gospa.Config{
+    DevMode: true,
+})
+
+// In browser console
+GoSPA.setLogLevel('debug')`, "javascript", "debug.js")
+		</section>
+
+		<section id="performance" class="space-y-6">
+			<h2 class="text-2xl font-bold border-b border-[var(--border)] pb-2">Performance</h2>
+			
+			@faqItem("How do I reduce bundle size?", `
+				Use the SimpleRuntime for a smaller bundle (9KB vs 25KB) if you don't need DOMPurify:
+			`)
+			@components.CodeBlock(`app := gospa.New(gospa.Config{
+    SimpleRuntime: true,
+})`, "go", "config.go")
+			
+			@faqItem("Why is my app slow on mobile?", `
+				• Enable lazy hydration: HydrationMode: "visible" or "idle"
+				• Use data-gospa-static for content that doesn't need interactivity
+				• Compress state updates with CompressState: true
+			`)
+		</section>
+
+		<section id="deployment" class="space-y-6">
+			<h2 class="text-2xl font-bold border-b border-[var(--border)] pb-2">Deployment</h2>
+			
+			@faqItem("How do I deploy to Fly.io?", `
+				Use the included fly.toml as a starting point. Key considerations:
+				• Use the internal port 3000
+				• Enable WebSocket support in fly.toml
+			`)
+			@components.CodeBlock(`[[services]]
+  internal_port = 3000
+  protocol = "tcp"
+  
+  [[services.ports]]
+    handlers = ["http"]
+    port = 80
+    
+  [[services.ports]]
+    handlers = ["tls", "http"]
+    port = 443`, "toml", "fly.toml")
+			
+			@faqItem("Docker build fails", `
+				Ensure your Dockerfile includes the Templ generation step:
+			`)
+			@components.CodeBlock(`RUN go install github.com/a-h/templ/cmd/templ@latest
+RUN templ generate
+RUN go build -o app .`, "dockerfile", "Dockerfile")
+		</section>
+
+		<div class="bg-[var(--bg-secondary)] border border-[var(--border)] p-6 rounded-2xl mt-12">
+			<h3 class="font-bold mb-2">Still need help?</h3>
+			<p class="text-sm text-[var(--text-secondary)]">
+				• Check the <a href="/docs" class="text-[var(--accent-primary)] hover:underline">Documentation</a><br/>
+				• Join our Discord community<br/>
+				• Open an issue on <a href="https://github.com/aydenstechdungeon/gospa" class="text-[var(--accent-primary)] hover:underline">GitHub</a>
+			</p>
+		</div>
+	</div>
+}
+
+templ faqItem(question, answer string) {
+	<div class="border-l-4 border-[var(--border)] pl-6 py-2 hover:border-[var(--accent-primary)] transition-colors">
+		<h3 class="font-bold text-lg mb-2">{ question }</h3>
+		<p class="text-[var(--text-secondary)]">{ answer }</p>
+	</div>
+}
+
+templ errorCard(title, description, solution string) {
+	<div class="bg-red-500/5 border border-red-500/20 rounded-xl p-6">
+		<div class="flex items-center gap-2 mb-3">
+			<svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="text-red-400">
+				<circle cx="12" cy="12" r="10"></circle>
+				<line x1="12" x2="12" y1="8" y2="12"></line>
+				<line x1="12" x2="12.01" y1="16" y2="16"></line>
+			</svg>
+			<h3 class="font-bold text-red-200">{ title }</h3>
+		</div>
+		<p class="text-sm text-[var(--text-secondary)] mb-4">{ description }</p>
+		<div class="bg-[var(--bg-primary)] rounded-lg p-4">
+			<div class="text-xs text-[var(--text-muted)] uppercase tracking-wider mb-2">Solution</div>
+			<pre class="text-sm text-green-300 overflow-x-auto"><code>{ solution }</code></pre>
+		</div>
+	</div>
+}

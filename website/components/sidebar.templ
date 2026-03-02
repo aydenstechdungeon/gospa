@@ -40,8 +40,19 @@ templ SidebarContent(currentPath string) {
 
 		@sidebarSection("Core Concepts", []NavItem{
 			{Label: "Reactive Primitives", Href: "/docs/reactive-primitives"},
+			{Label: "— Go", Href: "/docs/reactive-primitives/go"},
+			{Label: "— TypeScript", Href: "/docs/reactive-primitives/ts"},
+			{Label: "— Advanced", Href: "/docs/reactive-primitives/advanced"},
 			{Label: "File-Based Routing", Href: "/docs/routing"},
+			{Label: "— Layouts", Href: "/docs/routing/layouts"},
+			{Label: "— Dynamic Routes", Href: "/docs/routing/dynamic"},
+			{Label: "— API Routes", Href: "/docs/routing/api"},
+			{Label: "— Navigation", Href: "/docs/routing/navigation"},
 			{Label: "State Management", Href: "/docs/state-management"},
+			{Label: "— Server State", Href: "/docs/state-management/server"},
+			{Label: "— Client State", Href: "/docs/state-management/client"},
+			{Label: "— Sync", Href: "/docs/state-management/sync"},
+			{Label: "— Patterns", Href: "/docs/state-management/patterns"},
 			{Label: "Components", Href: "/docs/components"},
 			{Label: "Route Parameters", Href: "/docs/params"},
 			{Label: "Rendering Strategies", Href: "/docs/rendering"},
@@ -79,9 +90,18 @@ templ SidebarContent(currentPath string) {
 
 		@sidebarSection("Reference", []NavItem{
 			{Label: "Go API", Href: "/docs/api"},
+			{Label: "— Core", Href: "/docs/api/core"},
+			{Label: "— State", Href: "/docs/api/state"},
+			{Label: "— Routing", Href: "/docs/api/routing"},
+			{Label: "— Fiber", Href: "/docs/api/fiber"},
+			{Label: "— Client", Href: "/docs/api/client"},
 			{Label: "Configuration", Href: "/docs/configuration"},
+			{Label: "— Basic", Href: "/docs/configuration/basic"},
+			{Label: "— WebSocket", Href: "/docs/configuration/websocket"},
+			{Label: "— Scaling", Href: "/docs/configuration/scaling"},
 			{Label: "Runtime Selection", Href: "/docs/runtime"},
 			{Label: "CLI Reference", Href: "/docs/cli"},
+			{Label: "FAQ", Href: "/docs/faq"},
 		}, currentPath)
 
 		@sidebarSection("LLM Support", []NavItem{

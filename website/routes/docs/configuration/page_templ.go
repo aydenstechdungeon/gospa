@@ -31,7 +31,7 @@ func Page() templ.Component {
 			templ_7745c5c3_Var1 = templ.NopComponent
 		}
 		ctx = templ.ClearChildren(ctx)
-		templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 1, "<div class=\"space-y-8\"><div><h1 class=\"text-3xl font-bold text-[var(--text-primary)] mb-4\">Configuration Reference</h1><p class=\"text-[var(--text-secondary)] text-lg\">Complete reference for all gospa.Config options. This is the single source of truth for configuring your GoSPA application.</p></div><section class=\"space-y-4\"><h2 class=\"text-2xl font-semibold text-[var(--text-primary)]\">Quick Reference</h2>")
+		templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 1, "<div class=\"space-y-10\"><header><h1 class=\"text-4xl font-bold tracking-tight mb-4 text-transparent bg-clip-text bg-gradient-to-r from-[var(--accent-primary)] to-[var(--accent-secondary)]\">Configuration</h1><p class=\"text-xl text-[var(--text-secondary)] leading-relaxed\">Complete reference for all gospa.Config options. Configure your GoSPA application for development, production, and scale.</p></header><section class=\"space-y-4\"><h2 class=\"text-2xl font-bold\">Quick Start</h2>")
 		if templ_7745c5c3_Err != nil {
 			return templ_7745c5c3_Err
 		}
@@ -43,95 +43,7 @@ func Page() templ.Component {
 		if templ_7745c5c3_Err != nil {
 			return templ_7745c5c3_Err
 		}
-		templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 2, "</section><section class=\"space-y-4\"><h2 class=\"text-2xl font-semibold text-[var(--text-primary)]\">Basic Options</h2><div class=\"overflow-x-auto\"><table class=\"w-full text-sm border border-[var(--border)] rounded-lg\"><thead class=\"bg-[var(--bg-tertiary)]\"><tr><th class=\"px-4 py-2 text-left font-semibold\">Option</th><th class=\"px-4 py-2 text-left font-semibold\">Type</th><th class=\"px-4 py-2 text-left font-semibold\">Default</th><th class=\"px-4 py-2 text-left font-semibold\">Description</th></tr></thead> <tbody class=\"divide-y divide-[var(--border)]\"><tr><td class=\"px-4 py-2 font-mono text-[var(--accent-primary)]\">RoutesDir</td><td class=\"px-4 py-2\">string</td><td class=\"px-4 py-2\">\"./routes\"</td><td class=\"px-4 py-2\">Directory containing route files</td></tr><tr><td class=\"px-4 py-2 font-mono text-[var(--accent-primary)]\">RoutesFS</td><td class=\"px-4 py-2\">fs.FS</td><td class=\"px-4 py-2\">nil</td><td class=\"px-4 py-2\">Filesystem for routes (takes precedence over RoutesDir)</td></tr><tr><td class=\"px-4 py-2 font-mono text-[var(--accent-primary)]\">DevMode</td><td class=\"px-4 py-2\">bool</td><td class=\"px-4 py-2\">false</td><td class=\"px-4 py-2\">Enable development features</td></tr><tr><td class=\"px-4 py-2 font-mono text-[var(--accent-primary)]\">RuntimeScript</td><td class=\"px-4 py-2\">string</td><td class=\"px-4 py-2\">\"/_gospa/runtime.js\"</td><td class=\"px-4 py-2\">Path to client runtime script</td></tr><tr><td class=\"px-4 py-2 font-mono text-[var(--accent-primary)]\">StaticDir</td><td class=\"px-4 py-2\">string</td><td class=\"px-4 py-2\">\"./static\"</td><td class=\"px-4 py-2\">Directory for static files</td></tr><tr><td class=\"px-4 py-2 font-mono text-[var(--accent-primary)]\">StaticPrefix</td><td class=\"px-4 py-2\">string</td><td class=\"px-4 py-2\">\"/static\"</td><td class=\"px-4 py-2\">URL prefix for static files</td></tr><tr><td class=\"px-4 py-2 font-mono text-[var(--accent-primary)]\">AppName</td><td class=\"px-4 py-2\">string</td><td class=\"px-4 py-2\">\"GoSPA App\"</td><td class=\"px-4 py-2\">Application name</td></tr></tbody></table></div></section><section class=\"space-y-4\"><h2 class=\"text-2xl font-semibold text-[var(--text-primary)]\">State Options</h2><div class=\"overflow-x-auto\"><table class=\"w-full text-sm border border-[var(--border)] rounded-lg\"><thead class=\"bg-[var(--bg-tertiary)]\"><tr><th class=\"px-4 py-2 text-left font-semibold\">Option</th><th class=\"px-4 py-2 text-left font-semibold\">Type</th><th class=\"px-4 py-2 text-left font-semibold\">Default</th><th class=\"px-4 py-2 text-left font-semibold\">Description</th></tr></thead> <tbody class=\"divide-y divide-[var(--border)]\"><tr><td class=\"px-4 py-2 font-mono text-[var(--accent-primary)]\">DefaultState</td><td class=\"px-4 py-2\">map[string]interface</td><td class=\"px-4 py-2\"></td><td class=\"px-4 py-2\">Initial state for new sessions</td></tr><tr><td class=\"px-4 py-2 font-mono text-[var(--accent-primary)]\">StateSerializer</td><td class=\"px-4 py-2\">StateSerializerFunc</td><td class=\"px-4 py-2\">JSON</td><td class=\"px-4 py-2\">Custom state serialization function</td></tr><tr><td class=\"px-4 py-2 font-mono text-[var(--accent-primary)]\">StateDeserializer</td><td class=\"px-4 py-2\">StateDeserializerFunc</td><td class=\"px-4 py-2\">JSON</td><td class=\"px-4 py-2\">Custom state deserialization function</td></tr></tbody></table></div></section><section class=\"space-y-4\"><h2 class=\"text-2xl font-semibold text-[var(--text-primary)]\">WebSocket Options</h2><div class=\"overflow-x-auto\"><table class=\"w-full text-sm border border-[var(--border)] rounded-lg\"><thead class=\"bg-[var(--bg-tertiary)]\"><tr><th class=\"px-4 py-2 text-left font-semibold\">Option</th><th class=\"px-4 py-2 text-left font-semibold\">Type</th><th class=\"px-4 py-2 text-left font-semibold\">Default</th><th class=\"px-4 py-2 text-left font-semibold\">Description</th></tr></thead> <tbody class=\"divide-y divide-[var(--border)]\"><tr><td class=\"px-4 py-2 font-mono text-[var(--accent-primary)]\">EnableWebSocket</td><td class=\"px-4 py-2\">bool</td><td class=\"px-4 py-2\">true</td><td class=\"px-4 py-2\">Enable WebSocket support</td></tr><tr><td class=\"px-4 py-2 font-mono text-[var(--accent-primary)]\">WebSocketPath</td><td class=\"px-4 py-2\">string</td><td class=\"px-4 py-2\">\"/_gospa/ws\"</td><td class=\"px-4 py-2\">WebSocket endpoint path</td></tr><tr><td class=\"px-4 py-2 font-mono text-[var(--accent-primary)]\">WebSocketMiddleware</td><td class=\"px-4 py-2\">fiber.Handler</td><td class=\"px-4 py-2\">nil</td><td class=\"px-4 py-2\">Middleware before WebSocket upgrade</td></tr><tr><td class=\"px-4 py-2 font-mono text-[var(--accent-primary)]\">WSReconnectDelay</td><td class=\"px-4 py-2\">time.Duration</td><td class=\"px-4 py-2\">0</td><td class=\"px-4 py-2\">Initial reconnect delay</td></tr><tr><td class=\"px-4 py-2 font-mono text-[var(--accent-primary)]\">WSMaxReconnect</td><td class=\"px-4 py-2\">int</td><td class=\"px-4 py-2\">0</td><td class=\"px-4 py-2\">Max reconnect attempts (0 = unlimited)</td></tr><tr><td class=\"px-4 py-2 font-mono text-[var(--accent-primary)]\">WSHeartbeat</td><td class=\"px-4 py-2\">time.Duration</td><td class=\"px-4 py-2\">0</td><td class=\"px-4 py-2\">Heartbeat interval</td></tr><tr><td class=\"px-4 py-2 font-mono text-[var(--accent-primary)]\">WSMaxMessageSize</td><td class=\"px-4 py-2\">int</td><td class=\"px-4 py-2\">65536</td><td class=\"px-4 py-2\">Max WebSocket payload size in bytes</td></tr><tr><td class=\"px-4 py-2 font-mono text-[var(--accent-primary)]\">WSConnRateLimit</td><td class=\"px-4 py-2\">float64</td><td class=\"px-4 py-2\">0.2</td><td class=\"px-4 py-2\">Websocket connection refill rate per sec</td></tr><tr><td class=\"px-4 py-2 font-mono text-[var(--accent-primary)]\">WSConnBurst</td><td class=\"px-4 py-2\">float64</td><td class=\"px-4 py-2\">5.0</td><td class=\"px-4 py-2\">Websocket connection burst capacity</td></tr></tbody></table></div><div class=\"mt-4 p-4 rounded-xl bg-blue-500/5 border border-blue-500/20 text-sm text-[var(--text-secondary)]\"><h4 class=\"font-bold mb-1 text-[var(--text-primary)]\">ℹ️ Built-in Rate Limiting</h4>To prevent DoS attacks, GoSPA applies a fixed token-bucket rate limiter to all WebSocket connection upgrades per-IP. The limits allow a burst of <code class=\"font-mono text-[var(--accent-primary)]\">WSConnBurst</code> connections, dropping sequentially until the <code class=\"font-mono text-[var(--accent-primary)]\">WSConnRateLimit</code> recovers. If a client exceeds this, they receive an HTTP 429 Too Many Requests.</div></section><section class=\"space-y-4\"><h2 class=\"text-2xl font-semibold text-[var(--text-primary)]\">Performance Options</h2><div class=\"overflow-x-auto\"><table class=\"w-full text-sm border border-[var(--border)] rounded-lg\"><thead class=\"bg-[var(--bg-tertiary)]\"><tr><th class=\"px-4 py-2 text-left font-semibold\">Option</th><th class=\"px-4 py-2 text-left font-semibold\">Type</th><th class=\"px-4 py-2 text-left font-semibold\">Default</th><th class=\"px-4 py-2 text-left font-semibold\">Description</th></tr></thead> <tbody class=\"divide-y divide-[var(--border)]\"><tr><td class=\"px-4 py-2 font-mono text-[var(--accent-primary)]\">CompressState</td><td class=\"px-4 py-2\">bool</td><td class=\"px-4 py-2\">false</td><td class=\"px-4 py-2\">Compress WebSocket messages</td></tr><tr><td class=\"px-4 py-2 font-mono text-[var(--accent-primary)]\">StateDiffing</td><td class=\"px-4 py-2\">bool</td><td class=\"px-4 py-2\">false</td><td class=\"px-4 py-2\">Only send state diffs over WebSocket</td></tr><tr><td class=\"px-4 py-2 font-mono text-[var(--accent-primary)]\">CacheTemplates</td><td class=\"px-4 py-2\">bool</td><td class=\"px-4 py-2\">false</td><td class=\"px-4 py-2\">Cache compiled templates</td></tr><tr><td class=\"px-4 py-2 font-mono text-[var(--accent-primary)]\">SimpleRuntime</td><td class=\"px-4 py-2\">bool</td><td class=\"px-4 py-2\">false</td><td class=\"px-4 py-2\">Use lightweight runtime without DOMPurify</td></tr><tr><td class=\"px-4 py-2 font-mono text-[var(--accent-primary)]\">SimpleRuntimeSVGs</td><td class=\"px-4 py-2\">bool</td><td class=\"px-4 py-2\">false</td><td class=\"px-4 py-2\">Allow SVG/math in simple runtime (security risk)</td></tr></tbody></table></div></section><section class=\"space-y-4\"><h2 class=\"text-2xl font-semibold text-[var(--text-primary)]\">Hydration Options</h2><div class=\"overflow-x-auto\"><table class=\"w-full text-sm border border-[var(--border)] rounded-lg\"><thead class=\"bg-[var(--bg-tertiary)]\"><tr><th class=\"px-4 py-2 text-left font-semibold\">Option</th><th class=\"px-4 py-2 text-left font-semibold\">Type</th><th class=\"px-4 py-2 text-left font-semibold\">Default</th><th class=\"px-4 py-2 text-left font-semibold\">Description</th></tr></thead> <tbody class=\"divide-y divide-[var(--border)]\"><tr><td class=\"px-4 py-2 font-mono text-[var(--accent-primary)]\">HydrationMode</td><td class=\"px-4 py-2\">string</td><td class=\"px-4 py-2\">\"\"</td><td class=\"px-4 py-2\">Hydration strategy: \"immediate\", \"lazy\", \"visible\", \"idle\"</td></tr><tr><td class=\"px-4 py-2 font-mono text-[var(--accent-primary)]\">HydrationTimeout</td><td class=\"px-4 py-2\">int</td><td class=\"px-4 py-2\">0</td><td class=\"px-4 py-2\">Milliseconds before force hydrate</td></tr></tbody></table></div></section><section class=\"space-y-4\"><h2 class=\"text-2xl font-semibold text-[var(--text-primary)]\">Routing Options</h2><div class=\"overflow-x-auto\"><table class=\"w-full text-sm border border-[var(--border)] rounded-lg\"><thead class=\"bg-[var(--bg-tertiary)]\"><tr><th class=\"px-4 py-2 text-left font-semibold\">Option</th><th class=\"px-4 py-2 text-left font-semibold\">Type</th><th class=\"px-4 py-2 text-left font-semibold\">Default</th><th class=\"px-4 py-2 text-left font-semibold\">Description</th></tr></thead> <tbody class=\"divide-y divide-[var(--border)]\"><tr><td class=\"px-4 py-2 font-mono text-[var(--accent-primary)]\">DisableSPA</td><td class=\"px-4 py-2\">bool</td><td class=\"px-4 py-2\">false</td><td class=\"px-4 py-2\">Disable SPA navigation completely</td></tr><tr><td class=\"px-4 py-2 font-mono text-[var(--accent-primary)]\">IgnoredExtensions</td><td class=\"px-4 py-2\">[]string</td><td class=\"px-4 py-2\">nil</td><td class=\"px-4 py-2\">List of file extensions the SPA router should ignore (overwrites default)</td></tr><tr><td class=\"px-4 py-2 font-mono text-[var(--accent-primary)]\">AppendIgnoredExtensions</td><td class=\"px-4 py-2\">[]string</td><td class=\"px-4 py-2\">nil</td><td class=\"px-4 py-2\">List of file extensions to add to the default list</td></tr><tr><td class=\"px-4 py-2 font-mono text-[var(--accent-primary)]\">SSR</td><td class=\"px-4 py-2\">bool</td><td class=\"px-4 py-2\">false</td><td class=\"px-4 py-2\">Global SSR mode</td></tr></tbody></table></div></section><section class=\"space-y-4\"><h2 class=\"text-2xl font-semibold text-[var(--text-primary)]\">Distributed & Scaling Options</h2><div class=\"overflow-x-auto\"><table class=\"w-full text-sm border border-[var(--border)] rounded-lg\"><thead class=\"bg-[var(--bg-tertiary)]\"><tr><th class=\"px-4 py-2 text-left font-semibold\">Option</th><th class=\"px-4 py-2 text-left font-semibold\">Type</th><th class=\"px-4 py-2 text-left font-semibold\">Default</th><th class=\"px-4 py-2 text-left font-semibold\">Description</th></tr></thead> <tbody class=\"divide-y divide-[var(--border)]\"><tr><td class=\"px-4 py-2 font-mono text-[var(--accent-primary)]\">Prefork</td><td class=\"px-4 py-2\">bool</td><td class=\"px-4 py-2\">false</td><td class=\"px-4 py-2\">Enables Fiber Prefork</td></tr><tr><td class=\"px-4 py-2 font-mono text-[var(--accent-primary)]\">Storage</td><td class=\"px-4 py-2\">store.Storage</td><td class=\"px-4 py-2\">memory</td><td class=\"px-4 py-2\">External Key-Value store (e.g. Redis) for Sessions/State</td></tr><tr><td class=\"px-4 py-2 font-mono text-[var(--accent-primary)]\">PubSub</td><td class=\"px-4 py-2\">store.PubSub</td><td class=\"px-4 py-2\">memory</td><td class=\"px-4 py-2\">External broker (e.g. Redis PubSub) for broadcasts</td></tr></tbody></table></div></section><section class=\"space-y-4\"><h2 class=\"text-2xl font-semibold text-[var(--text-primary)]\">Remote Action Options</h2><div class=\"overflow-x-auto\"><table class=\"w-full text-sm border border-[var(--border)] rounded-lg\"><thead class=\"bg-[var(--bg-tertiary)]\"><tr><th class=\"px-4 py-2 text-left font-semibold\">Option</th><th class=\"px-4 py-2 text-left font-semibold\">Type</th><th class=\"px-4 py-2 text-left font-semibold\">Default</th><th class=\"px-4 py-2 text-left font-semibold\">Description</th></tr></thead> <tbody class=\"divide-y divide-[var(--border)]\"><tr><td class=\"px-4 py-2 font-mono text-[var(--accent-primary)]\">MaxRequestBodySize</td><td class=\"px-4 py-2\">int</td><td class=\"px-4 py-2\">4194304 (4MB)</td><td class=\"px-4 py-2\">Max size for remote action request bodies</td></tr><tr><td class=\"px-4 py-2 font-mono text-[var(--accent-primary)]\">RemotePrefix</td><td class=\"px-4 py-2\">string</td><td class=\"px-4 py-2\">\"/_gospa/remote\"</td><td class=\"px-4 py-2\">Prefix for remote action endpoints</td></tr></tbody></table></div></section><section class=\"space-y-4\"><h2 class=\"text-2xl font-semibold text-[var(--text-primary)]\">Security Options</h2><div class=\"overflow-x-auto\"><table class=\"w-full text-sm border border-[var(--border)] rounded-lg\"><thead class=\"bg-[var(--bg-tertiary)]\"><tr><th class=\"px-4 py-2 text-left font-semibold\">Option</th><th class=\"px-4 py-2 text-left font-semibold\">Type</th><th class=\"px-4 py-2 text-left font-semibold\">Default</th><th class=\"px-4 py-2 text-left font-semibold\">Description</th></tr></thead> <tbody class=\"divide-y divide-[var(--border)]\"><tr><td class=\"px-4 py-2 font-mono text-[var(--accent-primary)]\">AllowedOrigins</td><td class=\"px-4 py-2\">[]string</td><td class=\"px-4 py-2\">[]</td><td class=\"px-4 py-2\">Allowed CORS origins</td></tr><tr><td class=\"px-4 py-2 font-mono text-[var(--accent-primary)]\">EnableCSRF</td><td class=\"px-4 py-2\">bool</td><td class=\"px-4 py-2\">false</td><td class=\"px-4 py-2\">Enable automatic CSRF protection</td></tr></tbody></table></div></section><section class=\"space-y-4\"><h2 class=\"text-2xl font-semibold text-[var(--text-primary)]\">Detailed Examples</h2><h3 class=\"text-xl font-semibold text-[var(--text-primary)] mt-6\">RoutesDir & RoutesFS</h3><p class=\"text-[var(--text-secondary)] mb-2\">Directory containing your .templ route files. Use RoutesFS to embed routes in the binary:</p>")
-		if templ_7745c5c3_Err != nil {
-			return templ_7745c5c3_Err
-		}
-		templ_7745c5c3_Err = components.CodeBlock(`//go:embed routes
-var routesFS embed.FS
-
-app := gospa.New(gospa.Config{
-    RoutesFS: routesFS,
-})`, "go", "main.go").Render(ctx, templ_7745c5c3_Buffer)
-		if templ_7745c5c3_Err != nil {
-			return templ_7745c5c3_Err
-		}
-		templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 3, "<h3 class=\"text-xl font-semibold text-[var(--text-primary)] mt-6\">DefaultState</h3><p class=\"text-[var(--text-secondary)] mb-2\">Initial state for new sessions, synced to the client on initial load:</p>")
-		if templ_7745c5c3_Err != nil {
-			return templ_7745c5c3_Err
-		}
-		templ_7745c5c3_Err = components.CodeBlock(`DefaultState: map[string]interface{}{
-    "user":    nil,
-    "theme":   "light",
-    "counter": 0,
-}`, "go", "main.go").Render(ctx, templ_7745c5c3_Buffer)
-		if templ_7745c5c3_Err != nil {
-			return templ_7745c5c3_Err
-		}
-		templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 4, "<h3 class=\"text-xl font-semibold text-[var(--text-primary)] mt-6\">WebSocketMiddleware</h3><p class=\"text-[var(--text-secondary)] mb-2\">Middleware that runs before WebSocket upgrade for authentication:</p>")
-		if templ_7745c5c3_Err != nil {
-			return templ_7745c5c3_Err
-		}
-		templ_7745c5c3_Err = components.CodeBlock(`WebSocketMiddleware: func(c *fiber.Ctx) error {
-    token := c.Get("Authorization")
-    if !validateToken(token) {
-        return c.Status(401).SendString("Unauthorized")
-    }
-    return c.Next()
-},`, "go", "main.go").Render(ctx, templ_7745c5c3_Buffer)
-		if templ_7745c5c3_Err != nil {
-			return templ_7745c5c3_Err
-		}
-		templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 5, "<h3 class=\"text-xl font-semibold text-[var(--text-primary)] mt-6\">HydrationMode</h3><p class=\"text-[var(--text-secondary)] mb-2\">Control when components hydrate (become interactive):</p><ul class=\"list-disc list-inside text-[var(--text-secondary)] space-y-1 mb-2\"><li><code class=\"bg-[var(--bg-tertiary)] px-1 rounded\">\"immediate\"</code> - Hydrate as soon as possible (default)</li><li><code class=\"bg-[var(--bg-tertiary)] px-1 rounded\">\"lazy\"</code> - Hydrate during browser idle time</li><li><code class=\"bg-[var(--bg-tertiary)] px-1 rounded\">\"visible\"</code> - Hydrate when component enters viewport</li><li><code class=\"bg-[var(--bg-tertiary)] px-1 rounded\">\"idle\"</code> - Hydrate when browser is idle</li></ul>")
-		if templ_7745c5c3_Err != nil {
-			return templ_7745c5c3_Err
-		}
-		templ_7745c5c3_Err = components.CodeBlock(`HydrationMode: "visible",  // Hydrate when scrolled into view
-HydrationTimeout: 2000,   // Force hydrate after 2 seconds`, "go", "main.go").Render(ctx, templ_7745c5c3_Buffer)
-		if templ_7745c5c3_Err != nil {
-			return templ_7745c5c3_Err
-		}
-		templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 6, "<h3 class=\"text-xl font-semibold text-[var(--text-primary)] mt-6\">IgnoredExtensions & AppendIgnoredExtensions</h3><p class=\"text-[var(--text-secondary)] mb-2\">Customize which file extensions the SPA router ignores. Use <code class=\"bg-[var(--bg-tertiary)] px-1 rounded\">IgnoredExtensions</code> to **replace** the default list, or <code class=\"bg-[var(--bg-tertiary)] px-1 rounded\">AppendIgnoredExtensions</code> to **add** to it:</p>")
-		if templ_7745c5c3_Err != nil {
-			return templ_7745c5c3_Err
-		}
-		templ_7745c5c3_Err = components.CodeBlock(`app := gospa.New(gospa.Config{
-    // Replace default list completely
-    IgnoredExtensions: []string{"pdf", "docx", "custom"},
-    
-    // OR just add to default list
-    AppendIgnoredExtensions: []string{"bak", "tmp"},
-})`, "go", "main.go").Render(ctx, templ_7745c5c3_Buffer)
-		if templ_7745c5c3_Err != nil {
-			return templ_7745c5c3_Err
-		}
-		templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 7, "<h3 class=\"text-xl font-semibold text-[var(--text-primary)] mt-6\">SimpleRuntimeSVGs</h3><p class=\"text-[var(--text-secondary)] mb-2\">Allow SVG and math elements in the simple runtime sanitizer. Only enable when you control ALL HTML content:</p>")
-		if templ_7745c5c3_Err != nil {
-			return templ_7745c5c3_Err
-		}
-		templ_7745c5c3_Err = components.CodeBlock(`app := gospa.New(gospa.Config{
-    RoutesDir:        "./routes",
-    SimpleRuntime:    true,
-    SimpleRuntimeSVGs: true,  // Allow SVG/math in simple runtime
-})`, "go", "main.go").Render(ctx, templ_7745c5c3_Buffer)
-		if templ_7745c5c3_Err != nil {
-			return templ_7745c5c3_Err
-		}
-		templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 8, "<div class=\"bg-red-500/10 border border-red-500/30 rounded-lg p-4 mt-4\"><p class=\"text-red-500 font-semibold\">⚠️ Security Warning</p><p class=\"text-[var(--text-secondary)]\">SVG elements can contain embedded JavaScript and event handlers (e.g., &lt;svg onload=\"alert('xss')\"&gt;). Only enable this option if you completely trust all HTML content being rendered. Never enable when rendering user-generated content. This option has no effect when using the full runtime (SimpleRuntime: false).</p></div><h3 class=\"text-xl font-semibold text-[var(--text-primary)] mt-6\">Prefork, Storage, and PubSub</h3><p class=\"text-[var(--text-secondary)] mb-2\">Used for horizontal scaling and multi-core utilization via Fiber's Prefork. If Prefork is enabled, you MUST provide external implementations for Storage and PubSub (e.g. Redis), otherwise state and WebSockets will be isolated to individual child processes.</p>")
-		if templ_7745c5c3_Err != nil {
-			return templ_7745c5c3_Err
-		}
-		templ_7745c5c3_Err = components.CodeBlock(`import "github.com/aydenstechdungeon/gospa/store/redis"
-
-app := gospa.New(gospa.Config{
-    Prefork: true,
-    Storage: redis.NewStore(rdb),
-    PubSub:  redis.NewPubSub(rdb),
-})`, "go", "main.go").Render(ctx, templ_7745c5c3_Buffer)
-		if templ_7745c5c3_Err != nil {
-			return templ_7745c5c3_Err
-		}
-		templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 9, "</section><section class=\"space-y-4\"><h2 class=\"text-2xl font-semibold text-[var(--text-primary)]\">Environment-Specific Configuration</h2><h3 class=\"text-xl font-semibold text-[var(--text-primary)] mt-6\">Development</h3>")
+		templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 2, "</section><section class=\"space-y-6\"><h2 class=\"text-2xl font-bold\">Configuration Topics</h2><div class=\"grid md:grid-cols-2 gap-4\"><a href=\"/docs/configuration/basic\" class=\"p-6 rounded-2xl bg-[var(--bg-secondary)] border border-[var(--border)] hover:border-[var(--accent-primary)]/50 transition-all group\"><h3 class=\"font-bold mb-2 group-hover:text-[var(--accent-primary)]\">Basic and State</h3><p class=\"text-sm text-[var(--text-secondary)]\">RoutesDir, DevMode, AppName, DefaultState, and serializers.</p></a> <a href=\"/docs/configuration/websocket\" class=\"p-6 rounded-2xl bg-[var(--bg-secondary)] border border-[var(--border)] hover:border-[var(--accent-primary)]/50 transition-all group\"><h3 class=\"font-bold mb-2 group-hover:text-[var(--accent-primary)]\">WebSocket and Performance</h3><p class=\"text-sm text-[var(--text-secondary)]\">WebSocket settings, compression, diffing, and caching.</p></a> <a href=\"/docs/configuration/scaling\" class=\"p-6 rounded-2xl bg-[var(--bg-secondary)] border border-[var(--border)] hover:border-[var(--accent-primary)]/50 transition-all group\"><h3 class=\"font-bold mb-2 group-hover:text-[var(--accent-primary)]\">Scaling and Security</h3><p class=\"text-sm text-[var(--text-secondary)]\">Prefork, Redis storage, CORS, CSRF, and hydration modes.</p></a></div></section><section class=\"space-y-4\"><h2 class=\"text-2xl font-bold\">Environment-Specific Examples</h2><h3 class=\"text-xl font-semibold\">Development</h3>")
 		if templ_7745c5c3_Err != nil {
 			return templ_7745c5c3_Err
 		}
@@ -139,12 +51,12 @@ app := gospa.New(gospa.Config{
     DevMode:     true,
     AppName:     "My App (Dev)",
     RoutesDir:   "./routes",
-    SimpleRuntime: false,  // Full sanitization for dev
+    SimpleRuntime: false,
 })`, "go", "main.go").Render(ctx, templ_7745c5c3_Buffer)
 		if templ_7745c5c3_Err != nil {
 			return templ_7745c5c3_Err
 		}
-		templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 10, "<h3 class=\"text-xl font-semibold text-[var(--text-primary)] mt-6\">Production</h3>")
+		templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 3, "<h3 class=\"text-xl font-semibold mt-6\">Production</h3>")
 		if templ_7745c5c3_Err != nil {
 			return templ_7745c5c3_Err
 		}
@@ -162,25 +74,7 @@ app := gospa.New(gospa.Config{
 		if templ_7745c5c3_Err != nil {
 			return templ_7745c5c3_Err
 		}
-		templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 11, "<h3 class=\"text-xl font-semibold text-[var(--text-primary)] mt-6\">High-Performance (Cluster Mode via Prefork)</h3>")
-		if templ_7745c5c3_Err != nil {
-			return templ_7745c5c3_Err
-		}
-		templ_7745c5c3_Err = components.CodeBlock(`app := gospa.New(gospa.Config{
-    DevMode:         false,
-    Prefork:         true,
-    Storage:         redis.NewStore(rdb),
-    PubSub:          redis.NewPubSub(rdb),
-    SimpleRuntime:   true,   // No DOMPurify - only if you control all content!
-    CompressState:   true,
-    StateDiffing:    true,
-    CacheTemplates:  true,
-    HydrationMode:   "lazy",
-})`, "go", "main.go").Render(ctx, templ_7745c5c3_Buffer)
-		if templ_7745c5c3_Err != nil {
-			return templ_7745c5c3_Err
-		}
-		templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 12, "</section><section class=\"space-y-4\"><h2 class=\"text-2xl font-semibold text-[var(--text-primary)]\">Complete Example</h2>")
+		templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 4, "</section><section class=\"space-y-4\"><h2 class=\"text-2xl font-bold\">Complete Example</h2>")
 		if templ_7745c5c3_Err != nil {
 			return templ_7745c5c3_Err
 		}
@@ -188,45 +82,35 @@ app := gospa.New(gospa.Config{
 
 import (
     "time"
-    "github.com/a-b-0-1-2-3-4-5/gospa"
+    "github.com/aydenstechdungeon/gospa"
 )
 
 func main() {
     app := gospa.New(gospa.Config{
-        // Basic
         RoutesDir: "./routes",
         AppName:   "My Application",
         DevMode:   true,
         
-        // State
         DefaultState: map[string]interface{}{
             "theme": "dark",
             "user":  nil,
         },
         
-        // WebSocket
         EnableWebSocket:    true,
         WebSocketPath:      "/_gospa/ws",
         WSReconnectDelay:   100 * time.Millisecond,
         WSMaxReconnect:     10,
         WSHeartbeat:        30 * time.Second,
         
-        // Performance
         CompressState:  true,
         StateDiffing:   true,
         CacheTemplates: true,
-        SimpleRuntime:  false,
         
-        // Hydration
         HydrationMode:    "visible",
         HydrationTimeout: 3000,
         
-        // Security
         AllowedOrigins: []string{"https://myapp.com"},
         EnableCSRF:     true,
-        
-        // Remote Actions
-        MaxRequestBodySize: 8 * 1024 * 1024,  // 8MB
     })
     
     if err := app.Run(":3000"); err != nil {
@@ -236,7 +120,7 @@ func main() {
 		if templ_7745c5c3_Err != nil {
 			return templ_7745c5c3_Err
 		}
-		templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 13, "</section></div>")
+		templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 5, "</section></div>")
 		if templ_7745c5c3_Err != nil {
 			return templ_7745c5c3_Err
 		}

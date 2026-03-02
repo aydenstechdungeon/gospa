@@ -1,0 +1,92 @@
+package sync
+
+import "github.com/aydenstechdungeon/gospa/website/components"
+
+templ Page() {
+	<div class="space-y-12">
+		<header>
+			<h1 class="text-4xl font-bold tracking-tight mb-4">Server-Client Sync</h1>
+			<p class="text-xl text-[var(--text-secondary)] leading-relaxed">
+				Keep state synchronized between server and clients in real-time via WebSocket.
+			</p>
+		</header>
+
+		<section class="space-y-6">
+			<h2 class="text-2xl font-bold" id="synced-rune">Synced Rune</h2>
+			<p class="text-[var(--text-secondary)]">
+				Create a rune that automatically syncs with the server via WebSocket.
+			</p>
+			@components.CodeBlock(`import { syncedRune, wsClient } from '@gospa/runtime';
+
+// Connect to WebSocket
+const ws = wsClient({
+  url: 'ws://localhost:3000/ws',
+  reconnect: true,
+  heartbeat: 30000
+});
+
+// Create synced state
+const serverCount = syncedRune({
+  key: 'count',
+  socket: ws,
+  initial: 0
+});
+
+// Changes automatically sync to server
+serverCount.set(10);  // Sends update to server
+
+// Server updates are received automatically
+// No manual refresh needed`, "typescript", "synced.ts")
+
+			<div class="p-4 mt-4 rounded-xl border border-amber-500/20 bg-amber-500/5 text-sm text-[var(--text-secondary)]">
+				<strong class="text-amber-500 font-bold block mb-1">⚠️ Sync Constraints</strong>
+				When syncing state over WebSocket:
+				<ul class="list-disc list-inside mt-2 space-y-1">
+					<li><strong>Payload Size:</strong> Single messages cannot exceed 64KB. Enable <code class="font-mono text-[var(--accent-primary)]">CompressState</code> or <code class="font-mono text-[var(--accent-primary)]">StateDiffing</code> to minimize bandwidth.</li>
+					<li><strong>Circular References:</strong> JSON serialization will fail if your state objects contain circular references. Ensure your structures are acyclic.</li>
+				</ul>
+			</div>
+		</section>
+
+		<section class="space-y-6">
+			<h2 class="text-2xl font-bold" id="websocket-config">WebSocket Configuration</h2>
+			@components.CodeBlock(`import { WSClient } from '@gospa/runtime';
+
+const client = new WSClient({
+  url: 'ws://localhost:3000/ws',
+  
+  // Reconnection
+  reconnect: true,
+  reconnectInterval: 1000,
+  maxReconnectAttempts: 10,
+  
+  // Heartbeat
+  heartbeat: 30000,
+  heartbeatTimeout: 5000,
+  
+  // Session
+  sessionId: 'user-123',
+  
+  // Event handlers
+  onOpen: () => console.log('Connected'),
+  onClose: (e) => console.log('Disconnected'),
+  onError: (e) => console.error('Error:', e),
+  onMessage: (data) => console.log('Message:', data)
+});
+
+// Control
+await client.connect();
+client.disconnect();
+client.reconnect();
+
+// Status
+console.log(client.isConnected);
+console.log(client.sessionId);`, "typescript", "wsconfig.ts")
+		</section>
+
+		<div class="flex justify-between pt-6 border-t border-[var(--border)]">
+			<a href="/docs/state-management/client" class="text-sm text-[var(--text-secondary)] hover:text-[var(--accent-primary)]">← Client-Side State</a>
+			<a href="/docs/state-management/patterns" class="text-sm text-[var(--accent-primary)] hover:underline">Patterns →</a>
+		</div>
+	</div>
+}

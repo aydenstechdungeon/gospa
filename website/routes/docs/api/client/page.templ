@@ -1,0 +1,32 @@
+package clientapi
+
+import "github.com/aydenstechdungeon/gospa/website/components"
+
+templ Page() {
+	<div class="space-y-12">
+		<header>
+			<h1 class="text-4xl font-bold tracking-tight mb-4">Client Runtime API</h1>
+			<p class="text-xl text-[var(--text-secondary)] leading-relaxed">
+				Browser-side reactive state and navigation utilities.
+			</p>
+		</header>
+
+		<section id="reactive-state" class="space-y-8">
+			<h2 class="text-2xl font-bold border-b border-[var(--border)] pb-2">Reactive State</h2>
+			@components.CodeBlock(`const count = new GoSPA.Rune(0)
+count.set(5)
+count.subscribe((v) => console.log(v))`, "javascript", "rune.js")
+		</section>
+
+		<section id="navigation" class="space-y-8">
+			<h2 class="text-2xl font-bold border-b border-[var(--border)] pb-2">Navigation</h2>
+			@components.CodeBlock(`GoSPA.navigate('/about')
+GoSPA.prefetch('/dashboard')`, "javascript", "nav.js")
+		</section>
+
+		<div class="flex justify-between mt-16 pt-8 border-t border-[var(--border)]">
+			<a href="/docs/api/fiber" class="text-[var(--text-secondary)] hover:text-[var(--accent-primary)]">← Fiber API</a>
+			<a href="/docs/api" class="text-[var(--accent-primary)]">Back to API Overview →</a>
+		</div>
+	</div>
+}

@@ -1,0 +1,100 @@
+package client
+
+import "github.com/aydenstechdungeon/gospa/website/components"
+
+templ Page() {
+	<div class="space-y-12">
+		<header>
+			<h1 class="text-4xl font-bold tracking-tight mb-4">Client-Side State</h1>
+			<p class="text-xl text-[var(--text-secondary)] leading-relaxed">
+				Reactive primitives for building interactive UIs in the browser.
+			</p>
+		</header>
+
+		<section class="space-y-6">
+			<h2 class="text-2xl font-bold" id="rune">Rune</h2>
+			<p class="text-[var(--text-secondary)]">
+				The primary reactive primitive for client-side state.
+			</p>
+			@components.CodeBlock(`import { Rune, derived, effect } from '@gospa/runtime';
+
+// Create reactive state
+const count = new Rune(0);
+const user = new Rune({ name: 'Alice', age: 30 });
+
+// Read
+console.log(count.value);  // 0
+console.log(user.get());   // { name: 'Alice', age: 30 }
+
+// Write
+count.value = 1;
+user.set({ name: 'Bob', age: 25 });
+
+// Update with function
+count.update(n => n + 1);
+user.update(u => ({ ...u, age: u.age + 1 }));
+
+// Subscribe to changes
+const unsub = count.subscribe((newVal, oldVal) => {
+  console.log('Changed:', oldVal, '->', newVal);
+});`, "typescript", "rune.ts")
+		</section>
+
+		<section class="space-y-6">
+			<h2 class="text-2xl font-bold" id="derived">Derived State</h2>
+			@components.CodeBlock(`import { Derived, derived } from '@gospa/runtime';
+
+const count = new Rune(5);
+
+// Create derived value
+const doubled = new Derived(() => count.get() * 2);
+const summary = derived(() => 'Count: ' + count.get());
+
+// Derived from multiple sources
+const a = new Rune(10);
+const b = new Rune(20);
+const sum = derived(() => a.get() + b.get());
+
+// Read
+console.log(doubled.value); // 10
+console.log(sum.value);     // 30
+
+// Derived is lazy - only computes when read
+// and re-computes when dependencies change`, "typescript", "derived.ts")
+		</section>
+
+		<section class="space-y-6">
+			<h2 class="text-2xl font-bold" id="effects">Effects</h2>
+			@components.CodeBlock(`import { Effect, effect } from '@gospa/runtime';
+
+const count = new Rune(0);
+
+// Create effect
+const myEffect = new Effect(() => {
+  console.log('Count is:', count.get());
+  
+  // Optional cleanup function
+  return () => {
+    console.log('Cleanup before next run');
+  };
+});
+
+// Effect runs immediately and re-runs when dependencies change
+
+// Control
+myEffect.pause();   // Stop reacting
+myEffect.resume();  // Resume
+myEffect.dispose(); // Permanent cleanup
+
+// Shorthand
+const dispose = effect(() => {
+  document.title = 'Count: ' + count.get();
+});`, "typescript", "effect.ts")
+		</section>
+
+		<div class="flex justify-between pt-6 border-t border-[var(--border)]">
+			<a href="/docs/state-management/server" class="text-sm text-[var(--text-secondary)] hover:text-[var(--accent-primary)]">← Server-Side State</a>
+			<a href="/docs/state-management/sync" class="text-sm text-[var(--accent-primary)] hover:underline">Synchronization →</a>
+		</div>
+	</div>
+}

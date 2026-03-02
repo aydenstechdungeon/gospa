@@ -4,49 +4,84 @@
 package routes
 
 import (
-	docsrouting "github.com/aydenstechdungeon/gospa/website/routes/docs/routing"
-	docsgetstartedquickstart "github.com/aydenstechdungeon/gospa/website/routes/docs/getstarted/quickstart"
-	"github.com/aydenstechdungeon/gospa/website/routes/docs"
-	docsparams "github.com/aydenstechdungeon/gospa/website/routes/docs/params"
-	docsclientruntimenavigationevents "github.com/aydenstechdungeon/gospa/website/routes/docs/client-runtime/navigation-events"
-	docsclientruntimewebsocket "github.com/aydenstechdungeon/gospa/website/routes/docs/client-runtime/websocket"
-	docspluginsauth "github.com/aydenstechdungeon/gospa/website/routes/docs/plugins/auth"
-	docssecurity "github.com/aydenstechdungeon/gospa/website/routes/docs/security"
-	docswebsocket "github.com/aydenstechdungeon/gospa/website/routes/docs/websocket"
-	docsclientruntimeoverview "github.com/aydenstechdungeon/gospa/website/routes/docs/client-runtime/overview"
-	docsdevtools "github.com/aydenstechdungeon/gospa/website/routes/docs/devtools"
-	docspluginspostcss "github.com/aydenstechdungeon/gospa/website/routes/docs/plugins/postcss"
-	docsruntime "github.com/aydenstechdungeon/gospa/website/routes/docs/runtime"
-	docsstatemanagement "github.com/aydenstechdungeon/gospa/website/routes/docs/state-management"
-	docspluginsvalidation "github.com/aydenstechdungeon/gospa/website/routes/docs/plugins/validation"
 	"github.com/a-h/templ"
-	docsclientruntimedombindings "github.com/aydenstechdungeon/gospa/website/routes/docs/client-runtime/dom-bindings"
-	docsislands "github.com/aydenstechdungeon/gospa/website/routes/docs/islands"
-	docsreactiveprimitives "github.com/aydenstechdungeon/gospa/website/routes/docs/reactive-primitives"
-	docssse "github.com/aydenstechdungeon/gospa/website/routes/docs/sse"
-	"github.com/aydenstechdungeon/gospa/routing"
-	docsgetstartedinstallation "github.com/aydenstechdungeon/gospa/website/routes/docs/getstarted/installation"
-	docsgetstartedstructure "github.com/aydenstechdungeon/gospa/website/routes/docs/getstarted/structure"
-	docsremoteactions "github.com/aydenstechdungeon/gospa/website/routes/docs/remote-actions"
-	docsrendering "github.com/aydenstechdungeon/gospa/website/routes/docs/rendering"
-	docspluginsseo "github.com/aydenstechdungeon/gospa/website/routes/docs/plugins/seo"
-	docspluginstailwind "github.com/aydenstechdungeon/gospa/website/routes/docs/plugins/tailwind"
-	docsapi "github.com/aydenstechdungeon/gospa/website/routes/docs/api"
-	docscli "github.com/aydenstechdungeon/gospa/website/routes/docs/cli"
-	docscomponents "github.com/aydenstechdungeon/gospa/website/routes/docs/components"
-	docsconfiguration "github.com/aydenstechdungeon/gospa/website/routes/docs/configuration"
-	docspluginsimage "github.com/aydenstechdungeon/gospa/website/routes/docs/plugins/image"
-	docspluginsqrcode "github.com/aydenstechdungeon/gospa/website/routes/docs/plugins/qrcode"
-	docsclientruntimetransitions "github.com/aydenstechdungeon/gospa/website/routes/docs/client-runtime/transitions"
+	docsdevtools "github.com/aydenstechdungeon/gospa/website/routes/docs/devtools"
 	docserrors "github.com/aydenstechdungeon/gospa/website/routes/docs/errors"
+	docsgetstartedinstallation "github.com/aydenstechdungeon/gospa/website/routes/docs/getstarted/installation"
+	docspluginstailwind "github.com/aydenstechdungeon/gospa/website/routes/docs/plugins/tailwind"
+	docsstatemanagement "github.com/aydenstechdungeon/gospa/website/routes/docs/state-management"
+	docsclientruntimetransitions "github.com/aydenstechdungeon/gospa/website/routes/docs/client-runtime/transitions"
+	docsapi "github.com/aydenstechdungeon/gospa/website/routes/docs/api"
+	docsclientruntimenavigationevents "github.com/aydenstechdungeon/gospa/website/routes/docs/client-runtime/navigation-events"
+	docspluginsvalidation "github.com/aydenstechdungeon/gospa/website/routes/docs/plugins/validation"
+	docsroutinglayouts "github.com/aydenstechdungeon/gospa/website/routes/docs/routing/layouts"
+	docswebsocket "github.com/aydenstechdungeon/gospa/website/routes/docs/websocket"
+	docsconfigurationscaling "github.com/aydenstechdungeon/gospa/website/routes/docs/configuration/scaling"
+	docsreactiveprimitivesgo "github.com/aydenstechdungeon/gospa/website/routes/docs/reactive-primitives/go"
+	docsgetstartedstructure "github.com/aydenstechdungeon/gospa/website/routes/docs/getstarted/structure"
 	docshmr "github.com/aydenstechdungeon/gospa/website/routes/docs/hmr"
+	docsapiclient "github.com/aydenstechdungeon/gospa/website/routes/docs/api/client"
+	docscli "github.com/aydenstechdungeon/gospa/website/routes/docs/cli"
+	docsfaq "github.com/aydenstechdungeon/gospa/website/routes/docs/faq"
+	docspluginsqrcode "github.com/aydenstechdungeon/gospa/website/routes/docs/plugins/qrcode"
+	docssse "github.com/aydenstechdungeon/gospa/website/routes/docs/sse"
+	docspluginsseo "github.com/aydenstechdungeon/gospa/website/routes/docs/plugins/seo"
+	docsparams "github.com/aydenstechdungeon/gospa/website/routes/docs/params"
+	docspluginsauth "github.com/aydenstechdungeon/gospa/website/routes/docs/plugins/auth"
+	docsroutingnavigation "github.com/aydenstechdungeon/gospa/website/routes/docs/routing/navigation"
+	docsruntime "github.com/aydenstechdungeon/gospa/website/routes/docs/runtime"
+	docsapicore "github.com/aydenstechdungeon/gospa/website/routes/docs/api/core"
+	docsconfiguration "github.com/aydenstechdungeon/gospa/website/routes/docs/configuration"
 	docsplugins "github.com/aydenstechdungeon/gospa/website/routes/docs/plugins"
+	docsreactiveprimitivesadvanced "github.com/aydenstechdungeon/gospa/website/routes/docs/reactive-primitives/advanced"
+	docsremoteactions "github.com/aydenstechdungeon/gospa/website/routes/docs/remote-actions"
+	docsroutingapi "github.com/aydenstechdungeon/gospa/website/routes/docs/routing/api"
+	"github.com/aydenstechdungeon/gospa/website/routes/docs"
+	"github.com/aydenstechdungeon/gospa/routing"
+	docsapifiber "github.com/aydenstechdungeon/gospa/website/routes/docs/api/fiber"
+	docsconfigurationwebsocket "github.com/aydenstechdungeon/gospa/website/routes/docs/configuration/websocket"
+	docsgetstartedquickstart "github.com/aydenstechdungeon/gospa/website/routes/docs/getstarted/quickstart"
+	docsrendering "github.com/aydenstechdungeon/gospa/website/routes/docs/rendering"
+	docsroutingdynamic "github.com/aydenstechdungeon/gospa/website/routes/docs/routing/dynamic"
+	docspluginsimage "github.com/aydenstechdungeon/gospa/website/routes/docs/plugins/image"
+	docsstatemanagementclient "github.com/aydenstechdungeon/gospa/website/routes/docs/state-management/client"
+	docsislands "github.com/aydenstechdungeon/gospa/website/routes/docs/islands"
+	docsclientruntimeoverview "github.com/aydenstechdungeon/gospa/website/routes/docs/client-runtime/overview"
+	docsreactiveprimitivests "github.com/aydenstechdungeon/gospa/website/routes/docs/reactive-primitives/ts"
+	docssecurity "github.com/aydenstechdungeon/gospa/website/routes/docs/security"
+	docsclientruntimewebsocket "github.com/aydenstechdungeon/gospa/website/routes/docs/client-runtime/websocket"
+	docscomponents "github.com/aydenstechdungeon/gospa/website/routes/docs/components"
+	docsconfigurationbasic "github.com/aydenstechdungeon/gospa/website/routes/docs/configuration/basic"
+	docsstatemanagementserver "github.com/aydenstechdungeon/gospa/website/routes/docs/state-management/server"
+	docsapirouting "github.com/aydenstechdungeon/gospa/website/routes/docs/api/routing"
+	docspluginspostcss "github.com/aydenstechdungeon/gospa/website/routes/docs/plugins/postcss"
+	docsrouting "github.com/aydenstechdungeon/gospa/website/routes/docs/routing"
+	docsstatemanagementpatterns "github.com/aydenstechdungeon/gospa/website/routes/docs/state-management/patterns"
+	docsstatemanagementsync "github.com/aydenstechdungeon/gospa/website/routes/docs/state-management/sync"
+	docsapistate "github.com/aydenstechdungeon/gospa/website/routes/docs/api/state"
+	docsclientruntimedombindings "github.com/aydenstechdungeon/gospa/website/routes/docs/client-runtime/dom-bindings"
+	docsreactiveprimitives "github.com/aydenstechdungeon/gospa/website/routes/docs/reactive-primitives"
 )
 
 func init() {
 	// Register pages
+	routing.RegisterPage("/docs/api/client", func(props map[string]interface{}) templ.Component {
+		return docsapiclient.Page()
+	})
+	routing.RegisterPage("/docs/api/core", func(props map[string]interface{}) templ.Component {
+		return docsapicore.Page()
+	})
+	routing.RegisterPage("/docs/api/fiber", func(props map[string]interface{}) templ.Component {
+		return docsapifiber.Page()
+	})
 	routing.RegisterPage("/docs/api", func(props map[string]interface{}) templ.Component {
 		return docsapi.Page()
+	})
+	routing.RegisterPage("/docs/api/routing", func(props map[string]interface{}) templ.Component {
+		return docsapirouting.Page()
+	})
+	routing.RegisterPage("/docs/api/state", func(props map[string]interface{}) templ.Component {
+		return docsapistate.Page()
 	})
 	routing.RegisterPage("/docs/cli", func(props map[string]interface{}) templ.Component {
 		return docscli.Page()
@@ -69,14 +104,26 @@ func init() {
 	routing.RegisterPage("/docs/components", func(props map[string]interface{}) templ.Component {
 		return docscomponents.Page()
 	})
+	routing.RegisterPage("/docs/configuration/basic", func(props map[string]interface{}) templ.Component {
+		return docsconfigurationbasic.Page()
+	})
 	routing.RegisterPage("/docs/configuration", func(props map[string]interface{}) templ.Component {
 		return docsconfiguration.Page()
+	})
+	routing.RegisterPage("/docs/configuration/scaling", func(props map[string]interface{}) templ.Component {
+		return docsconfigurationscaling.Page()
+	})
+	routing.RegisterPage("/docs/configuration/websocket", func(props map[string]interface{}) templ.Component {
+		return docsconfigurationwebsocket.Page()
 	})
 	routing.RegisterPage("/docs/devtools", func(props map[string]interface{}) templ.Component {
 		return docsdevtools.Page()
 	})
 	routing.RegisterPage("/docs/errors", func(props map[string]interface{}) templ.Component {
 		return docserrors.Page()
+	})
+	routing.RegisterPage("/docs/faq", func(props map[string]interface{}) templ.Component {
+		return docsfaq.Page()
 	})
 	routing.RegisterPage("/docs/getstarted/installation", func(props map[string]interface{}) templ.Component {
 		return docsgetstartedinstallation.Page()
@@ -123,14 +170,35 @@ func init() {
 	routing.RegisterPage("/docs/plugins/validation", func(props map[string]interface{}) templ.Component {
 		return docspluginsvalidation.Page()
 	})
+	routing.RegisterPage("/docs/reactive-primitives/advanced", func(props map[string]interface{}) templ.Component {
+		return docsreactiveprimitivesadvanced.Page()
+	})
+	routing.RegisterPage("/docs/reactive-primitives/go", func(props map[string]interface{}) templ.Component {
+		return docsreactiveprimitivesgo.Page()
+	})
 	routing.RegisterPage("/docs/reactive-primitives", func(props map[string]interface{}) templ.Component {
 		return docsreactiveprimitives.Page()
+	})
+	routing.RegisterPage("/docs/reactive-primitives/ts", func(props map[string]interface{}) templ.Component {
+		return docsreactiveprimitivests.Page()
 	})
 	routing.RegisterPage("/docs/remote-actions", func(props map[string]interface{}) templ.Component {
 		return docsremoteactions.Page()
 	})
 	routing.RegisterPage("/docs/rendering", func(props map[string]interface{}) templ.Component {
 		return docsrendering.Page()
+	})
+	routing.RegisterPage("/docs/routing/api", func(props map[string]interface{}) templ.Component {
+		return docsroutingapi.Page()
+	})
+	routing.RegisterPage("/docs/routing/dynamic", func(props map[string]interface{}) templ.Component {
+		return docsroutingdynamic.Page()
+	})
+	routing.RegisterPage("/docs/routing/layouts", func(props map[string]interface{}) templ.Component {
+		return docsroutinglayouts.Page()
+	})
+	routing.RegisterPage("/docs/routing/navigation", func(props map[string]interface{}) templ.Component {
+		return docsroutingnavigation.Page()
 	})
 	routing.RegisterPage("/docs/routing", func(props map[string]interface{}) templ.Component {
 		return docsrouting.Page()
@@ -144,8 +212,20 @@ func init() {
 	routing.RegisterPage("/docs/sse", func(props map[string]interface{}) templ.Component {
 		return docssse.Page()
 	})
+	routing.RegisterPage("/docs/state-management/client", func(props map[string]interface{}) templ.Component {
+		return docsstatemanagementclient.Page()
+	})
 	routing.RegisterPage("/docs/state-management", func(props map[string]interface{}) templ.Component {
 		return docsstatemanagement.Page()
+	})
+	routing.RegisterPage("/docs/state-management/patterns", func(props map[string]interface{}) templ.Component {
+		return docsstatemanagementpatterns.Page()
+	})
+	routing.RegisterPage("/docs/state-management/server", func(props map[string]interface{}) templ.Component {
+		return docsstatemanagementserver.Page()
+	})
+	routing.RegisterPage("/docs/state-management/sync", func(props map[string]interface{}) templ.Component {
+		return docsstatemanagementsync.Page()
 	})
 	routing.RegisterPage("/docs/websocket", func(props map[string]interface{}) templ.Component {
 		return docswebsocket.Page()

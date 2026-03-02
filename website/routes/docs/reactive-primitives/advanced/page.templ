@@ -1,0 +1,189 @@
+package advanced
+
+import "github.com/aydenstechdungeon/gospa/website/components"
+
+templ Page() {
+	<div class="space-y-12">
+		<header>
+			<h1 class="text-4xl font-bold tracking-tight mb-4">Advanced Types</h1>
+			<p class="text-xl text-[var(--text-secondary)] leading-relaxed">
+				Specialized reactive types for complex use cases and API reference.
+			</p>
+		</header>
+
+		<section class="space-y-6">
+			<h2 class="text-2xl font-bold" id="resource">Resource</h2>
+			<p class="text-[var(--text-secondary)]">
+				Async data fetching with loading/error states.
+			</p>
+			@components.CodeBlock(`import { resourceReactive } from '@gospa/runtime';
+
+const userId = new Rune(1);
+
+// Reactive resource - refetches when userId changes
+const userResource = resourceReactive(
+  [userId],
+  async () => {
+    const res = await fetch('/api/user/' + userId.get());
+    return res.json();
+  }
+);
+
+// Status
+console.log(userResource.status);     // 'idle' | 'pending' | 'success' | 'error'
+console.log(userResource.isPending);  // boolean
+console.log(userResource.data);       // T | undefined
+console.log(userResource.error);      // Error | undefined
+
+// Refetch
+await userResource.refetch();`, "typescript", "resource.ts")
+		</section>
+
+		<section class="space-y-6">
+			<h2 class="text-2xl font-bold" id="runeraw">RuneRaw</h2>
+			<p class="text-[var(--text-secondary)]">
+				Shallow reactive state - only top-level changes tracked.
+			</p>
+			@components.CodeBlock(`import { RuneRaw } from '@gospa/runtime';
+
+// Shallow reactivity
+const person = new RuneRaw({ name: 'Zeno', nested: { age: 30 } });
+
+// This does NOT trigger updates
+person.value.nested.age = 31;
+
+// This DOES trigger updates (top-level reassignment)
+person.value = { ...person.value, name: 'New Name' };`, "typescript", "runeraw.ts")
+		</section>
+
+		<section class="space-y-6">
+			<h2 class="text-2xl font-bold" id="preeffect">PreEffect</h2>
+			<p class="text-[var(--text-secondary)]">
+				Effect that runs before DOM updates.
+			</p>
+			@components.CodeBlock(`import { PreEffect } from '@gospa/runtime';
+
+// Runs before DOM updates
+const preEffect = new PreEffect(() => {
+  // Read scroll position before DOM changes
+  const scrollY = window.scrollY;
+  console.log('Scroll position:', scrollY);
+});`, "typescript", "preeffect.ts")
+		</section>
+
+		<section class="space-y-6">
+			<h2 class="text-2xl font-bold" id="effectroot">EffectRoot</h2>
+			<p class="text-[var(--text-secondary)]">
+				Non-tracked effect scope with manual cleanup.
+			</p>
+			@components.CodeBlock(`import { EffectRoot } from '@gospa/runtime';
+
+// Non-tracked scope
+const cleanup = EffectRoot(() => {
+  // Effects created here are not auto-tracked
+  const e1 = new Effect(() => { /* ... */ });
+  const e2 = new Effect(() => { /* ... */ });
+  
+  // Return cleanup for all
+  return () => {
+    e1.dispose();
+    e2.dispose();
+  };
+});
+
+// Manual cleanup
+cleanup();`, "typescript", "effectroot.ts")
+		</section>
+
+		<section class="space-y-6">
+			<h2 class="text-2xl font-bold" id="api-reference">API Reference</h2>
+			
+			<h3 class="text-xl font-semibold mt-8">Go Rune Methods</h3>
+			<div class="overflow-x-auto">
+				<table class="w-full border-collapse">
+					<thead>
+						<tr class="border-b border-[var(--border)]">
+							<th class="text-left py-3 px-4 font-semibold">Method</th>
+							<th class="text-left py-3 px-4 font-semibold">Signature</th>
+							<th class="text-left py-3 px-4 font-semibold">Description</th>
+						</tr>
+					</thead>
+					<tbody class="text-[var(--text-secondary)]">
+						<tr class="border-b border-[var(--border)]">
+							<td class="py-3 px-4"><code class="text-[var(--accent-primary)]">Get()</code></td>
+							<td class="py-3 px-4"><code>T</code></td>
+							<td class="py-3 px-4">Get current value (thread-safe)</td>
+						</tr>
+						<tr class="border-b border-[var(--border)]">
+							<td class="py-3 px-4"><code class="text-[var(--accent-primary)]">Set()</code></td>
+							<td class="py-3 px-4"><code>func(T)</code></td>
+							<td class="py-3 px-4">Set new value and notify subscribers</td>
+						</tr>
+						<tr class="border-b border-[var(--border)]">
+							<td class="py-3 px-4"><code class="text-[var(--accent-primary)]">Update()</code></td>
+							<td class="py-3 px-4"><code>func(func(T) T)</code></td>
+							<td class="py-3 px-4">Update using function</td>
+						</tr>
+						<tr class="border-b border-[var(--border)]">
+							<td class="py-3 px-4"><code class="text-[var(--accent-primary)]">Subscribe()</code></td>
+							<td class="py-3 px-4"><code>func(func(T, T)) func()</code></td>
+							<td class="py-3 px-4">Subscribe to changes, returns unsubscribe</td>
+						</tr>
+					</tbody>
+				</table>
+			</div>
+
+			<h3 class="text-xl font-semibold mt-8">TypeScript Rune Methods</h3>
+			<div class="overflow-x-auto">
+				<table class="w-full border-collapse">
+					<thead>
+						<tr class="border-b border-[var(--border)]">
+							<th class="text-left py-3 px-4 font-semibold">Property/Method</th>
+							<th class="text-left py-3 px-4 font-semibold">Type</th>
+							<th class="text-left py-3 px-4 font-semibold">Description</th>
+						</tr>
+					</thead>
+					<tbody class="text-[var(--text-secondary)]">
+						<tr class="border-b border-[var(--border)]">
+							<td class="py-3 px-4"><code class="text-[var(--accent-primary)]">value</code></td>
+							<td class="py-3 px-4"><code>T</code></td>
+							<td class="py-3 px-4">Get/set value directly</td>
+						</tr>
+						<tr class="border-b border-[var(--border)]">
+							<td class="py-3 px-4"><code class="text-[var(--accent-primary)]">get()</code></td>
+							<td class="py-3 px-4"><code>() ={}> T</code></td>
+							<td class="py-3 px-4">Get value (tracks dependencies)</td>
+						</tr>
+						<tr class="border-b border-[var(--border)]">
+							<td class="py-3 px-4"><code class="text-[var(--accent-primary)]">set()</code></td>
+							<td class="py-3 px-4"><code>(v: T) ={}> void</code></td>
+							<td class="py-3 px-4">Set new value</td>
+						</tr>
+						<tr class="border-b border-[var(--border)]">
+							<td class="py-3 px-4"><code class="text-[var(--accent-primary)]">update()</code></td>
+							<td class="py-3 px-4"><code>(fn: (v: T) ={}> T) ={}> void</code></td>
+							<td class="py-3 px-4">Update using function</td>
+						</tr>
+						<tr class="border-b border-[var(--border)]">
+							<td class="py-3 px-4"><code class="text-[var(--accent-primary)]">subscribe()</code></td>
+							<td class="py-3 px-4"><code>(fn: Subscriber) ={}> Unsubscribe</code></td>
+							<td class="py-3 px-4">Subscribe to changes</td>
+						</tr>
+					</tbody>
+				</table>
+			</div>
+		</section>
+
+		<div class="bg-gradient-to-r from-[var(--bg-secondary)] to-[var(--bg-tertiary)] p-8 rounded-3xl border border-[var(--border)] shadow-inner">
+			<h3 class="text-lg font-bold mb-4">Why "Runes"?</h3>
+			<p class="text-sm text-[var(--text-secondary)] leading-relaxed">
+				Inspired by Svelte 5's terminology, Runes in GoSPA represent magical symbols that imbue your data with reactive properties. They are the building blocks of an interactive UI that responds naturally to user input and server events. The name reflects their power to transform ordinary values into reactive state.
+			</p>
+		</div>
+
+		<div class="flex justify-between pt-6 border-t border-[var(--border)]">
+			<a href="/docs/reactive-primitives/ts" class="text-sm text-[var(--text-secondary)] hover:text-[var(--accent-primary)]">← TypeScript Primitives</a>
+			<a href="/docs/reactive-primitives" class="text-sm text-[var(--accent-primary)] hover:underline">Back to Overview →</a>
+		</div>
+	</div>
+}
