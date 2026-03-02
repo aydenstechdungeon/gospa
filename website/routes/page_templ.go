@@ -9,7 +9,7 @@ import "github.com/a-h/templ"
 import templruntime "github.com/a-h/templ/runtime"
 
 import (
-	"website/components"
+	"github.com/aydenstechdungeon/gospa/website/components"
 )
 
 func Page() templ.Component {

@@ -1,7 +1,7 @@
 package docs
 
 import (
-	"website/components"
+	"github.com/aydenstechdungeon/gospa/website/components"
 )
 
 templ DocsLayout(children templ.Component, path string) {
@@ -11,7 +11,7 @@ templ DocsLayout(children templ.Component, path string) {
 		</div>
 		
 		<div class="flex-grow pt-12 pb-24 min-w-0 animate-in fade-in duration-700">
-			<div class="prose prose-invert prose-cyan max-w-3xl mx-auto">
+			<div class="prose max-w-4xl mx-auto w-full">
 				@children
 			</div>
 			

@@ -9,7 +9,7 @@ import "github.com/a-h/templ"
 import templruntime "github.com/a-h/templ/runtime"
 
 import (
-	"website/components"
+	"github.com/aydenstechdungeon/gospa/website/components"
 )
 
 func DocsLayout(children templ.Component, path string) templ.Component {
@@ -41,7 +41,7 @@ func DocsLayout(children templ.Component, path string) templ.Component {
 		if templ_7745c5c3_Err != nil {
 			return templ_7745c5c3_Err
 		}
-		templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 2, "</div><div class=\"flex-grow pt-12 pb-24 min-w-0 animate-in fade-in duration-700\"><div class=\"prose prose-invert prose-cyan max-w-3xl mx-auto\">")
+		templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 2, "</div><div class=\"flex-grow pt-12 pb-24 min-w-0 animate-in fade-in duration-700\"><div class=\"prose max-w-4xl mx-auto w-full\">")
 		if templ_7745c5c3_Err != nil {
 			return templ_7745c5c3_Err
 		}

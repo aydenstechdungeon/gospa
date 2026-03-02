@@ -8,7 +8,7 @@ package auth
 import "github.com/a-h/templ"
 import templruntime "github.com/a-h/templ/runtime"
 
-import "website/components"
+import "github.com/aydenstechdungeon/gospa/website/components"
 
 func Page() templ.Component {
 	return templruntime.GeneratedTemplate(func(templ_7745c5c3_Input templruntime.GeneratedComponentInput) (templ_7745c5c3_Err error) {
@@ -169,7 +169,7 @@ function onTelegramAuth(user) {
 		if templ_7745c5c3_Err != nil {
 			return templ_7745c5c3_Err
 		}
-		templ_7745c5c3_Err = featureCard("TOTP/OTP", "Time-based One-Time Password (RFC 6238).").Render(ctx, templ_7745c5c3_Buffer)
+		templ_7745c5c3_Err = featureCard("OTP", "Time-based One-Time Password (RFC 6238).").Render(ctx, templ_7745c5c3_Buffer)
 		if templ_7745c5c3_Err != nil {
 			return templ_7745c5c3_Err
 		}
@@ -215,27 +215,27 @@ func main() {
         return c.JSON(user)
     })
     
-    // TOTP setup
-    app.Post("/auth/2fa/enable", authPlugin.EnableTOTP())
-    app.Post("/auth/2fa/verify", authPlugin.VerifyTOTP())
+    // OTP setup
+    app.Post("/auth/2fa/enable", authPlugin.EnableOTPHandler())
+    app.Post("/auth/2fa/verify", authPlugin.VerifyOTPHandler())
     
     app.Listen(":3000")
 }`, "go", "main.go").Render(ctx, templ_7745c5c3_Buffer)
 		if templ_7745c5c3_Err != nil {
 			return templ_7745c5c3_Err
 		}
-		templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 7, "</section><section class=\"space-y-6\"><h2 class=\"text-2xl font-bold border-b border-[var(--border)] pb-2\">TOTP Setup Flow</h2>")
+		templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 7, "</section><section class=\"space-y-6\"><h2 class=\"text-2xl font-bold border-b border-[var(--border)] pb-2\">OTP Setup Flow</h2>")
 		if templ_7745c5c3_Err != nil {
 			return templ_7745c5c3_Err
 		}
 		templ_7745c5c3_Err = components.CodeBlock(`// 1. Generate secret and QR code URL
-secret, qrURL, err := auth.GenerateTOTPSecret("user@example.com", "MyApp")
+secret, qrURL, err := auth.GenerateOTPSecret() // or authPlugin.GenerateOTP("user@example.com")
 // qrURL = otpauth://totp/MyApp:user@example.com?secret=XXX&issuer=MyApp
 
 // 2. User scans QR code with authenticator app (Google Authenticator, Authy, etc.)
 
-// 3. Verify TOTP code
-valid := auth.VerifyTOTP(secret, userProvidedCode)
+// 3. Verify OTP code
+valid := auth.VerifyOTP(secret, userProvidedCode)
 
 // 4. Generate backup codes
 backupCodes := auth.GenerateBackupCodes(10) // 10 codes
@@ -258,8 +258,8 @@ POST /auth/logout              - Logout and clear session
 POST /auth/refresh             - Refresh JWT token
 
 # 2FA Routes
-POST /auth/2fa/enable          - Enable TOTP for user
-POST /auth/2fa/verify          - Verify TOTP code
+POST /auth/2fa/enable          - Enable OTP for user
+POST /auth/2fa/verify          - Verify OTP code
 POST /auth/2fa/backup          - Use backup code for recovery
 POST /auth/2fa/disable         - Disable 2FA`, "text", "routes").Render(ctx, templ_7745c5c3_Buffer)
 		if templ_7745c5c3_Err != nil {

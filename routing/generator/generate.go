@@ -57,7 +57,7 @@ func Generate(routesDir string) error {
 	}
 
 	// Generate type-safe route helpers
-	modulePath := getModulePath(routesDir)
+	modulePath, _ := getModuleInfo(routesDir)
 	routeGen := NewRouteTypeScriptGenerator(routes, modulePath)
 	generatedDir := filepath.Join(routesDir, "..", "generated")
 	if err := os.MkdirAll(generatedDir, 0755); err != nil {
@@ -376,12 +376,18 @@ func generateCode(routes []RouteInfo, routesDir string) (string, error) {
 	imports["github.com/aydenstechdungeon/gospa/routing"] = "routing"
 
 	// Get module path from go.mod
-	modulePath := getModulePath(routesDir)
+	modulePath, moduleRoot := getModuleInfo(routesDir)
+
+	// Calculate the relative path from the module root to the routes directory
+	// This ensures imports are correctly qualified even when nested in subdirectories (like website/routes)
+	absRoutesDir, _ := filepath.Abs(routesDir)
+	relRoutesPath, _ := filepath.Rel(moduleRoot, absRoutesDir)
+	relRoutesPath = filepath.ToSlash(relRoutesPath)
 
 	for _, route := range routes {
 		if route.ImportPath != "" {
 			// Construct full import path
-			fullImportPath := modulePath + "/" + filepath.ToSlash(filepath.Join(filepath.Base(routesDir), route.ImportPath))
+			fullImportPath := modulePath + "/" + filepath.ToSlash(filepath.Join(relRoutesPath, route.ImportPath))
 			imports[fullImportPath] = route.PackageName
 		}
 	}
@@ -443,11 +449,14 @@ func generateCode(routes []RouteInfo, routesDir string) (string, error) {
 	return sb.String(), nil
 }
 
-// getModulePath reads the module path from go.mod file.
-func getModulePath(dir string) string {
+// getModuleInfo reads the module path from go.mod file and returns the module name and root path.
+func getModuleInfo(dir string) (moduleName string, moduleRoot string) {
+	absDir, _ := filepath.Abs(dir)
+	curr := absDir
+
 	// Walk up directories to find go.mod
 	for {
-		goModPath := filepath.Join(dir, "go.mod")
+		goModPath := filepath.Join(curr, "go.mod")
 		content, err := os.ReadFile(goModPath)
 		if err == nil {
 			// Parse module path from go.mod
@@ -455,17 +464,23 @@ func getModulePath(dir string) string {
 			for _, line := range lines {
 				line = strings.TrimSpace(line)
 				if strings.HasPrefix(line, "module ") {
-					return strings.TrimPrefix(line, "module ")
+					return strings.TrimSpace(strings.TrimPrefix(line, "module ")), curr
 				}
 			}
 		}
-		parent := filepath.Dir(dir)
-		if parent == dir {
+		parent := filepath.Dir(curr)
+		if parent == curr {
 			break
 		}
-		dir = parent
+		curr = parent
 	}
-	return "example.com/project"
+	return "example.com/project", absDir
+}
+
+// getModulePath is a helper for backward compatibility inside the package.
+func getModulePath(dir string) string {
+	name, _ := getModuleInfo(dir)
+	return name
 }
 
 // generatePageCallWithPackage generates the function call with package prefix if needed.
