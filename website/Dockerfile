@@ -46,13 +46,11 @@ RUN if [ -d "website" ]; then \
     echo "Context: Repository Root. Building website subdirectory..." && \
     cd website && \
     go mod edit -replace github.com/aydenstechdungeon/gospa=../ && \
-    go mod tidy && \
     bun install && \
     /usr/local/bin/gospa build -o dist; \
     else \
     echo "Context: Website Directory. Building current directory..." && \
     go mod edit -dropreplace github.com/aydenstechdungeon/gospa && \
-    go mod tidy && \
     bun install && \
     /usr/local/bin/gospa build -o dist; \
     fi
