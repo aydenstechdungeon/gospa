@@ -6,6 +6,7 @@ import (
 	"os"
 	"path/filepath"
 	"regexp"
+	"sort"
 	"strings"
 )
 
@@ -370,12 +371,40 @@ func generateCode(routes []RouteInfo, routesDir string) (string, error) {
 	}
 	fmt.Fprintf(&sb, "package %s\n\n", pkgName)
 
+	// Group routes by directory
+	var pages, layouts []RouteInfo
+	for _, route := range routes {
+		if route.IsLayout {
+			layouts = append(layouts, route)
+		} else {
+			pages = append(pages, route)
+		}
+	}
+
+	// Check if we need context and io imports for layout wrapping
+	needsContextIO := false
+	for _, route := range layouts {
+		hasChildren := false
+		for _, p := range route.Params {
+			if p.Type == "templ.Component" {
+				hasChildren = true
+				break
+			}
+		}
+		if !hasChildren {
+			needsContextIO = true
+			break
+		}
+	}
+
 	// Collect unique import paths for subdirectory packages
 	imports := make(map[string]string) // importPath -> packageName
 	imports["github.com/a-h/templ"] = "templ"
 	imports["github.com/aydenstechdungeon/gospa/routing"] = "routing"
-	imports["context"] = ""
-	imports["io"] = ""
+	if needsContextIO {
+		imports["context"] = ""
+		imports["io"] = ""
+	}
 
 	// Get module path from go.mod
 	modulePath, moduleRoot := getModuleInfo(routesDir)
@@ -394,31 +423,57 @@ func generateCode(routes []RouteInfo, routesDir string) (string, error) {
 		}
 	}
 
-	// Imports
+	// Imports - sort and group (standard library first, then third-party)
+	var stdlibImports, thirdPartyImports []string
+	for importPath := range imports {
+		// Check if it's a standard library import (no dot in first path segment, not github.com)
+		if strings.Contains(importPath, ".") || strings.HasPrefix(importPath, "github.com") {
+			thirdPartyImports = append(thirdPartyImports, importPath)
+		} else {
+			stdlibImports = append(stdlibImports, importPath)
+		}
+	}
+
+	// Sort both groups
+	sort.Strings(stdlibImports)
+	sort.Strings(thirdPartyImports)
+
 	sb.WriteString("import (\n")
-	for importPath, alias := range imports {
+
+	// Write standard library imports first
+	for _, importPath := range stdlibImports {
+		alias := imports[importPath]
 		if alias != "" && alias != filepath.Base(importPath) {
 			fmt.Fprintf(&sb, "\t%s %q\n", alias, importPath)
 		} else {
 			fmt.Fprintf(&sb, "\t%q\n", importPath)
 		}
 	}
+
+	// Add blank line between groups if both exist
+	if len(stdlibImports) > 0 && len(thirdPartyImports) > 0 {
+		sb.WriteString("\n")
+	}
+
+	// Write third-party imports
+	for _, importPath := range thirdPartyImports {
+		alias := imports[importPath]
+		if alias != "" && alias != filepath.Base(importPath) {
+			fmt.Fprintf(&sb, "\t%s %q\n", alias, importPath)
+		} else {
+			fmt.Fprintf(&sb, "\t%q\n", importPath)
+		}
+	}
+
 	sb.WriteString(")\n\n")
 
 	// init function
 	sb.WriteString("func init() {\n")
 
-	// Group routes by directory for better organization
-	pages := []RouteInfo{}
-	layouts := []RouteInfo{}
+	// pages and layouts already grouped above
 
-	for _, route := range routes {
-		if route.IsLayout {
-			layouts = append(layouts, route)
-		} else {
-			pages = append(pages, route)
-		}
-	}
+	_ = pages   // Use the pages variable
+	_ = layouts // Use the layouts variable
 
 	// Register pages
 	if len(pages) > 0 {

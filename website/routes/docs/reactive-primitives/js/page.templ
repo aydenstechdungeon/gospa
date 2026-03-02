@@ -1,47 +1,46 @@
 package js
 
-import "github.com/aydenstechdungeon/gospa/website/ui/layouts"
+import "github.com/aydenstechdungeon/gospa/website/components"
 
 templ Page() {
-	@layouts.DocsLayout("Plain JavaScript Reactivity") {
-		<div class="max-w-4xl mx-auto">
-			<div class="mb-12">
-				<h1 class="text-5xl font-bold text-white mb-6">Plain JavaScript Reactivity</h1>
-				<p class="text-xl text-zinc-400">
-					Use GoSPA's reactive primitives with vanilla JavaScript — no build step required.
-				</p>
-			</div>
+	<div class="space-y-12">
+		<header>
+			<h1 class="text-4xl font-bold tracking-tight mb-4">Plain JavaScript</h1>
+			<p class="text-xl text-[var(--text-secondary)] leading-relaxed">
+				Use GoSPA's reactive primitives with vanilla JavaScript — no build step required.
+			</p>
+		</header>
 
-			<div class="prose prose-invert prose-zinc max-w-none">
-				<div class="mb-12 p-6 bg-purple-500/10 border border-purple-500/30 rounded-xl">
-					<h3 class="text-lg font-semibold text-purple-400 mt-0 mb-2">When to Use Plain JS</h3>
-					<ul class="mt-0 mb-0">
-						<li>Quick prototypes or simple interactions</li>
-						<li>Existing projects without a build pipeline</li>
-						<li>Progressive enhancement of server-rendered pages</li>
-						<li>Teams preferring vanilla JS over TypeScript</li>
-					</ul>
-				</div>
+		<div class="p-6 bg-[var(--accent-primary)]/10 border border-[var(--accent-primary)]/30 rounded-xl">
+			<h3 class="text-lg font-semibold text-[var(--accent-primary)] mt-0 mb-2">When to Use Plain JS</h3>
+			<ul class="mt-0 mb-0 text-[var(--text-secondary)]">
+				<li>Quick prototypes or simple interactions</li>
+				<li>Existing projects without a build pipeline</li>
+				<li>Progressive enhancement of server-rendered pages</li>
+				<li>Teams preferring vanilla JS over TypeScript</li>
+			</ul>
+		</div>
 
-				<h2>Getting Started</h2>
-				<p>
-					Include the GoSPA runtime in your HTML. The runtime exposes a global <code>GoSPA</code> object 
-					with all reactive primitives:
-				</p>
-
-				<pre class="bg-zinc-950 rounded-xl overflow-x-auto"><code class="language-html"><!-- Full runtime with DOMPurify (recommended) -->
+		<section class="space-y-6">
+			<h2 class="text-2xl font-bold" id="getting-started">Getting Started</h2>
+			<p class="text-[var(--text-secondary)]">
+				Include the GoSPA runtime in your HTML. The runtime exposes a global <code>GoSPA</code> object 
+				with all reactive primitives:
+			</p>
+			@components.CodeBlock(`<!-- Full runtime with DOMPurify (recommended) -->
 <script src="/_gospa/runtime.js"></script>
 
 <!-- Or use the simple runtime for smaller bundle (~6KB less) -->
-<script src="/_gospa/runtime.js?simple=1"></script></code></pre>
+<script src="/_gospa/runtime.js?simple=1"></script>`, "html", "setup.html")
+		</section>
 
-				<h2>Rune — Reactive State</h2>
-				<p>
-					A <code>Rune</code> is a reactive container for a single value. When the value changes, 
-					all subscribers are automatically notified.
-				</p>
-
-				{{ `// Create a rune
+		<section class="space-y-6">
+			<h2 class="text-2xl font-bold" id="rune">Rune — Reactive State</h2>
+			<p class="text-[var(--text-secondary)]">
+				A <code>Rune</code> is a reactive container for a single value. When the value changes, 
+				all subscribers are automatically notified.
+			</p>
+			@components.CodeBlock(`// Create a rune
 const count = new GoSPA.Rune(0)
 
 // Read the value
@@ -59,37 +58,16 @@ const unsubscribe = count.subscribe((value, oldValue) => {
 })
 
 // Later: stop listening
-unsubscribe()` | 
-				templ.Raw }}
+unsubscribe()`, "javascript", "rune.js")
+		</section>
 
-				<h3>Two-Way Binding</h3>
-				<p>Bind runes to DOM elements for automatic updates:</p>
-
-				{{ `<span id="counter">0</span>
-<button id="increment">+</button>
-
-<script>
-const count = new GoSPA.Rune(0)
-const counterEl = document.getElementById('counter')
-
-// Update DOM when count changes
-count.subscribe(value => {
-    counterEl.textContent = value
-})
-
-// Increment on click
-document.getElementById('increment').addEventListener('click', () => {
-    count.update(v => v + 1)
-})
-</script>` | templ.Raw }}
-
-				<h2>Derived — Computed Values</h2>
-				<p>
-					<code>Derived</code> creates reactive values that automatically update when their 
-					dependencies change.
-				</p>
-
-				{{ `const firstName = new GoSPA.Rune('John')
+		<section class="space-y-6">
+			<h2 class="text-2xl font-bold" id="derived">Derived — Computed Values</h2>
+			<p class="text-[var(--text-secondary)]">
+				<code>Derived</code> creates reactive values that automatically update when their 
+				dependencies change.
+			</p>
+			@components.CodeBlock(`const firstName = new GoSPA.Rune('John')
 const lastName = new GoSPA.Rune('Doe')
 
 // Derived automatically recalculates
@@ -100,15 +78,16 @@ const fullName = new GoSPA.Derived(() => {
 console.log(fullName.get()) // "John Doe"
 
 firstName.set('Jane')
-console.log(fullName.get()) // "Jane Doe" — automatically updated` | templ.Raw }}
+console.log(fullName.get()) // "Jane Doe" — automatically updated`, "javascript", "derived.js")
+		</section>
 
-				<h2>Effect — Side Effects</h2>
-				<p>
-					<code>Effect</code> runs side effects when reactive dependencies change. 
-					Return a cleanup function if needed.
-				</p>
-
-				{{ `const count = new GoSPA.Rune(0)
+		<section class="space-y-6">
+			<h2 class="text-2xl font-bold" id="effect">Effect — Side Effects</h2>
+			<p class="text-[var(--text-secondary)]">
+				<code>Effect</code> runs side effects when reactive dependencies change. 
+				Return a cleanup function if needed.
+			</p>
+			@components.CodeBlock(`const count = new GoSPA.Rune(0)
 
 const cleanup = new GoSPA.Effect(() => {
     console.log('Count is now:', count.get())
@@ -120,15 +99,16 @@ const cleanup = new GoSPA.Effect(() => {
 })
 
 // Stop the effect
-cleanup()` | templ.Raw }}
+cleanup()`, "javascript", "effect.js")
+		</section>
 
-				<h2>StateMap — Named State Collection</h2>
-				<p>
-					<code>StateMap</code> is a collection of named reactive values, useful for 
-					organizing component state.
-				</p>
-
-				{{ `const state = new GoSPA.StateMap()
+		<section class="space-y-6">
+			<h2 class="text-2xl font-bold" id="statemap">StateMap — Named State</h2>
+			<p class="text-[var(--text-secondary)]">
+				<code>StateMap</code> is a collection of named reactive values, useful for 
+				organizing component state.
+			</p>
+			@components.CodeBlock(`const state = new GoSPA.StateMap()
 
 // Set values
 state.set('count', 0)
@@ -148,42 +128,30 @@ state.delete('count')
 state.clear()
 
 // Serialize
-const json = state.toJSON() // { count: 0, name: 'Anonymous' }` | templ.Raw }}
+const json = state.toJSON() // { count: 0, name: 'Anonymous' }`, "javascript", "statemap.js")
+		</section>
 
-				<h2>Batch Updates</h2>
-				<p>
-					Batch multiple updates to prevent unnecessary recomputations:
-				</p>
-
-				{{ `const count = new GoSPA.Rune(0)
+		<section class="space-y-6">
+			<h2 class="text-2xl font-bold" id="batch">Batch Updates</h2>
+			<p class="text-[var(--text-secondary)]">
+				Batch multiple updates to prevent unnecessary recomputations:
+			</p>
+			@components.CodeBlock(`const count = new GoSPA.Rune(0)
 const name = new GoSPA.Rune('')
 
 GoSPA.batch(() => {
     count.set(10)
     name.set('Alice')
     // Subscribers notified once after batch completes
-})` | templ.Raw }}
+})`, "javascript", "batch.js")
+		</section>
 
-				<h2>Untrack — Non-Reactive Reads</h2>
-				<p>
-					Read a reactive value without creating a dependency:
-				</p>
-
-				{{ `const count = new GoSPA.Rune(0)
-
-// Inside an effect, this would normally subscribe
-new GoSPA.Effect(() => {
-    // This read is NOT tracked — effect won't re-run when count changes
-    const value = GoSPA.untrack(() => count.get())
-    console.log(value)
-})` | templ.Raw }}
-
-				<h2>Async State</h2>
-				<p>
-					Handle asynchronous data with <code>DerivedAsync</code> or <code>Resource</code>:
-				</p>
-
-				{{ `// DerivedAsync for computed async values
+		<section class="space-y-6">
+			<h2 class="text-2xl font-bold" id="async">Async State</h2>
+			<p class="text-[var(--text-secondary)]">
+				Handle asynchronous data with <code>DerivedAsync</code> or <code>Resource</code>:
+			</p>
+			@components.CodeBlock(`// DerivedAsync for computed async values
 const userId = new GoSPA.Rune(1)
 
 const userData = new GoSPA.DerivedAsync(async () => {
@@ -203,12 +171,13 @@ const posts = new GoSPA.Resource(async () => {
 })
 
 // Trigger fetch
-await posts.refetch()` | templ.Raw }}
+await posts.refetch()`, "javascript", "async.js")
+		</section>
 
-				<h2>Complete Example</h2>
-				<p>Here's a complete counter with derived display and effects:</p>
-
-				{{ `<div id="counter">
+		<section class="space-y-6">
+			<h2 class="text-2xl font-bold" id="example">Complete Example</h2>
+			<p class="text-[var(--text-secondary)]">Here's a complete counter with derived display and effects:</p>
+			@components.CodeBlock(`<div id="counter">
     <p>Count: <span id="value">0</span></p>
     <p>Doubled: <span id="doubled">0</span></p>
     <p>Status: <span id="status">Even</span></p>
@@ -222,7 +191,9 @@ const count = new GoSPA.Rune(0)
 
 // Derived values
 const doubled = new GoSPA.Derived(() => count.get() * 2)
-const status = new GoSPA.Derived(() => count.get() % 2 === 0 ? 'Even' : 'Odd')
+const status = new GoSPA.Derived(() => 
+    count.get() % 2 === 0 ? 'Even' : 'Odd'
+)
 
 // DOM elements
 const valueEl = document.getElementById('value')
@@ -250,89 +221,12 @@ document.getElementById('increment').addEventListener('click', () => {
 document.getElementById('decrement').addEventListener('click', () => {
     count.update(v => v - 1)
 })
-</script>` | templ.Raw }}
+</script>`, "html", "counter.html")
+		</section>
 
-				<h2>API Reference</h2>
-				<div class="overflow-x-auto">
-					<table class="w-full text-left border-collapse">
-						<thead>
-							<tr class="border-b border-zinc-700">
-								<th class="py-3 pr-4 font-semibold">Class/Function</th>
-								<th class="py-3 pr-4 font-semibold">Description</th>
-							</tr>
-						</thead>
-						<tbody class="text-zinc-300">
-							<tr class="border-b border-zinc-800">
-								<td class="py-3 pr-4 font-mono text-purple-400">new GoSPA.Rune(value)</td>
-								<td class="py-3">Create a reactive value container</td>
-							</tr>
-							<tr class="border-b border-zinc-800">
-								<td class="py-3 pr-4 font-mono text-purple-400">rune.get()</td>
-								<td class="py-3">Get current value</td>
-							</tr>
-							<tr class="border-b border-zinc-800">
-								<td class="py-3 pr-4 font-mono text-purple-400">rune.set(value)</td>
-								<td class="py-3">Set new value</td>
-							</tr>
-							<tr class="border-b border-zinc-800">
-								<td class="py-3 pr-4 font-mono text-purple-400">rune.update(fn)</td>
-								<td class="py-3">Update based on current value</td>
-							</tr>
-							<tr class="border-b border-zinc-800">
-								<td class="py-3 pr-4 font-mono text-purple-400">rune.subscribe(cb)</td>
-								<td class="py-3">Subscribe to changes, returns unsubscribe</td>
-							</tr>
-							<tr class="border-b border-zinc-800">
-								<td class="py-3 pr-4 font-mono text-purple-400">new GoSPA.Derived(fn)</td>
-								<td class="py-3">Create computed value</td>
-							</tr>
-							<tr class="border-b border-zinc-800">
-								<td class="py-3 pr-4 font-mono text-purple-400">new GoSPA.Effect(fn)</td>
-								<td class="py-3">Create reactive effect</td>
-							</tr>
-							<tr class="border-b border-zinc-800">
-								<td class="py-3 pr-4 font-mono text-purple-400">GoSPA.batch(fn)</td>
-								<td class="py-3">Batch multiple updates</td>
-							</tr>
-							<tr class="border-b border-zinc-800">
-								<td class="py-3 pr-4 font-mono text-purple-400">GoSPA.untrack(fn)</td>
-								<td class="py-3">Run function without tracking</td>
-							</tr>
-							<tr class="border-b border-zinc-800">
-								<td class="py-3 pr-4 font-mono text-purple-400">new GoSPA.StateMap()</td>
-								<td class="py-3">Create named state collection</td>
-							</tr>
-							<tr class="border-b border-zinc-800">
-								<td class="py-3 pr-4 font-mono text-purple-400">new GoSPA.DerivedAsync(fn)</td>
-								<td class="py-3">Async computed value</td>
-							</tr>
-							<tr class="border-b border-zinc-800">
-								<td class="py-3 pr-4 font-mono text-purple-400">new GoSPA.Resource(fn)</td>
-								<td class="py-3">Async data resource</td>
-							</tr>
-						</tbody>
-					</table>
-				</div>
-
-				<h2>Next Steps</h2>
-				<ul>
-					<li>
-						<a href="/docs/state-management/client" class="text-purple-400 hover:text-purple-300">
-							Learn about client-side state management →
-						</a>
-					</li>
-					<li>
-						<a href="/docs/client-runtime/overview" class="text-purple-400 hover:text-purple-300">
-							Explore the full client runtime →
-						</a>
-					</li>
-					<li>
-						<a href="/docs/islands" class="text-purple-400 hover:text-purple-300">
-							Add interactive islands →
-						</a>
-					</li>
-				</ul>
-			</div>
+		<div class="flex justify-between pt-6 border-t border-[var(--border)]">
+			<a href="/docs/reactive-primitives/ts" class="text-sm text-[var(--text-secondary)] hover:text-[var(--accent-primary)]">← TypeScript Primitives</a>
+			<a href="/docs/reactive-primitives/advanced" class="text-sm text-[var(--accent-primary)] hover:underline">Advanced Types →</a>
 		</div>
-	}
+	</div>
 }
