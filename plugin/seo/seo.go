@@ -144,16 +144,16 @@ func DefaultConfig() *Config {
 func Meta(p MetaParams) templ.Component {
 	return templ.ComponentFunc(func(ctx context.Context, w io.Writer) error {
 		var sb strings.Builder
-		sb.WriteString(fmt.Sprintf("<title>%s</title>\n", html.EscapeString(p.Title)))
-		sb.WriteString(fmt.Sprintf("<meta name=\"description\" content=\"%s\">\n", html.EscapeString(p.Description)))
+		fmt.Fprintf(&sb, "<title>%s</title>\n", html.EscapeString(p.Title))
+		fmt.Fprintf(&sb, "<meta name=\"description\" content=\"%s\">\n", html.EscapeString(p.Description))
 		if len(p.Keywords) > 0 {
-			sb.WriteString(fmt.Sprintf("<meta name=\"keywords\" content=\"%s\">\n", html.EscapeString(strings.Join(p.Keywords, ", "))))
+			fmt.Fprintf(&sb, "<meta name=\"keywords\" content=\"%s\">\n", html.EscapeString(strings.Join(p.Keywords, ", ")))
 		}
 		if p.Canonical != "" {
-			sb.WriteString(fmt.Sprintf("<link rel=\"canonical\" href=\"%s\">\n", p.Canonical))
+			fmt.Fprintf(&sb, "<link rel=\"canonical\" href=\"%s\">\n", p.Canonical)
 		}
 		if p.OGImage != "" {
-			sb.WriteString(fmt.Sprintf("<meta property=\"og:image\" content=\"%s\">\n", html.EscapeString(p.OGImage)))
+			fmt.Fprintf(&sb, "<meta property=\"og:image\" content=\"%s\">\n", html.EscapeString(p.OGImage))
 		}
 		_, err := w.Write([]byte(sb.String()))
 		return err
@@ -164,12 +164,12 @@ func Meta(p MetaParams) templ.Component {
 func OpenGraph(p OGParams) templ.Component {
 	return templ.ComponentFunc(func(ctx context.Context, w io.Writer) error {
 		var sb strings.Builder
-		sb.WriteString(fmt.Sprintf("<meta property=\"og:type\" content=\"%s\">\n", html.EscapeString(p.Type)))
-		sb.WriteString(fmt.Sprintf("<meta property=\"og:title\" content=\"%s\">\n", html.EscapeString(p.Title)))
-		sb.WriteString(fmt.Sprintf("<meta property=\"og:description\" content=\"%s\">\n", html.EscapeString(p.Description)))
-		sb.WriteString(fmt.Sprintf("<meta property=\"og:url\" content=\"%s\">\n", p.URL))
+		fmt.Fprintf(&sb, "<meta property=\"og:type\" content=\"%s\">\n", html.EscapeString(p.Type))
+		fmt.Fprintf(&sb, "<meta property=\"og:title\" content=\"%s\">\n", html.EscapeString(p.Title))
+		fmt.Fprintf(&sb, "<meta property=\"og:description\" content=\"%s\">\n", html.EscapeString(p.Description))
+		fmt.Fprintf(&sb, "<meta property=\"og:url\" content=\"%s\">\n", p.URL)
 		if p.Image != "" {
-			sb.WriteString(fmt.Sprintf("<meta property=\"og:image\" content=\"%s\">\n", html.EscapeString(p.Image)))
+			fmt.Fprintf(&sb, "<meta property=\"og:image\" content=\"%s\">\n", html.EscapeString(p.Image))
 		}
 		_, err := w.Write([]byte(sb.String()))
 		return err
@@ -180,14 +180,14 @@ func OpenGraph(p OGParams) templ.Component {
 func TwitterCard(p TwitterParams) templ.Component {
 	return templ.ComponentFunc(func(ctx context.Context, w io.Writer) error {
 		var sb strings.Builder
-		sb.WriteString(fmt.Sprintf("<meta name=\"twitter:card\" content=\"%s\">\n", html.EscapeString(p.Card)))
-		sb.WriteString(fmt.Sprintf("<meta name=\"twitter:title\" content=\"%s\">\n", html.EscapeString(p.Title)))
-		sb.WriteString(fmt.Sprintf("<meta name=\"twitter:description\" content=\"%s\">\n", html.EscapeString(p.Description)))
+		fmt.Fprintf(&sb, "<meta name=\"twitter:card\" content=\"%s\">\n", html.EscapeString(p.Card))
+		fmt.Fprintf(&sb, "<meta name=\"twitter:title\" content=\"%s\">\n", html.EscapeString(p.Title))
+		fmt.Fprintf(&sb, "<meta name=\"twitter:description\" content=\"%s\">\n", html.EscapeString(p.Description))
 		if p.Image != "" {
-			sb.WriteString(fmt.Sprintf("<meta name=\"twitter:image\" content=\"%s\">\n", html.EscapeString(p.Image)))
+			fmt.Fprintf(&sb, "<meta name=\"twitter:image\" content=\"%s\">\n", html.EscapeString(p.Image))
 		}
 		if p.Site != "" {
-			sb.WriteString(fmt.Sprintf("<meta name=\"twitter:site\" content=\"%s\">\n", html.EscapeString(p.Site)))
+			fmt.Fprintf(&sb, "<meta name=\"twitter:site\" content=\"%s\">\n", html.EscapeString(p.Site))
 		}
 		_, err := w.Write([]byte(sb.String()))
 		return err
@@ -203,7 +203,7 @@ func StructuredData(data any) templ.Component {
 		if err != nil {
 			return err
 		}
-		_, err = w.Write([]byte(fmt.Sprintf("<script type=\"application/ld+json\">\n%s\n</script>\n", string(jsonData))))
+		_, err = fmt.Fprintf(w, "<script type=\"application/ld+json\">\n%s\n</script>\n", string(jsonData))
 		return err
 	})
 }
@@ -385,10 +385,10 @@ func (p *SEOPlugin) generateSitemap(pages []PageSEO) error {
 
 		url := p.config.SiteURL + page.Path
 		sb.WriteString("  <url>\n")
-		sb.WriteString(fmt.Sprintf("    <loc>%s</loc>\n", url))
-		sb.WriteString(fmt.Sprintf("    <lastmod>%s</lastmod>\n", page.Modified))
-		sb.WriteString(fmt.Sprintf("    <changefreq>%s</changefreq>\n", page.ChangeFreq))
-		sb.WriteString(fmt.Sprintf("    <priority>%.1f</priority>\n", page.Priority))
+		fmt.Fprintf(&sb, "    <loc>%s</loc>\n", url)
+		fmt.Fprintf(&sb, "    <lastmod>%s</lastmod>\n", page.Modified)
+		fmt.Fprintf(&sb, "    <changefreq>%s</changefreq>\n", page.ChangeFreq)
+		fmt.Fprintf(&sb, "    <priority>%.1f</priority>\n", page.Priority)
 		sb.WriteString("  </url>\n")
 	}
 
@@ -422,36 +422,36 @@ func (p *SEOPlugin) generateMetaTags(pagePath string) error {
 
 	var sb strings.Builder
 	sb.WriteString("<!-- Meta Tags -->\n")
-	sb.WriteString(fmt.Sprintf("<title>%s | %s</title>\n", html.EscapeString(page.Title), html.EscapeString(p.config.SiteName)))
-	sb.WriteString(fmt.Sprintf("<meta name=\"description\" content=\"%s\">\n", html.EscapeString(page.Description)))
-	sb.WriteString(fmt.Sprintf("<meta name=\"language\" content=\"%s\">\n", html.EscapeString(p.config.Language)))
+	fmt.Fprintf(&sb, "<title>%s | %s</title>\n", html.EscapeString(page.Title), html.EscapeString(p.config.SiteName))
+	fmt.Fprintf(&sb, "<meta name=\"description\" content=\"%s\">\n", html.EscapeString(page.Description))
+	fmt.Fprintf(&sb, "<meta name=\"language\" content=\"%s\">\n", html.EscapeString(p.config.Language))
 
 	// Open Graph
 	sb.WriteString("\n<!-- Open Graph -->\n")
 	sb.WriteString("<meta property=\"og:type\" content=\"website\">\n")
-	sb.WriteString(fmt.Sprintf("<meta property=\"og:url\" content=\"%s%s\">\n", p.config.SiteURL, page.Path)) // URLs usually don't need HTML escaping in the same way, but good practice if queried
-	sb.WriteString(fmt.Sprintf("<meta property=\"og:title\" content=\"%s\">\n", html.EscapeString(page.Title)))
-	sb.WriteString(fmt.Sprintf("<meta property=\"og:description\" content=\"%s\">\n", html.EscapeString(page.Description)))
-	sb.WriteString(fmt.Sprintf("<meta property=\"og:site_name\" content=\"%s\">\n", html.EscapeString(p.config.SiteName)))
+	fmt.Fprintf(&sb, "<meta property=\"og:url\" content=\"%s%s\">\n", p.config.SiteURL, page.Path) // URLs usually don't need HTML escaping in the same way, but good practice if queried
+	fmt.Fprintf(&sb, "<meta property=\"og:title\" content=\"%s\">\n", html.EscapeString(page.Title))
+	fmt.Fprintf(&sb, "<meta property=\"og:description\" content=\"%s\">\n", html.EscapeString(page.Description))
+	fmt.Fprintf(&sb, "<meta property=\"og:site_name\" content=\"%s\">\n", html.EscapeString(p.config.SiteName))
 	if page.Image != "" {
-		sb.WriteString(fmt.Sprintf("<meta property=\"og:image\" content=\"%s\">\n", html.EscapeString(page.Image)))
+		fmt.Fprintf(&sb, "<meta property=\"og:image\" content=\"%s\">\n", html.EscapeString(page.Image))
 	}
 
 	// Twitter Card
 	sb.WriteString("\n<!-- Twitter Card -->\n")
 	sb.WriteString("<meta name=\"twitter:card\" content=\"summary_large_image\">\n")
 	if p.config.TwitterHandle != "" {
-		sb.WriteString(fmt.Sprintf("<meta name=\"twitter:site\" content=\"%s\">\n", html.EscapeString(p.config.TwitterHandle)))
+		fmt.Fprintf(&sb, "<meta name=\"twitter:site\" content=\"%s\">\n", html.EscapeString(p.config.TwitterHandle))
 	}
-	sb.WriteString(fmt.Sprintf("<meta name=\"twitter:title\" content=\"%s\">\n", html.EscapeString(page.Title)))
-	sb.WriteString(fmt.Sprintf("<meta name=\"twitter:description\" content=\"%s\">\n", html.EscapeString(page.Description)))
+	fmt.Fprintf(&sb, "<meta name=\"twitter:title\" content=\"%s\">\n", html.EscapeString(page.Title))
+	fmt.Fprintf(&sb, "<meta name=\"twitter:description\" content=\"%s\">\n", html.EscapeString(page.Description))
 	if page.Image != "" {
-		sb.WriteString(fmt.Sprintf("<meta name=\"twitter:image\" content=\"%s\">\n", html.EscapeString(page.Image)))
+		fmt.Fprintf(&sb, "<meta name=\"twitter:image\" content=\"%s\">\n", html.EscapeString(page.Image))
 	}
 
 	// Canonical
 	sb.WriteString("\n<!-- Canonical -->\n")
-	sb.WriteString(fmt.Sprintf("<link rel=\"canonical\" href=\"%s%s\">\n", p.config.SiteURL, page.Path))
+	fmt.Fprintf(&sb, "<link rel=\"canonical\" href=\"%s%s\">\n", p.config.SiteURL, page.Path)
 
 	fmt.Println(sb.String())
 	return nil
@@ -533,8 +533,8 @@ func (p *SEOPlugin) GeneratePageMeta(page PageSEO) string {
 	}
 
 	// Basic meta
-	sb.WriteString(fmt.Sprintf("<title>%s | %s</title>\n", html.EscapeString(title), html.EscapeString(p.config.SiteName)))
-	sb.WriteString(fmt.Sprintf("<meta name=\"description\" content=\"%s\">\n", html.EscapeString(description)))
+	fmt.Fprintf(&sb, "<title>%s | %s</title>\n", html.EscapeString(title), html.EscapeString(p.config.SiteName))
+	fmt.Fprintf(&sb, "<meta name=\"description\" content=\"%s\">\n", html.EscapeString(description))
 
 	// Robots
 	if page.NoIndex || page.NoFollow {
@@ -548,7 +548,7 @@ func (p *SEOPlugin) GeneratePageMeta(page PageSEO) string {
 			}
 			robots += "nofollow"
 		}
-		sb.WriteString(fmt.Sprintf("<meta name=\"robots\" content=\"%s\">\n", robots))
+		fmt.Fprintf(&sb, "<meta name=\"robots\" content=\"%s\">\n", robots)
 	}
 
 	// Canonical
@@ -556,21 +556,21 @@ func (p *SEOPlugin) GeneratePageMeta(page PageSEO) string {
 	if canonical == "" {
 		canonical = p.config.SiteURL + page.Path
 	}
-	sb.WriteString(fmt.Sprintf("<link rel=\"canonical\" href=\"%s\">\n", canonical))
+	fmt.Fprintf(&sb, "<link rel=\"canonical\" href=\"%s\">\n", canonical)
 
 	// Open Graph
-	sb.WriteString(fmt.Sprintf("<meta property=\"og:url\" content=\"%s\">\n", p.config.SiteURL+page.Path))
-	sb.WriteString(fmt.Sprintf("<meta property=\"og:title\" content=\"%s\">\n", html.EscapeString(title)))
-	sb.WriteString(fmt.Sprintf("<meta property=\"og:description\" content=\"%s\">\n", html.EscapeString(description)))
+	fmt.Fprintf(&sb, "<meta property=\"og:url\" content=\"%s\">\n", p.config.SiteURL+page.Path)
+	fmt.Fprintf(&sb, "<meta property=\"og:title\" content=\"%s\">\n", html.EscapeString(title))
+	fmt.Fprintf(&sb, "<meta property=\"og:description\" content=\"%s\">\n", html.EscapeString(description))
 	if image != "" {
-		sb.WriteString(fmt.Sprintf("<meta property=\"og:image\" content=\"%s\">\n", html.EscapeString(image)))
+		fmt.Fprintf(&sb, "<meta property=\"og:image\" content=\"%s\">\n", html.EscapeString(image))
 	}
 
 	// Twitter
-	sb.WriteString(fmt.Sprintf("<meta name=\"twitter:title\" content=\"%s\">\n", html.EscapeString(title)))
-	sb.WriteString(fmt.Sprintf("<meta name=\"twitter:description\" content=\"%s\">\n", html.EscapeString(description)))
+	fmt.Fprintf(&sb, "<meta name=\"twitter:title\" content=\"%s\">\n", html.EscapeString(title))
+	fmt.Fprintf(&sb, "<meta name=\"twitter:description\" content=\"%s\">\n", html.EscapeString(description))
 	if image != "" {
-		sb.WriteString(fmt.Sprintf("<meta name=\"twitter:image\" content=\"%s\">\n", html.EscapeString(image)))
+		fmt.Fprintf(&sb, "<meta name=\"twitter:image\" content=\"%s\">\n", html.EscapeString(image))
 	}
 
 	return sb.String()

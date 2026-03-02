@@ -243,7 +243,7 @@ func (p *ValidationPlugin) generateTypes(schema Schema, outputDir string) error 
 	sb.WriteString("// Auto-generated TypeScript types from schema\n")
 	sb.WriteString("// Do not edit manually\n\n")
 
-	sb.WriteString(fmt.Sprintf("export interface %s {\n", schema.Name))
+	fmt.Fprintf(&sb, "export interface %s {\n", schema.Name)
 
 	// Sort keys for deterministic output
 	var keys []string
@@ -259,7 +259,7 @@ func (p *ValidationPlugin) generateTypes(schema Schema, outputDir string) error 
 		if !field.Required {
 			optional = "?"
 		}
-		sb.WriteString(fmt.Sprintf("  %s%s: %s;\n", name, optional, tsType))
+		fmt.Fprintf(&sb, "  %s%s: %s;\n", name, optional, tsType)
 	}
 	sb.WriteString("}\n")
 
@@ -274,7 +274,7 @@ func (p *ValidationPlugin) generateValibotSchema(schema Schema, outputDir string
 	sb.WriteString("// Do not edit manually\n\n")
 	sb.WriteString("import * as v from 'valibot';\n\n")
 
-	sb.WriteString(fmt.Sprintf("export const %sSchema = v.object({\n", schema.Name))
+	fmt.Fprintf(&sb, "export const %sSchema = v.object({\n", schema.Name)
 
 	// Sort keys for deterministic output
 	var keys []string
@@ -287,14 +287,14 @@ func (p *ValidationPlugin) generateValibotSchema(schema Schema, outputDir string
 		field := schema.Fields[name]
 		validator := p.fieldToValibot(field)
 		if field.Required {
-			sb.WriteString(fmt.Sprintf("  %s: %s,\n", name, validator))
+			fmt.Fprintf(&sb, "  %s: %s,\n", name, validator)
 		} else {
-			sb.WriteString(fmt.Sprintf("  %s: v.optional(%s),\n", name, validator))
+			fmt.Fprintf(&sb, "  %s: v.optional(%s),\n", name, validator)
 		}
 	}
 	sb.WriteString("});\n\n")
 
-	sb.WriteString(fmt.Sprintf("export type %s = v.InferOutput<typeof %sSchema>;\n", schema.Name, schema.Name))
+	fmt.Fprintf(&sb, "export type %s = v.InferOutput<typeof %sSchema>;\n", schema.Name, schema.Name)
 
 	filename := fmt.Sprintf("%s.schema.ts", schema.Name)
 	return os.WriteFile(filepath.Join(outputDir, filename), []byte(sb.String()), 0644)
@@ -307,7 +307,7 @@ func (p *ValidationPlugin) generateGoValidation(schema Schema, outputDir string)
 	sb.WriteString("// Do not edit manually\n\n")
 	sb.WriteString("package validation\n\n")
 
-	sb.WriteString(fmt.Sprintf("type %s struct {\n", schema.Name))
+	fmt.Fprintf(&sb, "type %s struct {\n", schema.Name)
 
 	// Sort keys for deterministic output
 	var keys []string
@@ -320,8 +320,8 @@ func (p *ValidationPlugin) generateGoValidation(schema Schema, outputDir string)
 		field := schema.Fields[name]
 		goType := p.tsTypeToGo(field.Type)
 		tags := p.generateValidateTags(field)
-		sb.WriteString(fmt.Sprintf("  %s %s `json:\"%s\" validate:\"%s\"`\n",
-			p.capitalize(name), goType, name, tags))
+		fmt.Fprintf(&sb, "  %s %s `json:\"%s\" validate:\"%s\"`\n",
+			p.capitalize(name), goType, name, tags)
 	}
 	sb.WriteString("}\n")
 

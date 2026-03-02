@@ -4,43 +4,43 @@
 package routes
 
 import (
-	docspluginsvalidation "github.com/aydenstechdungeon/gospa/website/routes/docs/plugins/validation"
 	"github.com/a-h/templ"
-	docsgetstartedinstallation "github.com/aydenstechdungeon/gospa/website/routes/docs/getstarted/installation"
-	"github.com/aydenstechdungeon/gospa/website/routes/docs"
-	docsreactiveprimitives "github.com/aydenstechdungeon/gospa/website/routes/docs/reactive-primitives"
-	docsremoteactions "github.com/aydenstechdungeon/gospa/website/routes/docs/remote-actions"
-	docsruntime "github.com/aydenstechdungeon/gospa/website/routes/docs/runtime"
 	"github.com/aydenstechdungeon/gospa/routing"
+	"github.com/aydenstechdungeon/gospa/website/routes/docs"
+	docsapi "github.com/aydenstechdungeon/gospa/website/routes/docs/api"
+	docscli "github.com/aydenstechdungeon/gospa/website/routes/docs/cli"
 	docsclientruntimedombindings "github.com/aydenstechdungeon/gospa/website/routes/docs/client-runtime/dom-bindings"
-	docsdevtools "github.com/aydenstechdungeon/gospa/website/routes/docs/devtools"
-	docsgetstartedquickstart "github.com/aydenstechdungeon/gospa/website/routes/docs/getstarted/quickstart"
-	docsparams "github.com/aydenstechdungeon/gospa/website/routes/docs/params"
-	docspluginsauth "github.com/aydenstechdungeon/gospa/website/routes/docs/plugins/auth"
-	docsrouting "github.com/aydenstechdungeon/gospa/website/routes/docs/routing"
-	docswebsocket "github.com/aydenstechdungeon/gospa/website/routes/docs/websocket"
+	docsclientruntimenavigationevents "github.com/aydenstechdungeon/gospa/website/routes/docs/client-runtime/navigation-events"
+	docsclientruntimeoverview "github.com/aydenstechdungeon/gospa/website/routes/docs/client-runtime/overview"
+	docsclientruntimetransitions "github.com/aydenstechdungeon/gospa/website/routes/docs/client-runtime/transitions"
+	docsclientruntimewebsocket "github.com/aydenstechdungeon/gospa/website/routes/docs/client-runtime/websocket"
+	docscomponents "github.com/aydenstechdungeon/gospa/website/routes/docs/components"
 	docsconfiguration "github.com/aydenstechdungeon/gospa/website/routes/docs/configuration"
+	docsdevtools "github.com/aydenstechdungeon/gospa/website/routes/docs/devtools"
 	docserrors "github.com/aydenstechdungeon/gospa/website/routes/docs/errors"
+	docsgetstartedinstallation "github.com/aydenstechdungeon/gospa/website/routes/docs/getstarted/installation"
+	docsgetstartedquickstart "github.com/aydenstechdungeon/gospa/website/routes/docs/getstarted/quickstart"
 	docsgetstartedstructure "github.com/aydenstechdungeon/gospa/website/routes/docs/getstarted/structure"
 	docshmr "github.com/aydenstechdungeon/gospa/website/routes/docs/hmr"
-	docsplugins "github.com/aydenstechdungeon/gospa/website/routes/docs/plugins"
-	docspluginspostcss "github.com/aydenstechdungeon/gospa/website/routes/docs/plugins/postcss"
-	docspluginsseo "github.com/aydenstechdungeon/gospa/website/routes/docs/plugins/seo"
-	docsapi "github.com/aydenstechdungeon/gospa/website/routes/docs/api"
-	docsclientruntimeoverview "github.com/aydenstechdungeon/gospa/website/routes/docs/client-runtime/overview"
-	docsclientruntimewebsocket "github.com/aydenstechdungeon/gospa/website/routes/docs/client-runtime/websocket"
 	docsislands "github.com/aydenstechdungeon/gospa/website/routes/docs/islands"
+	docsparams "github.com/aydenstechdungeon/gospa/website/routes/docs/params"
+	docsplugins "github.com/aydenstechdungeon/gospa/website/routes/docs/plugins"
+	docspluginsauth "github.com/aydenstechdungeon/gospa/website/routes/docs/plugins/auth"
+	docspluginsimage "github.com/aydenstechdungeon/gospa/website/routes/docs/plugins/image"
+	docspluginspostcss "github.com/aydenstechdungeon/gospa/website/routes/docs/plugins/postcss"
 	docspluginsqrcode "github.com/aydenstechdungeon/gospa/website/routes/docs/plugins/qrcode"
+	docspluginsseo "github.com/aydenstechdungeon/gospa/website/routes/docs/plugins/seo"
+	docspluginstailwind "github.com/aydenstechdungeon/gospa/website/routes/docs/plugins/tailwind"
+	docspluginsvalidation "github.com/aydenstechdungeon/gospa/website/routes/docs/plugins/validation"
+	docsreactiveprimitives "github.com/aydenstechdungeon/gospa/website/routes/docs/reactive-primitives"
+	docsremoteactions "github.com/aydenstechdungeon/gospa/website/routes/docs/remote-actions"
+	docsrendering "github.com/aydenstechdungeon/gospa/website/routes/docs/rendering"
+	docsrouting "github.com/aydenstechdungeon/gospa/website/routes/docs/routing"
+	docsruntime "github.com/aydenstechdungeon/gospa/website/routes/docs/runtime"
 	docssecurity "github.com/aydenstechdungeon/gospa/website/routes/docs/security"
 	docssse "github.com/aydenstechdungeon/gospa/website/routes/docs/sse"
-	docsclientruntimenavigationevents "github.com/aydenstechdungeon/gospa/website/routes/docs/client-runtime/navigation-events"
-	docscomponents "github.com/aydenstechdungeon/gospa/website/routes/docs/components"
-	docspluginstailwind "github.com/aydenstechdungeon/gospa/website/routes/docs/plugins/tailwind"
-	docsrendering "github.com/aydenstechdungeon/gospa/website/routes/docs/rendering"
 	docsstatemanagement "github.com/aydenstechdungeon/gospa/website/routes/docs/state-management"
-	docsclientruntimetransitions "github.com/aydenstechdungeon/gospa/website/routes/docs/client-runtime/transitions"
-	docscli "github.com/aydenstechdungeon/gospa/website/routes/docs/cli"
-	docspluginsimage "github.com/aydenstechdungeon/gospa/website/routes/docs/plugins/image"
+	docswebsocket "github.com/aydenstechdungeon/gospa/website/routes/docs/websocket"
 )
 
 func init() {
@@ -157,48 +157,48 @@ func init() {
 	// Register layouts
 	routing.RegisterLayout("/docs", func(children templ.Component, props map[string]interface{}) templ.Component {
 		return docs.DocsLayout(children, func() string {
-		if v, ok := props["path"].(string); ok {
-			return v
-		}
-		return ""
-	}())
+			if v, ok := props["path"].(string); ok {
+				return v
+			}
+			return ""
+		}())
 	})
 	routing.RegisterRootLayout(func(children templ.Component, props map[string]interface{}) templ.Component {
 		return RootLayout(func() string {
-		if v, ok := props["title"].(string); ok {
-			return v
-		}
-		return ""
-	}(), children, func() string {
-		if v, ok := props["runtimePath"].(string); ok {
-			return v
-		}
-		return ""
-	}(), func() string {
-		if v, ok := props["path"].(string); ok {
-			return v
-		}
-		return ""
-	}(), func() string {
-		if v, ok := props["wsUrl"].(string); ok {
-			return v
-		}
-		return ""
-	}(), func() bool {
-		if v, ok := props["debug"].(bool); ok {
-			return v
-		}
-		return false
-	}(), func() string {
-		if v, ok := props["hydrationMode"].(string); ok {
-			return v
-		}
-		return ""
-	}(), func() int {
-		if v, ok := props["hydrationTimeout"].(int); ok {
-			return v
-		}
-		return 0
-	}())
+			if v, ok := props["title"].(string); ok {
+				return v
+			}
+			return ""
+		}(), children, func() string {
+			if v, ok := props["runtimePath"].(string); ok {
+				return v
+			}
+			return ""
+		}(), func() string {
+			if v, ok := props["path"].(string); ok {
+				return v
+			}
+			return ""
+		}(), func() string {
+			if v, ok := props["wsUrl"].(string); ok {
+				return v
+			}
+			return ""
+		}(), func() bool {
+			if v, ok := props["debug"].(bool); ok {
+				return v
+			}
+			return false
+		}(), func() string {
+			if v, ok := props["hydrationMode"].(string); ok {
+				return v
+			}
+			return ""
+		}(), func() int {
+			if v, ok := props["hydrationTimeout"].(int); ok {
+				return v
+			}
+			return 0
+		}())
 	})
 }

@@ -251,7 +251,7 @@ func renderIslandWrapper(island *component.Island, attrs map[string]string, opts
 	sb.WriteString("<")
 	sb.WriteString(tag)
 	for name, value := range attrs {
-		sb.WriteString(fmt.Sprintf(` %s="%s"`, name, templ.EscapeString(value)))
+		fmt.Fprintf(&sb, ` %s="%s"`, name, templ.EscapeString(value))
 	}
 	sb.WriteString(">")
 

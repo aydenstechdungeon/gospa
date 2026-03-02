@@ -575,7 +575,7 @@ func GetOAuthProviders() map[string]*oauth2.Config {
 `)
 
 	for _, provider := range providers {
-		sb.WriteString(fmt.Sprintf("\t\t\"%s\": get%sConfig(),\n", provider.Name, provider.Name))
+		fmt.Fprintf(&sb, "\t\t\"%s\": get%sConfig(),\n", provider.Name, provider.Name)
 	}
 
 	sb.WriteString(`	}
@@ -594,7 +594,7 @@ func FetchUserInfo(ctx context.Context, provider string, token *oauth2.Token) (*
 `)
 
 	for _, provider := range providers {
-		sb.WriteString(fmt.Sprintf("\tcase \"%s\":\n\t\tuserURL = \"%s\"\n", provider.Name, provider.UserURL))
+		fmt.Fprintf(&sb, "\tcase \"%s\":\n\t\tuserURL = \"%s\"\n", provider.Name, provider.UserURL)
 	}
 
 	sb.WriteString(`	default:

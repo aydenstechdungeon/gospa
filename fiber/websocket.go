@@ -16,7 +16,6 @@ import (
 
 	"github.com/aydenstechdungeon/gospa/state"
 	"github.com/aydenstechdungeon/gospa/store"
-	"github.com/gofiber/fiber/v2"
 	fiberpkg "github.com/gofiber/fiber/v2"
 	websocket "github.com/gofiber/websocket/v2"
 )
@@ -30,26 +29,35 @@ const (
 
 // ConnectionRateLimiter implements per-IP rate limiting for WebSocket connections
 // to prevent DoS attacks. Uses token bucket algorithm with burst capacity.
+// It can optionally use a store.Storage backend (like Redis) for multi-process environments.
 type ConnectionRateLimiter struct {
 	mu      sync.RWMutex
-	buckets map[string]*rateBucket // IP -> bucket
+	buckets map[string]*rateBucket // IP -> bucket (for in-memory fallback)
+	storage store.Storage          // Optional storage backend (e.g., Redis)
 	// Configurable limits
 	maxTokens       float64       // Maximum burst (default: 5)
 	refillRate      float64       // Tokens per second (default: 0.2 = 1 per 5 sec)
-	cleanupInterval time.Duration // How often to clean stale entries (default: 1 min)
+	cleanupInterval time.Duration // How often to clean stale entries (in-memory only, default: 1 min)
 }
 
 type rateBucket struct {
-	tokens     float64
-	lastRefill time.Time
+	Tokens     float64   `json:"tokens"`
+	LastRefill time.Time `json:"lastRefill"`
 }
 
-// SetConnectionRateLimiter configures the global connection rate limiter
+// SetConnectionRateLimiter configures the global connection rate limiter limits.
 func SetConnectionRateLimiter(maxTokens float64, refillRate float64) {
 	globalConnRateLimiter.mu.Lock()
 	defer globalConnRateLimiter.mu.Unlock()
 	globalConnRateLimiter.maxTokens = maxTokens
 	globalConnRateLimiter.refillRate = refillRate
+}
+
+// SetStorage configures the global connection rate limiter to use an external storage backend.
+func (rl *ConnectionRateLimiter) SetStorage(storage store.Storage) {
+	rl.mu.Lock()
+	defer rl.mu.Unlock()
+	rl.storage = storage
 }
 
 // Global connection rate limiter (singleton)
@@ -75,28 +83,74 @@ func (rl *ConnectionRateLimiter) Allow(ip string) bool {
 	defer rl.mu.Unlock()
 
 	now := time.Now()
+	var bucket *rateBucket
+
+	if rl.storage != nil {
+		key := "rate:" + ip
+		data, err := rl.storage.Get(key)
+		if err == nil {
+			var b rateBucket
+			if json.Unmarshal(data, &b) == nil {
+				bucket = &b
+			}
+		}
+
+		if bucket == nil {
+			// First connection from this IP
+			bucket = &rateBucket{
+				Tokens:     rl.maxTokens - 1, // Consume 1 token
+				LastRefill: now,
+			}
+			newBytes, _ := json.Marshal(bucket)
+			_ = rl.storage.Set(key, newBytes, 10*time.Minute)
+			return true
+		}
+
+		// Refill tokens based on elapsed time
+		elapsed := now.Sub(bucket.LastRefill).Seconds()
+		bucket.Tokens += elapsed * rl.refillRate
+		if bucket.Tokens > rl.maxTokens {
+			bucket.Tokens = rl.maxTokens
+		}
+		bucket.LastRefill = now
+
+		// Check if we can consume a token
+		allowed := false
+		if bucket.Tokens >= 1.0 {
+			bucket.Tokens -= 1.0
+			allowed = true
+		}
+
+		// Save back to storage
+		newBytes, _ := json.Marshal(bucket)
+		_ = rl.storage.Set(key, newBytes, 10*time.Minute)
+
+		return allowed
+	}
+
+	// In-memory fallback
 	bucket, exists := rl.buckets[ip]
 
 	if !exists {
 		// First connection from this IP
 		rl.buckets[ip] = &rateBucket{
-			tokens:     rl.maxTokens - 1, // Consume 1 token
-			lastRefill: now,
+			Tokens:     rl.maxTokens - 1, // Consume 1 token
+			LastRefill: now,
 		}
 		return true
 	}
 
 	// Refill tokens based on elapsed time
-	elapsed := now.Sub(bucket.lastRefill).Seconds()
-	bucket.tokens += elapsed * rl.refillRate
-	if bucket.tokens > rl.maxTokens {
-		bucket.tokens = rl.maxTokens
+	elapsed := now.Sub(bucket.LastRefill).Seconds()
+	bucket.Tokens += elapsed * rl.refillRate
+	if bucket.Tokens > rl.maxTokens {
+		bucket.Tokens = rl.maxTokens
 	}
-	bucket.lastRefill = now
+	bucket.LastRefill = now
 
 	// Check if we can consume a token
-	if bucket.tokens >= 1.0 {
-		bucket.tokens -= 1.0
+	if bucket.Tokens >= 1.0 {
+		bucket.Tokens -= 1.0
 		return true
 	}
 
@@ -111,6 +165,7 @@ func GetIPFromContext(c *fiberpkg.Ctx) string {
 }
 
 // cleanupLoop periodically removes stale rate limit entries to prevent memory leaks.
+// Note: only cleans up the memory fallback map.
 func (rl *ConnectionRateLimiter) cleanupLoop() {
 	ticker := time.NewTicker(rl.cleanupInterval)
 	defer ticker.Stop()
@@ -120,7 +175,7 @@ func (rl *ConnectionRateLimiter) cleanupLoop() {
 		now := time.Now()
 		for ip, bucket := range rl.buckets {
 			// Remove entries that haven't been used in 10 minutes
-			if now.Sub(bucket.lastRefill) > 10*time.Minute {
+			if now.Sub(bucket.LastRefill) > 10*time.Minute {
 				delete(rl.buckets, ip)
 			}
 		}
@@ -262,6 +317,7 @@ var globalClientStateStore = NewClientStateStore(store.NewMemoryStorage())
 func InitStores(storage store.Storage) {
 	globalSessionStore = NewSessionStore(storage)
 	globalClientStateStore = NewClientStateStore(storage)
+	globalConnRateLimiter.SetStorage(storage)
 }
 
 // WSClient represents a connected WebSocket client.
@@ -888,17 +944,17 @@ func WebSocketHandler(config WebSocketConfig) fiberpkg.Handler {
 		_ = c.SetReadDeadline(time.Now().Add(10 * time.Second))
 
 		// Wait for first message (should be init with session token)
-		_, firstMsg, err := c.Conn.ReadMessage()
+		_, firstMsg, err := c.ReadMessage()
 		if err != nil {
 			log.Printf("Failed to read initial message: %v", err)
-			_ = c.Conn.Close()
+			_ = c.Close()
 			return
 		}
 
 		var initMsg WSMessage
 		if err := json.Unmarshal(firstMsg, &initMsg); err != nil {
 			client.SendError("Invalid initial message format")
-			_ = c.Conn.Close()
+			_ = c.Close()
 			return
 		}
 
@@ -935,7 +991,7 @@ func WebSocketHandler(config WebSocketConfig) fiberpkg.Handler {
 			sessionToken = globalSessionStore.CreateSession(sessionID)
 			if sessionToken == "" {
 				client.SendError("Failed to create session")
-				_ = c.Conn.Close()
+				_ = c.Close()
 				return
 			}
 		}
@@ -1212,7 +1268,7 @@ func WebSocketUpgradeMiddleware() fiberpkg.Handler {
 		clientIP := GetIPFromContext(c)
 		if !globalConnRateLimiter.Allow(clientIP) {
 			log.Printf("WebSocket connection rate limit exceeded for IP: %s", clientIP)
-			return c.Status(fiber.StatusTooManyRequests).JSON(fiber.Map{
+			return c.Status(fiberpkg.StatusTooManyRequests).JSON(fiberpkg.Map{
 				"error": "Rate limit exceeded. Please try again later.",
 			})
 		}
@@ -1223,8 +1279,8 @@ func WebSocketUpgradeMiddleware() fiberpkg.Handler {
 }
 
 // StateSyncHandler creates a handler for state synchronization.
-func StateSyncHandler(hub *WSHub) fiber.Handler {
-	return func(c *fiber.Ctx) error {
+func StateSyncHandler(hub *WSHub) fiberpkg.Handler {
+	return func(c *fiberpkg.Ctx) error {
 		// Get session token from header or query
 		sessionToken := c.Query("session")
 		if sessionToken == "" {
@@ -1232,14 +1288,14 @@ func StateSyncHandler(hub *WSHub) fiber.Handler {
 		}
 
 		if sessionToken == "" {
-			return c.Status(fiber.StatusUnauthorized).JSON(fiber.Map{
+			return c.Status(fiberpkg.StatusUnauthorized).JSON(fiberpkg.Map{
 				"error": "Session token required",
 			})
 		}
 
 		sessionID, ok := globalSessionStore.ValidateSession(sessionToken)
 		if !ok {
-			return c.Status(fiber.StatusUnauthorized).JSON(fiber.Map{
+			return c.Status(fiberpkg.StatusUnauthorized).JSON(fiberpkg.Map{
 				"error": "Invalid session",
 			})
 		}
@@ -1247,7 +1303,7 @@ func StateSyncHandler(hub *WSHub) fiber.Handler {
 		// Get shared state map
 		stateMap, ok := globalClientStateStore.Get(sessionID)
 		if !ok {
-			return c.Status(fiber.StatusNotFound).JSON(fiber.Map{
+			return c.Status(fiberpkg.StatusNotFound).JSON(fiberpkg.Map{
 				"error": "Session state not found",
 			})
 		}
@@ -1255,7 +1311,7 @@ func StateSyncHandler(hub *WSHub) fiber.Handler {
 		// Parse state update
 		var update WSStateUpdate
 		if err := json.Unmarshal(c.Body(), &update); err != nil {
-			return c.Status(fiber.StatusBadRequest).JSON(fiber.Map{
+			return c.Status(fiberpkg.StatusBadRequest).JSON(fiberpkg.Map{
 				"error": "Invalid update payload",
 			})
 		}
@@ -1270,7 +1326,7 @@ func StateSyncHandler(hub *WSHub) fiber.Handler {
 			stateMap.Add(update.Key, r)
 		}
 
-		return c.JSON(fiber.Map{
+		return c.JSON(fiberpkg.Map{
 			"success": true,
 		})
 	}

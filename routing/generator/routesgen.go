@@ -105,7 +105,7 @@ func (g *RouteTypeScriptGenerator) generateRoutePaths(sb *strings.Builder) {
 		} else {
 			sb.WriteString("  | ")
 		}
-		sb.WriteString(fmt.Sprintf("%q\n", route.URLPath))
+		fmt.Fprintf(sb, "%q\n", route.URLPath)
 	}
 
 	sb.WriteString(";\n\n")
@@ -122,7 +122,7 @@ func (g *RouteTypeScriptGenerator) generateRoutePaths(sb *strings.Builder) {
 		}
 		// Create a route name from the path
 		name := g.pathToName(route.URLPath)
-		sb.WriteString(fmt.Sprintf("  %s: %q;\n", name, route.URLPath))
+		fmt.Fprintf(sb, "  %s: %q;\n", name, route.URLPath)
 	}
 
 	sb.WriteString("}\n")
@@ -140,12 +140,12 @@ func (g *RouteTypeScriptGenerator) generateRouteParams(sb *strings.Builder) {
 			continue
 		}
 		if len(route.RouteParams) > 0 {
-			sb.WriteString(fmt.Sprintf("  T extends %q ? { ", route.URLPath))
+			fmt.Fprintf(sb, "  T extends %q ? { ", route.URLPath)
 			for i, param := range route.RouteParams {
 				if i > 0 {
 					sb.WriteString("; ")
 				}
-				sb.WriteString(fmt.Sprintf("%s: string | number", param))
+				fmt.Fprintf(sb, "%s: string | number", param)
 			}
 			sb.WriteString(" } :\n")
 		}
@@ -164,9 +164,9 @@ func (g *RouteTypeScriptGenerator) generateRouteParams(sb *strings.Builder) {
 			continue
 		}
 		name := g.pathToName(route.URLPath)
-		sb.WriteString(fmt.Sprintf("export interface %sParams {\n", name))
+		fmt.Fprintf(sb, "export interface %sParams {\n", name)
 		for _, param := range route.RouteParams {
-			sb.WriteString(fmt.Sprintf("  %s: string | number;\n", param))
+			fmt.Fprintf(sb, "  %s: string | number;\n", param)
 		}
 		sb.WriteString("}\n\n")
 	}
@@ -231,19 +231,19 @@ func (g *RouteTypeScriptGenerator) generateRouteBuilder(sb *strings.Builder) {
 		funcName := g.pathToFuncName(route.URLPath)
 
 		if len(route.RouteParams) > 0 {
-			sb.WriteString(fmt.Sprintf("export function %s(params: { ", funcName))
+			fmt.Fprintf(sb, "export function %s(params: { ", funcName)
 			for i, param := range route.RouteParams {
 				if i > 0 {
 					sb.WriteString("; ")
 				}
-				sb.WriteString(fmt.Sprintf("%s: string | number", param))
+				fmt.Fprintf(sb, "%s: string | number", param)
 			}
 			sb.WriteString(" }): string {\n")
-			sb.WriteString(fmt.Sprintf("  return buildRoute(%q, params);\n", route.URLPath))
+			fmt.Fprintf(sb, "  return buildRoute(%q, params);\n", route.URLPath)
 			sb.WriteString("}\n\n")
 		} else {
-			sb.WriteString(fmt.Sprintf("export function %s(): string {\n", funcName))
-			sb.WriteString(fmt.Sprintf("  return %q;\n", route.URLPath))
+			fmt.Fprintf(sb, "export function %s(): string {\n", funcName)
+			fmt.Fprintf(sb, "  return %q;\n", route.URLPath)
 			sb.WriteString("}\n\n")
 		}
 	}
@@ -400,10 +400,10 @@ func (g *RouteTypeScriptGenerator) generateRouteRegistry(sb *strings.Builder) {
 		}
 		routeName := g.pathToName(route.URLPath)
 		sb.WriteString("  {\n")
-		sb.WriteString(fmt.Sprintf("    path: %q,\n", route.URLPath))
-		sb.WriteString(fmt.Sprintf("    name: %q,\n", routeName))
-		sb.WriteString(fmt.Sprintf("    isDynamic: %v,\n", route.IsDynamic))
-		sb.WriteString(fmt.Sprintf("    params: %v,\n", g.formatStringArray(route.RouteParams)))
+		fmt.Fprintf(sb, "    path: %q,\n", route.URLPath)
+		fmt.Fprintf(sb, "    name: %q,\n", routeName)
+		fmt.Fprintf(sb, "    isDynamic: %v,\n", route.IsDynamic)
+		fmt.Fprintf(sb, "    params: %v,\n", g.formatStringArray(route.RouteParams))
 		sb.WriteString("  },\n")
 	}
 
@@ -483,7 +483,7 @@ func (g *RouteTypeScriptGenerator) formatStringArray(arr []string) string {
 		if i > 0 {
 			sb.WriteString(", ")
 		}
-		sb.WriteString(fmt.Sprintf("%q", s))
+		fmt.Fprintf(&sb, "%q", s)
 	}
 	sb.WriteString("]")
 	return sb.String()

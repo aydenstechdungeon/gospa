@@ -11,7 +11,6 @@ import (
 	"time"
 
 	"github.com/aydenstechdungeon/gospa/store"
-	"github.com/gofiber/fiber/v2"
 	fiberpkg "github.com/gofiber/fiber/v2"
 	"github.com/gofiber/fiber/v2/middleware/cors"
 )
@@ -339,7 +338,7 @@ func (b *SSEBroker) SSESubscribeHandler() fiberpkg.Handler {
 		}
 
 		if err := c.BodyParser(&req); err != nil {
-			return c.Status(400).JSON(fiber.Map{"error": "invalid request"})
+			return c.Status(400).JSON(fiberpkg.Map{"error": "invalid request"})
 		}
 
 		// Validate that the client exists and is currently connected.
@@ -378,7 +377,7 @@ func (b *SSEBroker) SSEUnsubscribeHandler() fiberpkg.Handler {
 		}
 
 		if err := c.BodyParser(&req); err != nil {
-			return c.Status(400).JSON(fiber.Map{"error": "invalid request"})
+			return c.Status(400).JSON(fiberpkg.Map{"error": "invalid request"})
 		}
 
 		// Validate that the client exists and is currently connected
@@ -401,17 +400,17 @@ func (b *SSEBroker) SSEUnsubscribeHandler() fiberpkg.Handler {
 func writeSSEEvent(c *fiberpkg.Ctx, event SSEEvent) error {
 	// Write event ID if present
 	if event.ID != "" {
-		_, _ = c.Write([]byte(fmt.Sprintf("id: %s\n", event.ID)))
+		_, _ = fmt.Fprintf(c, "id: %s\n", event.ID)
 	}
 
 	// Write event name if present
 	if event.Event != "" {
-		_, _ = c.Write([]byte(fmt.Sprintf("event: %s\n", event.Event)))
+		_, _ = fmt.Fprintf(c, "event: %s\n", event.Event)
 	}
 
 	// Write retry if present
 	if event.Retry > 0 {
-		_, _ = c.Write([]byte(fmt.Sprintf("retry: %d\n", event.Retry)))
+		_, _ = fmt.Fprintf(c, "retry: %d\n", event.Retry)
 	}
 
 	// Write data
@@ -429,7 +428,7 @@ func writeSSEEvent(c *fiberpkg.Ctx, event SSEEvent) error {
 		dataStr = string(data)
 	}
 
-	_, _ = c.Write([]byte(fmt.Sprintf("data: %s\n\n", dataStr)))
+	_, _ = fmt.Fprintf(c, "data: %s\n\n", dataStr)
 
 	return nil
 }

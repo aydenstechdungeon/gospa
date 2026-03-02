@@ -89,9 +89,9 @@ func GenerateTypeScriptDefinitions(routesDir string) error {
 	sb.WriteString("// TypeScript Definitions for Go Structs\n\n")
 
 	for name, fields := range structs {
-		sb.WriteString(fmt.Sprintf("export interface %s {\n", name))
+		fmt.Fprintf(&sb, "export interface %s {\n", name)
 		for fname, ftype := range fields {
-			sb.WriteString(fmt.Sprintf("\t%s: %s;\n", fname, ftype))
+			fmt.Fprintf(&sb, "\t%s: %s;\n", fname, ftype)
 		}
 		sb.WriteString("}\n\n")
 	}

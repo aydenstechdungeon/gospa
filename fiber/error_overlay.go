@@ -477,7 +477,7 @@ func (e *ErrorOverlay) buildStackHTML(frames []StackFrame) string {
 	var html strings.Builder
 	for i, frame := range frames {
 		editorURL := e.buildEditorURL(frame.File, frame.Line)
-		html.WriteString(fmt.Sprintf(`
+		fmt.Fprintf(&html, `
 		<div class="stack-frame" onclick="toggleFrame(this)">
 			<div class="stack-frame-header">
 				<div class="stack-function">%s</div>
@@ -490,7 +490,7 @@ func (e *ErrorOverlay) buildStackHTML(frames []StackFrame) string {
 			editorURL,
 			escapeHTML(frame.File),
 			frame.Line,
-		))
+		)
 
 		// Only show first 10 frames by default
 		if i >= 9 {
@@ -505,7 +505,7 @@ func (e *ErrorOverlay) buildStackHTML(frames []StackFrame) string {
 func (e *ErrorOverlay) buildRequestHTML(req *RequestInfo) string {
 	var rows strings.Builder
 
-	rows.WriteString(fmt.Sprintf(`
+	fmt.Fprintf(&rows, `
 		<div class="request-row">
 			<div class="request-key">Method</div>
 			<div class="request-value">%s</div>
@@ -516,18 +516,18 @@ func (e *ErrorOverlay) buildRequestHTML(req *RequestInfo) string {
 		</div>`,
 		escapeHTML(req.Method),
 		escapeHTML(req.URL),
-	))
+	)
 
 	// Add query params
 	for key, value := range req.Query {
-		rows.WriteString(fmt.Sprintf(`
+		fmt.Fprintf(&rows, `
 		<div class="request-row">
 			<div class="request-key">Query[%s]</div>
 			<div class="request-value">%s</div>
 		</div>`,
 			escapeHTML(key),
 			escapeHTML(value),
-		))
+		)
 	}
 
 	return fmt.Sprintf(`
@@ -550,14 +550,14 @@ func (e *ErrorOverlay) buildCauseHTML(cause *ErrorInfo) string {
 	var html strings.Builder
 
 	for current := cause; current != nil; current = current.Cause {
-		html.WriteString(fmt.Sprintf(`
+		fmt.Fprintf(&html, `
 			<div class="cause-item">
 				<div class="cause-type">%s</div>
 				<div class="cause-message">%s</div>
 			</div>`,
 			escapeHTML(current.Type),
 			escapeHTML(current.Message),
-		))
+		)
 	}
 
 	return fmt.Sprintf(`

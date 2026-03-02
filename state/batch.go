@@ -48,16 +48,6 @@ func (bm *batchManagerInstance) clearBatchContext() {
 	bm.ctx = nil
 }
 
-// isInBatch checks if we're currently in a batch for the given context
-func (bm *batchManagerInstance) isInBatch(ctx context.Context) bool {
-	bm.mu.RLock()
-	defer bm.mu.RUnlock()
-	if bm.ctx == nil {
-		return false
-	}
-	return bm.ctx == ctx
-}
-
 // getBatchState retrieves the batch state from context if it exists
 func getBatchState(ctx context.Context) *batchState {
 	if ctx == nil {

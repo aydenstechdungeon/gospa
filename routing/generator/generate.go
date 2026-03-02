@@ -477,12 +477,6 @@ func getModuleInfo(dir string) (moduleName string, moduleRoot string) {
 	return "example.com/project", absDir
 }
 
-// getModulePath is a helper for backward compatibility inside the package.
-func getModulePath(dir string) string {
-	name, _ := getModuleInfo(dir)
-	return name
-}
-
 // generatePageCallWithPackage generates the function call with package prefix if needed.
 func generatePageCallWithPackage(route RouteInfo) string {
 	fnName := route.ComponentFn
