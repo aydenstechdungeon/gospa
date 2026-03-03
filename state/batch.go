@@ -103,7 +103,7 @@ func BatchWithContext(ctx context.Context, fn func() error) error {
 		dirty:  make(map[string]notifier),
 		active: true,
 	}
-	ctx = context.WithValue(ctx, batchContextKey{}, bs)
+	_ = context.WithValue(ctx, batchContextKey{}, bs)
 
 	gid := getGID()
 	activeBatches.Store(gid, bs)

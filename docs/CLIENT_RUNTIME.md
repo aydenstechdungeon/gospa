@@ -958,9 +958,46 @@ document.body.appendChild(div);
 
 ### setSanitizer
 
+Configure a custom HTML sanitizer for the runtime. By default, the runtime uses DOMPurify (full runtime) or a simple sanitizer (simple runtime).
+
+```typescript
+import { setSanitizer } from '@gospa/runtime';
 import DOMPurify from 'dompurify';
-setSanitizer((html) => DOMPurify.sanitize(html));
+
+// Set custom DOMPurify sanitizer
+setSanitizer((html) => DOMPurify.sanitize(html, {
+  ALLOWED_TAGS: ['b', 'i', 'em', 'strong', 'p'],
+  ALLOWED_ATTR: []
+}));
 ```
+
+**Sanitizer Functions:**
+
+The full runtime (`runtime.js`) exports these sanitizer functions:
+
+```typescript
+import {
+  sanitize,           // Async sanitization with DOMPurify
+  sanitizeSync,       // Sync sanitization (requires preloading)
+  isSanitizerReady,   // Check if DOMPurify is loaded
+  preloadSanitizer,   // Preload DOMPurify during idle time
+  domPurifySanitizer, // Default sanitizer for dom.ts
+  PURIFY_CONFIG       // Default DOMPurify configuration
+} from '@gospa/runtime';
+
+// Preload for faster first use
+preloadSanitizer();
+
+// Check readiness
+if (isSanitizerReady()) {
+  const clean = sanitizeSync(dirtyHtml);
+}
+
+// Async (always works)
+const clean = await sanitize(dirtyHtml);
+```
+
+**Security Note**: The simple runtime (`runtime-simple.js`) uses a basic sanitizer suitable for trusted content. For untrusted user input, use the full runtime with DOMPurify.
 
 ---
 

@@ -705,7 +705,7 @@ func (a *App) renderRoute(c *fiberpkg.Ctx, route *routing.Route) error {
 			if hit {
 				// Check TTL on access
 				if a.Config.SSGCacheTTL > 0 && time.Since(p.createdAt) >= a.Config.SSGCacheTTL {
-					hit = false
+					// TTL expired, treat as cache miss
 				} else {
 					shell = p.html
 					shellHit = true
@@ -810,16 +810,16 @@ func (a *App) renderRoute(c *fiberpkg.Ctx, route *routing.Route) error {
 					}
 				} else {
 					a.pprShellMu.RLock()
-					p, hit := a.pprShellCache[cacheKey]
-					if hit {
-						// Check TTL on access
-						if a.Config.SSGCacheTTL > 0 && time.Since(p.createdAt) >= a.Config.SSGCacheTTL {
-							hit = false
-						} else {
-							shellHTML = p.html
-							shellOk = true
+						p, hit := a.pprShellCache[cacheKey]
+						if hit {
+							// Check TTL on access
+							if a.Config.SSGCacheTTL > 0 && time.Since(p.createdAt) >= a.Config.SSGCacheTTL {
+								// TTL expired, treat as cache miss
+							} else {
+								shellHTML = p.html
+								shellOk = true
+							}
 						}
-					}
 					a.pprShellMu.RUnlock()
 				}
 				if shellOk {
