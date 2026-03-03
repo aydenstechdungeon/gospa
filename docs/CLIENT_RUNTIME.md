@@ -1563,7 +1563,7 @@ init({
 | `simpleRuntimeSVGs` | `boolean` | Allow SVGs in simple runtime (security risk) |
 | `disableSanitization` | `boolean` | Disable client-side HTML sanitization |
 
-**Note on `disableSanitization`**: When enabled, GoSPA trusts server-rendered HTML without DOMPurify filtering during SPA navigation. This provides a SvelteKit-like experience but requires careful handling of user-generated content. Only disable sanitization if you trust your content or properly escape user input server-side using Templ's auto-escaping.
+**Note on `disableSanitization`**: When enabled, GoSPA trusts server-rendered HTML without DOMPurify filtering during SPA navigation. This provides maximum compatibility with third-party libraries but requires careful handling of user-generated content. Only disable sanitization if you trust your content or properly escape user input server-side using Templ's auto-escaping.
 
 ---
 

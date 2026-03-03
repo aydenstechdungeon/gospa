@@ -42,7 +42,7 @@ Choose the appropriate runtime based on your security requirements:
 
 ### Disabling Client-Side Sanitization
 
-GoSPA allows you to disable client-side HTML sanitization entirely, similar to SvelteKit's approach. When disabled, GoSPA trusts server-rendered HTML without DOMPurify filtering during SPA navigation.
+GoSPA allows you to disable client-side HTML sanitization entirely. When disabled, GoSPA trusts server-rendered HTML without DOMPurify filtering during SPA navigation.
 
 **⚠️ Security Warning**: Only disable sanitization if you fully trust your content or handle user-generated content carefully on the server side. Disabling sanitization may expose XSS vulnerabilities.
 

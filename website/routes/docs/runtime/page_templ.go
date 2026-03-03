@@ -78,7 +78,7 @@ func Page() templ.Component {
 		if templ_7745c5c3_Err != nil {
 			return templ_7745c5c3_Err
 		}
-		templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 5, " you completely trust all HTML content. Never enable when rendering user-generated content. This option has no effect when using the full runtime.</p></div></section><section class=\"space-y-4\"><h2 class=\"text-2xl font-semibold text-[var(--text-primary)]\">Disabling Sanitization (SvelteKit Mode)</h2><p class=\"text-[var(--text-secondary)]\">For applications that completely trust their server-rendered content, GoSPA offers a <code class=\"bg-[var(--bg-tertiary)] px-1 rounded\">DisableSanitization</code> option. When enabled, no client-side sanitization is performed during SPA navigation - similar to how SvelteKit operates.</p><h3 class=\"text-xl font-semibold text-[var(--text-primary)] mt-6\">Configuration</h3>")
+		templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 5, " you completely trust all HTML content. Never enable when rendering user-generated content. This option has no effect when using the full runtime.</p></div></section><section class=\"space-y-4\"><h2 class=\"text-2xl font-semibold text-[var(--text-primary)]\">Trusted HTML Mode</h2><p class=\"text-[var(--text-secondary)]\"><strong>Trusted HTML Mode</strong> disables client-side HTML sanitization for applications that completely trust their server-rendered content. When enabled, GoSPA trusts the HTML returned by the server during SPA navigation without additional filtering.</p><h3 class=\"text-xl font-semibold text-[var(--text-primary)] mt-6\">Configuration</h3>")
 		if templ_7745c5c3_Err != nil {
 			return templ_7745c5c3_Err
 		}
