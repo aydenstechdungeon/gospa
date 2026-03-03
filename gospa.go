@@ -201,6 +201,11 @@ type ssgEntry struct {
 	createdAt time.Time
 }
 
+type pprEntry struct {
+	html      []byte
+	createdAt time.Time
+}
+
 // encodeSsgEntry encodes an SSG entry into bytes for external storage.
 func encodeSsgEntry(entry ssgEntry) []byte {
 	buf := make([]byte, 8+len(entry.html))
@@ -245,7 +250,7 @@ type App struct {
 	// isrRevalidating guards against duplicate background revalidations.
 	isrRevalidating sync.Map
 	// pprShellCache stores cached static shells for PPR pages.
-	pprShellCache map[string][]byte
+	pprShellCache map[string]pprEntry
 	// pprShellKeys tracks insertion order for PPR shell FIFO eviction.
 	pprShellKeys []string
 	// pprShellMu protects pprShellCache and pprShellKeys.
@@ -368,7 +373,7 @@ func New(config Config) *App {
 		StateMap:      stateMap,
 		ssgCache:      make(map[string]ssgEntry),
 		ssgCacheKeys:  make([]string, 0),
-		pprShellCache: make(map[string][]byte),
+		pprShellCache: make(map[string]pprEntry),
 		pprShellKeys:  make([]string, 0),
 	}
 
@@ -485,15 +490,24 @@ func (a *App) setupRoutes() {
 		}
 
 		var input interface{}
+		// Check request body size before materializing it.
+		// ContentLength might be -1 for chunked transfer, which Fiber will handle via BodyLimit.
+		if contentLength := c.Request().Header.ContentLength(); contentLength > a.Config.MaxRequestBodySize {
+			return c.Status(fiberpkg.StatusRequestEntityTooLarge).JSON(fiberpkg.Map{
+				"error": "Request body too large",
+				"code":  "REQUEST_TOO_LARGE",
+			})
+		}
+
 		// Only parse if body is not empty
-		if len(c.Body()) > 0 {
+		if body := c.Body(); len(body) > 0 {
 			if !strings.Contains(c.Get("Content-Type"), "application/json") {
 				return c.Status(fiberpkg.StatusUnsupportedMediaType).JSON(fiberpkg.Map{
 					"error": "Unsupported Media Type: expected application/json",
 					"code":  "INVALID_CONTENT_TYPE",
 				})
 			}
-			if len(c.Body()) > a.Config.MaxRequestBodySize {
+			if len(body) > a.Config.MaxRequestBodySize {
 				return c.Status(fiberpkg.StatusRequestEntityTooLarge).JSON(fiberpkg.Map{
 					"error": "Request body too large",
 					"code":  "REQUEST_TOO_LARGE",
@@ -601,6 +615,13 @@ func (a *App) renderRoute(c *fiberpkg.Ctx, route *routing.Route) error {
 		}
 
 		if hit {
+			// Check TTL on access to avoid leaky goroutines
+			if a.Config.SSGCacheTTL > 0 && time.Since(entry.createdAt) >= a.Config.SSGCacheTTL {
+				hit = false
+			}
+		}
+
+		if hit {
 			c.Set("Content-Type", "text/html")
 			c.Set("Cache-Control", "public, max-age=31536000, immutable")
 			return c.Send(entry.html)
@@ -628,6 +649,13 @@ func (a *App) renderRoute(c *fiberpkg.Ctx, route *routing.Route) error {
 			a.ssgCacheMu.RLock()
 			entry, hit = a.ssgCache[cacheKey]
 			a.ssgCacheMu.RUnlock()
+		}
+
+		if hit {
+			// Check global TTL on access
+			if a.Config.SSGCacheTTL > 0 && time.Since(entry.createdAt) >= a.Config.SSGCacheTTL {
+				hit = false
+			}
 		}
 
 		if hit {
@@ -673,7 +701,16 @@ func (a *App) renderRoute(c *fiberpkg.Ctx, route *routing.Route) error {
 			}
 		} else {
 			a.pprShellMu.RLock()
-			shell, shellHit = a.pprShellCache[cacheKey]
+			p, hit := a.pprShellCache[cacheKey]
+			if hit {
+				// Check TTL on access
+				if a.Config.SSGCacheTTL > 0 && time.Since(p.createdAt) >= a.Config.SSGCacheTTL {
+					hit = false
+				} else {
+					shell = p.html
+					shellHit = true
+				}
+			}
 			a.pprShellMu.RUnlock()
 		}
 
@@ -773,7 +810,16 @@ func (a *App) renderRoute(c *fiberpkg.Ctx, route *routing.Route) error {
 					}
 				} else {
 					a.pprShellMu.RLock()
-					shellHTML, shellOk = a.pprShellCache[cacheKey]
+					p, hit := a.pprShellCache[cacheKey]
+					if hit {
+						// Check TTL on access
+						if a.Config.SSGCacheTTL > 0 && time.Since(p.createdAt) >= a.Config.SSGCacheTTL {
+							hit = false
+						} else {
+							shellHTML = p.html
+							shellOk = true
+						}
+					}
 					a.pprShellMu.RUnlock()
 				}
 				if shellOk {
@@ -1024,21 +1070,6 @@ func (a *App) storeSsgEntry(key string, html []byte) {
 		a.ssgCacheKeys = append(a.ssgCacheKeys, key)
 	}
 	a.ssgCache[key] = ssgEntry{html: html, createdAt: time.Now()}
-
-	if a.Config.SSGCacheTTL > 0 {
-		time.AfterFunc(a.Config.SSGCacheTTL, func() {
-			a.ssgCacheMu.Lock()
-			defer a.ssgCacheMu.Unlock()
-			delete(a.ssgCache, key)
-			// Also remove from tracking keys to prevent slice growth
-			for i, k := range a.ssgCacheKeys {
-				if k == key {
-					a.ssgCacheKeys = append(a.ssgCacheKeys[:i], a.ssgCacheKeys[i+1:]...)
-					break
-				}
-			}
-		})
-	}
 }
 
 // storePprShell writes a PPR static shell into the pprShellCache with FIFO eviction.
@@ -1063,22 +1094,7 @@ func (a *App) storePprShell(key string, shell []byte) {
 	if _, exists := a.pprShellCache[key]; !exists {
 		a.pprShellKeys = append(a.pprShellKeys, key)
 	}
-	a.pprShellCache[key] = shell
-
-	if a.Config.SSGCacheTTL > 0 {
-		time.AfterFunc(a.Config.SSGCacheTTL, func() {
-			a.pprShellMu.Lock()
-			defer a.pprShellMu.Unlock()
-			delete(a.pprShellCache, key)
-			// Also remove from tracking keys to prevent slice growth
-			for i, k := range a.pprShellKeys {
-				if k == key {
-					a.pprShellKeys = append(a.pprShellKeys[:i], a.pprShellKeys[i+1:]...)
-					break
-				}
-			}
-		})
-	}
+	a.pprShellCache[key] = pprEntry{html: shell, createdAt: time.Now()}
 }
 
 // applyPPRSlots renders each named dynamic slot and splices it into the static

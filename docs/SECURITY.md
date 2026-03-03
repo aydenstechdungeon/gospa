@@ -19,28 +19,12 @@ GoSPA incorporates several fundamental security practices by design:
 
 GoSPA uses a **two-middleware pattern** for CSRF protection. You must configure both middleware correctly:
 
-### 1. CSRFSetTokenMiddleware (GET/HEAD requests)
-This middleware sets the CSRF cookie and token for safe (read-only) requests:
-
 ```go
-app.Use(gospa.CSRFSetTokenMiddleware(gospa.CSRFConfig{
-    CookieName:     "csrf_token",
-    CookieHTTPOnly: true,
-    CookieSecure:   true,  // Use true in production with HTTPS
-    CookieSameSite: "Strict",
-}))
+app.Use(fiber.CSRFSetTokenMiddleware())
 ```
 
-### 2. CSRFTokenMiddleware (POST/PUT/DELETE/PATCH)
-This middleware validates the CSRF token on mutating requests:
-
 ```go
-app.Use(gospa.CSRFTokenMiddleware(gospa.CSRFConfig{
-    TokenLookup:    "header:X-CSRF-Token",
-    CookieName:     "csrf_token",
-    CookieHTTPOnly: true,
-    CookieSecure:   true,
-}))
+app.Use(fiber.CSRFTokenMiddleware())
 ```
 
 ### Important: Middleware Order Matters
@@ -49,8 +33,8 @@ Place `CSRFSetTokenMiddleware` BEFORE `CSRFTokenMiddleware`:
 
 ```go
 // CORRECT: Set token first, then validate
-app.Use(gospa.CSRFSetTokenMiddleware(csrfConfig))  // Sets cookie on GET
-app.Use(gospa.CSRFTokenMiddleware(csrfConfig))     // Validates on POST/PUT/DELETE
+app.Use(fiber.CSRFSetTokenMiddleware())  // Sets cookie on GET
+app.Use(fiber.CSRFTokenMiddleware())     // Validates on POST/PUT/DELETE
 
 // INCORRECT: Don't reverse the order!
 // app.Use(gospa.CSRFTokenMiddleware(csrfConfig))   // Validation will fail

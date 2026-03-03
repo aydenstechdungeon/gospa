@@ -528,6 +528,9 @@ func (c *WSClient) ReadPump(hub *WSHub, onMessage func(*WSClient, WSMessage)) {
 	for {
 		_, message, err := c.Conn.ReadMessage()
 		if err != nil {
+			if websocket.IsUnexpectedCloseError(err, websocket.CloseGoingAway, websocket.CloseNormalClosure, websocket.CloseAbnormalClosure) {
+				log.Printf("WebSocket disconnect (client %s): %v", c.ID, err)
+			}
 			break
 		}
 
@@ -968,19 +971,6 @@ func WebSocketHandler(config WebSocketConfig) fiberpkg.Handler {
 					sessionID = prevSessionID
 					restoredState = savedState
 					sessionToken = initMsg.SessionToken
-				}
-			}
-		} else {
-			// Fallback: Check for session token in query params (legacy support)
-			sessionParam := c.Query("session")
-			if sessionParam != "" {
-				if prevSessionID, ok := globalSessionStore.ValidateSession(sessionParam); ok {
-					if savedState, hasState := globalClientStateStore.Get(prevSessionID); hasState {
-						log.Printf("Restoring session state for %s", prevSessionID)
-						sessionID = prevSessionID
-						restoredState = savedState
-						sessionToken = sessionParam
-					}
 				}
 			}
 		}

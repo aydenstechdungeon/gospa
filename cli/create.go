@@ -103,11 +103,11 @@ func createProject(config *ProjectConfig) error {
 func createGoMod(config *ProjectConfig) error {
 	content := fmt.Sprintf(`module %s
 
-go 1.23
+go 1.26.0
 
 require (
-	github.com/a-h/templ v0.3.857
-	github.com/aydenstechdungeon/gospa v0.1.9
+	github.com/a-h/templ v0.3.1001
+	github.com/aydenstechdungeon/gospa v0.1.8
 )
 `, config.Module)
 

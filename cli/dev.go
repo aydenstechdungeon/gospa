@@ -109,8 +109,7 @@ func startDevWithConfig(config *DevConfig) error {
 				// Stop existing server if any
 				cmdMu.Lock()
 				if currentCmd != nil && currentCmd.Process != nil {
-					_ = currentCmd.Process.Signal(os.Interrupt)
-					_ = currentCmd.Wait()
+					terminateProcess(currentCmd)
 				}
 
 				// Start new server
@@ -140,8 +139,7 @@ func startDevWithConfig(config *DevConfig) error {
 	// Stop the server
 	cmdMu.Lock()
 	if currentCmd != nil && currentCmd.Process != nil {
-		_ = currentCmd.Process.Signal(os.Interrupt)
-		_ = currentCmd.Wait()
+		terminateProcess(currentCmd)
 	}
 	cmdMu.Unlock()
 
@@ -448,8 +446,22 @@ func (s *DevServer) Stop() {
 	}
 
 	if s.server != nil && s.server.Process != nil {
-		_ = s.server.Process.Signal(os.Interrupt)
-		_ = s.server.Wait()
+		terminateProcess(s.server)
+	}
+}
+
+func terminateProcess(cmd *exec.Cmd) {
+	if cmd == nil || cmd.Process == nil {
+		return
+	}
+	_ = cmd.Process.Signal(os.Interrupt)
+	done := make(chan error, 1)
+	go func() { done <- cmd.Wait() }()
+	select {
+	case <-done:
+	case <-time.After(3 * time.Second):
+		_ = cmd.Process.Kill()
+		<-done
 	}
 }
 
