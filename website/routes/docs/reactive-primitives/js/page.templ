@@ -5,27 +5,25 @@ import "github.com/aydenstechdungeon/gospa/website/components"
 templ Page() {
 	<div class="space-y-12">
 		<header>
-			<h1 class="text-4xl font-bold tracking-tight mb-4">Plain JavaScript</h1>
+			<h1 class="text-4xl font-bold tracking-tight mb-4">JavaScript / TypeScript Primitives</h1>
 			<p class="text-xl text-[var(--text-secondary)] leading-relaxed">
-				Use GoSPA's reactive primitives with vanilla JavaScript — no build step required.
+				Use GoSPA's reactive primitives with TypeScript or vanilla JavaScript. 
+				Toggle between JS and TS examples using the language switcher on each code block.
 			</p>
 		</header>
 
 		<div class="p-6 bg-[var(--accent-primary)]/10 border border-[var(--accent-primary)]/30 rounded-xl">
-			<h3 class="text-lg font-semibold text-[var(--accent-primary)] mt-0 mb-2">When to Use Plain JS</h3>
-			<ul class="mt-0 mb-0 text-[var(--text-secondary)]">
-				<li>Quick prototypes or simple interactions</li>
-				<li>Existing projects without a build pipeline</li>
-				<li>Progressive enhancement of server-rendered pages</li>
-				<li>Teams preferring vanilla JS over TypeScript</li>
+			<h3 class="text-lg font-semibold text-[var(--accent-primary)] mt-0 mb-2">Setup Options</h3>
+			<ul class="mt-0 mb-0 text-[var(--text-secondary)] space-y-2">
+				<li><strong>TypeScript (ES Modules):</strong> Import from @gospa/runtime package</li>
+				<li><strong>Plain JavaScript:</strong> Use the global GoSPA object — no build step required</li>
 			</ul>
 		</div>
 
 		<section class="space-y-6">
 			<h2 class="text-2xl font-bold" id="getting-started">Getting Started</h2>
 			<p class="text-[var(--text-secondary)]">
-				Include the GoSPA runtime in your HTML. The runtime exposes a global <code>GoSPA</code> object 
-				with all reactive primitives:
+				Include the GoSPA runtime in your HTML, or import via ES modules:
 			</p>
 			@components.CodeBlock(`<!-- Full runtime with DOMPurify (recommended) -->
 <script src="/_gospa/runtime.js"></script>
@@ -40,7 +38,8 @@ templ Page() {
 				A <code>Rune</code> is a reactive container for a single value. When the value changes, 
 				all subscribers are automatically notified.
 			</p>
-			@components.CodeBlock(`// Create a rune
+			@components.DualCodeBlock(
+				`// Plain JavaScript — uses global GoSPA object
 const count = new GoSPA.Rune(0)
 
 // Read the value
@@ -54,11 +53,35 @@ count.update(v => v + 1)
 
 // Subscribe to changes
 const unsubscribe = count.subscribe((value, oldValue) => {
-    console.log('Count changed from ' + oldValue + ' to ' + value)
+    console.log('Changed from ' + oldValue + ' to ' + value)
 })
 
 // Later: stop listening
-unsubscribe()`, "javascript", "rune.js")
+unsubscribe()`, 
+				`// TypeScript — ES module imports
+import { Rune, rune } from '@gospa/runtime';
+
+// Create
+const count = new Rune(0);
+const name = rune('initial'); // factory function
+
+// Read
+console.log(count.value);  // 0
+console.log(count.get());  // 0
+
+// Write
+count.value = 1;
+count.set(2);
+count.update(n => n + 1);
+
+// Subscribe
+const unsubscribe = count.subscribe((value, oldValue) => {
+    console.log('Changed:', oldValue, '->', value);
+});
+
+// Cleanup
+unsubscribe();`,
+				"rune.js/ts")
 		</section>
 
 		<section class="space-y-6">
@@ -67,7 +90,9 @@ unsubscribe()`, "javascript", "rune.js")
 				<code>Derived</code> creates reactive values that automatically update when their 
 				dependencies change.
 			</p>
-			@components.CodeBlock(`const firstName = new GoSPA.Rune('John')
+			@components.DualCodeBlock(
+				`// Plain JavaScript
+const firstName = new GoSPA.Rune('John')
 const lastName = new GoSPA.Rune('Doe')
 
 // Derived automatically recalculates
@@ -78,7 +103,25 @@ const fullName = new GoSPA.Derived(() => {
 console.log(fullName.get()) // "John Doe"
 
 firstName.set('Jane')
-console.log(fullName.get()) // "Jane Doe" — automatically updated`, "javascript", "derived.js")
+console.log(fullName.get()) // "Jane Doe" — automatically updated`,
+				`// TypeScript
+import { Rune, Derived, derived } from '@gospa/runtime';
+
+const count = new Rune(5);
+
+// Create derived
+const doubled = new Derived(() => count.get() * 2);
+const summary = derived(() => 'Count: ' + count.get());
+
+// Read
+console.log(doubled.value); // 10
+
+// Subscribe
+doubled.subscribe(v => console.log('Doubled:', v));
+
+// Cleanup
+doubled.dispose();`,
+				"derived.js/ts")
 		</section>
 
 		<section class="space-y-6">
@@ -87,7 +130,9 @@ console.log(fullName.get()) // "Jane Doe" — automatically updated`, "javascrip
 				<code>Effect</code> runs side effects when reactive dependencies change. 
 				Return a cleanup function if needed.
 			</p>
-			@components.CodeBlock(`const count = new GoSPA.Rune(0)
+			@components.DualCodeBlock(
+				`// Plain JavaScript
+const count = new GoSPA.Rune(0)
 
 const cleanup = new GoSPA.Effect(() => {
     console.log('Count is now:', count.get())
@@ -99,7 +144,27 @@ const cleanup = new GoSPA.Effect(() => {
 })
 
 // Stop the effect
-cleanup()`, "javascript", "effect.js")
+cleanup()`,
+				`// TypeScript
+import { Rune, Effect, effect } from '@gospa/runtime';
+
+const count = new Rune(0);
+
+// Create effect
+const myEffect = new Effect(() => {
+    console.log('Count changed:', count.get());
+    
+    // Optional cleanup
+    return () => {
+        console.log('Cleanup before next run');
+    };
+});
+
+// Control
+myEffect.pause();   // Stop reacting
+myEffect.resume();  // Resume
+myEffect.dispose(); // Permanent cleanup`,
+				"effect.js/ts")
 		</section>
 
 		<section class="space-y-6">
@@ -108,7 +173,9 @@ cleanup()`, "javascript", "effect.js")
 				<code>StateMap</code> is a collection of named reactive values, useful for 
 				organizing component state.
 			</p>
-			@components.CodeBlock(`const state = new GoSPA.StateMap()
+			@components.DualCodeBlock(
+				`// Plain JavaScript
+const state = new GoSPA.StateMap()
 
 // Set values
 state.set('count', 0)
@@ -128,7 +195,32 @@ state.delete('count')
 state.clear()
 
 // Serialize
-const json = state.toJSON() // { count: 0, name: 'Anonymous' }`, "javascript", "statemap.js")
+const json = state.toJSON() // { count: 0, name: 'Anonymous' }`,
+				`// TypeScript
+import { StateMap, Rune } from '@gospa/runtime';
+
+const state = new StateMap();
+
+// Set values with type safety
+state.set('count', new Rune(0));
+state.set('name', new Rune('Anonymous'));
+
+// Get typed rune objects
+const countRune = state.get('count'); // Rune<number> | undefined
+console.log(countRune?.get()); // 0
+
+// Check existence
+console.log(state.has('count')); // true
+
+// Delete
+state.delete('count');
+
+// Clear all
+state.clear();
+
+// Serialize
+const json = state.toJSON(); // { count: 0, name: 'Anonymous' }`,
+				"statemap.js/ts")
 		</section>
 
 		<section class="space-y-6">
@@ -136,48 +228,49 @@ const json = state.toJSON() // { count: 0, name: 'Anonymous' }`, "javascript", "
 			<p class="text-[var(--text-secondary)]">
 				Batch multiple updates to prevent unnecessary recomputations:
 			</p>
-			@components.CodeBlock(`const count = new GoSPA.Rune(0)
+			@components.DualCodeBlock(
+				`// Plain JavaScript
+const count = new GoSPA.Rune(0)
 const name = new GoSPA.Rune('')
 
 GoSPA.batch(() => {
     count.set(10)
     name.set('Alice')
     // Subscribers notified once after batch completes
-})`, "javascript", "batch.js")
-		</section>
+})`,
+				`// TypeScript
+import { Rune, batch, untrack, watch } from '@gospa/runtime';
 
-		<section class="space-y-6">
-			<h2 class="text-2xl font-bold" id="async">Async State</h2>
-			<p class="text-[var(--text-secondary)]">
-				Handle asynchronous data with <code>DerivedAsync</code> or <code>Resource</code>:
-			</p>
-			@components.CodeBlock(`// DerivedAsync for computed async values
-const userId = new GoSPA.Rune(1)
+const count = new Rune(0);
+const name = new Rune('');
 
-const userData = new GoSPA.DerivedAsync(async () => {
-    const response = await fetch('/api/users/' + userId.get())
-    return response.json()
-})
+// Batch updates - single notification
+batch(() => {
+    count.set(10);
+    name.set('Alice');
+});
 
-// Access status and data
-console.log(userData.status)  // 'idle' | 'pending' | 'success' | 'error'
-console.log(userData.isPending) // true/false
-console.log(userData.get())   // data when available
+// Watch multiple sources
+const unsub = watch([count, name], (values, oldValues) => {
+    console.log('Changed:', values, oldValues);
+});
 
-// Resource for data fetching
-const posts = new GoSPA.Resource(async () => {
-    const res = await fetch('/api/posts')
-    return res.json()
-})
-
-// Trigger fetch
-await posts.refetch()`, "javascript", "async.js")
+// Untrack - don't track dependency inside effect
+effect(() => {
+    console.log('Count:', count.get());
+    untrack(() => {
+        console.log('Untracked:', name.get()); // Not a dependency
+    });
+});`,
+				"batch.js/ts")
 		</section>
 
 		<section class="space-y-6">
 			<h2 class="text-2xl font-bold" id="example">Complete Example</h2>
 			<p class="text-[var(--text-secondary)]">Here's a complete counter with derived display and effects:</p>
-			@components.CodeBlock(`<div id="counter">
+			@components.DualCodeBlock(
+				`<!-- Plain JavaScript -->
+<div id="counter">
     <p>Count: <span id="value">0</span></p>
     <p>Doubled: <span id="doubled">0</span></p>
     <p>Status: <span id="status">Even</span></p>
@@ -221,11 +314,60 @@ document.getElementById('increment').addEventListener('click', () => {
 document.getElementById('decrement').addEventListener('click', () => {
     count.update(v => v - 1)
 })
-</script>`, "html", "counter.html")
+</script>`,
+				`<!-- TypeScript -->
+<div id="counter">
+    <p>Count: <span id="value">0</span></p>
+    <p>Doubled: <span id="doubled">0</span></p>
+    <p>Status: <span id="status">Even</span></p>
+    <button id="increment">+</button>
+    <button id="decrement">-</button>
+</div>
+
+<script type="module">
+import { Rune, Derived, Effect } from '@gospa/runtime';
+
+// State
+const count = new Rune(0);
+
+// Derived values
+const doubled = new Derived(() => count.get() * 2);
+const status = new Derived(() => 
+    count.get() % 2 === 0 ? 'Even' : 'Odd'
+);
+
+// DOM elements
+const valueEl = document.getElementById('value')!;
+const doubledEl = document.getElementById('doubled')!;
+const statusEl = document.getElementById('status')!;
+
+// Effects to update DOM
+new Effect(() => {
+    valueEl.textContent = String(count.get());
+});
+
+new Effect(() => {
+    doubledEl.textContent = String(doubled.get());
+});
+
+new Effect(() => {
+    statusEl.textContent = status.get();
+});
+
+// Event listeners
+document.getElementById('increment')!.addEventListener('click', () => {
+    count.update(v => v + 1);
+});
+
+document.getElementById('decrement')!.addEventListener('click', () => {
+    count.update(v => v - 1);
+});
+</script>`,
+				"counter.html")
 		</section>
 
 		<div class="flex justify-between pt-6 border-t border-[var(--border)]">
-			<a href="/docs/reactive-primitives/ts" class="text-sm text-[var(--text-secondary)] hover:text-[var(--accent-primary)]">← TypeScript Primitives</a>
+			<a href="/docs/reactive-primitives/go" class="text-sm text-[var(--text-secondary)] hover:text-[var(--accent-primary)]">← Go Primitives</a>
 			<a href="/docs/reactive-primitives/advanced" class="text-sm text-[var(--accent-primary)] hover:underline">Advanced Types →</a>
 		</div>
 	</div>

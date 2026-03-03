@@ -54,10 +54,8 @@ func createProject(config *ProjectConfig) error {
 	dirs := []string{
 		"routes",
 		"components",
-		"lib",
 		"static",
 		"static/css",
-		"static/js",
 	}
 
 	for _, dir := range dirs {
@@ -87,16 +85,6 @@ func createProject(config *ProjectConfig) error {
 		return err
 	}
 
-	// Create components/counter.templ
-	if err := createCounterComponent(config); err != nil {
-		return err
-	}
-
-	// Create lib/state.go
-	if err := createStateFile(config); err != nil {
-		return err
-	}
-
 	// Create static/css/style.css
 	if err := createCSSFile(config); err != nil {
 		return err
@@ -115,11 +103,11 @@ func createProject(config *ProjectConfig) error {
 func createGoMod(config *ProjectConfig) error {
 	content := fmt.Sprintf(`module %s
 
-go 1.26.0
+go 1.23
 
 require (
-	github.com/a-h/templ v0.3.1001
-	github.com/aydenstechdungeon/gospa v0.1.8
+	github.com/a-h/templ v0.3.857
+	github.com/aydenstechdungeon/gospa v0.1.9
 )
 `, config.Module)
 
@@ -134,7 +122,6 @@ import (
 	"context"
 	"log"
 
-	"%s/lib"
 	_ "%s/routes" // Import routes to trigger init()
 
 	"github.com/aydenstechdungeon/gospa"
@@ -142,62 +129,88 @@ import (
 )
 
 func main() {
+	// Register a simple remote action for testing
 	routing.RegisterRemoteAction("Hello", func(ctx context.Context, input interface{}) (interface{}, error) {
-		return "World", nil
+		return "Hello from GoSPA! 👋", nil
 	})
 
 	app := gospa.New(gospa.Config{
 		RoutesDir: "./routes",
 		DevMode:   true,
 		AppName:   "%s",
-		DefaultState: map[string]interface{}{
-			"count": lib.GlobalCounter.Count,
-		},
 	})
 
 	if err := app.Run(":3000"); err != nil {
 		log.Fatal(err)
 	}
 }
-`, config.Module, config.Module, config.Name)
+`, config.Module, config.Name)
 
 	path := filepath.Join(config.OutputDir, "main.go")
 	return os.WriteFile(path, []byte(content), 0644)
 }
 
 func createHomePage(config *ProjectConfig) error {
-	content := fmt.Sprintf(`package routes
-
-import "%s/components"
+	content := `package routes
 
 templ Page() {
-	<div class="container mx-auto px-4 py-8">
-		<h1 class="text-4xl font-bold mb-4">Welcome to GoSPA</h1>
-		<p class="text-lg text-gray-600 mb-8">
-			A modern SPA framework for Go with Fiber and Templ.
-		</p>
-		
-		<div class="bg-white rounded-lg shadow p-6">
-			@components.Counter()
-		</div>
-		
-		<div class="mt-8 grid grid-cols-1 md:grid-cols-3 gap-4">
-			<div class="bg-blue-50 p-4 rounded-lg">
-				<h3 class="font-semibold text-blue-800">Reactive State</h3>
-				<p class="text-sm text-blue-600">Svelte-like runes for Go</p>
+	<div class="welcome-container">
+		<div class="welcome-content">
+			<div class="logo">
+				<svg width="80" height="80" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" xmlns="http://www.w3.org/2000/svg">
+					<circle cx="12" cy="12" r="10"/>
+					<path d="M12 6v6l4 2" stroke-linecap="round"/>
+				</svg>
 			</div>
-			<div class="bg-green-50 p-4 rounded-lg">
-				<h3 class="font-semibold text-green-800">File-based Routing</h3>
-				<p class="text-sm text-green-600">SvelteKit-style routing</p>
+			<h1 class="title">Welcome to GoSPA</h1>
+			<p class="subtitle">
+				A modern reactive framework for building single-page applications with Go.
+			</p>
+			<div class="actions">
+				<a href="https://gospa.dev/docs" class="btn btn-primary" target="_blank" rel="noopener">
+					Read Documentation →
+				</a>
+				<button class="btn btn-secondary" onclick="testRemote()">
+					Test Remote Action
+				</button>
 			</div>
-			<div class="bg-purple-50 p-4 rounded-lg">
-				<h3 class="font-semibold text-purple-800">Real-time Sync</h3>
-				<p class="text-sm text-purple-600">WebSocket state sync</p>
+			<div class="features">
+				<div class="feature">
+					<span class="feature-icon">⚡</span>
+					<span class="feature-text">Reactive State</span>
+				</div>
+				<div class="feature">
+					<span class="feature-icon">🗂️</span>
+					<span class="feature-text">File-Based Routing</span>
+				</div>
+				<div class="feature">
+					<span class="feature-icon">🔄</span>
+					<span class="feature-text">WebSocket Sync</span>
+				</div>
 			</div>
 		</div>
 	</div>
+	<script>
+		function testRemote() {
+			if (typeof GoSPA !== 'undefined' && GoSPA.remote) {
+				GoSPA.remote('Hello')
+					.then(function(result) {
+						if (result.ok) {
+							alert('Server says: ' + result.data);
+						} else {
+							alert('Error: ' + result.error);
+						}
+					})
+					.catch(function(err) {
+						alert('Request failed: ' + (err.message || 'Unknown error'));
+					});
+			} else {
+				alert('GoSPA runtime not loaded yet. Please wait a moment and try again.');
+			}
+		}
+	</script>
 }
-`, config.Module)
+`
 
 	path := filepath.Join(config.OutputDir, "routes", "page.templ")
 	return os.WriteFile(path, []byte(content), 0644)
@@ -210,20 +223,16 @@ import gospatempl "github.com/aydenstechdungeon/gospa/templ"
 
 templ Layout(title string) {
 	<!DOCTYPE html>
-	<html lang="en">
+	<html lang="en" data-gospa-auto>
 	<head>
 		<meta charset="UTF-8"/>
 		<meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+		<meta name="description" content="A GoSPA application"/>
 		<title>{ title }</title>
 		<link rel="stylesheet" href="/static/css/style.css"/>
 		@gospatempl.RuntimeScript("/_gospa/runtime.js")
 	</head>
-	<body class="bg-gray-100 min-h-screen">
-		<nav class="bg-white shadow-sm">
-			<div class="container mx-auto px-4 py-3">
-				<a href="/" class="text-xl font-bold text-gray-800">GoSPA</a>
-			</div>
-		</nav>
+	<body>
 		<main>
 			{ children... }
 		</main>
@@ -236,156 +245,141 @@ templ Layout(title string) {
 	return os.WriteFile(path, []byte(content), 0644)
 }
 
-func createCounterComponent(config *ProjectConfig) error {
-	content := `package components
-
-templ Counter() {
-	<div 
-		class="flex flex-col items-center justify-center p-8"
-		data-gospa-component="counter"
-		data-gospa-state='{"count":0}'
-	>
-		<h2 class="text-2xl font-semibold mb-4">Counter Example</h2>
-		<div class="flex items-center gap-4">
-			<button 
-				class="px-4 py-2 bg-red-500 text-white rounded hover:bg-red-600"
-				data-on="click:decrement"
-			>
-				-
-			</button>
-			<span class="text-3xl font-mono" data-bind="count">
-				0
-			</span>
-			<button 
-				class="px-4 py-2 bg-green-500 text-white rounded hover:bg-green-600"
-				data-on="click:increment"
-			>
-				+
-			</button>
-		</div>
-		<div class="mt-4 flex flex-col items-center gap-2">
-			<button 
-				class="px-4 py-2 bg-blue-500 text-white rounded hover:bg-blue-600"
-				onclick="GoSPA.remote('Hello').then(res => alert(res.data))"
-			>
-				Test Remote Action
-			</button>
-		</div>
-		<p class="mt-4 text-gray-600">
-			Click the buttons to change the count. State syncs automatically!
-		</p>
-	</div>
-}
-`
-
-	path := filepath.Join(config.OutputDir, "components", "counter.templ")
-	return os.WriteFile(path, []byte(content), 0644)
-}
-
-func createStateFile(config *ProjectConfig) error {
-	content := `package lib
-
-// GlobalCounter is a global state for the counter
-var GlobalCounter = struct {
-	Count int
-}{
-	Count: 0,
-}
-
-// AppState holds application-wide state.
-type AppState struct {
-	// Add your application state here
-}
-
-// NewAppState creates a new application state.
-func NewAppState() *AppState {
-	return &AppState{}
-}
-`
-
-	path := filepath.Join(config.OutputDir, "lib", "state.go")
-	return os.WriteFile(path, []byte(content), 0644)
-}
-
 func createCSSFile(config *ProjectConfig) error {
-	content := `/* GoSPA Default Styles */
+	content := `/* GoSPA Welcome Page Styles */
 
 * {
 	box-sizing: border-box;
-}
-
-body {
-	font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, sans-serif;
 	margin: 0;
 	padding: 0;
 }
 
-.container {
-	max-width: 1200px;
-	margin: 0 auto;
+body {
+	font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, sans-serif;
+	background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+	min-height: 100vh;
+	display: flex;
+	align-items: center;
+	justify-content: center;
+	color: #333;
 }
 
-/* Tailwind-like utilities */
-.text-4xl { font-size: 2.25rem; line-height: 2.5rem; }
-.text-2xl { font-size: 1.5rem; line-height: 2rem; }
-.text-lg { font-size: 1.125rem; line-height: 1.75rem; }
-.text-xl { font-size: 1.25rem; line-height: 1.75rem; }
-.text-sm { font-size: 0.875rem; line-height: 1.25rem; }
+.welcome-container {
+	width: 100%;
+	max-width: 600px;
+	padding: 2rem;
+}
 
-.font-bold { font-weight: 700; }
-.font-semibold { font-weight: 600; }
-.font-mono { font-family: monospace; }
+.welcome-content {
+	background: white;
+	border-radius: 24px;
+	padding: 3rem;
+	text-align: center;
+	box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.25);
+}
 
-.text-gray-600 { color: #4b5563; }
-.text-gray-800 { color: #1f2937; }
-.text-blue-800 { color: #1e40af; }
-.text-green-800 { color: #166534; }
-.text-purple-800 { color: #6b21a8; }
-.text-blue-600 { color: #2563eb; }
-.text-green-600 { color: #16a34a; }
-.text-purple-600 { color: #9333ea; }
-.text-white { color: #ffffff; }
+.logo {
+	color: #667eea;
+	margin-bottom: 1.5rem;
+	display: flex;
+	justify-content: center;
+}
 
-.bg-gray-100 { background-color: #f3f4f6; }
-.bg-white { background-color: #ffffff; }
-.bg-blue-50 { background-color: #eff6ff; }
-.bg-green-50 { background-color: #f0fdf4; }
-.bg-purple-50 { background-color: #faf5ff; }
-.bg-red-500 { background-color: #ef4444; }
-.bg-green-500 { background-color: #22c55e; }
+.title {
+	font-size: 2.5rem;
+	font-weight: 700;
+	margin-bottom: 1rem;
+	background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+	-webkit-background-clip: text;
+	-webkit-text-fill-color: transparent;
+	background-clip: text;
+}
 
-.hover\:bg-red-600:hover { background-color: #dc2626; }
-.hover\:bg-green-600:hover { background-color: #16a34a; }
+.subtitle {
+	font-size: 1.125rem;
+	color: #6b7280;
+	margin-bottom: 2rem;
+	line-height: 1.6;
+}
 
-.min-h-screen { min-height: 100vh; }
+.actions {
+	display: flex;
+	gap: 1rem;
+	justify-content: center;
+	margin-bottom: 2.5rem;
+	flex-wrap: wrap;
+}
 
-.shadow { box-shadow: 0 1px 3px 0 rgba(0, 0, 0, 0.1), 0 1px 2px 0 rgba(0, 0, 0, 0.06); }
-.shadow-sm { box-shadow: 0 1px 2px 0 rgba(0, 0, 0, 0.05); }
+.btn {
+	padding: 0.875rem 1.5rem;
+	border-radius: 12px;
+	font-size: 1rem;
+	font-weight: 500;
+	text-decoration: none;
+	border: none;
+	cursor: pointer;
+	transition: all 0.2s ease;
+}
 
-.rounded { border-radius: 0.25rem; }
-.rounded-lg { border-radius: 0.5rem; }
+.btn-primary {
+	background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+	color: white;
+}
 
-.px-4 { padding-left: 1rem; padding-right: 1rem; }
-.py-2 { padding-top: 0.5rem; padding-bottom: 0.5rem; }
-.py-3 { padding-top: 0.75rem; padding-bottom: 0.75rem; }
-.py-8 { padding-top: 2rem; padding-bottom: 2rem; }
-.p-4 { padding: 1rem; }
-.p-6 { padding: 1.5rem; }
+.btn-primary:hover {
+	transform: translateY(-2px);
+	box-shadow: 0 10px 20px -5px rgba(102, 126, 234, 0.4);
+}
 
-.mb-4 { margin-bottom: 1rem; }
-.mb-8 { margin-bottom: 2rem; }
-.mt-4 { margin-top: 1rem; }
-.mt-8 { margin-top: 2rem; }
+.btn-secondary {
+	background: #f3f4f6;
+	color: #374151;
+}
 
-.flex { display: flex; }
-.items-center { align-items: center; }
-.gap-4 { gap: 1rem; }
+.btn-secondary:hover {
+	background: #e5e7eb;
+	transform: translateY(-2px);
+}
 
-.grid { display: grid; }
-.grid-cols-1 { grid-template-columns: repeat(1, minmax(0, 1fr)); }
+.features {
+	display: flex;
+	justify-content: center;
+	gap: 2rem;
+	flex-wrap: wrap;
+}
 
-@media (min-width: 768px) {
-	.md\:grid-cols-3 { grid-template-columns: repeat(3, minmax(0, 1fr)); }
+.feature {
+	display: flex;
+	align-items: center;
+	gap: 0.5rem;
+	font-size: 0.875rem;
+	color: #6b7280;
+}
+
+.feature-icon {
+	font-size: 1.25rem;
+}
+
+@media (max-width: 480px) {
+	.welcome-content {
+		padding: 2rem;
+	}
+
+	.title {
+		font-size: 1.875rem;
+	}
+
+	.subtitle {
+		font-size: 1rem;
+	}
+
+	.actions {
+		flex-direction: column;
+	}
+
+	.btn {
+		width: 100%;
+	}
 }
 `
 
@@ -416,6 +410,7 @@ go.work
 # Build output
 dist/
 build/
+tmp/
 
 # IDE
 .idea/
@@ -431,10 +426,6 @@ Thumbs.db
 .env
 .env.local
 .env.*.local
-
-# Temp files
-tmp/
-temp/
 `
 
 	path := filepath.Join(config.OutputDir, ".gitignore")

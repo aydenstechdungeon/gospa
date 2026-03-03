@@ -31,7 +31,7 @@ func Page() templ.Component {
 			templ_7745c5c3_Var1 = templ.NopComponent
 		}
 		ctx = templ.ClearChildren(ctx)
-		templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 1, "<div class=\"space-y-12\"><header><h1 class=\"text-4xl font-bold tracking-tight mb-4 text-transparent bg-clip-text bg-gradient-to-r from-[var(--accent-primary)] to-[var(--accent-secondary)]\">Remote Actions</h1><p class=\"text-xl text-[var(--text-secondary)] leading-relaxed\">Type-safe server functions called directly from your Svelte-like templates or client-side scripts.</p></header><nav class=\"flex flex-wrap gap-4 p-4 rounded-2xl bg-[var(--bg-secondary)] border border-[var(--border)]\"><a href=\"#defining\" class=\"text-sm font-medium hover:text-[var(--accent-primary)] transition-colors\">Defining Actions</a> <a href=\"#complex-input\" class=\"text-sm font-medium hover:text-[var(--accent-primary)] transition-colors\">Complex Inputs</a> <a href=\"#calling-template\" class=\"text-sm font-medium hover:text-[var(--accent-primary)] transition-colors\">Calling from Template</a> <a href=\"#calling-script\" class=\"text-sm font-medium hover:text-[var(--accent-primary)] transition-colors\">Calling from Script</a> <a href=\"#csrf-protection\" class=\"text-sm font-medium hover:text-[var(--accent-primary)] transition-colors\">CSRF Protection</a></nav><section id=\"defining\" class=\"space-y-6\"><h2 class=\"text-2xl font-bold border-b border-[var(--border)] pb-2\">Defining Actions</h2><p class=\"text-[var(--text-secondary)]\">Remote actions are registered globally using the <code class=\"mono text-[var(--accent-primary)]\">routing</code> package. They receive a context and an interface which contains the parsed JSON input from the client.</p>")
+		templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 1, "<div class=\"space-y-12\"><header><h1 class=\"text-4xl font-bold tracking-tight mb-4 text-transparent bg-clip-text bg-gradient-to-r from-[var(--accent-primary)] to-[var(--accent-secondary)]\">Remote Actions</h1><p class=\"text-xl text-[var(--text-secondary)] leading-relaxed\">Type-safe server functions called directly from your templates or client-side scripts.</p></header><nav class=\"flex flex-wrap gap-4 p-4 rounded-2xl bg-[var(--bg-secondary)] border border-[var(--border)]\"><a href=\"#defining\" class=\"text-sm font-medium hover:text-[var(--accent-primary)] transition-colors\">Defining Actions</a> <a href=\"#complex-input\" class=\"text-sm font-medium hover:text-[var(--accent-primary)] transition-colors\">Complex Inputs</a> <a href=\"#calling-template\" class=\"text-sm font-medium hover:text-[var(--accent-primary)] transition-colors\">Calling from Template</a> <a href=\"#calling-script\" class=\"text-sm font-medium hover:text-[var(--accent-primary)] transition-colors\">Calling from Script</a> <a href=\"#csrf-protection\" class=\"text-sm font-medium hover:text-[var(--accent-primary)] transition-colors\">CSRF Protection</a></nav><section id=\"defining\" class=\"space-y-6\"><h2 class=\"text-2xl font-bold border-b border-[var(--border)] pb-2\">Defining Actions</h2><p class=\"text-[var(--text-secondary)]\">Remote actions are registered globally using the <code class=\"mono text-[var(--accent-primary)]\">routing</code> package. They receive a context and an interface which contains the parsed JSON input from the client.</p>")
 		if templ_7745c5c3_Err != nil {
 			return templ_7745c5c3_Err
 		}
@@ -66,7 +66,7 @@ routing.RegisterRemoteAction("createUser", func(ctx context.Context, input any) 
 		if templ_7745c5c3_Err != nil {
 			return templ_7745c5c3_Err
 		}
-		templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 3, "</section><section id=\"calling-template\" class=\"space-y-6\"><h2 class=\"text-2xl font-bold border-b border-[var(--border)] pb-2\">Calling from Templates</h2><p class=\"text-[var(--text-secondary)]\">Trigger remote actions programmatically via JavaScript event handlers.</p>")
+		templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 3, "</section><section id=\"calling-template\" class=\"space-y-6\"><h2 class=\"text-2xl font-bold border-b border-[var(--border)] pb-2\">Calling from Templates</h2><p class=\"text-[var(--text-secondary)]\">Trigger remote actions via JavaScript event handlers using the global <code class=\"mono text-[var(--accent-primary)]\">GoSPA.remote()</code> function.</p>")
 		if templ_7745c5c3_Err != nil {
 			return templ_7745c5c3_Err
 		}
@@ -79,7 +79,7 @@ routing.RegisterRemoteAction("createUser", func(ctx context.Context, input any) 
 
 <script>
 async function handleGreet() {
-    const result = await remote('greet', 'GoSPA User');
+    const result = await GoSPA.remote('greet', 'GoSPA User');
     if (result.ok) {
         console.log(result.data);
     }
@@ -88,11 +88,35 @@ async function handleGreet() {
 		if templ_7745c5c3_Err != nil {
 			return templ_7745c5c3_Err
 		}
-		templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 4, "</section><section id=\"calling-script\" class=\"space-y-6\"><h2 class=\"text-2xl font-bold border-b border-[var(--border)] pb-2\">Calling from Script</h2><p class=\"text-[var(--text-secondary)]\">You can also call remote actions programmatically using the <code class=\"mono text-[var(--accent-primary)]\">remote</code> function from the runtime.</p>")
+		templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 4, "</section><section id=\"calling-script\" class=\"space-y-6\"><h2 class=\"text-2xl font-bold border-b border-[var(--border)] pb-2\">Calling from Script</h2><p class=\"text-[var(--text-secondary)]\">Call remote actions using the <code class=\"mono text-[var(--accent-primary)]\">GoSPA.remote()</code> function from the runtime.</p><h3 class=\"text-lg font-semibold mt-6 mb-3\">JavaScript (ES Modules)</h3>")
 		if templ_7745c5c3_Err != nil {
 			return templ_7745c5c3_Err
 		}
-		templ_7745c5c3_Err = components.CodeBlock(`import { remote } from '@gospa/runtime';
+		templ_7745c5c3_Err = components.CodeBlock(`// Using the global GoSPA object (no import needed)
+async function handleSignup() {
+    const result = await GoSPA.remote('createUser', {
+        username: 'ayden',
+        email: 'ayden@example.com'
+    });
+    
+    if (result.error) {
+        alert('Error: ' + result.error);
+    } else {
+        console.log('Success:', result.data);
+    }
+}
+
+// Using the typed remoteAction helper
+const createUser = GoSPA.remoteAction('createUser');
+const result = await createUser({ username: 'ayden', email: 'ayden@example.com' });`, "javascript", "signup.js").Render(ctx, templ_7745c5c3_Buffer)
+		if templ_7745c5c3_Err != nil {
+			return templ_7745c5c3_Err
+		}
+		templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 5, "<h3 class=\"text-lg font-semibold mt-6 mb-3\">TypeScript (with imports)</h3>")
+		if templ_7745c5c3_Err != nil {
+			return templ_7745c5c3_Err
+		}
+		templ_7745c5c3_Err = components.CodeBlock(`import { remote, remoteAction } from '@gospa/runtime';
 
 async function handleSignup() {
     const result = await remote('createUser', {
@@ -105,11 +129,15 @@ async function handleSignup() {
     } else {
         console.log('Success:', result.data);
     }
-}`, "typescript", "signup.ts").Render(ctx, templ_7745c5c3_Buffer)
+}
+
+// Using the typed remoteAction helper
+const createUser = remoteAction<{ username: string; email: string }, { id: string }>('createUser');
+const result = await createUser({ username: 'ayden', email: 'ayden@example.com' });`, "typescript", "signup.ts").Render(ctx, templ_7745c5c3_Buffer)
 		if templ_7745c5c3_Err != nil {
 			return templ_7745c5c3_Err
 		}
-		templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 5, "</section><section id=\"csrf-protection\" class=\"space-y-6\"><h2 class=\"text-2xl font-bold border-b border-[var(--border)] pb-2\">CSRF Protection</h2><p class=\"text-[var(--text-secondary)]\">When CSRF protection is enabled in your app configuration, remote actions require a valid CSRF token. The token is automatically set as a cookie by the middleware.</p>")
+		templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 6, "</section><section id=\"csrf-protection\" class=\"space-y-6\"><h2 class=\"text-2xl font-bold border-b border-[var(--border)] pb-2\">CSRF Protection</h2><p class=\"text-[var(--text-secondary)]\">When CSRF protection is enabled in your app configuration, remote actions require a valid CSRF token. The token is automatically set as a cookie by the middleware.</p>")
 		if templ_7745c5c3_Err != nil {
 			return templ_7745c5c3_Err
 		}
@@ -124,7 +152,7 @@ app.Use(fiber.CSRFTokenMiddleware())       // Validates X-CSRF-Token header`, "g
 		if templ_7745c5c3_Err != nil {
 			return templ_7745c5c3_Err
 		}
-		templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 6, "<p class=\"text-[var(--text-secondary)]\">The client automatically reads the <code class=\"mono\">csrf_token</code> cookie and sends it as the <code class=\"mono\">X-CSRF-Token</code> header with each remote action request.</p></section><div class=\"bg-amber-500/5 border border-amber-500/20 p-6 rounded-2xl\"><h4 class=\"text-amber-500 font-bold mb-2\">Security Note</h4><p class=\"text-sm text-[var(--text-secondary)]\">Remote actions are public endpoints. Always perform authentication and authorization checks inside your action functions using the provided <code class=\"mono\">context.Context</code>. Extract session information from the context and validate permissions before executing sensitive operations.</p></div></div>")
+		templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 7, "<p class=\"text-[var(--text-secondary)]\">The client automatically reads the <code class=\"mono\">csrf_token</code> cookie and sends it as the <code class=\"mono\">X-CSRF-Token</code> header with each remote action request.</p></section><div class=\"bg-amber-500/5 border border-amber-500/20 p-6 rounded-2xl\"><h4 class=\"text-amber-500 font-bold mb-2\">Security Note</h4><p class=\"text-sm text-[var(--text-secondary)]\">Remote actions are public endpoints. Always perform authentication and authorization checks inside your action functions using the provided <code class=\"mono\">context.Context</code>. Extract session information from the context and validate permissions before executing sensitive operations.</p></div></div>")
 		if templ_7745c5c3_Err != nil {
 			return templ_7745c5c3_Err
 		}

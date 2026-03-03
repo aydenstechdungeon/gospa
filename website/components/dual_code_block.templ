@@ -1,0 +1,41 @@
+package components
+
+templ DualCodeBlock(jsCode, tsCode, filename string) {
+	<div class="my-6 rounded-2xl overflow-hidden border border-[var(--border)] bg-[var(--bg-tertiary)] group relative dual-code-block" data-dual-code-block>
+		<div class="px-4 py-2 border-b border-[var(--border)] bg-[var(--bg-secondary)] flex justify-between items-center">
+			<span class="text-xs font-medium mono text-[var(--text-muted)]">{ filename }</span>
+			<div class="flex items-center gap-2">
+				<div class="flex rounded-lg overflow-hidden border border-[var(--border)]">
+					<button 
+						class="px-3 py-1 text-xs font-medium bg-[var(--accent-primary)] text-white transition-colors lang-btn"
+						data-lang="js"
+						g-on:click="switchLang(this, 'js')"
+					>
+						JS
+					</button>
+					<button 
+						class="px-3 py-1 text-xs font-medium bg-[var(--bg-primary)] text-[var(--text-secondary)] hover:text-[var(--text-primary)] transition-colors lang-btn"
+						data-lang="ts"
+						g-on:click="switchLang(this, 'ts')"
+					>
+						TS
+					</button>
+				</div>
+			</div>
+		</div>
+		<div class="relative">
+			<pre class="p-6 overflow-x-auto text-sm leading-relaxed custom-scrollbar mono code-block-js" data-code="js">
+				<code>{ jsCode }</code>
+			</pre>
+			<pre class="p-6 overflow-x-auto text-sm leading-relaxed custom-scrollbar mono code-block-ts hidden" data-code="ts">
+				<code>{ tsCode }</code>
+			</pre>
+			<button 
+				class="absolute top-4 right-4 p-2 rounded-lg bg-[var(--bg-primary)] border border-[var(--border)] text-[var(--text-muted)] hover:text-[var(--text-primary)] opacity-0 group-hover:opacity-100 transition-all active:scale-95"
+				data-action="copy-code"
+			>
+				<span class="text-[10px] font-bold uppercase tracking-wider">Copy</span>
+			</button>
+		</div>
+	</div>
+}

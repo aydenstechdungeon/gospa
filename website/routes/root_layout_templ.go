@@ -314,8 +314,37 @@ func initGoSPA(runtimePath, wsUrl string, debug bool, hydrationMode string, hydr
 
 func setupGlobalActions() templ.ComponentScript {
 	return templ.ComponentScript{
-		Name: `__templ_setupGlobalActions_4a13`,
-		Function: `function __templ_setupGlobalActions_4a13(){// Global event delegation for data-action attributes
+		Name: `__templ_setupGlobalActions_1451`,
+		Function: `function __templ_setupGlobalActions_1451(){// Global switchLang function for DualCodeBlock component
+	// Must be global for g-on:click to work after sanitization
+	window.switchLang = function(btn, lang) {
+		const container = btn.closest('[data-dual-code-block]');
+		if (!container) return;
+		
+		const jsBtn = container.querySelector('[data-lang="js"]');
+		const tsBtn = container.querySelector('[data-lang="ts"]');
+		const jsCode = container.querySelector('[data-code="js"]');
+		const tsCode = container.querySelector('[data-code="ts"]');
+		
+		if (!jsBtn || !tsBtn || !jsCode || !tsCode) return;
+		
+		const activeClass = 'px-3 py-1 text-xs font-medium bg-[var(--accent-primary)] text-white transition-colors';
+		const inactiveClass = 'px-3 py-1 text-xs font-medium bg-[var(--bg-primary)] text-[var(--text-secondary)] hover:text-[var(--text-primary)] transition-colors';
+		
+		if (lang === 'js') {
+			jsBtn.className = activeClass;
+			tsBtn.className = inactiveClass;
+			jsCode.classList.remove('hidden');
+			tsCode.classList.add('hidden');
+		} else {
+			tsBtn.className = activeClass;
+			jsBtn.className = inactiveClass;
+			tsCode.classList.remove('hidden');
+			jsCode.classList.add('hidden');
+		}
+	};
+
+	// Global event delegation for data-action attributes
 	// This survives SPA navigation since it's attached at document level
 	document.addEventListener('click', (e) => {
 		const target = e.target.closest('[data-action]');
@@ -348,8 +377,8 @@ func setupGlobalActions() templ.ComponentScript {
 		}
 	});
 }`,
-		Call:       templ.SafeScript(`__templ_setupGlobalActions_4a13`),
-		CallInline: templ.SafeScriptInline(`__templ_setupGlobalActions_4a13`),
+		Call:       templ.SafeScript(`__templ_setupGlobalActions_1451`),
+		CallInline: templ.SafeScriptInline(`__templ_setupGlobalActions_1451`),
 	}
 }
 

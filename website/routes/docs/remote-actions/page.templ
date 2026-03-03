@@ -7,7 +7,7 @@ templ Page() {
 		<header>
 			<h1 class="text-4xl font-bold tracking-tight mb-4 text-transparent bg-clip-text bg-gradient-to-r from-[var(--accent-primary)] to-[var(--accent-secondary)]">Remote Actions</h1>
 			<p class="text-xl text-[var(--text-secondary)] leading-relaxed">
-				Type-safe server functions called directly from your Svelte-like templates or client-side scripts.
+				Type-safe server functions called directly from your templates or client-side scripts.
 			</p>
 		</header>
 
@@ -40,8 +40,8 @@ func init() {
 				Since inputs are passed as <code class="mono">any</code>, you should use type assertions or a library like <code class="mono">mitchellh/mapstructure</code> to map to your structs.
 			</p>
 			@components.CodeBlock(`type CreateUser struct {
-    Username string ` + "`" + `json:"username"` + "`" + `
-    Email    string ` + "`" + `json:"email"` + "`" + `
+    Username string `+"`"+`json:"username"`+"`"+`
+    Email    string `+"`"+`json:"email"`+"`"+`
 }
 
 routing.RegisterRemoteAction("createUser", func(ctx context.Context, input any) (any, error) {
@@ -57,7 +57,7 @@ routing.RegisterRemoteAction("createUser", func(ctx context.Context, input any) 
 		<section id="calling-template" class="space-y-6">
 			<h2 class="text-2xl font-bold border-b border-[var(--border)] pb-2">Calling from Templates</h2>
 			<p class="text-[var(--text-secondary)]">
-				Trigger remote actions programmatically via JavaScript event handlers.
+				Trigger remote actions via JavaScript event handlers using the global <code class="mono text-[var(--accent-primary)]">GoSPA.remote()</code> function.
 			</p>
 			@components.CodeBlock(`<button 
     onclick="handleGreet()"
@@ -68,7 +68,7 @@ routing.RegisterRemoteAction("createUser", func(ctx context.Context, input any) 
 
 <script>
 async function handleGreet() {
-    const result = await remote('greet', 'GoSPA User');
+    const result = await GoSPA.remote('greet', 'GoSPA User');
     if (result.ok) {
         console.log(result.data);
     }
@@ -79,9 +79,30 @@ async function handleGreet() {
 		<section id="calling-script" class="space-y-6">
 			<h2 class="text-2xl font-bold border-b border-[var(--border)] pb-2">Calling from Script</h2>
 			<p class="text-[var(--text-secondary)]">
-				You can also call remote actions programmatically using the <code class="mono text-[var(--accent-primary)]">remote</code> function from the runtime.
+				Call remote actions using the <code class="mono text-[var(--accent-primary)]">GoSPA.remote()</code> function from the runtime.
 			</p>
-			@components.CodeBlock(`import { remote } from '@gospa/runtime';
+			
+			<h3 class="text-lg font-semibold mt-6 mb-3">JavaScript (ES Modules)</h3>
+			@components.CodeBlock(`// Using the global GoSPA object (no import needed)
+async function handleSignup() {
+    const result = await GoSPA.remote('createUser', {
+        username: 'ayden',
+        email: 'ayden@example.com'
+    });
+    
+    if (result.error) {
+        alert('Error: ' + result.error);
+    } else {
+        console.log('Success:', result.data);
+    }
+}
+
+// Using the typed remoteAction helper
+const createUser = GoSPA.remoteAction('createUser');
+const result = await createUser({ username: 'ayden', email: 'ayden@example.com' });`, "javascript", "signup.js")
+
+			<h3 class="text-lg font-semibold mt-6 mb-3">TypeScript (with imports)</h3>
+			@components.CodeBlock(`import { remote, remoteAction } from '@gospa/runtime';
 
 async function handleSignup() {
     const result = await remote('createUser', {
@@ -94,7 +115,11 @@ async function handleSignup() {
     } else {
         console.log('Success:', result.data);
     }
-}`, "typescript", "signup.ts")
+}
+
+// Using the typed remoteAction helper
+const createUser = remoteAction<{ username: string; email: string }, { id: string }>('createUser');
+const result = await createUser({ username: 'ayden', email: 'ayden@example.com' });`, "typescript", "signup.ts")
 		</section>
 
 		<section id="csrf-protection" class="space-y-6">

@@ -96,11 +96,13 @@ export function init(options: RuntimeConfig = {}): void {
 		if (config.debug) console.error('Runtime error:', event.error);
 	});
 
-	// Expose to window for debugging
-	(window as any).__GOSPA__ = {
+	// Create the public GoSPA global object
+	const GoSPA = {
+		// Configuration
 		config,
 		components,
 		globalState,
+		// Core API
 		init,
 		createComponent,
 		destroyComponent,
@@ -110,11 +112,32 @@ export function init(options: RuntimeConfig = {}): void {
 		callAction,
 		bind,
 		autoInit,
+		// Remote actions
 		remote,
 		remoteAction,
 		configureRemote,
-		getRemotePrefix
+		getRemotePrefix,
+		// State primitives (lazy-loaded on access)
+		get Rune() { return Rune; },
+		get Derived() { return Derived; },
+		get Effect() { return Effect; },
+		get StateMap() { return StateMap; },
+		// Utility functions
+		batch,
+		effect,
+		watch,
+		// Events (lazy-loaded)
+		get on() { return on; },
+		get offAll() { return offAll; },
+		get debounce() { return debounce; },
+		get throttle() { return throttle; }
 	};
+
+	// Expose to window as the primary public API
+	(window as any).GoSPA = GoSPA;
+
+	// Also expose __GOSPA__ for debugging (same object)
+	(window as any).__GOSPA__ = GoSPA;
 }
 
 // Handle messages from server
@@ -386,7 +409,14 @@ export function autoInit(): void {
 function setupBindings(root: Element | Document = document): void {
 	// Data-bind elements
 	for (const element of root.querySelectorAll('[data-bind]')) {
-		const componentId = element.closest('[data-gospa-component]')?.getAttribute('data-gospa-component') || '';
+		const closestComponent = element.closest('[data-gospa-component]');
+		const componentId = closestComponent?.getAttribute('data-gospa-component') || '';
+
+		// Skip if this element belongs to a nested component root
+		if (root instanceof Element && closestComponent !== root && root.contains(closestComponent)) {
+			continue;
+		}
+
 		const bindingSpec = element.getAttribute('data-bind');
 		const transformName = element.getAttribute('data-transform');
 		if (!bindingSpec) continue;
@@ -402,7 +432,14 @@ function setupBindings(root: Element | Document = document): void {
 
 	// Event handlers
 	for (const element of root.querySelectorAll('[data-on]')) {
-		const componentId = element.closest('[data-gospa-component]')?.getAttribute('data-gospa-component') || '';
+		const closestComponent = element.closest('[data-gospa-component]');
+		const componentId = closestComponent?.getAttribute('data-gospa-component') || '';
+
+		// Skip if this element belongs to a nested component
+		if (root instanceof Element && closestComponent !== root && root.contains(closestComponent)) {
+			continue;
+		}
+
 		const eventSpec = element.getAttribute('data-on');
 		if (!eventSpec) continue;
 
@@ -424,7 +461,14 @@ function setupBindings(root: Element | Document = document): void {
 
 	// Two-way bindings
 	for (const element of root.querySelectorAll('[data-model]')) {
-		const componentId = element.closest('[data-gospa-component]')?.getAttribute('data-gospa-component') || '';
+		const closestComponent = element.closest('[data-gospa-component]');
+		const componentId = closestComponent?.getAttribute('data-gospa-component') || '';
+
+		// Skip if this element belongs to a nested component
+		if (root instanceof Element && closestComponent !== root && root.contains(closestComponent)) {
+			continue;
+		}
+
 		const key = element.getAttribute('data-model');
 		if (key) bind(componentId, element, 'value', key, { twoWay: true });
 	}

@@ -311,13 +311,13 @@ func New(config Config) *App {
 
 	if config.Storage == nil {
 		if config.Prefork {
-			log.Println("WARNING: Prefork is enabled with in-memory Storage. Sessions and State will be isolated per process!")
+			log.Println("CRITICAL WARNING: Prefork is enabled with in-memory Storage. User sessions and reactive state will NOT be shared between processes. Data will be lost or inconsistent!")
 		}
 		config.Storage = store.NewMemoryStorage()
 	}
 	if config.PubSub == nil {
 		if config.Prefork {
-			log.Println("WARNING: Prefork is enabled with in-memory PubSub. WebSocket broadcasts will be isolated per process!")
+			log.Println("CRITICAL WARNING: Prefork is enabled with in-memory PubSub. WebSocket broadcasts and state sync will NOT work across child processes!")
 		}
 		config.PubSub = store.NewMemoryPubSub()
 	}
@@ -1030,6 +1030,13 @@ func (a *App) storeSsgEntry(key string, html []byte) {
 			a.ssgCacheMu.Lock()
 			defer a.ssgCacheMu.Unlock()
 			delete(a.ssgCache, key)
+			// Also remove from tracking keys to prevent slice growth
+			for i, k := range a.ssgCacheKeys {
+				if k == key {
+					a.ssgCacheKeys = append(a.ssgCacheKeys[:i], a.ssgCacheKeys[i+1:]...)
+					break
+				}
+			}
 		})
 	}
 }
@@ -1057,6 +1064,21 @@ func (a *App) storePprShell(key string, shell []byte) {
 		a.pprShellKeys = append(a.pprShellKeys, key)
 	}
 	a.pprShellCache[key] = shell
+
+	if a.Config.SSGCacheTTL > 0 {
+		time.AfterFunc(a.Config.SSGCacheTTL, func() {
+			a.pprShellMu.Lock()
+			defer a.pprShellMu.Unlock()
+			delete(a.pprShellCache, key)
+			// Also remove from tracking keys to prevent slice growth
+			for i, k := range a.pprShellKeys {
+				if k == key {
+					a.pprShellKeys = append(a.pprShellKeys[:i], a.pprShellKeys[i+1:]...)
+					break
+				}
+			}
+		})
+	}
 }
 
 // applyPPRSlots renders each named dynamic slot and splices it into the static

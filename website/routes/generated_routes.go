@@ -45,7 +45,6 @@ import (
 	docsreactiveprimitivesadvanced "github.com/aydenstechdungeon/gospa/website/routes/docs/reactive-primitives/advanced"
 	docsreactiveprimitivesgo "github.com/aydenstechdungeon/gospa/website/routes/docs/reactive-primitives/go"
 	docsreactiveprimitivesjs "github.com/aydenstechdungeon/gospa/website/routes/docs/reactive-primitives/js"
-	docsreactiveprimitivests "github.com/aydenstechdungeon/gospa/website/routes/docs/reactive-primitives/ts"
 	docsremoteactions "github.com/aydenstechdungeon/gospa/website/routes/docs/remote-actions"
 	docsrendering "github.com/aydenstechdungeon/gospa/website/routes/docs/rendering"
 	docsrouting "github.com/aydenstechdungeon/gospa/website/routes/docs/routing"
@@ -182,9 +181,6 @@ func init() {
 	})
 	routing.RegisterPage("/docs/reactive-primitives", func(props map[string]interface{}) templ.Component {
 		return docsreactiveprimitives.Page()
-	})
-	routing.RegisterPage("/docs/reactive-primitives/ts", func(props map[string]interface{}) templ.Component {
-		return docsreactiveprimitivests.Page()
 	})
 	routing.RegisterPage("/docs/remote-actions", func(props map[string]interface{}) templ.Component {
 		return docsremoteactions.Page()

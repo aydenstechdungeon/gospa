@@ -31,6 +31,8 @@ templ Page() {
 						<tr><td class="px-4 py-2 font-mono text-[var(--accent-primary)]">Prefork</td><td class="px-4 py-2">bool</td><td class="px-4 py-2">false</td><td class="px-4 py-2">Enables Fiber Prefork</td></tr>
 						<tr><td class="px-4 py-2 font-mono text-[var(--accent-primary)]">Storage</td><td class="px-4 py-2">store.Storage</td><td class="px-4 py-2">memory</td><td class="px-4 py-2">External Key-Value store (e.g. Redis) for Sessions/State</td></tr>
 						<tr><td class="px-4 py-2 font-mono text-[var(--accent-primary)]">PubSub</td><td class="px-4 py-2">store.PubSub</td><td class="px-4 py-2">memory</td><td class="px-4 py-2">External broker (e.g. Redis PubSub) for broadcasts</td></tr>
+						<tr><td class="px-4 py-2 font-mono text-[var(--accent-primary)]">SSGCacheTTL</td><td class="px-4 py-2">time.Duration</td><td class="px-4 py-2">0</td><td class="px-4 py-2">TTL for SSG cache (0 = forever)</td></tr>
+						<tr><td class="px-4 py-2 font-mono text-[var(--accent-primary)]">SSGCacheMaxEntries</td><td class="px-4 py-2">int</td><td class="px-4 py-2">500</td><td class="px-4 py-2">Max SSG cache entries (FIFO)</td></tr>
 					</tbody>
 				</table>
 			</div>

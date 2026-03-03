@@ -1,11 +1,12 @@
 package fiber
 
 import (
+	"bytes"
 	"crypto/rand"
+	"crypto/subtle"
 	"encoding/hex"
 	"encoding/json"
 	"fmt"
-	"html/template"
 	"log"
 	"strings"
 	"time"
@@ -87,17 +88,18 @@ func StateMiddleware(config Config) gofiber.Handler {
 			return err
 		}
 
-		// Escape the JSON for safe injection into JavaScript to prevent XSS
-		escapedStateJSON := template.JSEscapeString(stateJSON)
-		stateScript := `<script>window.__GOSPA_STATE__ = ` + escapedStateJSON + `;</script>`
+		// Escape the JSON to prevent XSS and script tag breakouts
+		// We replace < with \u003c for complete safety inside a <script> tag
+		escapedJSON := strings.ReplaceAll(stateJSON, "<", "\\u003c")
+		stateScript := `<script>window.__GOSPA_STATE__ = ` + escapedJSON + `;</script>`
 		if config.DevMode {
 			stateScript += `<script src="` + config.RuntimeScript + `" type="module"></script>`
 		}
 
-		// Replace </body> with state script + </body>
-		bodyStr := string(body)
-		bodyStr = strings.Replace(bodyStr, "</body>", stateScript+"</body>", 1)
-		c.Response().SetBodyString(bodyStr)
+		// Inject before </body>
+		// Using bytes.Replace instead of string for better performance
+		body = bytes.Replace(body, []byte("</body>"), append([]byte(stateScript), []byte("</body>")...), 1)
+		c.Response().SetBody(body)
 
 		return err
 	}
@@ -178,11 +180,11 @@ func CSRFTokenMiddleware() gofiber.Handler {
 			return c.Next()
 		}
 
-		// Check for CSRF token in header
+		// Check for CSRF token in header with constant-time comparison
 		token := c.Get("X-CSRF-Token")
 		cookie := c.Cookies("csrf_token")
 
-		if token == "" || cookie == "" || token != cookie {
+		if token == "" || cookie == "" || subtle.ConstantTimeCompare([]byte(token), []byte(cookie)) != 1 {
 			return c.Status(gofiber.StatusForbidden).JSON(gofiber.Map{
 				"error": "CSRF token mismatch",
 			})

@@ -6,6 +6,9 @@ package state
 
 import (
 	"context"
+	"runtime"
+	"strconv"
+	"strings"
 	"sync"
 )
 
@@ -25,59 +28,43 @@ type notifier interface {
 	ID() string
 }
 
-// batchManager manages the current batch state using context
-var batchManager = &batchManagerInstance{}
+// activeBatches maps goroutine ID to *batchState
+var activeBatches sync.Map
 
-type batchManagerInstance struct {
-	mu sync.RWMutex
-	// ctx tracks which goroutine/context has an active batch
-	ctx context.Context
+// getGID returns the current goroutine ID.
+func getGID() int64 {
+	var buf [64]byte
+	n := runtime.Stack(buf[:], false)
+	idField := strings.Fields(strings.TrimPrefix(string(buf[:n]), "goroutine "))[0]
+	id, _ := strconv.ParseInt(idField, 10, 64)
+	return id
 }
 
-// setBatchContext sets the active batch context
-func (bm *batchManagerInstance) setBatchContext(ctx context.Context) {
-	bm.mu.Lock()
-	defer bm.mu.Unlock()
-	bm.ctx = ctx
-}
-
-// clearBatchContext clears the active batch context
-func (bm *batchManagerInstance) clearBatchContext() {
-	bm.mu.Lock()
-	defer bm.mu.Unlock()
-	bm.ctx = nil
-}
-
-// getBatchState retrieves the batch state from context if it exists
+// getBatchState retrieves the batch state from context or goroutine-local storage.
 func getBatchState(ctx context.Context) *batchState {
-	if ctx == nil {
-		return nil
+	// 1. Check context first (explicitly scoped)
+	if ctx != nil {
+		if bs, ok := ctx.Value(batchContextKey{}).(*batchState); ok {
+			return bs
+		}
 	}
-	if bs, ok := ctx.Value(batchContextKey{}).(*batchState); ok {
-		return bs
+
+	// 2. Fallback to goroutine-local storage
+	gid := getGID()
+	if bs, ok := activeBatches.Load(gid); ok {
+		return bs.(*batchState)
 	}
 	return nil
 }
 
-// inBatch returns true if the current goroutine is within a batch operation
-// This checks the background context by default; use BatchWithContext for proper scoping
+// inBatch returns true if the current goroutine is within a batch operation.
 func inBatch() bool {
-	batchManager.mu.RLock()
-	defer batchManager.mu.RUnlock()
-	return batchManager.ctx != nil
+	return getBatchState(context.TODO()) != nil
 }
 
-// addToBatch adds a notifier to the current batch for deferred notification
+// addToBatch adds a notifier to the current batch for deferred notification.
 func addToBatch(n notifier) {
-	batchManager.mu.RLock()
-	ctx := batchManager.ctx
-	batchManager.mu.RUnlock()
-
-	if ctx == nil {
-		return
-	}
-
-	bs := getBatchState(ctx)
+	bs := getBatchState(context.TODO())
 	if bs == nil {
 		return
 	}
@@ -92,61 +79,21 @@ func addToBatch(n notifier) {
 }
 
 // Batch executes the given function with notification batching enabled.
-// All state changes within the function will have their subscriber notifications
-// deferred until the batch completes, at which point all subscribers are notified
-// at once. This prevents cascading updates and reduces re-renders.
-//
-// Example:
-//
-//	Batch(func() {
-//	    count.Set(10)
-//	    name.Set("Alice")  // Subscribers notified after both updates complete
-//	})
 func Batch(fn func()) {
-	// Create a context for this batch
-	ctx := context.Background()
 	bs := &batchState{
 		dirty:  make(map[string]notifier),
 		active: true,
 	}
-	ctx = context.WithValue(ctx, batchContextKey{}, bs)
+	gid := getGID()
+	activeBatches.Store(gid, bs)
+	defer activeBatches.Delete(gid)
 
-	// Set as active batch
-	batchManager.setBatchContext(ctx)
-	defer batchManager.clearBatchContext()
-
-	// Execute the batch function
 	fn()
 
-	// Flush all pending notifications
-	bs.mu.Lock()
-	dirtyList := make([]notifier, 0, len(bs.dirty))
-	for _, n := range bs.dirty {
-		dirtyList = append(dirtyList, n)
-	}
-	bs.dirty = nil
-	bs.active = false
-	bs.mu.Unlock()
-
-	// Notify all subscribers outside the lock
-	for _, n := range dirtyList {
-		n.notifySubscribers()
-	}
+	flushBatch(bs)
 }
 
-// BatchWithContext executes the given function with notification batching
-// using the provided context. This allows for request-scoped batching in
-// HTTP handlers. The context must support value storage.
-//
-// Example in a Fiber handler:
-//
-//	app.Get("/api/update", func(c *fiber.Ctx) error {
-//	    return state.BatchWithContext(c.Context(), func() error {
-//	        counter.Set(counter.Get() + 1)
-//	        lastUpdated.Set(time.Now())
-//	        return nil
-//	    })
-//	})
+// BatchWithContext executes the given function with notification batching using context.
 func BatchWithContext(ctx context.Context, fn func() error) error {
 	if ctx == nil {
 		ctx = context.Background()
@@ -158,16 +105,19 @@ func BatchWithContext(ctx context.Context, fn func() error) error {
 	}
 	ctx = context.WithValue(ctx, batchContextKey{}, bs)
 
-	// Set as active batch
-	batchManager.setBatchContext(ctx)
-	defer batchManager.clearBatchContext()
+	gid := getGID()
+	activeBatches.Store(gid, bs)
+	defer activeBatches.Delete(gid)
 
-	// Execute the batch function
 	if err := fn(); err != nil {
 		return err
 	}
 
-	// Flush all pending notifications
+	flushBatch(bs)
+	return nil
+}
+
+func flushBatch(bs *batchState) {
 	bs.mu.Lock()
 	dirtyList := make([]notifier, 0, len(bs.dirty))
 	for _, n := range bs.dirty {
@@ -177,16 +127,12 @@ func BatchWithContext(ctx context.Context, fn func() error) error {
 	bs.active = false
 	bs.mu.Unlock()
 
-	// Notify all subscribers outside the lock
 	for _, n := range dirtyList {
 		n.notifySubscribers()
 	}
-
-	return nil
 }
 
 // BatchResult executes the given function with batching and returns its result.
-// All notifications are deferred until the function completes.
 func BatchResult[T any](fn func() T) T {
 	var result T
 	Batch(func() {
@@ -196,41 +142,24 @@ func BatchResult[T any](fn func() T) T {
 }
 
 // BatchError executes the given function with batching and returns any error.
-// All state changes within the function will be batched and notifications
-// deferred until the batch completes, regardless of error status.
 func BatchError(fn func() error) error {
 	var flushErr error
-
 	Batch(func() {
 		flushErr = fn()
 	})
-
 	return flushErr
 }
 
-// FlushPendingNotifications immediately sends all pending notifications
-// for the given context. This is useful when you need to ensure updates
-// are sent before a long-running operation or before returning from a handler.
+// FlushPendingNotifications immediately sends all pending notifications for the given context.
 func FlushPendingNotifications(ctx context.Context) {
 	bs := getBatchState(ctx)
 	if bs == nil {
 		return
 	}
-
-	bs.mu.Lock()
-	dirtyList := make([]notifier, 0, len(bs.dirty))
-	for _, n := range bs.dirty {
-		dirtyList = append(dirtyList, n)
-	}
-	bs.dirty = make(map[string]notifier) // Reset but keep batch active
-	bs.mu.Unlock()
-
-	for _, n := range dirtyList {
-		n.notifySubscribers()
-	}
+	flushBatch(bs)
 }
 
-// IsInBatch returns true if there is an active batch operation
+// IsInBatch returns true if there is an active batch operation.
 func IsInBatch() bool {
 	return inBatch()
 }

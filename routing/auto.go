@@ -419,7 +419,20 @@ func (r *Router) matchRoute(pattern, path string) (map[string]string, bool) {
 	}
 
 	// Exact segment match
+	// Allow mismatch of 1 if pattern contains an optional segment (converted to :param but originally [[param]])
+	// Note: convertDynamicSegments converts [[param]] to :param, so we check for presence of : in pattern
 	if len(patternSegs) != len(pathSegs) {
+		// Handle the case where the last segment is optional and missing from path
+		if len(patternSegs) == len(pathSegs)+1 && strings.HasPrefix(patternSegs[len(patternSegs)-1], ":") {
+			// This is likely an optional segment. Match the prefix and captured the rest as empty.
+			for i := 0; i < len(pathSegs); i++ {
+				if !r.matchSegment(patternSegs[i], pathSegs[i], params) {
+					return nil, false
+				}
+			}
+			params[patternSegs[len(patternSegs)-1][1:]] = ""
+			return params, true
+		}
 		return nil, false
 	}
 

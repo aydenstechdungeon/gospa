@@ -29,6 +29,7 @@ export interface Binding {
 // Binding registry
 const bindings = new Map<string, Set<Binding>>();
 const elementBindings = new WeakMap<Element, Set<Binding>>();
+const elementVersions = new WeakMap<Element, number>();
 
 // Create a unique binding ID
 let bindingId = 0;
@@ -70,10 +71,13 @@ export function unregisterBinding(id: string): void {
 	}
 }
 
-// Update element based on binding type
 async function updateElement(binding: Binding, value: unknown): Promise<void> {
 	const { element, type, attribute, transform } = binding;
 	const transformedValue = transform ? transform(value) : value;
+
+	// Track version to prevent async races
+	const version = (elementVersions.get(element) || 0) + 1;
+	elementVersions.set(element, version);
 
 	switch (type) {
 		case 'text':
@@ -86,7 +90,11 @@ async function updateElement(binding: Binding, value: unknown): Promise<void> {
 			if (element instanceof HTMLElement) {
 				// SECURITY: Sanitize HTML before setting innerHTML to prevent XSS
 				const sanitized = await sanitizeHtml(String(transformedValue ?? ''));
-				element.innerHTML = sanitized;
+
+				// Only update if no newer update has started
+				if (elementVersions.get(element) === version) {
+					element.innerHTML = sanitized;
+				}
 			}
 			break;
 
