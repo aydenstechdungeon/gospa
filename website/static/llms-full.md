@@ -10343,7 +10343,7 @@ gospa postcss:watch
 gospa image:optimize
 
 # Resize images to specific widths
-gospa image:resize --widths 320,640,1280
+gospa image:resize --widths 320,640.1.90
 ```
 
 ### Validation Plugin
