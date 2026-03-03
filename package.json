@@ -1,6 +1,6 @@
 {
     "name": "gospa",
-    "version": "0.1.10",
+    "version": "0.1.11",
     "private": true,
     "scripts": {
         "check": "cd client && bun check",
