@@ -93,7 +93,46 @@ func Page() templ.Component {
 		if templ_7745c5c3_Err != nil {
 			return templ_7745c5c3_Err
 		}
-		templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 6, "</section><section id=\"security-headers\" class=\"space-y-6\"><h2 class=\"text-2xl font-bold border-b border-[var(--border)] pb-2\">Security Headers</h2><p class=\"text-[var(--text-secondary)]\">GoSPA automatically injects recommended security headers into every response:</p><ul class=\"space-y-2 text-sm text-[var(--text-secondary)] list-disc list-inside ml-4\"><li><code class=\"mono font-bold\">X-Content-Type-Options: nosniff</code></li><li><code class=\"mono font-bold\">X-Frame-Options: DENY</code></li><li><code class=\"mono font-bold\">X-XSS-Protection: 1; mode=block</code></li><li><code class=\"mono font-bold\">Referrer-Policy: strict-origin-when-cross-origin</code></li><li><code class=\"mono font-bold\">Content-Security-Policy</code> (Configurable via middleware)</li></ul></section><div class=\"bg-red-500/5 border border-red-500/20 p-6 rounded-2xl\"><h4 class=\"text-red-500 font-bold mb-2\">Defense in Depth</h4><p class=\"text-sm text-[var(--text-secondary)] leading-relaxed\">Always validate and sanitize inputs inside your <strong>Remote Actions</strong> on the server. Client-side sanitization is a secondary defense layer designed to prevent malicious content from executing in the user's browser, not to validate the integrity of your business data.</p></div></div>")
+		templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 6, "</section><section id=\"security-headers\" class=\"space-y-6\"><h2 class=\"text-2xl font-bold border-b border-[var(--border)] pb-2\">Security Headers</h2><p class=\"text-[var(--text-secondary)]\">GoSPA automatically injects recommended security headers into every response:</p><ul class=\"space-y-2 text-sm text-[var(--text-secondary)] list-disc list-inside ml-4\"><li><code class=\"mono font-bold\">X-Content-Type-Options: nosniff</code></li><li><code class=\"mono font-bold\">X-Frame-Options: DENY</code></li><li><code class=\"mono font-bold\">X-XSS-Protection: 1; mode=block</code></li><li><code class=\"mono font-bold\">Referrer-Policy: strict-origin-when-cross-origin</code></li><li><code class=\"mono font-bold\">Content-Security-Policy</code> (Configurable via middleware)</li></ul></section><section id=\"security-checklist\" class=\"space-y-6\"><h2 class=\"text-2xl font-bold border-b border-[var(--border)] pb-2\">Security Checklist</h2><div class=\"grid md:grid-cols-2 gap-6\"><div class=\"space-y-4\"><h3 class=\"text-lg font-bold\">Production Readiness</h3><ul class=\"space-y-2 text-sm text-[var(--text-secondary)] list-disc list-inside ml-4\"><li>Set <code class=\"mono text-[var(--accent-primary)]\">DevMode: false</code> to disable debug overlays.</li><li>Configure <code class=\"mono text-[var(--accent-primary)]\">AllowedOrigins</code> with explicit domains.</li><li>Enable <code class=\"mono text-[var(--accent-primary)]\">EnableCSRF: true</code> ")
+		if templ_7745c5c3_Err != nil {
+			return templ_7745c5c3_Err
+		}
+		var templ_7745c5c3_Var5 string
+		templ_7745c5c3_Var5, templ_7745c5c3_Err = templ.JoinStringErrs("for")
+		if templ_7745c5c3_Err != nil {
+			return templ.Error{Err: templ_7745c5c3_Err, FileName: `routes/docs/security/page.templ`, Line: 81, Col: 96}
+		}
+		_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ.EscapeString(templ_7745c5c3_Var5))
+		if templ_7745c5c3_Err != nil {
+			return templ_7745c5c3_Err
+		}
+		templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 7, " all mutating actions.</li><li>Ensure <code class=\"mono text-[var(--accent-primary)]\">MaxRequestBodySize</code> is set to prevent memory DoS.</li></ul></div><div class=\"space-y-4\"><h3 class=\"text-lg font-bold\">Best Practices</h3><ul class=\"space-y-2 text-sm text-[var(--text-secondary)] list-disc list-inside ml-4\"><li>Use <code class=\"mono text-[var(--accent-primary)]\">HTTPS</code> strictly in production.</li><li>Never pass session tokens in URL query parameters.</li><li>Always use <code class=\"mono text-[var(--accent-primary)]\">subtle.ConstantTimeCompare</code> ")
+		if templ_7745c5c3_Err != nil {
+			return templ_7745c5c3_Err
+		}
+		var templ_7745c5c3_Var6 string
+		templ_7745c5c3_Var6, templ_7745c5c3_Err = templ.JoinStringErrs("for")
+		if templ_7745c5c3_Err != nil {
+			return templ.Error{Err: templ_7745c5c3_Err, FileName: `routes/docs/security/page.templ`, Line: 90, Col: 110}
+		}
+		_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ.EscapeString(templ_7745c5c3_Var6))
+		if templ_7745c5c3_Err != nil {
+			return templ_7745c5c3_Err
+		}
+		templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 8, " HMAC validation.</li><li>Rate limit WebSocket upgrades via <code class=\"mono text-[var(--accent-primary)]\">WSConnRateLimit</code>.</li></ul></div></div></section><div class=\"bg-red-500/5 border border-red-500/20 p-6 rounded-2xl\"><h4 class=\"text-red-500 font-bold mb-2\">Defense in Depth</h4><p class=\"text-sm text-[var(--text-secondary)] leading-relaxed\">Always validate and sanitize inputs inside your <strong>Remote Actions</strong> on the server. Client-side sanitization is a secondary defense layer designed ")
+		if templ_7745c5c3_Err != nil {
+			return templ_7745c5c3_Err
+		}
+		var templ_7745c5c3_Var7 string
+		templ_7745c5c3_Var7, templ_7745c5c3_Err = templ.JoinStringErrs("for")
+		if templ_7745c5c3_Err != nil {
+			return templ.Error{Err: templ_7745c5c3_Err, FileName: `routes/docs/security/page.templ`, Line: 100, Col: 169}
+		}
+		_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ.EscapeString(templ_7745c5c3_Var7))
+		if templ_7745c5c3_Err != nil {
+			return templ_7745c5c3_Err
+		}
+		templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 9, " preventing malicious content from executing in the user's browser, not to validate the integrity of your business data.</p></div></div>")
 		if templ_7745c5c3_Err != nil {
 			return templ_7745c5c3_Err
 		}
