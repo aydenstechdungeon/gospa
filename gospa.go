@@ -79,6 +79,11 @@ type Config struct {
 	// SimpleRuntimeSVGs allows SVG elements in the simple runtime sanitizer.
 	// WARNING: Only enable if your content is fully trusted and never user-generated.
 	SimpleRuntimeSVGs bool
+	// DisableSanitization disables client-side HTML sanitization for SPA navigation.
+	// When enabled, GoSPA trusts server-rendered HTML without DOMPurify filtering.
+	// This provides a SvelteKit-like experience but requires careful handling of
+	// user-generated content. Use with caution - only for trusted content.
+	DisableSanitization bool
 
 	// WebSocket Options — these values are passed directly to the client runtime's init() call.
 	// Defaults: WSReconnectDelay=1s, WSMaxReconnect=10, WSHeartbeat=30s.
@@ -810,16 +815,16 @@ func (a *App) renderRoute(c *fiberpkg.Ctx, route *routing.Route) error {
 					}
 				} else {
 					a.pprShellMu.RLock()
-						p, hit := a.pprShellCache[cacheKey]
-						if hit {
-							// Check TTL on access
-							if a.Config.SSGCacheTTL > 0 && time.Since(p.createdAt) >= a.Config.SSGCacheTTL {
-								// TTL expired, treat as cache miss
-							} else {
-								shellHTML = p.html
-								shellOk = true
-							}
+					p, hit := a.pprShellCache[cacheKey]
+					if hit {
+						// Check TTL on access
+						if a.Config.SSGCacheTTL > 0 && time.Since(p.createdAt) >= a.Config.SSGCacheTTL {
+							// TTL expired, treat as cache miss
+						} else {
+							shellHTML = p.html
+							shellOk = true
 						}
+					}
 					a.pprShellMu.RUnlock()
 				}
 				if shellOk {
@@ -892,6 +897,7 @@ runtime.init({
 	wsUrl: '%s',
 	debug: %v,
 	simpleRuntimeSVGs: %v,
+	disableSanitization: %v,
 	wsReconnectDelay: %d,
 	wsMaxReconnect: %d,
 	wsHeartbeat: %d,
@@ -900,7 +906,7 @@ runtime.init({
 		timeout: %d
 	}
 });
-</script>`, runtimePath, wsUrl, devMode, a.Config.SimpleRuntimeSVGs, wsReconnectDelay, wsMaxReconnect, wsHeartbeat, a.Config.HydrationMode, a.Config.HydrationTimeout)
+</script>`, runtimePath, wsUrl, devMode, a.Config.SimpleRuntimeSVGs, a.Config.DisableSanitization, wsReconnectDelay, wsMaxReconnect, wsHeartbeat, a.Config.HydrationMode, a.Config.HydrationTimeout)
 		_, _ = fmt.Fprint(w, `</body></html>`)
 		_ = w.Flush()
 	})
@@ -965,18 +971,19 @@ func (a *App) buildRootLayoutProps(c *fiberpkg.Ctx, params map[string]string) ma
 		wsHB = 30000
 	}
 	props := map[string]interface{}{
-		"appName":           a.Config.AppName,
-		"runtimePath":       a.getRuntimePath(),
-		"path":              c.Path(),
-		"debug":             a.Config.DevMode,
-		"wsUrl":             a.getWSUrl(c),
-		"hydrationMode":     a.Config.HydrationMode,
-		"hydrationTimeout":  a.Config.HydrationTimeout,
-		"wsReconnectDelay":  wsRD,
-		"wsMaxReconnect":    wsMR,
-		"wsHeartbeat":       wsHB,
-		"ignoredExtensions": a.Config.IgnoredExtensions,
-		"appendExtensions":  a.Config.AppendIgnoredExtensions,
+		"appName":             a.Config.AppName,
+		"runtimePath":         a.getRuntimePath(),
+		"path":                c.Path(),
+		"debug":               a.Config.DevMode,
+		"wsUrl":               a.getWSUrl(c),
+		"hydrationMode":       a.Config.HydrationMode,
+		"hydrationTimeout":    a.Config.HydrationTimeout,
+		"wsReconnectDelay":    wsRD,
+		"wsMaxReconnect":      wsMR,
+		"wsHeartbeat":         wsHB,
+		"ignoredExtensions":   a.Config.IgnoredExtensions,
+		"appendExtensions":    a.Config.AppendIgnoredExtensions,
+		"disableSanitization": a.Config.DisableSanitization,
 	}
 	for k, v := range params {
 		props[k] = v

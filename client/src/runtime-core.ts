@@ -48,6 +48,11 @@ export interface RuntimeConfig {
 	};
 	/** Allow SVG elements in simple runtime sanitizer (WARNING: security risk for untrusted content) */
 	simpleRuntimeSVGs?: boolean;
+	/** Disable client-side HTML sanitization. When enabled, GoSPA trusts server-rendered HTML
+	 *  without additional sanitization. Only use if you trust your content (like SvelteKit).
+	 *  WARNING: Disabling sanitization may expose XSS vulnerabilities with user-generated content.
+	 */
+	disableSanitization?: boolean;
 }
 
 // Global component registry
@@ -72,6 +77,12 @@ export function init(options: RuntimeConfig = {}): void {
 
 	config = options;
 	isInitialized = true;
+
+	// Set global flag for sanitization preference
+	if (config.disableSanitization) {
+		(window as any).__GOSPA_DISABLE_SANITIZATION__ = true;
+		if (config.debug) console.log('[GoSPA] Sanitization disabled - trusting server-rendered HTML');
+	}
 
 	// Initialize WebSocket if URL provided (lazy load)
 	if (config.wsUrl) {

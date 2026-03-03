@@ -1546,9 +1546,24 @@ init({
   hydration: {
     mode: 'immediate', // 'immediate' | 'lazy' | 'visible' | 'idle'
     timeout: 2000
-  }
+  },
+  disableSanitization: false  // Disable DOMPurify during SPA navigation
 });
 ```
+
+#### RuntimeConfig Options
+
+| Option | Type | Description |
+|--------|------|-------------|
+| `wsUrl` | `string` | WebSocket server URL |
+| `debug` | `boolean` | Enable debug logging |
+| `onConnectionError` | `(error: Error) => void` | WebSocket error handler |
+| `hydration.mode` | `'immediate' \| 'lazy' \| 'visible' \| 'idle'` | Component hydration strategy |
+| `hydration.timeout` | `number` | Hydration timeout in milliseconds |
+| `simpleRuntimeSVGs` | `boolean` | Allow SVGs in simple runtime (security risk) |
+| `disableSanitization` | `boolean` | Disable client-side HTML sanitization |
+
+**Note on `disableSanitization`**: When enabled, GoSPA trusts server-rendered HTML without DOMPurify filtering during SPA navigation. This provides a SvelteKit-like experience but requires careful handling of user-generated content. Only disable sanitization if you trust your content or properly escape user input server-side using Templ's auto-escaping.
 
 ---
 

@@ -11,12 +11,13 @@ templ Page() {
 			</p>
 		</header>
 
-		<nav class="flex flex-wrap gap-4 p-4 rounded-2xl bg-[var(--bg-secondary)] border border-[var(--border)]">
-			<a href="#xss-protection" class="text-sm font-medium hover:text-[var(--accent-primary)] transition-colors">XSS Protection</a>
-			<a href="#csrf-protection" class="text-sm font-medium hover:text-[var(--accent-primary)] transition-colors">CSRF Protection</a>
-			<a href="#cors-security" class="text-sm font-medium hover:text-[var(--accent-primary)] transition-colors">CORS & Origins</a>
-			<a href="#security-headers" class="text-sm font-medium hover:text-[var(--accent-primary)] transition-colors">Security Headers</a>
-		</nav>
+	<nav class="flex flex-wrap gap-4 p-4 rounded-2xl bg-[var(--bg-secondary)] border border-[var(--border)]">
+		<a href="#xss-protection" class="text-sm font-medium hover:text-[var(--accent-primary)] transition-colors">XSS Protection</a>
+		<a href="#disable-sanitization" class="text-sm font-medium hover:text-[var(--accent-primary)] transition-colors">Disable Sanitization</a>
+		<a href="#csrf-protection" class="text-sm font-medium hover:text-[var(--accent-primary)] transition-colors">CSRF Protection</a>
+		<a href="#cors-security" class="text-sm font-medium hover:text-[var(--accent-primary)] transition-colors">CORS & Origins</a>
+		<a href="#security-headers" class="text-sm font-medium hover:text-[var(--accent-primary)] transition-colors">Security Headers</a>
+	</nav>
 
 		<section id="xss-protection" class="space-y-6">
 			<h2 class="text-2xl font-bold">XSS Protection</h2>
@@ -28,6 +29,43 @@ templ Page() {
 					{ "For" } trusted environments, you can switch to the <code class="mono">SimpleRuntime</code> which uses a lightweight sanitizer for better performance. See <a href="/docs/runtime" class="text-[var(--accent-primary)] hover:underline">Runtime Selection</a> { "for" } details.
 				</p>
 			</div>
+		</section>
+
+		<section id="disable-sanitization" class="space-y-6">
+			<h2 class="text-2xl font-bold border-b border-[var(--border)] pb-2">Disabling Client-Side Sanitization</h2>
+			<p class="text-[var(--text-secondary)]">
+				GoSPA allows you to disable client-side HTML sanitization entirely, similar to SvelteKit's approach. When disabled, GoSPA trusts server-rendered HTML without DOMPurify filtering during SPA navigation.
+			</p>
+			<div class="bg-red-500/5 border border-red-500/20 p-4 rounded-xl">
+				<h4 class="text-red-500 font-bold mb-2 flex items-center gap-2">
+					<svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z"/></svg>
+					Security Warning
+				</h4>
+				<p class="text-sm text-[var(--text-secondary)]">
+					Only disable sanitization if you fully trust your content or handle user-generated content carefully on the server side. Disabling sanitization may expose XSS vulnerabilities.
+				</p>
+			</div>
+			@components.CodeBlock(`app := gospa.New(gospa.Config{
+    DisableSanitization: true,  // Disables DOMPurify during SPA navigation
+})`, "go", "main.go")
+			<p class="text-[var(--text-secondary)]">
+				When <code class="mono">DisableSanitization</code> is enabled:
+			</p>
+			<ul class="space-y-2 text-sm text-[var(--text-secondary)] list-disc list-inside ml-4">
+				<li>SPA navigation bypasses DOMPurify entirely</li>
+				<li>Server-rendered HTML is trusted as-is</li>
+				<li>Bundle size is reduced by ~20KB (DOMPurify not loaded)</li>
+				<li>Templ's automatic escaping still protects against XSS in templates</li>
+			</ul>
+			<p class="text-sm text-[var(--text-secondary)] mt-4">
+				<strong>Best practices when disabling sanitization:</strong>
+			</p>
+			<ul class="space-y-2 text-sm text-[var(--text-secondary)] list-disc list-inside ml-4">
+				<li>Always escape user content server-side using Templ's auto-escaping</li>
+				<li>Validate and sanitize any user-generated content before rendering</li>
+				<li>Consider using a Content Security Policy as an additional layer</li>
+				<li>Never render raw HTML from untrusted sources</li>
+			</ul>
 		</section>
 
 		<section id="csrf-protection" class="space-y-6">

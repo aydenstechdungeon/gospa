@@ -122,6 +122,39 @@ templ Page() {
 		</section>
 
 		<section class="space-y-4">
+			<h2 class="text-2xl font-semibold text-[var(--text-primary)]">Disabling Sanitization (SvelteKit Mode)</h2>
+			<p class="text-[var(--text-secondary)]">For applications that completely trust their server-rendered content, GoSPA offers a <code class="bg-[var(--bg-tertiary)] px-1 rounded">DisableSanitization</code> option. When enabled, no client-side sanitization is performed during SPA navigation - similar to how SvelteKit operates.</p>
+
+			<h3 class="text-xl font-semibold text-[var(--text-primary)] mt-6">Configuration</h3>
+			@components.CodeBlock(`app := gospa.New(gospa.Config{
+    RoutesDir:           "./routes",
+    DisableSanitization: true,  // Trust server-rendered HTML
+})`, "go", "main.go")
+
+			<h3 class="text-xl font-semibold text-[var(--text-primary)] mt-6">What This Means</h3>
+			<ul class="list-disc list-inside text-[var(--text-secondary)] space-y-1 ml-4">
+				<li>SPA navigation bypasses DOMPurify entirely</li>
+				<li>Server-rendered HTML is trusted as-is</li>
+				<li>Bundle size is reduced by ~20KB (DOMPurify not loaded)</li>
+				<li>Templ's automatic escaping still protects against XSS in templates</li>
+			</ul>
+
+			<div class="bg-red-500/10 border border-red-500/30 rounded-lg p-4 mt-4">
+				<p class="text-red-500 font-semibold">⚠️ Critical Security Warning</p>
+				<p class="text-[var(--text-secondary)]">Only disable sanitization if you fully trust your content or handle user-generated content carefully on the server side. Disabling sanitization may expose XSS vulnerabilities. Always ensure user content is properly escaped server-side using Templ's auto-escaping.</p>
+			</div>
+
+			<h3 class="text-xl font-semibold text-[var(--text-primary)] mt-6">When to Use</h3>
+			<p class="text-[var(--text-secondary)]">Consider disabling sanitization when:</p>
+			<ul class="list-disc list-inside text-[var(--text-secondary)] space-y-1 ml-4">
+				<li>You control all content and don't accept user-generated HTML</li>
+				<li>You've implemented server-side sanitization for any user content</li>
+				<li>You need the smallest possible bundle size</li>
+				<li>You want SvelteKit-like behavior where server-rendered HTML is trusted</li>
+			</ul>
+		</section>
+
+		<section class="space-y-4">
 			<h2 class="text-2xl font-semibold text-[var(--text-primary)]">Decision Matrix</h2>
 			<div class="overflow-x-auto">
 				<table class="w-full text-sm border border-[var(--border)] rounded-lg">

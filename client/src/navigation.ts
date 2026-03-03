@@ -173,7 +173,12 @@ async function getPageData(path: string): Promise<PageData | null> {
 }
 
 // Safely sanitize HTML with error handling
+// When disableSanitization is set, content is trusted (like SvelteKit)
 async function safeSanitize(html: string): Promise<string> {
+	// Check if sanitization is disabled globally (set by runtime.init())
+	if ((window as any).__GOSPA_DISABLE_SANITIZATION__) {
+		return html;
+	}
 	try {
 		return await sanitizeHtml(html);
 	} catch (error) {

@@ -40,6 +40,31 @@ Choose the appropriate runtime based on your security requirements:
 | `runtime-core.js` | ~15KB | None (passthrough) | Custom sanitizer implementation |
 | `runtime-micro.js` | ~5KB | None | State-only, no DOM operations |
 
+### Disabling Client-Side Sanitization
+
+GoSPA allows you to disable client-side HTML sanitization entirely, similar to SvelteKit's approach. When disabled, GoSPA trusts server-rendered HTML without DOMPurify filtering during SPA navigation.
+
+**⚠️ Security Warning**: Only disable sanitization if you fully trust your content or handle user-generated content carefully on the server side. Disabling sanitization may expose XSS vulnerabilities.
+
+```go
+// Server-side configuration
+app := gospa.New(gospa.Config{
+    DisableSanitization: true,  // Disables DOMPurify during SPA navigation
+})
+```
+
+When `DisableSanitization` is enabled:
+- SPA navigation bypasses DOMPurify entirely
+- Server-rendered HTML is trusted as-is
+- Bundle size is reduced by ~20KB (DOMPurify not loaded)
+- Templ's automatic escaping still protects against XSS in templates
+
+**Best practices when disabling sanitization:**
+- Always escape user content server-side using Templ's auto-escaping
+- Validate and sanitize any user-generated content before rendering
+- Consider using a Content Security Policy as an additional layer
+- Never render raw HTML from untrusted sources
+
 ### DOM Clobbering Protection
 
 GoSPA's DOMPurify configuration explicitly prevents DOM Clobbering attacks:
