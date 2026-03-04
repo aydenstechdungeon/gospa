@@ -76,6 +76,10 @@ async function handleGreet() {
 </script>`, "templ", "page.templ")
 		</section>
 
+		<section class="space-y-6">
+			@components.Callout(components.CalloutWarning, "Important: GoSPA Initialization", warningContent())
+		</section>
+
 		<section id="calling-script" class="space-y-6">
 			<h2 class="text-2xl font-bold border-b border-[var(--border)] pb-2">Calling from Script</h2>
 			<p class="text-[var(--text-secondary)]">
@@ -147,4 +151,10 @@ app.Use(fiber.CSRFTokenMiddleware())       // Validates X-CSRF-Token header`, "g
 			</p>
 		</div>
 	</div>
+}
+
+templ warningContent() {
+	<p class="text-sm">
+		Before using <code class="mono">GoSPA.remote()</code>, ensure the GoSPA runtime is initialized. Add <code class="mono">data-gospa-auto</code> to your HTML tag for auto-initialization, or call <code class="mono">init()</code> manually. See the <a href="/docs/troubleshooting" class="text-[var(--accent-primary)] hover:underline">Troubleshooting</a> page for details.
+	</p>
 }

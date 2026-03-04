@@ -1,0 +1,341 @@
+package troubleshooting
+
+import "github.com/aydenstechdungeon/gospa/website/components"
+
+templ Page() {
+	<div class="space-y-12">
+		<header>
+			<h1 class="text-4xl font-bold tracking-tight mb-4 text-transparent bg-clip-text bg-gradient-to-r from-[var(--accent-primary)] to-[var(--accent-secondary)]">Troubleshooting</h1>
+			<p class="text-xl text-[var(--text-secondary)] leading-relaxed">
+				Common issues and how to resolve them.
+			</p>
+		</header>
+
+		<nav class="flex flex-wrap gap-4 p-4 rounded-2xl bg-[var(--bg-secondary)] border border-[var(--border)]">
+			<a href="#gospa-undefined" class="text-sm font-medium hover:text-[var(--accent-primary)] transition-colors">GoSPA is not defined</a>
+			<a href="#remote-not-found" class="text-sm font-medium hover:text-[var(--accent-primary)] transition-colors">Remote Action Not Found</a>
+			<a href="#csrf-errors" class="text-sm font-medium hover:text-[var(--accent-primary)] transition-colors">CSRF Errors</a>
+			<a href="#network-errors" class="text-sm font-medium hover:text-[var(--accent-primary)] transition-colors">Network Errors</a>
+			<a href="#websocket-connections" class="text-sm font-medium hover:text-[var(--accent-primary)] transition-colors">WebSocket Connections</a>
+			<a href="#hmr-issues" class="text-sm font-medium hover:text-[var(--accent-primary)] transition-colors">HMR & Dev Server</a>
+			<a href="#island-hydration" class="text-sm font-medium hover:text-[var(--accent-primary)] transition-colors">Island Hydration</a>
+			<a href="#state-sync" class="text-sm font-medium hover:text-[var(--accent-primary)] transition-colors">State Synchronization</a>
+			<a href="#build-deployment" class="text-sm font-medium hover:text-[var(--accent-primary)] transition-colors">Build & Deployment</a>
+		</nav>
+
+		<section id="gospa-undefined" class="space-y-6">
+			<h2 class="text-2xl font-bold border-b border-[var(--border)] pb-2">"GoSPA is not defined" Error</h2>
+			<p class="text-[var(--text-secondary)]">
+				When calling <code class="mono text-[var(--accent-primary)]">GoSPA.remote()</code> or other GoSPA functions, you get:
+			</p>
+			@components.CodeBlock(`Uncaught ReferenceError: GoSPA is not defined`, "text", "")
+			
+			<h3 class="text-lg font-semibold mt-6">Solution: Ensure Proper Initialization</h3>
+			<p class="text-[var(--text-secondary)]">
+				The GoSPA runtime is created by calling <code class="mono">init()</code>. For auto-initialization, add <code class="mono">data-gospa-auto</code> to your HTML tag:
+			</p>
+			@components.CodeBlock(`<!DOCTYPE html>
+<html lang="en" data-gospa-auto>
+<head>
+    <title>My App</title>
+</head>
+<body>
+    <!-- Your content -->
+</body>
+</html>`, "html", "layout.templ")
+
+			<h3 class="text-lg font-semibold mt-6">How GoSPA is Created</h3>
+			<p class="text-[var(--text-secondary)]">
+				The <code class="mono">window.GoSPA</code> object is created by the runtime when <code class="mono">init()</code> is called. The runtime script is automatically injected by GoSPA's root layout. The object includes:
+			</p>
+			<ul class="list-disc list-inside text-[var(--text-secondary)] space-y-2">
+				<li><code class="mono">remote()</code> - Call remote actions</li>
+				<li><code class="mono">remoteAction()</code> - Create typed action callers</li>
+				<li><code class="mono">Rune</code>, <code class="mono">Derived</code>, <code class="mono">Effect</code> - Reactive primitives</li>
+				<li><code class="mono">init()</code> - Manual initialization</li>
+			</ul>
+
+			<h3 class="text-lg font-semibold mt-6">Alternative: ES Module Import</h3>
+			<p class="text-[var(--text-secondary)]">
+				Instead of relying on the global, import directly:
+			</p>
+			@components.CodeBlock(`<script type="module">
+    import { remote } from '/_gospa/runtime.js';
+    
+    const result = await remote('myAction', {});
+</script>`, "html", "")
+		</section>
+
+		<section id="remote-not-found" class="space-y-6">
+			<h2 class="text-2xl font-bold border-b border-[var(--border)] pb-2">"ACTION_NOT_FOUND" Error</h2>
+			<p class="text-[var(--text-secondary)]">
+				When calling a remote action, you get:
+			</p>
+			@components.CodeBlock(`{ "error": "Remote action not found", "code": "ACTION_NOT_FOUND" }`, "json", "")
+
+			<h3 class="text-lg font-semibold mt-6">Solution: Register the Action</h3>
+			<p class="text-[var(--text-secondary)]">
+				Ensure the action is registered in an <code class="mono">init()</code> function in your routes package:
+			</p>
+			@components.CodeBlock(`package routes
+
+import "github.com/aydenstechdungeon/gospa/routing"
+
+func init() {
+    routing.RegisterRemoteAction("saveData", func(ctx context.Context, input any) (any, error) {
+        return "saved", nil
+    })
+}`, "go", "routes/init.go")
+
+			@components.Callout(components.CalloutWarning, "Important", warningCaseSensitive())
+		</section>
+
+		<section id="csrf-errors" class="space-y-6">
+			<h2 class="text-2xl font-bold border-b border-[var(--border)] pb-2">CSRF Token Errors</h2>
+			<p class="text-[var(--text-secondary)]">
+				When CSRF protection is enabled, remote actions may fail with:
+			</p>
+			@components.CodeBlock(`{ "error": "CSRF token missing or invalid", "code": "CSRF_ERROR" }`, "json", "")
+
+			<h3 class="text-lg font-semibold mt-6">Solution: Correct Middleware Order</h3>
+			<p class="text-[var(--text-secondary)]">
+				The <code class="mono">CSRFSetTokenMiddleware</code> must come before <code class="mono">CSRFTokenMiddleware</code>:
+			</p>
+			@components.CodeBlock(`app := gospa.New(gospa.Config{
+    EnableCSRF: true,
+})
+
+// Order matters!
+app.Use(fiber.CSRFSetTokenMiddleware())  // Issues cookie first
+app.Use(fiber.CSRFTokenMiddleware())      // Then validates`, "go", "main.go")
+		</section>
+
+		<section id="network-errors" class="space-y-6">
+			<h2 class="text-2xl font-bold border-b border-[var(--border)] pb-2">Network Errors (status: 0)</h2>
+			<p class="text-[var(--text-secondary)]">
+				Remote action returns:
+			</p>
+			@components.CodeBlock(`{ ok: false, status: 0, code: "NETWORK_ERROR" }`, "javascript", "")
+
+			<h3 class="text-lg font-semibold mt-6">Common Causes</h3>
+			<ul class="list-disc list-inside text-[var(--text-secondary)] space-y-2">
+				<li><strong>Server not running</strong> - Check that your Go server is started</li>
+				<li><strong>Wrong URL</strong> - Default is <code class="mono">/_gospa/remote/:name</code></li>
+				<li><strong>CORS issues</strong> - Set <code class="mono">AllowedOrigins</code> in config</li>
+				<li><strong>Ad blockers</strong> - Some block <code class="mono">/_gospa/*</code> URLs</li>
+			</ul>
+
+			<h3 class="text-lg font-semibold mt-6">Check Browser DevTools</h3>
+			<ol class="list-decimal list-inside text-[var(--text-secondary)] space-y-2">
+				<li>Open Network tab</li>
+				<li>Look for POST to <code class="mono">/_gospa/remote/*</code></li>
+				<li>Check Console for errors</li>
+				<li>Verify Application → Cookies has <code class="mono">csrf_token</code></li>
+			</ol>
+		</section>
+
+		<section id="websocket-connections" class="space-y-6">
+			<h2 class="text-2xl font-bold border-b border-[var(--border)] pb-2">WebSocket Connection Issues</h2>
+			<p class="text-[var(--text-secondary)]">
+				Real-time features fail with WebSocket connection errors.
+			</p>
+
+			<h3 class="text-lg font-semibold mt-6">Enable WebSocket in Config</h3>
+			@components.CodeBlock(`app := gospa.New(gospa.Config{
+    WebSocket: true,
+    WSPath: "/_gospa/ws",
+})`, "go", "main.go")
+
+			<h3 class="text-lg font-semibold mt-6">Common Connection Errors</h3>
+			<ul class="list-disc list-inside text-[var(--text-secondary)] space-y-2">
+				<li><strong>"WebSocket connection failed"</strong> - Server not running or WS not enabled</li>
+				<li><strong>"Max reconnect attempts reached"</strong> - Check server availability and network</li>
+				<li><strong>Works on HTTP but not HTTPS</strong> - Use <code class="mono">wss://</code> for secure connections</li>
+			</ul>
+
+			<h3 class="text-lg font-semibold mt-6">Nginx Configuration for WebSocket</h3>
+			@components.CodeBlock(`location /_gospa/ws {
+    proxy_pass http://backend;
+    proxy_http_version 1.1;
+    proxy_set_header Upgrade $http_upgrade;
+    proxy_set_header Connection "upgrade";
+    proxy_read_timeout 86400;
+}`, "nginx", "")
+
+			@components.Callout(components.CalloutInfo, "Note", moreInfoWebsocket())
+		</section>
+
+		<section id="hmr-issues" class="space-y-6">
+			<h2 class="text-2xl font-bold border-b border-[var(--border)] pb-2">HMR & Development Server</h2>
+			<p class="text-[var(--text-secondary)]">
+				Hot Module Replacement not working or dev server issues.
+			</p>
+
+			<h3 class="text-lg font-semibold mt-6">"[HMR] Disconnected" Error</h3>
+			<ul class="list-disc list-inside text-[var(--text-secondary)] space-y-2">
+				<li>Ensure dev server is running with <code class="mono">DevMode: true</code></li>
+				<li>Check for port conflicts</li>
+				<li>Verify WebSocket connection in DevTools Network tab</li>
+			</ul>
+
+			<h3 class="text-lg font-semibold mt-6">Full Reload Instead of Hot Update</h3>
+			<p class="text-[var(--text-secondary)]">
+				Go templates require full reload. Only CSS/JS files support true HMR.
+			</p>
+			@components.CodeBlock(`// Implement state preservation to avoid data loss
+window.__gospaPreserveState = () => ({
+    formData: document.getElementById('myForm').value,
+    scrollPosition: window.scrollY,
+});
+
+window.__gospaRestoreState = (state) => {
+    if (state.formData) {
+        document.getElementById('myForm').value = state.formData;
+    }
+    window.scrollTo(0, state.scrollPosition || 0);
+};`, "javascript", "")
+
+			<h3 class="text-lg font-semibold mt-6">Port Already in Use</h3>
+			@components.CodeBlock(`# Kill process on port 3000
+lsof -ti:3000 | xargs kill -9  # macOS/Linux
+netstat -ano | findstr :3000   # Windows`, "bash", "")
+		</section>
+
+		<section id="island-hydration" class="space-y-6">
+			<h2 class="text-2xl font-bold border-b border-[var(--border)] pb-2">Island Hydration Issues</h2>
+			<p class="text-[var(--text-secondary)]">
+				Interactive islands not hydrating or behaving unexpectedly.
+			</p>
+
+			<h3 class="text-lg font-semibold mt-6">Island Not Hydrating</h3>
+			@components.CodeBlock(`<!-- Required attributes -->
+<div
+  data-gospa-island="Counter"
+  data-gospa-mode="visible"
+  data-gospa-priority="high"
+  data-gospa-props='{"initial": 10}'
+  id="my-counter"
+>
+  <button>Count: 0</button>
+</div>`, "html", "")
+
+			<h3 class="text-lg font-semibold mt-6">Common Issues</h3>
+			<ul class="list-disc list-inside text-[var(--text-secondary)] space-y-2">
+				<li><strong>Missing island module</strong> - Ensure <code class="mono">/islands/{name}.js</code> exists</li>
+				<li><strong>Hydration timeout</strong> - Increase timeout or lazy-load heavy dependencies</li>
+				<li><strong>Double hydration</strong> - Check for duplicate <code class="mono">data-gospa-island</code> attributes</li>
+			</ul>
+
+			<h3 class="text-lg font-semibold mt-6">Hydration Modes</h3>
+			<ul class="list-disc list-inside text-[var(--text-secondary)] space-y-2">
+				<li><code class="mono">immediate</code> - Hydrate right away (default)</li>
+				<li><code class="mono">visible</code> - Hydrate when scrolled into viewport</li>
+				<li><code class="mono">idle</code> - Hydrate when browser is idle</li>
+				<li><code class="mono">interaction</code> - Hydrate on first user interaction</li>
+				<li><code class="mono">lazy</code> - Manual hydration only</li>
+			</ul>
+		</section>
+
+		<section id="state-sync" class="space-y-6">
+			<h2 class="text-2xl font-bold border-b border-[var(--border)] pb-2">State Synchronization</h2>
+			<p class="text-[var(--text-secondary)]">
+				State changes not syncing between server and client.
+			</p>
+
+			<h3 class="text-lg font-semibold mt-6">State Not Syncing to Client</h3>
+			@components.CodeBlock(`// Enable WebSocket and broadcast changes
+app := gospa.New(gospa.Config{
+    WebSocket: true,
+})
+
+// Broadcast state update
+app.BroadcastState("count", count.Get())`, "go", "")
+
+			<h3 class="text-lg font-semibold mt-6">"State Message Too Large" Error</h3>
+			<p class="text-[var(--text-secondary)]">
+				WebSocket messages are limited to 64KB. Enable state diffing or compress state:
+			</p>
+			@components.CodeBlock(`app := gospa.New(gospa.Config{
+    WebSocket:     true,
+    StateDiffing:  true,  // Only send changes
+    CompressState: true,  // Compress large payloads
+})`, "go", "")
+
+			<h3 class="text-lg font-semibold mt-6">Circular Reference Errors</h3>
+			<p class="text-[var(--text-secondary)]">
+				Exclude circular references from state using JSON tags:
+			</p>
+			@components.CodeBlock(`type Node struct {
+    ID       string  ` + "`json:\"id\"`" + `
+    Value    int     ` + "`json:\"value\"`" + `
+    Parent   *Node   ` + "`json:\"-\"`" + `      // Exclude from sync
+    Children []*Node ` + "`json:\"children\"`" + `
+}`, "go", "")
+		</section>
+
+		<section id="build-deployment" class="space-y-6">
+			<h2 class="text-2xl font-bold border-b border-[var(--border)] pb-2">Build & Deployment</h2>
+			<p class="text-[var(--text-secondary)]">
+				Issues building for production or deploying your application.
+			</p>
+
+			<h3 class="text-lg font-semibold mt-6">"templ not found" Error</h3>
+			@components.CodeBlock(`# Install templ CLI
+go install github.com/a-h/templ/cmd/templ@latest
+
+# Add to PATH
+export PATH=$PATH:$(go env GOPATH)/bin`, "bash", "")
+
+			<h3 class="text-lg font-semibold mt-6">Binary Size Too Large</h3>
+			@components.CodeBlock(`# Strip debug info and build
+CGO_ENABLED=0 go build -ldflags="-s -w" -o app .
+
+# Optional: Compress with UPX
+upx --best -o app-compressed app`, "bash", "")
+
+			<h3 class="text-lg font-semibold mt-6">Template Not Found in Production</h3>
+			<p class="text-[var(--text-secondary)]">
+				Generate templates before building:
+			</p>
+			@components.CodeBlock(`# Generate templates
+templ generate
+
+# Build application
+go build -o app .`, "bash", "")
+
+			<h3 class="text-lg font-semibold mt-6">Docker Multi-Stage Build</h3>
+			@components.CodeBlock(`FROM golang:1.22-alpine AS builder
+WORKDIR /app
+COPY go.mod go.sum ./
+RUN go mod download
+COPY . .
+RUN go generate ./...
+RUN CGO_ENABLED=0 go build -ldflags="-s -w" -o main .
+
+FROM alpine:latest
+RUN apk --no-cache add ca-certificates
+WORKDIR /root/
+COPY --from=builder /app/main .
+COPY --from=builder /app/static ./static
+EXPOSE 8080
+CMD ["./main"]`, "dockerfile", "")
+		</section>
+
+		<div class="bg-blue-500/5 border border-blue-500/20 p-6 rounded-2xl">
+			<h3 class="text-blue-500 font-bold mb-2">Need More Help?</h3>
+			<p class="text-sm text-[var(--text-secondary)]">
+				Check the full troubleshooting documentation in the 
+				<a href="https://github.com/aydenstechdungeon/gospa/tree/main/docs/07-troubleshooting" class="text-[var(--accent-primary)] hover:underline">GitHub repository</a> 
+				or ask in the community Discord.
+			</p>
+		</div>
+	</div>
+}
+
+templ warningCaseSensitive() {
+	<p>Action names are case-sensitive. <code class="mono">saveData</code> ≠ <code class="mono">SaveData</code> ≠ <code class="mono">savedata</code>.</p>
+}
+
+templ moreInfoWebsocket() {
+	<p>See the <a href="https://github.com/aydenstechdungeon/gospa/blob/main/docs/07-troubleshooting/03-websocket-connections.md" class="text-[var(--accent-primary)] hover:underline">WebSocket troubleshooting guide</a> for more details on heartbeat, authentication, and debugging.</p>
+}
