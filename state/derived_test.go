@@ -1,6 +1,7 @@
 package state
 
 import (
+	"sync"
 	"testing"
 	"time"
 )
@@ -45,15 +46,20 @@ func TestDerivedSubscribe(t *testing.T) {
 	})
 	doubled.DependOn(count)
 
+	var mu sync.Mutex
 	var received []int
 	unsub := doubled.Subscribe(func(v int) {
+		mu.Lock()
 		received = append(received, v)
+		mu.Unlock()
 	})
 	defer unsub()
 
 	count.Set(10)
 	time.Sleep(100 * time.Millisecond)
 
+	mu.Lock()
+	defer mu.Unlock()
 	if len(received) != 1 || received[0] != 20 {
 		t.Errorf("Expected [20], got %v", received)
 	}
@@ -197,15 +203,20 @@ func TestDerivedSubscribeAny(t *testing.T) {
 	})
 	doubled.DependOn(count)
 
+	var mu sync.Mutex
 	var received []any
 	unsub := doubled.SubscribeAny(func(v any) {
+		mu.Lock()
 		received = append(received, v)
+		mu.Unlock()
 	})
 	defer unsub()
 
 	count.Set(10)
 	time.Sleep(100 * time.Millisecond)
 
+	mu.Lock()
+	defer mu.Unlock()
 	if len(received) != 1 || received[0] != 20 {
 		t.Errorf("Expected [20], got %v", received)
 	}

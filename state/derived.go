@@ -157,11 +157,14 @@ func (d *Derived[T]) DependOn(o Observable) {
 	})
 }
 
-// markDirty marks this derived value as needing recomputation
+// markDirty marks this derived value as needing recomputation and notifies
+// any subscribers of the new computed value. It is called when a dependency
+// changes. recompute() is invoked without holding d.mu (it acquires it
+// internally) to avoid a deadlock with the caller's subscription goroutine.
 func (d *Derived[T]) markDirty() {
-	d.mu.Lock()
-	d.dirty = true
-	d.mu.Unlock()
+	// Recompute immediately — this sets dirty=false, computes the new value,
+	// takes a snapshot of current subscribers, and fires notify() in a goroutine.
+	d.recompute()
 }
 
 // ID returns the unique identifier for this derived value
