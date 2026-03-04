@@ -528,11 +528,12 @@ func (a *App) setupRoutes() {
 
 		result, err := fn(c.Context(), input)
 		if err != nil {
-			// Log the actual error internally for debugging
+			// Log the actual error internally for debugging — never expose to client
 			log.Printf("Remote action %q error: %v", name, err)
-			// Return error with code for programmatic handling
+			// SECURITY: Return a generic message to prevent internal detail leakage
+			// (DB strings, file paths, stack info, etc. must not reach the browser)
 			return c.Status(fiberpkg.StatusInternalServerError).JSON(fiberpkg.Map{
-				"error": err.Error(),
+				"error": "Internal server error",
 				"code":  "ACTION_FAILED",
 			})
 		}
@@ -591,9 +592,11 @@ func (a *App) RegisterRoutes() error {
 // renderRoute renders a route with its layout chain.
 func (a *App) renderRoute(c *fiberpkg.Ctx, route *routing.Route) error {
 	cacheKey := c.Path()
-	if query := string(c.Request().URI().QueryString()); len(query) > 0 {
-		cacheKey += "?" + query
-	}
+	// SECURITY (P1): Removed query string from cache key to prevent cache-busting DoS attacks.
+	// An attacker spamming /path?random=1..n would fill the FIFO cache with junk keys,
+	// evicting all legitimate cached entries and forcing full SSR.
+	// Since static shells are identical regardless of query parameters, we only cache by path.
+
 	opts := routing.GetRouteOptions(route.Path)
 
 	// Resolve effective strategy (per-page opts override config default).
@@ -1069,9 +1072,19 @@ func (a *App) storeSsgEntry(key string, html []byte) {
 	}
 	// Only evict if maxEntries > 0 (-1 means unlimited)
 	if maxEntries > 0 && len(a.ssgCache) >= maxEntries && len(a.ssgCacheKeys) > 0 {
-		oldest := a.ssgCacheKeys[0]
-		a.ssgCacheKeys = a.ssgCacheKeys[1:]
-		delete(a.ssgCache, oldest)
+		// Batch evict 10% of entries to avoid O(n) slice shift on every insert (P2 fix)
+		evictCount := maxEntries / 10
+		if evictCount < 1 {
+			evictCount = 1
+		}
+		if evictCount > len(a.ssgCacheKeys) {
+			evictCount = len(a.ssgCacheKeys)
+		}
+		for i := 0; i < evictCount; i++ {
+			oldest := a.ssgCacheKeys[i]
+			delete(a.ssgCache, oldest)
+		}
+		a.ssgCacheKeys = append([]string(nil), a.ssgCacheKeys[evictCount:]...)
 	}
 	if _, exists := a.ssgCache[key]; !exists {
 		a.ssgCacheKeys = append(a.ssgCacheKeys, key)
@@ -1094,9 +1107,19 @@ func (a *App) storePprShell(key string, shell []byte) {
 	}
 	// Only evict if maxEntries > 0 (-1 means unlimited)
 	if maxEntries > 0 && len(a.pprShellCache) >= maxEntries && len(a.pprShellKeys) > 0 {
-		oldest := a.pprShellKeys[0]
-		a.pprShellKeys = a.pprShellKeys[1:]
-		delete(a.pprShellCache, oldest)
+		// Batch evict 10% of entries to avoid O(n) slice shift on every insert (P2 fix)
+		evictCount := maxEntries / 10
+		if evictCount < 1 {
+			evictCount = 1
+		}
+		if evictCount > len(a.pprShellKeys) {
+			evictCount = len(a.pprShellKeys)
+		}
+		for i := 0; i < evictCount; i++ {
+			oldest := a.pprShellKeys[i]
+			delete(a.pprShellCache, oldest)
+		}
+		a.pprShellKeys = append([]string(nil), a.pprShellKeys[evictCount:]...)
 	}
 	if _, exists := a.pprShellCache[key]; !exists {
 		a.pprShellKeys = append(a.pprShellKeys, key)
@@ -1177,6 +1200,12 @@ func (a *App) RunTLS(addr, certFile, keyFile string) error {
 
 // Shutdown gracefully shuts down the application.
 func (a *App) Shutdown() error {
+	if a.Hub != nil {
+		a.Hub.Close()
+	}
+	if closer, ok := a.Config.Storage.(interface{ Close() error }); ok {
+		_ = closer.Close()
+	}
 	return a.Fiber.Shutdown()
 }
 

@@ -133,30 +133,31 @@ func RuntimeMiddlewareWithContent(runtimeContent []byte) gofiber.Handler {
 }
 
 // CSRFSetTokenMiddleware issues and rotates the CSRF cookie on safe HTTP methods.
-// Use this alongside CSRFTokenMiddleware: the setter runs on GETs to plant the token,
+// Use this alongside CSRFTokenMiddleware: the setter runs on GETs to rotate the token,
 // the validator runs on mutating methods to verify it.
+// SECURITY: The token is rotated on every GET/HEAD to prevent token fixation attacks.
 func CSRFSetTokenMiddleware() gofiber.Handler {
 	return func(c *gofiber.Ctx) error {
-		// Only issue tokens on safe methods
+		// Only issue/rotate tokens on safe methods
 		if c.Method() != "GET" && c.Method() != "HEAD" {
 			return c.Next()
 		}
 
-		// Issue a token if one doesn't exist yet
-		if c.Cookies("csrf_token") == "" {
-			token, err := generateCSRFToken()
-			if err != nil {
-				// Non-critical: skip token issuance, don't block the request
-				return c.Next()
-			}
-			c.Cookie(&gofiber.Cookie{
-				Name:     "csrf_token",
-				Value:    token,
-				HTTPOnly: false, // Must be readable by JS to set the X-CSRF-Token header
-				SameSite: "Strict",
-				Secure:   c.Protocol() == "https",
-			})
+		// Always rotate — issuing a fresh token every GET prevents fixation attacks
+		// where a token stolen from an XSS/log leakage remains valid indefinitely.
+		token, err := generateCSRFToken()
+		if err != nil {
+			// Non-critical: skip token rotation, don't block the request
+			return c.Next()
 		}
+		c.Cookie(&gofiber.Cookie{
+			Name:     "csrf_token",
+			Value:    token,
+			HTTPOnly: false, // Must be readable by JS to set the X-CSRF-Token header
+			SameSite: "Strict",
+			Secure:   c.Protocol() == "https",
+			Path:     "/", // Ensure cookie covers entire site, not just request path
+		})
 
 		return c.Next()
 	}
@@ -303,9 +304,12 @@ func PreloadHeadersMiddlewareMinimal(config PreloadConfig) gofiber.Handler {
 // SecurityHeadersMiddleware adds security headers.
 func SecurityHeadersMiddleware() gofiber.Handler {
 	return func(c *gofiber.Ctx) error {
+		if c.Protocol() == "https" || c.Get("X-Forwarded-Proto") == "https" {
+			c.Set("Strict-Transport-Security", "max-age=31536000; includeSubDomains; preload")
+		}
 		c.Set("X-Content-Type-Options", "nosniff")
 		c.Set("X-Frame-Options", "DENY")
-		c.Set("X-XSS-Protection", "1; mode=block")
+		c.Set("X-XSS-Protection", "0") // 0 is recommended since XSS auditor is deprecated
 		c.Set("Referrer-Policy", "strict-origin-when-cross-origin")
 		return c.Next()
 	}
@@ -511,8 +515,17 @@ func randomString(length int) string {
 		panic(fmt.Sprintf("failed to generate secure random: %v", err))
 	}
 
-	for i := range b {
-		b[i] = charset[int(randomBytes[i])%len(charset)]
+	for i := 0; i < length; {
+		idx := int(randomBytes[i])
+		if idx < 248 { // 62 * 4 = 248 (eliminates modulo bias)
+			b[i] = charset[idx%len(charset)]
+			i++
+		} else {
+			// Reroll byte
+			if _, err := rand.Read(randomBytes[i : i+1]); err != nil {
+				panic(fmt.Sprintf("failed to generate secure random: %v", err))
+			}
+		}
 	}
 	return string(b)
 }

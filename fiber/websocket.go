@@ -38,6 +38,7 @@ type ConnectionRateLimiter struct {
 	maxTokens       float64       // Maximum burst (default: 5)
 	refillRate      float64       // Tokens per second (default: 0.2 = 1 per 5 sec)
 	cleanupInterval time.Duration // How often to clean stale entries (in-memory only, default: 1 min)
+	stop            chan struct{}
 }
 
 type rateBucket struct {
@@ -61,15 +62,17 @@ func (rl *ConnectionRateLimiter) SetStorage(storage store.Storage) {
 }
 
 // Global connection rate limiter (singleton)
-var globalConnRateLimiter = NewConnectionRateLimiter()
+var globalConnRateLimiter = NewConnectionRateLimiter(store.NewMemoryStorage())
 
 // NewConnectionRateLimiter creates a rate limiter with sensible defaults.
-func NewConnectionRateLimiter() *ConnectionRateLimiter {
+func NewConnectionRateLimiter(storage store.Storage) *ConnectionRateLimiter {
 	rl := &ConnectionRateLimiter{
 		buckets:         make(map[string]*rateBucket),
+		storage:         storage,
 		maxTokens:       5.0,         // Allow burst of 5 connections
 		refillRate:      0.2,         // 1 connection per 5 seconds sustained
 		cleanupInterval: time.Minute, // Cleanup stale entries every minute
+		stop:            make(chan struct{}),
 	}
 	// Start cleanup goroutine
 	go rl.cleanupLoop()
@@ -170,17 +173,27 @@ func (rl *ConnectionRateLimiter) cleanupLoop() {
 	ticker := time.NewTicker(rl.cleanupInterval)
 	defer ticker.Stop()
 
-	for range ticker.C {
-		rl.mu.Lock()
-		now := time.Now()
-		for ip, bucket := range rl.buckets {
-			// Remove entries that haven't been used in 10 minutes
-			if now.Sub(bucket.LastRefill) > 10*time.Minute {
-				delete(rl.buckets, ip)
+	for {
+		select {
+		case <-ticker.C:
+			rl.mu.Lock()
+			now := time.Now()
+			for ip, bucket := range rl.buckets {
+				// Remove entries that haven't been used in 10 minutes
+				if now.Sub(bucket.LastRefill) > 10*time.Minute {
+					delete(rl.buckets, ip)
+				}
 			}
+			rl.mu.Unlock()
+		case <-rl.stop:
+			return
 		}
-		rl.mu.Unlock()
 	}
+}
+
+// Close explicitly stops the rate limiter's cleanup goroutine.
+func (rl *ConnectionRateLimiter) Close() {
+	close(rl.stop)
 }
 
 // sessionEntry holds a session token and its expiry.
@@ -368,6 +381,7 @@ type WSHub struct {
 	Broadcast  chan []byte
 	mu         sync.RWMutex
 	pubsub     store.PubSub
+	stop       chan struct{}
 }
 
 // NewWSHub creates a new WebSocket hub.
@@ -381,6 +395,7 @@ func NewWSHub(pubsub store.PubSub) *WSHub {
 		Unregister: make(chan *WSClient),
 		Broadcast:  make(chan []byte, 256),
 		pubsub:     pubsub,
+		stop:       make(chan struct{}),
 	}
 
 	// Subscribe to a global broadcast channel for state syncing across processes
@@ -438,8 +453,15 @@ func (h *WSHub) Run() {
 			// Instead of directly sending to local clients, publish to the PubSub system.
 			// The PubSub subscription handler will broadcast it locally.
 			_ = h.pubsub.Publish("gospa:broadcast", message)
+		case <-h.stop:
+			return
 		}
 	}
+}
+
+// Close explicitly stops the WSHub loop.
+func (h *WSHub) Close() {
+	close(h.stop)
 }
 
 // BroadcastTo broadcasts a message to specific clients.
@@ -1271,11 +1293,10 @@ func WebSocketUpgradeMiddleware() fiberpkg.Handler {
 // StateSyncHandler creates a handler for state synchronization.
 func StateSyncHandler(hub *WSHub) fiberpkg.Handler {
 	return func(c *fiberpkg.Ctx) error {
-		// Get session token from header or query
-		sessionToken := c.Query("session")
-		if sessionToken == "" {
-			sessionToken = c.Get("X-Session-Token")
-		}
+		// Get session token from header
+		// SECURITY (P3): query params deprecated due to potential leakage in server logs
+		// or Referer headers. Only accepting HTTP headers securely.
+		sessionToken := c.Get("X-Session-Token")
 
 		if sessionToken == "" {
 			return c.Status(fiberpkg.StatusUnauthorized).JSON(fiberpkg.Map{

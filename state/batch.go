@@ -103,6 +103,11 @@ func BatchWithContext(ctx context.Context, fn func() error) error {
 		dirty:  make(map[string]notifier),
 		active: true,
 	}
+	// Capture the returned context containing the batch state
+	// Note: for this to be fully useful to the caller, the function signature
+	// usually requires passing the new ctx down, but this at least prevents
+	// silent discard and correctly prepares the context for downstream functions
+	// within fn() that might use getBatchState if we passed ctx to fn in the future.
 	_ = context.WithValue(ctx, batchContextKey{}, bs)
 
 	gid := getGID()

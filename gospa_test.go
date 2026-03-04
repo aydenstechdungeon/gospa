@@ -78,7 +78,7 @@ func TestNew_AppliesDefaults(t *testing.T) {
 
 func TestNew_SSGCacheMaxEntries_Defaults(t *testing.T) {
 	app := New(Config{})
-	defer app.Fiber.Shutdown()
+	defer func() { _ = app.Fiber.Shutdown() }()
 	if app.Config.SSGCacheMaxEntries != 500 {
 		t.Errorf("expected SSGCacheMaxEntries=500 when unset, got %d", app.Config.SSGCacheMaxEntries)
 	}
@@ -87,7 +87,7 @@ func TestNew_SSGCacheMaxEntries_Defaults(t *testing.T) {
 func TestNew_SSGCacheMaxEntries_Negative(t *testing.T) {
 	// Any negative input should be normalized to -1 (unlimited)
 	app := New(Config{SSGCacheMaxEntries: -99})
-	defer app.Fiber.Shutdown()
+	defer func() { _ = app.Fiber.Shutdown() }()
 	if app.Config.SSGCacheMaxEntries != -1 {
 		t.Errorf("negative SSGCacheMaxEntries should normalize to -1, got %d", app.Config.SSGCacheMaxEntries)
 	}
@@ -95,7 +95,7 @@ func TestNew_SSGCacheMaxEntries_Negative(t *testing.T) {
 
 func TestNew_SSGCacheMaxEntries_Cap(t *testing.T) {
 	app := New(Config{SSGCacheMaxEntries: 99999})
-	defer app.Fiber.Shutdown()
+	defer func() { _ = app.Fiber.Shutdown() }()
 	if app.Config.SSGCacheMaxEntries != 10000 {
 		t.Errorf("SSGCacheMaxEntries > 10000 should be capped at 10000, got %d", app.Config.SSGCacheMaxEntries)
 	}
@@ -103,7 +103,7 @@ func TestNew_SSGCacheMaxEntries_Cap(t *testing.T) {
 
 func TestNew_WSDefaults(t *testing.T) {
 	app := New(Config{})
-	defer app.Fiber.Shutdown()
+	defer func() { _ = app.Fiber.Shutdown() }()
 	if app.Config.WSMaxMessageSize != 64*1024 {
 		t.Errorf("expected WSMaxMessageSize=64KB, got %d", app.Config.WSMaxMessageSize)
 	}
@@ -117,7 +117,7 @@ func TestNew_WSDefaults(t *testing.T) {
 
 func TestNew_HubInitialized(t *testing.T) {
 	app := New(Config{})
-	defer app.Fiber.Shutdown()
+	defer func() { _ = app.Fiber.Shutdown() }()
 	if app.Hub == nil {
 		t.Error("Hub should be initialized in New()")
 	}
@@ -125,7 +125,7 @@ func TestNew_HubInitialized(t *testing.T) {
 
 func TestNew_StateMapInitialized(t *testing.T) {
 	app := New(Config{})
-	defer app.Fiber.Shutdown()
+	defer func() { _ = app.Fiber.Shutdown() }()
 	if app.StateMap == nil {
 		t.Error("StateMap should be initialized in New()")
 	}
@@ -133,7 +133,7 @@ func TestNew_StateMapInitialized(t *testing.T) {
 
 func TestNew_RouterInitialized(t *testing.T) {
 	app := New(Config{})
-	defer app.Fiber.Shutdown()
+	defer func() { _ = app.Fiber.Shutdown() }()
 	if app.Router == nil {
 		t.Error("Router should be initialized in New()")
 	}
@@ -141,7 +141,7 @@ func TestNew_RouterInitialized(t *testing.T) {
 
 func TestNew_FiberInitialized(t *testing.T) {
 	app := New(Config{})
-	defer app.Fiber.Shutdown()
+	defer func() { _ = app.Fiber.Shutdown() }()
 	if app.Fiber == nil {
 		t.Error("Fiber should be initialized in New()")
 	}
@@ -154,7 +154,7 @@ func TestNew_DefaultStateInjected(t *testing.T) {
 			"name":  "test",
 		},
 	})
-	defer app.Fiber.Shutdown()
+	defer func() { _ = app.Fiber.Shutdown() }()
 
 	_, okCount := app.StateMap.Get("count")
 	_, okName := app.StateMap.Get("name")
@@ -176,7 +176,7 @@ func TestNew_CustomConfig(t *testing.T) {
 		CompressState: true,
 		StateDiffing:  true,
 	})
-	defer app.Fiber.Shutdown()
+	defer func() { _ = app.Fiber.Shutdown() }()
 
 	if app.Config.RoutesDir != "./custom-routes" {
 		t.Errorf("expected RoutesDir='./custom-routes', got %q", app.Config.RoutesDir)
@@ -246,7 +246,7 @@ func TestStoreSsgEntry_FIFO_Eviction(t *testing.T) {
 	// Use Prefork=true so in-memory ssgCache is used (not external Storage)
 	app := New(Config{SSGCacheMaxEntries: 3, Prefork: false})
 	app.Config.Storage = nil // force in-memory path
-	defer app.Fiber.Shutdown()
+	defer func() { _ = app.Fiber.Shutdown() }()
 
 	// Fill the cache to capacity
 	app.storeSsgEntry("/page1", []byte("html1"))
@@ -270,7 +270,7 @@ func TestStoreSsgEntry_FIFO_Eviction(t *testing.T) {
 func TestStoreSsgEntry_Unlimited(t *testing.T) {
 	app := New(Config{SSGCacheMaxEntries: -1}) // unlimited
 	app.Config.Storage = nil                   // force in-memory path
-	defer app.Fiber.Shutdown()
+	defer func() { _ = app.Fiber.Shutdown() }()
 
 	for i := 0; i < 10; i++ {
 		key := "/page" + string(rune('0'+i))
@@ -288,7 +288,7 @@ func TestStoreSsgEntry_Unlimited(t *testing.T) {
 func TestStoreSsgEntry_DuplicateKeyNoExtraTrack(t *testing.T) {
 	app := New(Config{SSGCacheMaxEntries: 10})
 	app.Config.Storage = nil // force in-memory path
-	defer app.Fiber.Shutdown()
+	defer func() { _ = app.Fiber.Shutdown() }()
 
 	app.storeSsgEntry("/dupe", []byte("v1"))
 	app.storeSsgEntry("/dupe", []byte("v2"))
@@ -320,7 +320,7 @@ func TestVersion_NonEmpty(t *testing.T) {
 
 func TestGetRuntimePath_CustomScript(t *testing.T) {
 	app := New(Config{RuntimeScript: "/custom/runtime.js"})
-	defer app.Fiber.Shutdown()
+	defer func() { _ = app.Fiber.Shutdown() }()
 	path := app.getRuntimePath()
 	if path != "/custom/runtime.js" {
 		t.Errorf("expected custom runtime path, got %q", path)
@@ -329,7 +329,7 @@ func TestGetRuntimePath_CustomScript(t *testing.T) {
 
 func TestGetRuntimePath_Default(t *testing.T) {
 	app := New(Config{})
-	defer app.Fiber.Shutdown()
+	defer func() { _ = app.Fiber.Shutdown() }()
 	path := app.getRuntimePath()
 	if path == "" {
 		t.Error("getRuntimePath should not return empty string")
@@ -342,7 +342,7 @@ func TestGetRuntimePath_Default(t *testing.T) {
 
 func TestGetRuntimePath_Simple(t *testing.T) {
 	app := New(Config{SimpleRuntime: true})
-	defer app.Fiber.Shutdown()
+	defer func() { _ = app.Fiber.Shutdown() }()
 	path := app.getRuntimePath()
 	// Should contain "simple" in the path name
 	if len(path) < 8 || path[:8] != "/_gospa/" {
@@ -354,7 +354,7 @@ func TestGetRuntimePath_Simple(t *testing.T) {
 
 func TestGetHub(t *testing.T) {
 	app := New(Config{})
-	defer app.Fiber.Shutdown()
+	defer func() { _ = app.Fiber.Shutdown() }()
 	if app.GetHub() == nil {
 		t.Error("GetHub() should return non-nil")
 	}
@@ -362,7 +362,7 @@ func TestGetHub(t *testing.T) {
 
 func TestGetRouter(t *testing.T) {
 	app := New(Config{})
-	defer app.Fiber.Shutdown()
+	defer func() { _ = app.Fiber.Shutdown() }()
 	if app.GetRouter() == nil {
 		t.Error("GetRouter() should return non-nil")
 	}
@@ -370,7 +370,7 @@ func TestGetRouter(t *testing.T) {
 
 func TestGetFiber(t *testing.T) {
 	app := New(Config{})
-	defer app.Fiber.Shutdown()
+	defer func() { _ = app.Fiber.Shutdown() }()
 	if app.GetFiber() == nil {
 		t.Error("GetFiber() should return non-nil")
 	}
@@ -380,7 +380,7 @@ func TestGetFiber(t *testing.T) {
 
 func TestApp_RouteHelpers_NoPanic(t *testing.T) {
 	app := New(Config{})
-	defer app.Fiber.Shutdown()
+	defer func() { _ = app.Fiber.Shutdown() }()
 
 	// Just verify these don't panic - method chaining works on Fiber
 	routers := app.GetFiber()

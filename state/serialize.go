@@ -155,21 +155,19 @@ func (sm *StateMap) Diff(other *StateMap) *StateMapComparison {
 		}
 	}
 
-	sm.mu.RLock()
-	other.mu.RLock()
-	defer sm.mu.RUnlock()
-	defer other.mu.RUnlock()
+	// Safely copy both maps using toToMap to avoid locking both state maps
+	// simultaneously and risking a lock order deadlock.
+	smMap := sm.ToMap()
+	otherMap := other.ToMap()
 
 	added := make(map[string]interface{})
 	removed := make(map[string]interface{})
 	changed := make(map[string]interface{})
 
 	// Find added and changed keys
-	for name, obs := range sm.observables {
-		value := obs.GetAny()
-		if otherObs, ok := other.observables[name]; ok {
+	for name, value := range smMap {
+		if otherValue, ok := otherMap[name]; ok {
 			// Key exists in both, check if changed
-			otherValue := otherObs.GetAny()
 			if !deepEqualValues(value, otherValue) {
 				changed[name] = value
 			}
@@ -180,9 +178,9 @@ func (sm *StateMap) Diff(other *StateMap) *StateMapComparison {
 	}
 
 	// Find removed keys
-	for name, obs := range other.observables {
-		if _, ok := sm.observables[name]; !ok {
-			removed[name] = obs.GetAny()
+	for name, otherValue := range otherMap {
+		if _, ok := smMap[name]; !ok {
+			removed[name] = otherValue
 		}
 	}
 

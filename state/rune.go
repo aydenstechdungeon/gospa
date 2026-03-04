@@ -7,6 +7,7 @@ import (
 	"reflect"
 	"strconv"
 	"sync"
+	"sync/atomic"
 )
 
 // Unsubscribe is a function returned by Subscribe to remove the subscription.
@@ -48,14 +49,11 @@ type Rune[T any] struct {
 
 // runeIDCounter is used to generate unique IDs for runes
 var runeIDCounter uint64
-var runeIDMu sync.Mutex
 
 // generateRuneID creates a unique identifier for a rune
 func generateRuneID() string {
-	runeIDMu.Lock()
-	defer runeIDMu.Unlock()
-	runeIDCounter++
-	return strconv.FormatUint(runeIDCounter, 10)
+	id := atomic.AddUint64(&runeIDCounter, 1)
+	return strconv.FormatUint(id, 10)
 }
 
 // NewRune creates a new Rune with the given initial value.

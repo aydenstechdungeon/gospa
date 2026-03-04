@@ -16,22 +16,26 @@ type Storage interface {
 	Delete(key string) error
 }
 
+// MemoryStorage provides an in-memory implementation of the Storage interface.
+type MemoryStorage struct {
+	mu    sync.RWMutex
+	store map[string]memoryEntry
+	stop  chan struct{}
+}
+
+// memoryEntry stores a value and its expiration time.
 type memoryEntry struct {
 	val []byte
 	exp time.Time
-}
-
-// MemoryStorage provides an in-memory implementation of the Storage interface.
-type MemoryStorage struct {
-	store map[string]memoryEntry
-	mu    sync.RWMutex
 }
 
 // NewMemoryStorage creates a new in-memory storage.
 func NewMemoryStorage() *MemoryStorage {
 	s := &MemoryStorage{
 		store: make(map[string]memoryEntry),
+		stop:  make(chan struct{}),
 	}
+	// Start cleanup goroutine
 	go s.pruneLoop()
 	return s
 }
@@ -39,43 +43,28 @@ func NewMemoryStorage() *MemoryStorage {
 // Get retrieves a value from the in-memory store.
 func (s *MemoryStorage) Get(key string) ([]byte, error) {
 	s.mu.RLock()
-	entry, ok := s.store[key]
+	entry, exists := s.store[key]
 	s.mu.RUnlock()
 
-	if !ok {
+	if !exists {
 		return nil, ErrNotFound
 	}
-
 	if !entry.exp.IsZero() && time.Now().After(entry.exp) {
 		_ = s.Delete(key)
 		return nil, ErrNotFound
 	}
-
-	// Return a copy to prevent accidental mutation of stored data
-	valCopy := make([]byte, len(entry.val))
-	copy(valCopy, entry.val)
-	return valCopy, nil
+	return entry.val, nil
 }
 
 // Set stores a value in the in-memory store.
-// If exp is > 0, the entry will be removed after the given duration.
 func (s *MemoryStorage) Set(key string, val []byte, exp time.Duration) error {
-	var expiresAt time.Time
-	if exp > 0 {
-		expiresAt = time.Now().Add(exp)
-	}
-
-	// Store a copy to prevent accidental mutation by caller
-	valCopy := make([]byte, len(val))
-	copy(valCopy, val)
-
 	s.mu.Lock()
-	s.store[key] = memoryEntry{
-		val: valCopy,
-		exp: expiresAt,
+	var expiration time.Time
+	if exp > 0 {
+		expiration = time.Now().Add(exp)
 	}
+	s.store[key] = memoryEntry{val: val, exp: expiration}
 	s.mu.Unlock()
-
 	return nil
 }
 
@@ -91,14 +80,26 @@ func (s *MemoryStorage) Delete(key string) error {
 func (s *MemoryStorage) pruneLoop() {
 	ticker := time.NewTicker(5 * time.Minute)
 	defer ticker.Stop()
-	for range ticker.C {
-		s.mu.Lock()
-		now := time.Now()
-		for key, entry := range s.store {
-			if !entry.exp.IsZero() && now.After(entry.exp) {
-				delete(s.store, key)
+	for {
+		select {
+		case <-ticker.C:
+			s.mu.Lock()
+			now := time.Now()
+			for key, entry := range s.store {
+				if !entry.exp.IsZero() && now.After(entry.exp) {
+					delete(s.store, key)
+				}
 			}
+			s.mu.Unlock()
+		case <-s.stop:
+			return // Stop processing when closed
 		}
-		s.mu.Unlock()
 	}
+}
+
+// Close explicitly stops the background pruning loop to prevent goroutine leaks.
+func (s *MemoryStorage) Close() error {
+	// Send close signal
+	close(s.stop)
+	return nil
 }

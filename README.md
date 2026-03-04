@@ -5,8 +5,6 @@
 
 A Go framework for building reactive SPAs with server-side rendering. Brings Svelte-like reactivity to Go using Fiber and Templ.
 
--# Pushing to master/main will stop once framework is stable or if other people start working on it.
-
 ## Features
 
 - **Reactive Primitives** — `Rune[T]`, `Derived[T]`, `Effect` - Svelte-like reactivity in Go
@@ -31,21 +29,10 @@ go get github.com/aydenstechdungeon/gospa
 ### 1. Initialize Project
 
 ```bash
-go run github.com/aydenstechdungeon/gospa/cmd/gospa@latest create myapp
-```
-or
-from examples/:
-```bash
-go run ../cmd/gospa create myapp
-```
-from inside a examples project:
-```bash
-go run ../../cmd/gospa create myapp
-```
-
-```bash
-mkdir myapp && cd myapp
-go mod init myapp
+go install github.com/aydenstechdungeon/gospa/cmd/gospa@latest
+gospa create myapp
+cd myapp
+go mod tidy
 ```
 
 ### 2. Create Main File
@@ -332,14 +319,9 @@ app := gospa.New(gospa.Config{
 })
 ```
 
-> **CSRF protection requires two middlewares** — one to issue the token cookie, one to validate it:
->
-> ```go
-> app.Fiber.Use(fiber.CSRFSetTokenMiddleware()) // issues csrf_token cookie on GET
-> app.Fiber.Use(fiber.CSRFTokenMiddleware())    // validates X-CSRF-Token header on POST/PUT/DELETE
-> ```
->
-> Setting `EnableCSRF: true` alone is not sufficient — you must wire both middlewares.
+> **Security By Default:** 
+> When you set `EnableCSRF: true`, GoSPA automatically wires both the token issuer 
+> and validator middlewares for you. You do not need to wire them manually!
 
 ### Rendering Strategies
 
@@ -456,9 +438,7 @@ If no `root_layout.templ` exists, GoSPA provides a minimal default HTML wrapper.
 
 ## API Reference
 
-See [`docs/API.md`](docs/API.md) for complete API documentation.
-[`docs/llms/llms.txt`](docs/llms/llms.txt)
-[`docs/llms/llms-full.md`](docs/llms/llms-full.md)
+See [`docs/04-api-reference/`](docs/04-api-reference/) for complete API documentation.
 
 ## CLI
 
