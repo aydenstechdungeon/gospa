@@ -112,26 +112,62 @@ The runtime is automatically injected into your pages by the GoSPA server. No ma
 ### Manual Import (for advanced usage)
 
 ```typescript
-// Full runtime with DOMPurify
-import { Rune, Effect, navigate } from '@gospa/runtime';
+// Default runtime - trusts server-rendered HTML
+import { Rune, Effect, navigate } from 'gospa';
 
-// Lightweight runtime (no sanitizer)
-import { Rune, Effect, navigate } from '@gospa/runtime-simple';
+// Secure runtime - includes DOMPurify for user-generated content
+import { Rune, Effect, navigate, sanitize } from 'gospa/runtime-secure';
+
+// Core runtime - reactive primitives only
+import { Rune, Effect } from 'gospa/core';
+
+// Micro runtime - state-only, no DOM
+import { Rune, Derived } from 'gospa/micro';
 ```
 
 ---
 
 ## Runtime Variants
 
-| Variant | Size | Includes |
-|---------|------|----------|
-| `runtime.js` | ~17KB | Full runtime + DOMPurify sanitizer |
-| `runtime-simple.js` + `runtime-core.js` | ~11KB | Lightweight runtime (no sanitizer) |
+| Variant | Size | Sanitizer | Use Case |
+|---------|------|-----------|----------|
+| `gospa` (default) | ~15KB | None (trusts server) | Most apps - server-rendered with Templ |
+| `gospa/runtime-secure` | ~35KB | DOMPurify | Apps with user-generated HTML content |
+| `gospa/core` | ~12KB | None | Custom implementations - primitives only |
+| `gospa/micro` | ~3KB | None | State-only, no DOM operations |
 
-Use the simple runtime when:
-- You don't need HTML sanitization
-- You provide your own sanitizer via `setSanitizer()`
-- Bundle size is critical
+### Default Runtime (`gospa`)
+Trusts server-rendered HTML (Templ auto-escapes). Use for most applications.
+
+```typescript
+import { init } from 'gospa';
+init();
+```
+
+### Secure Runtime (`gospa/runtime-secure`)
+Includes DOMPurify for sanitizing user-generated content.
+
+```typescript
+import { init, sanitize } from 'gospa/runtime-secure';
+init();
+
+// Sanitize untrusted HTML
+const clean = await sanitize(userComment);
+```
+
+### When to use each:
+- **Default (`gospa`)**: Most apps, server-rendered content, with CSP
+- **Secure (`runtime-secure`)**: Forums, social apps, wikis, any UGC
+- **Core (`core`)**: Library authors, custom runtime implementations
+- **Micro (`micro`)**: Web Workers, Node.js scripts, state-only apps
+
+### Security Model
+GoSPA follows a "trust the server" model:
+1. Templ auto-escapes all dynamic content at the server
+2. Client-side sanitization is opt-in (for UGC only)
+3. CSP is the primary XSS defense
+
+This is similar to SvelteKit and other modern frameworks.
 
 ---
 
@@ -958,22 +994,22 @@ document.body.appendChild(div);
 
 ### setSanitizer
 
-Configure a custom HTML sanitizer for the runtime. By default, the runtime uses DOMPurify (full runtime) or a simple sanitizer (simple runtime).
+Configure a custom HTML sanitizer for the runtime. The default runtime (`gospa`) does not include a sanitizer - it trusts server-rendered HTML.
 
 ```typescript
-import { setSanitizer } from '@gospa/runtime';
+import { setSanitizer } from 'gospa';
 import DOMPurify from 'dompurify';
 
-// Set custom DOMPurify sanitizer
+// Set custom sanitizer (use only with user-generated content)
 setSanitizer((html) => DOMPurify.sanitize(html, {
   ALLOWED_TAGS: ['b', 'i', 'em', 'strong', 'p'],
   ALLOWED_ATTR: []
 }));
 ```
 
-**Sanitizer Functions:**
+**Using the Secure Runtime:**
 
-The full runtime (`runtime.js`) exports these sanitizer functions:
+For apps with user-generated content, use `gospa/runtime-secure` which includes DOMPurify:
 
 ```typescript
 import {
@@ -981,9 +1017,7 @@ import {
   sanitizeSync,       // Sync sanitization (requires preloading)
   isSanitizerReady,   // Check if DOMPurify is loaded
   preloadSanitizer,   // Preload DOMPurify during idle time
-  domPurifySanitizer, // Default sanitizer for dom.ts
-  PURIFY_CONFIG       // Default DOMPurify configuration
-} from '@gospa/runtime';
+} from 'gospa/runtime-secure';
 
 // Preload for faster first use
 preloadSanitizer();
@@ -997,7 +1031,23 @@ if (isSanitizerReady()) {
 const clean = await sanitize(dirtyHtml);
 ```
 
-**Security Note**: The simple runtime (`runtime-simple.js`) uses a basic sanitizer suitable for trusted content. For untrusted user input, use the full runtime with DOMPurify.
+**Security Model:**
+- **Default runtime (`gospa`)**: Trusts server-rendered HTML (Templ auto-escapes). No client-side sanitization needed for server content.
+- **Secure runtime (`runtime-secure`)**: Includes DOMPurify for sanitizing user-generated content.
+- Use the secure runtime only when displaying HTML from untrusted sources (comments, wikis, etc.).
+
+**When you need sanitization:**
+- User comments with HTML formatting
+- Rich text editors (WYSIWYG)
+- Wikis or knowledge bases
+- Forums or discussion boards
+- Any user-generated HTML content
+
+**When you DON'T need sanitization:**
+- Server-rendered Templ templates
+- Text content from your database
+- JSON data
+- Any content already escaped by Templ on the server
 
 ---
 
@@ -1547,7 +1597,7 @@ init({
     mode: 'immediate', // 'immediate' | 'lazy' | 'visible' | 'idle'
     timeout: 2000
   },
-  disableSanitization: false  // Disable DOMPurify during SPA navigation
+  simpleRuntimeSVGs: false  // Enable SVG support in simple runtime (deprecated)
 });
 ```
 

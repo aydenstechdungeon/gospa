@@ -8,8 +8,6 @@ package runtime
 import "github.com/a-h/templ"
 import templruntime "github.com/a-h/templ/runtime"
 
-import "github.com/aydenstechdungeon/gospa/website/components"
-
 func Page() templ.Component {
 	return templruntime.GeneratedTemplate(func(templ_7745c5c3_Input templruntime.GeneratedComponentInput) (templ_7745c5c3_Err error) {
 		templ_7745c5c3_W, ctx := templ_7745c5c3_Input.Writer, templ_7745c5c3_Input.Context
@@ -31,115 +29,7 @@ func Page() templ.Component {
 			templ_7745c5c3_Var1 = templ.NopComponent
 		}
 		ctx = templ.ClearChildren(ctx)
-		templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 1, "<div class=\"space-y-8\"><div><h1 class=\"text-3xl font-bold text-[var(--text-primary)] mb-4\">Runtime Selection</h1><p class=\"text-[var(--text-secondary)] text-lg\">GoSPA offers two runtime variants: Full (with DOMPurify) and Simple (lightweight). Choose based on your security requirements and performance needs.</p></div><section class=\"space-y-4\"><h2 class=\"text-2xl font-semibold text-[var(--text-primary)]\">Quick Comparison</h2><div class=\"overflow-x-auto\"><table class=\"w-full text-sm border border-[var(--border)] rounded-lg\"><thead class=\"bg-[var(--bg-tertiary)]\"><tr><th class=\"px-4 py-2 text-left font-semibold\">Feature</th><th class=\"px-4 py-2 text-left font-semibold\">Full Runtime</th><th class=\"px-4 py-2 text-left font-semibold\">Simple Runtime</th></tr></thead> <tbody class=\"divide-y divide-[var(--border)]\"><tr><td class=\"px-4 py-2 font-medium\">Size (minified)</td><td class=\"px-4 py-2\">~25.2 KB</td><td class=\"px-4 py-2\">~9.3 KB</td></tr><tr><td class=\"px-4 py-2 font-medium\">HTML Sanitization</td><td class=\"px-4 py-2\">DOMPurify (comprehensive)</td><td class=\"px-4 py-2\">Basic sanitizer</td></tr><tr><td class=\"px-4 py-2 font-medium\">XSS Protection</td><td class=\"px-4 py-2 text-green-500\">Full protection</td><td class=\"px-4 py-2 text-yellow-500\">Basic protection</td></tr><tr><td class=\"px-4 py-2 font-medium\">Use Case</td><td class=\"px-4 py-2\">User-generated content</td><td class=\"px-4 py-2\">Trusted content only</td></tr><tr><td class=\"px-4 py-2 font-medium\">Configuration</td><td class=\"px-4 py-2\"><code class=\"bg-[var(--bg-tertiary)] px-1 rounded\">SimpleRuntime: false</code></td><td class=\"px-4 py-2\"><code class=\"bg-[var(--bg-tertiary)] px-1 rounded\">SimpleRuntime: true</code></td></tr></tbody></table></div></section><section class=\"space-y-4\"><h2 class=\"text-2xl font-semibold text-[var(--text-primary)]\">Full Runtime</h2><p class=\"text-[var(--text-secondary)]\">The full runtime includes DOMPurify for comprehensive HTML sanitization. Use this when:</p><ul class=\"list-disc list-inside text-[var(--text-secondary)] space-y-1 ml-4\"><li>Your app displays user-generated content</li><li>You need protection against XSS attacks</li><li>Security is a priority over bundle size</li><li>You're in development mode</li></ul><h3 class=\"text-xl font-semibold text-[var(--text-primary)] mt-6\">Configuration</h3>")
-		if templ_7745c5c3_Err != nil {
-			return templ_7745c5c3_Err
-		}
-		templ_7745c5c3_Err = components.CodeBlock(`app := gospa.New(gospa.Config{
-    RoutesDir:     "./routes",
-    SimpleRuntime: false,  // Default - uses full runtime with DOMPurify
-})`, "go", "main.go").Render(ctx, templ_7745c5c3_Buffer)
-		if templ_7745c5c3_Err != nil {
-			return templ_7745c5c3_Err
-		}
-		templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 2, "<h3 class=\"text-xl font-semibold text-[var(--text-primary)] mt-6\">What DOMPurify Protects Against</h3><ul class=\"list-disc list-inside text-[var(--text-secondary)] space-y-1 ml-4\"><li>Script injection via &lt;script&gt; tags</li><li>Event handler injection (onclick, onerror, etc.)</li><li>JavaScript URIs (javascript: protocol)</li><li>Data URI attacks</li><li>SVG-based XSS</li><li>MathML-based XSS</li><li>DOM clobbering attacks</li></ul></section><section class=\"space-y-4\"><h2 class=\"text-2xl font-semibold text-[var(--text-primary)]\">Simple Runtime</h2><p class=\"text-[var(--text-secondary)]\">The simple runtime uses a lightweight sanitizer. Use this when:</p><ul class=\"list-disc list-inside text-[var(--text-secondary)] space-y-1 ml-4\"><li>All content is trusted (you control the data)</li><li>Bundle size is critical</li><li>Performance is the top priority</li><li>No user-generated HTML is displayed</li></ul><h3 class=\"text-xl font-semibold text-[var(--text-primary)] mt-6\">Configuration</h3>")
-		if templ_7745c5c3_Err != nil {
-			return templ_7745c5c3_Err
-		}
-		templ_7745c5c3_Err = components.CodeBlock(`app := gospa.New(gospa.Config{
-    RoutesDir:     "./routes",
-    SimpleRuntime: true,  // Use lightweight runtime
-})`, "go", "main.go").Render(ctx, templ_7745c5c3_Buffer)
-		if templ_7745c5c3_Err != nil {
-			return templ_7745c5c3_Err
-		}
-		templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 3, "<h3 class=\"text-xl font-semibold text-[var(--text-primary)] mt-6\">Simple Sanitizer Features</h3><p class=\"text-[var(--text-secondary)]\">The simple sanitizer provides basic protection:</p><ul class=\"list-disc list-inside text-[var(--text-secondary)] space-y-1 ml-4\"><li>Removes &lt;script&gt; tags</li><li>Removes event handler attributes</li><li>Removes javascript: URIs</li><li>Basic attribute sanitization</li></ul><div class=\"bg-yellow-500/10 border border-yellow-500/30 rounded-lg p-4 mt-4\"><p class=\"text-yellow-500 font-semibold\">⚠️ Warning</p><p class=\"text-[var(--text-secondary)]\">The simple runtime does NOT provide complete XSS protection. Only use it when you control all content or have other sanitization measures in place.</p></div><h3 class=\"text-xl font-semibold text-[var(--text-primary)] mt-6\">SVG Support</h3><p class=\"text-[var(--text-secondary)]\">By default, the simple sanitizer removes SVG and math elements for security. To enable SVG support:</p>")
-		if templ_7745c5c3_Err != nil {
-			return templ_7745c5c3_Err
-		}
-		templ_7745c5c3_Err = components.CodeBlock(`app := gospa.New(gospa.Config{
-    RoutesDir:         "./routes",
-    SimpleRuntime:     true,
-    SimpleRuntimeSVGs: true,  // Allow SVG/math elements
-})`, "go", "main.go").Render(ctx, templ_7745c5c3_Buffer)
-		if templ_7745c5c3_Err != nil {
-			return templ_7745c5c3_Err
-		}
-		templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 4, "<div class=\"bg-red-500/10 border border-red-500/30 rounded-lg p-4 mt-4\"><p class=\"text-red-500 font-semibold\">⚠️ Security Warning</p><p class=\"text-[var(--text-secondary)]\">SVG elements can contain embedded JavaScript and event handlers (e.g., &lt;svg onload=\"alert('xss')\"&gt;). Only enable <code class=\"bg-[var(--bg-tertiary)] px-1 rounded\">SimpleRuntimeSVGs</code> ")
-		if templ_7745c5c3_Err != nil {
-			return templ_7745c5c3_Err
-		}
-		var templ_7745c5c3_Var2 string
-		templ_7745c5c3_Var2, templ_7745c5c3_Err = templ.JoinStringErrs("if")
-		if templ_7745c5c3_Err != nil {
-			return templ.Error{Err: templ_7745c5c3_Err, FileName: `routes/docs/runtime/page.templ`, Line: 120, Col: 245}
-		}
-		_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ.EscapeString(templ_7745c5c3_Var2))
-		if templ_7745c5c3_Err != nil {
-			return templ_7745c5c3_Err
-		}
-		templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 5, " you completely trust all HTML content. Never enable when rendering user-generated content. This option has no effect when using the full runtime.</p></div></section><section class=\"space-y-4\"><h2 class=\"text-2xl font-semibold text-[var(--text-primary)]\">Trusted HTML Mode</h2><p class=\"text-[var(--text-secondary)]\"><strong>Trusted HTML Mode</strong> disables client-side HTML sanitization for applications that completely trust their server-rendered content. When enabled, GoSPA trusts the HTML returned by the server during SPA navigation without additional filtering.</p><h3 class=\"text-xl font-semibold text-[var(--text-primary)] mt-6\">Configuration</h3>")
-		if templ_7745c5c3_Err != nil {
-			return templ_7745c5c3_Err
-		}
-		templ_7745c5c3_Err = components.CodeBlock(`app := gospa.New(gospa.Config{
-    RoutesDir:           "./routes",
-    DisableSanitization: true,  // Trust server-rendered HTML
-})`, "go", "main.go").Render(ctx, templ_7745c5c3_Buffer)
-		if templ_7745c5c3_Err != nil {
-			return templ_7745c5c3_Err
-		}
-		templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 6, "<h3 class=\"text-xl font-semibold text-[var(--text-primary)] mt-6\">What This Means</h3><ul class=\"list-disc list-inside text-[var(--text-secondary)] space-y-1 ml-4\"><li>SPA navigation bypasses DOMPurify entirely</li><li>Server-rendered HTML is trusted as-is</li><li>Bundle size is reduced by ~20KB (DOMPurify not loaded)</li><li>Templ's automatic escaping still protects against XSS in templates</li></ul><div class=\"bg-red-500/10 border border-red-500/30 rounded-lg p-4 mt-4\"><p class=\"text-red-500 font-semibold\">⚠️ Critical Security Warning</p><p class=\"text-[var(--text-secondary)]\">Only disable sanitization if you fully trust your content or handle user-generated content carefully on the server side. Disabling sanitization may expose XSS vulnerabilities. Always ensure user content is properly escaped server-side using Templ's auto-escaping.</p></div><h3 class=\"text-xl font-semibold text-[var(--text-primary)] mt-6\">When to Use</h3><p class=\"text-[var(--text-secondary)]\">Consider disabling sanitization when:</p><ul class=\"list-disc list-inside text-[var(--text-secondary)] space-y-1 ml-4\"><li>You control all content and don't accept user-generated HTML</li><li>You've implemented server-side sanitization for any user content</li><li>You need the smallest possible bundle size</li><li>You want SvelteKit-like behavior where server-rendered HTML is trusted</li></ul></section><section class=\"space-y-4\"><h2 class=\"text-2xl font-semibold text-[var(--text-primary)]\">Decision Matrix</h2><div class=\"overflow-x-auto\"><table class=\"w-full text-sm border border-[var(--border)] rounded-lg\"><thead class=\"bg-[var(--bg-tertiary)]\"><tr><th class=\"px-4 py-2 text-left font-semibold\">Scenario</th><th class=\"px-4 py-2 text-left font-semibold\">Recommended Runtime</th></tr></thead> <tbody class=\"divide-y divide-[var(--border)]\"><tr><td class=\"px-4 py-2\">Blog with comments</td><td class=\"px-4 py-2 text-[var(--accent-primary)]\">Full (DOMPurify)</td></tr><tr><td class=\"px-4 py-2\">Admin dashboard (trusted users)</td><td class=\"px-4 py-2 text-[var(--accent-primary)]\">Simple</td></tr><tr><td class=\"px-4 py-2\">E-commerce product pages</td><td class=\"px-4 py-2 text-[var(--accent-primary)]\">Simple (if content is controlled)</td></tr><tr><td class=\"px-4 py-2\">Social media feed</td><td class=\"px-4 py-2 text-[var(--accent-primary)]\">Full (DOMPurify)</td></tr><tr><td class=\"px-4 py-2\">Internal tool</td><td class=\"px-4 py-2 text-[var(--accent-primary)]\">Simple</td></tr><tr><td class=\"px-4 py-2\">Public forum</td><td class=\"px-4 py-2 text-[var(--accent-primary)]\">Full (DOMPurify)</td></tr><tr><td class=\"px-4 py-2\">Documentation site</td><td class=\"px-4 py-2 text-[var(--accent-primary)]\">Simple</td></tr><tr><td class=\"px-4 py-2\">CMS with rich text</td><td class=\"px-4 py-2 text-[var(--accent-primary)]\">Full (DOMPurify)</td></tr></tbody></table></div></section><section class=\"space-y-4\"><h2 class=\"text-2xl font-semibold text-[var(--text-primary)]\">Security Considerations</h2><h3 class=\"text-xl font-semibold text-[var(--text-primary)] mt-6\">When to Always Use Full Runtime</h3><ul class=\"list-disc list-inside text-[var(--text-secondary)] space-y-1 ml-4\"><li>Any application accepting user input that becomes HTML</li><li>Applications with user profiles or bios</li><li>Comment systems or forums</li><li>Chat applications</li><li>Any application handling rich text input</li></ul><h3 class=\"text-xl font-semibold text-[var(--text-primary)] mt-6\">When Simple Runtime is Safe</h3><ul class=\"list-disc list-inside text-[var(--text-secondary)] space-y-1 ml-4\"><li>Static content websites</li><li>Internal tools with authenticated, trusted users</li><li>Applications where all HTML is generated server-side from trusted sources</li><li>Read-only dashboards</li></ul><div class=\"bg-[var(--accent-primary)]/10 border border-[var(--accent-primary)]/30 rounded-lg p-4 mt-4\"><p class=\"text-[var(--accent-primary)] font-semibold\">💡 Best Practice</p><p class=\"text-[var(--text-secondary)]\">Start with the full runtime in development. Only switch to simple runtime after auditing your content sources and confirming no user-generated HTML is displayed without additional sanitization.</p></div></section><section class=\"space-y-4\"><h2 class=\"text-2xl font-semibold text-[var(--text-primary)]\">Performance Impact</h2><p class=\"text-[var(--text-secondary)]\">The full runtime adds ~16 KB to your bundle. This impacts:</p><h3 class=\"text-xl font-semibold text-[var(--text-primary)] mt-6\">Initial Load</h3>")
-		if templ_7745c5c3_Err != nil {
-			return templ_7745c5c3_Err
-		}
-		templ_7745c5c3_Err = components.CodeBlock(`// Full runtime: ~25.2 KB minified
-// Simple runtime: ~9.3 KB minified
-// Difference: ~16 KB`, "text", "sizes.txt").Render(ctx, templ_7745c5c3_Buffer)
-		if templ_7745c5c3_Err != nil {
-			return templ_7745c5c3_Err
-		}
-		templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 7, "<h3 class=\"text-xl font-semibold text-[var(--text-primary)] mt-6\">Sanitization Speed</h3><p class=\"text-[var(--text-secondary)]\">DOMPurify is highly optimized, but the simple sanitizer is faster for large HTML strings:</p><ul class=\"list-disc list-inside text-[var(--text-secondary)] space-y-1 ml-4\"><li>Simple sanitizer: ~0.1ms for typical content</li><li>DOMPurify: ~0.5-2ms for typical content</li></ul><p class=\"text-[var(--text-secondary)] mt-2\">For most applications, this difference is negligible. The security benefits of DOMPurify far outweigh the minimal performance cost.</p></section><section class=\"space-y-4\"><h2 class=\"text-2xl font-semibold text-[var(--text-primary)]\">Custom Sanitization</h2><p class=\"text-[var(--text-secondary)]\">You can implement custom sanitization by extending the runtime or using server-side sanitization before sending HTML to the client.</p><h3 class=\"text-xl font-semibold text-[var(--text-primary)] mt-6\">Server-Side Sanitization (Recommended)</h3>")
-		if templ_7745c5c3_Err != nil {
-			return templ_7745c5c3_Err
-		}
-		templ_7745c5c3_Err = components.CodeBlock(`import "github.com/microcosm-cc/bluemonday"
-
-func sanitizeHTML(input string) string {
-    p := bluemonday.UGCPolicy() // User Generated Content policy
-    return p.Sanitize(input)
-}
-
-// Use in your handlers
-safeHTML := sanitizeHTML(userInput)`, "go", "sanitize.go").Render(ctx, templ_7745c5c3_Buffer)
-		if templ_7745c5c3_Err != nil {
-			return templ_7745c5c3_Err
-		}
-		templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 8, "<h3 class=\"text-xl font-semibold text-[var(--text-primary)] mt-6\">Client-Side Custom Sanitizer</h3><p class=\"text-[var(--text-secondary)]\">You can provide a custom sanitizer function in the runtime config:</p>")
-		if templ_7745c5c3_Err != nil {
-			return templ_7745c5c3_Err
-		}
-		templ_7745c5c3_Err = components.CodeBlock(`// In your client-side code
-gospa.setSanitizer(function(html) {
-    // Custom sanitization logic
-    return sanitizedHtml;
-});`, "javascript", "sanitize.js").Render(ctx, templ_7745c5c3_Buffer)
-		if templ_7745c5c3_Err != nil {
-			return templ_7745c5c3_Err
-		}
-		templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 9, "</section><section class=\"space-y-4\"><h2 class=\"text-2xl font-semibold text-[var(--text-primary)]\">Migration Guide</h2><h3 class=\"text-xl font-semibold text-[var(--text-primary)] mt-6\">From Full to Simple Runtime</h3><ol class=\"list-decimal list-inside text-[var(--text-secondary)] space-y-2 ml-4\"><li>Audit all places where HTML is rendered</li><li>Confirm no user-generated content is displayed as HTML</li><li>Test thoroughly in development</li><li>Enable SimpleRuntime in staging</li><li>Monitor for any XSS-related issues</li><li>Deploy to production</li></ol><h3 class=\"text-xl font-semibold text-[var(--text-primary)] mt-6\">From Simple to Full Runtime</h3>")
-		if templ_7745c5c3_Err != nil {
-			return templ_7745c5c3_Err
-		}
-		templ_7745c5c3_Err = components.CodeBlock(`// Simply change the config
-app := gospa.New(gospa.Config{
-    RoutesDir:     "./routes",
-    SimpleRuntime: false,  // Switch to full runtime
-})`, "go", "main.go").Render(ctx, templ_7745c5c3_Buffer)
-		if templ_7745c5c3_Err != nil {
-			return templ_7745c5c3_Err
-		}
-		templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 10, "<p class=\"text-[var(--text-secondary)] mt-2\">No other changes required. The full runtime is a drop-in replacement.</p></section></div>")
+		templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 1, "<div class=\"space-y-12\"><header><h1 class=\"text-4xl font-bold tracking-tight mb-4 text-transparent bg-clip-text bg-gradient-to-r from-[var(--accent-primary)] to-[var(--accent-secondary)]\">Client Runtime</h1><p class=\"text-xl text-[var(--text-secondary)] leading-relaxed\">GoSPA provides multiple runtime variants optimized for different use cases. Choose the right balance of features and bundle size.</p></header><section class=\"space-y-6\"><h2 class=\"text-2xl font-bold\">Runtime Variants</h2><div class=\"grid md:grid-cols-2 gap-6\"><div class=\"p-6 rounded-2xl border border-[var(--border)] bg-[var(--bg-secondary)]\"><div class=\"flex items-center gap-3 mb-4\"><div class=\"w-10 h-10 rounded-lg bg-green-500/20 flex items-center justify-center text-green-500\"><svg xmlns=\"http://www.w3.org/2000/svg\" width=\"20\" height=\"20\" viewBox=\"0 0 24 24\" fill=\"none\" stroke=\"currentColor\" stroke-width=\"2\"><path d=\"M13 2 3 14h9l-1 8 10-12h-9l1-8z\"></path></svg></div><div><h3 class=\"font-bold\">Default</h3><p class=\"text-sm text-[var(--text-muted)]\">gospa (~15KB)</p></div></div><p class=\"text-sm text-[var(--text-secondary)]\">Trusts server-rendered HTML. Best for most applications. No client-side sanitization. CSP-first security.</p></div><div class=\"p-6 rounded-2xl border border-[var(--border)] bg-[var(--bg-secondary)]\"><div class=\"flex items-center gap-3 mb-4\"><div class=\"w-10 h-10 rounded-lg bg-blue-500/20 flex items-center justify-center text-blue-500\"><svg xmlns=\"http://www.w3.org/2000/svg\" width=\"20\" height=\"20\" viewBox=\"0 0 24 24\" fill=\"none\" stroke=\"currentColor\" stroke-width=\"2\"><rect x=\"3\" y=\"11\" width=\"18\" height=\"11\" rx=\"2\" ry=\"2\"></rect><path d=\"M7 11V7a5 5 0 0 1 10 0v4\"></path></svg></div><div><h3 class=\"font-bold\">Secure</h3><p class=\"text-sm text-[var(--text-muted)]\">gospa/secure (~35KB)</p></div></div><p class=\"text-sm text-[var(--text-secondary)]\">Includes DOMPurify. For applications with user-generated content. Extra XSS protection.</p></div><div class=\"p-6 rounded-2xl border border-[var(--border)] bg-[var(--bg-secondary)]\"><div class=\"flex items-center gap-3 mb-4\"><div class=\"w-10 h-10 rounded-lg bg-purple-500/20 flex items-center justify-center text-purple-500\"><svg xmlns=\"http://www.w3.org/2000/svg\" width=\"20\" height=\"20\" viewBox=\"0 0 24 24\" fill=\"none\" stroke=\"currentColor\" stroke-width=\"2\"><path d=\"M12 2v4M12 18v4M4.93 4.93l2.83 2.83M16.24 16.24l2.83 2.83M2 12h4M18 12h4M4.93 19.07l2.83-2.83M16.24 7.76l2.83-2.83\"></path></svg></div><div><h3 class=\"font-bold\">Core</h3><p class=\"text-sm text-[var(--text-muted)]\">gospa/core (~14KB)</p></div></div><p class=\"text-sm text-[var(--text-secondary)]\">State management only. No navigation or islands. For custom architectures.</p></div><div class=\"p-6 rounded-2xl border border-[var(--border)] bg-[var(--bg-secondary)]\"><div class=\"flex items-center gap-3 mb-4\"><div class=\"w-10 h-10 rounded-lg bg-orange-500/20 flex items-center justify-center text-orange-500\"><svg xmlns=\"http://www.w3.org/2000/svg\" width=\"20\" height=\"20\" viewBox=\"0 0 24 24\" fill=\"none\" stroke=\"currentColor\" stroke-width=\"2\"><polygon points=\"13 2 3 14 12 14 11 22 21 10 12 10 13 2\"></polygon></svg></div><div><h3 class=\"font-bold\">Micro</h3><p class=\"text-sm text-[var(--text-muted)]\">gospa/micro (~2KB)</p></div></div><p class=\"text-sm text-[var(--text-secondary)]\">Minimal runtime. Just navigation and state hydration. For embedded widgets.</p></div></div></section><section class=\"space-y-6\"><h2 class=\"text-2xl font-bold\">Trust-the-Server Model</h2><p class=\"text-[var(--text-secondary)]\">GoSPA v2.0 adopts a trust-the-server security model (like SvelteKit and HTMX). The default runtime assumes your server renders safe HTML using Templ's auto-escaping.</p><div class=\"bg-blue-500/5 border border-blue-500/20 p-4 rounded-xl\"><p class=\"text-sm text-[var(--text-secondary)]\"><strong>Why no DOMPurify by default?</strong> Templ already escapes dynamic content. Adding DOMPurify for server-rendered HTML  is redundant and adds ~20KB.\t\t\t\t\tUse <code class=\"mono\">gospa/secure</code> only when  displaying user-generated content.</p></div></section></div>")
 		if templ_7745c5c3_Err != nil {
 			return templ_7745c5c3_Err
 		}

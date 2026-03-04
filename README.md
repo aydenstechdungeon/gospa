@@ -14,7 +14,7 @@ A Go framework for building reactive SPAs with server-side rendering. Brings Sve
 - **WebSocket Sync** — Real-time client-server state synchronization
 - **Session Management** — Secure session persistence with `SessionStore` and `ClientStateStore`
 - **Type Safety** — Compile-time template validation with Templ
-- **Lightweight Runtime** — ~11KB for the simple runtime, ~17KB for the full runtime with DOMPurify.
+- **Lightweight Runtime** — ~15KB default runtime (trusts server), ~35KB secure runtime with DOMPurify for user-generated content.
 - **Remote Actions** — Type-safe server functions callable directly from the client.
 - **Error Handling** — Global error boundaries, panic recovery, and error overlay in dev mode.
 - **Security** — Built-in CSRF protection, customizable CORS origins, and strict XSS prevention.
@@ -232,17 +232,43 @@ GoSPA.prefetch('/blog')
 GoSPA.fade(element, { duration: 300 })
 ```
 
-#### Performance vs Security (Simple Runtime)
+#### Runtime Variants: Default vs Secure
 
-By default, the client runtime includes [DOMPurify](https://github.com/cure53/DOMPurify) for robust XSS protection on dynamically bound templates. If you prefer a smaller bundle size and are comfortable with a less strictly-secured basic sanitizer, you can switch to the lightweight runtime using the configuration flag:
+GoSPA follows a **"trust the server"** security model (similar to SvelteKit). The default runtime trusts server-rendered HTML because Templ auto-escapes all dynamic content.
 
-```go
-app := gospa.New(gospa.Config{
-    // ...
-    SimpleRuntime: true,
-    // SimpleRuntimeSVGs: true, // ⚠️ Only enable for fully trusted content — allows SVG in sanitizer
-})
+**Default Runtime (`gospa`) — Recommended for most apps:**
+```typescript
+import { init } from 'gospa';
+init(); // ~15KB, no sanitizer needed
 ```
+
+**Secure Runtime (`gospa/runtime-secure`) — For user-generated content:**
+```typescript
+import { init, sanitize } from 'gospa/runtime-secure';
+init(); // ~35KB, includes DOMPurify
+
+// Sanitize user-generated HTML
+const clean = await sanitize(userComment);
+```
+
+| Runtime | Size | Sanitizer | Use Case |
+|---------|------|-----------|----------|
+| `gospa` | ~15KB | None (trusts server) | Most apps with CSP |
+| `gospa/runtime-secure` | ~35KB | DOMPurify | Apps with user-generated HTML |
+
+**When do you need the secure runtime?**
+- User comments with HTML formatting
+- Forums, wikis, social media apps
+- Rich text editors (WYSIWYG)
+- Any user-generated HTML content
+
+**When is the default runtime sufficient?**
+- Server-rendered Templ templates
+- Text content from your database
+- JSON data
+- Any content already escaped by Templ on the server
+
+See [`docs/RUNTIME.md`](docs/RUNTIME.md) for complete runtime selection guide.
 
 ### Remote Actions
 
@@ -566,7 +592,7 @@ See [`docs/PLUGINS.md`](docs/PLUGINS.md) for complete plugin documentation.
 | Feature | GoSPA | HTMX | Alpine | SvelteKit |
 |---------|-------|------|--------|-----------|
 | Language | Go | HTML | JS | JS/TS |
-| Runtime Size | <15KB* | ~14KB | ~15KB | Varies |
+| Runtime Size | ~15KB (default) | ~14KB | ~15KB | Varies |
 | SSR | ✅ | ✅ | ❌ | ✅ |
 | SSG | ✅ | ❌ | ❌ | ✅ |
 | ISR | ✅ | ❌ | ❌ | ✅ |

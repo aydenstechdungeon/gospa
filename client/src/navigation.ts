@@ -1,8 +1,6 @@
 // GoSPA Client-side Navigation
 // Enables SPA-style navigation without full page reloads
 
-import { sanitizeHtml } from './dom.ts';
-
 // Navigation state
 const state = {
 	currentPath: window.location.pathname,
@@ -172,22 +170,11 @@ async function getPageData(path: string): Promise<PageData | null> {
 	return fetchPageFromServer(path);
 }
 
-// Safely sanitize HTML with error handling
-// When disableSanitization is set, content is trusted (like SvelteKit)
-async function safeSanitize(html: string): Promise<string> {
-	// Check if sanitization is disabled globally (set by runtime.init())
-	if ((window as any).__GOSPA_DISABLE_SANITIZATION__) {
-		return html;
-	}
-	try {
-		return await sanitizeHtml(html);
-	} catch (error) {
-		console.error('[GoSPA] Sanitization failed:', error);
-		// Return escaped HTML as fallback to prevent XSS
-		const div = document.createElement('div');
-		div.textContent = html;
-		return div.innerHTML;
-	}
+// Content is trusted - Templ auto-escapes on the server
+// For user-generated content, use 'gospa/runtime-secure' which includes DOMPurify
+async function prepareContent(html: string): Promise<string> {
+	// Return HTML as-is - server is trusted, CSP provides XSS protection
+	return html;
 }
 
 // Update the DOM with new content
@@ -201,21 +188,21 @@ async function updateDOM(data: PageData): Promise<void> {
 	// Fall back to root, main or body for backwards compatibility
 	const contentEl = document.querySelector('[data-gospa-page-content]');
 	const rootEl = document.querySelector('[data-gospa-root]');
-	const sanitizedContent = await safeSanitize(data.content);
+	const pageContent = await prepareContent(data.content);
 
 	if (contentEl) {
 		// Preferred: update only the content region, preserving header/footer
-		contentEl.innerHTML = sanitizedContent;
+		contentEl.innerHTML = pageContent;
 	} else if (rootEl) {
 		// Fallback: update entire root (legacy behavior)
-		rootEl.innerHTML = sanitizedContent;
+		rootEl.innerHTML = pageContent;
 	} else {
 		// Last resort: update main or body
 		const mainEl = document.querySelector('main');
 		if (mainEl) {
-			mainEl.innerHTML = sanitizedContent;
+			mainEl.innerHTML = pageContent;
 		} else {
-			document.body.innerHTML = sanitizedContent;
+			document.body.innerHTML = pageContent;
 		}
 	}
 
@@ -365,9 +352,10 @@ async function initNewContent(): Promise<void> {
 					element.textContent = value;
 					break;
 				case 'html':
-					// SECURITY: Sanitize HTML before setting innerHTML to prevent XSS
-					element.innerHTML = await safeSanitize(value);
-					break;
+						// HTML content is trusted - Templ auto-escapes on the server
+						// For user-generated content, use 'gospa/runtime-secure' with DOMPurify
+						element.innerHTML = value;
+						break;
 				case 'value':
 					(element as HTMLInputElement).value = value;
 					break;

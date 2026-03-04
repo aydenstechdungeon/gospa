@@ -53,7 +53,6 @@ import (
 	docsroutinglayouts "github.com/aydenstechdungeon/gospa/website/routes/docs/routing/layouts"
 	docsroutingnavigation "github.com/aydenstechdungeon/gospa/website/routes/docs/routing/navigation"
 	docsruntime "github.com/aydenstechdungeon/gospa/website/routes/docs/runtime"
-	docssecurity "github.com/aydenstechdungeon/gospa/website/routes/docs/security"
 	docssse "github.com/aydenstechdungeon/gospa/website/routes/docs/sse"
 	docsstatemanagement "github.com/aydenstechdungeon/gospa/website/routes/docs/state-management"
 	docsstatemanagementclient "github.com/aydenstechdungeon/gospa/website/routes/docs/state-management/client"
@@ -205,9 +204,6 @@ func init() {
 	})
 	routing.RegisterPage("/docs/runtime", func(props map[string]interface{}) templ.Component {
 		return docsruntime.Page()
-	})
-	routing.RegisterPage("/docs/security", func(props map[string]interface{}) templ.Component {
-		return docssecurity.Page()
 	})
 	routing.RegisterPage("/docs/sse", func(props map[string]interface{}) templ.Component {
 		return docssse.Page()

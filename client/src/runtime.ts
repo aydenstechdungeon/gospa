@@ -1,24 +1,12 @@
 // GoSPA Client Runtime - Main entry point
 // A lightweight runtime for reactive SPAs with Go/Fiber/Templ
 //
-// For minimal bundle (~15KB), import from './runtime-core.ts' instead
-// This file includes all features including WebSocket, Navigation, Transitions
+// HTML sanitization is NOT included by default. The runtime trusts server-rendered
+// content (Templ auto-escapes). For user-generated content, use 'gospa/runtime-secure'
+//
+// Bundle size: ~15KB (without DOMPurify)
 
 // Core exports (re-exported from runtime-core for convenience)
-import { domPurifySanitizer, preloadSanitizer } from './sanitize.ts';
-import { setSanitizer } from './dom.ts';
-
-// Set up the full DOMPurify sanitizer for the standard runtime
-setSanitizer(domPurifySanitizer);
-
-// Preload DOMPurify immediately to ensure it's ready for first HTML binding
-// This runs in the background and caches the instance for sync use later
-if (typeof window !== 'undefined') {
-	// Use requestIdleCallback for non-blocking preload, or setTimeout as fallback
-	const schedulePreload = window.requestIdleCallback || ((cb: () => void) => setTimeout(cb, 1));
-	schedulePreload(() => preloadSanitizer());
-}
-
 import {
 	init, createComponent, destroyComponent, getComponent, getState, setState, callAction, bind, autoInit,
 	getWebSocket, getNavigation, getTransitions,
@@ -106,4 +94,3 @@ export {
 
 // Export types
 export type { NavigationOptions, StateMessage };
-

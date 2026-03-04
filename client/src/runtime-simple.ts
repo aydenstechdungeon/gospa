@@ -1,7 +1,11 @@
-// GoSPA Client Runtime - Simple version
-// A lightweight runtime using a basic HTML sanitizer for higher performance
+// GoSPA Client Runtime - Simple version (DEPRECATED)
+// ⚠️ DEPRECATED: This runtime variant is deprecated.
 //
-// This file includes all features including WebSocket, Navigation, Transitions
+// Migration paths:
+// - For default usage: Use 'gospa' (trust-the-server, no sanitization needed)
+// - For user-generated content: Use 'gospa/runtime-secure' (includes DOMPurify)
+//
+// This variant used a basic HTML sanitizer which is no longer recommended.
 
 import { createSimpleSanitizer, simpleSanitizer } from './sanitize-simple.ts';
 import { setSanitizer } from './dom.ts';
@@ -27,8 +31,21 @@ setSanitizer(simpleSanitizer);
 // Track if we've configured the sanitizer
 let sanitizerConfigured = false;
 
+// Track if we've shown the deprecation warning
+let deprecationWarned = false;
+
 // Extended init that configures sanitizer based on options
 function init(options: RuntimeConfig = {}): void {
+	// Show deprecation warning once
+	if (!deprecationWarned && typeof console !== 'undefined') {
+		deprecationWarned = true;
+		console.warn(
+			'[GoSPA DEPRECATION] gospa/simple is deprecated and will be removed in v2.0.\n' +
+			'Migration: Use "gospa" for server-trusted content or "gospa/runtime-secure" for UGC.\n' +
+			'See: https://gospa.dev/docs/migration-v2'
+		);
+	}
+
 	// Configure sanitizer before core init if SVGs are enabled
 	if (options.simpleRuntimeSVGs && !sanitizerConfigured) {
 		const svgAwareSanitizer = createSimpleSanitizer({ allowSVGs: true, allowMath: true });

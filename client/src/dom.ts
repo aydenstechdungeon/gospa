@@ -1,16 +1,11 @@
 import { Rune, Derived, batch } from './state.ts';
 
-// Configurable sanitizer (defaults to a passthrough, but injected by runtime entry points)
-let sanitizerConfigured = false;
-export let sanitizeHtml: (html: string) => string | Promise<string> = (html) => {
-	if (!sanitizerConfigured) {
-		console.warn('[GoSPA] No sanitizer configured - HTML will not be sanitized. Call setSanitizer() to configure.');
-	}
-	return html;
-};
+// Configurable sanitizer (defaults to passthrough - trust the server/Templ)
+// Sanitization is opt-in. For user-generated content, import from 'gospa/runtime-secure'
+// or manually configure with setSanitizer() and a sanitizer like DOMPurify
+export let sanitizeHtml: (html: string) => string | Promise<string> = (html) => html;
 
 export function setSanitizer(fn: (html: string) => string | Promise<string>) {
-	sanitizerConfigured = true;
 	sanitizeHtml = fn;
 }
 
