@@ -8,10 +8,6 @@ package docs
 import "github.com/a-h/templ"
 import templruntime "github.com/a-h/templ/runtime"
 
-import (
-	"github.com/aydenstechdungeon/gospa/website/components"
-)
-
 func DocsLayout(children templ.Component, path string) templ.Component {
 	return templruntime.GeneratedTemplate(func(templ_7745c5c3_Input templruntime.GeneratedComponentInput) (templ_7745c5c3_Err error) {
 		templ_7745c5c3_W, ctx := templ_7745c5c3_Input.Writer, templ_7745c5c3_Input.Context
@@ -33,15 +29,7 @@ func DocsLayout(children templ.Component, path string) templ.Component {
 			templ_7745c5c3_Var1 = templ.NopComponent
 		}
 		ctx = templ.ClearChildren(ctx)
-		templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 1, "<div class=\"max-w-7xl mx-auto px-4 flex gap-8\"><div class=\"w-64 flex-shrink-0\">")
-		if templ_7745c5c3_Err != nil {
-			return templ_7745c5c3_Err
-		}
-		templ_7745c5c3_Err = components.Sidebar(path).Render(ctx, templ_7745c5c3_Buffer)
-		if templ_7745c5c3_Err != nil {
-			return templ_7745c5c3_Err
-		}
-		templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 2, "</div><div class=\"flex-grow pt-12 pb-24 min-w-0 animate-in fade-in duration-700\"><div class=\"prose max-w-4xl mx-auto w-full\">")
+		templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 1, "<!-- Main Content Column - Sidebar and ToC are now in RootLayout --><div class=\"pt-12 pb-24 min-w-0 animate-in fade-in duration-700\"><div class=\"prose max-w-4xl mx-auto w-full\">")
 		if templ_7745c5c3_Err != nil {
 			return templ_7745c5c3_Err
 		}
@@ -49,7 +37,7 @@ func DocsLayout(children templ.Component, path string) templ.Component {
 		if templ_7745c5c3_Err != nil {
 			return templ_7745c5c3_Err
 		}
-		templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 3, "</div><div class=\"mt-16 pt-8 border-t border-[var(--border)] flex justify-between items-center text-sm\"><div class=\"text-[var(--text-muted)]\">Found a mistake? <a href=\"https://github.com/aydenstechdungeon/gospa\" class=\"text-[var(--accent-primary)] hover:underline\">Edit this page on GitHub</a></div><div class=\"text-[var(--text-muted)]\">Last updated: Feb 24, 2026</div></div></div><div class=\"hidden xl:block w-64 flex-shrink-0 pt-12\"><div class=\"sticky top-28\"><h4 class=\"text-xs font-bold uppercase tracking-widest text-[var(--text-muted)] mb-4\">On this page</h4><nav id=\"toc\"><ul class=\"space-y-3 text-xs text-[var(--text-secondary)]\"><!-- Populated by static/docs.js --></ul></nav></div></div></div>")
+		templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 2, "</div><div class=\"mt-16 pt-8 border-t border-[var(--border)] flex justify-between items-center text-sm\"><div class=\"text-[var(--text-muted)]\">Found a mistake? <a href=\"https://github.com/aydenstechdungeon/gospa\" class=\"text-[var(--accent-primary)] hover:underline\">Edit this page on GitHub</a></div><div class=\"text-[var(--text-muted)]\">Last updated: Feb 24, 2026</div></div></div>")
 		if templ_7745c5c3_Err != nil {
 			return templ_7745c5c3_Err
 		}

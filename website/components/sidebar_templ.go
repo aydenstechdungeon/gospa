@@ -41,7 +41,7 @@ func Sidebar(currentPath string) templ.Component {
 			templ_7745c5c3_Var1 = templ.NopComponent
 		}
 		ctx = templ.ClearChildren(ctx)
-		templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 1, "<aside class=\"w-64 flex-shrink-0 hidden lg:block border-r border-[var(--border)] h-[calc(100vh-4rem)] sticky top-16 overflow-y-auto p-6 custom-scrollbar\">")
+		templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 1, "<aside class=\"w-64 flex-shrink-0 hidden lg:block border-r border-[var(--border)] h-[calc(100vh-4rem)] sticky top-16 overflow-y-auto p-6 custom-scrollbar\" id=\"sidebar-scroll\">")
 		if templ_7745c5c3_Err != nil {
 			return templ_7745c5c3_Err
 		}

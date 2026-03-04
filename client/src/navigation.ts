@@ -112,6 +112,12 @@ interface PageData {
 	content: string;
 	title: string;
 	head: string;
+	isDocsPage: boolean;
+}
+
+// Check if path is a docs page
+function isDocsPage(path: string): boolean {
+	return path.startsWith('/docs');
 }
 
 // Prefetch cache
@@ -138,13 +144,22 @@ async function fetchPageFromServer(path: string): Promise<PageData | null> {
 		const parser = new DOMParser();
 		const doc = parser.parseFromString(html, 'text/html');
 
-		// Extract content from page content region first (preserves header/footer)
-		// Fall back to root, main element or body for backwards compatibility
-		const contentEl = doc.querySelector('[data-gospa-page-content]');
-		const rootEl = doc.querySelector('[data-gospa-root]');
-		const mainEl = doc.querySelector('main');
-		const content = contentEl ? contentEl.innerHTML :
-			(rootEl ? rootEl.innerHTML : (mainEl ? mainEl.innerHTML : doc.body.innerHTML));
+		// Check if this is a docs page
+		const isDocsPage = !!doc.querySelector('[data-gospa-docs-content]');
+
+		// Extract content - for docs pages, get the specific docs content area
+		// Otherwise fall back to standard content areas
+		let content: string;
+		if (isDocsPage) {
+			const docsContentEl = doc.querySelector('[data-gospa-docs-content]');
+			content = docsContentEl ? docsContentEl.innerHTML : '';
+		} else {
+			const contentEl = doc.querySelector('[data-gospa-page-content]');
+			const rootEl = doc.querySelector('[data-gospa-root]');
+			const mainEl = doc.querySelector('main');
+			content = contentEl ? contentEl.innerHTML :
+				(rootEl ? rootEl.innerHTML : (mainEl ? mainEl.innerHTML : doc.body.innerHTML));
+		}
 
 		// Extract title
 		const title = doc.querySelector('title')?.textContent || '';
@@ -153,7 +168,7 @@ async function fetchPageFromServer(path: string): Promise<PageData | null> {
 		const headEl = doc.querySelector('head');
 		const head = headEl ? headEl.innerHTML : '';
 
-		return { content, title, head };
+		return { content, title, head, isDocsPage };
 	} catch (error) {
 		console.error('[GoSPA] Navigation error:', error);
 		return null;
@@ -184,25 +199,40 @@ async function updateDOM(data: PageData): Promise<void> {
 		document.title = data.title;
 	}
 
-	// Update content area - target page content region first to preserve header/footer
-	// Fall back to root, main or body for backwards compatibility
-	const contentEl = document.querySelector('[data-gospa-page-content]');
-	const rootEl = document.querySelector('[data-gospa-root]');
 	const pageContent = await prepareContent(data.content);
 
-	if (contentEl) {
-		// Preferred: update only the content region, preserving header/footer
-		contentEl.innerHTML = pageContent;
-	} else if (rootEl) {
-		// Fallback: update entire root (legacy behavior)
-		rootEl.innerHTML = pageContent;
-	} else {
-		// Last resort: update main or body
-		const mainEl = document.querySelector('main');
-		if (mainEl) {
-			mainEl.innerHTML = pageContent;
+	// Handle docs content specifically to preserve sidebar
+	if (data.isDocsPage) {
+		const docsContentEl = document.querySelector('[data-gospa-docs-content]');
+		if (docsContentEl) {
+			// We're navigating between docs pages - only replace the docs content
+			docsContentEl.innerHTML = pageContent;
 		} else {
-			document.body.innerHTML = pageContent;
+			// Transitioning from non-docs to docs - replace full page content
+			const contentEl = document.querySelector('[data-gospa-page-content]');
+			if (contentEl) {
+				contentEl.innerHTML = pageContent;
+			}
+		}
+	} else {
+		// Non-docs page: standard full content replacement
+		const contentEl = document.querySelector('[data-gospa-page-content]');
+		const rootEl = document.querySelector('[data-gospa-root]');
+
+		if (contentEl) {
+			// Preferred: update only the content region, preserving header/footer
+			contentEl.innerHTML = pageContent;
+		} else if (rootEl) {
+			// Fallback: update entire root (legacy behavior)
+			rootEl.innerHTML = pageContent;
+		} else {
+			// Last resort: update main or body
+			const mainEl = document.querySelector('main');
+			if (mainEl) {
+				mainEl.innerHTML = pageContent;
+			} else {
+				document.body.innerHTML = pageContent;
+			}
 		}
 	}
 
@@ -411,7 +441,13 @@ export async function navigate(path: string, options: NavigationOptions = {}): P
 			await updateDOM(data);
 
 			if (options.scrollToTop !== false) {
-				window.scrollTo(0, 0);
+				if (data.isDocsPage && document.querySelector('[data-gospa-docs-content]')) {
+					// For docs navigation, scroll the main content area, not the whole page
+					// This preserves sidebar scroll position
+					window.scrollTo(0, 0);
+				} else {
+					window.scrollTo(0, 0);
+				}
 			}
 
 			afterNavCallbacks.forEach(cb => cb(path));

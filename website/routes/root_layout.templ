@@ -1,6 +1,9 @@
 package routes
 
-import "strings"
+import (
+	"strings"
+	"github.com/aydenstechdungeon/gospa/website/components"
+)
 
 // SEO configuration for GoSPA website
 const (
@@ -206,10 +209,41 @@ templ RootLayout(title string, children templ.Component, runtimePath string, pat
 				</div>
 			</div>
 
+			<!-- Main Content Area -->
 			<main class="flex-grow z-10 relative" data-gospa-page-content>
-				<div data-gospa-page={ path }>
-					@children
-				</div>
+				if strings.HasPrefix(path, "/docs") {
+					<!-- Docs Layout: Persistent sidebar, swap only content -->
+					<div class="max-w-7xl mx-auto px-4 flex gap-8">
+						<!-- Persistent Sidebar (outside swap area) -->
+						<div class="w-64 flex-shrink-0 hidden lg:block" id="docs-sidebar">
+							@components.Sidebar(path)
+						</div>
+						
+						<!-- Swappable Content Area -->
+						<div data-gospa-docs-content class="flex-grow min-w-0">
+							<div data-gospa-page={ path }>
+								@children
+							</div>
+						</div>
+						
+						<!-- Table of Contents (outside swap area) -->
+						<div class="hidden xl:block w-64 flex-shrink-0 pt-12" id="docs-toc">
+							<div class="sticky top-28">
+								<h4 class="text-xs font-bold uppercase tracking-widest text-[var(--text-muted)] mb-4">On this page</h4>
+								<nav id="toc">
+									<ul class="space-y-3 text-xs text-[var(--text-secondary)]">
+										<!-- Populated by static/docs.js -->
+									</ul>
+								</nav>
+							</div>
+						</div>
+					</div>
+				} else {
+					<!-- Non-Docs Layout: Full page swap -->
+					<div data-gospa-page={ path }>
+						@children
+					</div>
+				}
 			</main>
 
 			<footer class="border-t border-[var(--border)] bg-[var(--bg-secondary)] py-12 z-10 relative">

@@ -1,8 +1,9 @@
 
-// Documentation functionality: Search and Dynamic ToC
+// Documentation functionality: Search, Dynamic ToC, and Sidebar State
 (function () {
     let searchIndex = null;
     let fuse = null;
+    let sidebarScrollPos = 0;
 
     async function initSearch() {
         if (searchIndex) return;
@@ -38,10 +39,12 @@
         const headings = document.querySelectorAll('.prose h2, .prose h3');
 
         if (headings.length === 0) {
-            document.querySelector('#toc').parentElement.classList.add('hidden');
+            const tocContainer = document.querySelector('#toc')?.parentElement;
+            if (tocContainer) tocContainer.classList.add('hidden');
             return;
         }
-        document.querySelector('#toc').parentElement.classList.remove('hidden');
+        const tocContainer = document.querySelector('#toc')?.parentElement;
+        if (tocContainer) tocContainer.classList.remove('hidden');
 
         headings.forEach(heading => {
             const id = heading.id || heading.innerText.toLowerCase().replace(/\s+/g, '-');
@@ -69,7 +72,11 @@
         const headings = Array.from(document.querySelectorAll('.prose h2, .prose h3'));
         const tocLinks = Array.from(document.querySelectorAll('#toc a'));
 
-        window.addEventListener('scroll', () => {
+        // Remove existing scroll listener if any
+        window.removeEventListener('scroll', handleScroll);
+        window.addEventListener('scroll', handleScroll);
+
+        function handleScroll() {
             let activeId = null;
             const scrollPos = window.scrollY + 100;
 
@@ -85,6 +92,47 @@
                     link.classList.add('text-[var(--accent-primary)]', 'font-bold');
                 }
             });
+        }
+    }
+
+    // Save sidebar scroll position
+    function saveSidebarScroll() {
+        const sidebar = document.querySelector('#docs-sidebar aside');
+        if (sidebar) {
+            sidebarScrollPos = sidebar.scrollTop;
+        }
+    }
+
+    // Restore sidebar scroll position
+    function restoreSidebarScroll() {
+        const sidebar = document.querySelector('#docs-sidebar aside');
+        if (sidebar && sidebarScrollPos > 0) {
+            sidebar.scrollTop = sidebarScrollPos;
+        }
+    }
+
+    // Update sidebar active state based on current path
+    function updateSidebarActiveState() {
+        const currentPath = window.location.pathname;
+        const sidebarLinks = document.querySelectorAll('#docs-sidebar a');
+        
+        sidebarLinks.forEach(link => {
+            const href = link.getAttribute('href');
+            if (!href) return;
+            
+            // Remove active classes
+            link.classList.remove('bg-[var(--accent-primary)]/10', 'text-[var(--accent-primary)]', 'font-semibold', 'border-l-2', 'border-[var(--accent-primary)]', 'rounded-l-none');
+            link.classList.add('text-[var(--text-secondary)]');
+            
+            // Add active classes if this is the current page
+            const normalizedHref = href.replace(/\/$/, '');
+            const normalizedPath = currentPath.replace(/\/$/, '');
+            
+            if (normalizedPath === normalizedHref || 
+                (normalizedHref !== '/docs' && normalizedPath.startsWith(normalizedHref))) {
+                link.classList.remove('text-[var(--text-secondary)]');
+                link.classList.add('bg-[var(--accent-primary)]/10', 'text-[var(--accent-primary)]', 'font-semibold', 'border-l-2', 'border-[var(--accent-primary)]', 'rounded-l-none');
+            }
         });
     }
 
@@ -148,13 +196,24 @@
 
     // Listen for GoSPA navigation
     document.addEventListener('gospa:navigated', () => {
+        // Save sidebar scroll before DOM update
+        saveSidebarScroll();
+        
+        // Update docs-specific content
         updateToC();
+        updateSidebarActiveState();
         initSearch();
+        
+        // Restore sidebar scroll after a brief delay to allow DOM to settle
+        setTimeout(() => {
+            restoreSidebarScroll();
+        }, 0);
     });
 
     // Also run on initial load
     window.addEventListener('load', () => {
         updateToC();
+        updateSidebarActiveState();
         initSearch();
     });
 
