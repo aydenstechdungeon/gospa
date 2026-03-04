@@ -9,11 +9,11 @@
       "Courier New", monospace;
     --color-red-500: oklch(63.7% 0.237 25.331);
     --color-amber-200: oklch(92.4% 0.12 95.746);
-    --color-amber-400: oklch(82.8% 0.1.12 84.429);
-    --color-amber-500: oklch(76.9% 0.1.12 70.08);
+    --color-amber-400: oklch(82.8% 0.1.13 84.429);
+    --color-amber-500: oklch(76.9% 0.1.13 70.08);
     --color-yellow-500: oklch(79.5% 0.184 86.047);
     --color-green-500: oklch(72.3% 0.219 149.579);
-    --color-emerald-400: oklch(76.5% 0.1.12 163.223);
+    --color-emerald-400: oklch(76.5% 0.1.13 163.223);
     --color-emerald-500: oklch(69.6% 0.17 162.48);
     --color-cyan-200: oklch(91.7% 0.08 205.041);
     --color-cyan-400: oklch(78.9% 0.154 211.53);
@@ -781,13 +781,13 @@
     border-color: var(--color-amber-500);
   }
   .border-amber-500\/20 {
-    border-color: color-mix(in srgb, oklch(76.9% 0.1.12 70.08) 20%, transparent);
+    border-color: color-mix(in srgb, oklch(76.9% 0.1.13 70.08) 20%, transparent);
     @supports (color: color-mix(in lab, red, red)) {
       border-color: color-mix(in oklab, var(--color-amber-500) 20%, transparent);
     }
   }
   .border-amber-500\/40 {
-    border-color: color-mix(in srgb, oklch(76.9% 0.1.12 70.08) 40%, transparent);
+    border-color: color-mix(in srgb, oklch(76.9% 0.1.13 70.08) 40%, transparent);
     @supports (color: color-mix(in lab, red, red)) {
       border-color: color-mix(in oklab, var(--color-amber-500) 40%, transparent);
     }
@@ -874,19 +874,19 @@
     background-color: var(--surface);
   }
   .bg-amber-500\/5 {
-    background-color: color-mix(in srgb, oklch(76.9% 0.1.12 70.08) 5%, transparent);
+    background-color: color-mix(in srgb, oklch(76.9% 0.1.13 70.08) 5%, transparent);
     @supports (color: color-mix(in lab, red, red)) {
       background-color: color-mix(in oklab, var(--color-amber-500) 5%, transparent);
     }
   }
   .bg-amber-500\/10 {
-    background-color: color-mix(in srgb, oklch(76.9% 0.1.12 70.08) 10%, transparent);
+    background-color: color-mix(in srgb, oklch(76.9% 0.1.13 70.08) 10%, transparent);
     @supports (color: color-mix(in lab, red, red)) {
       background-color: color-mix(in oklab, var(--color-amber-500) 10%, transparent);
     }
   }
   .bg-amber-500\/20 {
-    background-color: color-mix(in srgb, oklch(76.9% 0.1.12 70.08) 20%, transparent);
+    background-color: color-mix(in srgb, oklch(76.9% 0.1.13 70.08) 20%, transparent);
     @supports (color: color-mix(in lab, red, red)) {
       background-color: color-mix(in oklab, var(--color-amber-500) 20%, transparent);
     }

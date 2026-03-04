@@ -4,7 +4,7 @@ go 1.26.0
 
 require (
 	github.com/a-h/templ v0.3.1001
-	github.com/aydenstechdungeon/gospa v0.1.12
+	github.com/aydenstechdungeon/gospa v0.1.13
 	github.com/gofiber/fiber/v2 v2.52.12
 )
 
