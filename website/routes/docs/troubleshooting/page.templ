@@ -150,7 +150,7 @@ app.Use(fiber.CSRFTokenMiddleware())      // Then validates`, "go", "main.go")
 			<ul class="list-disc list-inside text-[var(--text-secondary)] space-y-2">
 				<li><strong>"WebSocket connection failed"</strong> - Server not running or WS not enabled</li>
 				<li><strong>"Max reconnect attempts reached"</strong> - Check server availability and network</li>
-				<li><strong>Works on HTTP but not HTTPS</strong> - Use <code class="mono">wss://</code> for secure connections</li>
+				<li><strong>Works on HTTP but not HTTPS</strong> - Use <code class="mono">wss://</code> { "for" } secure connections</li>
 			</ul>
 
 			<h3 class="text-lg font-semibold mt-6">Nginx Configuration for WebSocket</h3>
@@ -162,7 +162,7 @@ app.Use(fiber.CSRFTokenMiddleware())      // Then validates`, "go", "main.go")
     proxy_read_timeout 86400;
 }`, "nginx", "")
 
-			@components.Callout(components.CalloutInfo, "Note", moreInfoWebsocket())
+			@components.Callout(components.CalloutNote, "Note", moreInfoWebsocket())
 		</section>
 
 		<section id="hmr-issues" class="space-y-6">
@@ -221,7 +221,7 @@ netstat -ano | findstr :3000   # Windows`, "bash", "")
 
 			<h3 class="text-lg font-semibold mt-6">Common Issues</h3>
 			<ul class="list-disc list-inside text-[var(--text-secondary)] space-y-2">
-				<li><strong>Missing island module</strong> - Ensure <code class="mono">/islands/{name}.js</code> exists</li>
+				<li><strong>Missing island module</strong> - Ensure <code class="mono">/islands/{ "name" }.js</code> exists</li>
 				<li><strong>Hydration timeout</strong> - Increase timeout or lazy-load heavy dependencies</li>
 				<li><strong>Double hydration</strong> - Check for duplicate <code class="mono">data-gospa-island</code> attributes</li>
 			</ul>
@@ -337,5 +337,5 @@ templ warningCaseSensitive() {
 }
 
 templ moreInfoWebsocket() {
-	<p>See the <a href="https://github.com/aydenstechdungeon/gospa/blob/main/docs/07-troubleshooting/03-websocket-connections.md" class="text-[var(--accent-primary)] hover:underline">WebSocket troubleshooting guide</a> for more details on heartbeat, authentication, and debugging.</p>
+	<p>See the <a href="https://github.com/aydenstechdungeon/gospa/blob/main/docs/07-troubleshooting/03-websocket-connections.md" class="text-[var(--accent-primary)] hover:underline">WebSocket troubleshooting guide</a> { "for" } more details on heartbeat, authentication, and debugging.</p>
 }

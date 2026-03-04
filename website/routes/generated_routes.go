@@ -59,6 +59,7 @@ import (
 	docsstatemanagementpatterns "github.com/aydenstechdungeon/gospa/website/routes/docs/state-management/patterns"
 	docsstatemanagementserver "github.com/aydenstechdungeon/gospa/website/routes/docs/state-management/server"
 	docsstatemanagementsync "github.com/aydenstechdungeon/gospa/website/routes/docs/state-management/sync"
+	docstroubleshooting "github.com/aydenstechdungeon/gospa/website/routes/docs/troubleshooting"
 	docswebsocket "github.com/aydenstechdungeon/gospa/website/routes/docs/websocket"
 )
 
@@ -222,6 +223,9 @@ func init() {
 	})
 	routing.RegisterPage("/docs/state-management/sync", func(props map[string]interface{}) templ.Component {
 		return docsstatemanagementsync.Page()
+	})
+	routing.RegisterPage("/docs/troubleshooting", func(props map[string]interface{}) templ.Component {
+		return docstroubleshooting.Page()
 	})
 	routing.RegisterPage("/docs/websocket", func(props map[string]interface{}) templ.Component {
 		return docswebsocket.Page()

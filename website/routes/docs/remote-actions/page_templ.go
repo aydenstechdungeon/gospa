@@ -88,7 +88,15 @@ async function handleGreet() {
 		if templ_7745c5c3_Err != nil {
 			return templ_7745c5c3_Err
 		}
-		templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 4, "</section><section id=\"calling-script\" class=\"space-y-6\"><h2 class=\"text-2xl font-bold border-b border-[var(--border)] pb-2\">Calling from Script</h2><p class=\"text-[var(--text-secondary)]\">Call remote actions using the <code class=\"mono text-[var(--accent-primary)]\">GoSPA.remote()</code> function from the runtime.</p><h3 class=\"text-lg font-semibold mt-6 mb-3\">JavaScript (ES Modules)</h3>")
+		templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 4, "</section><section class=\"space-y-6\">")
+		if templ_7745c5c3_Err != nil {
+			return templ_7745c5c3_Err
+		}
+		templ_7745c5c3_Err = components.Callout(components.CalloutWarning, "Important: GoSPA Initialization", warningContent()).Render(ctx, templ_7745c5c3_Buffer)
+		if templ_7745c5c3_Err != nil {
+			return templ_7745c5c3_Err
+		}
+		templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 5, "</section><section id=\"calling-script\" class=\"space-y-6\"><h2 class=\"text-2xl font-bold border-b border-[var(--border)] pb-2\">Calling from Script</h2><p class=\"text-[var(--text-secondary)]\">Call remote actions using the <code class=\"mono text-[var(--accent-primary)]\">GoSPA.remote()</code> function from the runtime.</p><h3 class=\"text-lg font-semibold mt-6 mb-3\">JavaScript (ES Modules)</h3>")
 		if templ_7745c5c3_Err != nil {
 			return templ_7745c5c3_Err
 		}
@@ -112,7 +120,7 @@ const result = await createUser({ username: 'ayden', email: 'ayden@example.com' 
 		if templ_7745c5c3_Err != nil {
 			return templ_7745c5c3_Err
 		}
-		templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 5, "<h3 class=\"text-lg font-semibold mt-6 mb-3\">TypeScript (with imports)</h3>")
+		templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 6, "<h3 class=\"text-lg font-semibold mt-6 mb-3\">TypeScript (with imports)</h3>")
 		if templ_7745c5c3_Err != nil {
 			return templ_7745c5c3_Err
 		}
@@ -137,7 +145,7 @@ const result = await createUser({ username: 'ayden', email: 'ayden@example.com' 
 		if templ_7745c5c3_Err != nil {
 			return templ_7745c5c3_Err
 		}
-		templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 6, "</section><section id=\"csrf-protection\" class=\"space-y-6\"><h2 class=\"text-2xl font-bold border-b border-[var(--border)] pb-2\">CSRF Protection</h2><p class=\"text-[var(--text-secondary)]\">When CSRF protection is enabled in your app configuration, remote actions require a valid CSRF token. The token is automatically set as a cookie by the middleware.</p>")
+		templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 7, "</section><section id=\"csrf-protection\" class=\"space-y-6\"><h2 class=\"text-2xl font-bold border-b border-[var(--border)] pb-2\">CSRF Protection</h2><p class=\"text-[var(--text-secondary)]\">When CSRF protection is enabled in your app configuration, remote actions require a valid CSRF token. The token is automatically set as a cookie by the middleware.</p>")
 		if templ_7745c5c3_Err != nil {
 			return templ_7745c5c3_Err
 		}
@@ -152,7 +160,36 @@ app.Use(fiber.CSRFTokenMiddleware())       // Validates X-CSRF-Token header`, "g
 		if templ_7745c5c3_Err != nil {
 			return templ_7745c5c3_Err
 		}
-		templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 7, "<p class=\"text-[var(--text-secondary)]\">The client automatically reads the <code class=\"mono\">csrf_token</code> cookie and sends it as the <code class=\"mono\">X-CSRF-Token</code> header with each remote action request.</p></section><div class=\"bg-amber-500/5 border border-amber-500/20 p-6 rounded-2xl\"><h4 class=\"text-amber-500 font-bold mb-2\">Security Note</h4><p class=\"text-sm text-[var(--text-secondary)]\">Remote actions are public endpoints. Always perform authentication and authorization checks inside your action functions using the provided <code class=\"mono\">context.Context</code>. Extract session information from the context and validate permissions before executing sensitive operations.</p></div></div>")
+		templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 8, "<p class=\"text-[var(--text-secondary)]\">The client automatically reads the <code class=\"mono\">csrf_token</code> cookie and sends it as the <code class=\"mono\">X-CSRF-Token</code> header with each remote action request.</p></section><div class=\"bg-amber-500/5 border border-amber-500/20 p-6 rounded-2xl\"><h4 class=\"text-amber-500 font-bold mb-2\">Security Note</h4><p class=\"text-sm text-[var(--text-secondary)]\">Remote actions are public endpoints. Always perform authentication and authorization checks inside your action functions using the provided <code class=\"mono\">context.Context</code>. Extract session information from the context and validate permissions before executing sensitive operations.</p></div></div>")
+		if templ_7745c5c3_Err != nil {
+			return templ_7745c5c3_Err
+		}
+		return nil
+	})
+}
+
+func warningContent() templ.Component {
+	return templruntime.GeneratedTemplate(func(templ_7745c5c3_Input templruntime.GeneratedComponentInput) (templ_7745c5c3_Err error) {
+		templ_7745c5c3_W, ctx := templ_7745c5c3_Input.Writer, templ_7745c5c3_Input.Context
+		if templ_7745c5c3_CtxErr := ctx.Err(); templ_7745c5c3_CtxErr != nil {
+			return templ_7745c5c3_CtxErr
+		}
+		templ_7745c5c3_Buffer, templ_7745c5c3_IsBuffer := templruntime.GetBuffer(templ_7745c5c3_W)
+		if !templ_7745c5c3_IsBuffer {
+			defer func() {
+				templ_7745c5c3_BufErr := templruntime.ReleaseBuffer(templ_7745c5c3_Buffer)
+				if templ_7745c5c3_Err == nil {
+					templ_7745c5c3_Err = templ_7745c5c3_BufErr
+				}
+			}()
+		}
+		ctx = templ.InitializeContext(ctx)
+		templ_7745c5c3_Var2 := templ.GetChildren(ctx)
+		if templ_7745c5c3_Var2 == nil {
+			templ_7745c5c3_Var2 = templ.NopComponent
+		}
+		ctx = templ.ClearChildren(ctx)
+		templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 9, "<p class=\"text-sm\">Before using <code class=\"mono\">GoSPA.remote()</code>, ensure the GoSPA runtime is initialized. Add <code class=\"mono\">data-gospa-auto</code> to your HTML tag for auto-initialization, or call <code class=\"mono\">init()</code> manually. See the <a href=\"/docs/troubleshooting\" class=\"text-[var(--accent-primary)] hover:underline\">Troubleshooting</a> page for details.</p>")
 		if templ_7745c5c3_Err != nil {
 			return templ_7745c5c3_Err
 		}

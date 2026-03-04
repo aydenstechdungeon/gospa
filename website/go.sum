@@ -6,6 +6,8 @@ github.com/aydenstechdungeon/gospa v0.1.8 h1:NT8j1vgY0AdoMxAtFRmAvdSK/0FMtlGoZyN
 github.com/aydenstechdungeon/gospa v0.1.8/go.mod h1:pjSv8bkIy2uoMIUZInzilAsxClbfLVi0ULv98MdaWwk=
 github.com/aydenstechdungeon/gospa v0.1.9 h1:GEFzX9qkxteMn1sAuHrvZdKjghBsZ5sz4ufG492DwAU=
 github.com/aydenstechdungeon/gospa v0.1.9/go.mod h1:pjSv8bkIy2uoMIUZInzilAsxClbfLVi0ULv98MdaWwk=
+github.com/aydenstechdungeon/gospa v0.1.12 h1:KYkPxX0Sw8Rt1Ac2XLHTPwDDwjaovzLY6nhVlgU/N30=
+github.com/aydenstechdungeon/gospa v0.1.12/go.mod h1:pjSv8bkIy2uoMIUZInzilAsxClbfLVi0ULv98MdaWwk=
 github.com/fasthttp/websocket v1.5.3 h1:TPpQuLwJYfd4LJPXvHDYPMFWbLjsT91n3GpWtCQtdek=
 github.com/fasthttp/websocket v1.5.3/go.mod h1:46gg/UBmTU1kUaTcwQXpUxtRwG2PvIZYeA8oL6vF3Fs=
 github.com/gofiber/fiber/v2 v2.52.12 h1:0LdToKclcPOj8PktUdIKo9BUohjjwfnQl42Dhw8/WUw=
