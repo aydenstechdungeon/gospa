@@ -2,7 +2,7 @@
 
 **Audit Date:** 2026-03-03  
 **Auditor:** Kilo Code (AI Code Reviewer)  
-**Framework Version:** v0.1.11  
+**Framework Version:** v0.1.12  
 **Scope:** Full codebase audit including security, performance, DX, and documentation
 
 ---

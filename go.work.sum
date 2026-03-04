@@ -2,7 +2,7 @@ cloud.google.com/go/compute/metadata v0.3.0/go.mod h1:zFmK7XCadkQkj6TtorcaGlCW1h
 github.com/a-h/parse v0.0.0-20250122154542-74294addb73e/go.mod h1:3mnrkvGpurZ4ZrTDbYU84xhwXW2TjTKShSwjRi2ihfQ=
 github.com/a-h/templ v0.3.977/go.mod h1:oCZcnKRf5jjsGpf2yELzQfodLphd2mwecwG4Crk5HBo=
 github.com/aydenstechdungeon/gospa v0.1.3/go.mod h1:glzSnafhdlxeAzyDJSXvIInkEKd0nAr9f4GljKuDi/w=
-github.com/aydenstechdungeon/gospa v0.1.11/go.mod h1:pjSv8bkIy2uoMIUZInzilAsxClbfLVi0ULv98MdaWwk=
+github.com/aydenstechdungeon/gospa v0.1.12/go.mod h1:pjSv8bkIy2uoMIUZInzilAsxClbfLVi0ULv98MdaWwk=
 github.com/cenkalti/backoff/v4 v4.3.0/go.mod h1:Y3VNntkOUPxTVeUxJ/G5vcM//AlwfmyYozVcomhLiZE=
 github.com/cli/browser v1.3.0/go.mod h1:HH8s+fOAxjhQoBUAsKuPCbqUuxZDhQ2/aD+SzsEfBTk=
 github.com/fatih/color v1.16.0/go.mod h1:fL2Sau1YI5c0pdGEVCbKQbLXB6edEj1ZgiY4NijnWvE=
