@@ -84,7 +84,7 @@ templ Page() {
 					<tbody class="divide-y divide-[var(--border)]">
 						<tr>
 							<td class="px-6 py-4 mono text-[var(--accent-primary)] font-bold">gospa add:postcss</td>
-							<td class="px-6 py-4 text-[var(--text-muted)]">ap</td>
+							<td class="px-6 py-4 text-[var(--text-muted)]">—</td>
 							<td class="px-6 py-4 text-[var(--text-secondary)]">Install PostCSS deps and create config</td>
 						</tr>
 						<tr>
@@ -191,6 +191,14 @@ templ Page() {
 				<div>
 					<code class="text-sm text-[var(--accent-primary)]">postcss.CriticalCSSWithFallback(path, fallback string) string</code>
 					<p class="text-sm text-[var(--text-muted)] mt-1">Like CriticalCSS but returns fallback content if file doesn't exist (useful for development).</p>
+				</div>
+				<div>
+					<code class="text-sm text-[var(--accent-primary)]">postcss.GenerateCriticalCSSHelper(projectDir, criticalCSSPath string) (string, error)</code>
+					<p class="text-sm text-[var(--text-muted)] mt-1">Reads critical CSS relative to projectDir. Returns an error if the file cannot be read — prefer this over CriticalCSS when you need explicit error handling at startup.</p>
+				</div>
+				<div>
+					<code class="text-sm text-[var(--accent-primary)]">postcss.GenerateAsyncCSSScript(cssPath string) string</code>
+					<p class="text-sm text-[var(--text-muted)] mt-1">Low-level helper that returns the raw preload + noscript HTML string. AsyncCSS wraps this function.</p>
 				</div>
 			</div>
 			

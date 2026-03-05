@@ -67,7 +67,7 @@
   - Size: 16802 bytes
 
 [04-plugins](docs/04-api-reference/04-plugins.md)
-  - Size: 20454 bytes
+  - Size: 25791 bytes
 
 
 ### Advanced

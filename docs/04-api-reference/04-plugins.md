@@ -140,7 +140,7 @@ plugins:
     output: ./static/css/main.css # Output CSS file (default: ./static/css/main.css)
     watch: true                   # Watch mode in dev (default: true)
     minify: true                  # Minify in production (default: true)
-    source_map: false             # Generate source maps (default: false)
+    sourceMap: false              # Generate source maps (default: false)
     plugins:                      # PostCSS plugins to enable
       typography: true            # @tailwindcss/typography
       forms: true                 # @tailwindcss/forms
@@ -206,8 +206,16 @@ plugins:
   postcss:
     criticalCSS:
       enabled: true
-      criticalOutput: ./static/css/critical.css
-      nonCriticalOutput: ./static/css/non-critical.css
+      criticalOutput: ./static/css/critical.css      # Inlined in HTML head
+      nonCriticalOutput: ./static/css/non-critical.css  # Loaded asynchronously
+      inlineMaxSize: 14336        # Max bytes for inline CSS (14KB = single round-trip)
+      dimensions:                 # Viewport sizes for critical CSS detection
+        - width: 1300
+          height: 900
+          name: desktop
+        - width: 500
+          height: 900
+          name: mobile
 ```
 
 2. Extract critical CSS:
@@ -215,24 +223,47 @@ plugins:
 gospa postcss:critical
 ```
 
-3. Use in your templates:
-```templ
-// Inline critical CSS
-<style>
-{{ CriticalCSS "/css/critical.css" }}
-</style>
+3. Import the postcss package in your layout:
+```go
+import (
+    "github.com/aydenstechdungeon/gospa/plugin/postcss"
+    // ... other imports
+)
+```
 
-// Async load non-critical CSS
-{{ AsyncCSS "/css/non-critical.css" }}
+4. Use the helper functions in your templ files:
+```templ
+<!-- Inlined Critical CSS (render-blocking, single round-trip) -->
+@templ.Raw("<style>" + postcss.CriticalCSS("./static/css/critical.css") + "</style>")
+
+<!-- Note: Path is relative to your app's working directory -->
+<!-- For apps running from root: "./website/static/css/critical.css" -->
+<!-- For apps running from website dir: "./static/css/critical.css" -->
+
+<!-- Async load non-critical CSS (non-blocking) -->
+@templ.Raw(postcss.AsyncCSS("/static/css/non-critical.css"))
 ```
 
 **How it works:**
-The `CriticalCSS` helper reads the critical CSS file and inlines it. The `AsyncCSS` helper generates a preload link that loads the non-critical CSS asynchronously:
+The `CriticalCSS` helper reads the critical CSS file and returns its content as a string for inlining. The `AsyncCSS` helper generates a preload link that loads the non-critical CSS asynchronously:
 
 ```html
-<link rel="preload" href="/css/non-critical.css" as="style" onload="this.onload=null;this.rel='stylesheet'">
-<noscript><link rel="stylesheet" href="/css/non-critical.css"></noscript>
+<link rel="preload" href="/static/css/non-critical.css" as="style" onload="this.onload=null;this.rel='stylesheet'">
+<noscript><link rel="stylesheet" href="/static/css/non-critical.css"></noscript>
 ```
+
+**Performance:** The 14KB default `inlineMaxSize` ensures critical CSS fits within a single TCP round-trip (HTTP/2 initial window), minimising render-blocking time.
+**CSS-safe extraction:** The splitter always cuts at a complete CSS rule boundary (`}`), never mid-declaration.
+
+**Helper Function Reference:**
+
+| Function | Signature | Description |
+|----------|-----------|-------------|
+| `CriticalCSS` | `func CriticalCSS(path string) string` | Reads critical CSS file; returns empty string if file not found |
+| `CriticalCSSWithFallback` | `func CriticalCSSWithFallback(path, fallback string) string` | Like `CriticalCSS` but returns `fallback` if file not found (useful in dev) |
+| `AsyncCSS` | `func AsyncCSS(path string) string` | Returns HTML string for async CSS loading with preload + noscript fallback |
+| `GenerateCriticalCSSHelper` | `func GenerateCriticalCSSHelper(projectDir, criticalCSSPath string) (string, error)` | Reads critical CSS relative to `projectDir`; returns error on failure |
+| `GenerateAsyncCSSScript` | `func GenerateAsyncCSSScript(cssPath string) string` | Low-level helper that generates the preload/noscript HTML string |
 
 ### CSS Bundle Splitting
 
