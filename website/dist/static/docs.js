@@ -1,8 +1,9 @@
 
-// Documentation functionality: Search and Dynamic ToC
+// Documentation functionality: Search, Dynamic ToC, and Sidebar State
 (function () {
     let searchIndex = null;
     let fuse = null;
+    let sidebarScrollPos = 0;
 
     async function initSearch() {
         if (searchIndex) return;
@@ -38,10 +39,12 @@
         const headings = document.querySelectorAll('.prose h2, .prose h3');
 
         if (headings.length === 0) {
-            document.querySelector('#toc').parentElement.classList.add('hidden');
+            const tocContainer = document.querySelector('#toc')?.parentElement;
+            if (tocContainer) tocContainer.classList.add('hidden');
             return;
         }
-        document.querySelector('#toc').parentElement.classList.remove('hidden');
+        const tocContainer = document.querySelector('#toc')?.parentElement;
+        if (tocContainer) tocContainer.classList.remove('hidden');
 
         headings.forEach(heading => {
             const id = heading.id || heading.innerText.toLowerCase().replace(/\s+/g, '-');
@@ -69,7 +72,11 @@
         const headings = Array.from(document.querySelectorAll('.prose h2, .prose h3'));
         const tocLinks = Array.from(document.querySelectorAll('#toc a'));
 
-        window.addEventListener('scroll', () => {
+        // Remove existing scroll listener if any
+        window.removeEventListener('scroll', handleScroll);
+        window.addEventListener('scroll', handleScroll);
+
+        function handleScroll() {
             let activeId = null;
             const scrollPos = window.scrollY + 100;
 
@@ -85,6 +92,47 @@
                     link.classList.add('text-[var(--accent-primary)]', 'font-bold');
                 }
             });
+        }
+    }
+
+    // Save sidebar scroll position
+    function saveSidebarScroll() {
+        const sidebar = document.querySelector('#docs-sidebar aside');
+        if (sidebar) {
+            sidebarScrollPos = sidebar.scrollTop;
+        }
+    }
+
+    // Restore sidebar scroll position
+    function restoreSidebarScroll() {
+        const sidebar = document.querySelector('#docs-sidebar aside');
+        if (sidebar && sidebarScrollPos > 0) {
+            sidebar.scrollTop = sidebarScrollPos;
+        }
+    }
+
+    // Update sidebar active state based on current path
+    function updateSidebarActiveState() {
+        const currentPath = window.location.pathname;
+        const sidebarLinks = document.querySelectorAll('#docs-sidebar a');
+        
+        sidebarLinks.forEach(link => {
+            const href = link.getAttribute('href');
+            if (!href) return;
+            
+            // Remove active classes
+            link.classList.remove('bg-[var(--accent-primary)]/10', 'text-[var(--accent-primary)]', 'font-semibold', 'border-l-2', 'border-[var(--accent-primary)]', 'rounded-l-none');
+            link.classList.add('text-[var(--text-secondary)]');
+            
+            // Add active classes if this is the current page
+            const normalizedHref = href.replace(/\/$/, '');
+            const normalizedPath = currentPath.replace(/\/$/, '');
+            
+            if (normalizedPath === normalizedHref || 
+                (normalizedHref !== '/docs' && normalizedPath.startsWith(normalizedHref))) {
+                link.classList.remove('text-[var(--text-secondary)]');
+                link.classList.add('bg-[var(--accent-primary)]/10', 'text-[var(--accent-primary)]', 'font-semibold', 'border-l-2', 'border-[var(--accent-primary)]', 'rounded-l-none');
+            }
         });
     }
 
@@ -93,15 +141,79 @@
         return fuse.search(query).slice(0, 8);
     }
 
+    // Extract context snippet around matched text
+    function getContextSnippet(result, query) {
+        if (!result.matches || result.matches.length === 0) {
+            return result.item.description || result.item.content.substring(0, 120) + '...';
+        }
+
+        // Find the best match (prioritize content matches)
+        const contentMatch = result.matches.find(m => m.key === 'content');
+        const match = contentMatch || result.matches[0];
+        
+        if (!match.value) {
+            return result.item.description || result.item.content.substring(0, 120) + '...';
+        }
+
+        // Get the first matched indices
+        const [start, end] = match.indices[0];
+        const contextRadius = 60;
+        const text = match.value;
+        
+        // Calculate snippet boundaries
+        let snippetStart = Math.max(0, start - contextRadius);
+        let snippetEnd = Math.min(text.length, end + contextRadius);
+        
+        // Expand to word boundaries
+        while (snippetStart > 0 && text[snippetStart - 1] !== ' ') snippetStart--;
+        while (snippetEnd < text.length && text[snippetEnd] !== ' ') snippetEnd++;
+        
+        let snippet = text.substring(snippetStart, snippetEnd);
+        
+        // Add ellipsis if truncated
+        if (snippetStart > 0) snippet = '...' + snippet;
+        if (snippetEnd < text.length) snippet = snippet + '...';
+        
+        return snippet;
+    }
+
+    // Highlight matched text in snippet
+    function highlightSnippet(snippet, query) {
+        const terms = query.toLowerCase().split(/\s+/).filter(t => t.length > 0);
+        let highlighted = snippet;
+        
+        terms.forEach(term => {
+            const regex = new RegExp(`(${escapeRegex(term)})`, 'gi');
+            highlighted = highlighted.replace(regex, '<mark class="bg-[var(--accent-primary)]/20 text-[var(--accent-primary)] px-0.5 rounded">$1</mark>');
+        });
+        
+        return highlighted;
+    }
+
+    function escapeRegex(string) {
+        return string.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+    }
+
     // Listen for GoSPA navigation
     document.addEventListener('gospa:navigated', () => {
+        // Save sidebar scroll before DOM update
+        saveSidebarScroll();
+        
+        // Update docs-specific content
         updateToC();
+        updateSidebarActiveState();
         initSearch();
+        
+        // Restore sidebar scroll after a brief delay to allow DOM to settle
+        setTimeout(() => {
+            restoreSidebarScroll();
+        }, 0);
     });
 
     // Also run on initial load
     window.addEventListener('load', () => {
         updateToC();
+        updateSidebarActiveState();
         initSearch();
     });
 
@@ -127,21 +239,33 @@
 
     document.addEventListener('input', (e) => {
         if (e.target.id === 'search-input') {
-            const results = handleSearch(e.target.value);
+            const query = e.target.value;
+            const results = handleSearch(query);
             const list = document.getElementById('search-results');
             if (!list) return;
+
+            if (query.length === 0) {
+                list.innerHTML = '';
+                return;
+            }
 
             if (results.length === 0) {
                 list.innerHTML = '<div class="p-4 text-center text-[var(--text-muted)]">No results found</div>';
                 return;
             }
 
-            list.innerHTML = results.map(res => `
-                <a href="${res.item.url}" class="block p-4 hover:bg-[var(--bg-tertiary)] transition-all border-b border-[var(--border)] last:border-0">
-                    <div class="font-bold text-[var(--accent-primary)]">${res.item.title}</div>
-                    <div class="text-xs text-[var(--text-secondary)] mt-1 opacity-80">${res.item.description || res.item.content.substring(0, 100)}...</div>
+            list.innerHTML = results.map(res => {
+                const snippet = getContextSnippet(res, query);
+                const highlightedSnippet = highlightSnippet(snippet, query);
+                return `
+                <a href="${res.item.url}" class="block p-4 hover:bg-[var(--bg-tertiary)] transition-all border-b border-[var(--border)] last:border-0 group">
+                    <div class="flex items-center gap-2">
+                        <div class="font-bold text-[var(--accent-primary)] group-hover:underline">${res.item.title}</div>
+                        ${res.item.section ? `<span class="text-xs text-[var(--text-muted)]">— ${res.item.section}</span>` : ''}
+                    </div>
+                    <div class="text-sm text-[var(--text-secondary)] mt-1.5 leading-relaxed">${highlightedSnippet}</div>
                 </a>
-            `).join('');
+            `}).join('');
         }
     });
 })();

@@ -12,8 +12,6 @@
 
 A Go framework for building reactive SPAs with server-side rendering. Brings Svelte-like reactivity to Go using Fiber and Templ.
 
--# Pushing to master/main will stop once framework is stable or if other people start working on it.
-
 ## Features
 
 - **Reactive Primitives** — `Rune[T]`, `Derived[T]`, `Effect` - Svelte-like reactivity in Go
@@ -21,7 +19,7 @@ A Go framework for building reactive SPAs with server-side rendering. Brings Sve
 - **WebSocket Sync** — Real-time client-server state synchronization
 - **Session Management** — Secure session persistence with `SessionStore` and `ClientStateStore`
 - **Type Safety** — Compile-time template validation with Templ
-- **Lightweight Runtime** — ~11KB for the simple runtime, ~17KB for the full runtime with DOMPurify.
+- **Lightweight Runtime** — ~15KB default runtime (trusts server), ~35KB secure runtime with DOMPurify for user-generated content.
 - **Remote Actions** — Type-safe server functions callable directly from the client.
 - **Error Handling** — Global error boundaries, panic recovery, and error overlay in dev mode.
 - **Security** — Built-in CSRF protection, customizable CORS origins, and strict XSS prevention.
@@ -38,21 +36,10 @@ go get github.com/aydenstechdungeon/gospa
 ### 1. Initialize Project
 
 ```bash
-go run github.com/aydenstechdungeon/gospa/cmd/gospa@latest create myapp
-```
-or
-from examples/:
-```bash
-go run ../cmd/gospa create myapp
-```
-from inside a examples project:
-```bash
-go run ../../cmd/gospa create myapp
-```
-
-```bash
-mkdir myapp && cd myapp
-go mod init myapp
+go install github.com/aydenstechdungeon/gospa/cmd/gospa@latest
+gospa create myapp
+cd myapp
+go mod tidy
 ```
 
 ### 2. Create Main File
@@ -62,6 +49,7 @@ go mod init myapp
 package main
 
 import (
+    "context"
     "log"
     _ "myapp/routes" // Import routes to trigger init()
     
@@ -238,17 +226,43 @@ GoSPA.prefetch('/blog')
 GoSPA.fade(element, { duration: 300 })
 ```
 
-#### Performance vs Security (Simple Runtime)
+#### Runtime Variants: Default vs Secure
 
-By default, the client runtime includes [DOMPurify](https://github.com/cure53/DOMPurify) for robust XSS protection on dynamically bound templates. If you prefer a smaller bundle size and are comfortable with a less strictly-secured basic sanitizer, you can switch to the lightweight runtime using the configuration flag:
+GoSPA follows a **"trust the server"** security model (similar to SvelteKit). The default runtime trusts server-rendered HTML because Templ auto-escapes all dynamic content.
 
-```go
-app := gospa.New(gospa.Config{
-    // ...
-    SimpleRuntime: true,
-    // SimpleRuntimeSVGs: true, // ⚠️ Only enable for fully trusted content — allows SVG in sanitizer
-})
+**Default Runtime (`gospa`) — Recommended for most apps:**
+```typescript
+import { init } from 'gospa';
+init(); // ~15KB, no sanitizer needed
 ```
+
+**Secure Runtime (`gospa/runtime-secure`) — For user-generated content:**
+```typescript
+import { init, sanitize } from 'gospa/runtime-secure';
+init(); // ~35KB, includes DOMPurify
+
+// Sanitize user-generated HTML
+const clean = await sanitize(userComment);
+```
+
+| Runtime | Size | Sanitizer | Use Case |
+|---------|------|-----------|----------|
+| `gospa` | ~15KB | None (trusts server) | Most apps with CSP |
+| `gospa/runtime-secure` | ~35KB | DOMPurify | Apps with user-generated HTML |
+
+**When do you need the secure runtime?**
+- User comments with HTML formatting
+- Forums, wikis, social media apps
+- Rich text editors (WYSIWYG)
+- Any user-generated HTML content
+
+**When is the default runtime sufficient?**
+- Server-rendered Templ templates
+- Text content from your database
+- JSON data
+- Any content already escaped by Templ on the server
+
+See [`docs/RUNTIME.md`](docs/RUNTIME.md) for complete runtime selection guide.
 
 ### Remote Actions
 
@@ -312,14 +326,9 @@ app := gospa.New(gospa.Config{
 })
 ```
 
-> **CSRF protection requires two middlewares** — one to issue the token cookie, one to validate it:
->
-> ```go
-> app.Fiber.Use(fiber.CSRFSetTokenMiddleware()) // issues csrf_token cookie on GET
-> app.Fiber.Use(fiber.CSRFTokenMiddleware())    // validates X-CSRF-Token header on POST/PUT/DELETE
-> ```
->
-> Setting `EnableCSRF: true` alone is not sufficient — you must wire both middlewares.
+> **Security By Default:** 
+> When you set `EnableCSRF: true`, GoSPA automatically wires both the token issuer 
+> and validator middlewares for you. You do not need to wire them manually!
 
 ### Rendering Strategies
 
@@ -436,9 +445,7 @@ If no `root_layout.templ` exists, GoSPA provides a minimal default HTML wrapper.
 
 ## API Reference
 
-See [`docs/API.md`](docs/API.md) for complete API documentation.
-[`docs/llms/llms.txt`](docs/llms/llms.txt)
-[`docs/llms/llms-full.md`](docs/llms/llms-full.md)
+See [`docs/04-api-reference/`](docs/04-api-reference/) for complete API documentation.
 
 ## CLI
 
@@ -572,7 +579,7 @@ See [`docs/PLUGINS.md`](docs/PLUGINS.md) for complete plugin documentation.
 | Feature | GoSPA | HTMX | Alpine | SvelteKit |
 |---------|-------|------|--------|-----------|
 | Language | Go | HTML | JS | JS/TS |
-| Runtime Size | <15KB* | ~14KB | ~15KB | Varies |
+| Runtime Size | ~15KB (default) | ~14KB | ~15KB | Varies |
 | SSR | ✅ | ✅ | ❌ | ✅ |
 | SSG | ✅ | ❌ | ❌ | ✅ |
 | ISR | ✅ | ❌ | ❌ | ✅ |
@@ -587,7 +594,71 @@ See [`docs/PLUGINS.md`](docs/PLUGINS.md) for complete plugin documentation.
 [Apache License 2.0](LICENSE)
 
 
-<!-- FILE: docs/GETTING_STARTED.md -->
+<!-- FILE: docs/README.md -->
+================================================================================
+
+# GoSPA Documentation
+
+This directory contains the complete documentation for GoSPA. The documentation is organized to guide users from their first steps through advanced topics.
+
+## Structure
+
+```
+docs/
+├── 01-getting-started/     # Installation and first steps
+├── 02-core-concepts/       # Essential concepts
+├── 03-features/            # Feature guides
+├── 04-api-reference/       # API documentation
+├── 05-advanced/            # Advanced topics
+└── 06-migration/           # Version migration guides
+```
+
+## Quick Navigation
+
+### Getting Started
+- [Quick Start](01-getting-started/01-quick-start.md) - Installation and first app
+- [Tutorial](01-getting-started/02-tutorial.md) - Build a todo app
+
+### Core Concepts
+- [Architecture](02-core-concepts/01-architecture.md) - How GoSPA works
+- [Rendering](02-core-concepts/02-rendering.md) - SSR, SPA, and islands
+- [State](02-core-concepts/03-state.md) - Reactive state management
+- [Components](02-core-concepts/04-components.md) - Component system
+- [Islands](02-core-concepts/05-islands.md) - Partial hydration
+- [Routing](02-core-concepts/06-routing.md) - Route parameters and navigation
+
+### Features
+- [Client Runtime](03-features/01-client-runtime.md) - Runtime variants and selection
+- [Runtime API](03-features/02-runtime-api.md) - Client-side API reference
+- [Realtime](03-features/03-realtime.md) - SSE and WebSocket
+- [Security](03-features/04-security.md) - Security model and CSP
+- [Dev Tools](03-features/05-dev-tools.md) - HMR and debugging
+
+### API Reference
+- [Core API](04-api-reference/01-core-api.md) - Go API documentation
+- [Configuration](04-api-reference/02-configuration.md) - Config options
+- [CLI](04-api-reference/03-cli.md) - Command line interface
+- [Plugins](04-api-reference/04-plugins.md) - Plugin system
+
+### Advanced
+- [Error Handling](05-advanced/01-error-handling.md)
+- [State Pruning](05-advanced/02-state-pruning.md)
+
+### Migration
+- [v1 to v2](06-migration/01-v1-to-v2.md) - Migrating from v1.x to v2.0
+
+## Website Integration
+
+This documentation structure is designed to be consumed by the GoSPA website. Each folder represents a documentation section, and files are ordered by their numerical prefix.
+
+To render these docs on the website:
+1. Read `README.md` for structure
+2. Parse each section folder
+3. Render markdown files in numerical order
+4. Use frontmatter (if present) for metadata
+
+
+<!-- FILE: docs/01-getting-started/01-quick-start.md -->
 ================================================================================
 
 # Getting Started with GoSPA
@@ -1156,1426 +1227,7 @@ Check that WebSocket is enabled in config:
 Ensure you're running `gospa dev` not `go run main.go`.
 
 
-<!-- FILE: docs/API.md -->
-================================================================================
-
-# GoSPA API Reference
-
-## Table of Contents
-
-- [GoSPA Package](#gospa-package)
-- [State Package](#state-package)
-- [Routing Package](#routing-package)
-- [Fiber Package](#fiber-package)
-- [Templ Package](#templ-package)
-- [Client Runtime](#client-runtime)
-
----
-
-## GoSPA Package
-
-`github.com/aydenstechdungeon/gospa`
-
-### App
-
-The main GoSPA application.
-
-```go
-// Create new app
-app := gospa.New(config gospa.Config)
-
-// Start server
-err := app.Run(":3000")
-err := app.RunTLS(":443", "cert.pem", "key.pem")
-
-// Graceful shutdown
-err := app.Shutdown()
-
-// Routing & Middleware
-app.Scan()            // Scans routes directory
-app.RegisterRoutes()  // Registers Fiber routes
-app.Use(middleware)   // Adds global middleware
-group := app.Group("/api") // Creates route group
-
-// Access internals
-hub := app.GetHub()
-router := app.GetRouter()
-fiberApp := app.GetFiber()
-
-// Broadcast to all WebSocket clients
-app.Broadcast([]byte("message"))
-err := app.BroadcastState("key", value)
-
-// Add routes manually
-app.Get("/path", handler)
-app.Post("/path", handler)
-app.Put("/path", handler)
-app.Delete("/path", handler)
-
-// Static files
-app.Static("/static", "./public")
-```
-
-### `Config`
-The `Config` struct defines the application's configuration.
-
-```go
-type Config struct {
-	// RoutesDir is the directory containing route files.
-	RoutesDir string
-	// RoutesFS is the filesystem containing route files (optional).
-	RoutesFS fs.FS
-	// DevMode enables development features.
-	DevMode bool
-	// RuntimeScript is the path to the client runtime script.
-	RuntimeScript string
-	// StaticDir is the directory for static files.
-	StaticDir string
-	// StaticPrefix is the URL prefix for static files.
-	StaticPrefix string
-	// AppName is the application name.
-	AppName string
-	// DefaultState is the initial state for new sessions.
-	DefaultState map[string]interface{}
-	// EnableWebSocket enables WebSocket support.
-	EnableWebSocket bool
-	// WebSocketPath is the WebSocket endpoint path.
-	WebSocketPath string
-	// WebSocketMiddleware allows injecting middleware before WebSocket upgrade.
-	WebSocketMiddleware fiberpkg.Handler
-
-	// Performance Options
-	CompressState  bool // Gzip-compress outbound state payloads; client must decompress via DecompressionStream
-	StateDiffing   bool // Only send changed state keys (patch messages) after the initial full snapshot
-	CacheTemplates bool // Cache compiled templates
-	SimpleRuntime  bool // Use lightweight runtime without DOMPurify
-
-	// WebSocket Options
-	WSReconnectDelay time.Duration // Initial reconnect delay (default 1s), passed to client runtime
-	WSMaxReconnect   int           // Max reconnect attempts (default 10), passed to client runtime
-	WSHeartbeat      time.Duration // Heartbeat ping interval (default 30s), passed to client runtime
-
-	// Hydration Options
-	HydrationMode    string // "immediate" | "lazy" | "visible" | "idle" (default: "immediate")
-	HydrationTimeout int    // ms before force hydrate
-
-	// Serialization Options
-	StateSerializer   StateSerializerFunc // Custom serialization for outbound state
-	StateDeserializer StateDeserializerFunc // Custom deserialization for inbound state
-
-	// Routing Options
-	DisableSPA bool // Disable SPA navigation completely
-	SSR        bool // NOTE: planned, not yet implemented
-
-	// Remote Action Options
-	MaxRequestBodySize int    // Maximum allowed size for remote action request bodies
-	RemotePrefix       string // Prefix for remote action endpoints
-
-	// Security Options
-	AllowedOrigins []string // Allowed CORS origins
-	EnableCSRF     bool     // Enable CSRF (requires CSRFSetTokenMiddleware + CSRFTokenMiddleware)
-
-	// Cache Options
-	SSGCacheMaxEntries int // Max SSG cache entries (default 500; -1 = unbounded)
-
-	// Distributed & Scaling Options
-	Prefork bool          // Enables Fiber Prefork. WARNING: If true, you MUST use external Storage/PubSub to share state.
-	Storage store.Storage // External Key-Value store (e.g., Redis) for Session and ClientState. Default is memory.
-	PubSub  store.PubSub  // External messaging broker (e.g., Redis PubSub) for WebSocket broadcasting. Default is memory.
-}
-```
-
-#### Key Options:
-- `RoutesFS`: Allows embedding routes using `go:embed`.
-- `CompressState`: Enables gzip+base64 compression of outbound WebSocket state payloads. Client decodes with the `DecompressionStream` browser API.
-- `StateDiffing`: Sends only changed state keys as `"patch"` WebSocket messages after the initial full snapshot — reduces bandwidth for large states.
-- `StateSerializer` / `StateDeserializer`: Custom hooks replacing JSON for WebSocket state encoding/decoding.
-- `SimpleRuntime`: Reduces client bundle size by ~6KB by removing DOMPurify. ⚠️ Security Risk: Only enable SimpleRuntime for fully trusted content.
-- `SimpleRuntimeSVGs`: Allows SVG elements in the simple runtime sanitizer. ⚠️ Security Risk: Only enable SimpleRuntimeSVGs for fully trusted content.
-- `HydrationMode`: Controls when components become interactive. Values: `"immediate"` (default), `"lazy"`, `"visible"`, `"idle"`.
-- `WSReconnectDelay`: Initial reconnect delay passed to the client WebSocket runtime. Default: 1s.
-- `WSMaxReconnect`: Maximum reconnect attempts passed to the client. Default: 10.
-- `WSHeartbeat`: Heartbeat ping interval passed to the client. Default: 30s.
-- `SSR`: **Planned** — not yet implemented.
-- `EnableCSRF`: Enables CSRF protection. Must wire up **both** `CSRFSetTokenMiddleware()` (issues cookie) **and** `CSRFTokenMiddleware()` (validates).
-- `SSGCacheMaxEntries`: Caps the SSG page cache with FIFO eviction. Default 500.
-- `Prefork`, `Storage`, `PubSub`: Used for horizontal scaling. See `store/redis` for the Redis implementation.
-
-```go
-// Default configuration
-config := gospa.DefaultConfig()
-
----
-
-## State Package
-
-`github.com/aydenstechdungeon/gospa/state`
-
-### Rune[T]
-
-Core reactive primitive. Holds a value and notifies subscribers on changes.
-
-```go
-// Create
-rune := state.NewRune[T](initial T)
-
-// Read
-rune.Get() T
-rune.GetAny() any  // for Observable interface
-rune.ID() string   // returns unique internal ID
-// NOTE: rune.peek() does NOT exist — there is no non-tracking read on the server-side Rune.
-
-// Write
-rune.Set(value T)
-rune.Update(fn func(T) T)
-rune.SetAny(value any) error // for Settable interface
-
-// Subscribe
-unsubscribe := rune.Subscribe(func(newValue T) {})
-unsubscribe := rune.SubscribeAny(func(newValue any) {})
-
-// Serialization
-data, err := rune.MarshalJSON()
-```
-
-**Interfaces**
-
-```go
-type Observable interface {
-    GetAny() any
-    SubscribeAny(func(any)) func()
-}
-
-type Settable interface {
-    SetAny(value any) error
-}
-```
-
-**Example**
-
-```go
-count := state.NewRune(0)
-
-// Read
-fmt.Println(count.Get()) // 0
-
-// Write
-count.Set(5)
-count.Update(func(v int) int { return v + 1 })
-
-// React
-unsub := count.Subscribe(func(v int) {
-    fmt.Println("Count:", v)
-})
-defer unsub()
-```
-
----
-
-### Derived[T]
-
-Computed state that recalculates when dependencies change.
-
-```go
-// Create
-derived := state.NewDerived[T](compute func() T)
-
-// Read
-derived.Get() T
-
-// Subscribe
-unsubscribe := derived.Subscribe(func(T) {})
-
-// Lifecycle
-derived.Dispose()
-```
-
-**Helper Functions**
-
-```go
-// Single dependency
-d := state.DerivedFrom(rune, func(v T) U { ... })
-
-// Two dependencies
-d := state.Derived2(rune1, rune2, func(v1 T1, v2 T2) U { ... })
-
-// Three dependencies
-d := state.Derived3(rune1, rune2, rune3, func(v1 T1, v2 T2, v3 T3) U { ... })
-```
-
-**Example**
-
-```go
-count := state.NewRune(5)
-doubled := state.NewDerived(func() int {
-    return count.Get() * 2
-})
-
-fmt.Println(doubled.Get()) // 10
-count.Set(10)
-fmt.Println(doubled.Get()) // 20
-```
-
----
-
-### Effect
-
-Side effects that run when dependencies change.
-
-```go
-// Create - returns cleanup function
-cleanup := state.NewEffect(func() func() {
-    // effect logic
-    return func() {
-        // cleanup logic
-    }
-})
-```
-
-**Helper Functions**
-
-```go
-// Single dependency
-cleanup := state.EffectOn(rune, func(v T) { ... })
-
-// Watch multiple
-cleanup := state.Watch(rune1, rune2, func(v1 T1, v2 T2) { ... })
-cleanup := state.Watch3(rune1, rune2, rune3, func(v1 T1, v2 T2, v3 T3) { ... })
-```
-
-**Example**
-
-```go
-count := state.NewRune(0)
-
-cleanup := state.NewEffect(func() func() {
-    fmt.Println("Count is:", count.Get())
-    return func() {
-        fmt.Println("Cleaning up")
-    }
-})
-defer cleanup()
-
-count.Set(1) // Prints: "Count is: 1"
-```
-
----
-
-### Batch
-
-Batch multiple updates into single notification cycle.
-
-```go
-state.Batch(func() {
-    count.Set(1)
-    name.Set("Alice")
-})
-```
-
----
-
-### StateMap
-
-Collection of named reactive values.
-
-```go
-// Create
-sm := state.NewStateMap()
-
-// Add reactive value
-sm.Add(key string, observable Observable)
-sm.AddAny(key string, value any) error // Adds plain value as auto-rune
-
-// Get value
-obs, ok := sm.Get(key string)
-
-// Remove
-sm.Remove(key string)
-
-// Iteration
-sm.ForEach(func(key string, value Observable) { ... })
-
-// Conversion
-m := sm.ToMap() // returns map[string]any
-
-// Serialization
-json, err := sm.ToJSON()
-data, err := sm.MarshalJSON()
-sm.FromJSON(data []byte)
-
-// Diff
-diff := sm.Diff(other *StateMap) *StateDiff
-
-// OnChange callback
-sm.OnChange = func(key string, value any) { ... }
-```
-
----
-
-### StateValidator
-
-Validates reactive state updates.
-
-```go
-validator := state.NewStateValidator()
-
-// Register rules
-validator.AddValidator("count", func(v any) error {
-    if v.(int) < 0 { return errors.New("must be positive") }
-    return nil
-})
-
-// Validate
-err := validator.Validate("count", -1)
-err := validator.ValidateAll(map[string]any{"count": 5})
-```
-
----
-
-### Serialization Types
-
-```go
-type StateMessage struct {
-    Type        string      `json:"type"`
-    ComponentID string      `json:"componentId"`
-    State       interface{} `json:"state"`
-    Timestamp   int64       `json:"timestamp"`
-}
-
-type StateSnapshot struct {
-    ComponentID string
-    State       StateMap
-    Timestamp   int64
-}
-
-type StateDiff struct {
-    Added   map[string]interface{}
-    Removed map[string]interface{}
-    Changed map[string]interface{}
-}
-
-// Constructors
-msg := state.NewInitMessage(componentID string, state interface{})
-msg := state.NewSyncMessage(componentID string, state interface{})
-snapshot := state.NewSnapshot(componentID string, state StateMap)
-```
-
----
-
-## Routing Package
-
-`github.com/aydenstechdungeon/gospa/routing`
-
-### Router
-
-File-based router that scans `.templ` files.
-
-```go
-// Create from directory
-router := routing.NewRouter(routesDir string)
-
-// Create from filesystem (hybrid approach)
-router := routing.NewRouter(routesFS fs.FS)
-
-// Scan routes directory
-err := router.Scan()
-
-// Match route
-route, params := router.Match(path string)
-
-// Match with layout chain
-route, params, layouts := router.MatchWithLayout(path string)
-
-// Get all routes
-routes := router.GetRoutes()
-
-// Get page routes only
-pages := router.GetPages()
-
-// Resolve layout chain for route
-layouts := router.ResolveLayoutChain(route *Route)
-```
-
-**Route Structure**
-
-```go
-type Route struct {
-    Path       string            // URL path
-    FilePath   string            // Source .templ file
-    Params     []string          // Dynamic param names
-    IsCatchAll bool              // [...rest] route
-    Type       RouteType         // page, layout, error, api
-    Meta       map[string]string // Custom metadata
-}
-
-type RouteType int
-const (
-    RouteTypePage RouteType = iota
-    RouteTypeLayout
-    RouteTypeError
-    RouteTypeAPI
-)
-```
-
-**File Convention**
-
-```
-routes/
-├ root_layout.templ    → Base HTML shell
-├ page.templ           → /
-├ about/
-│   └ page.templ       → /about
-├ blog/
-│   ├── layout.templ   → Layout for /blog/*
-│   └ [id]/
-│       └ page.templ   → /blog/:id
-└ posts/
-    └ [...rest]/
-        └ page.templ   → /posts/*
-```
-
----
-
-### Manual Router
-
-For programmatic route registration.
-
-```go
-router := routing.NewManualRouter()
-
-// Register routes
-router.GET(path string, handler Handler, middleware ...Middleware)
-router.POST(path string, handler Handler, middleware ...Middleware)
-router.PUT(path string, handler Handler, middleware ...Middleware)
-router.DELETE(path string, handler Handler, middleware ...Middleware)
-router.PATCH(path string, handler Handler, middleware ...Middleware)
-
-// Get all routes
-routes := router.GetRoutes()
-
-// Create route group
-group := router.Group(prefix string, middleware ...Middleware)
-group.GET("/subpath", handler)
-
-// Register all routes to Fiber
-router.RegisterToFiber(fiberApp *fiber.App)
-```
-
-**Handler Type**
-
-```go
-type Handler func(c *fiber.Ctx) error
-type Middleware func(c *fiber.Ctx) error
-```
-
----
-
-### Params
-
-Route parameter extraction and typed access.
-
-```go
-type Params map[string]string
-
-// Basic access
-value := params.Get("id")
-value := params.GetDefault("id", "default")
-exists := params.Has("id")
-
-// Writing
-params.Set("id", "123")
-
-// Typed access (returns (T, error))
-intVal, err := params.Int("count")
-int64Val, err := params.Int64("id")
-floatVal, err := params.Float64("price")
-boolVal, err := params.Bool("active")
-
-// Slice (for catch-all params, splits by '/')
-sliceVal := params.Slice("path")
-
-// Utility functions
-params := routing.ExtractParams(c *fiber.Ctx, paramKeys []string)
-queryParams := routing.QueryParams(c *fiber.Ctx)
-```
-
----
-
-### Route Registry
-
-Register page and layout components.
-
-```go
-// Defined types
-// type ComponentFunc func(props map[string]interface{}) templ.Component
-// type LayoutFunc func(children templ.Component, props map[string]interface{}) templ.Component
-// type SlotFunc func(props map[string]interface{}) templ.Component
-
-// Register page component
-routing.RegisterPage(path string, fn ComponentFunc)
-routing.RegisterPageWithOptions(path string, fn ComponentFunc, opts RouteOptions)
-
-// Register layout component
-routing.RegisterLayout(path string, fn LayoutFunc)
-
-// Register root layout
-routing.RegisterRootLayout(fn LayoutFunc)
-
-// Get registered components
-pageFunc := routing.GetPage(path string)
-layoutFunc := routing.GetLayout(path string)
-rootLayoutFunc := routing.GetRootLayout()
-
-// Remote actions
-routing.RegisterRemoteAction(name string, fn RemoteActionFunc)
-fn, ok := routing.GetRemoteAction(name string)
-
-// PPR slot registration
-routing.RegisterSlot(pagePath string, slotName string, fn SlotFunc)
-slotFn := routing.GetSlot(pagePath string, slotName string)
-```
-
----
-
-### Route Options
-
-```go
-type RouteOptions struct {
-    // Strategy controls how the page is rendered and cached.
-    // Values: StrategySSR (default), StrategySSG, StrategyISR, StrategyPPR.
-    Strategy   RenderStrategy
-
-    // ISR only: duration after which the cached page is considered stale.
-    // On a stale hit, the old page is returned immediately and a background
-    // goroutine re-renders and updates the cache (stale-while-revalidate).
-    // Zero means always revalidate (behaves like SSR).
-    RevalidateAfter time.Duration
-
-    // PPR only: names of dynamic slots excluded from the cached static shell.
-    // Each name must match a SlotFunc registered via RegisterSlot for this path.
-    DynamicSlots []string
-}
-
-const (
-    StrategySSR RenderStrategy = "ssr" // fresh render per request (default)
-    StrategySSG RenderStrategy = "ssg" // render once, cache forever
-    StrategyISR RenderStrategy = "isr" // render once, revalidate after TTL
-    StrategyPPR RenderStrategy = "ppr" // static shell + per-request dynamic slots
-)
-
-// Get options for route
-opts := routing.GetRouteOptions(path string)
-```
-
----
-
-## Fiber Package
-
-`github.com/aydenstechdungeon/gospa/fiber`
-
-### Middleware
-
-```go
-// SPA middleware - initializes state and component ID
-app.Use(fiber.SPAMiddleware(config fiber.Config))
-
-// State injection into HTML responses
-app.Use(fiber.StateMiddleware(config fiber.Config))
-
-// Runtime script serving
-app.Get("/_gospa/runtime.js", fiber.RuntimeMiddleware(simple bool))
-app.Get("/_gospa/runtime.js", fiber.RuntimeMiddlewareWithContent(content []byte))
-
-// SPA navigation detection
-app.Use(fiber.SPANavigationMiddleware())
-isSPA := fiber.IsSPANavigation(c *fiber.Ctx) bool
-
-// CORS
-app.Use(fiber.CORSMiddleware(allowedOrigins []string))
-
-// Security headers
-app.Use(fiber.SecurityHeadersMiddleware())
-
-// CSRF protection — use BOTH middlewares:
-// 1. CSRFSetTokenMiddleware issues the cookie on GET responses
-// 2. CSRFTokenMiddleware validates the token on POST/PUT/DELETE/PATCH
-app.Use(fiber.CSRFSetTokenMiddleware()) // must come before CSRFTokenMiddleware
-app.Use(fiber.CSRFTokenMiddleware())
-
-// Compression (Brotli + Gzip)
-app.Use(fiber.BrotliGzipMiddleware(fiber.DefaultCompressionConfig()))
-
-// Request logging
-app.Use(fiber.RequestLoggerMiddleware())
-
-// Panic recovery
-app.Use(fiber.RecoveryMiddleware())
-```
-
----
-
-### WebSocket Hub
-
-```go
-// Create hub
-hub := fiber.NewWSHub()
-
-// Start hub (run in goroutine)
-go hub.Run()
-
-// Broadcast to all clients
-hub.Broadcast <- []byte(message)
-
-// Broadcast to specific clients
-hub.BroadcastTo(clientIDs []string, message []byte)
-
-// Broadcast except one
-hub.BroadcastExcept(exceptID string, message []byte)
-
-// Get client
-client, ok := hub.GetClient(id string)
-
-// Client count
-count := hub.ClientCount()
-```
-
----
-
-### WebSocket Client
-
-```go
-// Create client
-client := fiber.NewWSClient(id string, conn *websocket.Conn)
-
-// Properties
-client.ID        string
-client.SessionID string
-client.Conn      *websocket.Conn
-client.State     *state.StateMap
-
-// Methods
-client.SendJSON(v interface{}) error
-client.SendError(message string)
-client.SendState()
-client.SendInitWithSession(sessionToken string)
-client.Close() error
-
-// Read/Write pumps
-client.ReadPump(hub *WSHub, onMessage func(*WSClient, WSMessage))
-client.WritePump()
-```
-
----
-
-### WebSocket Configuration
-
-```go
-config := fiber.WebSocketConfig{
-    Hub:         hub,                    // WebSocket hub
-    OnConnect:   func(*WSClient) {},     // Connect callback
-    OnDisconnect: func(*WSClient) {},    // Disconnect callback
-    OnMessage:   func(*WSClient, WSMessage) {}, // Message handler
-    GenerateID:  func() string {},       // ID generator
-}
-
-// Create handler
-handler := fiber.WebSocketHandler(config)
-```
-
----
-
-### Action Handlers
-
-```go
-// Register action handler
-fiber.RegisterActionHandler(name string, handler func(*WSClient, json.RawMessage))
-
-// Register connect handler
-fiber.RegisterOnConnectHandler(handler func(*WSClient))
-
-// Get action handler
-handler, ok := fiber.GetActionHandler(name string)
-```
-
-**Example**
-
-```go
-fiber.RegisterActionHandler("increment", func(client *fiber.WSClient, payload json.RawMessage) {
-    GlobalCounter.Count++
-    fiber.BroadcastState(hub, "count", GlobalCounter.Count)
-})
-```
-
----
-
-### Session Management
-
-```go
-// Session store - maps tokens to client IDs
-sessionStore := fiber.NewSessionStore()
-token := sessionStore.CreateSession(clientID string)
-clientID, ok := sessionStore.ValidateSession(token string)
-sessionStore.RemoveSession(token string)
-sessionStore.RemoveClientSessions(clientID string)
-
-// Client state store - persists state by client ID
-stateStore := fiber.NewClientStateStore()
-stateStore.Save(clientID string, state *state.StateMap)
-state, ok := stateStore.Get(clientID string)
-stateStore.Remove(clientID string)
-
-// Global instances
-fiber.globalSessionStore
-fiber.globalClientStateStore
-```
-
----
-
-### Utility Functions
-
-```go
-// Broadcast state to all clients
-fiber.BroadcastState(hub *WSHub, key string, value interface{}) error
-
-// Send to specific client
-fiber.SendToClient(hub *WSHub, clientID string, message interface{}) error
-
-// State sync HTTP handler
-handler := fiber.StateSyncHandler(hub *WSHub)
-
-// Component rendering
-fiber.RenderComponent(c *fiber.Ctx, config Config, component templ.Component, name string) error
-
-// State access
-stateMap := fiber.GetState(c *fiber.Ctx, config Config)
-componentID := fiber.GetComponentID(c *fiber.Ctx, config Config)
-sessionState := fiber.GetSessionState(c *fiber.Ctx, config Config)
-fiber.SetSessionState(c *fiber.Ctx, config Config, key string, value interface{})
-
-// Response helpers
-fiber.JSONResponse(c *fiber.Ctx, status int, data interface{}) error
-fiber.JSONError(c *fiber.Ctx, status int, message string) error
-fiber.ParseBody(c *fiber.Ctx, v interface{}) error
-```
-
----
-
-## Templ Package
-
-`github.com/aydenstechdungeon/gospa/templ`
-
-### Reactive Bindings
-
-```go
-// Create data binding attribute
-attrs := templ.Bind(componentID, key string) templ.Attributes
-
-// Create multiple bindings
-attrs := templ.BindAll(componentID string, keys ...string) templ.Attributes
-```
-
-**Example**
-
-```templ
-templ Counter(count int) {
-    <div data-component="counter">
-        <span { templ.Bind("counter", "count")... }>{ count }</span>
-        <button { templ.On("click", "counter", "increment")... }>+</button>
-    </div>
-}
-```
-
----
-
-### Event Handlers
-
-```go
-// Create event handler attribute
-attrs := templ.On(event, componentID, handler string) templ.Attributes
-
-// With options
-attrs := templ.OnWithOpts(event, componentID, handler string, opts templ.EventOptions) templ.Attributes
-
-type EventOptions struct {
-    PreventDefault  bool
-    StopPropagation bool
-    Debounce        int // milliseconds
-    Throttle        int // milliseconds
-}
-```
-
-**Example**
-
-```templ
-templ Button() {
-    <button { templ.On("click", "counter", "increment")... }>
-        Click me
-    </button>
-
-    <form { templ.OnWithOpts("submit", "form", "handleSubmit", templ.EventOptions{
-        PreventDefault: true,
-    })... }>
-        <input type="text" name="value" />
-        <button type="submit">Submit</button>
-    </form>
-}
-```
-
----
-
-### Component Helpers
-
-```go
-// Create component wrapper
-comp := templ.NewComponent(name string, opts ...ComponentOption) *Component
-
-// Options
-templ.WithProps(props map[string]any) ComponentOption
-templ.WithState(state *state.StateMap) ComponentOption
-
-// Render
-rendered := templ.RenderComponent(comp *Component, content templ.Component) templ.Component
-```
-
----
-
-## Client Runtime
-
-### Rune Class
-
-```javascript
-const count = new GoSPA.Rune(0)
-
-count.get()           // 0
-count.set(5)
-count.update(v => v + 1)
-
-const unsub = count.subscribe((value, oldValue) => {
-    console.log('Count:', value)
-})
-unsub() // stop listening
-```
-
----
-
-### Derived Class
-
-```javascript
-const count = new GoSPA.Rune(5)
-const doubled = new GoSPA.Derived(() => count.get() * 2)
-
-doubled.get() // 10
-count.set(10)
-doubled.get() // 20
-```
-
----
-
-### Effect Class
-
-```javascript
-const count = new GoSPA.Rune(0)
-
-const cleanup = new GoSPA.Effect(() => {
-    console.log('Count:', count.get())
-    return () => console.log('Cleanup')
-})
-
-cleanup() // stop effect
-```
-
----
-
-### StateMap Class
-
-```javascript
-const state = new GoSPA.StateMap()
-
-state.set('count', 0)
-state.get('count')     // Rune object
-state.has('count')     // true
-state.delete('count')
-state.clear()
-
-state.toJSON()         // { count: 0 }
-state.fromJSON({ count: 5 })
-```
-
----
-
-### Batch Updates
-
-```javascript
-GoSPA.batch(() => {
-    count.set(1)
-    name.set('Alice')
-})
-```
-
----
-
-### Watch
-
-```javascript
-// Watch single rune
-const unsub = GoSPA.watch(count, (value, oldValue) => {
-    console.log('Changed:', value)
-})
-
-// Watch multiple runes
-const unsub = GoSPA.watch([count, name], (values, oldValues) => {
-    console.log('Count:', values[0], 'Name:', values[1])
-})
-```
-
----
-
-### Advanced State
-
-```javascript
-// Untrack - read without subscribing
-const value = GoSPA.untrack(() => count.get())
-
-// Raw rune - shallow reactivity
-const raw = new GoSPA.RuneRaw({ name: 'Alice' })
-
-// Snapshot - non-reactive copy
-const snap = GoSPA.snapshot(count)
-
-// Pre-effect - runs before DOM updates
-const cleanup = new GoSPA.PreEffect(() => {
-    console.log('Before DOM update')
-})
-
-// Effect root - manual lifecycle
-const stop = GoSPA.effectRoot(() => {
-    console.log('Effect running')
-})
-
-// Check if tracking
-if (GoSPA.tracking()) { ... }
-```
-
----
-
-### Async State
-
-```javascript
-// Async derived
-const data = new GoSPA.DerivedAsync(async () => {
-    const res = await fetch('/api/data')
-    return res.json()
-})
-
-data.get()       // undefined while loading
-data.status      // 'idle' | 'pending' | 'success' | 'error'
-data.isPending   // true/false
-data.isSuccess   // true/false
-data.isError     // true/false
-data.error       // Error object if failed
-
-// Resource
-const res = new GoSPA.Resource(async () => {
-    const response = await fetch('/api/data')
-    return response.json()
-})
-
-await res.refetch()
-res.reset()
-res.data         // current data
-res.status       // current status
-
-// Reactive resource
-const res = GoSPA.resourceReactive([userId], async () => {
-    return fetch(`/api/users/${userId.get()}`).then(r => r.json())
-})
-```
-
----
-
-### Debug
-
-```javascript
-// Inspect state changes (dev only)
-GoSPA.inspect(count, name)
-GoSPA.inspect(count).with((type, values) => {
-    if (type === 'update') debugger
-})
-
-// Trace dependencies
-GoSPA.inspect.trace('label')
-```
-
----
-
-### WebSocket Client
-
-```javascript
-// Initialize WebSocket
-const ws = GoSPA.initWebSocket('ws://localhost:3000/_gospa/ws')
-
-// Get client
-const client = GoSPA.getWebSocketClient()
-
-// Send action
-GoSPA.sendAction('increment', { value: 1 })
-
-// Synced rune (auto-syncs with server)
-const count = GoSPA.syncedRune('count', 0)
-
-// Apply state update
-GoSPA.applyStateUpdate({ key: 'count', value: 5 })
-```
-
----
-
-### Navigation
-
-```javascript
-// Navigate
-GoSPA.navigate('/about')
-GoSPA.navigate('/about', { replace: true })
-
-// History
-GoSPA.back()
-GoSPA.forward()
-GoSPA.go(-2)  // Go back 2
-
-// Prefetch
-GoSPA.prefetch('/blog')      // Prefetch page into cache (30s TTL)
-
-// State
-GoSPA.getCurrentPath()
-GoSPA.isNavigating()
-
-// Events
-GoSPA.onBeforeNavigate((from, to) => {
-    // Return false to cancel
-})
-GoSPA.onAfterNavigate((from, to) => {
-    console.log('Navigated to:', to)
-})
-
-// Initialize navigation
-GoSPA.initNavigation()
-GoSPA.destroyNavigation()
-
-// Navigation state
-const navState = GoSPA.createNavigationState()
-
-// Global DOM Event (for vanilla JS)
-document.addEventListener('gospa:navigated', (e) => {
-    console.log('Navigated to:', e.detail.path)
-})
-```
-
----
-
-### Transitions
-
-```javascript
-// Setup transitions on element
-GoSPA.setupTransitions(element, {
-    enter: 'fade',
-    leave: 'slide'
-})
-
-// Built-in transitions
-GoSPA.fade(element, { duration: 300 })
-GoSPA.fly(element, { duration: 300, y: 50 })
-GoSPA.slide(element, { duration: 300, direction: 'left' })
-GoSPA.scale(element, { duration: 300, start: 0.8 })
-GoSPA.blur(element, { duration: 300 })
-
-// Crossfade between elements
-GoSPA.crossfade(elementA, elementB, { duration: 300 })
-```
-
----
-
-### DOM Binding
-
-```javascript
-// Bind element to rune
-GoSPA.bindElement('element-id', countRune)
-
-// Two-way binding for inputs
-GoSPA.bindTwoWay('input-id', nameRune)
-
-// Conditional rendering
-GoSPA.renderIf(conditionRune, element)
-
-// List rendering
-GoSPA.renderList(itemsRune, (item, index) => {
-    return document.createElement('div')
-})
-
-// Register/unregister custom bindings
-GoSPA.registerBinding('custom', (element, rune) => { ... })
-GoSPA.unregisterBinding('custom')
-```
-
----
-
-### Events
-
-```javascript
-// Add event listener with auto-cleanup
-GoSPA.on(element, 'click', handler)
-
-// Remove all listeners
-GoSPA.offAll(element)
-
-// Debounce
-const debounced = GoSPA.debounce(handler, 300)
-
-// Throttle
-const throttled = GoSPA.throttle(handler, 300)
-
-// Event delegation
-GoSPA.delegate(container, '.button', 'click', handler)
-
-// Keyboard shortcuts
-GoSPA.onKey(['ctrl', 's'], handler)
-GoSPA.keys.ctrl  // Check if key is pressed
-GoSPA.keys.all   // Set of all pressed keys
-
-// Event transformers
-GoSPA.transformers.preventDefault
-GoSPA.transformers.stopPropagation
-```
-
----
-
-### Event Handling Patterns
-
-GoSPA sanitizes HTML during SPA navigation using DOMPurify, which strips inline event handlers (`onclick`, `onmouseover`, etc.) for security. Use these patterns instead:
-
-**Inside Components (data-on):**
-
-```html
-<div data-gospa-component="counter">
-    <button data-on="click:increment">+</button>
-    <span data-bind="count">0</span>
-</div>
-```
-
-**Outside Components (data-action with global delegation):**
-
-For elements outside `data-gospa-component` (like layouts, static content), use `data-action` attributes with global event delegation:
-
-```html
-<!-- In your template -->
-<button data-action="copy-code">Copy</button>
-<button data-action="toggle-menu">Menu</button>
-```
-
-```javascript
-// In your root layout or main script
-document.addEventListener('click', (e) => {
-    const target = e.target.closest('[data-action]');
-    if (!target) return;
-    
-    const action = target.getAttribute('data-action');
-    
-    switch (action) {
-        case 'copy-code':
-            const code = target.parentElement.querySelector('code');
-            navigator.clipboard.writeText(code.innerText);
-            break;
-        case 'toggle-menu':
-            document.getElementById('menu').classList.toggle('hidden');
-            break;
-    }
-});
-```
-
-This pattern survives SPA navigation because the handler is attached at document level, not on individual elements.
-
----
-
-### Component API
-
-```javascript
-// Initialize component
-GoSPA.init({
-    wsUrl: 'ws://localhost:3000/_gospa/ws',
-    debug: true,
-    hydration: {
-        mode: 'immediate',  // 'immediate' | 'lazy' | 'visible'
-        timeout: 5000
-    }
-})
-
-// Create component
-const comp = GoSPA.createComponent('counter', {
-    count: new GoSPA.Rune(0)
-})
-
-// Get component
-const comp = GoSPA.getComponent('counter')
-
-// State access
-const state = GoSPA.getState('counter')
-GoSPA.setState('counter', { count: 5 })
-
-// Call action
-GoSPA.callAction('increment', { value: 1 })
-
-// Destroy component
-GoSPA.destroyComponent('counter')
-
-// Auto-initialize from DOM
-GoSPA.autoInit()
-```
-
----
-
-### Partial Hydration
-
-```html
-<div data-gospa-static>
-    <!-- No bindings or event listeners -->
-    <p>Static content</p>
-</div>
-```
-
----
-
-### Transitions
-
-```html
-<!-- Single transition -->
-<div data-transition="fade" data-transition-params='{"duration": 300}'>
-    Content
-</div>
-
-<!-- Separate in/out -->
-<div data-transition-in="fly" data-transition-out="slide">
-    Content
-</div>
-```
-
-Available transitions: `fade`, `fly`, `slide`, `scale`, `blur`
-
----
-
-### Local State Mode
-
-Components with client-only state (no server sync).
-
-```html
-<div data-gospa-component="counter" data-gospa-local>
-    <span data-bind="count">0</span>
-    <button data-on="click:increment">+</button>
-</div>
-```
-
-Local state handlers run entirely in the browser without WebSocket communication.
-
----
-
-## Islands & Partial Hydration
-
-See [ISLANDS.md](ISLANDS.md) for full documentation.
-
-```typescript
-import { initIslands, hydrateIsland, getIslandManager } from './island.ts';
-
-// Initialize — auto-discovers [data-gospa-island] elements
-const manager = initIslands({
-    moduleBasePath: '/islands',    // Where island JS files are served from
-    defaultTimeout: 30000,
-    debug: false,
-    moduleLoader: async (name) => import(`./islands/${name}`), // optional custom loader
-});
-
-// Manually hydrate a lazy island
-await hydrateIsland('Counter');  // by name or DOM id
-
-// Check status
-manager.isHydrated('counter-1');
-manager.getIslands();       // all discovered islands
-manager.discoverIslands();  // re-scan DOM (use after SPA nav)
-manager.destroy();          // clean up observers
-
-// Browser globals (available when island.ts is loaded)
-window.__GOSPA_ISLAND_MANAGER__.init(config)
-window.__GOSPA_ISLAND_MANAGER__.get()
-window.__GOSPA_ISLAND_MANAGER__.hydrate(name)
-
-// DOM event — fired on the island element after hydration
-element.addEventListener('gospa:hydrated', (ev) => {
-    console.log(ev.detail.island); // IslandElementData
-});
-```
-
-### Hydration Modes (via `data-gospa-mode`)
-
-| Mode | Trigger |
-|------|---------|
-| `immediate` | On discovery (default) |
-| `visible` | Enters viewport (IntersectionObserver) |
-| `idle` | Browser idle (requestIdleCallback) |
-| `interaction` | mouseenter / touchstart / focusin / click |
-| `lazy` | Manual call only |
-
-### Island Module Shape
-
-```typescript
-// Both default export and named export are supported.
-export default {
-    hydrate(element: Element, props: Record<string, unknown>, state: Record<string, unknown>) {
-        // Mount your UI here
-    }
-}
-// OR
-export function hydrate(element, props, state) { ... }
-export function mount(element, props, state) { ... }  // alias for hydrate
-```
-
----
-
-## HMR (Hot Module Replacement)
-
-See [HMR.md](HMR.md) for full documentation.
-
-```go
-// Server setup
-hmr := fiber.InitHMR(fiber.HMRConfig{
-    Enabled:      true,
-    WatchPaths:   []string{"./routes", "./static"},
-    IgnorePaths:  []string{"node_modules", ".git"},
-    DebounceTime: 500 * time.Millisecond, // default
-})
-hmr.Start()
-defer hmr.Stop()
-
-// Register endpoints
-app.Get("/__hmr", hmr.HMREndpoint())  // WebSocket upgrades
-app.Use(hmr.HMRMiddleware())           // Inject client script into HTML
-
-// State preservation (for modules that need it)
-hmr.PreserveState(moduleID string, state any)
-state, exists := hmr.GetState(moduleID string)
-hmr.ClearState(moduleID string)
-
-// Global accessor
-hmr := fiber.GetHMR()
-```
-
-### HMRConfig Fields
-
-| Field | Type | Default | Description |
-|-------|------|---------|-------------|
-| `Enabled` | bool | false | Master switch |
-| `WatchPaths` | []string | — | Dirs to poll for changes |
-| `IgnorePaths` | []string | — | Path substrings to skip |
-| `DebounceTime` | Duration | 500ms | Min time between updates for same file |
-| `BroadcastAll` | bool | false | Broadcast to all clients regardless of path |
-
-
-<!-- FILE: docs/TODO_APP_EXAMPLE.md -->
+<!-- FILE: docs/01-getting-started/02-tutorial.md -->
 ================================================================================
 
 # Todo App Example - Implementation Plan
@@ -2848,7 +1500,294 @@ flowchart TD
 - Comment complex reactive patterns for learning purposes
 
 
-<!-- FILE: docs/STATE_PRIMITIVES.md -->
+<!-- FILE: docs/02-core-concepts/02-rendering.md -->
+================================================================================
+
+# Rendering Strategies
+
+GoSPA supports four per-page rendering strategies that can be mixed freely across routes. Each strategy controls how and when a page is rendered and how its HTTP `Cache-Control` header is set.
+
+## Strategy Overview
+
+| Strategy | When to Use | Cache-Control |
+|----------|-------------|---------------|
+| `StrategySSR` | Auth-gated pages, real-time data, per-user content | `no-store` |
+| `StrategySSG` | Fully static content: marketing pages, docs, landing pages | `public, max-age=31536000, immutable` |
+| `StrategyISR` | Mostly static, acceptable to serve stale for N minutes | `public, s-maxage=<TTL>, stale-while-revalidate=<TTL>` |
+| `StrategyPPR` | "App shell" pages with a static outer frame and dynamic inner sections | `no-store` (slots rendered per-request) |
+
+All four strategies share the same rendering pipeline (file-based routing, layout chain, root layout). The strategy only affects **caching and when re-rendering occurs**.
+
+---
+
+## SSR — Server-Side Rendering (default)
+
+Every request triggers a fresh render. This is the default and requires no extra configuration.
+
+```go
+// Default — no options needed
+routing.RegisterPage("/dashboard", dashboardPage)
+
+// Or explicitly:
+routing.RegisterPageWithOptions("/dashboard", dashboardPage, routing.RouteOptions{
+    Strategy: routing.StrategySSR,
+})
+```
+
+**HTTP header:** `Cache-Control: no-store`  
+**Requires `CacheTemplates`:** No
+
+---
+
+## SSG — Static Site Generation
+
+The page is rendered **once** on first request and cached until `SSGCacheTTL` expires or it is evicted by FIFO policy or server restart. Subsequent requests are served instantly from the in-memory cache.
+
+> **Warning:** If `SSGCacheTTL` is set to `0` (the default), SSG caches forever without expiring, making it susceptible to stale content and memory pressure over time. **For most use-cases, we strongly recommend using ISR (Incremental Static Regeneration) instead**, which provides the exact same performance but allows pages to expire.
+
+```go
+routing.RegisterPageWithOptions("/about", aboutPage, routing.RouteOptions{
+    Strategy: routing.StrategySSG,
+})
+```
+
+**Enable the cache** in your app config:
+
+```go
+app := gospa.New(gospa.Config{
+    CacheTemplates:     true,
+    SSGCacheMaxEntries: 500, // FIFO eviction at 500 entries (default for in-memory)
+    SSGCacheTTL:        1 * time.Hour, // Optional expiration time for static pages
+    // Optional: Configure an external store like Redis to share cache across processes
+    Storage: redisstore.NewStore(redisClient),
+})
+```
+
+**HTTP header:** `Cache-Control: public, max-age=31536000, immutable`  
+**Requires `CacheTemplates`:** Yes
+
+> **Note:** If `CacheTemplates` is `false`, SSG pages fall back to per-request SSR rendering. No error is raised.
+
+---
+
+## ISR — Incremental Static Regeneration
+
+ISR is an extension of SSG with a **TTL (Time-To-Live)**. On first request the page is rendered and cached. Subsequent requests within the TTL are served from cache. When a request arrives **after** the TTL has expired, the **stale** cached version is returned immediately (zero added latency) and a background goroutine re-renders the page to update the cache. This is known as the **stale-while-revalidate** pattern.
+
+```go
+routing.RegisterPageWithOptions("/blog", blogIndexPage, routing.RouteOptions{
+    Strategy:        routing.StrategyISR,
+    RevalidateAfter: 5 * time.Minute,
+})
+```
+
+**App config:**
+```go
+app := gospa.New(gospa.Config{
+    CacheTemplates:         true,
+    DefaultRevalidateAfter: 10 * time.Minute, // ISR TTL fallback for pages that don't set it
+})
+```
+
+**HTTP header:** `Cache-Control: public, s-maxage=300, stale-while-revalidate=300`  
+**Requires `CacheTemplates`:** Yes
+
+### ISR Behaviour Details
+
+| Scenario | Result |
+|----------|--------|
+| Cache miss (first request) | Render synchronously, store, respond |
+| Cache hit, age < TTL | Serve from cache immediately |
+| Cache hit, age ≥ TTL | Serve stale cache immediately; background goroutine re-renders and updates cache |
+| Multiple simultaneous stale requests | Only **one** background goroutine is launched (deduplicated via `sync.Map`) |
+
+> **Prefork warning:** By default, ISR cache is in-memory and per-process. With `Prefork: true` each child process maintains its own cache. TTL-based revalidation still works correctly per process, but cache entries are not shared between processes. For shared ISR, configure an external `Storage` backend (e.g., Redis).
+
+---
+
+## PPR — Partial Prerendering
+
+PPR renders a **static shell** of the page (header, nav, footer, skeleton layout) once and caches it. Per-request only the **named dynamic slots** (e.g. a user feed, notification list, or live data widget) are re-rendered and merged into the cached shell before responding.
+
+This gives you the performance of SSG for the page frame and SSR freshness for dynamic content sections, without the overhead of re-rendering the entire page tree on every request.
+
+### Step 1 — Register the page with slot names
+
+```go
+routing.RegisterPageWithOptions("/dashboard", dashboardPage, routing.RouteOptions{
+    Strategy:     routing.StrategyPPR,
+    DynamicSlots: []string{"feed", "notifications"},
+})
+
+// Register each slot's render function
+routing.RegisterSlot("/dashboard", "feed", feedSlot)
+routing.RegisterSlot("/dashboard", "notifications", notificationsSlot)
+```
+
+### Step 2 — Use `DynamicSlot` in your templ component
+
+```go
+// routes/dashboard/page.templ
+package dashboard
+
+import "github.com/aydenstechdungeon/gospa/templ"
+
+templ Page(props map[string]interface{}) {
+    <div class="dashboard">
+        <header>...</header>  // ← rendered into the cached shell
+        <nav>...</nav>        // ← rendered into the cached shell
+
+        // This slot is excluded from the shell and re-rendered per-request
+        @templ.DynamicSlot("feed", FeedComponent(props))
+
+        // This slot is also per-request
+        @templ.DynamicSlot("notifications", NotificationsComponent(props))
+
+        <footer>...</footer>  // ← rendered into the cached shell
+    </div>
+}
+```
+
+During the first request (shell build), `DynamicSlot` emits `<!--gospa-slot:feed-->` and `<!--gospa-slot:notifications-->` into the cached HTML. On each subsequent request, the server renders each slot function and replaces the placeholder comment with the live `<div data-gospa-slot="...">` fragment.
+
+**App config:**
+```go
+app := gospa.New(gospa.Config{
+    CacheTemplates: true,
+})
+```
+
+**HTTP header:** `Cache-Control: no-store` (slots are per-request)  
+**Requires `CacheTemplates`:** Yes
+
+### PPR API Reference
+
+```go
+// templ package — use in .templ files
+templ.DynamicSlot(name string, content templ.Component) templ.Component
+
+// Context helpers (used internally by the framework)
+templ.WithPPRShellBuild(ctx context.Context) context.Context
+templ.IsPPRShellBuild(ctx context.Context) bool
+
+// routing package — register slot render functions
+routing.RegisterSlot(pagePath, slotName string, fn routing.SlotFunc)
+routing.GetSlot(pagePath, slotName string) routing.SlotFunc
+
+// SlotFunc signature
+type SlotFunc func(props map[string]interface{}) templ.Component
+```
+
+---
+
+## Per-Page Strategy Selector
+
+### Option A — Inline `init()` (recommended, works today)
+
+Register strategy directly in your route file's `init()` function:
+
+```go
+// routes/blog/page.templ or a companion .go file
+func init() {
+    routing.RegisterPageWithOptions("/blog", blogPage, routing.RouteOptions{
+        Strategy:        routing.StrategyISR,
+        RevalidateAfter: 5 * time.Minute,
+    })
+}
+```
+
+### Option B — `page.options.go` convention (used by code generator)
+
+Place a companion file next to your `page.templ`:
+
+```go
+// routes/blog/page.options.go
+package blog
+
+import (
+    "time"
+    "github.com/aydenstechdungeon/gospa/routing"
+)
+
+var PageOptions = routing.RouteOptions{
+    Strategy:        routing.StrategyISR,
+    RevalidateAfter: 5 * time.Minute,
+}
+```
+
+The code generator (`gospa generate`) reads `PageOptions` and emits `RegisterPageWithOptions` in `generated/routes.go`.
+
+---
+
+## Global Strategy Defaults
+
+Set defaults in `gospa.Config` for pages that don't specify their own strategy:
+
+```go
+app := gospa.New(gospa.Config{
+    CacheTemplates:         true,
+    DefaultRenderStrategy:  routing.StrategyISR,  // default for all pages
+    DefaultRevalidateAfter: 10 * time.Minute,     // ISR TTL default
+    SSGCacheMaxEntries:     1000,                 // shared FIFO limit for SSG+ISR+PPR
+})
+```
+
+Per-page `RouteOptions` always take precedence over these defaults.
+
+---
+
+## Cache Sizing and Eviction
+
+All three caching strategies (SSG, ISR, PPR shells) share a unified **FIFO eviction** policy controlled by `SSGCacheMaxEntries`:
+
+- Default: `500`
+- Set to `-1` for unbounded (not recommended in production)
+- SSG and ISR pages share the same pool; PPR shells share the same pool
+
+---
+
+## Interaction with Prefork
+
+In Prefork mode (`Prefork: true`), if no external `Storage` is configured, each child process has its own independent in-memory cache. Cache entries are not shared between processes. ISR TTLs fire independently per process.
+
+To support shared SSG, ISR, and PPR caching across Prefork child processes or horizontally scaled clusters, configure the `Storage` option in `gospa.Config` with a distributed backend such as Redis. This ensures consistent cache hits and dedicates a single background revalidation per route across the entire cluster.
+
+---
+
+## Quick Reference
+
+```go
+import (
+    "time"
+    "github.com/aydenstechdungeon/gospa/routing"
+    gospatmpl "github.com/aydenstechdungeon/gospa/templ"
+)
+
+// SSR (default)
+routing.RegisterPage("/", indexPage)
+
+// SSG
+routing.RegisterPageWithOptions("/about", aboutPage, routing.RouteOptions{
+    Strategy: routing.StrategySSG,
+})
+
+// ISR with 5-minute TTL
+routing.RegisterPageWithOptions("/blog", blogPage, routing.RouteOptions{
+    Strategy:        routing.StrategyISR,
+    RevalidateAfter: 5 * time.Minute,
+})
+
+// PPR with two dynamic slots
+routing.RegisterPageWithOptions("/dashboard", dashboardPage, routing.RouteOptions{
+    Strategy:     routing.StrategyPPR,
+    DynamicSlots: []string{"feed", "notifications"},
+})
+routing.RegisterSlot("/dashboard", "feed",          feedSlot)
+routing.RegisterSlot("/dashboard", "notifications", notificationsSlot)
+```
+
+
+<!-- FILE: docs/02-core-concepts/03-state.md -->
 ================================================================================
 
 # Go State Primitives Reference
@@ -3714,116 +2653,1540 @@ The Go implementation focuses on server-side concerns:
 - No DOM-related features
 
 
-<!-- FILE: docs/STATE_PRUNING.md -->
+<!-- FILE: docs/02-core-concepts/04-components.md -->
 ================================================================================
 
-# StatePruner — API Reference
+# GoSPA Component System
 
-`github.com/aydenstechdungeon/gospa/state`
+The component system provides a structured way to build reusable, composable UI components with lifecycle management, props validation, and state handling.
 
 ## Overview
 
-`StatePruner` automatically removes stale `Rune` values from a `StateMap` when they haven't changed for a configurable duration. This prevents unbounded state map growth in long-lived applications where keys are added dynamically.
+GoSPA components are built using the `component` package which provides:
+
+- **BaseComponent**: Foundation for all components
+- **ComponentTree**: Hierarchical component management
+- **Lifecycle**: Component lifecycle hooks
+- **Props**: Type-safe property handling with validation
 
 ---
 
-## Types
+## BaseComponent
+
+The `BaseComponent` is the foundation for all GoSPA components.
+
+### Creating a Component
 
 ```go
-// StatePruner periodically removes stale entries from a StateMap.
-type StatePruner struct {
+import "github.com/gospa/gospa/component"
+
+// Create a basic component
+comp := component.NewBaseComponent("my-component")
+
+// Create with options
+comp := component.NewBaseComponent("my-component",
+    component.WithProps(component.Props{
+        "title": "Hello",
+        "count": 0,
+    }),
+    component.WithState(stateMap),
+    component.WithChildren(childComponent),
+)
+```
+
+### Methods
+
+| Method | Signature | Description |
+|--------|-----------|-------------|
+| `ID()` | `string` | Returns unique component identifier |
+| `Name()` | `string` | Returns component name |
+| `State()` | `*state.StateMap` | Returns component state |
+| `Props()` | `Props` | Returns component props |
+| `Children()` | `[]Component` | Returns child components |
+| `Parent()` | `Component` | Returns parent component |
+| `AddChild()` | `AddChild(child Component)` | Adds a child component |
+| `RemoveChild()` | `RemoveChild(child Component)` | Removes a child component |
+| `GetSlot()` | `GetSlot(name string) templ.Component` | Gets a named slot |
+| `SetSlot()` | `SetSlot(name string, comp templ.Component)` | Sets a named slot |
+| `Context()` | `context.Context` | Returns component context |
+| `SetContext()` | `SetContext(ctx context.Context)` | Sets component context |
+| `ToJSON()` | `([]byte, error)` | Serializes component to JSON |
+| `Clone()` | `Component` | Creates a deep copy |
+
+### Component Options
+
+```go
+// Props option
+component.WithProps(component.Props{
+    "title": "My Title",
+    "visible": true,
+})
+
+// State option
+component.WithState(stateMap)
+
+// Children option
+component.WithChildren(child1, child2, child3)
+
+// Parent option
+component.WithParent(parentComponent)
+
+// Context option
+component.WithContext(context.Background())
+
+// Slots option
+component.WithSlots(map[string]templ.Component{
+    "header": headerComponent,
+    "footer": footerComponent,
+})
+```
+
+---
+
+## Component Interface
+
+```go
+type Component interface {
+    ID() string
+    Name() string
+    State() *state.StateMap
+    Props() Props
+    Children() []Component
+    Parent() Component
+    AddChild(child Component)
+    RemoveChild(child Component)
+    GetSlot(name string) templ.Component
+    SetSlot(name string, comp templ.Component)
+    Context() context.Context
+    SetContext(ctx context.Context)
+    ToJSON() ([]byte, error)
+    Clone() Component
+}
+```
+
+---
+
+## ComponentTree
+
+Manages hierarchical component relationships.
+
+### Creating a Tree
+
+```go
+// Create with root component
+tree := component.NewComponentTree(rootComponent)
+
+// Get root
+root := tree.Root()
+
+// Get component by ID
+comp := tree.Get("component-id")
+
+// Add component to tree
+tree.Add(parent, child)
+
+// Remove component from tree
+tree.Remove(component)
+```
+
+### Tree Methods
+
+| Method | Signature | Description |
+|--------|-----------|-------------|
+| `Root()` | `Component` | Returns root component |
+| `Get()` | `Get(id string) Component` | Get component by ID |
+| `Add()` | `Add(parent, child Component)` | Add child to parent |
+| `Remove()` | `Remove(component Component)` | Remove from tree |
+| `OnMount()` | `OnMount(fn func(Component))` | Register mount callback |
+| `OnUpdate()` | `OnUpdate(fn func(Component))` | Register update callback |
+| `OnDestroy()` | `OnDestroy(fn func(Component))` | Register destroy callback |
+| `Mount()` | `Mount()` | Trigger mount lifecycle |
+| `Update()` | `Update()` | Trigger update lifecycle |
+| `Walk()` | `Walk(fn func(Component) bool)` | Walk tree depth-first |
+| `Find()` | `Find(fn func(Component) bool) Component` | Find first matching |
+| `FindAll()` | `FindAll(fn func(Component) bool) []Component` | Find all matching |
+| `FindByName()` | `FindByName(name string) Component` | Find by component name |
+| `FindByProp()` | `FindByProp(key string, value any) Component` | Find by prop value |
+
+### Walking the Tree
+
+```go
+// Walk all components
+tree.Walk(func(comp Component) bool {
+    fmt.Println("Component:", comp.Name())
+    return true // continue walking
+})
+
+// Find specific component
+found := tree.Find(func(comp Component) bool {
+    return comp.Name() == "target-component"
+})
+
+// Find all matching
+all := tree.FindAll(func(comp Component) bool {
+    props := comp.Props()
+    return props.GetBool("active")
+})
+```
+
+---
+
+## Lifecycle
+
+The `Lifecycle` type manages component lifecycle phases and hooks.
+
+### Lifecycle Phases
+
+```go
+const (
+    PhaseCreated   LifecyclePhase = iota // Component created
+    PhaseMounting                        // Component mounting
+    PhaseMounted                         // Component mounted
+    PhaseUpdating                        // Component updating
+    PhaseUpdated                         // Component updated
+    PhaseDestroying                      // Component destroying
+    PhaseDestroyed                       // Component destroyed
+)
+```
+
+### Creating a Lifecycle
+
+```go
+lc := component.NewLifecycle()
+
+// Check current phase
+phase := lc.Phase()
+
+// Check if mounted
+if lc.IsMounted() {
+    // Component is mounted
+}
+```
+
+### Registering Hooks
+
+```go
+// Before mount
+lc.OnBeforeMount(func() {
+    fmt.Println("About to mount")
+})
+
+// On mount
+lc.OnMount(func() {
+    fmt.Println("Mounted")
+})
+
+// Before update
+lc.OnBeforeUpdate(func() {
+    fmt.Println("About to update")
+})
+
+// On update
+lc.OnUpdate(func() {
+    fmt.Println("Updated")
+})
+
+// Before destroy
+lc.OnBeforeDestroy(func() {
+    fmt.Println("About to destroy")
+})
+
+// On destroy
+lc.OnDestroy(func() {
+    fmt.Println("Destroyed")
+})
+
+// Cleanup (runs after destroy)
+lc.OnCleanup(func() {
+    fmt.Println("Cleanup")
+})
+```
+
+### Triggering Lifecycle Events
+
+```go
+// Trigger mount
+lc.Mount()
+
+// Trigger update
+lc.Update()
+
+// Trigger destroy
+lc.Destroy()
+
+// Clear all hooks
+lc.ClearHooks()
+```
+
+### Lifecycle-Aware Components
+
+```go
+type LifecycleAware interface {
+    OnBeforeMount()
+    OnMount()
+    OnBeforeUpdate()
+    OnUpdate()
+    OnBeforeDestroy()
+    OnDestroy()
+}
+```
+
+### Helper Functions
+
+```go
+// Mount a component with lifecycle
+err := component.MountComponent(comp)
+
+// Update a component with lifecycle
+err := component.UpdateComponent(comp)
+
+// Destroy a component with lifecycle
+err := component.DestroyComponent(comp)
+```
+
+---
+
+## Props
+
+Type-safe property handling with validation.
+
+### Basic Usage
+
+```go
+// Create props
+props := component.Props{
+    "title": "Hello",
+    "count": 42,
+    "active": true,
+}
+
+// Get values
+title := props.Get("title")           // any
+titleStr := props.GetString("title")  // string
+count := props.GetInt("count")        // int
+count64 := props.GetInt64("count")    // int64
+price := props.GetFloat64("price")    // float64
+active := props.GetBool("active")     // bool
+items := props.GetSlice("items")      // []any
+config := props.GetMap("config")      // map[string]any
+
+// Get with default
+title := props.GetDefault("title", "Default Title")
+
+// Set value
+props.Set("newKey", "newValue")
+
+// Check existence
+if props.Has("title") {
+    // Key exists
+}
+
+// Delete key
+props.Delete("oldKey")
+
+// Get all keys
+keys := props.Keys()
+
+// Get all values
+values := props.Values()
+
+// Clone props
+cloned := props.Clone()
+
+// Merge props
+props.Merge(otherProps)
+
+// JSON serialization
+json, err := props.ToJSON()
+
+// Compare props
+if props.Equals(otherProps) {
+    // Props are equal
+}
+```
+
+### Props Methods
+
+| Method | Signature | Description |
+|--------|-----------|-------------|
+| `Get()` | `Get(key string) any` | Get prop value |
+| `Set()` | `Set(key string, value any)` | Set prop value |
+| `GetDefault()` | `GetDefault(key string, def any) any` | Get with default |
+| `GetString()` | `GetString(key string) string` | Get as string |
+| `GetInt()` | `GetInt(key string) int` | Get as int |
+| `GetInt64()` | `GetInt(key string) int64` | Get as int64 |
+| `GetFloat64()` | `GetFloat64(key string) float64` | Get as float64 |
+| `GetBool()` | `GetBool(key string) bool` | Get as bool |
+| `GetSlice()` | `GetSlice(key string) []any` | Get as slice |
+| `GetMap()` | `GetMap(key string) map[string]any` | Get as map |
+| `Has()` | `Has(key string) bool` | Check if exists |
+| `Delete()` | `Delete(key string)` | Delete prop |
+| `Keys()` | `Keys() []string` | Get all keys |
+| `Values()` | `Values() []any` | Get all values |
+| `Clone()` | `Clone() Props` | Clone props |
+| `Merge()` | `Merge(other Props)` | Merge props |
+| `ToJSON()` | `ToJSON() ([]byte, error)` | JSON serialization |
+| `Equals()` | `Equals(other Props) bool` | Compare props |
+
+---
+
+## PropSchema
+
+Define and validate prop schemas.
+
+### Creating a Schema
+
+```go
+schema := component.NewPropSchema()
+
+// Define props
+schema.Define("title", reflect.String).
+       Define("count", reflect.Int).
+       Define("active", reflect.Bool)
+
+// Define with validator
+schema.DefineWithValidator("email", func(value any) error {
+    str, ok := value.(string)
+    if !ok {
+        return errors.New("email must be string")
+    }
+    if !strings.Contains(str, "@") {
+        return errors.New("invalid email format")
+    }
+    return nil
+})
+```
+
+### PropDefinition
+
+```go
+type PropDefinition struct {
+    Name         string            // Prop name
+    Type         reflect.Kind      // Expected type
+    DefaultValue any               // Default value
+    Required     bool              // Is required
+    Validator    func(any) error   // Custom validator
+}
+```
+
+### Validation
+
+```go
+// Validate props
+err := schema.Validate(props)
+
+// Apply defaults
+propsWithDefaults := schema.ApplyDefaults(props)
+
+// Validate and apply
+validated, err := schema.ValidateAndApply(props)
+
+// Get definition
+def := schema.GetDefinition("title")
+
+// Get all definitions
+defs := schema.Definitions()
+```
+
+---
+
+## BindableProp
+
+Two-way bindable properties.
+
+### Creating Bindable Props
+
+```go
+// Create bindable prop
+bp := component.NewBindableProp("count", 0)
+
+// Get value
+value := bp.Get()
+
+// Set value
+bp.Set(42)
+
+// Get name
+name := bp.Name()
+
+// On change callback
+bp.OnChange(func(newValue any) {
+    fmt.Println("Value changed to:", newValue)
+})
+
+// Set validator
+bp.SetValidator(func(value any) error {
+    if value.(int) < 0 {
+        return errors.New("count cannot be negative")
+    }
+    return nil
+})
+
+// Two-way bind to another prop
+bp.Bind(otherBindableProp)
+```
+
+### BindableProps Collection
+
+```go
+// Create collection
+bps := component.NewBindableProps()
+
+// Add bindable
+bps.Add(component.NewBindableProp("count", 0))
+
+// Get bindable
+bp := bps.Get("count")
+
+// Remove bindable
+bps.Remove("count")
+
+// Get all names
+names := bps.Names()
+
+// Convert to Props
+props := bps.ToProps()
+```
+
+---
+
+## Complete Example
+
+```go
+package main
+
+import (
+    "context"
+    "fmt"
+    
+    "github.com/gospa/gospa/component"
+    "github.com/gospa/gospa/state"
+)
+
+// Custom component
+type ButtonComponent struct {
+    *component.BaseComponent
+    lifecycle *component.Lifecycle
+}
+
+func NewButtonComponent(text string, onClick func()) *ButtonComponent {
+    btn := &ButtonComponent{
+        BaseComponent: component.NewBaseComponent("button",
+            component.WithProps(component.Props{
+                "text":    text,
+                "onClick": onClick,
+            }),
+        ),
+        lifecycle: component.NewLifecycle(),
+    }
+    
+    // Setup lifecycle hooks
+    btn.lifecycle.OnMount(func() {
+        fmt.Println("Button mounted")
+    })
+    
+    btn.lifecycle.OnDestroy(func() {
+        fmt.Println("Button destroyed")
+    })
+    
+    return btn
+}
+
+func main() {
+    // Create state
+    sm := state.NewStateMap()
+    sm.Add("counter", state.NewRune(0))
+    
+    // Create component tree
+    root := component.NewBaseComponent("app",
+        component.WithState(sm),
+    )
+    
+    tree := component.NewComponentTree(root)
+    
+    // Add child components
+    button := NewButtonComponent("Click Me", func() {
+        counter := sm.Get("counter").(*state.Rune[int])
+        counter.Set(counter.Get() + 1)
+    })
+    
+    tree.Add(root, button)
+    
+    // Mount tree
+    tree.Mount()
+    
+    // Walk tree
+    tree.Walk(func(comp component.Component) bool {
+        fmt.Printf("Component: %s (ID: %s)\n", comp.Name(), comp.ID())
+        return true
+    })
+    
+    // Cleanup
+    tree.Destroy()
+}
+```
+
+
+<!-- FILE: docs/02-core-concepts/05-islands.md -->
+================================================================================
+
+# Island Hydration & Streaming SSR
+
+GoSPA implements a partial hydration (Islands Architecture) system, allowing you to ship static HTML by default and selectively hydrate interactive components based on viewport visibility, idle time, or user interaction.
+
+---
+
+## Islands Architecture
+
+An **island** is an interactive component that is loaded and hydrated on the client. The server renders the HTML placeholder; the client loads the JavaScript module and calls its `hydrate` or `mount` function.
+
+### DOM Attributes
+
+Mark an element as an island using `data-gospa-island`:
+
+```html
+<div
+  data-gospa-island="Counter"
+  data-gospa-mode="visible"
+  data-gospa-priority="high"
+  data-gospa-props='{"initial": 10}'
+  data-gospa-state='{"count": 0}'
+  data-gospa-threshold="200"
+  id="my-counter"
+>
+  <!-- Server-rendered placeholder content here -->
+  <p>Loading...</p>
+</div>
+```
+
+| Attribute | Type | Description |
+|-----------|------|-------------|
+| `data-gospa-island` | string | **Required.** Island name — maps to `/islands/{name}.js` |
+| `data-gospa-mode` | string | Hydration mode (see below, default: `immediate`) |
+| `data-gospa-priority` | string | Queue priority: `high`, `normal`, `low` (default: `normal`) |
+| `data-gospa-props` | JSON | Props passed to `hydrate(element, props, state)` |
+| `data-gospa-state` | JSON | State passed to `hydrate(element, props, state)` |
+| `data-gospa-threshold` | number | Intersection margin in px for `visible` mode (default: 200) |
+| `data-gospa-defer` | number | ms delay for `idle` mode (default: 2000) |
+| `data-gospa-client-only` | boolean | Skip server rendering entirely |
+| `data-gospa-server-only` | boolean | Never hydrate — render only |
+
+### Hydration Modes
+
+| Mode | Description |
+|------|-------------|
+| `immediate` | (Default) Hydrate when the island is discovered |
+| `visible` | Hydrate when the element enters the viewport (uses `IntersectionObserver`) |
+| `idle` | Hydrate when the browser is idle (uses `requestIdleCallback`, falls back to `setTimeout`) |
+| `interaction` | Hydrate on first user event: `mouseenter`, `touchstart`, `focusin`, or `click` |
+| `lazy` | Never auto-hydrate — call `hydrateIsland(id)` manually |
+
+### Priority Queue
+
+When multiple islands are scheduled for `immediate` hydration, they are processed in priority order:
+
+| Priority | Use Case |
+|----------|----------|
+| `high` | Navigation, purchase buttons, search — hydrate first |
+| `normal` | (Default) General interactive components |
+| `low` | Below-the-fold, non-essential widgets |
+
+---
+
+## Island Module Convention
+
+Island modules must be ES modules served at `/islands/{name}.js` (configurable via `moduleBasePath`).
+
+```typescript
+// /islands/Counter.ts
+export default {
+    hydrate(element: Element, props: Record<string, unknown>, state: Record<string, unknown>) {
+        const btn = element.querySelector('button')!;
+        let count = (state.count as number) ?? (props.initial as number) ?? 0;
+
+        const render = () => btn.textContent = `Count: ${count}`;
+        render();
+        btn.addEventListener('click', () => { count++; render(); });
+    }
+}
+```
+
+Both `hydrate` and `mount` are accepted (either on the default export or as named exports). `hydrate` takes precedence.
+
+---
+
+## Client API
+
+### `initIslands(config?) → IslandManager`
+
+Initializes the global island manager. Auto-discovers all `[data-gospa-island]` elements in the DOM.
+
+```typescript
+import { initIslands } from './island.ts';
+
+const manager = initIslands({
+    moduleBasePath: '/islands',   // Where to load island JS from
+    defaultTimeout: 30000,        // ms until hydration times out
+    debug: true,                  // Enable console logging
+    // Custom loader for bundlers that handle imports differently:
+    moduleLoader: async (name) => import(`./islands/${name}`),
+});
+```
+
+### `getIslandManager() → IslandManager | null`
+
+Returns the global island manager.
+
+### `hydrateIsland(idOrName) → Promise<IslandHydrationResult | null>`
+
+Manually triggers hydration for a specific island (by DOM `id` or island name):
+
+```typescript
+import { hydrateIsland } from './island.ts';
+
+// Hydrate the lazy island when user clicks "Show chart"
+document.getElementById('show-chart')?.addEventListener('click', async () => {
+    const result = await hydrateIsland('Chart');
+    if (!result?.success) console.error('Chart hydration failed:', result?.error);
+});
+```
+
+### `IslandManager` Methods
+
+```typescript
+manager.discoverIslands()               // Scan DOM for new islands
+manager.hydrateIsland(data)             // Hydrate a specific island data object
+manager.hydrate(idOrName)               // Hydrate by id or name string
+manager.isHydrated(id)                  // Check if an island is already hydrated
+manager.getIslands()                    // All discovered islands
+manager.getIsland(id)                   // Get island data by id
+manager.destroy()                       // Clean up observers and listeners
+```
+
+### Browser Globals
+
+```js
+// Available at runtime when island.ts is loaded
+window.__GOSPA_ISLAND_MANAGER__.init(config?)   // == initIslands
+window.__GOSPA_ISLAND_MANAGER__.get()           // == getIslandManager
+window.__GOSPA_ISLAND_MANAGER__.hydrate(name)   // == hydrateIsland
+```
+
+### Events
+
+```typescript
+// Fired on the island element when hydration completes
+element.addEventListener('gospa:hydrated', (ev: CustomEvent) => {
+    console.log('hydrated:', ev.detail.island); // IslandElementData
+});
+```
+
+---
+
+## Streaming SSR
+
+GoSPA's `StreamingManager` handles progressive hydration from server-streamed HTML chunks. It is usually initialized automatically; each chunk type triggers a different action:
+
+| Chunk Type | Action |
+|------------|--------|
+| `html` | Updates a specific DOM element by `id` with new innerHTML |
+| `island` | Registers and schedules the island for hydration per its mode |
+| `script` | Dynamically injects and executes a `<script>` tag |
+| `state` | Merges the payload into the global `__GOSPA_STATE__` |
+| `error` | Logs a server-side rendering error to the console |
+
+### Manual Setup
+
+```typescript
+import { initStreaming } from './streaming.ts';
+
+const streamer = initStreaming({
+    hydrationTimeout: 5000,  // ms before island hydration times out
+    enableLogging: true,
+});
+
+// Manually hydrate an island that arrived via streaming
+await streamer.hydrate('IslandId');
+
+// Check hydration status
+console.log(streamer.getHydratedIslands()); // Set<string>
+console.log(streamer.isHydrated('IslandId')); // boolean
+```
+
+---
+
+## Auto-Initialize
+
+If a `<script data-gospa-islands>` tag is present, `initIslands()` is called automatically when the DOM is ready. Otherwise, call it manually before the page finishes loading.
+
+---
+
+## Notes
+
+- Islands do **not** require a framework. They can be Svelte, Preact, Vanilla JS, or any library that runs in a browser `<script type="module">`.
+- Islands discovered after `initIslands()` (e.g. via SPA navigation) can be re-scanned with `manager.discoverIslands()`.
+- Setting `data-gospa-server-only="true"` skips hydration entirely — useful for purely decorative server-rendered components.
+
+
+<!-- FILE: docs/02-core-concepts/06-routing.md -->
+================================================================================
+
+# GoSPA Route Parameters
+
+GoSPA provides a comprehensive route parameter handling system for extracting, validating, and building URLs with path and query parameters.
+
+## Overview
+
+The parameter system in `routing/params.go` provides:
+
+- **Params**: Type-safe parameter map with conversion methods
+- **QueryParams**: Query string parameter handling
+- **ParamExtractor**: Route matching and parameter extraction
+- **PathBuilder**: URL path construction with parameters
+
+---
+
+## Params
+
+The `Params` type is a map for storing route parameters with type-safe accessors.
+
+### Basic Usage
+
+```go
+import "github.com/aydenstechdungeon/gospa/routing"
+
+// Create params
+params := routing.Params{
+    "id":    "123",
+    "name":  "john",
+    "admin": "true",
+}
+
+// Get value
+id := params.Get("id")  // "123"
+
+// Get with default
+name := params.GetDefault("nickname", "anonymous")  // "anonymous" if not found
+
+// Check existence
+if params.Has("id") {
+    // Parameter exists
+}
+
+// Set value
+params.Set("email", "john@example.com")
+
+// Delete value
+params.Delete("temp")
+
+// Clone
+cloned := params.Clone()
+
+// Merge
+otherParams := routing.Params{"role": "admin"}
+params.Merge(otherParams)
+```
+
+### Type Conversion Methods
+
+```go
+// String
+name := params.GetString("name")  // string
+
+// Integer
+id := params.GetInt("id")         // int
+id64 := params.GetInt64("id")     // int64
+
+// Float
+price := params.GetFloat64("price")  // float64
+
+// Boolean
+admin := params.GetBool("admin")  // bool
+
+// Slice (comma-separated)
+tags := params.GetSlice("tags")   // []any
+
+// JSON
+json, err := params.ToJSON()      // []byte
+```
+
+### All Methods
+
+| Method | Signature | Description |
+|--------|-----------|-------------|
+| `Get()` | `Get(key string) any` | Get parameter value |
+| `GetDefault()` | `GetDefault(key string, def any) any` | Get with default |
+| `GetString()` | `GetString(key string) string` | Get as string |
+| `GetInt()` | `GetInt(key string) int` | Get as int |
+| `GetInt64()` | `GetInt64(key string) int64` | Get as int64 |
+| `GetFloat64()` | `GetFloat64(key string) float64` | Get as float64 |
+| `GetBool()` | `GetBool(key string) bool` | Get as bool |
+| `GetSlice()` | `GetSlice(key string) []any` | Get as slice |
+| `Has()` | `Has(key string) bool` | Check if exists |
+| `Set()` | `Set(key string, value any)` | Set parameter |
+| `Delete()` | `Delete(key string)` | Delete parameter |
+| `Clone()` | `Clone() Params` | Clone params |
+| `Merge()` | `Merge(other Params)` | Merge params |
+| `ToJSON()` | `ToJSON() ([]byte, error)` | Serialize to JSON |
+| `Keys()` | `Keys() []string` | Get all keys |
+| `Values()` | `Values() []any` | Get all values |
+
+---
+
+## QueryParams
+
+Handle URL query string parameters.
+
+### Creating QueryParams
+
+```go
+// From URL
+url, _ := url.Parse("https://example.com/search?q=gospa&page=2")
+queryParams := routing.NewQueryParams(url.Query())
+
+// From map
+queryParams := routing.NewQueryParamsFromMap(map[string][]string{
+    "q":    {"gospa"},
+    "page": {"2"},
+})
+
+// Empty
+queryParams := routing.NewQueryParamsEmpty()
+```
+
+### Methods
+
+```go
+// Get first value
+q := queryParams.Get("q")  // "gospa"
+
+// Get all values (for multi-value params)
+tags := queryParams.GetAll("tags")  // []string
+
+// Get with default
+page := queryParams.GetDefault("page", "1")  // "2" or "1" if not found
+
+// Type conversions
+page := queryParams.GetInt("page")        // int
+price := queryParams.GetFloat64("price")  // float64
+active := queryParams.GetBool("active")   // bool
+
+// Check existence
+if queryParams.Has("q") {
+    // Query param exists
+}
+
+// Set value
+queryParams.Set("sort", "desc")
+
+// Add value (for multi-value params)
+queryParams.Add("filter", "active")
+queryParams.Add("filter", "pending")  // filter=active&filter=pending
+
+// Delete
+queryParams.Del("temp")
+
+// Encode to string
+encoded := queryParams.Encode()  // "q=gospa&page=2"
+
+// Clone
+cloned := queryParams.Clone()
+
+// To URL values
+values := queryParams.Values()  // url.Values
+```
+
+### QueryParams Methods Table
+
+| Method | Signature | Description |
+|--------|-----------|-------------|
+| `Get()` | `Get(key string) string` | Get first value |
+| `GetAll()` | `GetAll(key string) []string` | Get all values |
+| `GetDefault()` | `GetDefault(key, def string) string` | Get with default |
+| `GetInt()` | `GetInt(key string) int` | Get as int |
+| `GetInt64()` | `GetInt64(key string) int64` | Get as int64 |
+| `GetFloat64()` | `GetFloat64(key string) float64` | Get as float64 |
+| `GetBool()` | `GetBool(key string) bool` | Get as bool |
+| `Has()` | `Has(key string) bool` | Check if exists |
+| `Set()` | `Set(key, value string)` | Set value |
+| `Add()` | `Add(key, value string)` | Add value |
+| `Del()` | `Del(key string)` | Delete key |
+| `Encode()` | `Encode() string` | Encode to string |
+| `Clone()` | `Clone() QueryParams` | Clone params |
+| `Values()` | `Values() url.Values` | Get as url.Values |
+
+---
+
+## ParamExtractor
+
+Extract parameters from routes during matching.
+
+### Creating an Extractor
+
+```go
+// Create an extractor for a specific pattern
+extractor := routing.NewParamExtractor("/users/:id")
+
+// Match and extract
+params, ok := extractor.Extract("/users/123")
+if ok {
+    id := params.Get("id")  // "123"
+}
+```
+
+### Extracting Parameters
+
+```go
+// Match with wildcard
+extractor = routing.NewParamExtractor("/files/*filepath")
+params, ok = extractor.Extract("/files/docs/readme.txt")
+if ok {
+    filepath := params.Get("filepath")  // "docs/readme.txt"
+}
+```
+
+### RouteMatch
+
+```go
+type RouteMatch struct {
+    Pattern string  // Matched pattern
+    Params  Params  // Extracted parameters
+    Handler any     // Associated handler
+}
+```
+
+### Pattern Syntax
+
+| Pattern | Description | Example |
+|---------|-------------|---------|
+| `:name` | Named parameter | `/users/:id` matches `/users/123` |
+| `*name` | Wildcard (greedy) | `/files/*path` matches `/files/a/b/c` |
+| `{name:regex}` | Regex constraint | `/users/{id:\\d+}` matches digits only |
+
+---
+
+## Route Groups
+
+Route groups allow you to organize routes into logical groups without affecting the URL path. This is useful for:
+
+- Grouping related routes together
+- Applying layouts to specific sections
+- Keeping feature areas separated
+
+### Syntax
+
+Route groups are created by wrapping a folder name in parentheses: `(name)`
+
+```
+routes/
+├── (marketing)/
+│   ├── about/
+│   │   └── page.templ      → /about
+│   └── contact/
+│       └── page.templ      → /contact
+├── (shop)/
+│   ├── products/
+│   │   └── page.templ      → /products
+│   └── cart/
+│       └── page.templ      → /cart
+└── page.templ              → /
+```
+
+### How It Works
+
+When a folder is named with parentheses:
+
+1. The folder name is **not** included in the URL path
+2. Routes inside the group behave as if they were at the parent level
+3. Multiple groups can exist at the same level
+
+### Example Structure
+
+```
+routes/
+├── (docs)/
+│   ├── layout.templ        → Layout for /docs/* routes
+│   ├── getting-started/
+│   │   └── page.templ      → /getting-started
+│   └── api/
+│       └── page.templ      → /api
+├── (auth)/
+│   ├── login/
+│   │   └── page.templ      → /login
+│   └── register/
+│       └── page.templ      → /register
+└── page.templ              → /
+```
+
+### Benefits
+
+1. **Organization**: Keep related routes together without URL bloat
+2. **Layouts**: Apply layouts to groups of routes
+3. **Clean URLs**: Maintain clean URL structures while organizing code
+
+### Comparison with Other Patterns
+
+| Pattern | URL Impact | Use Case |
+|---------|------------|----------|
+| `(name)` | Not included in URL | Organizational grouping |
+| `_name` | Becomes `:name` | Dynamic parameter |
+| `[name]` | Becomes `:name` | Dynamic parameter (bracket syntax) |
+| `name` | Included as `/name` | Static path segment |
+
+### Methods
+
+| Method | Signature | Description |
+|--------|-----------|-------------|
+| `AddPattern()` | `AddPattern(pattern string)` | Add route pattern |
+| `Match()` | `Match(path string) *RouteMatch` | Match path and extract |
+| `MatchPattern()` | `MatchPattern(pattern, path string) *RouteMatch` | Match specific pattern |
+| `Extract()` | `Extract(pattern, path string) Params` | Extract params only |
+| `Patterns()` | `Patterns() []string` | Get all patterns |
+
+---
+
+## PathBuilder
+
+Build URL paths with parameters.
+
+### Creating a PathBuilder
+
+```go
+builder := routing.NewPathBuilder("/users/:userId/posts/:postId")
+builder.Param("userId", "1")
+builder.Param("postId", "42")
+path := builder.Build()
+// Result: "/users/1/posts/42"
+```
+
+### With Query Parameters
+
+```go
+builder = routing.NewPathBuilder("/search")
+builder.Query("q", "gospa")
+builder.Query("page", "1")
+path = builder.Build()
+// Result: "/search?q=gospa&page=1"
+```
+
+### URL Encoding
+
+```go
+// Automatic URL encoding
+path := builder.Build("/search/:q", routing.Params{
+    "q": "hello world",
+})
+// Result: "/search/hello%20world"
+```
+
+### Methods
+
+| Method | Signature | Description |
+|--------|-----------|-------------|
+| `Build()` | `Build(pattern string, params Params) string` | Build path |
+| `BuildWithQuery()` | `BuildWithQuery(pattern string, params Params, query QueryParams) string` | Build with query |
+| `SetStrictSlash()` | `SetStrictSlash(strict bool) *PathBuilder` | Enable/disable trailing slash |
+| `SetURLEncoding()` | `SetURLEncoding(enabled bool) *PathBuilder` | Enable/disable URL encoding |
+
+---
+
+## Complete Example
+
+```go
+package main
+
+import (
+    "fmt"
+    "net/url"
+    
+    "github.com/aydenstechdungeon/gospa/routing"
+)
+
+func main() {
+    // Create param extractor
+    extractor := routing.NewParamExtractor("/users/:id")
+    
+    // Match routes
+    params, ok := extractor.Extract("/users/123")
+    if ok {
+        fmt.Printf("User ID: %s\n", params.Get("id"))
+    }
+    
+    // Match with wildcard
+    extractor = routing.NewParamExtractor("/api/:version/*path")
+    params, ok = extractor.Extract("/api/v1/users/123/profile")
+    if ok {
+        fmt.Printf("Version: %s\n", params.Get("version"))
+        fmt.Printf("Path: %s\n", params.Get("path"))
+    }
+    
+    // Build paths
+    builder := routing.NewPathBuilder("/users/:id/posts/:postId")
+    builder.Param("id", "1")
+    builder.Param("postId", "42")
+    path := builder.Build()
+    fmt.Println("Built path:", path)
+    
+    // With query params
+    builder = routing.NewPathBuilder("/search")
+    builder.Query("q", "gospa")
+    builder.Query("page", "1")
+    fullPath := builder.Build()
+    fmt.Println("Full path:", fullPath)
+    
+    // Parse and use query params
+    u, _ := url.Parse("https://example.com/search?q=gospa&page=2&filter=active&filter=pending")
+    qp := routing.NewQueryParams(u.Query())
+    
+    fmt.Println("Query:", qp.Get("q"))
+    fmt.Println("Page:", qp.GetInt("page"))
+    fmt.Println("Filters:", qp.GetAll("filter"))
+}
+```
+
+---
+
+## Integration with Fiber
+
+```go
+func GetUser(c *fiber.Ctx) error {
+    // Get path params
+    id := c.Params("id")
+    
+    // Get query params
+    qp := routing.NewQueryParams(c.Request().URI().QueryArgs())
+    page := qp.GetDefault("page", "1")
+    
+    // Type-safe access
+    pageNum := qp.GetInt("page")
+    active := qp.GetBool("active")
+    
     // ...
 }
 
-// PrunerConfig configures the StatePruner.
-type PrunerConfig struct {
-    // Interval is how often the pruner runs (default: 5m).
-    Interval time.Duration
-    // MaxAge is how long a value must be unchanged before it is pruned (default: 30m).
-    MaxAge time.Duration
-    // OnPrune is an optional callback fired for each pruned key.
-    OnPrune func(key string)
+func Search(c *fiber.Ctx) error {
+    // Build URL for redirect
+    builder := routing.NewPathBuilder()
+    redirectURL := builder.BuildWithQuery("/results", nil, routing.QueryParams{
+        "q":    []string{c.Query("q")},
+        "page": []string{"1"},
+    })
+    
+    return c.Redirect(redirectURL)
 }
 ```
 
 ---
 
-## Constructor
+## Best Practices
 
-### `NewStatePruner(sm *StateMap, config PrunerConfig) *StatePruner`
+1. **Use type-safe accessors**: Always use `GetInt`, `GetBool`, etc. for type conversion
+2. **Provide defaults**: Use `GetDefault` for optional parameters
+3. **Validate parameters**: Check existence with `Has` before processing
+4. **URL encode**: Let PathBuilder handle URL encoding
+5. **Clone when modifying**: Clone params before modification if original needed
+6. **Use wildcards sparingly**: Wildcards are greedy, use specific patterns when possible
 
-Creates a new `StatePruner` targeting the given `StateMap`. Does not start pruning until `Start()` is called.
 
-**Example:**
+<!-- FILE: docs/03-features/01-client-runtime.md -->
+================================================================================
 
-```go
-sm := state.NewStateMap()
+# GoSPA Runtime Selection Guide
 
-pruner := state.NewStatePruner(sm, state.PrunerConfig{
-    Interval: 10 * time.Minute,
-    MaxAge:   1 * time.Hour,
-    OnPrune: func(key string) {
-        log.Printf("Pruned stale key: %s", key)
-    },
-})
-pruner.Start()
-defer pruner.Stop()
+GoSPA provides multiple runtime variants to balance security, performance, and bundle size. This guide helps you choose the right one.
+
+## Runtime Variants
+
+### Default Runtime (`gospa`) — Recommended
+
+The default runtime trusts server-rendered HTML (Templ auto-escapes all content). No client-side sanitization is included by default.
+
+**File:** `runtime.js`
+
+**Features:**
+- Trust-the-server security model
+- All core features (WebSocket, Navigation, Transitions)
+- Smallest bundle size
+- CSP-first approach to security
+
+**Size:**
+- Uncompressed: ~15 KB
+- Gzipped: ~6 KB
+
+**When to use:**
+- Most applications (recommended default)
+- Server-rendered apps using Templ
+- Apps without user-generated HTML content
+- When you have a proper CSP configured
+
+```typescript
+import { init, Rune, navigate } from 'gospa';
+
+init();
+```
+
+### Secure Runtime (`gospa/runtime-secure`)
+
+The secure runtime includes DOMPurify for HTML sanitization. Use this when displaying user-generated content.
+
+**File:** `runtime-secure.js`
+
+**Features:**
+- DOMPurify HTML sanitization
+- Protection against XSS attacks
+- Safe rendering of user-generated content
+- All core features (WebSocket, Navigation, Transitions)
+
+**Size:**
+- Uncompressed: ~35 KB
+- Gzipped: ~13 KB
+
+**When to use:**
+- Rendering user-generated HTML content
+- Social media apps with comments
+- Forums, wikis, CMS with rich text
+- Any app displaying untrusted HTML
+
+```typescript
+import { init, sanitize } from 'gospa/runtime-secure';
+
+init();
+
+// Sanitize user content
+const cleanHtml = await sanitize(userComment);
+```
+
+### Core Runtime (`gospa/core`)
+
+Minimal runtime without extra features. Use for custom implementations.
+
+**File:** `runtime-core.js`
+
+**Features:**
+- Reactive primitives only
+- No WebSocket, Navigation, or Transitions
+- No sanitization
+
+**Size:**
+- Uncompressed: ~12 KB
+- Gzipped: ~5 KB
+
+**When to use:**
+- Custom runtime implementations
+- Library authors
+- When you need only reactive state
+
+### Micro Runtime (`gospa/micro`)
+
+Ultra-lightweight runtime for state-only applications.
+
+**File:** `runtime-micro.js`
+
+**Features:**
+- Reactive primitives only
+- No DOM operations
+- No sanitization
+
+**Size:**
+- Uncompressed: ~3 KB
+- Gzipped: ~1.5 KB
+
+**When to use:**
+- Web Workers
+- Node.js scripts
+- State-only applications
+
+### Simple Runtime (`gospa/simple`) — Deprecated
+
+⚠️ **DEPRECATED**: This runtime is deprecated and will be removed in v2.0. Use `gospa` (default) instead.
+
+---
+
+## Security Model Comparison
+
+| Runtime | Sanitizer | Trust Model | Use Case |
+|---------|-----------|-------------|----------|
+| `gospa` (default) | None | Trust server (Templ) | Most apps with CSP |
+| `gospa/runtime-secure` | DOMPurify | Sanitize UGC | Apps with user-generated HTML |
+| `gospa/core` | None | Custom | Library authors |
+| `gospa/micro` | None | Custom | State-only |
+
+## When Do You Need Each Runtime?
+
+### Use `gospa` (default) when:
+- Building a typical server-rendered app
+- Using Templ for all templates
+- Content comes from your database (trusted)
+- You have a CSP configured
+- No user-generated HTML (just text/JSON)
+
+### Use `gospa/runtime-secure` when:
+- Users can submit HTML content
+- Running a forum, wiki, or social app
+- Displaying rich text from untrusted sources
+- Embedding third-party HTML widgets
+
+### Example scenarios:
+
+| App Type | Recommended Runtime |
+|----------|---------------------|
+| E-commerce store | `gospa` |
+| Dashboard (internal) | `gospa` |
+| Blog | `gospa` |
+| Forum / Community | `gospa/runtime-secure` |
+| Social media app | `gospa/runtime-secure` |
+| Wiki | `gospa/runtime-secure` |
+| SaaS app | `gospa` |
+| Comment system | `gospa/runtime-secure` |
+
+---
+
+## Using DOMPurify with the Default Runtime
+
+Even with the default runtime, you can add DOMPurify manually for specific components:
+
+```typescript
+import { init, setSanitizer } from 'gospa';
+import DOMPurify from 'dompurify';
+
+init();
+
+// Set custom sanitizer for UGC sections
+setSanitizer((html) => DOMPurify.sanitize(html));
+```
+
+Or use the secure runtime import:
+
+```typescript
+import { sanitize } from 'gospa/runtime-secure';
+
+// Use only where needed
+const clean = await sanitize(dirtyHtml);
 ```
 
 ---
 
-## Methods
+## Client-Side Usage
 
-### `(*StatePruner) Start()`
+All runtimes export the same core API:
 
-Begins the background pruning loop. Safe to call multiple times (no-op if already running).
-
-### `(*StatePruner) Stop()`
-
-Stops the background pruning loop and blocks until it exits. Safe to call multiple times.
-
-### `(*StatePruner) Prune() int`
-
-Runs a single pruning pass immediately (outside the normal interval). Returns the number of keys pruned.
-
----
-
-## Behavior Notes
-
-- The pruner tracks the last modification time of each Rune via a subscription. It does **not** poll Rune values directly.
-- Keys added after `Start()` are automatically tracked.
-- Pruned keys are deleted from the `StateMap`. The corresponding Rune is also disposed if it implements `Disposable`.
-- The `OnPrune` callback is invoked synchronously during the prune pass. Keep it fast; heavy work should be dispatched asynchronously.
-- The pruner does **not** protect against re-adding pruned keys — if code adds them back, they will be tracked again.
-
----
-
-## Interaction with `WebSocket` state sync
-
-If you use a `StateMap` for per-session WebSocket state, attach a pruner to avoid unbounded growth of per-user keys as sessions expire:
-
-```go
-// Per-session state example
-sessionState := state.NewStateMap()
-
-pruner := state.NewStatePruner(sessionState, state.PrunerConfig{
-    Interval: 5 * time.Minute,
-    MaxAge:   fiber.SessionTTL, // match session TTL from websocket package
-})
-pruner.Start()
-defer pruner.Stop()
+```typescript
+import {
+    // Core
+    init,
+    createComponent,
+    destroyComponent,
+    getComponent,
+    getState,
+    setState,
+    callAction,
+    bind,
+    autoInit,
+    
+    // State Primitives
+    Rune,
+    Derived,
+    Effect,
+    StateMap,
+    batch,
+    effect,
+    watch,
+    
+    // DOM Bindings
+    bindElement,
+    bindTwoWay,
+    renderIf,
+    renderList,
+    
+    // Events
+    on,
+    offAll,
+    debounce,
+    throttle,
+    delegate,
+    onKey,
+    
+    // WebSocket
+    getWebSocket,
+    sendAction,
+    syncedRune,
+    
+    // Navigation
+    getNavigation,
+    navigate,
+    back,
+    forward,
+    
+    // Transitions
+    getTransitions,
+    fade,
+    fly,
+    slide,
+    scale,
+} from 'gospa'; // or 'gospa/runtime-secure'
 ```
 
 ---
 
-## See Also
+## Migration from v1.x
 
-- [`StateMap`](API.md#statemap)
-- [`Rune`](API.md#runet)
-- [`SessionTTL`](API.md#websocket-hub) in `fiber` package
+If you're upgrading from GoSPA v1.x:
+
+### Before (v1.x):
+```go
+// Server config
+app := gospa.New(gospa.Config{
+    SimpleRuntime: true,  // Use lightweight runtime
+})
+```
+
+### After (v2.x):
+```typescript
+// Client - no changes needed for most apps
+import { init } from 'gospa';  // Default runtime (trusts server)
+init();
+
+// Only change if you have user-generated content:
+import { init } from 'gospa/runtime-secure';
+init();
+```
+
+### Key changes:
+1. `SimpleRuntime` config option removed (no longer needed)
+2. Default runtime no longer includes DOMPurify
+3. Added `gospa/runtime-secure` for UGC scenarios
+4. `runtime-simple.js` is deprecated
+
+---
+
+## Troubleshooting
+
+### Content Not Rendering User HTML
+
+If user HTML content is being escaped instead of rendered:
+
+1. **Check your runtime**: Use `gospa/runtime-secure` for user-generated HTML
+2. **Use `type: 'html'` binding**: `bindElement(el, content, { type: 'html' })`
+3. **Sanitize manually**: Use `sanitize()` from `gospa/runtime-secure`
+
+### Bundle Size Too Large
+
+If your bundle is larger than expected:
+
+1. **Check imports**: Ensure you're importing from `gospa`, not `gospa/runtime-secure`
+2. **Tree shaking**: Use named imports to enable tree shaking
+3. **Verify runtime**: Check Network tab to see which runtime file is loaded
+
+### Security Warnings
+
+If security tools flag content:
+
+1. **Use secure runtime**: Switch to `gospa/runtime-secure` for UGC
+2. **Add CSP headers**: Configure strict Content-Security-Policy
+3. **Server-side validation**: Validate all user input on the server
 
 
-<!-- FILE: docs/CLIENT_RUNTIME.md -->
+<!-- FILE: docs/03-features/02-runtime-api.md -->
 ================================================================================
 
 # GoSPA Client Runtime API Reference
@@ -3940,26 +4303,62 @@ The runtime is automatically injected into your pages by the GoSPA server. No ma
 ### Manual Import (for advanced usage)
 
 ```typescript
-// Full runtime with DOMPurify
-import { Rune, Effect, navigate } from '@gospa/runtime';
+// Default runtime - trusts server-rendered HTML
+import { Rune, Effect, navigate } from 'gospa';
 
-// Lightweight runtime (no sanitizer)
-import { Rune, Effect, navigate } from '@gospa/runtime-simple';
+// Secure runtime - includes DOMPurify for user-generated content
+import { Rune, Effect, navigate, sanitize } from 'gospa/runtime-secure';
+
+// Core runtime - reactive primitives only
+import { Rune, Effect } from 'gospa/core';
+
+// Micro runtime - state-only, no DOM
+import { Rune, Derived } from 'gospa/micro';
 ```
 
 ---
 
 ## Runtime Variants
 
-| Variant | Size | Includes |
-|---------|------|----------|
-| `runtime.js` | ~17KB | Full runtime + DOMPurify sanitizer |
-| `runtime-simple.js` + `runtime-core.js` | ~11KB | Lightweight runtime (no sanitizer) |
+| Variant | Size | Sanitizer | Use Case |
+|---------|------|-----------|----------|
+| `gospa` (default) | ~15KB | None (trusts server) | Most apps - server-rendered with Templ |
+| `gospa/runtime-secure` | ~35KB | DOMPurify | Apps with user-generated HTML content |
+| `gospa/core` | ~12KB | None | Custom implementations - primitives only |
+| `gospa/micro` | ~3KB | None | State-only, no DOM operations |
 
-Use the simple runtime when:
-- You don't need HTML sanitization
-- You provide your own sanitizer via `setSanitizer()`
-- Bundle size is critical
+### Default Runtime (`gospa`)
+Trusts server-rendered HTML (Templ auto-escapes). Use for most applications.
+
+```typescript
+import { init } from 'gospa';
+init();
+```
+
+### Secure Runtime (`gospa/runtime-secure`)
+Includes DOMPurify for sanitizing user-generated content.
+
+```typescript
+import { init, sanitize } from 'gospa/runtime-secure';
+init();
+
+// Sanitize untrusted HTML
+const clean = await sanitize(userComment);
+```
+
+### When to use each:
+- **Default (`gospa`)**: Most apps, server-rendered content, with CSP
+- **Secure (`runtime-secure`)**: Forums, social apps, wikis, any UGC
+- **Core (`core`)**: Library authors, custom runtime implementations
+- **Micro (`micro`)**: Web Workers, Node.js scripts, state-only apps
+
+### Security Model
+GoSPA follows a "trust the server" model:
+1. Templ auto-escapes all dynamic content at the server
+2. Client-side sanitization is opt-in (for UGC only)
+3. CSP is the primary XSS defense
+
+This is similar to SvelteKit and other modern frameworks.
 
 ---
 
@@ -4786,9 +5185,60 @@ document.body.appendChild(div);
 
 ### setSanitizer
 
+Configure a custom HTML sanitizer for the runtime. The default runtime (`gospa`) does not include a sanitizer - it trusts server-rendered HTML.
+
+```typescript
+import { setSanitizer } from 'gospa';
 import DOMPurify from 'dompurify';
-setSanitizer((html) => DOMPurify.sanitize(html));
+
+// Set custom sanitizer (use only with user-generated content)
+setSanitizer((html) => DOMPurify.sanitize(html, {
+  ALLOWED_TAGS: ['b', 'i', 'em', 'strong', 'p'],
+  ALLOWED_ATTR: []
+}));
 ```
+
+**Using the Secure Runtime:**
+
+For apps with user-generated content, use `gospa/runtime-secure` which includes DOMPurify:
+
+```typescript
+import {
+  sanitize,           // Async sanitization with DOMPurify
+  sanitizeSync,       // Sync sanitization (requires preloading)
+  isSanitizerReady,   // Check if DOMPurify is loaded
+  preloadSanitizer,   // Preload DOMPurify during idle time
+} from 'gospa/runtime-secure';
+
+// Preload for faster first use
+preloadSanitizer();
+
+// Check readiness
+if (isSanitizerReady()) {
+  const clean = sanitizeSync(dirtyHtml);
+}
+
+// Async (always works)
+const clean = await sanitize(dirtyHtml);
+```
+
+**Security Model:**
+- **Default runtime (`gospa`)**: Trusts server-rendered HTML (Templ auto-escapes). No client-side sanitization needed for server content.
+- **Secure runtime (`runtime-secure`)**: Includes DOMPurify for sanitizing user-generated content.
+- Use the secure runtime only when displaying HTML from untrusted sources (comments, wikis, etc.).
+
+**When you need sanitization:**
+- User comments with HTML formatting
+- Rich text editors (WYSIWYG)
+- Wikis or knowledge bases
+- Forums or discussion boards
+- Any user-generated HTML content
+
+**When you DON'T need sanitization:**
+- Server-rendered Templ templates
+- Text content from your database
+- JSON data
+- Any content already escaped by Templ on the server
 
 ---
 
@@ -4925,7 +5375,32 @@ document.addEventListener('gospa:navigated', (event) => {
 });
 ```
 
+### Navigation Configuration
+
+Configure which file extensions the SPA router should ignore. By default, GoSPA ignores common non-HTML file types (e.g., `.png`, `.pdf`, `.zip`) to ensure they trigger a normal browser download or navigation.
+
+#### setIgnoredExtensions
+
+Completely replace the default list of ignored extensions.
+
+```typescript
+import { setIgnoredExtensions } from '@gospa/runtime';
+
+setIgnoredExtensions(['pdf', 'docx', 'custom']);
+```
+
+#### appendIgnoredExtensions
+
+Add new extensions to the existing ignored list.
+
+```typescript
+import { appendIgnoredExtensions } from '@gospa/runtime';
+
+appendIgnoredExtensions(['bak', 'tmp']);
+```
+
 ---
+
 
 ## Event Handling
 
@@ -5312,9 +5787,24 @@ init({
   hydration: {
     mode: 'immediate', // 'immediate' | 'lazy' | 'visible' | 'idle'
     timeout: 2000
-  }
+  },
+  simpleRuntimeSVGs: false  // Enable SVG support in simple runtime (deprecated)
 });
 ```
+
+#### RuntimeConfig Options
+
+| Option | Type | Description |
+|--------|------|-------------|
+| `wsUrl` | `string` | WebSocket server URL |
+| `debug` | `boolean` | Enable debug logging |
+| `onConnectionError` | `(error: Error) => void` | WebSocket error handler |
+| `hydration.mode` | `'immediate' \| 'lazy' \| 'visible' \| 'idle'` | Component hydration strategy |
+| `hydration.timeout` | `number` | Hydration timeout in milliseconds |
+| `simpleRuntimeSVGs` | `boolean` | Allow SVGs in simple runtime (security risk) |
+| `disableSanitization` | `boolean` | Disable client-side HTML sanitization |
+
+**Note on `disableSanitization`**: When enabled, GoSPA trusts server-rendered HTML without DOMPurify filtering during SPA navigation. This provides maximum compatibility with third-party libraries but requires careful handling of user-generated content. Only disable sanitization if you trust your content or properly escape user input server-side using Templ's auto-escaping.
 
 ---
 
@@ -5555,1529 +6045,2121 @@ import type {
 ```
 
 
-<!-- FILE: docs/PARAMS.md -->
+<!-- FILE: docs/03-features/03-realtime.md -->
 ================================================================================
 
-# GoSPA Route Parameters
+# Server-Sent Events (SSE)
 
-GoSPA provides a comprehensive route parameter handling system for extracting, validating, and building URLs with path and query parameters.
-
-## Overview
-
-The parameter system in `routing/params.go` provides:
-
-- **Params**: Type-safe parameter map with conversion methods
-- **QueryParams**: Query string parameter handling
-- **ParamExtractor**: Route matching and parameter extraction
-- **PathBuilder**: URL path construction with parameters
+GoSPA provides first-class support for Server-Sent Events (SSE) via the `fiber.SSEBroker`. SSE enables real-time, server-to-client push without the full bidirectionality of WebSockets — ideal for notifications, status updates, and live counters.
 
 ---
 
-## Params
+## Server-Side API
 
-The `Params` type is a map for storing route parameters with type-safe accessors.
-
-### Basic Usage
+### `SSEConfig`
 
 ```go
-import "github.com/aydenstechdungeon/gospa/routing"
-
-// Create params
-params := routing.Params{
-    "id":    "123",
-    "name":  "john",
-    "admin": "true",
+type SSEConfig struct {
+    // EventBufferSize is the channel buffer for pending events per client (default: 100)
+    EventBufferSize int
+    // HeartbeatInterval is how often a keepalive comment is sent (default: 30s; 0 = disable)
+    HeartbeatInterval time.Duration
+    // OnConnect is called when a client connects
+    OnConnect func(client *SSEClient)
+    // OnDisconnect is called when a client disconnects
+    OnDisconnect func(client *SSEClient)
 }
-
-// Get value
-id := params.Get("id")  // "123"
-
-// Get with default
-name := params.GetDefault("nickname", "anonymous")  // "anonymous" if not found
-
-// Check existence
-if params.Has("id") {
-    // Parameter exists
-}
-
-// Set value
-params.Set("email", "john@example.com")
-
-// Delete value
-params.Delete("temp")
-
-// Clone
-cloned := params.Clone()
-
-// Merge
-otherParams := routing.Params{"role": "admin"}
-params.Merge(otherParams)
 ```
 
-### Type Conversion Methods
+### `NewSSEBroker(config *SSEConfig) *SSEBroker`
+
+Creates a new SSE broker. Pass `nil` to use defaults.
+
+### `SetupSSE(app *fiber.App, broker *SSEBroker, prefix string, middleware ...fiber.Handler)`
+
+Registers all SSE routes under a path prefix:
+
+| Route | Handler | Description |
+|-------|---------|-------------|
+| `GET  {prefix}/connect` | `SSEHandler` | Client opens EventSource connection |
+| `POST {prefix}/subscribe` | `SSESubscribeHandler` | Subscribe client to topics |
+| `POST {prefix}/unsubscribe` | `SSEUnsubscribeHandler` | Unsubscribe client from topics |
 
 ```go
-// String
-name := params.GetString("name")  // string
-
-// Integer
-id := params.GetInt("id")         // int
-id64 := params.GetInt64("id")     // int64
-
-// Float
-price := params.GetFloat64("price")  // float64
-
-// Boolean
-admin := params.GetBool("admin")  // bool
-
-// Slice (comma-separated)
-tags := params.GetSlice("tags")   // []any
-
-// JSON
-json, err := params.ToJSON()      // []byte
-```
-
-### All Methods
-
-| Method | Signature | Description |
-|--------|-----------|-------------|
-| `Get()` | `Get(key string) any` | Get parameter value |
-| `GetDefault()` | `GetDefault(key string, def any) any` | Get with default |
-| `GetString()` | `GetString(key string) string` | Get as string |
-| `GetInt()` | `GetInt(key string) int` | Get as int |
-| `GetInt64()` | `GetInt64(key string) int64` | Get as int64 |
-| `GetFloat64()` | `GetFloat64(key string) float64` | Get as float64 |
-| `GetBool()` | `GetBool(key string) bool` | Get as bool |
-| `GetSlice()` | `GetSlice(key string) []any` | Get as slice |
-| `Has()` | `Has(key string) bool` | Check if exists |
-| `Set()` | `Set(key string, value any)` | Set parameter |
-| `Delete()` | `Delete(key string)` | Delete parameter |
-| `Clone()` | `Clone() Params` | Clone params |
-| `Merge()` | `Merge(other Params)` | Merge params |
-| `ToJSON()` | `ToJSON() ([]byte, error)` | Serialize to JSON |
-| `Keys()` | `Keys() []string` | Get all keys |
-| `Values()` | `Values() []any` | Get all values |
-
----
-
-## QueryParams
-
-Handle URL query string parameters.
-
-### Creating QueryParams
-
-```go
-// From URL
-url, _ := url.Parse("https://example.com/search?q=gospa&page=2")
-queryParams := routing.NewQueryParams(url.Query())
-
-// From map
-queryParams := routing.NewQueryParamsFromMap(map[string][]string{
-    "q":    {"gospa"},
-    "page": {"2"},
+broker := fiber.NewSSEBroker(&fiber.SSEConfig{
+    HeartbeatInterval: 30 * time.Second,
+    OnConnect: func(c *fiber.SSEClient) {
+        log.Printf("SSE client connected: %s", c.ID)
+    },
 })
 
-// Empty
-queryParams := routing.NewQueryParamsEmpty()
+fiber.SetupSSE(app.Fiber, broker, "/_sse")
 ```
 
-### Methods
+### `SSEClient`
 
 ```go
-// Get first value
-q := queryParams.Get("q")  // "gospa"
-
-// Get all values (for multi-value params)
-tags := queryParams.GetAll("tags")  // []string
-
-// Get with default
-page := queryParams.GetDefault("page", "1")  // "2" or "1" if not found
-
-// Type conversions
-page := queryParams.GetInt("page")        // int
-price := queryParams.GetFloat64("price")  // float64
-active := queryParams.GetBool("active")   // bool
-
-// Check existence
-if queryParams.Has("q") {
-    // Query param exists
-}
-
-// Set value
-queryParams.Set("sort", "desc")
-
-// Add value (for multi-value params)
-queryParams.Add("filter", "active")
-queryParams.Add("filter", "pending")  // filter=active&filter=pending
-
-// Delete
-queryParams.Del("temp")
-
-// Encode to string
-encoded := queryParams.Encode()  // "q=gospa&page=2"
-
-// Clone
-cloned := queryParams.Clone()
-
-// To URL values
-values := queryParams.Values()  // url.Values
-```
-
-### QueryParams Methods Table
-
-| Method | Signature | Description |
-|--------|-----------|-------------|
-| `Get()` | `Get(key string) string` | Get first value |
-| `GetAll()` | `GetAll(key string) []string` | Get all values |
-| `GetDefault()` | `GetDefault(key, def string) string` | Get with default |
-| `GetInt()` | `GetInt(key string) int` | Get as int |
-| `GetInt64()` | `GetInt64(key string) int64` | Get as int64 |
-| `GetFloat64()` | `GetFloat64(key string) float64` | Get as float64 |
-| `GetBool()` | `GetBool(key string) bool` | Get as bool |
-| `Has()` | `Has(key string) bool` | Check if exists |
-| `Set()` | `Set(key, value string)` | Set value |
-| `Add()` | `Add(key, value string)` | Add value |
-| `Del()` | `Del(key string)` | Delete key |
-| `Encode()` | `Encode() string` | Encode to string |
-| `Clone()` | `Clone() QueryParams` | Clone params |
-| `Values()` | `Values() url.Values` | Get as url.Values |
-
----
-
-## ParamExtractor
-
-Extract parameters from routes during matching.
-
-### Creating an Extractor
-
-```go
-// Create an extractor for a specific pattern
-extractor := routing.NewParamExtractor("/users/:id")
-
-// Match and extract
-params, ok := extractor.Extract("/users/123")
-if ok {
-    id := params.Get("id")  // "123"
+type SSEClient struct {
+    ID       string            // Unique client ID (UUID)
+    Topics   []string          // Currently subscribed topics
+    Metadata map[string]string // Arbitrary metadata (e.g. user ID, set on connect)
 }
 ```
 
-### Extracting Parameters
+### Broker Methods
 
 ```go
-// Match with wildcard
-extractor = routing.NewParamExtractor("/files/*filepath")
-params, ok = extractor.Extract("/files/docs/readme.txt")
-if ok {
-    filepath := params.Get("filepath")  // "docs/readme.txt"
+// Subscribe clientID to one or more topics
+broker.Subscribe(clientID string, topics ...string)
+
+// Unsubscribe clientID from one or more topics
+broker.Unsubscribe(clientID string, topics ...string)
+
+// Send an event to a single client
+broker.Send(clientID string, event SSEEvent) error
+
+// Broadcast an event to all connected clients
+broker.Broadcast(event SSEEvent)
+
+// Broadcast an event to all clients subscribed to a topic
+broker.BroadcastToTopic(topic string, event SSEEvent)
+
+// Disconnect a client
+broker.Disconnect(clientID string)
+```
+
+### `SSEEvent`
+
+```go
+type SSEEvent struct {
+    ID    string // Optional event ID (for client reconnect resume)
+    Event string // Event type (e.g. "notification", "update")
+    Data  any    // Payload — will be JSON-encoded
+    Retry int    // Optional retry delay (ms)
 }
 ```
 
-### RouteMatch
+### `SSEHelper` (High-Level)
 
 ```go
-type RouteMatch struct {
-    Pattern string  // Matched pattern
-    Params  Params  // Extracted parameters
-    Handler any     // Associated handler
-}
-```
+helper := fiber.NewSSEHelper(broker)
 
-### Pattern Syntax
+// Send a notification
+helper.Notify(clientID, map[string]string{"message": "Hello!"})
 
-| Pattern | Description | Example |
-|---------|-------------|---------|
-| `:name` | Named parameter | `/users/:id` matches `/users/123` |
-| `*name` | Wildcard (greedy) | `/files/*path` matches `/files/a/b/c` |
-| `{name:regex}` | Regex constraint | `/users/{id:\\d+}` matches digits only |
+// Broadcast to all clients
+helper.NotifyAll("System maintenance in 5 minutes")
 
----
+// Send a state update
+helper.Update(clientID, "count", 42)
 
-## Route Groups
+// Send an alert
+helper.Alert(clientID, "warning", "Low disk space")
 
-Route groups allow you to organize routes into logical groups without affecting the URL path. This is useful for:
-
-- Grouping related routes together
-- Applying layouts to specific sections
-- Keeping feature areas separated
-
-### Syntax
-
-Route groups are created by wrapping a folder name in parentheses: `(name)`
-
-```
-routes/
-├── (marketing)/
-│   ├── about/
-│   │   └── page.templ      → /about
-│   └── contact/
-│       └── page.templ      → /contact
-├── (shop)/
-│   ├── products/
-│   │   └── page.templ      → /products
-│   └── cart/
-│       └── page.templ      → /cart
-└── page.templ              → /
-```
-
-### How It Works
-
-When a folder is named with parentheses:
-
-1. The folder name is **not** included in the URL path
-2. Routes inside the group behave as if they were at the parent level
-3. Multiple groups can exist at the same level
-
-### Example Structure
-
-```
-routes/
-├── (docs)/
-│   ├── layout.templ        → Layout for /docs/* routes
-│   ├── getting-started/
-│   │   └── page.templ      → /getting-started
-│   └── api/
-│       └── page.templ      → /api
-├── (auth)/
-│   ├── login/
-│   │   └── page.templ      → /login
-│   └── register/
-│       └── page.templ      → /register
-└── page.templ              → /
-```
-
-### Benefits
-
-1. **Organization**: Keep related routes together without URL bloat
-2. **Layouts**: Apply layouts to groups of routes
-3. **Clean URLs**: Maintain clean URL structures while organizing code
-
-### Comparison with Other Patterns
-
-| Pattern | URL Impact | Use Case |
-|---------|------------|----------|
-| `(name)` | Not included in URL | Organizational grouping |
-| `_name` | Becomes `:name` | Dynamic parameter |
-| `[name]` | Becomes `:name` | Dynamic parameter (bracket syntax) |
-| `name` | Included as `/name` | Static path segment |
-
-### Methods
-
-| Method | Signature | Description |
-|--------|-----------|-------------|
-| `AddPattern()` | `AddPattern(pattern string)` | Add route pattern |
-| `Match()` | `Match(path string) *RouteMatch` | Match path and extract |
-| `MatchPattern()` | `MatchPattern(pattern, path string) *RouteMatch` | Match specific pattern |
-| `Extract()` | `Extract(pattern, path string) Params` | Extract params only |
-| `Patterns()` | `Patterns() []string` | Get all patterns |
-
----
-
-## PathBuilder
-
-Build URL paths with parameters.
-
-### Creating a PathBuilder
-
-```go
-builder := routing.NewPathBuilder("/users/:userId/posts/:postId")
-builder.Param("userId", "1")
-builder.Param("postId", "42")
-path := builder.Build()
-// Result: "/users/1/posts/42"
-```
-
-### With Query Parameters
-
-```go
-builder = routing.NewPathBuilder("/search")
-builder.Query("q", "gospa")
-builder.Query("page", "1")
-path = builder.Build()
-// Result: "/search?q=gospa&page=1"
-```
-
-### URL Encoding
-
-```go
-// Automatic URL encoding
-path := builder.Build("/search/:q", routing.Params{
-    "q": "hello world",
-})
-// Result: "/search/hello%20world"
-```
-
-### Methods
-
-| Method | Signature | Description |
-|--------|-----------|-------------|
-| `Build()` | `Build(pattern string, params Params) string` | Build path |
-| `BuildWithQuery()` | `BuildWithQuery(pattern string, params Params, query QueryParams) string` | Build with query |
-| `SetStrictSlash()` | `SetStrictSlash(strict bool) *PathBuilder` | Enable/disable trailing slash |
-| `SetURLEncoding()` | `SetURLEncoding(enabled bool) *PathBuilder` | Enable/disable URL encoding |
-
----
-
-## Complete Example
-
-```go
-package main
-
-import (
-    "fmt"
-    "net/url"
-    
-    "github.com/aydenstechdungeon/gospa/routing"
-)
-
-func main() {
-    // Create param extractor
-    extractor := routing.NewParamExtractor("/users/:id")
-    
-    // Match routes
-    params, ok := extractor.Extract("/users/123")
-    if ok {
-        fmt.Printf("User ID: %s\n", params.Get("id"))
-    }
-    
-    // Match with wildcard
-    extractor = routing.NewParamExtractor("/api/:version/*path")
-    params, ok = extractor.Extract("/api/v1/users/123/profile")
-    if ok {
-        fmt.Printf("Version: %s\n", params.Get("version"))
-        fmt.Printf("Path: %s\n", params.Get("path"))
-    }
-    
-    // Build paths
-    builder := routing.NewPathBuilder("/users/:id/posts/:postId")
-    builder.Param("id", "1")
-    builder.Param("postId", "42")
-    path := builder.Build()
-    fmt.Println("Built path:", path)
-    
-    // With query params
-    builder = routing.NewPathBuilder("/search")
-    builder.Query("q", "gospa")
-    builder.Query("page", "1")
-    fullPath := builder.Build()
-    fmt.Println("Full path:", fullPath)
-    
-    // Parse and use query params
-    u, _ := url.Parse("https://example.com/search?q=gospa&page=2&filter=active&filter=pending")
-    qp := routing.NewQueryParams(u.Query())
-    
-    fmt.Println("Query:", qp.Get("q"))
-    fmt.Println("Page:", qp.GetInt("page"))
-    fmt.Println("Filters:", qp.GetAll("filter"))
-}
+// Report progress (0–100)
+helper.Progress(clientID, 75, "Uploading...")
 ```
 
 ---
 
-## Integration with Fiber
+## Security
 
-```go
-func GetUser(c *fiber.Ctx) error {
-    // Get path params
-    id := c.Params("id")
-    
-    // Get query params
-    qp := routing.NewQueryParams(c.Request().URI().QueryArgs())
-    page := qp.GetDefault("page", "1")
-    
-    // Type-safe access
-    pageNum := qp.GetInt("page")
-    active := qp.GetBool("active")
-    
-    // ...
-}
-
-func Search(c *fiber.Ctx) error {
-    // Build URL for redirect
-    builder := routing.NewPathBuilder()
-    redirectURL := builder.BuildWithQuery("/results", nil, routing.QueryParams{
-        "q":    []string{c.Query("q")},
-        "page": []string{"1"},
-    })
-    
-    return c.Redirect(redirectURL)
-}
-```
-
----
-
-## Best Practices
-
-1. **Use type-safe accessors**: Always use `GetInt`, `GetBool`, etc. for type conversion
-2. **Provide defaults**: Use `GetDefault` for optional parameters
-3. **Validate parameters**: Check existence with `Has` before processing
-4. **URL encode**: Let PathBuilder handle URL encoding
-5. **Clone when modifying**: Clone params before modification if original needed
-6. **Use wildcards sparingly**: Wildcards are greedy, use specific patterns when possible
-
-
-<!-- FILE: docs/COMPONENT_SYSTEM.md -->
-================================================================================
-
-# GoSPA Component System
-
-The component system provides a structured way to build reusable, composable UI components with lifecycle management, props validation, and state handling.
-
-## Overview
-
-GoSPA components are built using the `component` package which provides:
-
-- **BaseComponent**: Foundation for all components
-- **ComponentTree**: Hierarchical component management
-- **Lifecycle**: Component lifecycle hooks
-- **Props**: Type-safe property handling with validation
-
----
-
-## BaseComponent
-
-The `BaseComponent` is the foundation for all GoSPA components.
-
-### Creating a Component
-
-```go
-import "github.com/gospa/gospa/component"
-
-// Create a basic component
-comp := component.NewBaseComponent("my-component")
-
-// Create with options
-comp := component.NewBaseComponent("my-component",
-    component.WithProps(component.Props{
-        "title": "Hello",
-        "count": 0,
-    }),
-    component.WithState(stateMap),
-    component.WithChildren(childComponent),
-)
-```
-
-### Methods
-
-| Method | Signature | Description |
-|--------|-----------|-------------|
-| `ID()` | `string` | Returns unique component identifier |
-| `Name()` | `string` | Returns component name |
-| `State()` | `*state.StateMap` | Returns component state |
-| `Props()` | `Props` | Returns component props |
-| `Children()` | `[]Component` | Returns child components |
-| `Parent()` | `Component` | Returns parent component |
-| `AddChild()` | `AddChild(child Component)` | Adds a child component |
-| `RemoveChild()` | `RemoveChild(child Component)` | Removes a child component |
-| `GetSlot()` | `GetSlot(name string) templ.Component` | Gets a named slot |
-| `SetSlot()` | `SetSlot(name string, comp templ.Component)` | Sets a named slot |
-| `Context()` | `context.Context` | Returns component context |
-| `SetContext()` | `SetContext(ctx context.Context)` | Sets component context |
-| `ToJSON()` | `([]byte, error)` | Serializes component to JSON |
-| `Clone()` | `Component` | Creates a deep copy |
-
-### Component Options
-
-```go
-// Props option
-component.WithProps(component.Props{
-    "title": "My Title",
-    "visible": true,
-})
-
-// State option
-component.WithState(stateMap)
-
-// Children option
-component.WithChildren(child1, child2, child3)
-
-// Parent option
-component.WithParent(parentComponent)
-
-// Context option
-component.WithContext(context.Background())
-
-// Slots option
-component.WithSlots(map[string]templ.Component{
-    "header": headerComponent,
-    "footer": footerComponent,
-})
-```
-
----
-
-## Component Interface
-
-```go
-type Component interface {
-    ID() string
-    Name() string
-    State() *state.StateMap
-    Props() Props
-    Children() []Component
-    Parent() Component
-    AddChild(child Component)
-    RemoveChild(child Component)
-    GetSlot(name string) templ.Component
-    SetSlot(name string, comp templ.Component)
-    Context() context.Context
-    SetContext(ctx context.Context)
-    ToJSON() ([]byte, error)
-    Clone() Component
-}
-```
-
----
-
-## ComponentTree
-
-Manages hierarchical component relationships.
-
-### Creating a Tree
-
-```go
-// Create with root component
-tree := component.NewComponentTree(rootComponent)
-
-// Get root
-root := tree.Root()
-
-// Get component by ID
-comp := tree.Get("component-id")
-
-// Add component to tree
-tree.Add(parent, child)
-
-// Remove component from tree
-tree.Remove(component)
-```
-
-### Tree Methods
-
-| Method | Signature | Description |
-|--------|-----------|-------------|
-| `Root()` | `Component` | Returns root component |
-| `Get()` | `Get(id string) Component` | Get component by ID |
-| `Add()` | `Add(parent, child Component)` | Add child to parent |
-| `Remove()` | `Remove(component Component)` | Remove from tree |
-| `OnMount()` | `OnMount(fn func(Component))` | Register mount callback |
-| `OnUpdate()` | `OnUpdate(fn func(Component))` | Register update callback |
-| `OnDestroy()` | `OnDestroy(fn func(Component))` | Register destroy callback |
-| `Mount()` | `Mount()` | Trigger mount lifecycle |
-| `Update()` | `Update()` | Trigger update lifecycle |
-| `Walk()` | `Walk(fn func(Component) bool)` | Walk tree depth-first |
-| `Find()` | `Find(fn func(Component) bool) Component` | Find first matching |
-| `FindAll()` | `FindAll(fn func(Component) bool) []Component` | Find all matching |
-| `FindByName()` | `FindByName(name string) Component` | Find by component name |
-| `FindByProp()` | `FindByProp(key string, value any) Component` | Find by prop value |
-
-### Walking the Tree
-
-```go
-// Walk all components
-tree.Walk(func(comp Component) bool {
-    fmt.Println("Component:", comp.Name())
-    return true // continue walking
-})
-
-// Find specific component
-found := tree.Find(func(comp Component) bool {
-    return comp.Name() == "target-component"
-})
-
-// Find all matching
-all := tree.FindAll(func(comp Component) bool {
-    props := comp.Props()
-    return props.GetBool("active")
-})
-```
-
----
-
-## Lifecycle
-
-The `Lifecycle` type manages component lifecycle phases and hooks.
-
-### Lifecycle Phases
-
-```go
-const (
-    PhaseCreated   LifecyclePhase = iota // Component created
-    PhaseMounting                        // Component mounting
-    PhaseMounted                         // Component mounted
-    PhaseUpdating                        // Component updating
-    PhaseUpdated                         // Component updated
-    PhaseDestroying                      // Component destroying
-    PhaseDestroyed                       // Component destroyed
-)
-```
-
-### Creating a Lifecycle
-
-```go
-lc := component.NewLifecycle()
-
-// Check current phase
-phase := lc.Phase()
-
-// Check if mounted
-if lc.IsMounted() {
-    // Component is mounted
-}
-```
-
-### Registering Hooks
-
-```go
-// Before mount
-lc.OnBeforeMount(func() {
-    fmt.Println("About to mount")
-})
-
-// On mount
-lc.OnMount(func() {
-    fmt.Println("Mounted")
-})
-
-// Before update
-lc.OnBeforeUpdate(func() {
-    fmt.Println("About to update")
-})
-
-// On update
-lc.OnUpdate(func() {
-    fmt.Println("Updated")
-})
-
-// Before destroy
-lc.OnBeforeDestroy(func() {
-    fmt.Println("About to destroy")
-})
-
-// On destroy
-lc.OnDestroy(func() {
-    fmt.Println("Destroyed")
-})
-
-// Cleanup (runs after destroy)
-lc.OnCleanup(func() {
-    fmt.Println("Cleanup")
-})
-```
-
-### Triggering Lifecycle Events
-
-```go
-// Trigger mount
-lc.Mount()
-
-// Trigger update
-lc.Update()
-
-// Trigger destroy
-lc.Destroy()
-
-// Clear all hooks
-lc.ClearHooks()
-```
-
-### Lifecycle-Aware Components
-
-```go
-type LifecycleAware interface {
-    OnBeforeMount()
-    OnMount()
-    OnBeforeUpdate()
-    OnUpdate()
-    OnBeforeDestroy()
-    OnDestroy()
-}
-```
-
-### Helper Functions
-
-```go
-// Mount a component with lifecycle
-err := component.MountComponent(comp)
-
-// Update a component with lifecycle
-err := component.UpdateComponent(comp)
-
-// Destroy a component with lifecycle
-err := component.DestroyComponent(comp)
-```
-
----
-
-## Props
-
-Type-safe property handling with validation.
-
-### Basic Usage
-
-```go
-// Create props
-props := component.Props{
-    "title": "Hello",
-    "count": 42,
-    "active": true,
-}
-
-// Get values
-title := props.Get("title")           // any
-titleStr := props.GetString("title")  // string
-count := props.GetInt("count")        // int
-count64 := props.GetInt64("count")    // int64
-price := props.GetFloat64("price")    // float64
-active := props.GetBool("active")     // bool
-items := props.GetSlice("items")      // []any
-config := props.GetMap("config")      // map[string]any
-
-// Get with default
-title := props.GetDefault("title", "Default Title")
-
-// Set value
-props.Set("newKey", "newValue")
-
-// Check existence
-if props.Has("title") {
-    // Key exists
-}
-
-// Delete key
-props.Delete("oldKey")
-
-// Get all keys
-keys := props.Keys()
-
-// Get all values
-values := props.Values()
-
-// Clone props
-cloned := props.Clone()
-
-// Merge props
-props.Merge(otherProps)
-
-// JSON serialization
-json, err := props.ToJSON()
-
-// Compare props
-if props.Equals(otherProps) {
-    // Props are equal
-}
-```
-
-### Props Methods
-
-| Method | Signature | Description |
-|--------|-----------|-------------|
-| `Get()` | `Get(key string) any` | Get prop value |
-| `Set()` | `Set(key string, value any)` | Set prop value |
-| `GetDefault()` | `GetDefault(key string, def any) any` | Get with default |
-| `GetString()` | `GetString(key string) string` | Get as string |
-| `GetInt()` | `GetInt(key string) int` | Get as int |
-| `GetInt64()` | `GetInt(key string) int64` | Get as int64 |
-| `GetFloat64()` | `GetFloat64(key string) float64` | Get as float64 |
-| `GetBool()` | `GetBool(key string) bool` | Get as bool |
-| `GetSlice()` | `GetSlice(key string) []any` | Get as slice |
-| `GetMap()` | `GetMap(key string) map[string]any` | Get as map |
-| `Has()` | `Has(key string) bool` | Check if exists |
-| `Delete()` | `Delete(key string)` | Delete prop |
-| `Keys()` | `Keys() []string` | Get all keys |
-| `Values()` | `Values() []any` | Get all values |
-| `Clone()` | `Clone() Props` | Clone props |
-| `Merge()` | `Merge(other Props)` | Merge props |
-| `ToJSON()` | `ToJSON() ([]byte, error)` | JSON serialization |
-| `Equals()` | `Equals(other Props) bool` | Compare props |
-
----
-
-## PropSchema
-
-Define and validate prop schemas.
-
-### Creating a Schema
-
-```go
-schema := component.NewPropSchema()
-
-// Define props
-schema.Define("title", reflect.String).
-       Define("count", reflect.Int).
-       Define("active", reflect.Bool)
-
-// Define with validator
-schema.DefineWithValidator("email", func(value any) error {
-    str, ok := value.(string)
-    if !ok {
-        return errors.New("email must be string")
-    }
-    if !strings.Contains(str, "@") {
-        return errors.New("invalid email format")
-    }
-    return nil
-})
-```
-
-### PropDefinition
-
-```go
-type PropDefinition struct {
-    Name         string            // Prop name
-    Type         reflect.Kind      // Expected type
-    DefaultValue any               // Default value
-    Required     bool              // Is required
-    Validator    func(any) error   // Custom validator
-}
-```
-
-### Validation
-
-```go
-// Validate props
-err := schema.Validate(props)
-
-// Apply defaults
-propsWithDefaults := schema.ApplyDefaults(props)
-
-// Validate and apply
-validated, err := schema.ValidateAndApply(props)
-
-// Get definition
-def := schema.GetDefinition("title")
-
-// Get all definitions
-defs := schema.Definitions()
-```
-
----
-
-## BindableProp
-
-Two-way bindable properties.
-
-### Creating Bindable Props
-
-```go
-// Create bindable prop
-bp := component.NewBindableProp("count", 0)
-
-// Get value
-value := bp.Get()
-
-// Set value
-bp.Set(42)
-
-// Get name
-name := bp.Name()
-
-// On change callback
-bp.OnChange(func(newValue any) {
-    fmt.Println("Value changed to:", newValue)
-})
-
-// Set validator
-bp.SetValidator(func(value any) error {
-    if value.(int) < 0 {
-        return errors.New("count cannot be negative")
-    }
-    return nil
-})
-
-// Two-way bind to another prop
-bp.Bind(otherBindableProp)
-```
-
-### BindableProps Collection
-
-```go
-// Create collection
-bps := component.NewBindableProps()
-
-// Add bindable
-bps.Add(component.NewBindableProp("count", 0))
-
-// Get bindable
-bp := bps.Get("count")
-
-// Remove bindable
-bps.Remove("count")
-
-// Get all names
-names := bps.Names()
-
-// Convert to Props
-props := bps.ToProps()
-```
-
----
-
-## Complete Example
-
-```go
-package main
-
-import (
-    "context"
-    "fmt"
-    
-    "github.com/gospa/gospa/component"
-    "github.com/gospa/gospa/state"
-)
-
-// Custom component
-type ButtonComponent struct {
-    *component.BaseComponent
-    lifecycle *component.Lifecycle
-}
-
-func NewButtonComponent(text string, onClick func()) *ButtonComponent {
-    btn := &ButtonComponent{
-        BaseComponent: component.NewBaseComponent("button",
-            component.WithProps(component.Props{
-                "text":    text,
-                "onClick": onClick,
-            }),
-        ),
-        lifecycle: component.NewLifecycle(),
-    }
-    
-    // Setup lifecycle hooks
-    btn.lifecycle.OnMount(func() {
-        fmt.Println("Button mounted")
-    })
-    
-    btn.lifecycle.OnDestroy(func() {
-        fmt.Println("Button destroyed")
-    })
-    
-    return btn
-}
-
-func main() {
-    // Create state
-    sm := state.NewStateMap()
-    sm.Add("counter", state.NewRune(0))
-    
-    // Create component tree
-    root := component.NewBaseComponent("app",
-        component.WithState(sm),
-    )
-    
-    tree := component.NewComponentTree(root)
-    
-    // Add child components
-    button := NewButtonComponent("Click Me", func() {
-        counter := sm.Get("counter").(*state.Rune[int])
-        counter.Set(counter.Get() + 1)
-    })
-    
-    tree.Add(root, button)
-    
-    // Mount tree
-    tree.Mount()
-    
-    // Walk tree
-    tree.Walk(func(comp component.Component) bool {
-        fmt.Printf("Component: %s (ID: %s)\n", comp.Name(), comp.ID())
-        return true
-    })
-    
-    // Cleanup
-    tree.Destroy()
-}
-```
-
-
-<!-- FILE: docs/ISLANDS.md -->
-================================================================================
-
-# Island Hydration & Streaming SSR
-
-GoSPA implements a partial hydration (Islands Architecture) system, allowing you to ship static HTML by default and selectively hydrate interactive components based on viewport visibility, idle time, or user interaction.
-
----
-
-## Islands Architecture
-
-An **island** is an interactive component that is loaded and hydrated on the client. The server renders the HTML placeholder; the client loads the JavaScript module and calls its `hydrate` or `mount` function.
-
-### DOM Attributes
-
-Mark an element as an island using `data-gospa-island`:
-
-```html
-<div
-  data-gospa-island="Counter"
-  data-gospa-mode="visible"
-  data-gospa-priority="high"
-  data-gospa-props='{"initial": 10}'
-  data-gospa-state='{"count": 0}'
-  data-gospa-threshold="200"
-  id="my-counter"
+> **IMPORTANT:** `SSESubscribeHandler` verifies that the target `clientId` is connected, but does **NOT** verify that the HTTP requester is that client. Any caller who knows another client's ID can subscribe it to arbitrary topics.
 >
-  <!-- Server-rendered placeholder content here -->
-  <p>Loading...</p>
-</div>
-```
-
-| Attribute | Type | Description |
-|-----------|------|-------------|
-| `data-gospa-island` | string | **Required.** Island name — maps to `/islands/{name}.js` |
-| `data-gospa-mode` | string | Hydration mode (see below, default: `immediate`) |
-| `data-gospa-priority` | string | Queue priority: `high`, `normal`, `low` (default: `normal`) |
-| `data-gospa-props` | JSON | Props passed to `hydrate(element, props, state)` |
-| `data-gospa-state` | JSON | State passed to `hydrate(element, props, state)` |
-| `data-gospa-threshold` | number | Intersection margin in px for `visible` mode (default: 200) |
-| `data-gospa-defer` | number | ms delay for `idle` mode (default: 2000) |
-| `data-gospa-client-only` | boolean | Skip server rendering entirely |
-| `data-gospa-server-only` | boolean | Never hydrate — render only |
-
-### Hydration Modes
-
-| Mode | Description |
-|------|-------------|
-| `immediate` | (Default) Hydrate when the island is discovered |
-| `visible` | Hydrate when the element enters the viewport (uses `IntersectionObserver`) |
-| `idle` | Hydrate when the browser is idle (uses `requestIdleCallback`, falls back to `setTimeout`) |
-| `interaction` | Hydrate on first user event: `mouseenter`, `touchstart`, `focusin`, or `click` |
-| `lazy` | Never auto-hydrate — call `hydrateIsland(id)` manually |
-
-### Priority Queue
-
-When multiple islands are scheduled for `immediate` hydration, they are processed in priority order:
-
-| Priority | Use Case |
-|----------|----------|
-| `high` | Navigation, purchase buttons, search — hydrate first |
-| `normal` | (Default) General interactive components |
-| `low` | Below-the-fold, non-essential widgets |
+> Always place `SSESubscribeHandler` behind authentication middleware that validates the session identity matches the requested `clientId`:
+>
+> ```go
+> fiber.SetupSSE(app.Fiber, broker, "/_sse", myAuthMiddleware)
+> ```
 
 ---
 
-## Island Module Convention
+## Client-Side
 
-Island modules must be ES modules served at `/islands/{name}.js` (configurable via `moduleBasePath`).
+The browser uses the native `EventSource` API to connect and receive events. GoSPA does not ship a client-side SSE wrapper — the native API is sufficient:
 
 ```typescript
-// /islands/Counter.ts
-export default {
-    hydrate(element: Element, props: Record<string, unknown>, state: Record<string, unknown>) {
-        const btn = element.querySelector('button')!;
-        let count = (state.count as number) ?? (props.initial as number) ?? 0;
+const clientId = crypto.randomUUID();
 
-        const render = () => btn.textContent = `Count: ${count}`;
-        render();
-        btn.addEventListener('click', () => { count++; render(); });
-    }
+// Connect
+const es = new EventSource(`/_sse/connect?clientId=${clientId}`);
+
+// Generic message
+es.onmessage = (ev) => console.log('message:', ev.data);
+
+// Named event
+es.addEventListener('notification', (ev) => {
+    const data = JSON.parse(ev.data);
+    showToast(data.message);
+});
+
+es.addEventListener('error', () => {
+    console.warn('SSE connection lost, browser will reconnect automatically');
+});
+```
+
+### Topic Subscription from Client
+
+```typescript
+// Subscribe to topics after connecting
+await fetch('/_sse/subscribe', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ clientId, topics: ['alerts', 'updates'] }),
+});
+```
+
+---
+
+## Full Example
+
+```go
+package main
+
+import (
+    "fmt"
+    "time"
+    "github.com/aydenstechdungeon/gospa"
+    "github.com/aydenstechdungeon/gospa/fiber"
+)
+
+func main() {
+    app := gospa.New(gospa.Config{RoutesDir: "./routes"})
+
+    broker := fiber.NewSSEBroker(&fiber.SSEConfig{
+        HeartbeatInterval: 30 * time.Second,
+        OnConnect: func(c *fiber.SSEClient) {
+            fmt.Printf("Client connected: %s\n", c.ID)
+        },
+    })
+
+    fiber.SetupSSE(app.Fiber, broker, "/_sse")
+
+    // Push an event from a background task
+    go func() {
+        for {
+            time.Sleep(5 * time.Second)
+            broker.Broadcast(fiber.SSEEvent{
+                Event: "tick",
+                Data:  map[string]int{"count": int(time.Now().Unix())},
+            })
+        }
+    }()
+
+    app.Listen(":3000")
 }
 ```
 
-Both `hydrate` and `mount` are accepted (either on the default export or as named exports). `hydrate` takes precedence.
-
 ---
 
-## Client API
+## Heartbeat
 
-### `initIslands(config?) → IslandManager`
-
-Initializes the global island manager. Auto-discovers all `[data-gospa-island]` elements in the DOM.
-
-```typescript
-import { initIslands } from './island.ts';
-
-const manager = initIslands({
-    moduleBasePath: '/islands',   // Where to load island JS from
-    defaultTimeout: 30000,        // ms until hydration times out
-    debug: true,                  // Enable console logging
-    // Custom loader for bundlers that handle imports differently:
-    moduleLoader: async (name) => import(`./islands/${name}`),
-});
-```
-
-### `getIslandManager() → IslandManager | null`
-
-Returns the global island manager.
-
-### `hydrateIsland(idOrName) → Promise<IslandHydrationResult | null>`
-
-Manually triggers hydration for a specific island (by DOM `id` or island name):
-
-```typescript
-import { hydrateIsland } from './island.ts';
-
-// Hydrate the lazy island when user clicks "Show chart"
-document.getElementById('show-chart')?.addEventListener('click', async () => {
-    const result = await hydrateIsland('Chart');
-    if (!result?.success) console.error('Chart hydration failed:', result?.error);
-});
-```
-
-### `IslandManager` Methods
-
-```typescript
-manager.discoverIslands()               // Scan DOM for new islands
-manager.hydrateIsland(data)             // Hydrate a specific island data object
-manager.hydrate(idOrName)               // Hydrate by id or name string
-manager.isHydrated(id)                  // Check if an island is already hydrated
-manager.getIslands()                    // All discovered islands
-manager.getIsland(id)                   // Get island data by id
-manager.destroy()                       // Clean up observers and listeners
-```
-
-### Browser Globals
-
-```js
-// Available at runtime when island.ts is loaded
-window.__GOSPA_ISLAND_MANAGER__.init(config?)   // == initIslands
-window.__GOSPA_ISLAND_MANAGER__.get()           // == getIslandManager
-window.__GOSPA_ISLAND_MANAGER__.hydrate(name)   // == hydrateIsland
-```
-
-### Events
-
-```typescript
-// Fired on the island element when hydration completes
-element.addEventListener('gospa:hydrated', (ev: CustomEvent) => {
-    console.log('hydrated:', ev.detail.island); // IslandElementData
-});
-```
-
----
-
-## Streaming SSR
-
-GoSPA's `StreamingManager` handles progressive hydration from server-streamed HTML chunks. It is usually initialized automatically; each chunk type triggers a different action:
-
-| Chunk Type | Action |
-|------------|--------|
-| `html` | Updates a specific DOM element by `id` with new innerHTML |
-| `island` | Registers and schedules the island for hydration per its mode |
-| `script` | Dynamically injects and executes a `<script>` tag |
-| `state` | Merges the payload into the global `__GOSPA_STATE__` |
-| `error` | Logs a server-side rendering error to the console |
-
-### Manual Setup
-
-```typescript
-import { initStreaming } from './streaming.ts';
-
-const streamer = initStreaming({
-    hydrationTimeout: 5000,  // ms before island hydration times out
-    enableLogging: true,
-});
-
-// Manually hydrate an island that arrived via streaming
-await streamer.hydrate('IslandId');
-
-// Check hydration status
-console.log(streamer.getHydratedIslands()); // Set<string>
-console.log(streamer.isHydrated('IslandId')); // boolean
-```
-
----
-
-## Auto-Initialize
-
-If a `<script data-gospa-islands>` tag is present, `initIslands()` is called automatically when the DOM is ready. Otherwise, call it manually before the page finishes loading.
-
----
-
-## Notes
-
-- Islands do **not** require a framework. They can be Svelte, Preact, Vanilla JS, or any library that runs in a browser `<script type="module">`.
-- Islands discovered after `initIslands()` (e.g. via SPA navigation) can be re-scanned with `manager.discoverIslands()`.
-- Setting `data-gospa-server-only="true"` skips hydration entirely — useful for purely decorative server-rendered components.
+When `HeartbeatInterval > 0`, the broker sends a comment line (`: heartbeat`) at the configured interval. This keeps proxies from closing idle connections. The browser `EventSource` ignores comment lines; they are invisible to `onmessage` handlers.
 
 
-<!-- FILE: docs/RENDERING.md -->
+<!-- FILE: docs/03-features/04-security.md -->
 ================================================================================
 
-# Rendering Strategies
+# Security Policy for GoSPA
 
-GoSPA supports four per-page rendering strategies that can be mixed freely across routes. Each strategy controls how and when a page is rendered and how its HTTP `Cache-Control` header is set.
+## Supported Versions
 
-## Strategy Overview
+Currently, only the latest version of GoSPA is supported with security updates.
 
-| Strategy | When to Use | Cache-Control |
-|----------|-------------|---------------|
-| `StrategySSR` | Auth-gated pages, real-time data, per-user content | `no-store` |
-| `StrategySSG` | Fully static content: marketing pages, docs, landing pages | `public, max-age=31536000, immutable` |
-| `StrategyISR` | Mostly static, acceptable to serve stale for N minutes | `public, s-maxage=<TTL>, stale-while-revalidate=<TTL>` |
-| `StrategyPPR` | "App shell" pages with a static outer frame and dynamic inner sections | `no-store` (slots rendered per-request) |
+| Version | Supported          |
+| ------- | ------------------ |
+| v0.x    | :white_check_mark: |
 
-All four strategies share the same rendering pipeline (file-based routing, layout chain, root layout). The strategy only affects **caching and when re-rendering occurs**.
+## Security Philosophy: Trust the Server
+
+GoSPA follows a **"trust the server"** security model, similar to SvelteKit and other modern frameworks. This means:
+
+1. **Templ auto-escapes all content** during server-side rendering
+2. **Client-side sanitization is opt-in**, not required by default
+3. **Content Security Policy (CSP)** is the primary XSS defense
+4. **User-generated content** is the only scenario requiring DOMPurify
+
+### Why No Default Sanitization?
+
+Traditional SPAs need client-side sanitization because they render untrusted HTML directly in the browser. GoSPA uses Templ, which:
+
+- Auto-escapes all dynamic content at the server
+- Prevents XSS at the source, not as an afterthought
+- Renders clean HTML that doesn't need re-sanitization on the client
+
+## XSS Protection Layers
+
+### Layer 1: Templ Auto-Escaping (Always Active)
+
+Templ automatically escapes all dynamic content:
+
+```go
+// In your Templ component
+@templ.Component {
+    // This is safe - userInput is auto-escaped
+    <div>{ userInput }</div>
+}
+```
+
+Output: `<div><script>alert(1)</script></div>`
+
+### Layer 2: Content Security Policy (Recommended)
+
+Configure strict CSP headers as your primary defense:
+
+```http
+Content-Security-Policy: 
+  default-src 'self';
+  script-src 'self';
+  style-src 'self' 'unsafe-inline';
+  img-src 'self' data: https:;
+  connect-src 'self' wss:;
+```
+
+### Layer 3: DOMPurify (User-Generated Content Only)
+
+Use DOMPurify only when displaying **untrusted user-generated content**:
+
+```typescript
+// Use the secure runtime for UGC scenarios
+import { sanitize } from '@gospa/runtime-secure';
+
+const clean = await sanitize(untrustedHtml);
+```
+
+## Runtime Variants and Security
+
+Choose the appropriate runtime based on your needs:
+
+| Runtime | Size | Sanitizer | Use Case |
+|---------|------|-----------|----------|
+| `gospa` (default) | ~15KB | None (trust server) | **Recommended**: Server-rendered apps with CSP |
+| `gospa/runtime-secure` | ~35KB | DOMPurify (full) | Apps with user-generated content (comments, wikis) |
+| `gospa/simple` | ~18KB | Simple (basic) | **Deprecated**: Will be removed in v2.0 |
+| `gospa/core` | ~12KB | None | Custom implementations |
+| `gospa/micro` | ~3KB | None | State-only, no DOM operations |
+
+### Default Runtime (`gospa`)
+
+```typescript
+import { init } from 'gospa';
+
+// No sanitization - trusts server-rendered HTML
+// Bundle size: ~15KB
+init();
+```
+
+**Security model:**
+- Trusts all HTML from your server
+- Relies on Templ's auto-escaping for XSS prevention
+- CSP is your primary defense
+- Perfect for apps without user-generated HTML content
+
+### Secure Runtime (`gospa/runtime-secure`)
+
+```typescript
+import { init, sanitize } from 'gospa/runtime-secure';
+
+// Includes DOMPurify for user-generated content
+// Bundle size: ~35KB
+init();
+
+// Sanitize untrusted HTML
+const clean = await sanitize(userComment);
+```
+
+**Security model:**
+- Same as default, plus DOMPurify for UGC
+- Use only when displaying HTML from untrusted sources
+- Social media apps, comment systems, wikis, forums
+
+## When Do You Need DOMPurify?
+
+| Scenario | Needs DOMPurify? | Reason |
+|----------|-----------------|--------|
+| Server-rendered Templ components | No | Templ auto-escapes |
+| Client-side HTML bindings with server data | No | Data already escaped by Templ |
+| Displaying user comments with HTML | **Yes** | Users can submit malicious HTML |
+| Rich text editors (WYSIWYG) | **Yes** | Users control HTML content |
+| Markdown rendering | Maybe | Depends on your markdown parser |
+| Embedding third-party widgets | **Yes** | External content is untrusted |
+
+## HTML Sanitization API
+
+### Using DOMPurify (Secure Runtime)
+
+```typescript
+import { sanitize, sanitizeSync, isSanitizerReady, preloadSanitizer } from 'gospa/runtime-secure';
+
+// Async sanitization (recommended)
+const clean = await sanitize(untrustedHtml);
+
+// Preload during idle time for faster first use
+if (typeof window !== 'undefined') {
+  requestIdleCallback(() => preloadSanitizer());
+}
+
+// Sync sanitization (only if already loaded)
+if (isSanitizerReady()) {
+  const clean = sanitizeSync(untrustedHtml);
+}
+```
+
+### Custom Sanitizer Configuration
+
+```typescript
+import { setSanitizer } from 'gospa';
+import DOMPurify from 'dompurify';
+
+// Set custom sanitizer (even in default runtime)
+setSanitizer((html) => DOMPurify.sanitize(html, {
+  ALLOWED_TAGS: ['b', 'i', 'em', 'strong', 'p', 'br'],
+  ALLOWED_ATTR: []
+}));
+```
+
+## DOM Clobbering Protection
+
+When using DOMPurify (via `runtime-secure`), GoSPA prevents DOM Clobbering attacks:
+
+- `name` attributes are stripped from all elements
+- `form` attributes are removed
+- `id` attributes are sanitized to prevent property shadowing
+- `SANITIZE_DOM: true` and `SANITIZE_NAMED_PROPS: true` are enabled
+
+## CSRF Protection Setup
+
+GoSPA uses a **two-middleware pattern** for CSRF protection:
+
+```go
+app.Use(fiber.CSRFSetTokenMiddleware())
+app.Use(fiber.CSRFTokenMiddleware())
+```
+
+### Important: Middleware Order Matters
+
+Place `CSRFSetTokenMiddleware` BEFORE `CSRFTokenMiddleware`:
+
+```go
+// CORRECT: Set token first, then validate
+app.Use(fiber.CSRFSetTokenMiddleware())  // Sets cookie on GET
+app.Use(fiber.CSRFTokenMiddleware())     // Validates on POST/PUT/DELETE
+
+// INCORRECT: Don't reverse the order!
+// app.Use(gospa.CSRFTokenMiddleware(csrfConfig))   // Validation will fail
+// app.Use(gospa.CSRFSetTokenMiddleware(csrfConfig))
+```
+
+### Prefork Mode Warning
+
+When using Prefork mode (`Prefork: true`), each worker process has **isolated memory**. CSRF tokens stored in memory will not be shared across workers, causing validation failures. You must use an external session store (Redis, database) for CSRF state in Prefork deployments.
+
+### Client-Side Integration
+
+Fetch the CSRF token from the cookie and include it in requests:
+
+```javascript
+// Get token from cookie
+const csrfToken = document.cookie
+  .split('; ')
+  .find(row => row.startsWith('csrf_token='))
+  ?.split('=')[1];
+
+// Include in request headers
+fetch('/api/action', {
+  method: 'POST',
+  headers: {
+    'X-CSRF-Token': csrfToken,
+    'Content-Type': 'application/json',
+  },
+  body: JSON.stringify(data)
+});
+```
+
+## Configuration Hardening Guidelines
+
+For production environments:
+
+- Set `DevMode: false`. Development mode leaks stack traces.
+- Configure `AllowedOrigins` for CORS. Avoid wildcard `*` domains.
+- Never place session identifiers in URL query parameters.
+- Rate-limit Action routes.
+- Use HTTPS in production with HSTS headers.
+- Implement a strict CSP (see examples above).
+
+## Migration from v1.x
+
+If you're upgrading from GoSPA v1.x:
+
+1. **Default runtime no longer includes DOMPurify**
+   - Most apps don't need to change anything (Templ already protects you)
+   - If you display user-generated HTML, switch to `gospa/runtime-secure`
+
+2. **runtime-simple is deprecated**
+   - Use `gospa` instead (trusts server by default)
+   - Or use `gospa/runtime-secure` if you need sanitization
+
+3. **Remove `DisableSanitization: true` from server config**
+   - It's no longer needed (and no longer exists)
+   - The default runtime now trusts the server by default
+
+See the [Migration Guide](/docs/migration-v2) for detailed instructions.
+
+## Security Update Policy
+
+Critical and High severity vulnerabilities are patched immediately with out-of-band hotfix releases. Regular security updates are included in minor version releases.
+
+## Reporting a Vulnerability
+
+If you discover a security vulnerability, please report it privately:
+
+- Email: security@gospa.dev
+- GitHub Security Advisories
+
+You'll receive an acknowledgment within 48 hours with an estimated resolution timeline.
+
+## Known Limitations
+
+1. **Trusted Types**: GoSPA supports Trusted Types API when available, but falls back to string-based sanitization in unsupported browsers.
+
+2. **SVG Support**: SVG elements are disabled by default in DOMPurify due to XSS risks. Enable only if you understand the risks.
+
+3. **WebSocket Security**: Use WSS (WebSocket Secure) in production. The runtime does not enforce this.
+
+
+<!-- FILE: docs/03-features/05-dev-tools.md -->
+================================================================================
+
+# Hot Module Replacement (HMR)
+
+GoSPA includes a built-in Hot Module Replacement (HMR) system that watches files for changes and notifies connected browser clients in real-time — without losing application state.
 
 ---
 
-## SSR — Server-Side Rendering (default)
+## How It Works
 
-Every request triggers a fresh render. This is the default and requires no extra configuration.
+The HMR system has three parts:
 
-```go
-// Default — no options needed
-routing.RegisterPage("/dashboard", dashboardPage)
+1. **`HMRFileWatcher`** — polls the file system every 500ms for `.templ`, `.go`, `.ts`, `.js`, `.css`, `.html`, `.svelte`, `.vue`, `.jsx`, `.tsx` changes.
+2. **`HMRManager`** — debounces change events, determines the update type, and broadcasts `HMRMessage` payloads over WebSocket to connected clients.
+3. **Client script** — injected automatically by `HMRMiddleware`, connects over WebSocket and applies updates or triggers a full reload.
 
-// Or explicitly:
-routing.RegisterPageWithOptions("/dashboard", dashboardPage, routing.RouteOptions{
-    Strategy: routing.StrategySSR,
-})
-```
-
-**HTTP header:** `Cache-Control: no-store`  
-**Requires `CacheTemplates`:** No
+> **Note:** The file watcher uses polling (not `fsnotify`). For faster feedback loops, set `DebounceTime` to a lower value or replace the watcher with an inotify-based solution.
 
 ---
 
-## SSG — Static Site Generation
+## Server-Side API
 
-The page is rendered **once** on first request and cached until `SSGCacheTTL` expires or it is evicted by FIFO policy or server restart. Subsequent requests are served instantly from the in-memory cache.
-
-> **Warning:** If `SSGCacheTTL` is set to `0` (the default), SSG caches forever without expiring, making it susceptible to stale content and memory pressure over time. **For most use-cases, we strongly recommend using ISR (Incremental Static Regeneration) instead**, which provides the exact same performance but allows pages to expire.
+### `HMRConfig`
 
 ```go
-routing.RegisterPageWithOptions("/about", aboutPage, routing.RouteOptions{
-    Strategy: routing.StrategySSG,
-})
+type HMRConfig struct {
+    Enabled      bool          // Enable the HMR system
+    WatchPaths   []string      // Directories to watch (e.g. []string{"./routes", "./static"})
+    IgnorePaths  []string      // Path substrings to ignore (e.g. []string{"node_modules", ".git"})
+    DebounceTime time.Duration // Min time between two updates for the same file (default: 500ms)
+    BroadcastAll bool          // Broadcast all updates, not just matching clients (unused currently)
+}
 ```
 
-**Enable the cache** in your app config:
+### `NewHMRManager(config HMRConfig) *HMRManager`
+
+Creates a new HMR manager. Does not start watching; call `Start()` to begin.
+
+### `(*HMRManager) Start()`
+
+Starts the file watcher and the change-processing goroutine.
+
+### `(*HMRManager) Stop()`
+
+Stops the file watcher and closes the change channel. Safe to call multiple times.
+
+### `(*HMRManager) HMREndpoint() fiber.Handler`
+
+Returns a Fiber handler that upgrades WebSocket connections for HMR clients. Register this at `/__hmr`.
 
 ```go
-app := gospa.New(gospa.Config{
-    CacheTemplates:     true,
-    SSGCacheMaxEntries: 500, // FIFO eviction at 500 entries (default for in-memory)
-    SSGCacheTTL:        1 * time.Hour, // Optional expiration time for static pages
-    // Optional: Configure an external store like Redis to share cache across processes
-    Storage: redisstore.NewStore(redisClient),
-})
+app.Get("/__hmr", hmr.HMREndpoint())
 ```
 
-**HTTP header:** `Cache-Control: public, max-age=31536000, immutable`  
-**Requires `CacheTemplates`:** Yes
+### `(*HMRManager) HMRMiddleware() fiber.Handler`
 
-> **Note:** If `CacheTemplates` is `false`, SSG pages fall back to per-request SSR rendering. No error is raised.
+Returns middleware that injects the HMR client script into HTML responses. Must be used **after** the route handlers so the body is available.
+
+```go
+app.Use(hmr.HMRMiddleware())
+```
+
+### State Preservation
+
+Clients can push state before a reload and retrieve it after:
+
+```go
+// Server: preserve module state sent from client
+hmr.PreserveState(moduleID string, state any)
+
+// Server: retrieve preserved state for a module
+state, exists := hmr.GetState(moduleID string)
+
+// Server: clear preserved state for a module
+hmr.ClearState(moduleID string)
+```
+
+The client script sends `state-preserve` messages automatically via `window.__gospaPreserveState()` on `beforeunload`.
+
+### `InitHMR(config HMRConfig) *HMRManager`
+
+Initializes and stores a global HMR manager instance.
+
+### `GetHMR() *HMRManager`
+
+Returns the global HMR manager set by `InitHMR`.
 
 ---
 
-## ISR — Incremental Static Regeneration
+## Message Types
 
-ISR is an extension of SSG with a **TTL (Time-To-Live)**. On first request the page is rendered and cached. Subsequent requests within the TTL are served from cache. When a request arrives **after** the TTL has expired, the **stale** cached version is returned immediately (zero added latency) and a background goroutine re-renders the page to update the cache. This is known as the **stale-while-revalidate** pattern.
-
-```go
-routing.RegisterPageWithOptions("/blog", blogIndexPage, routing.RouteOptions{
-    Strategy:        routing.StrategyISR,
-    RevalidateAfter: 5 * time.Minute,
-})
-```
-
-**App config:**
-```go
-app := gospa.New(gospa.Config{
-    CacheTemplates:         true,
-    DefaultRevalidateAfter: 10 * time.Minute, // ISR TTL fallback for pages that don't set it
-})
-```
-
-**HTTP header:** `Cache-Control: public, s-maxage=300, stale-while-revalidate=300`  
-**Requires `CacheTemplates`:** Yes
-
-### ISR Behaviour Details
-
-| Scenario | Result |
-|----------|--------|
-| Cache miss (first request) | Render synchronously, store, respond |
-| Cache hit, age < TTL | Serve from cache immediately |
-| Cache hit, age ≥ TTL | Serve stale cache immediately; background goroutine re-renders and updates cache |
-| Multiple simultaneous stale requests | Only **one** background goroutine is launched (deduplicated via `sync.Map`) |
-
-> **Prefork warning:** By default, ISR cache is in-memory and per-process. With `Prefork: true` each child process maintains its own cache. TTL-based revalidation still works correctly per process, but cache entries are not shared between processes. For shared ISR, configure an external `Storage` backend (e.g., Redis).
+| Type | Direction | Meaning |
+|------|-----------|---------|
+| `connected` | Server → Client | Welcome message on connect |
+| `update` | Server → Client | A file changed; contains `path`, `moduleId`, `event`, `timestamp` |
+| `reload` | Server → Client | Full page reload required |
+| `error` | Server → Client | A server-side HMR error |
+| `state-preserve` | Client → Server | Client is saving module state before reload |
+| `state-request` | Client → Server | Client requests previously saved state |
+| `error` | Client → Server | Client-side HMR error logged to server |
 
 ---
 
-## PPR — Partial Prerendering
-
-PPR renders a **static shell** of the page (header, nav, footer, skeleton layout) once and caches it. Per-request only the **named dynamic slots** (e.g. a user feed, notification list, or live data widget) are re-rendered and merged into the cached shell before responding.
-
-This gives you the performance of SSG for the page frame and SSR freshness for dynamic content sections, without the overhead of re-rendering the entire page tree on every request.
-
-### Step 1 — Register the page with slot names
+## Complete Setup Example
 
 ```go
-routing.RegisterPageWithOptions("/dashboard", dashboardPage, routing.RouteOptions{
-    Strategy:     routing.StrategyPPR,
-    DynamicSlots: []string{"feed", "notifications"},
-})
+package main
 
-// Register each slot's render function
-routing.RegisterSlot("/dashboard", "feed", feedSlot)
-routing.RegisterSlot("/dashboard", "notifications", notificationsSlot)
+import (
+    "time"
+    "github.com/aydenstechdungeon/gospa"
+    "github.com/aydenstechdungeon/gospa/fiber"
+)
+
+func main() {
+    app := gospa.New(gospa.Config{
+        RoutesDir: "./routes",
+        DevMode:   true,
+    })
+
+    if app.Config.DevMode {
+        hmr := fiber.InitHMR(fiber.HMRConfig{
+            Enabled:      true,
+            WatchPaths:   []string{"./routes", "./static"},
+            IgnorePaths:  []string{"node_modules", ".git", "_templ.go"},
+            DebounceTime: 500 * time.Millisecond,
+        })
+        hmr.Start()
+        defer hmr.Stop()
+
+        // WebSocket endpoint for HMR clients
+        app.Fiber.Get("/__hmr", hmr.HMREndpoint())
+
+        // Inject HMR script into HTML pages
+        app.Fiber.Use(hmr.HMRMiddleware())
+    }
+
+    app.Listen(":3000")
+}
 ```
 
-### Step 2 — Use `DynamicSlot` in your templ component
+---
+
+## Troubleshooting
+
+| Symptom | Cause | Fix |
+|---------|-------|-----|
+| Full reload instead of hot update | `.go` or `.templ` file changed requiring rebuild | Expected — Go templates require re-render |
+| HMR doesn't connect over HTTPS | Script used `ws://` (now fixed — uses `wss://` on HTTPS) | Ensure you're on a recent GoSPA version |
+| Changes not detected | File not in `WatchPaths` or path matches `IgnorePaths` | Review config; check console for `[HMR] Connected` |
+| State lost across reload | `window.__gospaPreserveState` not implemented | Implement the state preservation hook |
+
+
+<!-- FILE: docs/03-features/06-deployment.md -->
+================================================================================
+
+# Deployment Guide
+
+Deploying a GoSPA application to production is very simple because GoSPA compiles your backend and HTML generators directly into a single lightweight Go executable. 
+
+This guide details best practices to run securely at scale.
+
+## 1. Building the Application
+
+GoSPA incorporates a CLI pipeline to handle both your frontend typescript compilation and your backend templ/go files.
+
+To prepare a production build, run:
+```bash
+gospa build
+```
+
+This compiles `templ` outputs, executes client build tasks, outputs it inside your binary (if opted using `go:embed`), and constructs a standalone Go binary usually ending up at `bin/app`.
+
+## 2. Environment Considerations
+
+Always ensure `/bin/app` executes with explicit Production variables. A standard production context limits detailed error overlays. 
+
+Ensure you enable HSTS flags and run your application exclusively over TLS / HTTPS.
+
+## 3. Production Deployment with Docker
+
+Most apps running GoSPA thrive via Docker. Below is an optimal lightweight multi-stage `Dockerfile`:
+
+```dockerfile
+# Stage 1: Build
+FROM golang:1.24-alpine AS builder
+
+WORKDIR /app
+COPY go.mod go.sum ./
+RUN go mod download
+
+COPY . .
+# We assume gospa build has run, or you can integrate it locally
+RUN go build -o main .
+
+# Stage 2: Prod 
+FROM alpine:latest
+WORKDIR /root/
+COPY --from=builder /app/main . 
+EXPOSE 3000
+
+CMD ["./main"]
+```
+
+## 4. Production WebSockets and CDN Handling
+
+When hooking GoSPA behind Nginx, standard cloud balancing setups (AWS/GCP), or an edge CDN (Cloudflare), remember to proxy WebSocket upgrades continuously.
+
+Additionally, handle rate limits. GoSPA will natively enforce per-IP WebSocket and action limits, but large ingress networks spoof IPs unless you actively forward using `X-Forwarded-For`.
+
+
+<!-- FILE: docs/04-api-reference/01-core-api.md -->
+================================================================================
+
+# GoSPA API Reference
+
+## Table of Contents
+
+- [GoSPA Package](#gospa-package)
+- [State Package](#state-package)
+- [Routing Package](#routing-package)
+- [Fiber Package](#fiber-package)
+- [Templ Package](#templ-package)
+- [Client Runtime](#client-runtime)
+
+---
+
+## GoSPA Package
+
+`github.com/aydenstechdungeon/gospa`
+
+### App
+
+The main GoSPA application.
 
 ```go
-// routes/dashboard/page.templ
-package dashboard
+// Create new app
+app := gospa.New(config gospa.Config)
 
-import "github.com/aydenstechdungeon/gospa/templ"
+// Start server
+err := app.Run(":3000")
+err := app.RunTLS(":443", "cert.pem", "key.pem")
 
-templ Page(props map[string]interface{}) {
-    <div class="dashboard">
-        <header>...</header>  // ← rendered into the cached shell
-        <nav>...</nav>        // ← rendered into the cached shell
+// Graceful shutdown
+err := app.Shutdown()
 
-        // This slot is excluded from the shell and re-rendered per-request
-        @templ.DynamicSlot("feed", FeedComponent(props))
+// Routing & Middleware
+app.Scan()            // Scans routes directory
+app.RegisterRoutes()  // Registers Fiber routes
+app.Use(middleware)   // Adds global middleware
+group := app.Group("/api") // Creates route group
 
-        // This slot is also per-request
-        @templ.DynamicSlot("notifications", NotificationsComponent(props))
+// Access internals
+hub := app.GetHub()
+router := app.GetRouter()
+fiberApp := app.GetFiber()
 
-        <footer>...</footer>  // ← rendered into the cached shell
+// Broadcast to all WebSocket clients
+app.Broadcast([]byte("message"))
+err := app.BroadcastState("key", value)
+
+// Add routes manually
+app.Get("/path", handler)
+app.Post("/path", handler)
+app.Put("/path", handler)
+app.Delete("/path", handler)
+
+// Static files
+app.Static("/static", "./public")
+```
+
+### `Config`
+The `Config` struct defines the application's configuration.
+
+```go
+type Config struct {
+	// RoutesDir is the directory containing route files.
+	RoutesDir string
+	// RoutesFS is the filesystem containing route files (optional).
+	RoutesFS fs.FS
+	// DevMode enables development features.
+	DevMode bool
+	// RuntimeScript is the path to the client runtime script.
+	RuntimeScript string
+	// StaticDir is the directory for static files.
+	StaticDir string
+	// StaticPrefix is the URL prefix for static files.
+	StaticPrefix string
+	// AppName is the application name.
+	AppName string
+	// DefaultState is the initial state for new sessions.
+	DefaultState map[string]interface{}
+	// EnableWebSocket enables WebSocket support.
+	EnableWebSocket bool
+	// WebSocketPath is the WebSocket endpoint path.
+	WebSocketPath string
+	// WebSocketMiddleware allows injecting middleware before WebSocket upgrade.
+	WebSocketMiddleware fiberpkg.Handler
+
+	// Performance Options
+	CompressState  bool // Gzip-compress outbound state payloads; client must decompress via DecompressionStream
+	StateDiffing   bool // Only send changed state keys (patch messages) after the initial full snapshot
+	CacheTemplates bool // Cache compiled templates
+	SimpleRuntime  bool // Use lightweight runtime without DOMPurify
+
+	// WebSocket Options
+	WSReconnectDelay time.Duration // Initial reconnect delay (default 1s), passed to client runtime
+	WSMaxReconnect   int           // Max reconnect attempts (default 10), passed to client runtime
+	WSHeartbeat      time.Duration // Heartbeat ping interval (default 30s), passed to client runtime
+
+	// Hydration Options
+	HydrationMode    string // "immediate" | "lazy" | "visible" | "idle" (default: "immediate")
+	HydrationTimeout int    // ms before force hydrate
+
+	// Serialization Options
+	StateSerializer   StateSerializerFunc // Custom serialization for outbound state
+	StateDeserializer StateDeserializerFunc // Custom deserialization for inbound state
+
+	// Routing Options
+	DisableSPA               bool     // Disable SPA navigation completely
+	IgnoredExtensions        []string // List of file extensions to always ignore (overrides default)
+	AppendIgnoredExtensions  []string // List of file extensions to add to default ignored list
+	SSR                      bool     // Enables server side rendering for dynamic components
+
+	// Remote Action Options
+	MaxRequestBodySize int    // Maximum allowed size for remote action request bodies
+	RemotePrefix       string // Prefix for remote action endpoints
+
+	// Security Options
+	AllowedOrigins []string // Allowed CORS origins
+	EnableCSRF     bool     // Enable CSRF (requires CSRFSetTokenMiddleware + CSRFTokenMiddleware)
+
+	// Cache Options
+	SSGCacheMaxEntries int // Max SSG cache entries (default 500; -1 = unbounded)
+
+	// Distributed & Scaling Options
+	Prefork bool          // Enables Fiber Prefork. WARNING: If true, you MUST use external Storage/PubSub to share state.
+	Storage store.Storage // External Key-Value store (e.g., Redis) for Session and ClientState. Default is memory.
+	PubSub  store.PubSub  // External messaging broker (e.g., Redis PubSub) for WebSocket broadcasting. Default is memory.
+}
+```
+
+#### Key Options:
+- `RoutesFS`: Allows embedding routes using `go:embed`.
+- `CompressState`: Enables gzip+base64 compression of outbound WebSocket state payloads. Client decodes with the `DecompressionStream` browser API.
+- `StateDiffing`: Sends only changed state keys as `"patch"` WebSocket messages after the initial full snapshot — reduces bandwidth for large states.
+- `StateSerializer` / `StateDeserializer`: Custom hooks replacing JSON for WebSocket state encoding/decoding.
+- `SimpleRuntime`: Reduces client bundle size by ~6KB by removing DOMPurify. ⚠️ Security Risk: Only enable SimpleRuntime for fully trusted content.
+- `SimpleRuntimeSVGs`: Allows SVG elements in the simple runtime sanitizer. ⚠️ Security Risk: Only enable SimpleRuntimeSVGs for fully trusted content.
+- `HydrationMode`: Controls when components become interactive. Values: `"immediate"` (default), `"lazy"`, `"visible"`, `"idle"`.
+- `WSReconnectDelay`: Initial reconnect delay passed to the client WebSocket runtime. Default: 1s.
+- `WSMaxReconnect`: Maximum reconnect attempts passed to the client. Default: 10.
+- `WSHeartbeat`: Heartbeat ping interval passed to the client. Default: 30s.
+- `SSR`: **Planned** — not yet implemented.
+- `IgnoredExtensions`: Completely replaces the default list of file extensions ignored by the SPA router.
+- `AppendIgnoredExtensions`: Adds to the default list of file extensions ignored by the SPA router.
+- `EnableCSRF`: Enables CSRF protection. Must wire up **both** `fiber.CSRFSetTokenMiddleware()` (issues cookie) **and** `fiber.CSRFTokenMiddleware()` (validates).
+- `SSGCacheMaxEntries`: Caps the SSG page cache with FIFO eviction. Default 500.
+- `Prefork`, `Storage`, `PubSub`: Used for horizontal scaling. See `store/redis` for the Redis implementation.
+
+```go
+// Default configuration
+config := gospa.DefaultConfig()
+
+---
+
+## State Package
+
+`github.com/aydenstechdungeon/gospa/state`
+
+### Rune[T]
+
+Core reactive primitive. Holds a value and notifies subscribers on changes.
+
+```go
+// Create
+rune := state.NewRune[T](initial T)
+
+// Read
+rune.Get() T
+rune.GetAny() any  // for Observable interface
+rune.ID() string   // returns unique internal ID
+// NOTE: rune.peek() does NOT exist — there is no non-tracking read on the server-side Rune.
+
+// Write
+rune.Set(value T)
+rune.Update(fn func(T) T)
+rune.SetAny(value any) error // for Settable interface
+
+// Subscribe
+unsubscribe := rune.Subscribe(func(newValue T) {})
+unsubscribe := rune.SubscribeAny(func(newValue any) {})
+
+// Serialization
+data, err := rune.MarshalJSON()
+```
+
+**Interfaces**
+
+```go
+type Observable interface {
+    GetAny() any
+    SubscribeAny(func(any)) func()
+}
+
+type Settable interface {
+    SetAny(value any) error
+}
+```
+
+**Example**
+
+```go
+count := state.NewRune(0)
+
+// Read
+fmt.Println(count.Get()) // 0
+
+// Write
+count.Set(5)
+count.Update(func(v int) int { return v + 1 })
+
+// React
+unsub := count.Subscribe(func(v int) {
+    fmt.Println("Count:", v)
+})
+defer unsub()
+```
+
+---
+
+### Derived[T]
+
+Computed state that recalculates when dependencies change.
+
+```go
+// Create
+derived := state.NewDerived[T](compute func() T)
+
+// Read
+derived.Get() T
+
+// Subscribe
+unsubscribe := derived.Subscribe(func(T) {})
+
+// Lifecycle
+derived.Dispose()
+```
+
+**Helper Functions**
+
+```go
+// Single dependency
+d := state.DerivedFrom(rune, func(v T) U { ... })
+
+// Two dependencies
+d := state.Derived2(rune1, rune2, func(v1 T1, v2 T2) U { ... })
+
+// Three dependencies
+d := state.Derived3(rune1, rune2, rune3, func(v1 T1, v2 T2, v3 T3) U { ... })
+```
+
+**Example**
+
+```go
+count := state.NewRune(5)
+doubled := state.NewDerived(func() int {
+    return count.Get() * 2
+})
+
+fmt.Println(doubled.Get()) // 10
+count.Set(10)
+fmt.Println(doubled.Get()) // 20
+```
+
+---
+
+### Effect
+
+Side effects that run when dependencies change.
+
+```go
+// Create - returns cleanup function
+cleanup := state.NewEffect(func() func() {
+    // effect logic
+    return func() {
+        // cleanup logic
+    }
+})
+```
+
+**Helper Functions**
+
+```go
+// Single dependency
+cleanup := state.EffectOn(rune, func(v T) { ... })
+
+// Watch multiple
+cleanup := state.Watch(rune1, rune2, func(v1 T1, v2 T2) { ... })
+cleanup := state.Watch3(rune1, rune2, rune3, func(v1 T1, v2 T2, v3 T3) { ... })
+```
+
+**Example**
+
+```go
+count := state.NewRune(0)
+
+cleanup := state.NewEffect(func() func() {
+    fmt.Println("Count is:", count.Get())
+    return func() {
+        fmt.Println("Cleaning up")
+    }
+})
+defer cleanup()
+
+count.Set(1) // Prints: "Count is: 1"
+```
+
+---
+
+### Batch
+
+Batch multiple updates into single notification cycle.
+
+```go
+state.Batch(func() {
+    count.Set(1)
+    name.Set("Alice")
+})
+```
+
+---
+
+### StateMap
+
+Collection of named reactive values.
+
+```go
+// Create
+sm := state.NewStateMap()
+
+// Add reactive value
+sm.Add(key string, observable Observable)
+sm.AddAny(key string, value any) error // Adds plain value as auto-rune
+
+// Get value
+obs, ok := sm.Get(key string)
+
+// Remove
+sm.Remove(key string) *StateMap
+
+// Iteration
+sm.ForEach(func(key string, value any) { ... })
+
+// Conversion
+m := sm.ToMap() // returns map[string]any
+
+// Serialization
+json, err := sm.ToJSON()
+data, err := sm.MarshalJSON()
+sm.FromJSON(data []byte)
+
+// Diff - returns comparison between two StateMaps
+diff := sm.Diff(other *StateMap) *StateMapComparison
+
+// OnChange callback
+sm.OnChange = func(key string, value any) { ... }
+```
+
+---
+
+### StateValidator
+
+Validates reactive state updates.
+
+```go
+validator := state.NewStateValidator()
+
+// Register rules
+validator.AddValidator("count", func(v any) error {
+    if v.(int) < 0 { return errors.New("must be positive") }
+    return nil
+})
+
+// Validate
+err := validator.Validate("count", -1)
+err := validator.ValidateAll(map[string]any{"count": 5})
+```
+
+---
+
+### Serialization Types
+
+```go
+type StateMessage struct {
+    Type        string      `json:"type"`
+    ComponentID string      `json:"componentId"`
+    State       interface{} `json:"state"`
+    Timestamp   int64       `json:"timestamp"`
+}
+
+type StateSnapshot struct {
+    ComponentID string
+    State       StateMap
+    Timestamp   int64
+}
+
+type StateMapComparison struct {
+    Added   map[string]interface{} `json:"added"`
+    Removed map[string]interface{} `json:"removed"`
+    Changed map[string]interface{} `json:"changed"`
+}
+
+// StateDiff represents a single key change (used in messaging)
+type StateDiff struct {
+    ComponentID string      `json:"componentId"`
+    Key         string      `json:"key"`
+    OldValue    interface{} `json:"oldValue,omitempty"`
+    NewValue    interface{} `json:"newValue"`
+    Timestamp   int64       `json:"timestamp"`
+}
+
+// Constructors
+msg := state.NewInitMessage(componentID string, state interface{})
+msg := state.NewSyncMessage(componentID string, state interface{})
+snapshot := state.NewSnapshot(componentID string, state StateMap)
+```
+
+---
+
+## Routing Package
+
+`github.com/aydenstechdungeon/gospa/routing`
+
+### Router
+
+File-based router that scans `.templ` files.
+
+```go
+// Create from directory
+router := routing.NewRouter(routesDir string)
+
+// Create from filesystem (hybrid approach)
+router := routing.NewRouter(routesFS fs.FS)
+
+// Scan routes directory
+err := router.Scan()
+
+// Match route
+route, params := router.Match(path string)
+
+// Match with layout chain
+route, params, layouts := router.MatchWithLayout(path string)
+
+// Get all routes
+routes := router.GetRoutes()
+
+// Get page routes only
+pages := router.GetPages()
+
+// Resolve layout chain for route
+layouts := router.ResolveLayoutChain(route *Route)
+```
+
+**Route Structure**
+
+```go
+type Route struct {
+    Path       string            // URL path
+    File       string            // Source .templ file
+    Params     []string          // Dynamic param names
+    IsCatchAll bool              // [...rest] route
+    Type       RouteType         // page, layout, error, api
+    Meta       map[string]string // Custom metadata
+}
+
+type RouteType int
+const (
+    RouteTypePage RouteType = iota
+    RouteTypeLayout
+    RouteTypeError
+    RouteTypeAPI
+)
+```
+
+**File Convention**
+
+```
+routes/
+├ root_layout.templ    → Base HTML shell
+├ page.templ           → /
+├ about/
+│   └ page.templ       → /about
+├ blog/
+│   ├── layout.templ   → Layout for /blog/*
+│   └ [id]/
+│       └ page.templ   → /blog/:id
+└ posts/
+    └ [...rest]/
+        └ page.templ   → /posts/*
+```
+
+---
+
+### Manual Router
+
+For programmatic route registration.
+
+```go
+router := routing.NewManualRouter()
+
+// Register routes
+router.GET(path string, handler Handler, middleware ...Middleware)
+router.POST(path string, handler Handler, middleware ...Middleware)
+router.PUT(path string, handler Handler, middleware ...Middleware)
+router.DELETE(path string, handler Handler, middleware ...Middleware)
+router.PATCH(path string, handler Handler, middleware ...Middleware)
+
+// Get all routes
+routes := router.GetRoutes()
+
+// Create route group
+group := router.Group(prefix string, middleware ...Middleware)
+group.GET("/subpath", handler)
+
+// Register all routes to Fiber
+router.RegisterToFiber(fiberApp *fiber.App)
+```
+
+**Handler Type**
+
+```go
+type Handler func(c *fiber.Ctx) error
+type Middleware func(c *fiber.Ctx) error
+```
+
+---
+
+### Params
+
+Route parameter extraction and typed access.
+
+```go
+type Params map[string]string
+
+// Basic access
+value := params.Get("id")
+value := params.GetDefault("id", "default")
+exists := params.Has("id")
+
+// Writing
+params.Set("id", "123")
+
+// Typed access (returns (T, error))
+intVal, err := params.Int("count")
+int64Val, err := params.Int64("id")
+floatVal, err := params.Float64("price")
+boolVal, err := params.Bool("active")
+
+// Slice (for catch-all params, splits by '/')
+sliceVal := params.Slice("path")
+
+// Utility functions
+params := routing.ExtractParams(c *fiber.Ctx, paramKeys []string)
+queryParams := routing.QueryParams(c *fiber.Ctx)
+```
+
+---
+
+### Route Registry
+
+Register page and layout components.
+
+```go
+// Defined types
+// type ComponentFunc func(props map[string]interface{}) templ.Component
+// type LayoutFunc func(children templ.Component, props map[string]interface{}) templ.Component
+// type SlotFunc func(props map[string]interface{}) templ.Component
+
+// Register page component
+routing.RegisterPage(path string, fn ComponentFunc)
+routing.RegisterPageWithOptions(path string, fn ComponentFunc, opts RouteOptions)
+
+// Register layout component
+routing.RegisterLayout(path string, fn LayoutFunc)
+
+// Register root layout
+routing.RegisterRootLayout(fn LayoutFunc)
+
+// Get registered components
+pageFunc := routing.GetPage(path string)
+layoutFunc := routing.GetLayout(path string)
+rootLayoutFunc := routing.GetRootLayout()
+
+// Remote actions
+routing.RegisterRemoteAction(name string, fn RemoteActionFunc)
+fn, ok := routing.GetRemoteAction(name string)
+
+// PPR slot registration
+routing.RegisterSlot(pagePath string, slotName string, fn SlotFunc)
+slotFn := routing.GetSlot(pagePath string, slotName string)
+```
+
+---
+
+### Route Options
+
+```go
+type RouteOptions struct {
+    // Strategy controls how the page is rendered and cached.
+    // Values: StrategySSR (default), StrategySSG, StrategyISR, StrategyPPR.
+    Strategy   RenderStrategy
+
+    // ISR only: duration after which the cached page is considered stale.
+    // On a stale hit, the old page is returned immediately and a background
+    // goroutine re-renders and updates the cache (stale-while-revalidate).
+    // Zero means always revalidate (behaves like SSR).
+    RevalidateAfter time.Duration
+
+    // PPR only: names of dynamic slots excluded from the cached static shell.
+    // Each name must match a SlotFunc registered via RegisterSlot for this path.
+    DynamicSlots []string
+}
+
+const (
+    StrategySSR RenderStrategy = "ssr" // fresh render per request (default)
+    StrategySSG RenderStrategy = "ssg" // render once, cache forever
+    StrategyISR RenderStrategy = "isr" // render once, revalidate after TTL
+    StrategyPPR RenderStrategy = "ppr" // static shell + per-request dynamic slots
+)
+
+// Get options for route
+opts := routing.GetRouteOptions(path string)
+```
+
+---
+
+## Fiber Package
+
+`github.com/aydenstechdungeon/gospa/fiber`
+
+### Middleware
+
+```go
+// SPA middleware - initializes state and component ID
+app.Use(fiber.SPAMiddleware(config fiber.Config))
+
+// Runtime script serving
+app.Get("/_gospa/runtime.js", fiber.RuntimeMiddleware(simple bool))
+app.Get("/_gospa/runtime.js", fiber.RuntimeMiddlewareWithContent(content []byte))
+
+// SPA navigation detection
+app.Use(fiber.SPANavigationMiddleware())
+isSPA := fiber.IsSPANavigation(c *fiber.Ctx) bool
+
+// CORS
+app.Use(fiber.CORSMiddleware(allowedOrigins []string))
+
+// Security headers
+app.Use(fiber.SecurityHeadersMiddleware())
+
+// CSRF protection — use BOTH middlewares:
+// 1. CSRFSetTokenMiddleware issues the cookie on GET responses
+// 2. CSRFTokenMiddleware validates the token on POST/PUT/DELETE/PATCH
+app.Use(fiber.CSRFSetTokenMiddleware()) // must come before CSRFTokenMiddleware
+app.Use(fiber.CSRFTokenMiddleware())
+```
+
+---
+
+### WebSocket Hub
+
+```go
+// Create hub
+hub := fiber.NewWSHub()
+
+// Start hub (run in goroutine)
+go hub.Run()
+
+// Broadcast to all clients
+hub.Broadcast <- []byte(message)
+
+// Broadcast to specific clients
+hub.BroadcastTo(clientIDs []string, message []byte)
+
+// Broadcast except one
+hub.BroadcastExcept(exceptID string, message []byte)
+
+// Get client
+client, ok := hub.GetClient(id string)
+
+// Client count
+count := hub.ClientCount()
+```
+
+---
+
+### WebSocket Client
+
+```go
+// Create client
+client := fiber.NewWSClient(id string, conn *websocket.Conn)
+
+// Properties
+client.ID        string
+client.SessionID string
+client.Conn      *websocket.Conn
+client.State     *state.StateMap
+
+// Methods
+client.SendJSON(v interface{}) error
+client.SendError(message string)
+client.SendState()
+client.SendInitWithSession(sessionToken string)
+client.Close() error
+
+// Read/Write pumps
+client.ReadPump(hub *WSHub, onMessage func(*WSClient, WSMessage))
+client.WritePump()
+```
+
+---
+
+### WebSocket Configuration
+
+```go
+config := fiber.WebSocketConfig{
+    Hub:         hub,                    // WebSocket hub
+    OnConnect:   func(*WSClient) {},     // Connect callback
+    OnDisconnect: func(*WSClient) {},    // Disconnect callback
+    OnMessage:   func(*WSClient, WSMessage) {}, // Message handler
+    GenerateID:  func() string {},       // ID generator
+}
+
+// Create handler
+handler := fiber.WebSocketHandler(config)
+```
+
+---
+
+### Action Handlers
+
+```go
+// Register action handler
+fiber.RegisterActionHandler(name string, handler func(*WSClient, json.RawMessage))
+
+// Register connect handler
+fiber.RegisterOnConnectHandler(handler func(*WSClient))
+
+// Get action handler
+handler, ok := fiber.GetActionHandler(name string)
+```
+
+**Example**
+
+```go
+fiber.RegisterActionHandler("increment", func(client *fiber.WSClient, payload json.RawMessage) {
+    GlobalCounter.Count++
+    fiber.BroadcastState(hub, "count", GlobalCounter.Count)
+})
+```
+
+---
+
+### Session Management
+
+```go
+// Session store - maps tokens to client IDs
+sessionStore := fiber.NewSessionStore()
+token := sessionStore.CreateSession(clientID string)
+clientID, ok := sessionStore.ValidateSession(token string)
+sessionStore.RemoveSession(token string)
+sessionStore.RemoveClientSessions(clientID string)
+
+// Client state store - persists state by client ID
+stateStore := fiber.NewClientStateStore()
+stateStore.Save(clientID string, state *state.StateMap)
+state, ok := stateStore.Get(clientID string)
+stateStore.Remove(clientID string)
+
+// Global instances
+fiber.globalSessionStore
+fiber.globalClientStateStore
+```
+
+---
+
+### Utility Functions
+
+```go
+// Broadcast state to all clients
+fiber.BroadcastState(hub *WSHub, key string, value interface{}) error
+
+// Send to specific client
+fiber.SendToClient(hub *WSHub, clientID string, message interface{}) error
+
+// State sync HTTP handler
+handler := fiber.StateSyncHandler(hub *WSHub)
+
+// Component rendering
+fiber.RenderComponent(c *fiber.Ctx, config Config, component templ.Component, name string) error
+
+// State access
+stateMap := fiber.GetState(c *fiber.Ctx, config Config)
+componentID := fiber.GetComponentID(c *fiber.Ctx, config Config)
+sessionState := fiber.GetSessionState(c *fiber.Ctx, config Config)
+fiber.SetSessionState(c *fiber.Ctx, config Config, key string, value interface{})
+
+// Response helpers
+fiber.JSONResponse(c *fiber.Ctx, status int, data interface{}) error
+fiber.JSONError(c *fiber.Ctx, status int, message string) error
+fiber.ParseBody(c *fiber.Ctx, v interface{}) error
+```
+
+---
+
+## Templ Package
+
+`github.com/aydenstechdungeon/gospa/templ`
+
+### Reactive Bindings
+
+```go
+// Create data binding attribute
+attrs := templ.Bind(componentID, key string) templ.Attributes
+
+// Create multiple bindings
+attrs := templ.BindAll(componentID string, keys ...string) templ.Attributes
+```
+
+**Example**
+
+```templ
+templ Counter(count int) {
+    <div data-component="counter">
+        <span { templ.Bind("counter", "count")... }>{ count }</span>
+        <button { templ.On("click", "counter", "increment")... }>+</button>
     </div>
 }
 ```
 
-During the first request (shell build), `DynamicSlot` emits `<!--gospa-slot:feed-->` and `<!--gospa-slot:notifications-->` into the cached HTML. On each subsequent request, the server renders each slot function and replaces the placeholder comment with the live `<div data-gospa-slot="...">` fragment.
-
-**App config:**
-```go
-app := gospa.New(gospa.Config{
-    CacheTemplates: true,
-})
-```
-
-**HTTP header:** `Cache-Control: no-store` (slots are per-request)  
-**Requires `CacheTemplates`:** Yes
-
-### PPR API Reference
-
-```go
-// templ package — use in .templ files
-templ.DynamicSlot(name string, content templ.Component) templ.Component
-
-// Context helpers (used internally by the framework)
-templ.WithPPRShellBuild(ctx context.Context) context.Context
-templ.IsPPRShellBuild(ctx context.Context) bool
-
-// routing package — register slot render functions
-routing.RegisterSlot(pagePath, slotName string, fn routing.SlotFunc)
-routing.GetSlot(pagePath, slotName string) routing.SlotFunc
-
-// SlotFunc signature
-type SlotFunc func(props map[string]interface{}) templ.Component
-```
-
 ---
 
-## Per-Page Strategy Selector
-
-### Option A — Inline `init()` (recommended, works today)
-
-Register strategy directly in your route file's `init()` function:
+### Event Handlers
 
 ```go
-// routes/blog/page.templ or a companion .go file
-func init() {
-    routing.RegisterPageWithOptions("/blog", blogPage, routing.RouteOptions{
-        Strategy:        routing.StrategyISR,
-        RevalidateAfter: 5 * time.Minute,
-    })
+// Create event handler attribute
+attrs := templ.On(event, componentID, handler string) templ.Attributes
+
+// With options
+attrs := templ.OnWithOpts(event, componentID, handler string, opts templ.EventOptions) templ.Attributes
+
+type EventOptions struct {
+    PreventDefault  bool
+    StopPropagation bool
+    Debounce        int // milliseconds
+    Throttle        int // milliseconds
 }
 ```
 
-### Option B — `page.options.go` convention (used by code generator)
+**Example**
 
-Place a companion file next to your `page.templ`:
+```templ
+templ Button() {
+    <button { templ.On("click", "counter", "increment")... }>
+        Click me
+    </button>
 
-```go
-// routes/blog/page.options.go
-package blog
-
-import (
-    "time"
-    "github.com/aydenstechdungeon/gospa/routing"
-)
-
-var PageOptions = routing.RouteOptions{
-    Strategy:        routing.StrategyISR,
-    RevalidateAfter: 5 * time.Minute,
+    <form { templ.OnWithOpts("submit", "form", "handleSubmit", templ.EventOptions{
+        PreventDefault: true,
+    })... }>
+        <input type="text" name="value" />
+        <button type="submit">Submit</button>
+    </form>
 }
 ```
 
-The code generator (`gospa generate`) reads `PageOptions` and emits `RegisterPageWithOptions` in `generated/routes.go`.
+---
+
+### Component Helpers
+
+```go
+// Create component wrapper
+comp := templ.NewComponent(name string, opts ...ComponentOption) *Component
+
+// Options
+templ.WithProps(props map[string]any) ComponentOption
+templ.WithState(state *state.StateMap) ComponentOption
+
+// Render
+rendered := templ.RenderComponent(comp *Component, content templ.Component) templ.Component
+```
 
 ---
 
-## Global Strategy Defaults
+## Client Runtime
 
-Set defaults in `gospa.Config` for pages that don't specify their own strategy:
+### Rune Class
 
-```go
-app := gospa.New(gospa.Config{
-    CacheTemplates:         true,
-    DefaultRenderStrategy:  routing.StrategyISR,  // default for all pages
-    DefaultRevalidateAfter: 10 * time.Minute,     // ISR TTL default
-    SSGCacheMaxEntries:     1000,                 // shared FIFO limit for SSG+ISR+PPR
+```javascript
+const count = new GoSPA.Rune(0)
+
+count.get()           // 0
+count.set(5)
+count.update(v => v + 1)
+
+const unsub = count.subscribe((value, oldValue) => {
+    console.log('Count:', value)
+})
+unsub() // stop listening
+```
+
+---
+
+### Derived Class
+
+```javascript
+const count = new GoSPA.Rune(5)
+const doubled = new GoSPA.Derived(() => count.get() * 2)
+
+doubled.get() // 10
+count.set(10)
+doubled.get() // 20
+```
+
+---
+
+### Effect Class
+
+```javascript
+const count = new GoSPA.Rune(0)
+
+const cleanup = new GoSPA.Effect(() => {
+    console.log('Count:', count.get())
+    return () => console.log('Cleanup')
+})
+
+cleanup() // stop effect
+```
+
+---
+
+### StateMap Class
+
+```javascript
+const state = new GoSPA.StateMap()
+
+state.set('count', 0)
+state.get('count')     // Rune object
+state.has('count')     // true
+state.delete('count')
+state.clear()
+
+state.toJSON()         // { count: 0 }
+state.fromJSON({ count: 5 })
+```
+
+---
+
+### Batch Updates
+
+```javascript
+GoSPA.batch(() => {
+    count.set(1)
+    name.set('Alice')
 })
 ```
 
-Per-page `RouteOptions` always take precedence over these defaults.
-
 ---
 
-## Cache Sizing and Eviction
+### Watch
 
-All three caching strategies (SSG, ISR, PPR shells) share a unified **FIFO eviction** policy controlled by `SSGCacheMaxEntries`:
-
-- Default: `500`
-- Set to `-1` for unbounded (not recommended in production)
-- SSG and ISR pages share the same pool; PPR shells share the same pool
-
----
-
-## Interaction with Prefork
-
-In Prefork mode (`Prefork: true`), if no external `Storage` is configured, each child process has its own independent in-memory cache. Cache entries are not shared between processes. ISR TTLs fire independently per process.
-
-To support shared SSG, ISR, and PPR caching across Prefork child processes or horizontally scaled clusters, configure the `Storage` option in `gospa.Config` with a distributed backend such as Redis. This ensures consistent cache hits and dedicates a single background revalidation per route across the entire cluster.
-
----
-
-## Quick Reference
-
-```go
-import (
-    "time"
-    "github.com/aydenstechdungeon/gospa/routing"
-    gospatmpl "github.com/aydenstechdungeon/gospa/templ"
-)
-
-// SSR (default)
-routing.RegisterPage("/", indexPage)
-
-// SSG
-routing.RegisterPageWithOptions("/about", aboutPage, routing.RouteOptions{
-    Strategy: routing.StrategySSG,
+```javascript
+// Watch single rune
+const unsub = GoSPA.watch(count, (value, oldValue) => {
+    console.log('Changed:', value)
 })
 
-// ISR with 5-minute TTL
-routing.RegisterPageWithOptions("/blog", blogPage, routing.RouteOptions{
-    Strategy:        routing.StrategyISR,
-    RevalidateAfter: 5 * time.Minute,
+// Watch multiple runes
+const unsub = GoSPA.watch([count, name], (values, oldValues) => {
+    console.log('Count:', values[0], 'Name:', values[1])
 })
-
-// PPR with two dynamic slots
-routing.RegisterPageWithOptions("/dashboard", dashboardPage, routing.RouteOptions{
-    Strategy:     routing.StrategyPPR,
-    DynamicSlots: []string{"feed", "notifications"},
-})
-routing.RegisterSlot("/dashboard", "feed",          feedSlot)
-routing.RegisterSlot("/dashboard", "notifications", notificationsSlot)
 ```
 
+---
 
-<!-- FILE: docs/CONFIGURATION.md -->
+### Advanced State
+
+```javascript
+// Untrack - read without subscribing
+const value = GoSPA.untrack(() => count.get())
+
+// Raw rune - shallow reactivity
+const raw = new GoSPA.RuneRaw({ name: 'Alice' })
+
+// Snapshot - non-reactive copy
+const snap = GoSPA.snapshot(count)
+
+// Pre-effect - runs before DOM updates
+const cleanup = new GoSPA.PreEffect(() => {
+    console.log('Before DOM update')
+})
+
+// Effect root - manual lifecycle
+const stop = GoSPA.effectRoot(() => {
+    console.log('Effect running')
+})
+
+// Check if tracking
+if (GoSPA.tracking()) { ... }
+```
+
+---
+
+### Async State
+
+```javascript
+// Async derived
+const data = new GoSPA.DerivedAsync(async () => {
+    const res = await fetch('/api/data')
+    return res.json()
+})
+
+data.get()       // undefined while loading
+data.status      // 'idle' | 'pending' | 'success' | 'error'
+data.isPending   // true/false
+data.isSuccess   // true/false
+data.isError     // true/false
+data.error       // Error object if failed
+
+// Resource
+const res = new GoSPA.Resource(async () => {
+    const response = await fetch('/api/data')
+    return response.json()
+})
+
+await res.refetch()
+res.reset()
+res.data         // current data
+res.status       // current status
+
+// Reactive resource
+const res = GoSPA.resourceReactive([userId], async () => {
+    return fetch(`/api/users/${userId.get()}`).then(r => r.json())
+})
+```
+
+---
+
+### Debug
+
+```javascript
+// Inspect state changes (dev only)
+GoSPA.inspect(count, name)
+GoSPA.inspect(count).with((type, values) => {
+    if (type === 'update') debugger
+})
+
+// Trace dependencies
+GoSPA.inspect.trace('label')
+```
+
+---
+
+### WebSocket Client
+
+```javascript
+// Initialize WebSocket
+const ws = GoSPA.initWebSocket('ws://localhost:3000/_gospa/ws')
+
+// Get client
+const client = GoSPA.getWebSocketClient()
+
+// Send action
+GoSPA.sendAction('increment', { value: 1 })
+
+// Synced rune (auto-syncs with server)
+const count = GoSPA.syncedRune('count', 0)
+
+// Apply state update
+GoSPA.applyStateUpdate({ key: 'count', value: 5 })
+```
+
+---
+
+### Navigation
+
+```javascript
+// Navigate
+GoSPA.navigate('/about')
+GoSPA.navigate('/about', { replace: true })
+
+// History
+GoSPA.back()
+GoSPA.forward()
+GoSPA.go(-2)  // Go back 2
+
+// Prefetch
+GoSPA.prefetch('/blog')      // Prefetch page into cache (30s TTL)
+
+// State
+GoSPA.getCurrentPath()
+GoSPA.isNavigating()
+
+// Events
+GoSPA.onBeforeNavigate((from, to) => {
+    // Return false to cancel
+})
+GoSPA.onAfterNavigate((from, to) => {
+    console.log('Navigated to:', to)
+})
+
+// Initialize navigation
+GoSPA.initNavigation()
+GoSPA.destroyNavigation()
+
+// Navigation state
+const navState = GoSPA.createNavigationState()
+
+// Global DOM Event (for vanilla JS)
+document.addEventListener('gospa:navigated', (e) => {
+    console.log('Navigated to:', e.detail.path)
+})
+```
+
+---
+
+### Transitions
+
+```javascript
+// Setup transitions on element
+GoSPA.setupTransitions(element, {
+    enter: 'fade',
+    leave: 'slide'
+})
+
+// Built-in transitions
+GoSPA.fade(element, { duration: 300 })
+GoSPA.fly(element, { duration: 300, y: 50 })
+GoSPA.slide(element, { duration: 300, direction: 'left' })
+GoSPA.scale(element, { duration: 300, start: 0.8 })
+GoSPA.blur(element, { duration: 300 })
+
+// Crossfade between elements
+GoSPA.crossfade(elementA, elementB, { duration: 300 })
+```
+
+---
+
+### DOM Binding
+
+```javascript
+// Bind element to rune
+GoSPA.bindElement('element-id', countRune)
+
+// Two-way binding for inputs
+GoSPA.bindTwoWay('input-id', nameRune)
+
+// Conditional rendering
+GoSPA.renderIf(conditionRune, element)
+
+// List rendering
+GoSPA.renderList(itemsRune, (item, index) => {
+    return document.createElement('div')
+})
+
+// Register/unregister custom bindings
+GoSPA.registerBinding('custom', (element, rune) => { ... })
+GoSPA.unregisterBinding('custom')
+```
+
+---
+
+### Events
+
+```javascript
+// Add event listener with auto-cleanup
+GoSPA.on(element, 'click', handler)
+
+// Remove all listeners
+GoSPA.offAll(element)
+
+// Debounce
+const debounced = GoSPA.debounce(handler, 300)
+
+// Throttle
+const throttled = GoSPA.throttle(handler, 300)
+
+// Event delegation
+GoSPA.delegate(container, '.button', 'click', handler)
+
+// Keyboard shortcuts
+GoSPA.onKey(['ctrl', 's'], handler)
+GoSPA.keys.ctrl  // Check if key is pressed
+GoSPA.keys.all   // Set of all pressed keys
+
+// Event transformers
+GoSPA.transformers.preventDefault
+GoSPA.transformers.stopPropagation
+```
+
+---
+
+### Event Handling Patterns
+
+GoSPA sanitizes HTML during SPA navigation using DOMPurify, which strips inline event handlers (`onclick`, `onmouseover`, etc.) for security. Use these patterns instead:
+
+**Inside Components (data-on):**
+
+```html
+<div data-gospa-component="counter">
+    <button data-on="click:increment">+</button>
+    <span data-bind="count">0</span>
+</div>
+```
+
+**Outside Components (data-action with global delegation):**
+
+For elements outside `data-gospa-component` (like layouts, static content), use `data-action` attributes with global event delegation:
+
+```html
+<!-- In your template -->
+<button data-action="copy-code">Copy</button>
+<button data-action="toggle-menu">Menu</button>
+```
+
+```javascript
+// In your root layout or main script
+document.addEventListener('click', (e) => {
+    const target = e.target.closest('[data-action]');
+    if (!target) return;
+    
+    const action = target.getAttribute('data-action');
+    
+    switch (action) {
+        case 'copy-code':
+            const code = target.parentElement.querySelector('code');
+            navigator.clipboard.writeText(code.innerText);
+            break;
+        case 'toggle-menu':
+            document.getElementById('menu').classList.toggle('hidden');
+            break;
+    }
+});
+```
+
+This pattern survives SPA navigation because the handler is attached at document level, not on individual elements.
+
+---
+
+### Component API
+
+```javascript
+// Initialize component
+GoSPA.init({
+    wsUrl: 'ws://localhost:3000/_gospa/ws',
+    debug: true,
+    hydration: {
+        mode: 'immediate',  // 'immediate' | 'lazy' | 'visible'
+        timeout: 5000
+    }
+})
+
+// Create component
+const comp = GoSPA.createComponent('counter', {
+    count: new GoSPA.Rune(0)
+})
+
+// Get component
+const comp = GoSPA.getComponent('counter')
+
+// State access
+const state = GoSPA.getState('counter')
+GoSPA.setState('counter', { count: 5 })
+
+// Call action
+GoSPA.callAction('increment', { value: 1 })
+
+// Destroy component
+GoSPA.destroyComponent('counter')
+
+// Auto-initialize from DOM
+GoSPA.autoInit()
+```
+
+---
+
+### Partial Hydration
+
+```html
+<div data-gospa-static>
+    <!-- No bindings or event listeners -->
+    <p>Static content</p>
+</div>
+```
+
+---
+
+### Transitions
+
+```html
+<!-- Single transition -->
+<div data-transition="fade" data-transition-params='{"duration": 300}'>
+    Content
+</div>
+
+<!-- Separate in/out -->
+<div data-transition-in="fly" data-transition-out="slide">
+    Content
+</div>
+```
+
+Available transitions: `fade`, `fly`, `slide`, `scale`, `blur`
+
+---
+
+### Local State Mode
+
+Components with client-only state (no server sync).
+
+```html
+<div data-gospa-component="counter" data-gospa-local>
+    <span data-bind="count">0</span>
+    <button data-on="click:increment">+</button>
+</div>
+```
+
+Local state handlers run entirely in the browser without WebSocket communication.
+
+---
+
+## Islands & Partial Hydration
+
+See [ISLANDS.md](ISLANDS.md) for full documentation.
+
+```typescript
+import { initIslands, hydrateIsland, getIslandManager } from './island.ts';
+
+// Initialize — auto-discovers [data-gospa-island] elements
+const manager = initIslands({
+    moduleBasePath: '/islands',    // Where island JS files are served from
+    defaultTimeout: 30000,
+    debug: false,
+    moduleLoader: async (name) => import(`./islands/${name}`), // optional custom loader
+});
+
+// Manually hydrate a lazy island
+await hydrateIsland('Counter');  // by name or DOM id
+
+// Check status
+manager.isHydrated('counter-1');
+manager.getIslands();       // all discovered islands
+manager.discoverIslands();  // re-scan DOM (use after SPA nav)
+manager.destroy();          // clean up observers
+
+// Browser globals (available when island.ts is loaded)
+window.__GOSPA_ISLAND_MANAGER__.init(config)
+window.__GOSPA_ISLAND_MANAGER__.get()
+window.__GOSPA_ISLAND_MANAGER__.hydrate(name)
+
+// DOM event — fired on the island element after hydration
+element.addEventListener('gospa:hydrated', (ev) => {
+    console.log(ev.detail.island); // IslandElementData
+});
+```
+
+### Hydration Modes (via `data-gospa-mode`)
+
+| Mode | Trigger |
+|------|---------|
+| `immediate` | On discovery (default) |
+| `visible` | Enters viewport (IntersectionObserver) |
+| `idle` | Browser idle (requestIdleCallback) |
+| `interaction` | mouseenter / touchstart / focusin / click |
+| `lazy` | Manual call only |
+
+### Island Module Shape
+
+```typescript
+// Both default export and named export are supported.
+export default {
+    hydrate(element: Element, props: Record<string, unknown>, state: Record<string, unknown>) {
+        // Mount your UI here
+    }
+}
+// OR
+export function hydrate(element, props, state) { ... }
+export function mount(element, props, state) { ... }  // alias for hydrate
+```
+
+---
+
+## HMR (Hot Module Replacement)
+
+See [HMR.md](HMR.md) for full documentation.
+
+```go
+// Server setup
+hmr := fiber.InitHMR(fiber.HMRConfig{
+    Enabled:      true,
+    WatchPaths:   []string{"./routes", "./static"},
+    IgnorePaths:  []string{"node_modules", ".git"},
+    DebounceTime: 500 * time.Millisecond, // default
+})
+hmr.Start()
+defer hmr.Stop()
+
+// Register endpoints
+app.Get("/__hmr", hmr.HMREndpoint())  // WebSocket upgrades
+app.Use(hmr.HMRMiddleware())           // Inject client script into HTML
+
+// State preservation (for modules that need it)
+hmr.PreserveState(moduleID string, state any)
+state, exists := hmr.GetState(moduleID string)
+hmr.ClearState(moduleID string)
+
+// Global accessor
+hmr := fiber.GetHMR()
+```
+
+### HMRConfig Fields
+
+| Field | Type | Default | Description |
+|-------|------|---------|-------------|
+| `Enabled` | bool | false | Master switch |
+| `WatchPaths` | []string | — | Dirs to poll for changes |
+| `IgnorePaths` | []string | — | Path substrings to skip |
+| `DebounceTime` | Duration | 500ms | Min time between updates for same file |
+| `BroadcastAll` | bool | false | Broadcast to all clients regardless of path |
+
+
+<!-- FILE: docs/04-api-reference/02-configuration.md -->
 ================================================================================
 
 # GoSPA Configuration Reference
@@ -7161,6 +8243,8 @@ app := gospa.New(gospa.Config{
 | Option | Type | Default | Description |
 |--------|------|---------|-------------|
 | `DisableSPA` | `bool` | `false` | Disable SPA navigation completely |
+| `IgnoredExtensions` | `[]string` | `nil` | List of file extensions the SPA router should ignore (overrides default) |
+| `AppendIgnoredExtensions` | `[]string` | `nil` | List of file extensions to add to the default ignored list |
 | `SSR` | `bool` | `false` | Global SSR mode |
 
 ### Distributed & Scaling Options
@@ -7402,6 +8486,22 @@ Enable global Server-Side Rendering mode.
 SSR: true,
 ```
 
+### IgnoredExtensions & AppendIgnoredExtensions
+
+Customize which file extensions the SPA router ignores. By default, GoSPA ignores common file types like `.pdf`, `.zip`, `.png`, etc. to ensure they trigger a normal browser download or navigation instead of an SPA transition.
+
+Use `IgnoredExtensions` to **completely replace** the default list:
+
+```go
+IgnoredExtensions: []string{"pdf", "docx", "custom"},
+```
+
+Use `AppendIgnoredExtensions` to **add to** the default list:
+
+```go
+AppendIgnoredExtensions: []string{"bak", "tmp"},
+```
+
 ### Prefork, Storage, and PubSub
 
 Used for horizontal scaling and multi-core utilization via Fiber's `Prefork`.
@@ -7590,303 +8690,712 @@ app := gospa.New(gospa.Config{
 ```
 
 
-<!-- FILE: docs/RUNTIME.md -->
+<!-- FILE: docs/04-api-reference/03-cli.md -->
 ================================================================================
 
-# GoSPA Runtime Selection Guide
+# GoSPA CLI Reference
 
-GoSPA provides two runtime variants to balance security and performance. This guide helps you choose the right one.
+The GoSPA CLI provides commands for creating, building, and developing GoSPA applications.
 
-## Runtime Variants
+## Installation
 
-### Full Runtime (Default)
+```bash
+go install github.com/aydenstechdungeon/gospa/cmd/gospa@latest
+```
 
-The full runtime includes DOMPurify for HTML sanitization. Use this when security is a priority.
+## Commands Overview
 
-**File:** `runtime.js` (embedded)
+| Command | Alias | Description |
+|---------|-------|-------------|
+| `create` | - | Create a new GoSPA project |
+| `dev` | - | Start development server with hot reload |
+| `build` | - | Build for production |
+| `generate` | - | Generate route registration code |
+| `prune` | - | Remove unused state from state stores |
+| `add` | - | Add a feature (e.g., tailwind) |
+| `clean` | - | Remove build artifacts and generated files |
+| `version` | `-v`, `--version` | Show GoSPA version |
+| `help` | `-h`, `--help` | Show help message |
 
-**Features:**
-- DOMPurify HTML sanitization
-- Protection against XSS attacks
-- Safe rendering of user-generated content
-- All core features (WebSocket, Navigation, Transitions)
+---
 
-**Size:**
-- Uncompressed: 25.2 KB
-- Gzipped: 9.8 KB
+## `gospa create`
 
-**When to use:**
-- Rendering user-generated content
-- Public-facing applications
-- Applications handling untrusted data
-- Default choice for most applications
+Creates a new GoSPA project with all necessary files and directory structure.
 
-### Simple Runtime
+```bash
+gospa create <project-name> [options]
+```
 
-The simple runtime uses a basic HTML sanitizer for higher performance. Use this when you control all content.
+### Options
 
-**File:** `runtime-simple.js` (embedded)
+| Flag | Short | Default | Description |
+|------|-------|---------|-------------|
+| `--module` | `-m` | `<project-name>` | Go module name for the project |
+| `--output` | `-o` | `<project-name>` | Output directory for the project |
+| `--no-git` | - | `false` | Skip creation of `.gitignore` file |
+| `--docker` | - | `false` | Add a default `Dockerfile` to the project |
+| `--help` | `-h` | - | Show help for this command |
 
-**Features:**
-- Basic HTML sanitization (tag stripping only)
-- Smaller bundle size
-- All core features (WebSocket, Navigation, Transitions)
-- Higher performance
-- Optional SVG/math element support via `SimpleRuntimeSVGs` config
+### Generated Project Structure
 
-**Size:**
-- Uncompressed: 1.7 KB (wrapper) + 7.6 KB (core) = 9.3 KB total
-- Gzipped: 0.9 KB (wrapper) + 3.0 KB (core) = 3.9 KB total
+```
+myapp/
+├── main.go              # Application entry point
+├── go.mod               # Go module file
+├── routes/              # Route components
+│   ├── layout.templ     # Root layout component
+│   └── page.templ       # Home page component
+├── components/          # Reusable components
+├── lib/                 # Shared libraries
+└── static/              # Static assets
+```
 
-**When to use:**
-- Internal tools and admin panels
-- Applications where you control all HTML content
-- Performance-critical applications
-- No user-generated content
+### Generated main.go
 
-**SVG Support:**
+```go
+package main
 
-By default, the simple runtime strips SVG and math elements for security (they can contain malicious event handlers). If your application needs SVGs and you control all content, enable them with:
+import (
+    "log"
+
+    "github.com/aydenstechdungeon/gospa"
+    _ "myapp/routes" // Import routes to trigger init()
+)
+
+func main() {
+    app := gospa.New(gospa.Config{
+        RoutesDir:   "./routes",
+        DevMode:     true,
+        AppName:     "myapp",
+    })
+
+    if err := app.Run(":3000"); err != nil {
+        log.Fatal(err)
+    }
+}
+```
+
+### Examples
+
+```bash
+# Create a new project
+gospa create myapp
+
+# Navigate to project
+cd myapp
+
+# Install dependencies
+go mod tidy
+
+# Generate templ files
+templ generate
+
+# Generate GoSPA routes
+gospa generate
+
+# Start development server
+gospa dev
+```
+
+---
+
+## `gospa dev`
+
+Starts the development server with hot reload. Watches for file changes and automatically regenerates templates.
+
+```bash
+gospa dev [options]
+```
+
+### Options
+
+| Flag | Short | Default | Description |
+|------|-------|---------|-------------|
+| `--port` | `-p` | `3000` | Server port |
+| `--host` | `-H` | `localhost` | Server host |
+| `--routes` | `-r` | `./routes` | Routes directory to watch |
+| `--components` | `-c` | `./components` | Components directory to watch |
+| `--help` | `-h` | - | Show help for this command |
+
+### Behavior
+
+1. Checks for `go.mod` and `routes/` directory (must be in a GoSPA project)
+2. Triggers `BeforeDev` plugin hooks
+3. Generates initial templ files
+4. Generates TypeScript types and routes
+5. Starts file watcher for:
+   - `.templ` files → regenerate templates, restart server
+   - `.go` files → restart server
+   - `.css`, `.js` files → browser reload (no restart)
+6. Runs server with `GOSPA_DEV=1` environment variable
+
+### Default Configuration
+
+| Setting | Value |
+|---------|-------|
+| Port | 3000 |
+| Host | localhost |
+| Routes Directory | ./routes |
+| Components Directory | ./components |
+| Watch Interval | 500ms |
+
+### File Watching
+
+The dev server watches these directories:
+- `./routes`
+- `./components`
+
+Ignored files:
+- `generated_routes.go` (prevents infinite loops)
+- Files starting with `_` (underscore prefix)
+
+### Hot Reload Events
+
+| Event Type | Trigger | Action |
+|------------|---------|--------|
+| `create` | New file created | Regenerate, restart |
+| `modify` | File modified | Regenerate, restart |
+| `delete` | File deleted | Restart |
+
+### Examples
+
+```bash
+# Start dev server (default port 3000)
+gospa dev
+
+# Server will be available at http://localhost:3000
+```
+
+---
+
+## `gospa build`
+
+Builds the application for production deployment.
+
+```bash
+gospa build [options]
+```
+
+### Options
+
+| Flag | Short | Default | Description |
+|------|-------|---------|-------------|
+| `--output` | `-o` | `dist` | Output directory for built files |
+| `--platform` | `-p` | `runtime.GOOS` | Target platform (OS) |
+| `--arch` | `-a` | `runtime.GOARCH` | Target architecture |
+| `--env` | `-e` | `production` | Build environment |
+| `--no-minify` | - | `false` | Disable JavaScript minification |
+| `--no-compress` | - | `false` | Disable asset pre-compression (gzip) |
+| `--no-static` | - | `false` | Skip copying static assets |
+| `--all` | - | `false` | Build for all platforms (linux/darwin/windows, amd64/arm64) |
+| `--help` | `-h` | - | Show help for this command |
+
+### Build Process
+
+1. Triggers `BeforeBuild` plugin hooks
+2. Generates templ files (`templ generate`)
+3. Generates TypeScript types
+4. Builds client runtime with bun (if `client/` directory exists)
+5. Builds Go binary with optimizations:
+   - `-ldflags "-s -w"` (strip debug info)
+   - `CGO_ENABLED=0` (static binary)
+6. Copies static assets to `dist/static/`
+7. Pre-compresses assets with gzip
+8. Triggers `AfterBuild` plugin hooks
+
+### Default Configuration
+
+| Setting | Value |
+|---------|-------|
+| Output Directory | `./dist` |
+| Platform | Current OS (`runtime.GOOS`) |
+| Architecture | Current Arch (`runtime.GOARCH`) |
+| Static Assets | true (embedded) |
+| Minify | true |
+| Compress | true |
+| Environment | production |
+
+### Output Structure
+
+```
+dist/
+├── server              # Executable (server.exe on Windows)
+└── static/
+    ├── js/
+    │   └── runtime.js  # Minified client runtime
+    │   └── runtime.js.gz
+    ├── css/
+    └── ...
+```
+
+### Cross-Compilation
+
+The build uses Go's cross-compilation support via `GOOS` and `GOARCH` environment variables.
+
+### Examples
+
+```bash
+# Build for current platform
+gospa build
+
+# Output: dist/server
+```
+
+---
+
+## `gospa generate`
+
+Generates TypeScript route definitions and types from Go source code.
+
+```bash
+gospa generate [options]
+```
+
+### Options
+
+| Flag | Short | Default | Description |
+|------|-------|---------|-------------|
+| `--input` | `-i` | `.` | Input directory to scan |
+| `--output` | `-o` | `./generated` | Output directory for generated files |
+| `--help` | `-h` | - | Show help for this command |
+
+### What Gets Generated
+
+1. **Go Route Registry** (`routes/generated_routes.go`)
+   - Auto-registers all routes from `.templ` files
+   - Generated by `routing/generator`
+
+2. **TypeScript Types** (`generated/types.ts`)
+   - Interfaces from Go structs with `State` or `Props` suffix
+   - Structs with `gospa:state` comment
+
+3. **TypeScript Routes** (`generated/routes.ts`)
+   - Route definitions with paths, params, and metadata
+   - Helper functions: `getRoute()`, `buildPath()`
+
+### Generated TypeScript Types
+
+Go structs are converted to TypeScript interfaces:
+
+```go
+// Go source
+// gospa:state
+type CounterState struct {
+    Count int    `json:"count"`
+    Label string `json:"label"`
+}
+```
+
+```typescript
+// Generated types.ts
+export interface CounterState {
+  count: number;
+  label: string;
+}
+```
+
+### Type Mappings
+
+| Go Type | TypeScript Type |
+|---------|-----------------|
+| `string` | `string` |
+| `int`, `int8`, `int16`, `int32`, `int64` | `number` |
+| `uint`, `uint8`, `uint16`, `uint32`, `uint64` | `number` |
+| `float32`, `float64` | `number` |
+| `bool` | `boolean` |
+| `any` | `any` |
+| `[]T` | `Array<T>` |
+| `map[K]V` | `Record<K, V>` |
+| `*T` | `T` (marked optional) |
+
+### Generated Routes
+
+```typescript
+// generated/routes.ts
+export interface Route {
+  path: string;
+  file: string;
+  params: string[];
+  isDynamic: boolean;
+  isCatchAll: boolean;
+}
+
+export const routes: Route[] = [
+  { path: "/", file: "routes/page.templ", params: [], isDynamic: false, isCatchAll: false },
+  { path: "/users/[id]", file: "routes/users/[id]/page.templ", params: ["id"], isDynamic: true, isCatchAll: false },
+];
+
+export function getRoute(path: string): Route | undefined;
+export function buildPath(route: Route, params: Record<string, string>): string;
+```
+
+### Route Path Conventions
+
+| File Path | Route Path | Type |
+|-----------|------------|------|
+| `routes/page.templ` | `/` | Static |
+| `routes/about/page.templ` | `/about` | Static |
+| `routes/users/[id]/page.templ` | `/users/[id]` | Dynamic |
+| `routes/docs/[...slug]/page.templ` | `/docs/[...slug]` | Catch-all |
+
+### Examples
+
+```bash
+# Generate route code from .templ files
+gospa generate
+```
+
+---
+
+## `gospa add`
+
+Adds a feature to the project via plugins.
+
+```bash
+gospa add <feature>
+```
+
+### Available Features
+
+| Feature | Description |
+|---------|-------------|
+| `tailwind` | Adds Tailwind CSS support |
+| `postcss` | Adds PostCSS with Tailwind extensions |
+| `image` | Adds image optimization |
+| `validation` | Adds form validation (Valibot + Go validator) |
+| `seo` | Adds SEO optimization (sitemap, meta tags, JSON-LD) |
+| `auth` | Adds authentication (OAuth2, JWT, OTP) |
+
+### Examples
+
+```bash
+# Add Tailwind CSS
+gospa add tailwind
+
+# Add authentication
+gospa add auth
+
+# Add SEO optimization
+gospa add seo
+```
+
+---
+
+## Plugin Commands
+
+Plugins can provide custom CLI commands. Below are the commands provided by built-in plugins.
+
+### PostCSS Plugin
+
+| Command | Alias | Description |
+|---------|-------|-------------|
+| `postcss:process` | `pp` | Process CSS with PostCSS |
+| `postcss:watch` | `pw` | Watch and process CSS files |
+
+```bash
+# Process CSS once
+gospa postcss:process
+
+# Watch for changes
+gospa postcss:watch
+```
+
+### Image Plugin
+
+| Command | Alias | Description |
+|---------|-------|-------------|
+| `image:optimize` | `io` | Optimize images in a directory |
+| `image:resize` | `ir` | Resize images to specified dimensions |
+
+```bash
+# Optimize all images in static/
+gospa image:optimize
+
+# Resize images to specific widths
+gospa image:resize --widths 320,640.1.140
+```
+
+### Validation Plugin
+
+| Command | Alias | Description |
+|---------|-------|-------------|
+| `validation:generate` | `vg` | Generate validation code from schema |
+| `validation:schema` | `vs` | Generate Valibot schema from JSON |
+
+```bash
+# Generate validation code
+gospa validation:generate
+
+# Generate schema from JSON
+gospa validation:schema schema.json
+```
+
+### SEO Plugin
+
+| Command | Alias | Description |
+|---------|-------|-------------|
+| `seo:generate` | `sg` | Generate SEO files (sitemap, robots.txt) |
+| `seo:meta` | `sm` | Generate meta tags for a page |
+| `seo:structured` | `ss` | Generate structured data (JSON-LD) |
+
+```bash
+# Generate sitemap and robots.txt
+gospa seo:generate
+
+# Generate meta tags for a page
+gospa seo:meta /about
+
+# Generate JSON-LD for Organization
+gospa seo:structured Organization
+```
+
+### Auth Plugin
+
+| Command | Alias | Description |
+|---------|-------|-------------|
+| `auth:generate` | `ag` | Generate authentication code |
+| `auth:secret` | `as` | Generate a secure JWT secret |
+| `auth:otp` | `ao` | Generate OTP secret and QR code URL |
+| `auth:backup` | `ab` | Generate backup codes for 2FA |
+| `auth:verify` | `av` | Verify an OTP code against a secret |
+
+```bash
+# Generate auth code
+gospa auth:generate
+
+# Generate JWT secret
+gospa auth:secret
+
+# Generate OTP setup for user
+gospa auth:otp user@example.com
+
+# Generate backup codes
+gospa auth:backup 10
+
+# Verify OTP code
+gospa auth:verify <secret> <code>
+```
+
+---
+
+## `gospa prune`
+
+Removes unused component state from state stores to prevent memory leaks in long-running applications. This is particularly important for applications using WebSocket state synchronization with high component churn.
+
+```bash
+gospa prune [options]
+```
+
+### Options
+
+| Flag | Short | Default | Description |
+|------|-------|---------|-------------|
+| `--dry-run` | `-d` | `false` | Show what would be pruned without removing |
+| `--older-than` | `-o` | `1h` | Remove state older than duration (e.g., `30m`, `2h`, `1d`) |
+| `--all` | `-a` | `false` | Remove all state (use with caution) |
+| `--store` | `-s` | `all` | Target specific store: `session`, `client`, or `all` |
+| `--help` | `-h` | - | Show help for this command |
+
+### When to Use
+
+- **Memory Management**: Long-running servers with many short-lived components
+- **WebSocket Cleanup**: Remove stale WebSocket connection state
+- **Session Cleanup**: Clean up expired or abandoned session data
+- **Before Deployments**: Clean slate for major version updates
+
+### Examples
+
+```bash
+# Dry run to see what would be pruned
+gospa prune --dry-run
+
+# Prune state older than 2 hours
+gospa prune --older-than 2h
+
+# Prune only session store
+gospa prune --store session
+
+# Prune everything (dangerous - use with caution)
+gospa prune --all
+```
+
+### Automatic Pruning
+
+For production applications, consider enabling automatic pruning in your app configuration:
 
 ```go
 app := gospa.New(gospa.Config{
-    RoutesDir:        "./routes",
-    SimpleRuntime:    true,
-    SimpleRuntimeSVGs: true,  // Allow SVG/math elements
+    EnableStatePrune:    true,
+    StatePruneInterval: 30 * time.Minute,
+    StatePruneMaxAge:   2 * time.Hour,
 })
 ```
 
-> ⚠️ **Security Warning**: Only enable `SimpleRuntimeSVGs` if you control ALL HTML content. SVG elements can contain embedded JavaScript and event handlers that could execute malicious code. Never enable this option when rendering user-generated content.
+---
+
+## `gospa clean`
+
+Removes build artifacts and generated files.
+
+```bash
+gospa clean
+```
+
+### What Gets Removed
+
+- `dist/` directory
+- `node_modules/` directory
+- `*_templ.go` files (generated templ files)
+- `*_templ.txt` files
 
 ---
 
-## How to Select Runtime
+## Plugin System
 
-### Server-Side Configuration
+The CLI supports a plugin system with hooks for extending functionality.
 
-Set `SimpleRuntime: true` in your `gospa.Config`:
+### Available Hooks
+
+| Hook | When | Context |
+|------|------|---------|
+| `BeforeDev` | Before dev server starts | `nil` |
+| `AfterDev` | After dev server stops | `nil` |
+| `BeforeBuild` | Before production build | `{"config": *BuildConfig}` |
+| `AfterBuild` | After production build | `{"config": *BuildConfig}` |
+| `BeforeGenerate` | Before code generation | `nil` |
+| `AfterGenerate` | After code generation | `nil` |
+
+### Built-in Plugins
+
+| Plugin | Description | Dependencies |
+|--------|-------------|--------------|
+| **Tailwind** | Tailwind CSS v4 support | `tailwindcss` (bun) |
+| **PostCSS** | PostCSS with Tailwind extensions | `postcss`, `@tailwindcss/postcss` (bun) |
+| **Image** | Image optimization (WebP, JPEG, PNG) | None (stdlib) |
+| **Validation** | Form validation (Valibot + Go validator) | `github.com/go-playground/validator/v10` (go), `valibot` (bun) |
+| **SEO** | SEO optimization (sitemap, meta, JSON-LD) | None (stdlib) |
+| **Auth** | Authentication (OAuth2, JWT, OTP) | `github.com/golang-jwt/jwt/v5`, `golang.org/x/oauth2`, `github.com/pquerna/otp` (go) |
+
+### Plugin Configuration
+
+Plugins can be configured via `gospa.yaml`:
+
+```yaml
+# gospa.yaml
+plugins:
+  tailwind:
+    input: ./styles/main.css
+    output: ./static/css/main.css
+  
+  image:
+    input: ./static/images
+    output: ./static/images/optimized
+    formats: [webp, jpeg]
+    widths: [320, 640, 1280]
+  
+  seo:
+    site_url: https://example.com
+    site_name: My GoSPA Site
+    generate_sitemap: true
+  
+  auth:
+    jwt_secret: ${JWT_SECRET}
+    jwt_expiry: 24
+    oauth_providers: [google, github]
+    otp_enabled: true
+```
+
+### Plugin Cache
+
+External plugins are cached in `~/.gospa/plugins/`. This allows plugins to be downloaded and reused across projects.
+
+### Creating Custom Plugins
+
+Plugins implement the `Plugin` interface:
 
 ```go
-app := gospa.New(gospa.Config{
-    RoutesDir:     "./routes",
-    SimpleRuntime: true,  // Use simple runtime
-})
+type Plugin interface {
+    Name() string
+    Init() error
+    Dependencies() []Dependency
+}
+
+type CLIPlugin interface {
+    Plugin
+    OnHook(hook Hook, ctx map[string]interface{}) error
+    Commands() []Command
+}
 ```
 
-The framework automatically serves the correct runtime file based on this setting.
-
-### How It Works
-
-1. When `SimpleRuntime: false` (default):
-   - Serves `runtime.js` with DOMPurify
-   
-2. When `SimpleRuntime: true`:
-   - Serves `runtime-simple.js` with basic sanitizer
-
-The runtime files are embedded in the binary with content hashes for cache busting.
+See [PLUGINS.md](./PLUGINS.md) for detailed plugin development guide.
 
 ---
 
-## Security Considerations
+## Environment Variables
 
-### Full Runtime Security
+| Variable | Description |
+|----------|-------------|
+| `GOSPA_DEV` | Set to `1` when running in dev mode |
+| `GOSPA_ENV` | Set during build (`production`) |
+| `GOOS` | Target OS for cross-compilation |
+| `GOARCH` | Target architecture for cross-compilation |
+| `CGO_ENABLED` | Set to `0` for static binaries |
 
-The full runtime uses DOMPurify to sanitize HTML before rendering:
+---
 
-```typescript
-// DOMPurify removes dangerous content
-const dirty = '<script>alert("xss")</script><p>Safe content</p>';
-const clean = DOMPurify.sanitize(dirty);
-// Result: '<p>Safe content</p>'
+## Output Formatting
+
+The CLI provides colored output for different message types:
+
+| Type | Color | Prefix |
+|------|-------|--------|
+| Success | Green | ✓ |
+| Error | Red | ✗ |
+| Warning | Yellow | ⚠ |
+| Info | Cyan | ℹ |
+| Step | Blue | `N/M` |
+
+---
+
+## Exit Codes
+
+| Code | Description |
+|------|-------------|
+| `0` | Success |
+| `1` | General error |
+| `2` | Invalid arguments |
+
+---
+
+## Development Workflow
+
+```bash
+# 1. Create new project
+gospa create myapp
+cd myapp
+
+# 2. Install dependencies
+go mod tidy
+
+# 3. Generate templ files (first time)
+templ generate
+
+# 4. Generate GoSPA routes
+gospa generate
+
+# 5. Start development
+gospa dev
+
+# 6. Build for production
+gospa build
+
+# 7. Run production binary
+./dist/server
 ```
 
-**Protected against:**
-- XSS (Cross-Site Scripting)
-- HTML injection
-- JavaScript URL injection
-- Event handler injection
 
-### Simple Runtime Security
-
-The simple runtime uses a basic sanitizer that strips HTML tags:
-
-```typescript
-// Basic sanitizer - strips tags only
-const dirty = '<script>alert("xss")</script><p>Safe content</p>';
-const clean = simpleSanitizer(dirty);
-// Result: 'Safe content' (tags removed)
-```
-
-**Limitations:**
-- Does not validate attribute values
-- Does not handle all edge cases
-- Not suitable for untrusted content
-
----
-
-## Size Comparison
-
-| Runtime | Uncompressed | Gzipped |
-|---------|--------------|---------|
-| Full (runtime.js) | 25.2 KB | 9.8 KB |
-| Simple (wrapper + core) | 9.3 KB | 3.9 KB |
-| Savings | 16 KB (63%) | 5.9 KB (60%) |
-
----
-
-## Client-Side Usage
-
-Both runtimes export the same API:
-
-```typescript
-import {
-    // Core
-    init,
-    createComponent,
-    destroyComponent,
-    getComponent,
-    getState,
-    setState,
-    callAction,
-    bind,
-    autoInit,
-    
-    // State Primitives
-    Rune,
-    Derived,
-    Effect,
-    StateMap,
-    batch,
-    effect,
-    watch,
-    
-    // DOM Bindings
-    bindElement,
-    bindTwoWay,
-    renderIf,
-    renderList,
-    
-    // Events
-    on,
-    offAll,
-    debounce,
-    throttle,
-    delegate,
-    onKey,
-    
-    // WebSocket
-    getWebSocket,
-    sendAction,
-    syncedRune,
-    
-    // Navigation
-    getNavigation,
-    navigate,
-    back,
-    forward,
-    
-    // Transitions
-    getTransitions,
-    fade,
-    fly,
-    slide,
-    scale,
-} from '@gospa/runtime';
-```
-
----
-
-## Manual Runtime Selection
-
-If you need to manually specify the runtime script:
-
-```go
-app := gospa.New(gospa.Config{
-    RuntimeScript: "/static/js/custom-runtime.js",
-})
-```
-
-This overrides the automatic selection.
-
----
-
-## Hybrid Approach
-
-For applications with mixed security requirements, you can:
-
-1. Use simple runtime for the main application
-2. Use DOMPurify directly for specific user-generated content:
-
-```typescript
-import DOMPurify from 'dompurify';
-
-// In your component
-const safeContent = DOMPurify.sanitize(userContent);
-element.innerHTML = safeContent;
-```
-
-This gives you performance for most operations while maintaining security where needed.
-
----
-
-## Decision Matrix
-
-| Scenario | Recommended Runtime |
-|----------|---------------------|
-| Public website with user comments | Full |
-| E-commerce product pages | Full |
-| Admin dashboard (internal) | Simple |
-| Data visualization app | Simple |
-| Blog with markdown posts | Simple (if sanitized server-side) |
-| Forum or social app | Full |
-| Single-player game | Simple |
-| Real-time trading dashboard | Simple |
-| CMS with rich text editing | Full |
-
----
-
-## Migration
-
-To switch between runtimes, simply change the config:
-
-```go
-// Before (full runtime)
-app := gospa.New(gospa.Config{
-    RoutesDir: "./routes",
-    // SimpleRuntime defaults to false
-})
-
-// After (simple runtime)
-app := gospa.New(gospa.Config{
-    RoutesDir:     "./routes",
-    SimpleRuntime: true,
-})
-```
-
-No client-side code changes required - the API is identical.
-
----
-
-## Troubleshooting
-
-### Content Not Rendering Correctly
-
-If content is being over-sanitized in simple runtime:
-
-1. Check if content contains valid HTML
-2. Consider switching to full runtime
-3. Pre-sanitize content server-side
-
-### Security Warnings
-
-If security tools flag content:
-
-1. Ensure you're using full runtime for user content
-2. Add Content-Security-Policy headers
-3. Audit content sources
-
-
-<!-- FILE: docs/PLUGINS.md -->
+<!-- FILE: docs/04-api-reference/04-plugins.md -->
 ================================================================================
 
 # GoSPA Plugin System
@@ -8744,628 +10253,7 @@ bun add package-name
 3. Run `gospa config validate` to check configuration
 
 
-<!-- FILE: docs/SSE.md -->
-================================================================================
-
-# Server-Sent Events (SSE)
-
-GoSPA provides first-class support for Server-Sent Events (SSE) via the `fiber.SSEBroker`. SSE enables real-time, server-to-client push without the full bidirectionality of WebSockets — ideal for notifications, status updates, and live counters.
-
----
-
-## Server-Side API
-
-### `SSEConfig`
-
-```go
-type SSEConfig struct {
-    // EventBufferSize is the channel buffer for pending events per client (default: 100)
-    EventBufferSize int
-    // HeartbeatInterval is how often a keepalive comment is sent (default: 30s; 0 = disable)
-    HeartbeatInterval time.Duration
-    // OnConnect is called when a client connects
-    OnConnect func(client *SSEClient)
-    // OnDisconnect is called when a client disconnects
-    OnDisconnect func(client *SSEClient)
-}
-```
-
-### `NewSSEBroker(config *SSEConfig) *SSEBroker`
-
-Creates a new SSE broker. Pass `nil` to use defaults.
-
-### `SetupSSE(app *fiber.App, broker *SSEBroker, prefix string, middleware ...fiber.Handler)`
-
-Registers all SSE routes under a path prefix:
-
-| Route | Handler | Description |
-|-------|---------|-------------|
-| `GET  {prefix}/connect` | `SSEHandler` | Client opens EventSource connection |
-| `POST {prefix}/subscribe` | `SSESubscribeHandler` | Subscribe client to topics |
-| `POST {prefix}/unsubscribe` | `SSEUnsubscribeHandler` | Unsubscribe client from topics |
-
-```go
-broker := fiber.NewSSEBroker(&fiber.SSEConfig{
-    HeartbeatInterval: 30 * time.Second,
-    OnConnect: func(c *fiber.SSEClient) {
-        log.Printf("SSE client connected: %s", c.ID)
-    },
-})
-
-fiber.SetupSSE(app.Fiber, broker, "/_sse")
-```
-
-### `SSEClient`
-
-```go
-type SSEClient struct {
-    ID       string            // Unique client ID (UUID)
-    Topics   []string          // Currently subscribed topics
-    Metadata map[string]string // Arbitrary metadata (e.g. user ID, set on connect)
-}
-```
-
-### Broker Methods
-
-```go
-// Subscribe clientID to one or more topics
-broker.Subscribe(clientID string, topics ...string)
-
-// Unsubscribe clientID from one or more topics
-broker.Unsubscribe(clientID string, topics ...string)
-
-// Send an event to a single client
-broker.Send(clientID string, event SSEEvent) error
-
-// Broadcast an event to all connected clients
-broker.Broadcast(event SSEEvent)
-
-// Broadcast an event to all clients subscribed to a topic
-broker.BroadcastToTopic(topic string, event SSEEvent)
-
-// Disconnect a client
-broker.Disconnect(clientID string)
-```
-
-### `SSEEvent`
-
-```go
-type SSEEvent struct {
-    ID    string // Optional event ID (for client reconnect resume)
-    Event string // Event type (e.g. "notification", "update")
-    Data  any    // Payload — will be JSON-encoded
-    Retry int    // Optional retry delay (ms)
-}
-```
-
-### `SSEHelper` (High-Level)
-
-```go
-helper := fiber.NewSSEHelper(broker)
-
-// Send a notification
-helper.Notify(clientID, map[string]string{"message": "Hello!"})
-
-// Broadcast to all clients
-helper.NotifyAll("System maintenance in 5 minutes")
-
-// Send a state update
-helper.Update(clientID, "count", 42)
-
-// Send an alert
-helper.Alert(clientID, "warning", "Low disk space")
-
-// Report progress (0–100)
-helper.Progress(clientID, 75, "Uploading...")
-```
-
----
-
-## Security
-
-> **IMPORTANT:** `SSESubscribeHandler` verifies that the target `clientId` is connected, but does **NOT** verify that the HTTP requester is that client. Any caller who knows another client's ID can subscribe it to arbitrary topics.
->
-> Always place `SSESubscribeHandler` behind authentication middleware that validates the session identity matches the requested `clientId`:
->
-> ```go
-> fiber.SetupSSE(app.Fiber, broker, "/_sse", myAuthMiddleware)
-> ```
-
----
-
-## Client-Side
-
-The browser uses the native `EventSource` API to connect and receive events. GoSPA does not ship a client-side SSE wrapper — the native API is sufficient:
-
-```typescript
-const clientId = crypto.randomUUID();
-
-// Connect
-const es = new EventSource(`/_sse/connect?clientId=${clientId}`);
-
-// Generic message
-es.onmessage = (ev) => console.log('message:', ev.data);
-
-// Named event
-es.addEventListener('notification', (ev) => {
-    const data = JSON.parse(ev.data);
-    showToast(data.message);
-});
-
-es.addEventListener('error', () => {
-    console.warn('SSE connection lost, browser will reconnect automatically');
-});
-```
-
-### Topic Subscription from Client
-
-```typescript
-// Subscribe to topics after connecting
-await fetch('/_sse/subscribe', {
-    method: 'POST',
-    headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({ clientId, topics: ['alerts', 'updates'] }),
-});
-```
-
----
-
-## Full Example
-
-```go
-package main
-
-import (
-    "fmt"
-    "time"
-    "github.com/aydenstechdungeon/gospa"
-    "github.com/aydenstechdungeon/gospa/fiber"
-)
-
-func main() {
-    app := gospa.New(gospa.Config{RoutesDir: "./routes"})
-
-    broker := fiber.NewSSEBroker(&fiber.SSEConfig{
-        HeartbeatInterval: 30 * time.Second,
-        OnConnect: func(c *fiber.SSEClient) {
-            fmt.Printf("Client connected: %s\n", c.ID)
-        },
-    })
-
-    fiber.SetupSSE(app.Fiber, broker, "/_sse")
-
-    // Push an event from a background task
-    go func() {
-        for {
-            time.Sleep(5 * time.Second)
-            broker.Broadcast(fiber.SSEEvent{
-                Event: "tick",
-                Data:  map[string]int{"count": int(time.Now().Unix())},
-            })
-        }
-    }()
-
-    app.Listen(":3000")
-}
-```
-
----
-
-## Heartbeat
-
-When `HeartbeatInterval > 0`, the broker sends a comment line (`: heartbeat`) at the configured interval. This keeps proxies from closing idle connections. The browser `EventSource` ignores comment lines; they are invisible to `onmessage` handlers.
-
-
-<!-- FILE: docs/DEV_TOOLS.md -->
-================================================================================
-
-# Development Tools
-
-GoSPA exposes debug utilities via the `window.__GOSPA__` global and several server-side helpers designed exclusively for **development mode**. Do not enable these in production.
-
----
-
-## Client-Side Debug Object
-
-When the `data-gospa-auto` attribute is present on `<html>`, the runtime exposes itself on `window.__GOSPA__`:
-
-```html
-<html data-gospa-auto>
-```
-
-From the browser console you can inspect:
-
-```js
-// All active component instances (Map<string, ComponentInstance>)
-__GOSPA__.components
-
-// The root StateMap holding global state
-__GOSPA__.globalState
-
-// The active runtime configuration
-__GOSPA__.config
-
-// Functions
-__GOSPA__.init(options)
-__GOSPA__.createComponent(def, element?, isLocal?)
-__GOSPA__.destroyComponent(id)
-__GOSPA__.getComponent(id)
-__GOSPA__.getState(componentId, key)
-__GOSPA__.setState(componentId, key, value)
-__GOSPA__.callAction(componentId, action, ...args)
-__GOSPA__.bind(componentId, element, binding, key, options?)
-__GOSPA__.autoInit()
-```
-
----
-
-## HMR Integration
-
-During development the HMR system logs to the browser console:
-
-```
-[HMR] Connected
-[HMR] Update: routes/docs/page
-[HMR] Full reload required
-[HMR] Disconnected, reconnecting...
-```
-
-See [HMR.md](HMR.md) for full setup instructions.
-
----
-
-## Server-Side Debug Logging
-
-The framework uses the standard `log` package for server-side output. Key log messages:
-
-| Message | Source | Meaning |
-|---------|--------|---------|
-| `Client connected: <id>` | `fiber/websocket.go` | WebSocket client registered |
-| `Client disconnected: <id>` | `fiber/websocket.go` | WebSocket client unregistered |
-| `Render error: <err>` | `gospa.go` | Template render failed |
-| `Streaming render error: <err>` | `gospa.go` | Streaming render failed |
-| `CRITICAL: crypto/rand.Read failed` | `fiber/websocket.go` | OS CSPRNG failure (should never happen) |
-| `[HMR] Client error: <msg>` | `fiber/hmr.go` | Client reported an HMR error |
-| `Failed to read initial message` | `fiber/websocket.go` | Client connected but timed out on auth |
-
----
-
-## GOSPA_DEBUG Environment Variable
-
-`routing.RegisterPageWithOptions` previously emitted a debug print on every page registration; it has been removed. To re-enable verbose registration logging, set the `GOSPA_DEBUG` environment variable:
-
-```bash
-GOSPA_DEBUG=1 go run .
-```
-
-> **Note:** This env variable is a convention — individual packages must check it manually if you add custom debug output.
-
----
-
-## Error Overlay
-
-The `fiber.ErrorOverlay` renders a rich full-page HTML error overlay for development mode, showing the error message, type, file location, stack trace, and request details.
-
-### Configuration
-
-```go
-config := fiber.ErrorOverlayConfig{
-    Enabled:     true,
-    ShowStack:   true,     // Display stack traces
-    ShowRequest: true,     // Show request details
-    ShowCode:    true,     // Show source code snippets
-    Theme:       "dark",   // "dark" or "light"
-    Editor:      "code",   // "code" (VS Code), "idea" (JetBrains), "sublime"
-}
-
-overlay := fiber.NewErrorOverlay(config)
-```
-
-### Automatic DevMode Wiring
-
-When `DevMode: true` is set in `gospa.Config`, a development error handler is automatically registered. Any unhandled error that returns HTML renders the overlay instead of a plain JSON response.
-
-```go
-app := gospa.New(gospa.Config{
-    DevMode: true,
-    // ...
-})
-```
-
-### Manual Usage
-
-Render the overlay HTML for any Go `error`:
-
-```go
-// With request context
-overlayHTML := overlay.RenderOverlay(err, c.Request())
-
-// Without request context (e.g., background goroutines)
-overlayHTML := overlay.RenderOverlay(err, nil)
-
-// Send as response
-c.Status(500)
-c.Set("Content-Type", "text/html; charset=utf-8")
-return c.SendString(overlayHTML)
-```
-
-### `ErrorOverlayConfig` Fields
-
-| Field | Type | Default | Description |
-|-------|------|---------|-------------|
-| `Enabled` | `bool` | `true` | Enable the overlay |
-| `ShowStack` | `bool` | `true` | Render Go stack traces |
-| `ShowRequest` | `bool` | `true` | Include method, URL, and query params |
-| `ShowCode` | `bool` | `true` | Show code snippet (if available) |
-| `Theme` | `string` | `"dark"` | `"dark"` or `"light"` |
-| `Editor` | `string` | `"code"` | `"code"`, `"idea"`, or `"sublime"` — sets the click-to-open protocol |
-| `EditorPort` | `int` | `0` | Optional port for local editor server |
-
----
-
-## State Inspector
-
-`fiber.DevTools` provides a real-time WebSocket-backed state inspector panel for development. It tracks every state key and value change across server and client.
-
-### Setup
-
-```go
-devTools := fiber.NewDevTools(fiber.DevConfig{
-    Enabled:   true,
-    RoutesDir: "./routes",
-})
-devTools.Start()
-defer devTools.Stop()
-
-// Add state inspector middleware (before routes)
-app.Use(fiber.StateInspectorMiddleware(devTools, config))
-
-// Mount the dev panel UI at /_gospa/dev
-app.Get("/_gospa/dev", devTools.DevPanelHandler())
-
-// Mount WebSocket endpoint for real-time updates
-app.Get("/_gospa/dev/ws", devTools.DevToolsHandler())
-```
-
-Navigate to `/_gospa/dev` in the browser to open the panel.
-
-### `DevConfig` Fields
-
-| Field | Type | Default | Description |
-|-------|------|---------|-------------|
-| `Enabled` | `bool` | `false` | Enable development tools |
-| `RoutesDir` | `string` | `"routes"` | Directory to watch for changes |
-| `ComponentsDir` | `string` | `"components"` | Components directory to watch |
-| `WatchPaths` | `[]string` | `[]` | Additional paths to watch |
-| `IgnorePaths` | `[]string` | `["node_modules", ".git", ...]` | Paths to skip |
-| `Debounce` | `time.Duration` | `100ms` | Debounce interval for file changes |
-| `OnReload` | `func()` | `nil` | Called when files change |
-| `StateKey` | `string` | `"gospa.state"` | Context key for state |
-
-### `DevTools` API
-
-```go
-// Lifecycle
-devTools.Start()  // starts file watcher and dev tools
-devTools.Stop()   // stops file watcher
-
-// State logging
-devTools.LogStateChange(key, oldValue, newValue, source)
-// source: "client" or "server"
-
-// Query log
-entries := devTools.GetStateLog()     // []StateLogEntry
-keys    := devTools.GetStateKeys()    // []string
-
-// Handlers (registered to Fiber)
-devTools.DevPanelHandler()  // fiber.Handler — serves the dev panel HTML
-devTools.DevToolsHandler()  // fiber.Handler — WebSocket for real-time updates
-```
-
-### Panel Features
-
-The dev panel at `/_gospa/dev` provides:
-- **Live Change Log** — every state key change as it happens (server or client origin)
-- **Diff View** — before and after values
-- **Source Tracking** — whether update came from `"server"` or `"client"`
-- **Key Registry** — all currently tracked reactive state keys
-
-### Debug Middleware
-
-`fiber.DebugMiddleware` logs every request with method, path, HTTP status, and processing time:
-
-```go
-app.Use(fiber.DebugMiddleware(devTools))
-// Output: [GET] /docs/api 200 1.2ms
-```
-
----
-
-## Request Logging
-
-`fiber.RequestLoggerMiddleware()` logs every request with method, path, status code, and duration:
-
-```go
-app.Use(fiber.RequestLoggerMiddleware())
-// Output: [GET] /docs/api 200 1.234ms
-```
-
-For more advanced structured logging (JSON, fields, sampling), use Fiber's built-in logger middleware:
-
-```go
-import "github.com/gofiber/fiber/v2/middleware/logger"
-
-app.Fiber.Use(logger.New())
-```
-
----
-
-## Recovery Middleware
-
-`fiber.RecoveryMiddleware()` catches panics and returns a 500 JSON response:
-
-```go
-app.Fiber.Use(fiber.RecoveryMiddleware())
-```
-
-Use this in all environments to prevent a single panicking goroutine from crashing the server.
-
-
-<!-- FILE: docs/HMR.md -->
-================================================================================
-
-# Hot Module Replacement (HMR)
-
-GoSPA includes a built-in Hot Module Replacement (HMR) system that watches files for changes and notifies connected browser clients in real-time — without losing application state.
-
----
-
-## How It Works
-
-The HMR system has three parts:
-
-1. **`HMRFileWatcher`** — polls the file system every 500ms for `.templ`, `.go`, `.ts`, `.js`, `.css`, `.html`, `.svelte`, `.vue`, `.jsx`, `.tsx` changes.
-2. **`HMRManager`** — debounces change events, determines the update type, and broadcasts `HMRMessage` payloads over WebSocket to connected clients.
-3. **Client script** — injected automatically by `HMRMiddleware`, connects over WebSocket and applies updates or triggers a full reload.
-
-> **Note:** The file watcher uses polling (not `fsnotify`). For faster feedback loops, set `DebounceTime` to a lower value or replace the watcher with an inotify-based solution.
-
----
-
-## Server-Side API
-
-### `HMRConfig`
-
-```go
-type HMRConfig struct {
-    Enabled      bool          // Enable the HMR system
-    WatchPaths   []string      // Directories to watch (e.g. []string{"./routes", "./static"})
-    IgnorePaths  []string      // Path substrings to ignore (e.g. []string{"node_modules", ".git"})
-    DebounceTime time.Duration // Min time between two updates for the same file (default: 500ms)
-    BroadcastAll bool          // Broadcast all updates, not just matching clients (unused currently)
-}
-```
-
-### `NewHMRManager(config HMRConfig) *HMRManager`
-
-Creates a new HMR manager. Does not start watching; call `Start()` to begin.
-
-### `(*HMRManager) Start()`
-
-Starts the file watcher and the change-processing goroutine.
-
-### `(*HMRManager) Stop()`
-
-Stops the file watcher and closes the change channel. Safe to call multiple times.
-
-### `(*HMRManager) HMREndpoint() fiber.Handler`
-
-Returns a Fiber handler that upgrades WebSocket connections for HMR clients. Register this at `/__hmr`.
-
-```go
-app.Get("/__hmr", hmr.HMREndpoint())
-```
-
-### `(*HMRManager) HMRMiddleware() fiber.Handler`
-
-Returns middleware that injects the HMR client script into HTML responses. Must be used **after** the route handlers so the body is available.
-
-```go
-app.Use(hmr.HMRMiddleware())
-```
-
-### State Preservation
-
-Clients can push state before a reload and retrieve it after:
-
-```go
-// Server: preserve module state sent from client
-hmr.PreserveState(moduleID string, state any)
-
-// Server: retrieve preserved state for a module
-state, exists := hmr.GetState(moduleID string)
-
-// Server: clear preserved state for a module
-hmr.ClearState(moduleID string)
-```
-
-The client script sends `state-preserve` messages automatically via `window.__gospaPreserveState()` on `beforeunload`.
-
-### `InitHMR(config HMRConfig) *HMRManager`
-
-Initializes and stores a global HMR manager instance.
-
-### `GetHMR() *HMRManager`
-
-Returns the global HMR manager set by `InitHMR`.
-
----
-
-## Message Types
-
-| Type | Direction | Meaning |
-|------|-----------|---------|
-| `connected` | Server → Client | Welcome message on connect |
-| `update` | Server → Client | A file changed; contains `path`, `moduleId`, `event`, `timestamp` |
-| `reload` | Server → Client | Full page reload required |
-| `error` | Server → Client | A server-side HMR error |
-| `state-preserve` | Client → Server | Client is saving module state before reload |
-| `state-request` | Client → Server | Client requests previously saved state |
-| `error` | Client → Server | Client-side HMR error logged to server |
-
----
-
-## Complete Setup Example
-
-```go
-package main
-
-import (
-    "time"
-    "github.com/aydenstechdungeon/gospa"
-    "github.com/aydenstechdungeon/gospa/fiber"
-)
-
-func main() {
-    app := gospa.New(gospa.Config{
-        RoutesDir: "./routes",
-        DevMode:   true,
-    })
-
-    if app.Config.DevMode {
-        hmr := fiber.InitHMR(fiber.HMRConfig{
-            Enabled:      true,
-            WatchPaths:   []string{"./routes", "./static"},
-            IgnorePaths:  []string{"node_modules", ".git", "_templ.go"},
-            DebounceTime: 500 * time.Millisecond,
-        })
-        hmr.Start()
-        defer hmr.Stop()
-
-        // WebSocket endpoint for HMR clients
-        app.Fiber.Get("/__hmr", hmr.HMREndpoint())
-
-        // Inject HMR script into HTML pages
-        app.Fiber.Use(hmr.HMRMiddleware())
-    }
-
-    app.Listen(":3000")
-}
-```
-
----
-
-## Troubleshooting
-
-| Symptom | Cause | Fix |
-|---------|-------|-----|
-| Full reload instead of hot update | `.go` or `.templ` file changed requiring rebuild | Expected — Go templates require re-render |
-| HMR doesn't connect over HTTPS | Script used `ws://` (now fixed — uses `wss://` on HTTPS) | Ensure you're on a recent GoSPA version |
-| Changes not detected | File not in `WatchPaths` or path matches `IgnorePaths` | Review config; check console for `[HMR] Connected` |
-| State lost across reload | `window.__gospaPreserveState` not implemented | Implement the state preservation hook |
-
-
-<!-- FILE: docs/ERROR_HANDLING.md -->
+<!-- FILE: docs/05-advanced/01-error-handling.md -->
 ================================================================================
 
 # GoSPA Error Handling
@@ -9810,5297 +10698,3479 @@ app.Use(fiber.ErrorHandler(fiber.ErrorHandlerConfig{
 8. **Use typed errors**: Create domain-specific error types
 
 
-<!-- FILE: docs/SECURITY.md -->
+<!-- FILE: docs/05-advanced/02-state-pruning.md -->
 ================================================================================
 
-# Security Policy for GoSPA
+# StatePruner — API Reference
 
-## Supported Versions
+`github.com/aydenstechdungeon/gospa/state`
 
-Currently, only the latest version of GoSPA is supported with security updates.
+## Overview
 
-| Version | Supported          |
-| ------- | ------------------ |
-| v0.x    | :white_check_mark: |
-
-## Security Features
-
-GoSPA incorporates several fundamental security practices by design:
-
-- **Cross-Site Scripting (XSS) Protection**: Client-side states and UI reactivity use DOMPurify to effectively sanitize any injected HTML layout payloads unless explicitly opted out (`SimpleRuntimeSVGs` configuration).
-- **Cross-Site Request Forgery (CSRF)**: Framework provides optional Double-Submit-Cookie strategies for authenticating mutable state requests.
-
-## CSRF Protection Setup
-
-GoSPA uses a **two-middleware pattern** for CSRF protection. You must configure both middleware correctly:
-
-### 1. CSRFSetTokenMiddleware (GET/HEAD requests)
-This middleware sets the CSRF cookie and token for safe (read-only) requests:
-
-```go
-app.Use(gospa.CSRFSetTokenMiddleware(gospa.CSRFConfig{
-    CookieName:     "csrf_token",
-    CookieHTTPOnly: true,
-    CookieSecure:   true,  // Use true in production with HTTPS
-    CookieSameSite: "Strict",
-}))
-```
-
-### 2. CSRFTokenMiddleware (POST/PUT/DELETE/PATCH)
-This middleware validates the CSRF token on mutating requests:
-
-```go
-app.Use(gospa.CSRFTokenMiddleware(gospa.CSRFConfig{
-    TokenLookup:    "header:X-CSRF-Token",
-    CookieName:     "csrf_token",
-    CookieHTTPOnly: true,
-    CookieSecure:   true,
-}))
-```
-
-### Important: Middleware Order Matters
-
-Place `CSRFSetTokenMiddleware` BEFORE `CSRFTokenMiddleware`:
-
-```go
-// CORRECT: Set token first, then validate
-app.Use(gospa.CSRFSetTokenMiddleware(csrfConfig))  // Sets cookie on GET
-app.Use(gospa.CSRFTokenMiddleware(csrfConfig))     // Validates on POST/PUT/DELETE
-
-// INCORRECT: Don't reverse the order!
-// app.Use(gospa.CSRFTokenMiddleware(csrfConfig))   // Validation will fail
-// app.Use(gospa.CSRFSetTokenMiddleware(csrfConfig))
-```
-
-### Prefork Mode Warning
-
-When using Prefork mode (`Prefork: true`), each worker process has **isolated memory**. CSRF tokens stored in memory will not be shared across workers, causing validation failures. You must use an external session store (Redis, database) for CSRF state in Prefork deployments.
-
-### Client-Side Integration
-
-Fetch the CSRF token from the cookie and include it in requests:
-
-```javascript
-// Get token from cookie
-const csrfToken = document.cookie
-  .split('; ')
-  .find(row => row.startsWith('csrf_token='))
-  ?.split('=')[1];
-
-// Include in request headers
-fetch('/api/action', {
-  method: 'POST',
-  headers: {
-    'X-CSRF-Token': csrfToken,
-    'Content-Type': 'application/json',
-  },
-  body: JSON.stringify(data)
-});
-```
-
-- **Data Encapsulation**: Server states synchronize differentially while validating scopes. Ensure proper RBAC authorization on all sensitive payload actions via custom Handlers or Plugins.
-
-## Configuration Hardening Guidelines
-
-For production environments, ensure you abide by these guidelines:
-- Set `DevMode: false`. Development mode enables detailed stack traces to leak which is unsafe for public endpoints.
-- Initialize explicitly locked `AllowedOrigins` for `CORSMiddleware`. Avoid wildcard `*` domains whenever sensitive cookies/authentication tokens are utilized.
-- Never place session identifiers in URL query arguments or params.
-- Rate-limit Action routes dynamically leveraging proxies or internal token buckets.
-
-## Reporting a Vulnerability
-
-If you have discovered a security vulnerability in this project, do not open a public issue. We handle vulnerability disclosures privately.
-
-Please report any identified vulnerability via email directly to the maintainers or report it through our GitHub Security platform.
-You will receive an acknowledgment within 48 hours with an estimation of when the problem will be resolved.
-
-## Security Update Policy
-
-Vulnerabilities with a "Critical" or "High" classification are usually prioritized immediately with an out-of-band hotfix release. Regular security updates are appended to the next minor version iteration.
-
-
-<!-- FILE: docs/CLI.md -->
-================================================================================
-
-# GoSPA CLI Reference
-
-The GoSPA CLI provides commands for creating, building, and developing GoSPA applications.
-
-## Installation
-
-```bash
-go install github.com/aydenstechdungeon/gospa/cmd/gospa@latest
-```
-
-## Commands Overview
-
-| Command | Alias | Description |
-|---------|-------|-------------|
-| `create` | - | Create a new GoSPA project |
-| `dev` | - | Start development server with hot reload |
-| `build` | - | Build for production |
-| `generate` | - | Generate route registration code |
-| `prune` | - | Remove unused state from state stores |
-| `add` | - | Add a feature (e.g., tailwind) |
-| `clean` | - | Remove build artifacts and generated files |
-| `version` | `-v`, `--version` | Show GoSPA version |
-| `help` | `-h`, `--help` | Show help message |
+`StatePruner` automatically removes stale `Rune` values from a `StateMap` when they haven't changed for a configurable duration. This prevents unbounded state map growth in long-lived applications where keys are added dynamically.
 
 ---
 
-## `gospa create`
+## Types
 
-Creates a new GoSPA project with all necessary files and directory structure.
+```go
+// StatePruner periodically removes stale entries from a StateMap.
+type StatePruner struct {
+    // ...
+}
 
+// PrunerConfig configures the StatePruner.
+type PrunerConfig struct {
+    // Interval is how often the pruner runs (default: 5m).
+    Interval time.Duration
+    // MaxAge is how long a value must be unchanged before it is pruned (default: 30m).
+    MaxAge time.Duration
+    // OnPrune is an optional callback fired for each pruned key.
+    OnPrune func(key string)
+}
+```
+
+---
+
+## Constructor
+
+### `NewStatePruner(sm *StateMap, config PrunerConfig) *StatePruner`
+
+Creates a new `StatePruner` targeting the given `StateMap`. Does not start pruning until `Start()` is called.
+
+**Example:**
+
+```go
+sm := state.NewStateMap()
+
+pruner := state.NewStatePruner(sm, state.PrunerConfig{
+    Interval: 10 * time.Minute,
+    MaxAge:   1 * time.Hour,
+    OnPrune: func(key string) {
+        log.Printf("Pruned stale key: %s", key)
+    },
+})
+pruner.Start()
+defer pruner.Stop()
+```
+
+---
+
+## Methods
+
+### `(*StatePruner) Start()`
+
+Begins the background pruning loop. Safe to call multiple times (no-op if already running).
+
+### `(*StatePruner) Stop()`
+
+Stops the background pruning loop and blocks until it exits. Safe to call multiple times.
+
+### `(*StatePruner) Prune() int`
+
+Runs a single pruning pass immediately (outside the normal interval). Returns the number of keys pruned.
+
+---
+
+## Behavior Notes
+
+- The pruner tracks the last modification time of each Rune via a subscription. It does **not** poll Rune values directly.
+- Keys added after `Start()` are automatically tracked.
+- Pruned keys are deleted from the `StateMap`. The corresponding Rune is also disposed if it implements `Disposable`.
+- The `OnPrune` callback is invoked synchronously during the prune pass. Keep it fast; heavy work should be dispatched asynchronously.
+- The pruner does **not** protect against re-adding pruned keys — if code adds them back, they will be tracked again.
+
+---
+
+## Interaction with `WebSocket` state sync
+
+If you use a `StateMap` for per-session WebSocket state, attach a pruner to avoid unbounded growth of per-user keys as sessions expire:
+
+```go
+// Per-session state example
+sessionState := state.NewStateMap()
+
+pruner := state.NewStatePruner(sessionState, state.PrunerConfig{
+    Interval: 5 * time.Minute,
+    MaxAge:   fiber.SessionTTL, // match session TTL from websocket package
+})
+pruner.Start()
+defer pruner.Stop()
+```
+
+---
+
+## See Also
+
+- [`StateMap`](API.md#statemap)
+- [`Rune`](API.md#runet)
+- [`SessionTTL`](API.md#websocket-hub) in `fiber` package
+
+
+<!-- FILE: docs/06-migration/01-v1-to-v2.md -->
+================================================================================
+
+# Migration Guide: v1.x to v2.0
+
+GoSPA v2.0 introduces significant changes to the client-side security model. This guide helps you migrate your applications.
+
+## Breaking Changes
+
+### 1. DOMPurify is Now Optional
+
+**Before (v1.x):**
+- DOMPurify was a required dependency
+- Client-side HTML sanitization was mandatory
+- Added ~20KB to bundle size
+
+**After (v2.0):**
+- DOMPurify moved to `optionalDependencies`
+- Default runtime trusts server-rendered content
+- DOMPurify only loaded when explicitly needed
+
+### 2. Runtime Import Changes
+
+**Before (v1.x):**
+```javascript
+// Standard runtime with mandatory sanitization
+import { init } from 'gospa';
+
+// "Simple" runtime without sanitization (deprecated)
+import { init } from 'gospa/simple';
+```
+
+**After (v2.0):**
+```javascript
+// Default runtime - trusts server, no sanitization (~15KB)
+import { init } from 'gospa';
+
+// Secure runtime - includes DOMPurify (~35KB)
+import { init } from 'gospa/secure';
+
+// gospa/simple is DEPRECATED - will be removed in v3.0
+```
+
+### 3. Security Model Change
+
+**Before (v1.x):**
+- Defense-in-depth: Server sanitization (Templ) + Client sanitization (DOMPurify)
+- HTML bindings were automatically sanitized on client
+
+**After (v2.0):**
+- Trust-the-server model (like SvelteKit, HTMX)
+- Server sanitization only (Templ's auto-escaping)
+- Client sanitization is opt-in via `gospa/secure`
+
+## Migration Steps
+
+### For Most Applications
+
+**No changes required.** The default runtime now trusts your server-rendered content, which is already safe due to Templ's auto-escaping. Your bundle size will automatically decrease by ~20KB.
+
+```javascript
+// This continues to work - just without unnecessary client-side sanitization
+import { init } from 'gospa';
+init();
+```
+
+### For Applications Displaying User-Generated Content
+
+If your app displays untrusted HTML (e.g., comments, rich text from users):
+
+**Option A: Use the Secure Runtime (Recommended)**
+```javascript
+// Change your import to use the secure runtime
+import { init } from 'gospa/secure';
+init();
+```
+
+**Option B: Configure DOMPurify Manually**
+```javascript
+import { init, setSanitizer } from 'gospa';
+import DOMPurify from 'dompurify';
+
+setSanitizer((html) => DOMPurify.sanitize(html, {
+  ALLOWED_TAGS: ['b', 'i', 'em', 'strong', 'a'],
+  ALLOWED_ATTR: ['href']
+}));
+
+init();
+```
+
+**Option C: Server-Side Sanitization (Best)**
+Sanitize user content on the server before storing/displaying:
+```go
+import "github.com/microcosm-cc/bluemonday"
+
+func sanitizeUserContent(input string) string {
+    p := bluemonday.UGCPolicy()
+    return p.Sanitize(input)
+}
+```
+
+### For Applications Using `gospa/simple`
+
+**The simple runtime is deprecated and will be removed in v3.0.**
+
+**Before (v1.x):**
+```javascript
+import { init } from 'gospa/simple';
+init();
+```
+
+**After (v2.0):**
+```javascript
+// Use the default runtime instead
+import { init } from 'gospa';
+init();
+```
+
+A deprecation warning will appear in the console until you update.
+
+## Security Considerations
+
+### Why This Change?
+
+1. **Templ Already Protects You**: Go templates with Templ auto-escape all dynamic content
+2. **Server Navigation is Safe**: When navigating via `data-link`, the server renders fresh HTML
+3. **CSP is Better**: Content Security Policy prevents XSS more effectively than sanitization
+4. **Bundle Size Matters**: 20KB less JavaScript improves performance
+
+### When You Still Need DOMPurify
+
+- **Rich text editors** with user-generated HTML
+- **Markdown rendering** to HTML on the client
+- **Third-party widget embeds** (iframes, scripts)
+- **Legacy applications** without proper server-side escaping
+
+### Security Checklist
+
+- [ ] All user input is escaped by Templ on the server
+- [ ] No `rawHTML` or `@templ.Raw` with untrusted content
+- [ ] CSP headers are configured (`script-src 'self'`)
+- [ ] If displaying user HTML, use `gospa/secure` or sanitize server-side
+
+## Bundle Size Comparison
+
+| Runtime | v1.x Size | v2.0 Size | Change |
+|---------|-----------|-----------|--------|
+| `gospa` | ~35KB | ~15KB | **-57%** |
+| `gospa/secure` | N/A | ~35KB | New |
+| `gospa/simple` | ~15KB | ~15KB | Deprecated |
+
+## Troubleshooting
+
+### Console Warning: "gospa/simple is deprecated"
+
+Update your import:
+```javascript
+// Change from:
+import { init } from 'gospa/simple';
+
+// To:
+import { init } from 'gospa';
+```
+
+### HTML Not Rendering
+
+If you were relying on DOMPurify to allow certain HTML, either:
+1. Switch to `gospa/secure`
+2. Configure a custom sanitizer with `setSanitizer()`
+3. Ensure your server sends properly escaped HTML
+
+### DOMPurify Not Found
+
+If using `gospa/secure`:
 ```bash
-gospa create <project-name> [options]
+npm install dompurify
 ```
 
-### Options
+## Need Help?
 
-| Flag | Short | Default | Description |
-|------|-------|---------|-------------|
-| `--module` | `-m` | `<project-name>` | Go module name for the project |
-| `--output` | `-o` | `<project-name>` | Output directory for the project |
-| `--no-git` | - | `false` | Skip creation of `.gitignore` file |
-| `--docker` | - | `false` | Add a default `Dockerfile` to the project |
-| `--help` | `-h` | - | Show help for this command |
+- Review [Security Documentation](SECURITY.md)
+- Check [Client Runtime Guide](CLIENT_RUNTIME.md)
+- Open an issue on GitHub
 
-### Generated Project Structure
+
+<!-- FILE: docs/07-troubleshooting/01-runtime-initialization.md -->
+================================================================================
+
+# Troubleshooting Runtime Initialization
+
+## "GoSPA is not defined" Error
+
+### Problem
+When calling `GoSPA.remote()` or other GoSPA functions from inline scripts or event handlers, you get:
 
 ```
-myapp/
-├── main.go              # Application entry point
-├── go.mod               # Go module file
-├── routes/              # Route components
-│   ├── layout.templ     # Root layout component
-│   └── page.templ       # Home page component
-├── components/          # Reusable components
-├── lib/                 # Shared libraries
-└── static/              # Static assets
+Uncaught ReferenceError: GoSPA is not defined
 ```
 
-### Generated main.go
+### Cause
+The GoSPA runtime hasn't been initialized yet. The `window.GoSPA` global is created by the runtime's `init()` function, which is called automatically when the page loads if properly configured.
+
+### Solution
+
+#### 1. Ensure `data-gospa-auto` is on your `<html>` tag
+
+The runtime checks for this attribute to auto-initialize:
+
+```html
+<!DOCTYPE html>
+<html lang="en" data-gospa-auto>
+<head>
+    <title>My App</title>
+</head>
+<body>
+    <!-- Your content -->
+</body>
+</html>
+```
+
+#### 2. Use GoSPA's root layout
+
+If using a custom layout, ensure it includes the runtime script. The default root layout handles this automatically:
+
+```templ
+package routes
+
+templ RootLayout() {
+    <!DOCTYPE html>
+    <html data-gospa-auto>
+        <head>
+            <title>My App</title>
+        </head>
+        <body>
+            { children... }
+            <!-- Runtime script is auto-injected here by GoSPA -->
+        </body>
+    </html>
+}
+```
+
+#### 3. Manual initialization (advanced)
+
+If not using `data-gospa-auto`, manually initialize in a module script:
+
+```html
+<script type="module">
+    import { init } from '/_gospa/runtime.js';
+    init({
+        wsUrl: 'ws://localhost:3000/_gospa/ws',
+        debug: false
+    });
+</script>
+```
+
+#### 4. Wait for DOM ready
+
+If calling from a regular script tag, ensure the runtime has loaded:
+
+```html
+<script>
+    // Wait for GoSPA to be available
+    function waitForGoSPA(callback, maxAttempts = 50) {
+        let attempts = 0;
+        const check = () => {
+            if (typeof GoSPA !== 'undefined') {
+                callback();
+            } else if (attempts < maxAttempts) {
+                attempts++;
+                setTimeout(check, 100);
+            } else {
+                console.error('GoSPA failed to load');
+            }
+        };
+        check();
+    }
+
+    waitForGoSPA(() => {
+        // Now safe to use GoSPA
+        GoSPA.remote('myAction', {});
+    });
+</script>
+```
+
+### How GoSPA is Created
+
+The `window.GoSPA` object is created in `client/src/runtime-core.ts` when `init()` is called:
+
+```typescript
+// Create the public GoSPA global object
+const GoSPA = {
+    config,
+    components,
+    globalState,
+    init,
+    createComponent,
+    destroyComponent,
+    getComponent,
+    getState,
+    setState,
+    callAction,
+    bind,
+    autoInit,
+    // Remote actions
+    remote,
+    remoteAction,
+    configureRemote,
+    getRemotePrefix,
+    // State primitives
+    get Rune() { return Rune; },
+    get Derived() { return Derived; },
+    get Effect() { return Effect; },
+    // Utility functions
+    batch,
+    effect,
+    watch,
+    // Events
+    get on() { return on; },
+    get offAll() { return offAll; },
+    get debounce() { return debounce; },
+    get throttle() { return throttle; }
+};
+
+// Expose to window as the primary public API
+(window as any).GoSPA = GoSPA;
+```
+
+## "__GOSPA__ is not defined" vs "GoSPA is not defined"
+
+There are two different globals:
+
+- **`window.GoSPA`** - The public API (what you should use)
+- **`window.__GOSPA__`** - Internal debugging object (same content, different name)
+
+Always use `GoSPA` (without underscores) in your application code.
+
+## ES Module Alternative
+
+Instead of relying on the global, import directly from the runtime:
+
+```html
+<script type="module">
+    import { remote } from '/_gospa/runtime.js';
+    
+    // No need for GoSPA global
+    const result = await remote('myAction', {});
+</script>
+```
+
+This approach:
+- Works immediately (no waiting for init)
+- Is tree-shakeable
+- Works better with TypeScript
+- Doesn't pollute global scope
+
+## Checking Runtime Status
+
+To verify the runtime loaded correctly:
+
+```javascript
+// In browser console
+console.log(typeof GoSPA);  // Should print "object"
+console.log(Object.keys(GoSPA));  // Should list available methods
+```
+
+## Common Mistakes
+
+### Mistake 1: Calling before DOM is ready
+
+```javascript
+// BAD - Script runs before runtime loads
+goSPA.remote('action', {});  // Note: wrong case too!
+
+// GOOD - Wait for page to load
+window.addEventListener('DOMContentLoaded', () => {
+    GoSPA.remote('action', {});
+});
+```
+
+### Mistake 2: Wrong case
+
+```javascript
+// BAD - Wrong case
+goSPA.remote('action', {});
+Gospa.remote('action', {});
+
+// GOOD
+goSPA.remote('action', {});
+```
+
+### Mistake 3: Script type="module" without import
+
+```html
+<!-- BAD - Module scripts don't see globals automatically -->
+<script type="module">
+    GoSPA.remote('action', {});  // May fail
+</script>
+
+<!-- GOOD - Either import or use regular script -->
+<script type="module">
+    import { remote } from '/_gospa/runtime.js';
+    remote('action', {});
+</script>
+
+<!-- Or -->
+<script>
+    GoSPA.remote('action', {});
+</script>
+```
+
+
+<!-- FILE: docs/07-troubleshooting/02-remote-actions.md -->
+================================================================================
+
+# Troubleshooting Remote Actions
+
+## "ACTION_NOT_FOUND" Error
+
+### Problem
+Calling a remote action returns:
+
+```json
+{
+    "error": "Remote action not found",
+    "code": "ACTION_NOT_FOUND"
+}
+```
+
+### Cause
+The action hasn't been registered on the server yet.
+
+### Solution
+
+#### 1. Ensure action is registered in `init()` or package-level
+
+```go
+package routes
+
+import "github.com/aydenstechdungeon/gospa/routing"
+
+func init() {
+    routing.RegisterRemoteAction("saveData", func(ctx context.Context, input any) (any, error) {
+        return "saved", nil
+    })
+}
+```
+
+The `init()` function runs automatically when the package is imported. Make sure your routes package is imported in `main.go`:
 
 ```go
 package main
 
 import (
-    "log"
-
-    "github.com/aydenstechdungeon/gospa"
-    _ "myapp/routes" // Import routes to trigger init()
+    _ "yourapp/routes"  // Import for side effects (init)
 )
+```
 
-func main() {
-    app := gospa.New(gospa.Config{
-        RoutesDir:   "./routes",
-        DevMode:     true,
-        AppName:     "myapp",
-    })
+#### 2. Check action name matches exactly
 
-    if err := app.Run(":3000"); err != nil {
-        log.Fatal(err)
-    }
+```javascript
+// Client calls 'saveData'
+GoSPA.remote('saveData', {})
+
+// Server must register 'saveData' (case-sensitive)
+routing.RegisterRemoteAction("saveData", ...)
+```
+
+Names are case-sensitive. `saveData` ≠ `SaveData` ≠ `savedata`.
+
+#### 3. Verify registration order
+
+Remote actions must be registered before the server starts. Register them in `init()` functions which run before `main()`.
+
+## "INVALID_JSON" Error
+
+### Problem
+```json
+{
+    "error": "Invalid input JSON",
+    "code": "INVALID_JSON"
 }
 ```
 
-### Examples
+### Cause
+The request body isn't valid JSON.
 
-```bash
-# Create a new project
-gospa create myapp
+### Solution
+Ensure you're sending proper JSON:
 
-# Navigate to project
-cd myapp
+```javascript
+// BAD - Missing quotes on keys
+GoSPA.remote('action', { name: "value" })
 
-# Install dependencies
-go mod tidy
+// GOOD - This is automatically handled by GoSPA
+GoSPA.remote('action', { name: "value" })
 
-# Generate templ files
-templ generate
-
-# Generate GoSPA routes
-gospa generate
-
-# Start development server
-gospa dev
+// If calling manually with fetch:
+fetch('/_gospa/remote/action', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ name: "value" })  // Must stringify!
+})
 ```
 
----
+## "REQUEST_TOO_LARGE" Error
 
-## `gospa dev`
-
-Starts the development server with hot reload. Watches for file changes and automatically regenerates templates.
-
-```bash
-gospa dev [options]
-```
-
-### Options
-
-| Flag | Short | Default | Description |
-|------|-------|---------|-------------|
-| `--port` | `-p` | `3000` | Server port |
-| `--host` | `-H` | `localhost` | Server host |
-| `--routes` | `-r` | `./routes` | Routes directory to watch |
-| `--components` | `-c` | `./components` | Components directory to watch |
-| `--help` | `-h` | - | Show help for this command |
-
-### Behavior
-
-1. Checks for `go.mod` and `routes/` directory (must be in a GoSPA project)
-2. Triggers `BeforeDev` plugin hooks
-3. Generates initial templ files
-4. Generates TypeScript types and routes
-5. Starts file watcher for:
-   - `.templ` files → regenerate templates, restart server
-   - `.go` files → restart server
-   - `.css`, `.js` files → browser reload (no restart)
-6. Runs server with `GOSPA_DEV=1` environment variable
-
-### Default Configuration
-
-| Setting | Value |
-|---------|-------|
-| Port | 3000 |
-| Host | localhost |
-| Routes Directory | ./routes |
-| Components Directory | ./components |
-| Watch Interval | 500ms |
-
-### File Watching
-
-The dev server watches these directories:
-- `./routes`
-- `./components`
-
-Ignored files:
-- `generated_routes.go` (prevents infinite loops)
-- Files starting with `_` (underscore prefix)
-
-### Hot Reload Events
-
-| Event Type | Trigger | Action |
-|------------|---------|--------|
-| `create` | New file created | Regenerate, restart |
-| `modify` | File modified | Regenerate, restart |
-| `delete` | File deleted | Restart |
-
-### Examples
-
-```bash
-# Start dev server (default port 3000)
-gospa dev
-
-# Server will be available at http://localhost:3000
-```
-
----
-
-## `gospa build`
-
-Builds the application for production deployment.
-
-```bash
-gospa build [options]
-```
-
-### Options
-
-| Flag | Short | Default | Description |
-|------|-------|---------|-------------|
-| `--output` | `-o` | `dist` | Output directory for built files |
-| `--platform` | `-p` | `runtime.GOOS` | Target platform (OS) |
-| `--arch` | `-a` | `runtime.GOARCH` | Target architecture |
-| `--env` | `-e` | `production` | Build environment |
-| `--no-minify` | - | `false` | Disable JavaScript minification |
-| `--no-compress` | - | `false` | Disable asset pre-compression (gzip) |
-| `--no-static` | - | `false` | Skip copying static assets |
-| `--all` | - | `false` | Build for all platforms (linux/darwin/windows, amd64/arm64) |
-| `--help` | `-h` | - | Show help for this command |
-
-### Build Process
-
-1. Triggers `BeforeBuild` plugin hooks
-2. Generates templ files (`templ generate`)
-3. Generates TypeScript types
-4. Builds client runtime with bun (if `client/` directory exists)
-5. Builds Go binary with optimizations:
-   - `-ldflags "-s -w"` (strip debug info)
-   - `CGO_ENABLED=0` (static binary)
-6. Copies static assets to `dist/static/`
-7. Pre-compresses assets with gzip
-8. Triggers `AfterBuild` plugin hooks
-
-### Default Configuration
-
-| Setting | Value |
-|---------|-------|
-| Output Directory | `./dist` |
-| Platform | Current OS (`runtime.GOOS`) |
-| Architecture | Current Arch (`runtime.GOARCH`) |
-| Static Assets | true (embedded) |
-| Minify | true |
-| Compress | true |
-| Environment | production |
-
-### Output Structure
-
-```
-dist/
-├── server              # Executable (server.exe on Windows)
-└── static/
-    ├── js/
-    │   └── runtime.js  # Minified client runtime
-    │   └── runtime.js.gz
-    ├── css/
-    └── ...
-```
-
-### Cross-Compilation
-
-The build uses Go's cross-compilation support via `GOOS` and `GOARCH` environment variables.
-
-### Examples
-
-```bash
-# Build for current platform
-gospa build
-
-# Output: dist/server
-```
-
----
-
-## `gospa generate`
-
-Generates TypeScript route definitions and types from Go source code.
-
-```bash
-gospa generate [options]
-```
-
-### Options
-
-| Flag | Short | Default | Description |
-|------|-------|---------|-------------|
-| `--input` | `-i` | `.` | Input directory to scan |
-| `--output` | `-o` | `./generated` | Output directory for generated files |
-| `--help` | `-h` | - | Show help for this command |
-
-### What Gets Generated
-
-1. **Go Route Registry** (`routes/generated_routes.go`)
-   - Auto-registers all routes from `.templ` files
-   - Generated by `routing/generator`
-
-2. **TypeScript Types** (`generated/types.ts`)
-   - Interfaces from Go structs with `State` or `Props` suffix
-   - Structs with `gospa:state` comment
-
-3. **TypeScript Routes** (`generated/routes.ts`)
-   - Route definitions with paths, params, and metadata
-   - Helper functions: `getRoute()`, `buildPath()`
-
-### Generated TypeScript Types
-
-Go structs are converted to TypeScript interfaces:
-
-```go
-// Go source
-// gospa:state
-type CounterState struct {
-    Count int    `json:"count"`
-    Label string `json:"label"`
+### Problem
+```json
+{
+    "error": "Request body too large",
+    "code": "REQUEST_TOO_LARGE"
 }
 ```
 
-```typescript
-// Generated types.ts
-export interface CounterState {
-  count: number;
-  label: string;
-}
-```
+### Cause
+The request body exceeds `MaxRequestBodySize` (default: 4MB).
 
-### Type Mappings
-
-| Go Type | TypeScript Type |
-|---------|-----------------|
-| `string` | `string` |
-| `int`, `int8`, `int16`, `int32`, `int64` | `number` |
-| `uint`, `uint8`, `uint16`, `uint32`, `uint64` | `number` |
-| `float32`, `float64` | `number` |
-| `bool` | `boolean` |
-| `any` | `any` |
-| `[]T` | `Array<T>` |
-| `map[K]V` | `Record<K, V>` |
-| `*T` | `T` (marked optional) |
-
-### Generated Routes
-
-```typescript
-// generated/routes.ts
-export interface Route {
-  path: string;
-  file: string;
-  params: string[];
-  isDynamic: boolean;
-  isCatchAll: boolean;
-}
-
-export const routes: Route[] = [
-  { path: "/", file: "routes/page.templ", params: [], isDynamic: false, isCatchAll: false },
-  { path: "/users/[id]", file: "routes/users/[id]/page.templ", params: ["id"], isDynamic: true, isCatchAll: false },
-];
-
-export function getRoute(path: string): Route | undefined;
-export function buildPath(route: Route, params: Record<string, string>): string;
-```
-
-### Route Path Conventions
-
-| File Path | Route Path | Type |
-|-----------|------------|------|
-| `routes/page.templ` | `/` | Static |
-| `routes/about/page.templ` | `/about` | Static |
-| `routes/users/[id]/page.templ` | `/users/[id]` | Dynamic |
-| `routes/docs/[...slug]/page.templ` | `/docs/[...slug]` | Catch-all |
-
-### Examples
-
-```bash
-# Generate route code from .templ files
-gospa generate
-```
-
----
-
-## `gospa add`
-
-Adds a feature to the project via plugins.
-
-```bash
-gospa add <feature>
-```
-
-### Available Features
-
-| Feature | Description |
-|---------|-------------|
-| `tailwind` | Adds Tailwind CSS support |
-| `postcss` | Adds PostCSS with Tailwind extensions |
-| `image` | Adds image optimization |
-| `validation` | Adds form validation (Valibot + Go validator) |
-| `seo` | Adds SEO optimization (sitemap, meta tags, JSON-LD) |
-| `auth` | Adds authentication (OAuth2, JWT, OTP) |
-
-### Examples
-
-```bash
-# Add Tailwind CSS
-gospa add tailwind
-
-# Add authentication
-gospa add auth
-
-# Add SEO optimization
-gospa add seo
-```
-
----
-
-## Plugin Commands
-
-Plugins can provide custom CLI commands. Below are the commands provided by built-in plugins.
-
-### PostCSS Plugin
-
-| Command | Alias | Description |
-|---------|-------|-------------|
-| `postcss:process` | `pp` | Process CSS with PostCSS |
-| `postcss:watch` | `pw` | Watch and process CSS files |
-
-```bash
-# Process CSS once
-gospa postcss:process
-
-# Watch for changes
-gospa postcss:watch
-```
-
-### Image Plugin
-
-| Command | Alias | Description |
-|---------|-------|-------------|
-| `image:optimize` | `io` | Optimize images in a directory |
-| `image:resize` | `ir` | Resize images to specified dimensions |
-
-```bash
-# Optimize all images in static/
-gospa image:optimize
-
-# Resize images to specific widths
-gospa image:resize --widths 320,640.1.140
-```
-
-### Validation Plugin
-
-| Command | Alias | Description |
-|---------|-------|-------------|
-| `validation:generate` | `vg` | Generate validation code from schema |
-| `validation:schema` | `vs` | Generate Valibot schema from JSON |
-
-```bash
-# Generate validation code
-gospa validation:generate
-
-# Generate schema from JSON
-gospa validation:schema schema.json
-```
-
-### SEO Plugin
-
-| Command | Alias | Description |
-|---------|-------|-------------|
-| `seo:generate` | `sg` | Generate SEO files (sitemap, robots.txt) |
-| `seo:meta` | `sm` | Generate meta tags for a page |
-| `seo:structured` | `ss` | Generate structured data (JSON-LD) |
-
-```bash
-# Generate sitemap and robots.txt
-gospa seo:generate
-
-# Generate meta tags for a page
-gospa seo:meta /about
-
-# Generate JSON-LD for Organization
-gospa seo:structured Organization
-```
-
-### Auth Plugin
-
-| Command | Alias | Description |
-|---------|-------|-------------|
-| `auth:generate` | `ag` | Generate authentication code |
-| `auth:secret` | `as` | Generate a secure JWT secret |
-| `auth:otp` | `ao` | Generate OTP secret and QR code URL |
-| `auth:backup` | `ab` | Generate backup codes for 2FA |
-| `auth:verify` | `av` | Verify an OTP code against a secret |
-
-```bash
-# Generate auth code
-gospa auth:generate
-
-# Generate JWT secret
-gospa auth:secret
-
-# Generate OTP setup for user
-gospa auth:otp user@example.com
-
-# Generate backup codes
-gospa auth:backup 10
-
-# Verify OTP code
-gospa auth:verify <secret> <code>
-```
-
----
-
-## `gospa prune`
-
-Removes unused component state from state stores to prevent memory leaks in long-running applications. This is particularly important for applications using WebSocket state synchronization with high component churn.
-
-```bash
-gospa prune [options]
-```
-
-### Options
-
-| Flag | Short | Default | Description |
-|------|-------|---------|-------------|
-| `--dry-run` | `-d` | `false` | Show what would be pruned without removing |
-| `--older-than` | `-o` | `1h` | Remove state older than duration (e.g., `30m`, `2h`, `1d`) |
-| `--all` | `-a` | `false` | Remove all state (use with caution) |
-| `--store` | `-s` | `all` | Target specific store: `session`, `client`, or `all` |
-| `--help` | `-h` | - | Show help for this command |
-
-### When to Use
-
-- **Memory Management**: Long-running servers with many short-lived components
-- **WebSocket Cleanup**: Remove stale WebSocket connection state
-- **Session Cleanup**: Clean up expired or abandoned session data
-- **Before Deployments**: Clean slate for major version updates
-
-### Examples
-
-```bash
-# Dry run to see what would be pruned
-gospa prune --dry-run
-
-# Prune state older than 2 hours
-gospa prune --older-than 2h
-
-# Prune only session store
-gospa prune --store session
-
-# Prune everything (dangerous - use with caution)
-gospa prune --all
-```
-
-### Automatic Pruning
-
-For production applications, consider enabling automatic pruning in your app configuration:
+### Solution
+Increase the limit in your config:
 
 ```go
 app := gospa.New(gospa.Config{
-    EnableStatePrune:    true,
-    StatePruneInterval: 30 * time.Minute,
-    StatePruneMaxAge:   2 * time.Hour,
+    MaxRequestBodySize: 10 * 1024 * 1024,  // 10MB
+})
+```
+
+Or reduce your payload size by:
+- Sending file uploads via direct POST instead of remote actions
+- Compressing data before sending
+- Chunking large payloads
+
+## CSRF Token Errors
+
+### Problem
+```json
+{
+    "error": "CSRF token missing or invalid",
+    "code": "CSRF_ERROR"
+}
+```
+
+### Cause
+CSRF protection is enabled but the token is missing/invalid.
+
+### Solution
+
+#### 1. Ensure middleware is in correct order
+
+```go
+app := gospa.New(gospa.Config{
+    EnableCSRF: true,
+})
+
+// Order matters! SetToken must come before protection
+app.Use(fiber.CSRFSetTokenMiddleware())  // Issues cookie
+app.Use(fiber.CSRFTokenMiddleware())      // Validates header
+```
+
+#### 2. Check cookies are enabled
+
+The client reads the `csrf_token` cookie. If cookies are disabled, remote actions will fail.
+
+#### 3. Verify token is being sent
+
+Check browser dev tools:
+1. Look for `csrf_token` cookie in Application → Cookies
+2. Check that `X-CSRF-Token` header is sent in the request
+
+## "ACTION_FAILED" Error
+
+### Problem
+```json
+{
+    "error": "something went wrong",
+    "code": "ACTION_FAILED"
+}
+```
+
+### Cause
+Your action handler returned an error.
+
+### Solution
+Add logging to your action:
+
+```go
+routing.RegisterRemoteAction("processData", func(ctx context.Context, input any) (any, error) {
+    log.Printf("Received input: %+v", input)
+    
+    data, ok := input.(map[string]any)
+    if !ok {
+        return nil, fmt.Errorf("expected object, got %T", input)
+    }
+    
+    result, err := process(data)
+    if err != nil {
+        log.Printf("Process failed: %v", err)
+        return nil, fmt.Errorf("processing failed: %w", err)
+    }
+    
+    return result, nil
+})
+```
+
+## Network Errors (status: 0)
+
+### Problem
+```javascript
+{
+    ok: false,
+    status: 0,
+    code: "NETWORK_ERROR",
+    error: "Failed to fetch"
+}
+```
+
+### Causes & Solutions
+
+#### 1. Server is not running
+Check that your Go server is running and accessible.
+
+#### 2. Wrong URL/path
+Default remote actions path is `/_gospa/remote/:name`:
+
+```go
+app := gospa.New(gospa.Config{
+    RemotePrefix: "/_gospa/remote",  // Default
+})
+```
+
+If you change this, ensure the client knows:
+
+```javascript
+import { configureRemote } from '@gospa/runtime';
+
+configureRemote({ prefix: '/api/rpc' });
+```
+
+#### 3. CORS issues
+If calling from a different origin:
+
+```go
+app := gospa.New(gospa.Config{
+    AllowedOrigins: []string{"https://example.com"},
+})
+```
+
+#### 4. Ad blockers
+Some ad blockers may block requests to `/_gospa/*`. Try:
+- Using a custom `RemotePrefix` without "gospa"
+- Testing with ad blockers disabled
+
+## Input Type Handling
+
+### Problem
+JSON numbers become `float64`, not `int`:
+
+```go
+routing.RegisterRemoteAction("add", func(ctx context.Context, input any) (any, error) {
+    // BAD - This will panic!
+    num := input.(int)  // JSON numbers are float64
+    
+    // GOOD - Handle float64
+    num, ok := input.(float64)
+    if !ok {
+        return nil, errors.New("expected number")
+    }
+    return int(num) + 1, nil
+})
+```
+
+### Solution
+Use a struct with proper JSON tags:
+
+```go
+type AddInput struct {
+    A int `json:"a"`
+    B int `json:"b"`
+}
+
+routing.RegisterRemoteAction("add", func(ctx context.Context, input any) (any, error) {
+    var data AddInput
+    
+    // Convert map to struct
+    if err := mapstructure.Decode(input, &data); err != nil {
+        return nil, err
+    }
+    
+    return data.A + data.B, nil
+})
+```
+
+## Timeouts
+
+### Problem
+```javascript
+{
+    ok: false,
+    status: 0,
+    code: "TIMEOUT",
+    error: "Request timeout"
+}
+```
+
+### Solution
+Increase the timeout:
+
+```javascript
+const result = await GoSPA.remote('slowAction', data, {
+    timeout: 60000  // 60 seconds (default is 30s)
+});
+```
+
+Or make your action faster by:
+- Moving heavy work to goroutines
+- Using background jobs for long operations
+- Returning immediately and polling for results
+
+## Debugging Remote Actions
+
+### Enable Debug Logging (Server)
+
+```go
+app := gospa.New(gospa.Config{
+    DevMode: true,  // Enables request logging
+})
+```
+
+### Log All Remote Action Calls
+
+Wrap your actions with logging:
+
+```go
+func loggedAction(name string, fn routing.RemoteActionFunc) routing.RemoteActionFunc {
+    return func(ctx context.Context, input any) (any, error) {
+        log.Printf("[RemoteAction:%s] Input: %+v", name, input)
+        start := time.Now()
+        
+        result, err := fn(ctx, input)
+        
+        log.Printf("[RemoteAction:%s] Duration: %v, Error: %v", 
+            name, time.Since(start), err)
+        return result, err
+    }
+}
+
+routing.RegisterRemoteAction("process", loggedAction("process", func(ctx context.Context, input any) (any, error) {
+    // Your logic here
+}))
+```
+
+### Check Browser DevTools
+
+1. **Network tab**: Look for the POST request to `/_gospa/remote/*`
+2. **Console**: Look for JavaScript errors
+3. **Application > Cookies**: Verify `csrf_token` exists
+
+## Common Mistakes
+
+### Mistake 1: Not handling context cancellation
+
+```go
+// BAD - May hang indefinitely
+routing.RegisterRemoteAction("slow", func(ctx context.Context, input any) (any, error) {
+    result := slowOperation()  // No timeout handling
+    return result, nil
+})
+
+// GOOD - Respect context
+routing.RegisterRemoteAction("slow", func(ctx context.Context, input any) (any, error) {
+    done := make(chan any)
+    go func() {
+        done <- slowOperation()
+    }()
+    
+    select {
+    case result := <-done:
+        return result, nil
+    case <-ctx.Done():
+        return nil, ctx.Err()
+    }
+})
+```
+
+### Mistake 2: Not validating authorization
+
+```go
+// BAD - No auth check
+routing.RegisterRemoteAction("deleteUser", func(ctx context.Context, input any) (any, error) {
+    return deleteUser(input.(string)), nil
+})
+
+// GOOD - Check permissions
+routing.RegisterRemoteAction("deleteUser", func(ctx context.Context, input any) (any, error) {
+    user := auth.GetUser(ctx)  // Extract from context
+    if !user.IsAdmin {
+        return nil, errors.New("unauthorized")
+    }
+    return deleteUser(input.(string)), nil
+})
+```
+
+
+<!-- FILE: docs/07-troubleshooting/03-websocket-connections.md -->
+================================================================================
+
+# Troubleshooting WebSocket & Real-Time Connections
+
+## "WebSocket Connection Failed" Error
+
+### Problem
+The browser console shows:
+
+```
+WebSocket connection failed
+Connection refused
+```
+
+Or the connection state remains `disconnected`.
+
+### Cause
+WebSocket support isn't enabled or properly configured on the server.
+
+### Solution
+
+#### 1. Enable WebSocket in Config
+
+```go
+app := gospa.New(gospa.Config{
+    WebSocket: true,  // Enable WebSocket support
+    WSPath: "/_gospa/ws",  // WebSocket endpoint path
+})
+```
+
+#### 2. Ensure Middleware is Applied
+
+```go
+// Apply WebSocket middleware before starting server
+app.Use(fiber.WebSocketMiddleware())
+```
+
+#### 3. Check Client Configuration
+
+```javascript
+import { initWebSocket } from '@gospa/runtime';
+
+const ws = initWebSocket({
+    url: 'ws://localhost:3000/_gospa/ws',
+    reconnect: true,
+    reconnectInterval: 1000,
+    maxReconnectAttempts: 10,
+});
+
+await ws.connect();
+```
+
+---
+
+## "Max Reconnect Attempts Reached"
+
+### Problem
+WebSocket repeatedly tries to connect but fails after max attempts:
+
+```
+[HMR] Disconnected
+[HMR] Reconnecting... (1/10)
+...
+Max reconnect attempts reached
+```
+
+### Causes & Solutions
+
+#### 1. Server Not Running
+Ensure your Go server is started and listening on the correct port:
+
+```bash
+go run main.go
+```
+
+#### 2. Wrong URL/Path
+Verify the WebSocket URL matches your server config:
+
+```javascript
+// Check your config
+const wsUrl = window.location.protocol === 'https:' 
+    ? 'wss://localhost:3000/_gospa/ws'  // HTTPS
+    : 'ws://localhost:3000/_gospa/ws';   // HTTP
+```
+
+#### 3. Proxy/Router Blocking WebSocket
+If behind Nginx or a load balancer, ensure WebSocket upgrade is allowed:
+
+```nginx
+# Nginx config
+location /_gospa/ws {
+    proxy_pass http://localhost:3000;
+    proxy_http_version 1.1;
+    proxy_set_header Upgrade $http_upgrade;
+    proxy_set_header Connection "upgrade";
+    proxy_set_header Host $host;
+}
+```
+
+#### 4. Firewall Blocking Port
+Check that the WebSocket port (usually same as HTTP) isn't blocked:
+
+```bash
+# Test WebSocket connection
+curl -i -N -H "Connection: Upgrade" \
+     -H "Upgrade: websocket" \
+     -H "Host: localhost:3000" \
+     http://localhost:3000/_gospa/ws
+```
+
+---
+
+## WebSocket Works on HTTP but Not HTTPS
+
+### Problem
+WebSocket connects fine on `http://localhost` but fails on `https://` production.
+
+### Solution
+Use `wss://` (secure WebSocket) for HTTPS sites:
+
+```javascript
+const protocol = window.location.protocol === 'https:' ? 'wss:' : 'ws:';
+const wsUrl = `${protocol}//${window.location.host}/_gospa/ws`;
+
+const ws = initWebSocket({ url: wsUrl });
+```
+
+For self-signed certificates in development, you may need to accept the certificate first by visiting the HTTPS URL in your browser.
+
+---
+
+## "WebSocket is already in CONNECTING or OPEN state"
+
+### Problem
+Calling `connect()` multiple times throws an error or logs a warning.
+
+### Solution
+Check connection state before connecting:
+
+```javascript
+import { getWebSocket } from '@gospa/runtime';
+
+const ws = getWebSocket();
+
+// Only connect if not already connecting or connected
+if (!ws || ws.getState() === 'disconnected') {
+    await ws.connect();
+}
+```
+
+Or use the singleton pattern:
+
+```javascript
+let wsPromise = null;
+
+function ensureWebSocket() {
+    if (!wsPromise) {
+        wsPromise = initWebSocket({ url: 'ws://localhost:3000/_gospa/ws' })
+            .connect();
+    }
+    return wsPromise;
+}
+```
+
+---
+
+## Messages Not Being Received
+
+### Problem
+WebSocket connects but no messages arrive from the server.
+
+### Causes & Solutions
+
+#### 1. Not Subscribed to Events
+
+```javascript
+const ws = initWebSocket({
+    url: 'ws://localhost:3000/_gospa/ws',
+    onMessage: (message) => {
+        console.log('Received:', message);
+    },
+});
+```
+
+#### 2. Server Not Broadcasting
+Ensure server is broadcasting messages:
+
+```go
+// Broadcast to all clients
+app.Broadcast(map[string]interface{}{
+    "type": "notification",
+    "message": "Hello everyone!",
+})
+
+// Or broadcast state update
+app.BroadcastState("counter", count.Get())
+```
+
+#### 3. Message Format Mismatch
+Server and client must agree on message format:
+
+```go
+// Server sends
+type StateMessage struct {
+    Type        string      `json:"type"`
+    ComponentID string      `json:"componentId,omitempty"`
+    Key         string      `json:"key,omitempty"`
+    Value       interface{} `json:"value,omitempty"`
+}
+
+app.Broadcast(StateMessage{
+    Type:  "update",
+    Key:   "count",
+    Value: 42,
+})
+```
+
+```javascript
+// Client receives
+ws.onMessage = (msg) => {
+    if (msg.type === 'update' && msg.key === 'count') {
+        console.log('Count is now:', msg.value);
+    }
+};
+```
+
+---
+
+## Heartbeat/Keep-Alive Timeout
+
+### Problem
+Connection drops after periods of inactivity.
+
+### Solution
+Enable heartbeat in client config:
+
+```javascript
+const ws = initWebSocket({
+    url: 'ws://localhost:3000/_gospa/ws',
+    heartbeatInterval: 30000,  // Send ping every 30s
+    heartbeatTimeout: 5000,    // Wait 5s for pong
+});
+```
+
+Server-side configuration:
+
+```go
+app := gospa.New(gospa.Config{
+    WebSocket:         true,
+    WSHeartbeat:       30 * time.Second,
+    WSHeartbeatTimeout: 10 * time.Second,
 })
 ```
 
 ---
 
-## `gospa clean`
+## Server-Sent Events (SSE) Not Working
 
-Removes build artifacts and generated files.
+### Problem
+SSE connections fail or don't receive events.
 
-```bash
-gospa clean
-```
+### Solution
 
-### What Gets Removed
-
-- `dist/` directory
-- `node_modules/` directory
-- `*_templ.go` files (generated templ files)
-- `*_templ.txt` files
-
----
-
-## Plugin System
-
-The CLI supports a plugin system with hooks for extending functionality.
-
-### Available Hooks
-
-| Hook | When | Context |
-|------|------|---------|
-| `BeforeDev` | Before dev server starts | `nil` |
-| `AfterDev` | After dev server stops | `nil` |
-| `BeforeBuild` | Before production build | `{"config": *BuildConfig}` |
-| `AfterBuild` | After production build | `{"config": *BuildConfig}` |
-| `BeforeGenerate` | Before code generation | `nil` |
-| `AfterGenerate` | After code generation | `nil` |
-
-### Built-in Plugins
-
-| Plugin | Description | Dependencies |
-|--------|-------------|--------------|
-| **Tailwind** | Tailwind CSS v4 support | `tailwindcss` (bun) |
-| **PostCSS** | PostCSS with Tailwind extensions | `postcss`, `@tailwindcss/postcss` (bun) |
-| **Image** | Image optimization (WebP, JPEG, PNG) | None (stdlib) |
-| **Validation** | Form validation (Valibot + Go validator) | `github.com/go-playground/validator/v10` (go), `valibot` (bun) |
-| **SEO** | SEO optimization (sitemap, meta, JSON-LD) | None (stdlib) |
-| **Auth** | Authentication (OAuth2, JWT, OTP) | `github.com/golang-jwt/jwt/v5`, `golang.org/x/oauth2`, `github.com/pquerna/otp` (go) |
-
-### Plugin Configuration
-
-Plugins can be configured via `gospa.yaml`:
-
-```yaml
-# gospa.yaml
-plugins:
-  tailwind:
-    input: ./styles/main.css
-    output: ./static/css/main.css
-  
-  image:
-    input: ./static/images
-    output: ./static/images/optimized
-    formats: [webp, jpeg]
-    widths: [320, 640, 1280]
-  
-  seo:
-    site_url: https://example.com
-    site_name: My GoSPA Site
-    generate_sitemap: true
-  
-  auth:
-    jwt_secret: ${JWT_SECRET}
-    jwt_expiry: 24
-    oauth_providers: [google, github]
-    otp_enabled: true
-```
-
-### Plugin Cache
-
-External plugins are cached in `~/.gospa/plugins/`. This allows plugins to be downloaded and reused across projects.
-
-### Creating Custom Plugins
-
-Plugins implement the `Plugin` interface:
+#### 1. Enable SSE in Config
 
 ```go
-type Plugin interface {
-    Name() string
-    Init() error
-    Dependencies() []Dependency
-}
-
-type CLIPlugin interface {
-    Plugin
-    OnHook(hook Hook, ctx map[string]interface{}) error
-    Commands() []Command
-}
-```
-
-See [PLUGINS.md](./PLUGINS.md) for detailed plugin development guide.
-
----
-
-## Environment Variables
-
-| Variable | Description |
-|----------|-------------|
-| `GOSPA_DEV` | Set to `1` when running in dev mode |
-| `GOSPA_ENV` | Set during build (`production`) |
-| `GOOS` | Target OS for cross-compilation |
-| `GOARCH` | Target architecture for cross-compilation |
-| `CGO_ENABLED` | Set to `0` for static binaries |
-
----
-
-## Output Formatting
-
-The CLI provides colored output for different message types:
-
-| Type | Color | Prefix |
-|------|-------|--------|
-| Success | Green | ✓ |
-| Error | Red | ✗ |
-| Warning | Yellow | ⚠ |
-| Info | Cyan | ℹ |
-| Step | Blue | `N/M` |
-
----
-
-## Exit Codes
-
-| Code | Description |
-|------|-------------|
-| `0` | Success |
-| `1` | General error |
-| `2` | Invalid arguments |
-
----
-
-## Development Workflow
-
-```bash
-# 1. Create new project
-gospa create myapp
-cd myapp
-
-# 2. Install dependencies
-go mod tidy
-
-# 3. Generate templ files (first time)
-templ generate
-
-# 4. Generate GoSPA routes
-gospa generate
-
-# 5. Start development
-gospa dev
-
-# 6. Build for production
-gospa build
-
-# 7. Run production binary
-./dist/server
-```
-
-
-<!-- FILE: plans/gospa-architecture.md -->
-================================================================================
-
-# GoSPA Framework Architecture Plan
-
-## Overview
-
-GoSPA is a modern SPA framework for Go that brings Svelte-like reactivity to server-side rendering with Fiber and Templ. This document outlines the complete architecture and implementation plan.
-
-## High-Level Architecture
-
-```mermaid
-graph TB
-    subgraph Client
-        A[Browser Runtime JS - 15KB]
-        B[WebSocket Connection]
-        C[DOM Update Engine]
-        D[Event Handlers]
-    end
-    
-    subgraph Server
-        E[Fiber Server]
-        F[Auto Router]
-        G[State Engine]
-        H[WebSocket Hub]
-        I[Templ Renderer]
-    end
-    
-    subgraph Developer Code
-        J[routes/*.templ]
-        K[components/*.templ]
-        L[lib/state.go]
-    end
-    
-    A --> B
-    B --> H
-    H --> G
-    G --> I
-    I --> E
-    E --> A
-    J --> F
-    K --> I
-    L --> G
-    A --> C
-    A --> D
-    D --> B
-```
-
-## Package Structure
-
-```
-gospa/
-├── state/              # Reactive state primitives
-│   ├── rune.go         # Core Rune[T] type
-│   ├── derived.go      # Derived[T] computed state
-│   ├── effect.go       # Side effects
-│   ├── batch.go        # Batch update support
-│   └── serialize.go    # JSON serialization
-├── templ/              # Templ integration helpers
-│   ├── bind.go         # Reactive bindings
-│   ├── events.go       # Event handlers
-│   ├── component.go    # Component initialization
-│   └── render.go       # Rendering helpers
-├── routing/            # File-based and manual routing
-│   ├── auto.go         # Auto-routing from filesystem
-│   ├── manual.go       # Manual route registration
-│   ├── params.go       # Route parameter extraction
-│   └── layout.go       # Layout nesting
-├── fiber/              # Fiber integration
-│   ├── middleware.go   # SPA middleware
-│   ├── websocket.go    # WebSocket handler
-│   ├── errors.go       # Error handling
-│   └── dev.go          # Development tools
-├── client/             # TypeScript runtime
-│   ├── src/
-│   │   ├── runtime.ts  # Main runtime
-│   │   ├── state.ts    # Client-side state
-│   │   ├── dom.ts      # DOM updates
-│   │   ├── events.ts   # Event handling
-│   │   └── websocket.ts# WebSocket client
-│   └── dist/
-│       └── runtime.js  # Compiled bundle
-├── component/          # Component system
-│   ├── base.go         # Base component
-│   ├── props.go        # Props handling
-│   ├── slots.go        # Slot support
-│   └── lifecycle.go    # Lifecycle hooks
-└── cli/                # CLI tool
-    ├── main.go         # Entry point
-    ├── create.go       # Project scaffolding
-    ├── generate.go     # Type generation
-    ├── dev.go          # Dev server
-    └── build.go        # Production build
-```
-
-## Core Components Detail
-
-### 1. State Management Engine - state/
-
-#### Rune[T] - Base Reactive Primitive
-
-```go
-// rune.go
-package state
-
-type Rune[T any] struct {
-    value       T
-    subscribers []func(T)
-    mu          sync.RWMutex
-}
-
-func NewRune[T any](initial T) *Rune[T]
-func (r *Rune[T]) Set(value T)
-func (r *Rune[T]) Get() T
-func (r *Rune[T]) Subscribe(fn func(T)) Unsubscribe
-func (r *Rune[T]) Notify()
-```
-
-#### Derived[T] - Computed State
-
-```go
-// derived.go
-package state
-
-type Derived[T any] struct {
-    compute     func() T
-    value       T
-    deps        []*Rune[any]
-    subscribers []func(T)
-}
-
-func NewDerived[T any](compute func() T, deps ...*Rune[any]) *Derived[T]
-func (d *Derived[T]) Get() T
-func (d *Derived[T]) Subscribe(fn func(T)) Unsubscribe
-```
-
-#### Effect - Side Effects
-
-```go
-// effect.go
-package state
-
-type Effect struct {
-    fn       func()
-    deps     []any
-    active   bool
-}
-
-func NewEffect(fn func(), deps ...any) *Effect
-func (e *Effect) Run()
-func (e *Effect) Dispose()
-```
-
-#### Batch Updates
-
-```go
-// batch.go
-package state
-
-type BatchContext struct {
-    pending   map[*Rune[any]]any
-    flushing  bool
-}
-
-func Batch(fn func())
-func (b *BatchContext) Queue(rune *Rune[T], value T)
-func (b *BatchContext) Flush()
-```
-
-### 2. Client Runtime - client/
-
-#### Core Runtime Structure
-
-```typescript
-// runtime.ts
-interface GoSPARuntime {
-  state: Map<string, ReactiveState>;
-  components: Map<string, Component>;
-  ws: WebSocketConnection;
-  dom: DOMEngine;
-  events: EventManager;
-}
-
-interface ReactiveState<T = unknown> {
-  value: T;
-  subscribers: Set<Subscriber<T>>;
-  set: (value: T) => void;
-  subscribe: (fn: Subscriber<T>) => () => void;
-}
-
-interface Component {
-  id: string;
-  state: Record<string, ReactiveState>;
-  mounted: boolean;
-  element: HTMLElement | null;
-}
-```
-
-#### DOM Update Engine
-
-```typescript
-// dom.ts
-class DOMEngine {
-  updateAttribute(element: Element, name: string, value: unknown): void;
-  updateText(element: Text, value: string): void;
-  updateClass(element: Element, classes: Record<string, boolean>): void;
-  updateStyle(element: HTMLElement, styles: Record<string, string>): void;
-  conditionalRender(condition: boolean, template: string, target: Element): void;
-  listRender<T>(items: T[], keyFn: (item: T) => string, renderFn: (item: T) => string): void;
-}
-```
-
-#### WebSocket Synchronization
-
-```typescript
-// websocket.ts
-class WebSocketConnection {
-  private ws: WebSocket;
-  private pending: Map<string, PendingUpdate>;
-  private debounceMs: number;
-  
-  connect(url: string): void;
-  sendStateUpdate(componentId: string, key: string, value: unknown): void;
-  receiveUpdate(data: ServerMessage): void;
-  optimisticUpdate<T>(key: string, newValue: T, rollback: T): void;
-}
-```
-
-### 3. Templ Integration - templ/
-
-#### Reactive Bindings
-
-```go
-// bind.go
-package templ
-
-import "github.com/a-h/templ"
-
-// Bind creates a data-bind attribute for reactive binding
-func Bind(componentID, key string) templ.Component
-
-// BindValue creates a two-way value binding
-func BindValue(componentID, key string) templ.Component
-
-// BindChecked creates a checkbox binding
-func BindChecked(componentID, key string) templ.Component
-
-// BindClass creates a class binding
-func BindClass(componentID, key string, classes map[string]bool) templ.Component
-```
-
-#### Event Handlers
-
-```go
-// events.go
-package templ
-
-// On creates an event handler attribute
-func On(event, componentID, handler string) templ.Component
-
-// OnClick shorthand for click events
-func OnClick(componentID, handler string) templ.Component
-
-// OnInput shorthand for input events with debounce
-func OnInput(componentID, handler string, debounceMs int) templ.Component
-
-// OnSubmit handles form submissions
-func OnSubmit(componentID, handler string) templ.Component
-```
-
-#### Component Initialization
-
-```go
-// component.go
-package templ
-
-// Component creates a component wrapper with state
-func Component(id, name string, state map[string]any, content templ.Component) templ.Component
-
-// InitScript injects the runtime and initial state
-func InitScript(state map[string]any) templ.Component
-
-// StateJSON serializes state for client
-func StateJSON(state map[string]any) string
-```
-
-### 4. Auto-Routing System - routing/
-
-#### Route Scanner
-
-```go
-// auto.go
-package routing
-
-import "github.com/gofiber/fiber/v2"
-
-type Route struct {
-    Path       string
-    Component  templ.Component
-    Layouts    []templ.Component
-    Params     []string
-    IsCatchAll bool
-}
-
-type Router struct {
-    routes    map[string]*Route
-    layouts   map[string]templ.Component
-    fiber     *fiber.App
-}
-
-// ScanDirectory scans routes/ for .templ files
-func (r *Router) ScanDirectory(root string) error
-
-// parseRoutePath converts file path to URL pattern
-// routes/page.templ -> /
-// routes/about/page.templ -> /about
-// routes/blog/[id]/page.templ -> /blog/:id
-// routes/posts/[...rest]/page.templ -> /posts/*
-func parseRoutePath(filePath string) string
-
-// RegisterRoutes registers all scanned routes with Fiber
-func (r *Router) RegisterRoutes() error
-```
-
-#### Layout Nesting
-
-```go
-// layout.go
-package routing
-
-// LayoutStack manages nested layouts
-type LayoutStack struct {
-    layouts []templ.Component
-}
-
-// FindLayouts finds all layout.templ files for a route
-func FindLayouts(routePath string) []templ.Component
-
-// RenderWithLayouts renders a page with its layout chain
-func RenderWithLayouts(page templ.Component, layouts []templ.Component) templ.Component
-```
-
-#### Route Parameters
-
-```go
-// params.go
-package routing
-
-// ExtractParams extracts URL params from request
-func ExtractParams(c *fiber.Ctx, route *Route) map[string]string
-
-// ParamMatcher validates route parameters
-type ParamMatcher interface {
-    Match(value string) bool
-}
-
-// RegisterMatcher registers a custom param matcher
-func RegisterMatcher(name string, matcher ParamMatcher)
-```
-
-### 5. Fiber Integration - fiber/
-
-#### SPA Middleware
-
-```go
-// middleware.go
-package fiber
-
-import "github.com/gofiber/fiber/v2"
-
-type SPAMiddleware struct {
-    runtimeJS  []byte
-    devMode    bool
-}
-
-// SPA injects runtime scripts and handles SPA routing
-func SPA(config Config) fiber.Handler
-
-// InjectRuntime adds the client runtime to responses
-func InjectRuntime(c *fiber.Ctx) error
-
-// HandleSPA fallback for client-side routing
-func HandleSPA(c *fiber.Ctx) error
-```
-
-#### WebSocket Handler
-
-```go
-// websocket.go
-package fiber
-
-import "github.com/gofiber/fiber/v2/middleware/websocket"
-
-type WSMessage struct {
-    Type        string `json:"type"`
-    ComponentID string `json:"componentId"`
-    Key         string `json:"key"`
-    Value       any    `json:"value"`
-}
-
-type WSHub struct {
-    clients    map[*websocket.Conn]bool
-    broadcast  chan WSMessage
-    register   chan *websocket.Conn
-    unregister chan *websocket.Conn
-}
-
-// NewWSHub creates a WebSocket hub for state sync
-func NewWSHub() *WSHub
-
-// Run starts the hub
-func (h *WSHub) Run()
-
-// WebSocket handler for Fiber
-func WebSocketHandler(hub *WSHub) fiber.Handler
-```
-
-### 6. Component System - component/
-
-#### Base Component
-
-```go
-// base.go
-package component
-
-type BaseComponent struct {
-    ID         string
-    State      map[string]*state.Rune[any]
-    Props      Props
-    Lifecycle  LifecycleHooks
-}
-
-func NewBaseComponent(id string) *BaseComponent
-func (c *BaseComponent) Mount()
-func (c *BaseComponent) Update()
-func (c *BaseComponent) Destroy()
-```
-
-#### Props System
-
-```go
-// props.go
-package component
-
-type Props map[string]any
-
-// Prop retrieves a prop with type safety
-func Prop[T any](p Props, key string, defaultValue ...T) T
-
-// RequiredProp retrieves a required prop
-func RequiredProp[T any](p Props, key string) (T, error)
-```
-
-#### Lifecycle Hooks
-
-```go
-// lifecycle.go
-package component
-
-type LifecycleHooks struct {
-    OnMount   func()
-    OnUpdate  func()
-    OnDestroy func()
-}
-
-func OnMount(c *BaseComponent, fn func())
-func OnUpdate(c *BaseComponent, fn func())
-func OnDestroy(c *BaseComponent, fn func())
-```
-
-### 7. CLI Tool - cli/
-
-#### Commands
-
-```go
-// main.go
-package main
-
-// gospa create <name> - Scaffold new project
-// gospa generate - Generate types and routes
-// gospa dev - Development server with hot reload
-// gospa build - Production build
-```
-
-#### Project Template
-
-```
-myapp/
-├── routes/
-│   ├── page.templ
-│   └── about/
-│       └── page.templ
-├── components/
-├── lib/
-│   └── state.go
-├── main.go
-├── go.mod
-└── gospa.config.yaml
-```
-
-## Data Flow
-
-### Initial Page Load
-
-```mermaid
-sequenceDiagram
-    participant Browser
-    participant Fiber
-    participant Router
-    participant Templ
-    participant StateEngine
-    
-    Browser->>Fiber: GET /about
-    Fiber->>Router: Match route
-    Router->>Templ: Render page.templ
-    Templ->>StateEngine: Initialize state
-    StateEngine-->>Templ: State JSON
-    Templ-->>Fiber: HTML + runtime + state
-    Fiber-->>Browser: Response
-    Browser->>Browser: Initialize runtime
-    Browser->>Browser: Connect WebSocket
-```
-
-### State Update Flow
-
-```mermaid
-sequenceDiagram
-    participant User
-    participant Browser
-    participant Runtime
-    participant WebSocket
-    participant Server
-    participant StateEngine
-    
-    User->>Browser: Click button
-    Browser->>Runtime: Event triggered
-    Runtime->>Runtime: Optimistic update
-    Runtime->>WebSocket: Send update
-    WebSocket->>Server: State change
-    Server->>StateEngine: Update rune
-    StateEngine->>StateEngine: Notify subscribers
-    StateEngine-->>WebSocket: Broadcast change
-    WebSocket-->>Runtime: Confirm/Reject
-    Runtime->>Browser: Update DOM
-```
-
-## API Examples
-
-### Counter Component
-
-```go
-// components/counter.templ
-package components
-
-import "github.com/aydenstechdungeon/gospa/templ"
-
-templ Counter(id string) {
-    @templ.Component(id, "Counter", map[string]any{
-        "count": 0,
-    }) {
-        <div data-component={ id }>
-            <button @templ.OnClick(id, "decrement")>-</button>
-            <span @templ.Bind(id, "count")>{ templ.State("count") }</span>
-            <button @templ.OnClick(id, "increment")>+</button>
-        </div>
-    }
-}
-```
-
-### Page with State
-
-```go
-// routes/blog/[id]/page.templ
-package blog
-
-import "github.com/aydenstechdungeon/gospa/templ"
-
-templ Page(params map[string]string) {
-    @templ.Component("blog-"+params["id"], "BlogPost", map[string]any{
-        "post": nil,
-        "loading": true,
-    }) {
-        <article data-component={ "blog-"+params["id"] }>
-            if templ.StateBool("loading") {
-                <p>Loading...</p>
-            } else {
-                <h1>{ templ.StateString("post.title") }</h1>
-                <p>{ templ.StateString("post.content") }</p>
-            }
-        </article>
-    }
-}
-```
-
-### Server-Side Handler
-
-```go
-// main.go
-package main
-
-import (
-    "github.com/gofiber/fiber/v2"
-    "github.com/aydenstechdungeon/gospa/fiber"
-    "github.com/aydenstechdungeon/gospa/routing"
-)
-
-func main() {
-    app := fiber.New()
-    
-    // Auto-scan routes directory
-    router := routing.NewRouter(app)
-    router.ScanDirectory("./routes")
-    router.RegisterRoutes()
-    
-    // SPA middleware
-    app.Use(fiber.SPA(fiber.Config{
-        DevMode: true,
-    }))
-    
-    // WebSocket for state sync
-    hub := fiber.NewWSHub()
-    go hub.Run()
-    app.Get("/ws", fiber.WebSocketHandler(hub))
-    
-    app.Listen(":3000")
-}
-```
-
-## Implementation Phases
-
-### Phase 1: Core State Engine
-1. Implement `Rune[T]` with subscriptions
-2. Implement `Derived[T]` with dependency tracking
-3. Implement `Effect` with cleanup
-4. Implement batch updates
-5. Add JSON serialization
-
-### Phase 2: Client Runtime
-1. Create TypeScript project structure
-2. Implement reactive state primitives
-3. Implement DOM update engine
-4. Implement WebSocket client
-5. Implement event handling
-6. Build and optimize to <15KB
-
-### Phase 3: Templ Integration
-1. Create binding helpers
-2. Create event handler helpers
-3. Create component wrapper
-4. Create state injection
-
-### Phase 4: Routing System
-1. Implement file scanner
-2. Implement route parser
-3. Implement layout nesting
-4. Implement param extraction
-5. Add manual routing API
-
-### Phase 5: Fiber Integration
-1. Create SPA middleware
-2. Create WebSocket handler
-3. Create error handling
-4. Add dev tools
-
-### Phase 6: Component System
-1. Implement base component
-2. Implement props system
-3. Implement lifecycle hooks
-4. Add slot support
-
-### Phase 7: CLI Tool
-1. Implement create command
-2. Implement generate command
-3. Implement dev command
-4. Implement build command
-
-### Phase 8: Examples & Docs
-1. Counter example
-2. Todo list example
-3. Blog example
-4. Chat example
-5. API documentation
-6. Getting started guide
-
-## Performance Targets
-
-- Client runtime: <15KB gzipped
-- First paint: <100ms
-- Time to interactive: <200ms
-- WebSocket latency: <50ms
-- Memory per component: <1KB
-
-## Security Considerations
-
-- XSS prevention: All bindings are escaped by default
-- CSRF protection: Built into WebSocket handshake
-- Input validation: Server-side validation required
-- State isolation: Components have isolated state
-
-## Testing Strategy
-
-- Unit tests for state engine (>80% coverage)
-- Integration tests for routing
-- E2E tests for examples
-- Performance benchmarks
-
-
-<!-- FILE: plans/framework-enhancement-plan.md -->
-================================================================================
-
-# GoSPA Framework Enhancement Plan
-
-## Overview
-
-This plan outlines the implementation of 10 major features to enhance the GoSPA framework:
-
-1. Streaming SSR with Progressive Hydration
-2. Auto-Detection of Reactive Boundaries
-3. Formal Islands Architecture
-4. Hot Module Replacement (HMR) with State Preservation
-5. Type-Safe Route Helpers
-6. Enhanced Error Overlay
-7. Priority-Based Selective Hydration
-8. Build-Time State Pruning
-9. Starter Component Library/Plugin
-10. Server-Sent Events (SSE) Support
-
----
-
-## Architecture Overview
-
-```mermaid
-graph TB
-    subgraph Server
-        A[Route Handler] --> B[Streaming Renderer]
-        B --> C[Island Detector]
-        C --> D[State Serializer]
-        D --> E[HTML Stream]
-    end
-    
-    subgraph Client
-        E --> F[Progressive Hydrator]
-        F --> G[Island Runtime]
-        G --> H[Reactive State]
-    end
-    
-    subgraph DevTools
-        I[HMR Server] --> J[State Preserver]
-        J --> K[Error Overlay]
-        K --> L[Type Generator]
-    end
-```
-
----
-
-## Feature 1: Streaming SSR with Progressive Hydration
-
-### Goal
-Stream HTML to the client as it renders, enabling faster TTFB and progressive enhancement.
-
-### Implementation Steps
-
-#### 1.1 Server-Side Streaming Renderer
-**File**: `templ/stream.go`
-
-```go
-// StreamConfig configures streaming SSR
-type StreamConfig struct {
-    EnableStreaming   bool
-    FlushInterval     time.Duration
-    BoundaryMarkers   bool
-    AsyncComponents   bool
-}
-
-// StreamWriter handles streaming HTML output
-type StreamWriter struct {
-    w          http.ResponseWriter
-    flusher    http.Flusher
-    buffer     *bytes.Buffer
-    boundaries []StreamBoundary
-}
-
-// StreamBoundary marks a streaming boundary
-type StreamBoundary struct {
-    ID       string
-    Priority int
-    Status   string // pending, ready, error
-}
-```
-
-**Tasks**:
-- [ ] Create `templ/stream.go` with StreamWriter struct
-- [ ] Implement chunked HTML rendering with flush points
-- [ ] Add boundary markers for component boundaries
-- [ ] Integrate with Fiber's streaming response API
-
-#### 1.2 Client-Side Progressive Hydrator
-**File**: `client/src/hydration.ts`
-
-```typescript
-// Hydration scheduler with priority queue
-class HydrationScheduler {
-  private queue: HydrationTask[] = [];
-  private priorities = { high: 0, medium: 1, low: 2 };
-  
-  schedule(component: ComponentDefinition, priority: Priority) {
-    this.queue.push({ component, priority });
-    this.flush();
-  }
-  
-  private flush() {
-    // Use requestIdleCallback for low priority
-    // Use requestAnimationFrame for medium
-    // Execute immediately for high priority
-  }
-}
-```
-
-**Tasks**:
-- [ ] Create `client/src/hydration.ts` with HydrationScheduler
-- [ ] Implement priority-based hydration queue
-- [ ] Add intersection observer for viewport-based hydration
-- [ ] Support idle callback for deferred hydration
-
-#### 1.3 Template Integration
-**File**: `templ/render.go` modifications
-
-- Add `StreamComponent` function for async components
-- Add `SuspenseBoundary` for loading states
-- Integrate with existing `SPAPage` function
-
-**Tasks**:
-- [ ] Add streaming helpers to `templ/render.go`
-- [ ] Create `templ/suspense.go` for async boundaries
-- [ ] Update route generator to support streaming routes
-
----
-
-## Feature 2: Auto-Detection of Reactive Boundaries
-
-### Goal
-Automatically detect which components need client-side reactivity based on usage patterns.
-
-### Implementation Steps
-
-#### 2.1 Static Analysis Engine
-**File**: `routing/generator/analyzer.go`
-
-```go
-// BoundaryAnalyzer analyzes templates for reactive patterns
-type BoundaryAnalyzer struct {
-    patterns []ReactivePattern
-}
-
-// ReactivePattern defines a pattern that indicates reactivity
-type ReactivePattern struct {
-    Type       string // event, bind, state, effect
-    Attribute  string
-    Severity   int    // 1=definitely reactive, 2=likely, 3=maybe
-}
-
-// AnalysisResult contains detected boundaries
-type AnalysisResult struct {
-    ComponentID   string
-    IsReactive    bool
-    Boundaries    []Boundary
-    Confidence    float64
-}
-```
-
-**Detection Rules**:
-1. `data-bind` attribute → reactive
-2. `data-on` attribute → reactive
-3. `data-model` attribute → reactive
-4. `data-gospa-component` with state → reactive
-5. Event handlers in template → reactive
-
-**Tasks**:
-- [ ] Create `routing/generator/analyzer.go`
-- [ ] Implement pattern matching for reactive attributes
-- [ ] Add AST analysis for templ files
-- [ ] Generate boundary metadata in route info
-
-#### 2.2 Runtime Detection
-**File**: `client/src/detection.ts`
-
-```typescript
-// Detects reactive boundaries at runtime
-function detectReactiveBoundaries(root: Element): Boundary[] {
-  const boundaries: Boundary[] = [];
-  
-  // Query for reactive markers
-  const reactiveElements = root.querySelectorAll(
-    '[data-bind], [data-on], [data-model], [data-gospa-state]'
-  );
-  
-  reactiveElements.forEach(el => {
-    boundaries.push({
-      element: el,
-      type: detectBoundaryType(el),
-      priority: inferPriority(el)
-    });
-  });
-  
-  return boundaries;
-}
-```
-
-**Tasks**:
-- [ ] Create `client/src/detection.ts`
-- [ ] Implement DOM-based boundary detection
-- [ ] Add heuristics for priority inference
-- [ ] Integrate with hydration scheduler
-
----
-
-## Feature 3: Formal Islands Architecture
-
-### Goal
-Implement a formal islands architecture where only interactive components are hydrated.
-
-### Implementation Steps
-
-#### 3.1 Island Definition
-**File**: `component/island.go`
-
-```go
-// Island represents an interactive component
-type Island struct {
-    ID           string
-    Component    templ.Component
-    State        map[string]any
-    Hydration    HydrationStrategy
-    Priority     int
-    Dependencies []string
-}
-
-// HydrationStrategy defines how an island hydrates
-type HydrationStrategy string
-
-const (
-    HydrationImmediate HydrationStrategy = "immediate"
-    HydrationVisible   HydrationStrategy = "visible"
-    HydrationIdle      HydrationStrategy = "idle"
-    HydrationLazy      HydrationStrategy = "lazy"
-)
-
-// IslandRegistry tracks all islands
-type IslandRegistry struct {
-    islands map[string]*Island
-}
-```
-
-**Tasks**:
-- [ ] Create `component/island.go` with Island struct
-- [ ] Implement IslandRegistry for tracking
-- [ ] Add island serialization for client transfer
-
-#### 3.2 Island Template Helpers
-**File**: `templ/island.go`
-
-```go
-// Island creates an island component
-func Island(id string, component templ.Component, opts ...IslandOption) templ.Component {
-    return templ.ComponentFunc(func(ctx context.Context, w io.Writer) error {
-        // Render island wrapper with data attributes
-        fmt.Fprintf(w, `<div data-gospa-island="%s" data-gospa-hydrate="%s">`, id, strategy)
-        component.Render(ctx, w)
-        fmt.Fprint(w, `</div>`)
-        return nil
-    })
-}
-
-// IslandState embeds initial state for an island
-func IslandState(id string, state map[string]any) templ.Component
-```
-
-**Tasks**:
-- [ ] Create `templ/island.go` with Island helper
-- [ ] Add IslandState for state embedding
-- [ ] Create IslandLazy for code-split islands
-
-#### 3.3 Client Island Runtime
-**File**: `client/src/island.ts`
-
-```typescript
-// IslandRuntime manages island lifecycle
-class IslandRuntime {
-  private islands: Map<string, IslandInstance> = new Map();
-  
-  async hydrate(id: string, strategy: HydrationStrategy) {
-    const island = await this.loadIsland(id);
-    const instance = this.createInstance(island);
-    this.islands.set(id, instance);
-  }
-  
-  private async loadIsland(id: string): Promise<IslandModule> {
-    // Dynamic import for code-split islands
-    return import(`/islands/${id}.js`);
-  }
-}
-```
-
-**Tasks**:
-- [ ] Create `client/src/island.ts` with IslandRuntime
-- [ ] Implement lazy loading for islands
-- [ ] Add island-to-island communication
-
----
-
-## Feature 4: Hot Module Replacement (HMR) with State Preservation
-
-### Goal
-Enable hot reloading during development while preserving component state.
-
-### Implementation Steps
-
-#### 4.1 HMR Server
-**File**: `fiber/hmr.go`
-
-```go
-// HMRServer handles hot module replacement
-type HMRServer struct {
-    clients   map[string]*websocket.Conn
-    watcher   *fsnotify.Watcher
-    state     *StatePreserver
-    moduleMap map[string]string // file -> module ID
-}
-
-// HMRUpdate represents an update message
-type HMRUpdate struct {
-    Type      string // full-reload, update, prune
-    ModuleID  string
-    URL       string
-    Timestamp int64
-    State     map[string]any // preserved state
-}
-```
-
-**Tasks**:
-- [ ] Create `fiber/hmr.go` with HMRServer
-- [ ] Implement file watching with fsnotify
-- [ ] Add WebSocket-based update propagation
-- [ ] Integrate with existing dev server
-
-#### 4.2 State Preservation
-**File**: `fiber/state_preserve.go`
-
-```go
-// StatePreserver saves and restores component state
-type StatePreserver struct {
-    snapshots map[string]StateSnapshot
-}
-
-// StateSnapshot captures component state
-type StateSnapshot struct {
-    ComponentID string
-    State       map[string]any
-    Timestamp   time.Time
-    Version     string
-}
-
-// Preserve captures current state before HMR
-func (s *StatePreserver) Preserve(componentID string, state map[string]any)
-
-// Restore returns preserved state after HMR
-func (s *StatePreserver) Restore(componentID string) map[string]any
-```
-
-**Tasks**:
-- [ ] Create `fiber/state_preserve.go`
-- [ ] Implement state snapshot mechanism
-- [ ] Add state versioning for compatibility
-
-#### 4.3 Client HMR Runtime
-**File**: `client/src/hmr.ts`
-
-```typescript
-// HMRClient handles hot updates
-class HMRClient {
-  private ws: WebSocket;
-  private state: Map<string, any> = new Map();
-  
-  connect() {
-    this.ws = new WebSocket('/_gospa/hmr');
-    this.ws.onmessage = (e) => this.handleUpdate(JSON.parse(e.data));
-  }
-  
-  private async handleUpdate(update: HMRUpdate) {
-    // Save current state
-    this.preserveState();
-    
-    // Apply update
-    if (update.type === 'update') {
-      await this.applyUpdate(update);
-    } else if (update.type === 'full-reload') {
-      location.reload();
-    }
-    
-    // Restore state
-    this.restoreState(update.state);
-  }
-}
-```
-
-**Tasks**:
-- [ ] Create `client/src/hmr.ts` with HMRClient
-- [ ] Implement module replacement logic
-- [ ] Add state preservation/restoration
-
----
-
-## Feature 5: Type-Safe Route Helpers
-
-### Goal
-Generate TypeScript types for routes, enabling type-safe navigation and data fetching.
-
-### Implementation Steps
-
-#### 5.1 Enhanced TypeScript Generator
-**File**: `routing/generator/tsgen.go` (enhance existing)
-
-```go
-// TypeScriptGenerator generates type-safe route helpers
-type TypeScriptGenerator struct {
-    routes []RouteInfo
-}
-
-// GenerateRouteTypes creates TypeScript types for all routes
-func (g *TypeScriptGenerator) GenerateRouteTypes() string {
-    // Generate:
-    // - RouteParams type for each route
-    // - RouteQuery type for query params
-    // - RouteData type for page data
-    // - Typed navigate function
-    // - Typed Link component
-}
-
-// Generate output:
-// type Routes = '/' | '/blog/:id' | '/admin/users';
-// type RouteParams<T extends Routes> = T extends '/blog/:id' 
-//   ? { id: string } : {};
-// function navigate<T extends Routes>(route: T, params?: RouteParams<T>): Promise<void>;
-```
-
-**Tasks**:
-- [ ] Enhance `routing/generator/tsgen.go`
-- [ ] Generate route parameter types
-- [ ] Generate typed navigate function
-- [ ] Generate typed Link component props
-
-#### 5.2 Client Navigation Types
-**File**: `client/src/navigation.ts` (enhance existing)
-
-```typescript
-// Type-safe navigation
-export function navigate<T extends Routes>(
-  route: T,
-  params?: RouteParams<T>,
-  options?: NavigateOptions
-): Promise<void>;
-
-// Type-safe Link component
-export function Link<T extends Routes>(props: {
-  to: T;
-  params?: RouteParams<T>;
-  children: ReactNode;
-}): JSX.Element;
-```
-
-**Tasks**:
-- [ ] Add type-safe navigate function
-- [ ] Create typed Link component
-- [ ] Add route data fetching types
-
----
-
-## Feature 6: Enhanced Error Overlay
-
-### Goal
-Provide a rich development error overlay with source maps and component stack.
-
-### Implementation Steps
-
-#### 6.1 Error Collector
-**File**: `fiber/errors.go` (enhance existing)
-
-```go
-// ErrorCollector gathers error information
-type ErrorCollector struct {
-    errors   []ErrorInfo
-    sourceMap *SourceMapCache
-}
-
-// ErrorInfo contains detailed error information
-type ErrorInfo struct {
-    ID           string
-    Message      string
-    Stack        []StackFrame
-    Component    string
-    Source       string
-    Line         int
-    Column       int
-    Suggestions  []string
-    Timestamp    time.Time
-}
-
-// StackFrame represents a stack trace frame
-type StackFrame struct {
-    File     string
-    Line     int
-    Column   int
-    Function string
-    Source   string // source code snippet
-}
-```
-
-**Tasks**:
-- [ ] Enhance `fiber/errors.go` with ErrorCollector
-- [ ] Implement source map parsing
-- [ ] Add error suggestion engine
-
-#### 6.2 Error Overlay UI
-**File**: `client/src/overlay.ts`
-
-```typescript
-// ErrorOverlay displays errors in development
-class ErrorOverlay {
-  private container: HTMLElement;
-  
-  show(error: ErrorInfo) {
-    // Create overlay with:
-    // - Error message
-    // - Component stack
-    // - Source code context
-    // - Suggested fixes
-    // - Actions (dismiss, copy, open in editor)
-  }
-  
-  private renderSourceContext(frame: StackFrame): HTMLElement {
-    // Show source code with syntax highlighting
-    // Highlight error line
-    // Show surrounding context
-  }
-}
-```
-
-**Tasks**:
-- [ ] Create `client/src/overlay.ts` with ErrorOverlay
-- [ ] Implement source code display
-- [ ] Add syntax highlighting
-- [ ] Add open-in-editor functionality
-
----
-
-## Feature 7: Priority-Based Selective Hydration
-
-### Goal
-Hydrate components based on priority for optimal perceived performance.
-
-### Implementation Steps
-
-#### 7.1 Priority System
-**File**: `client/src/priority.ts`
-
-```typescript
-// Priority levels for hydration
-enum Priority {
-  Critical = 0,  // Above fold, interactive
-  High = 1,      // User will interact soon
-  Medium = 2,    // Below fold, visible
-  Low = 3,       // Deferred until idle
-  Deferred = 4   // May never hydrate
-}
-
-// PriorityResolver determines component priority
-class PriorityResolver {
-  resolve(element: Element): Priority {
-    // Factors:
-    // - data-gospa-priority attribute
-    // - Position in viewport
-    // - Component type (interactive vs static)
-    // - User interaction likelihood
-  }
-}
-```
-
-**Tasks**:
-- [ ] Create `client/src/priority.ts` with Priority enum
-- [ ] Implement PriorityResolver
-- [ ] Add viewport-based priority adjustment
-
-#### 7.2 Hydration Scheduler
-**File**: `client/src/scheduler.ts`
-
-```typescript
-// HydrationScheduler manages hydration order
-class HydrationScheduler {
-  private queues: Map<Priority, HydrationTask[]> = new Map();
-  private isProcessing = false;
-  
-  schedule(task: HydrationTask) {
-    const priority = task.priority;
-    this.queues.get(priority)?.push(task);
-    this.scheduleFlush();
-  }
-  
-  private flush() {
-    // Process critical immediately
-    // Process high on next frame
-    // Process medium on idle
-    // Process low when nothing else pending
-  }
-}
-```
-
-**Tasks**:
-- [ ] Create `client/src/scheduler.ts`
-- [ ] Implement priority queues
-- [ ] Add requestIdleCallback integration
-- [ ] Add hydration budget management
-
----
-
-## Feature 8: Build-Time State Pruning
-
-### Goal
-Remove unused state from the client bundle at build time.
-
-### Implementation Steps
-
-#### 8.1 State Analyzer
-**File**: `state/analyzer.go`
-
-```go
-// StateAnalyzer analyzes state usage
-type StateAnalyzer struct {
-    usedState  map[string]bool
-    allState   map[string]StateDef
-}
-
-// AnalyzeResult contains pruning information
-type AnalyzeResult struct {
-    UsedState    []string
-    UnusedState  []string
-    Savings      int64 // bytes saved
-}
-
-// Analyze determines which state is actually used
-func (a *StateAnalyzer) Analyze(routes []RouteInfo) AnalyzeResult
-```
-
-**Tasks**:
-- [ ] Create `state/analyzer.go`
-- [ ] Implement state usage tracking
-- [ ] Add dead code elimination
-
-#### 8.2 Build Integration
-**File**: `cli/build.go` (enhance existing)
-
-```go
-// Add state pruning step to build process
-func (b *Builder) pruneState() error {
-    analyzer := state.NewAnalyzer()
-    result := analyzer.Analyze(b.routes)
-    
-    // Generate pruned state initialization
-    // Remove unused state from client bundle
-    // Report savings
-}
-```
-
-**Tasks**:
-- [ ] Enhance `cli/build.go` with pruning step
-- [ ] Add state usage reporting
-- [ ] Integrate with TypeScript generator
-
----
-
-## Feature 9: Starter Component Library/Plugin
-
-### Goal
-Provide a starter plugin with common UI components. Modern inspired by mostly shadcn, some by BitsUI.
-
-### Implementation Steps
-
-#### 9.1 Plugin Structure
-**Directory**: `plugin/starter/`
-
-```
-plugin/starter/
-├── starter.go          # Plugin registration
-├── components/
-│   ├── button.templ    # Button component
-│   ├── input.templ     # Input component
-│   ├── card.templ      # Card component
-│   ├── modal.templ     # Modal component
-│   ├── dropdown.templ  # Dropdown component
-│   └── toast.templ     # Toast notification
-└── styles/
-    └── components.css  # Base styles
-```
-
-**Tasks**:
-- [ ] Create `plugin/starter/starter.go`
-- [ ] Create Button component
-- [ ] Create Input component
-- [ ] Create Card component
-- [ ] Create Modal component
-- [ ] Create Dropdown component
-- [ ] Create Toast component
-
-#### 9.2 Component Examples
-**File**: `plugin/starter/components/button.templ`
-
-```templ
-package components
-
-// ButtonProps defines button properties
-type ButtonProps struct {
-    Variant string // primary, secondary, ghost, danger
-    Size    string // sm, md, lg
-    Disabled bool
-    Loading  bool
-}
-
-// Button renders a styled button
-templ Button(props ButtonProps) {
-    <button
-        class={ fmt.Sprintf("btn btn-%s btn-%s", props.Variant, props.Size) }
-        if props.Disabled { disabled }
-        data-gospa-component="button"
-    >
-        if props.Loading {
-            <span class="spinner"></span>
-        }
-        { children... }
-    </button>
-}
-```
-
-**Tasks**:
-- [ ] Implement each component with variants
-- [ ] Add accessibility attributes
-- [ ] Add keyboard navigation
-- [ ] Create documentation
-
----
-
-## Feature 10: Server-Sent Events (SSE) Support
-
-### Goal
-Provide SSE as a lighter alternative to WebSocket for server-to-client updates.
-
-### Implementation Steps
-
-#### 10.1 SSE Server
-**File**: `fiber/sse.go`
-
-```go
-// SSEServer handles Server-Sent Events
-type SSEServer struct {
-    clients   map[string]*SSEClient
-    broadcast chan SSEMessage
-    mu        sync.RWMutex
-}
-
-// SSEClient represents an SSE connection
-type SSEClient struct {
-    ID        string
-    Send      chan []byte
-    Quit      chan struct{}
-    LastEvent string
-}
-
-// SSEMessage represents an SSE event
-type SSEMessage struct {
-    Event string
-    Data  interface{}
-    ID    string
-}
-
-// SSEHandler returns a Fiber handler for SSE
-func (s *SSEServer) SSEHandler() fiber.Handler {
-    return func(c *fiber.Ctx) error {
-        c.Set("Content-Type", "text/event-stream")
-        c.Set("Cache-Control", "no-cache")
-        c.Set("Connection", "keep-alive")
-        c.Set("X-Accel-Buffering", "no")
-        
-        // Stream events to client
-        c.Context().SetBodyStreamWriter(func(w *bufio.Writer) {
-            // Event loop
-        })
-    }
-}
-```
-
-**Tasks**:
-- [ ] Create `fiber/sse.go` with SSEServer
-- [ ] Implement SSE handler for Fiber
-- [ ] Add heartbeat mechanism
-- [ ] Add reconnection support
-
-#### 10.2 SSE Client
-**File**: `client/src/sse.ts`
-
-```typescript
-// SSEClient handles Server-Sent Events
-export class SSEClient {
-  private es: EventSource | null = null;
-  private reconnectDelay = 1000;
-  private maxReconnectDelay = 30000;
-  private handlers: Map<string, Set<(data: any) => void>> = new Map();
-  
-  constructor(private url: string) {}
-  
-  connect() {
-    this.es = new EventSource(this.url);
-    
-    this.es.onmessage = (e) => {
-      const msg = JSON.parse(e.data);
-      this.handlers.get(msg.event)?.forEach(h => h(msg.data));
-    };
-    
-    this.es.onerror = () => {
-      this.es?.close();
-      setTimeout(() => this.connect(), this.reconnectDelay);
-      this.reconnectDelay = Math.min(
-        this.reconnectDelay * 2, 
-        this.maxReconnectDelay
-      );
-    };
-  }
-  
-  on(event: string, handler: (data: any) => void) {
-    if (!this.handlers.has(event)) {
-      this.handlers.set(event, new Set());
-    }
-    this.handlers.get(event)!.add(handler);
-  }
-  
-  close() {
-    this.es?.close();
-  }
-}
-```
-
-**Tasks**:
-- [ ] Create `client/src/sse.ts` with SSEClient
-- [ ] Implement reconnection logic
-- [ ] Add event subscription API
-
-#### 10.3 Template Integration
-**File**: `templ/sse.go`
-
-```go
-// SSEScript returns the SSE client script
-func SSEScript() templ.Component
-
-// SSEComponent marks a component for SSE updates
-func SSEComponent(id string, component templ.Component) templ.Component
-```
-
-**Tasks**:
-- [ ] Create `templ/sse.go` with SSE helpers
-- [ ] Add SSE component wrapper
-- [ ] Integrate with existing state sync
-
----
-
-## Implementation Order
-
-### Phase 1: Core Infrastructure
-1. Feature 3: Islands Architecture (foundation for others)
-2. Feature 1: Streaming SSR
-3. Feature 2: Auto-Detection
-
-### Phase 2: Developer Experience
-4. Feature 4: HMR with State Preservation
-5. Feature 6: Enhanced Error Overlay
-6. Feature 5: Type-Safe Route Helpers
-
-### Phase 3: Performance
-7. Feature 7: Priority-Based Hydration
-8. Feature 8: Build-Time State Pruning
-
-### Phase 4: Ecosystem
-9. Feature 10: SSE Support
-10. Feature 9: Starter Component Library
-
----
-
-## Testing Strategy
-
-Each feature should include:
-
-1. **Unit Tests**: Core functionality
-2. **Integration Tests**: Feature interactions
-3. **E2E Tests**: User-facing behavior
-4. **Performance Tests**: Benchmarks for critical paths
-5. **Documentation**: API docs and examples
-
----
-
-## Breaking Changes
-
-| Feature | Breaking Change | Migration Path |
-|---------|-----------------|----------------|
-| Islands | New attribute format | Auto-migration tool |
-| Streaming | Response format change | Feature flag |
-| HMR | Dev server changes | Transparent |
-| Types | Generated file location | Update imports |
-
----
-
-## Configuration
-
-```go
-// Config additions for new features
-type Config struct {
-    // ... existing config
-    
-    // Streaming
-    Streaming   StreamingConfig
-    
-    // Islands
-    Islands     IslandsConfig
-    
-    // HMR
-    HMR         HMRConfig
-    
-    // SSE
-    SSE         SSEConfig
-}
-```
-
----
-
-## Next Steps
-
-1. Review and approve this plan
-2. Switch to Code mode for implementation
-3. Implement features in the specified order
-4. Create documentation for each feature
-5. Update website with new feature docs
-
-
-<!-- FILE: plans/plugin-system-enhancement.md -->
-================================================================================
-
-# GoSPA Plugin System Enhancement Plan
-
-## Overview
-
-This plan outlines the enhancement of GoSPA's plugin system to support a richer ecosystem of plugins with dependency management, external plugin loading, and comprehensive documentation.
-
-## Current State Analysis
-
-### Existing Plugin Interface ([`plugin/plugin.go`](plugin/plugin.go))
-
-```go
-type Plugin interface {
-    Name() string
-    Init() error
-}
-
-type CLIPlugin interface {
-    Plugin
-    OnHook(hook Hook, ctx map[string]interface{}) error
-    Commands() []Command
-}
-```
-
-### Existing Hooks
-- `BeforeGenerate` / `AfterGenerate`
-- `BeforeDev` / `AfterDev`
-- `BeforeBuild` / `AfterBuild`
-
-### Existing Plugin: Tailwind v4 ([`plugin/tailwind/tailwind.go`](plugin/tailwind/tailwind.go))
-- Installs: `tailwindcss @tailwindcss/postcss postcss`
-- Creates `static/css/app.css` with `@import "tailwindcss"`
-- Creates `postcss.config.js`
-- Provides `add:tailwind` command
-
----
-
-## Proposed Architecture
-
-### 1. Enhanced Plugin Interface
-
-```go
-// Dependency represents a package dependency
-type Dependency struct {
-    Name     string // Package name e.g. "@tailwindcss/typography"
-    Version  string // Version constraint e.g. "^1.0.0" or "latest"
-    Dev      bool   // Is this a dev dependency?
-}
-
-// Plugin interface with dependency support
-type Plugin interface {
-    Name() string
-    Init() error
-    Dependencies() []Dependency  // NEW: Declare NPM dependencies
-}
-
-// CLIPlugin with enhanced capabilities
-type CLIPlugin interface {
-    Plugin
-    OnHook(hook Hook, ctx map[string]interface{}) error
-    Commands() []Command
-    Config() map[string]interface{} // NEW: Plugin configuration schema
-}
-```
-
-### 2. External Plugin Support
-
-```go
-// ExternalPluginLoader handles loading plugins from GitHub
-type ExternalPluginLoader struct {
-    cacheDir string
-}
-
-// LoadFromGitHub downloads and loads a plugin from a GitHub URL
-// Format: github.com/owner/repo@version or github.com/owner/repo
-func (l *ExternalPluginLoader) LoadFromGitHub(url string) (CLIPlugin, error)
-```
-
-### 3. Plugin Registry Enhancement
-
-```go
-// InstallDependencies installs all dependencies for registered plugins
-func InstallDependencies() error
-
-// GetPluginDeps returns combined dependencies from all plugins
-func GetPluginDeps() []Dependency
-```
-
----
-
-## New Plugins
-
-### 1. PostCSS Plugin (`plugin/postcss/`)
-
-**Purpose**: Extend Tailwind with official extensions and CSS processing.
-
-**Dependencies**:
-```json
-[
-  {"name": "@tailwindcss/typography", "dev": true},
-  {"name": "@tailwindcss/forms", "dev": true},
-  {"name": "@tailwindcss/aspect-ratio", "dev": true},
-  {"name": "cssnano", "dev": true}
-]
-```
-
-**Commands**:
-- `add:postcss` - Install PostCSS with Tailwind extensions
-
-**Files Created**:
-- Updates `postcss.config.js` with plugins
-- Creates `static/css/app.css` with `@plugin` directives
-
-**Usage in CSS**:
-```css
-@import "tailwindcss";
-@plugin "@tailwindcss/typography";
-@plugin "@tailwindcss/forms";
-@plugin "@tailwindcss/aspect-ratio";
-```
-
----
-
-### 2. Image Optimization Plugin (`plugin/image/`)
-
-**Purpose**: Auto-optimize images with modern formats and responsive srcset.
-
-**Dependencies**:
-```json
-[
-  {"name": "sharp", "dev": true}
-]
-```
-
-**Commands**:
-- `add:image` - Install image optimization tooling
-
-**Features**:
-- Auto WebP/AVIF conversion during build (70-90%, maybe 85%  by default, of course adjustable in a config some way)
-- Responsive srcset generation
-- Image component helper for templates
-
-**Hooks**:
-- `AfterBuild`: Process images in `static/images/`
-
----
-
-### 3. Form Validation Plugin (`plugin/validation/`)
-
-**Purpose**: Go validator integration with Valibot for client-side validation.
-
-**Dependencies**:
-```json
-[
-  {"name": "valibot", "dev": false}  // ~1.5KB gzipped (vs Zod's ~12KB)
-]
-```
-
-**Go Dependencies**:
-```go
-github.com/go-playground/validator/v10
-```
-
-**Commands**:
-- `add:validation` - Setup validation scaffolding
-
-**Features**:
-- Go struct tag parsing for validation rules
-- Valibot schema generation from Go structs
-- Server-side validation middleware for Fiber
-- Client-side validation with Valibot (optional, lightweight)
-
-**Generated Example**:
-```go
-// Go struct
-type UserForm struct {
-    Email string `validate:"required,email" json:"email"`
-    Age   int    `validate:"min=18" json:"age"`
-}
-```
-
-```typescript
-// Generated Valibot schema
-import * as v from 'valibot';
-export const UserFormSchema = v.object({
-  email: v.pipe(v.string(), v.minLength(1), v.email()),
-  age: v.pipe(v.number(), v.minValue(18))
-});
-export type UserForm = v.InferOutput<typeof UserFormSchema>;
-```
-
-**Why Valibot?**
-- ~1.5KB gzipped vs Zod's ~12KB (8x smaller)
-- Same TypeScript-first API
-- Tree-shakeable (only import what you use)
-- Works with Standard Schema spec
-
----
-
-### 4. SEO Plugin (`plugin/seo/`)
-
-**Purpose**: Sitemap generation, Open Graph, and JSON-LD support.
-
-**Dependencies**: None (pure Go)
-
-**Commands**:
-- `add:seo` - Configure SEO helpers
-
-**Features**:
-- Sitemap.xml generation from routes
-- Open Graph meta tag helpers
-- JSON-LD structured data components
-
-**Hooks**:
-- `AfterBuild`: Generate sitemap.xml
-
-**Templ Components**:
-```go
-// SEO component helpers
-templ OpenGraph(title, description, image string)
-templ JSONLD(data any)
-templ SitemapEntry(path string, lastMod time.Time)
-```
-
----
-
-### 5. Auth Plugin (`plugin/auth/`)
-
-**Purpose**: OAuth2, JWT, OTP, and session management.
-
-**Dependencies**: None (uses Go stdlib + golang.org/x/oauth2)
-
-**Go Dependencies**:
-```go
-golang.org/x/oauth2
-github.com/golang-jwt/jwt/v5
-github.com/pquerna/otp  // TOTP/HOTP support
-```
-
-**Commands**:
-- `add:auth` - Setup authentication scaffolding
-
-**Features**:
-- **OAuth2 providers** (Google, Facebook, GitHub, Microsoft, Discord)
-- JWT token generation/validation
-- **OTP/TOTP support** (Google Authenticator, Authy compatible)
-- Backup codes generation
-- Session middleware for Fiber
-- Protected route helpers
-
-**Generated Files**:
-```
-lib/auth/
-├── auth.go       # Core auth functions
-├── oauth.go      # OAuth2 handlers
-├── providers/    # Provider-specific configs
-│   ├── google.go
-│   ├── facebook.go
-│   ├── github.go
-│   ├── microsoft.go
-│   └── discord.go
-├── jwt.go        # JWT utilities
-├── otp.go        # TOTP/HOTP + QR code generation
-├── backup.go     # Backup codes generation/validation
-└── middleware.go # Fiber middleware
-```
-
-**OAuth Providers**:
-- Google (OAuth2)
-- Facebook (OAuth2)
-- GitHub (OAuth2)
-- Microsoft (OAuth2)
-- Discord (OAuth2)
-
-**OTP Features**:
-- TOTP (Time-based One-Time Password) - RFC 6238
-- QR code generation for authenticator apps
-- Backup codes (single-use recovery codes)
-- Rate limiting for OTP verification
-- Configurable code length (6 or 8 digits)
-
-**Usage Example**:
-```go
-// Generate TOTP secret + QR code
-secret, qrURL, _ := otp.GenerateTOTP("user@example.com", "MyApp")
-
-// Verify TOTP code
-valid := otp.VerifyTOTP(secret, userCode)
-
-// Generate backup codes
-backupCodes := backup.Generate(10) // 10 single-use codes
-```
-
----
-
-## CLI Commands Update
-
-### `gospa add` Command
-
-```
-gospa add <feature>     Add a feature via plugin
-
-Available Features:
-  tailwind    Add Tailwind CSS v4
-  postcss     Add PostCSS with Tailwind extensions
-  image       Add image optimization
-  validation  Add form validation with Zod
-  seo         Add SEO helpers
-  auth        Add authentication scaffolding
-
-External Plugins:
-  gospa add github.com/owner/gospa-plugin-name
-```
-
-### New Commands
-
-```
-gospa plugin list              List installed plugins
-gospa plugin deps              Show all plugin dependencies
-gospa plugin install           Install all plugin dependencies
-```
-
----
-
-## Documentation Updates
-
-### docs/CLI.md Updates
-- Add all new `gospa add` commands
-- Document plugin hooks
-- Add external plugin usage
-
-### docs/PLUGINS.md (New)
-- Plugin architecture overview
-- Creating custom plugins
-- Plugin API reference
-- Hook reference
-
-### README.md Updates
-- Add plugin ecosystem section
-- List available plugins
-- Link to plugin documentation
-
-### Website Docs
-- Create `website/routes/docs/plugins/` page
-- Update sidebar with Plugins link
-
----
-
-## Implementation Order
-
-```mermaid
-flowchart TD
-    A[Enhance Plugin Interface] --> B[Add Dependencies Method]
-    A --> C[Add External Plugin Loader]
-    B --> D[Create PostCSS Plugin]
-    C --> E[Update CLI add Command]
-    D --> F[Create Image Plugin]
-    F --> G[Create Validation Plugin]
-    G --> H[Create SEO Plugin]
-    H --> I[Create Auth Plugin]
-    I --> J[Update Documentation]
-    J --> K[Update Website Docs]
-```
-
----
-
-## File Structure
-
-```
-plugin/
-├── plugin.go           # Enhanced interface
-├── loader.go           # NEW: External plugin loader
-├── tailwind/
-│   └── tailwind.go     # Existing
-├── postcss/
-│   └── postcss.go      # NEW
-├── image/
-│   └── image.go        # NEW
-├── validation/
-│   └── validation.go   # NEW
-├── seo/
-│   └── seo.go          # NEW
-└── auth/
-    └── auth.go         # NEW
-
-docs/
-├── CLI.md              # Update
-├── PLUGINS.md          # NEW
-└── ...
-
-website/routes/docs/
-├── plugins/            # NEW
-│   └── page.templ
-└── ...
-```
-
----
-
-## Questions for User
-
-1. **Auth Plugin Scope**: Should the auth plugin support multiple OAuth providers out of the box, or start with a single provider (e.g., GitHub)?
-
-2. **Image Plugin**: Should image optimization happen on-the-fly during dev or only during build?
-
-3. **Validation Plugin**: Should this integrate with a specific Go validation library (go-playground/validator) or be agnostic?
-
-4. **External Plugins**: Should external plugins be cached locally? If so, where (`~/.gospa/plugins/` or within project)?
-
-5. **Plugin Configuration**: Should plugins support configuration files (e.g., `gospa.yaml`)?
-
-
-<!-- FILE: plans/ssg-isr-ppr-rendering-plan.md -->
-================================================================================
-
-# GoSPA Rendering Strategy Plan: SSG, ISR & PPR
-
-## Overview
-
-This plan extends the existing rendering strategy system in GoSPA to add **ISR** (Incremental Static Regeneration) and **PPR** (Partial Prerendering), alongside a **per-page strategy selector**. The current system only has `StrategySSR` and `StrategySSG`. This plan also covers proper documentation in `docs/`, `website/`, and `README.md`.
-
----
-
-## Current State
-
-| Component | Location | Status |
-|---|---|---|
-| `RenderStrategy` type + `StrategySSR`/`StrategySSG` consts | `routing/registry.go` | ✅ Exists |
-| `RouteOptions.Strategy` field | `routing/registry.go` | ✅ Exists |
-| `RegisterPageWithOptions` | `routing/registry.go` | ✅ Exists |
-| SSG cache (FIFO, `ssgCache` map) | `gospa.go` | ✅ Exists |
-| `CacheTemplates` config flag | `gospa.go` | ✅ Exists |
-| ISR (TTL-based revalidation) | — | ❌ Missing |
-| PPR (partial static shell + dynamic slots) | — | ❌ Missing |
-| Per-page strategy selector in code gen | — | ❌ Missing |
-| Docs for rendering strategies | `docs/`, `website/` | ❌ Missing |
-
----
-
-## Architecture
-
-```
-RouteOptions.Strategy selects one of four strategies:
-  StrategySSR  — render fresh on every request (default)
-  StrategySSG  — render once, cache forever (FIFO eviction)
-  StrategyISR  — render once, then revalidate after TTL expires
-  StrategyPPR  — render static shell at startup, stream dynamic slots per-request
-```
-
-All four strategies share the same `renderRoute` dispatch path in `gospa.go`. The strategy is looked up via `routing.GetRouteOptions(route.Path)` and the resulting `RouteOptions` drives which cache branch executes.
-
----
-
-## Phase 1 — Extend `routing/registry.go`
-
-### 1.1 Add new strategy constants
-
-Add `StrategyISR` and `StrategyPPR` alongside the existing two.
-
-```go
-const (
-    StrategySSR RenderStrategy = "ssr"  // existing
-    StrategySSG RenderStrategy = "ssg"  // existing
-    StrategyISR RenderStrategy = "isr"  // new: revalidate after TTL
-    StrategyPPR RenderStrategy = "ppr"  // new: static shell + dynamic slots
-)
-```
-
-### 1.2 Extend `RouteOptions`
-
-Add optional TTL for ISR and slot names for PPR:
-
-```go
-type RouteOptions struct {
-    Strategy     RenderStrategy
-    // ISR: how long the cached version is valid before background revalidation.
-    // Zero means "revalidate on every request" (same as SSR).
-    RevalidateAfter time.Duration
-
-    // PPR: list of named slot component keys that are excluded from the static
-    // shell and streamed dynamically per-request.
-    DynamicSlots []string
-}
-```
-
-No other changes are needed to the `Registry` struct itself — it already stores per-path `RouteOptions`.
-
----
-
-## Phase 2 — ISR Cache Layer in `gospa.go`
-
-ISR extends the existing `ssgCache`. Instead of caching forever, each entry also stores a generation timestamp. The first stale request triggers a **background revalidation goroutine** and immediately returns the stale cached page (stale-while-revalidate pattern).
-
-### 2.1 New cache entry type
-
-Replace the current `ssgCache map[string][]byte` with:
-
-```go
-type ssgEntry struct {
-    html      []byte
-    createdAt time.Time
-}
-
-// app fields:
-ssgCache     map[string]ssgEntry
-ssgCacheKeys []string
-ssgCacheMu   sync.RWMutex
-isrRevalidating sync.Map // key: string → bool (guard against duplicate goroutines)
-```
-
-### 2.2 ISR render path in `renderRoute`
-
-```
-1. opts = GetRouteOptions(route.Path)
-2. if opts.Strategy == StrategyISR:
-   a. RLock → check ssgCache[cacheKey]
-   b. If hit AND age < opts.RevalidateAfter → serve cached HTML (fresh)
-   c. If hit AND age >= opts.RevalidateAfter → serve cached HTML (stale), launch background revalidation goroutine (deduplicated via isrRevalidating)
-   d. If miss → render synchronously, store entry with createdAt = now
-3. Background goroutine:
-   a. Re-render page to bytes
-   b. Lock → update ssgCache[cacheKey] with new html + createdAt = now
-   c. Delete key from isrRevalidating
-```
-
-The `isrRevalidating sync.Map` prevents multiple concurrent goroutines from rerendering the same page at the same time.
-
-### 2.3 ISR eviction
-
-ISR entries share the same FIFO eviction pool as SSG entries, bounded by `SSGCacheMaxEntries`. No separate limit is needed.
-
----
-
-## Phase 3 — PPR: Static Shell + Dynamic Slots
-
-PPR (Partial Prerendering) renders the **outer static shell** (everything not in a dynamic slot) once at startup and caches it. On each request, only the **named dynamic slots** are re-rendered and merged into the shell via a streaming replacement.
-
-### 3.1 `DynamicSlot` templ helper (`templ/ppr.go`)
-
-A new helper that marks a subtree as a dynamic slot. Server-side it emits a placeholder comment; client-side the runtime replaces it on arrival.
-
-```go
-// DynamicSlot wraps content that must be rendered dynamically per-request.
-// In PPR mode, the shell is cached without this content.
-// name must match a key in RouteOptions.DynamicSlots.
-func DynamicSlot(name string, content templ.Component) templ.Component {
-    return templ.ComponentFunc(func(ctx context.Context, w io.Writer) error {
-        if IsPPRShellBuild(ctx) {
-            // Emit placeholder for shell
-            fmt.Fprintf(w, `<!--gospa-slot:%s-->`, name)
-            return nil
-        }
-        // Normal render: emit full content wrapped in marker
-        fmt.Fprintf(w, `<div data-gospa-slot="%s">`, name)
-        if err := content.Render(ctx, w); err != nil {
-            return err
-        }
-        fmt.Fprint(w, `</div>`)
-        return nil
-    })
-}
-
-// context key used to signal shell-build phase
-type pprShellKey struct{}
-
-func WithPPRShellBuild(ctx context.Context) context.Context {
-    return context.WithValue(ctx, pprShellKey{}, true)
-}
-
-func IsPPRShellBuild(ctx context.Context) bool {
-    v, _ := ctx.Value(pprShellKey{}).(bool)
-    return v
-}
-```
-
-### 3.2 PPR shell cache in `gospa.go`
-
-Add a separate shell cache (separate map, same eviction pool):
-
-```go
-pprShellCache map[string][]byte   // path → static shell HTML (with slot placeholders)
-pprShellKeys  []string
-```
-
-### 3.3 PPR render path in `renderRoute`
-
-```
-1. opts = GetRouteOptions(route.Path); strategy == StrategyPPR
-2. Check pprShellCache[cacheKey]:
-   a. Miss → render with WithPPRShellBuild(ctx), store result as static shell
-   b. Hit  → use cached shell
-
-3. For each slot in opts.DynamicSlots:
-   a. Re-render the relevant sub-component (looked up by slot name from a SlotRegistry, see §3.4)
-   b. Produce slot HTML fragment
-
-4. Stream response:
-   a. Write shell up to <!--gospa-slot:name-->
-   b. Write dynamic slot content
-   c. Continue writing shell after placeholder
-   d. Repeat for each slot
-   e. Flush
-```
-
-### 3.4 PPR Slot Registry
-
-A simple registry mapping slot names to component functions, registered alongside the page:
-
-```go
-// routing/registry.go addition
-type SlotFunc func(props map[string]interface{}) templ.Component
-
-// Per-page slot registry (stored in Registry, keyed by page path)
-slots map[string]map[string]SlotFunc
-
-func RegisterSlot(pagePath, slotName string, fn SlotFunc)
-func GetSlot(pagePath, slotName string) SlotFunc
-```
-
----
-
-## Phase 4 — Per-Page Strategy Selector in Generated Code
-
-Currently `gospa generate` produces `generated/routes.go` which calls `routing.RegisterPage`. Extend it to also emit `routing.RegisterPageWithOptions` calls.
-
-### 4.1 Convention: `page.options.go` file
-
-Each route can optionally have a `page.options.go` file next to `page.templ`:
-
-```go
-// routes/blog/[slug]/page.options.go
-package blog
-
-import (
-    "time"
-    "github.com/aydenstechdungeon/gospa/routing"
-)
-
-var PageOptions = routing.RouteOptions{
-    Strategy:        routing.StrategyISR,
-    RevalidateAfter: 5 * time.Minute,
-}
-```
-
-The code generator (`routing/generator/`) reads `PageOptions` from each route package (via a naming convention, not reflection) and emits the correct `RegisterPageWithOptions` call in `generated/routes.go`.
-
-### 4.2 Inline option via `init()` (always available, no code gen required)
-
-Users can always skip code gen entirely and register manually in any `init()`:
-
-```go
-// routes/blog/[slug]/page.templ
-func init() {
-    routing.RegisterPageWithOptions("/blog/:slug", func(props map[string]interface{}) templ.Component {
-        return Page(props)
-    }, routing.RouteOptions{
-        Strategy:        routing.StrategyISR,
-        RevalidateAfter: 5 * time.Minute,
-    })
-}
-```
-
-This already works today with SSG. The plan just adds ISR/PPR options.
-
-### 4.3 PPR slot inline registration
-
-```go
-func init() {
-    routing.RegisterPageWithOptions("/dashboard", dashboardPage, routing.RouteOptions{
-        Strategy:     routing.StrategyPPR,
-        DynamicSlots: []string{"feed", "notifications"},
-    })
-    routing.RegisterSlot("/dashboard", "feed",          feedSlot)
-    routing.RegisterSlot("/dashboard", "notifications", notificationsSlot)
-}
-```
-
----
-
-## Phase 5 — Config-Level Defaults
-
-Add a `DefaultRenderStrategy` field to `Config` so apps can set a global default without touching every page:
-
-```go
-// gospa.go Config struct addition:
-DefaultRenderStrategy routing.RenderStrategy // overrides built-in SSR default
-DefaultRevalidateAfter time.Duration         // ISR default TTL when not set per-page
-```
-
-`GetRouteOptions` continues to return the per-page override when set, falling back to these config defaults.
-
----
-
-## Phase 6 — HTTP Cache Headers
-
-Each strategy emits appropriate `Cache-Control` headers so CDNs and proxies can cooperate:
-
-| Strategy | Cache-Control |
-|---|---|
-| SSR | `no-store` |
-| SSG | `public, max-age=31536000, immutable` |
-| ISR | `public, s-maxage=<TTL>, stale-while-revalidate=<TTL>` |
-| PPR | Shell: `public, max-age=31536000` / Slots: `no-store` |
-
-These are set in `renderRoute` before writing the response body.
-
----
-
-## Phase 7 — Documentation
-
-### 7.1 `docs/RENDERING.md` (new file)
-
-Create `/home/aydenstechdungeon/gospa/docs/RENDERING.md` with:
-
-- Overview table: SSR / SSG / ISR / PPR comparison
-- When to use each strategy
-- Config reference (`CacheTemplates`, `SSGCacheMaxEntries`, `DefaultRenderStrategy`, `DefaultRevalidateAfter`)
-- Per-page API (`RouteOptions`, `RegisterPageWithOptions`)
-- ISR stale-while-revalidate explanation
-- PPR slot API (`DynamicSlot`, `RegisterSlot`, `RouteOptions.DynamicSlots`)
-- Code examples for all four strategies
-- HTTP cache header behavior per strategy
-- Interaction with Prefork mode (ISR/SSG cache is per-process without shared storage — document the limitation)
-
-### 7.2 Update `docs/API.md`
-
-- Update `RouteOptions` block at line ~576 to include `RevalidateAfter` and `DynamicSlots`
-- Update `Config` block to include `DefaultRenderStrategy` and `DefaultRevalidateAfter`
-- Add `RegisterSlot` / `GetSlot` to the Route Registry section
-- Add `DynamicSlot`, `WithPPRShellBuild`, `IsPPRShellBuild` to the Templ Package section
-
-### 7.3 `docs/CONFIGURATION.md`
-
-Add a **Rendering Strategies** subsection documenting:
-- `CacheTemplates` (already exists, clarify it applies to SSG and ISR both)
-- `SSGCacheMaxEntries` (also covers ISR entries)
-- `DefaultRenderStrategy`
-- `DefaultRevalidateAfter`
-
-### 7.4 Website: new docs page `website/routes/docs/rendering/page.templ`
-
-Create a new route at `/docs/rendering` with:
-
-- Section: Strategy Overview (comparison table)
-- Section: SSR (default, how it works)
-- Section: SSG (static generation, cache config)
-- Section: ISR (TTL, stale-while-revalidate, background regen)
-- Section: PPR (shell concept, slot registration, streaming)
-- Section: Per-Page Configuration (inline `init()` + `page.options.go` convention)
-- Section: Global Defaults (Config fields)
-- Code examples for each strategy using `@components.CodeBlock`
-
-Add the new page to the nav in `website/routes/docs/page.templ` and the sidebar layout.
-
-### 7.5 Update `README.md`
-
-Add **Rendering Strategies** subsection under **Core Concepts**:
-
-```markdown
-### Rendering Strategies
-
-GoSPA supports four per-page rendering strategies:
-
-| Strategy | When to Use |
-|---|---|
-| `StrategySSR` | Dynamic content, auth-gated pages (default) |
-| `StrategySSG` | Fully static content, marketing pages |
-| `StrategyISR` | Mostly static, refreshes every N minutes |
-| `StrategyPPR` | Static shell with dynamic sections (e.g. dashboards) |
-
-Select a strategy per-page in your route's `init()`:
-
-​```go
-func init() {
-    routing.RegisterPageWithOptions("/pricing", PricingPage, routing.RouteOptions{
-        Strategy:        routing.StrategyISR,
-        RevalidateAfter: 10 * time.Minute,
-    })
-}
-​```
-```
-
-Also update the Features bullet point (currently "Rendering Modes — Seamlessly mix CSR, SSR, and SSG per-page rendering strategies") to mention ISR and PPR.
-
-Update the Comparison table to add ISR and PPR rows.
-
----
-
-## Implementation Order
-
-1. **`routing/registry.go`** — add `StrategyISR`, `StrategyPPR`, `RevalidateAfter`, `DynamicSlots` to `RouteOptions`; add `SlotFunc`, `RegisterSlot`, `GetSlot`
-2. **`gospa.go`** — refactor `ssgCache` to `ssgEntry`, add `pprShellCache`; extend `renderRoute` with ISR and PPR branches; add HTTP cache headers; add config defaults
-3. **`templ/ppr.go`** — `DynamicSlot`, `WithPPRShellBuild`, `IsPPRShellBuild`
-4. **`docs/RENDERING.md`** — new file
-5. **`docs/API.md`** — update `RouteOptions`, `Config`, route registry, templ sections
-6. **`docs/CONFIGURATION.md`** — add rendering fields
-7. **`website/routes/docs/rendering/page.templ`** — new website page
-8. **`README.md`** — add Rendering Strategies section, update features + table
-
----
-
-## Non-Goals (Out of Scope for This Plan)
-
-- Global SSG ("build-time" pre-render CLI command) — covered by `runtime-performance-optimization-plan.md`
-- Edge/CDN deployment helpers
-- ISR persistence across restarts (cache is in-memory; acceptable since ISR revalidates by TTL anyway)
-- PPR streaming over SSE (uses Fiber's existing `SetBodyStreamWriter`)
-
-
-<!-- FILE: plans/audit-fixes-plan.md -->
-================================================================================
-
-# GoSPA Audit Fix Plan
-
-Generated: 2026-02-25  
-**FULLY COMPLETED: 2026-02-25** — all tracked bugs, security issues, performance bottlenecks, and documentation gaps resolved  
-Audit found: 10 bugs · 9 security issues · 8 perf bottlenecks · 12 doc gaps  
-Total items fixed: **39 of 39**
-
----
-
-## Execution Order
-
-Fixes are ordered so later fixes don't rely on broken code from earlier passes.
-
----
-
-## Phase 1 — Critical Bugs (data races, panics, channel corruption)
-
-### B1 + B2 — HMR `Broadcast` mutates map under RLock + double channel close
-**File:** `fiber/hmr.go`
-- Fix: Collect failed connections during RLock iteration, then remove them under a separate Lock after iteration ends. Never call `delete(mgr.clients, conn)` inside the RLock loop.
-
-### B2 — WSHub double-close of `client.Send`
-**File:** `fiber/websocket.go`
-- Fix: In the `Broadcast` case, when a client channel is full, do NOT `close(client.Send)`. Instead, just mark them for removal. The `Unregister` path (which correctly guards with `existing == client`) will be the sole closer. Add the `WSClient.closed` flag check before closing in `WSHub.Run` Unregister path.
-
-### B3 — `WebSocketHandler` starts extra `hub.Run()` goroutines
-**File:** `fiber/websocket.go`
-- Fix: Remove the `go config.Hub.Run()` call inside `WebSocketHandler`. The hub is always started in `gospa.go:New()` via `go hub.Run()`. Document that callers using `DefaultWebSocketConfig()` must call `go hub.Run()` themselves.
-
-### B6 — `RegisterPageWithOptions` leaks `fmt.Printf` in production
-**File:** `routing/registry.go`
-- Fix: Remove the `fmt.Printf("Registering page: %s\n", path)` line entirely. Add it behind a `if os.Getenv("GOSPA_DEBUG") != ""` guard only.
-
-### B10 — HMR FileWatcher double-close of `stopChan`
-**File:** `fiber/hmr.go`
-- Fix: Re-create `stopChan` on each `Start()` so `Stop(); Start(); Stop()` doesn't panic. Use a pattern that only closes on first Stop call (guard with `running` which is already mutex-protected).
-
----
-
-## Phase 2 — Memory Leaks & Logic Bugs
-
-### B4 — `Derived` leaks subscribers on old dependencies
-**File:** `client/src/state.ts`
-- Fix: In `_recompute()`, store the unsubscribe functions returned by `dep.subscribe(...)` into a WeakMap keyed by dep. When a dep is removed from `_dependencies`, call its unsubscribe. This prevents subscriber accumulation.
-
-### B5 — `navigate()` race: `pendingNavigation` cleared before resolved
-**File:** `client/src/navigation.ts`
-- Fix: Use a mutex pattern (a flag + queue) so concurrent calls serialize correctly. The `finally` block should only clear `pendingNavigation` after all chained consumers resolve. A simple fix: do `state.pendingNavigation = null` inside the inner async IIFE after it completes, not in `finally` of the outer wrapper.
-
-### B7 — `StateMap.Add` deadlock risk: `OnChange` can re-enter the map
-**File:** `state/serialize.go`
-- Fix: After releasing `sm.mu.Unlock()` at line 61, the `settable.SetAny()` at line 66 correctly runs outside the lock — this is safe. However, the `SubscribeAny` callback (line 52-58) takes `sm.mu.RLock()` to read `OnChange`. If `OnChange` itself calls `sm.Add()`/`sm.Remove()`, it will deadlock. Fix: copy the handler reference before releasing the lock (already done with `sm.mu.RLock()` on line 53). Document clearly with a comment that `OnChange` must not call back into `sm.Add/Remove`.
-
-### B8 — `Rune.notify()` passes `value` as both new and old value
-**File:** `client/src/state.ts`
-- Fix: `notify()` doesn't have access to old value. Store `_prevValue` before assignment in `set value(newValue)`, pass it to `_notifySubscribers(oldValue)`. Update `notify()` to accept an optional oldValue param, or change notification to always carry oldValue through the pipeline.
-
-### B9 — `SPANavigationMiddleware` reads body on streaming responses
-**File:** `fiber/middleware.go`
-- Fix: The middleware should check `c.Response().Header.Peek("X-GoSPA-Stream")` or simply skip body manipulation on streaming responses. Since body is set via `SetBodyStreamWriter`, `c.Response().Body()` will be empty. Add a guard: `if len(c.Response().Body()) == 0 { return nil }`.
-
----
-
-## Phase 3 — Security Fixes
-
-### S1 — Sessions never expire (DoS / session fixation)
-**File:** `fiber/websocket.go`
-- Fix: Add a TTL to `SessionStore` entries. Store `SessionEntry{clientID string, expiresAt time.Time}`. On `ValidateSession`, check `time.Now().Before(entry.expiresAt)`. Add a background goroutine to prune expired entries every N minutes. Default TTL: 24 hours.
-
-### S2 — CSRF middleware never issues tokens
-**File:** `fiber/middleware.go`
-- Fix: Add a `CSRFSetTokenMiddleware()` that generates a new token (if cookie absent) and sets it as a cookie on all GET responses. The existing `CSRFTokenMiddleware()` validates POSTs. Document both must be used together. Without the setter, the validator is useless.
-
-### S3 — SSE subscribe handler allows cross-client topic subscription
-**File:** `fiber/sse.go`
-- Fix: `SSESubscribeHandler` must verify the requester IS the client they're subscribing for. Since SSE is HTTP-based, the only way to do this is either: (a) pass a client-owned token that was issued at connect time and validate it, or (b) derive the clientID from a session/auth mechanism in the handler rather than from the request body. Short-term fix: document that `SSESubscribeHandler` should only be used behind authentication middleware that validates `req.ClientID` matches the authenticated session.
-
-### S5 — WebSocket action/error messages echo unvalidated strings
-**File:** `fiber/websocket.go`
-- Fix: Cap `msg.Action` length to 256 characters before any lookup. Cap `msg.Type` to VALID_TYPES check. Add a max message size on the WebSocket read (`c.Conn.SetReadLimit(maxSize)`).
-
-### S6 — HMR script hardcodes `ws://` ignoring HTTPS
-**File:** `fiber/hmr.go`
-- Fix: Change the inline script to use `(window.location.protocol === 'https:' ? 'wss://' : 'ws://')` for the WebSocket URL.
-
-### S9 — CORS reflects origin + `Allow-Credentials: true` when wildcard is configured
-**File:** `fiber/middleware.go`
-- Fix: When `o == "*"`, set `Access-Control-Allow-Origin: *` (not the reflected origin) and do NOT set `Allow-Credentials: true` (the two are incompatible). `Allow-Credentials: true` should only be set when matching an explicit named origin.
-
----
-
-## Phase 4 — Performance
-
-### P2 — Unbounded SSG cache
-**File:** `gospa.go`
-- Fix: Cap `ssgCache` at a configurable max entries (default 500). Use a simple LRU eviction: maintain a slice of keys in insertion order; on overflow, delete the oldest. Or add an optional `SSGCacheMaxEntries int` field to `Config`.
-
-### P4 — HMR polls O(n×m) every 100ms
-**File:** `fiber/hmr.go`
-- Note: `fsnotify` isn't in dependencies. Instead of adding a dependency, change the poll interval default to 500ms (better) and document the limitation. Full fix would require adding `github.com/fsnotify/fsnotify`.
-
-### P5 — `StateMiddleware` full body string alloc
-**File:** `fiber/middleware.go`
-- Note: This middleware isn't in the default stack — no change needed to default behavior. Add a comment warning about memory cost for large responses.
-
----
-
-## Phase 5 — Documentation Fixes
-
-### D1 — Phantom API methods in `docs/API.md`
-- Remove `app.HandleSSE()`, `app.HandleWS()`, `rune.peek()` from the docs
-- Fix `MatchWithLayout` return order documentation
-- Remove `RouteOptions.CacheTTL` and `RouteOptions.Prerender` (don't exist)
-
-### D2 — No-op Config fields
-- Add `// NOTE: not yet implemented` inline to `CompressState`, `StateDiffing`, `WSReconnectDelay`, `WSMaxReconnect`, `WSHeartbeat`, `StateSerializer`, `StateDeserializer`, `SSR` in `gospa.go`
-- Update `docs/API.md` and `Config` table in README to mark these as "planned"
-
-### D3 — `HydrationMode` "idle" ghost option
-- Remove "idle" from `docs/API.md` line 102 since the `Config` struct only documents 3 values (implementation in `runtime-core.ts` *does* handle it via `requestIdleCallback`, so actually keep it and add it to the Go struct comment)
-
-### D4 — `SimpleRuntimeSVGs` undocumented
-- Add to `README.md` Config section
-- Add to `docs/API.md` Config table with security warning
-
-### D5 — `HMR.md` and `DEV_TOOLS.md` are stubs
-- Add full `HMRConfig` struct docs, all `HMRManager` methods, setup example
-
-### D6 — `fiber.CompressionMiddleware()` phantom
-- Replace with correct `BrotliGzipMiddleware(config CompressionConfig)` in API doc
-
-### D7 — `docs/ISLANDS.md` and `docs/SSE.md` incomplete
-- Add full `SSEBroker`, `SSEConfig`, `SSEClient` API reference
-
-### D10 — Website docs phantom methods
-- Remove `HandleSSE`/`HandleWS` from website API page
-
-### D12 — `StatePruner` completely undocumented
-- Add `docs/STATE_PRUNING.md` with API reference and usage examples
-
----
-
-## Files Modified
-
-| File | Changes |
-|------|---------|
-| `fiber/hmr.go` | B1, B10, S6 |
-| `fiber/websocket.go` | B2, B3, S1, S5 |
-| `fiber/middleware.go` | B9, S2, S9 |
-| `fiber/sse.go` | S3 (doc/comment) |
-| `routing/registry.go` | B6 |
-| `state/serialize.go` | B7 (comment) |
-| `gospa.go` | D2 (comments), P2 |
-| `client/src/state.ts` | B4, B8 |
-| `client/src/navigation.ts` | B5 |
-| `docs/API.md` | D1, D2, D3, D4, D6 |
-| `docs/HMR.md` | D5 |
-| `docs/DEV_TOOLS.md` | D5 |
-| `docs/SSE.md` | D7 |
-| `docs/ISLANDS.md` | D7 (partial) |
-| `docs/STATE_PRUNING.md` | D12 (new file) |
-| `README.md` | D2, D4 |
-| `website/routes/docs/api/page.templ` | D10 |
-
----
-
-## What Is NOT Changed
-
-- No changes to the public Go API surface (no breaking changes)
-- No new required configuration (all additions are optional)
-- `StateMiddleware`, `BrotliGzipMiddleware`, `StatePruner` left functionally intact
-- Plugin system untouched
-- Route generator untouched
-- TypeScript build system untouched
-
-
-<!-- FILE: plans/prefork-session-storage-plan.md -->
-================================================================================
-
-# GoSPA Prefork & External Session Storage Plan
-
-## Overview
-Currently, GoSPA's state synchronization (`ClientStateStore`), session management (`SessionStore`), and WebSocket broadcast hub (`WSHub`) are strictly **in-memory**. If Fiber's `Prefork` mode is enabled (which spawns multiple processes), state and WebSocket connections become isolated per process.
-
-To achieve horizontal scalability and fully leverage `Prefork`, we need to decouple state and pub/sub mechanisms from local memory and allow backing them with external data stores like **Redis** or **Valkey**.
-
----
-
-## Architectural Changes
-
-### 1. Storage Abstraction
-We need a unified Key-Value interface that can be backed by Memory (default) or External Storage (Redis/Valkey).
-
-```go
-type Storage interface {
-    Get(key string) ([]byte, error)
-    Set(key string, val []byte, exp time.Duration) error
-    Delete(key string) error
-}
-```
-
-- **SessionStore**: Move away from `map[string]sessionEntry` to using the `Storage` interface.
-- **ClientStateStore**: Serialize `StateMap` to JSON and save it in `Storage`. On connection, load the JSON and deserialize it back into a `StateMap`.
-
-### 2. Pub/Sub Abstraction for WebSocket Hub
-`WSHub` needs to broadcast state changes across *all* connected clients in *all* processes.
-
-```go
-type PubSub interface {
-    Publish(channel string, message []byte) error
-    Subscribe(channel string, handler func(message []byte)) error
-}
-```
-
-- When `BroadcastState` is called, it should `Publish` to a Redis channel instead of (or in addition to) the local `broadcast` channel.
-- Each GoSPA process's `WSHub` will `Subscribe` to the channel. When a message is received from Redis, the `WSHub` forwards it to its locally connected `Clients`.
-
-### 3. Configuration Updates
-Update the `gospa.Config` struct to accept `Prefork` and external dependencies.
-
-```go
-type Config struct {
-    // ... existing fields ...
-    
-    // Enable Fiber Prefork
-    Prefork bool
-    
-    // External storage for Sessions and State (defaults to Memory)
-    Storage Storage
-    
-    // PubSub for multi-process WebSocket broadcasting (defaults to local memory)
-    PubSub PubSub
-}
-```
-
----
-
-## Implementation Phases
-
-### Phase 1: Abstraction & In-Memory Defaults
-1. Introduce `store/storage.go` with the `Storage` interface.
-2. Introduce `store/pubsub.go` with the `PubSub` interface.
-3. Implement `memory` adapters for both to serve as the default so the framework runs out-of-the-box without Redis.
-4. Refactor `fiber/websocket.go` (specifically `SessionStore` and `ClientStateStore`) to use the `Storage` interface instead of maps.
-5. Refactor `fiber/websocket.go` (`WSHub`) to use the `PubSub` interface for broadcasting. 
-
-### Phase 2: Configuration & Fiber Integration
-1. Add `Prefork`, `Storage`, and `PubSub` to `gospa.Config` in `gospa.go`.
-2. Map `Config.Prefork` to `fiberConfig.Prefork`.
-3. Validate config on startup: Output a `WARNING` if `Prefork: true` is combined with memory-based Storage/PubSub, notifying the user that state will be isolated.
-
-### Phase 3: Redis/Valkey Plugin
-1. Create a `plugin/store/redis` or `store/redis` package.
-2. Implement the `Storage` and `PubSub` interfaces using the `github.com/redis/go-redis/v9` client.
-3. Create an example app (`examples/prefork`) demonstrating Prefork scaling with Redis.
-
-### Phase 4: State Serialization Improvements
-- In `state/serialize.go`, ensure `StateMap` can be fully serialized and fully hydrated from raw JSON bytes, as external storage only stores bytes.
-- Handle state versioning or diffing carefully if multiple processes write to the same state concurrently (consider optimistic locking or last-write-wins).
-
----
-
-## Security & Concurrency Considerations
-- **Race Conditions**: With multiple processes accessing the same session/state, we may encounter race conditions. Ensure atomic updates where possible.
-- **Payload Size**: `ClientStateStore` could grow large for complex apps. Minimize what is saved to the store by leveraging state diffing.
-
-
-<!-- FILE: plans/runtime-performance-optimization-plan.md -->
-================================================================================
-
-# GoSPA Runtime Performance Optimization Plan
-
-## Executive Summary
-
-This plan outlines a comprehensive strategy to optimize the GoSPA runtime environment for minimal initial load times and maximum execution speed. The optimization spans three phases: profiling and analysis, implementation, and validation.
-
-## Current Architecture Analysis
-
-### Client Runtime Structure
-
-```mermaid
-graph TD
-    A[runtime.ts - Full Entry] --> B[runtime-core.ts - Core]
-    A --> C[DOMPurify Import]
-    B --> D[state.ts - Reactive Primitives]
-    B --> E[dom.ts - DOM Bindings]
-    B --> F[events.ts - Event Handling]
-    
-    G[Lazy Modules] --> H[websocket.ts]
-    G --> I[navigation.ts]
-    G --> J[transition.ts]
-    
-    K[Streaming SSR] --> L[streaming.ts]
-    K --> M[island.ts]
-    
-    N[Development] --> O[hmr.ts]
-    N --> P[sse.ts]
-```
-
-### Existing Optimizations
-
-| Feature | Implementation | Status |
-|---------|---------------|--------|
-| Code Splitting | Bun `--splitting` flag | Active |
-| Lazy Loading | Dynamic imports for WS/Nav/Transition | Active |
-| Cache Busting | SHA256 hash in filename | Active |
-| Compression | Fiber compress middleware | Active |
-| Long-term Caching | max-age=31536000, immutable | Active |
-| Streaming SSR | SetBodyStreamWriter | Active |
-| Hydration Strategies | immediate/visible/idle/interaction/lazy | Active |
-| Runtime Variants | full/core/simple | Active |
-
-### Identified Bottlenecks
-
-1. **Bundle Size**: No tree-shaking validation, potential dead code
-2. **Initial Parse Time**: Full state.ts included in core bundle
-3. **WebSocket Connection**: No connection pooling or multiplexing
-4. **State Serialization**: JSON.stringify without optimization
-5. **Memory Leaks**: Potential in reactive subscriptions without cleanup
-6. **Critical Path**: DOMPurify loaded synchronously in full runtime
-
----
-
-## Phase 1: Profiling and Analysis
-
-### 1.1 Bundle Analysis Setup
-
-**Objective**: Establish baseline metrics and identify optimization targets.
-
-**Tasks**:
-- [ ] Add bundle analyzer to build process
-- [ ] Generate source maps for production builds
-- [ ] Create bundle size regression test
-- [ ] Document current bundle sizes per entry point
-
-**Implementation**:
-```json
-// client/package.json - Add analyze script
-{
-  "scripts": {
-    "analyze": "bun build ./src/runtime.ts --outdir ./dist --target browser --splitting --format esm --sourcemap && bunx bundle-analyzer ./dist"
-  }
-}
-```
-
-**Metrics to Track**:
-- Total bundle size (gzipped)
-- Individual chunk sizes
-- Dependency tree depth
-- Duplicate code percentage
-
-### 1.2 Runtime Performance Profiling
-
-**Objective**: Measure execution speed and identify hot paths.
-
-**Tasks**:
-- [ ] Add performance marks to critical initialization paths
-- [ ] Create benchmark suite for reactive primitives
-- [ ] Profile hydration time across strategies
-- [ ] Measure WebSocket message throughput
-
-**Key Metrics**:
-- Time to Interactive (TTI)
-- First Contentful Paint (FCP)
-- Hydration completion time
-- State update latency
-
-### 1.3 Memory Profiling
-
-**Objective**: Identify memory leaks and optimization opportunities.
-
-**Tasks**:
-- [ ] Add memory profiling to reactive primitives
-- [ ] Test subscription cleanup on component destroy
-- [ ] Profile long-running WebSocket connections
-- [ ] Measure island hydration memory impact
-
----
-
-## Phase 2: Implementation Steps
-
-### 2.1 Code Splitting Enhancements
-
-**Objective**: Reduce initial bundle size through strategic code splitting.
-
-#### 2.1.1 Extract Debug Utilities
-
-```typescript
-// client/src/state.ts - Move debug utilities to separate module
-// BEFORE: Debug utilities in state.ts
-// AFTER: Lazy-loaded debug module
-
-// client/src/debug.ts - New file
-export function inspect<T>(rune: Rune<T>): void { ... }
-export function tracking(): boolean { ... }
-export function watchPath(...): void { ... }
-```
-
-**Impact**: Reduces core bundle by ~2KB
-
-#### 2.1.2 Create Micro-Runtimes
-
-```mermaid
-graph LR
-    A[Full Runtime] --> B[Core Runtime]
-    A --> C[Minimal Runtime]
-    B --> D[State Only]
-    B --> E[DOM Only]
-```
-
-**Tasks**:
-- [ ] Create `runtime-state.ts` - State primitives only
-- [ ] Create `runtime-dom.ts` - DOM bindings only  
-- [ ] Create `runtime-island.ts` - Island hydration only
-- [ ] Update Go server to serve appropriate runtime variant
-
-#### 2.1.3 Lazy Load DOMPurify
-
-```typescript
-// client/src/dom.ts - Lazy load sanitizer
-let dompurifyModule: Promise<typeof DOMPurify> | null = null;
-
-async function getSanitizer(): Promise<(html: string) => string> {
-  if (!dompurifyModule) {
-    dompurifyModule = import('dompurify').then(m => m.default);
-  }
-  const purify = await dompurifyModule;
-  return (html: string) => purify.sanitize(html);
-}
-```
-
-### 2.2 Lazy Loading Improvements
-
-**Objective**: Defer non-critical module loading.
-
-#### 2.2.1 Preload Hints Integration
-
-```go
-// gospa.go - Add preload headers for critical chunks
-func (a *App) setupRoutes() {
-    // Add Link header for preload hints
-    a.Fiber.Use(func(c *fiberpkg.Ctx) error {
-        c.Set("Link", fmt.Sprintf(
-            "<%s>; rel=modulepreload",
-            a.getRuntimePath(),
-        ))
-        return c.Next()
-    })
-}
-```
-
-#### 2.2.2 Intelligent Module Preloading
-
-```typescript
-// client/src/runtime-core.ts - Predictive preloading
-let preloadedModules = new Set<string>();
-
-export function preloadModule(module: 'ws' | 'nav' | 'transition'): void {
-  if (preloadedModules.has(module)) return;
-  preloadedModules.add(module);
-  
-  switch (module) {
-    case 'ws':
-      import('./websocket.ts');
-      break;
-    case 'nav':
-      import('./navigation.ts');
-      break;
-    case 'transition':
-      import('./transition.ts');
-      break;
-  }
-}
-
-// Preload navigation on hover
-document.addEventListener('mouseover', (e) => {
-  const link = (e.target as Element).closest('a[href]');
-  if (link) preloadModule('nav');
-}, { passive: true, capture: true });
-```
-
-### 2.3 Asset Compression Optimization
-
-**Objective**: Maximize compression efficiency.
-
-#### 2.3.1 Brotli Compression for Static Assets
-
-```go
-// gospa.go - Add Brotli compression option
-import "github.com/andybalholm/brotli"
-
-func (a *App) setupMiddleware() {
-    // Add Brotli for supported clients
-    a.Fiber.Use(func(c *fiberpkg.Ctx) error {
-        acceptEncoding := c.Get("Accept-Encoding")
-        if strings.Contains(acceptEncoding, "br") {
-            // Use Brotli compression
-        }
-        return c.Next()
-    })
-}
-```
-
-#### 2.3.2 Pre-compress Embedded Assets
-
-```go
-// embed/runtime.go - Pre-compressed variants
-//go:embed *.js *.js.br *.js.gz
-var runtimeFS embed.FS
-
-func RuntimeJS(simple bool, encoding string) ([]byte, error) {
-    ext := ".js"
-    if encoding == "br" {
-        ext = ".js.br"
-    } else if encoding == "gzip" {
-        ext = ".js.gz"
-    }
-    name := "runtime" + ext
-    if simple {
-        name = "runtime-simple" + ext
-    }
-    return runtimeFS.ReadFile(name)
-}
-```
-
-### 2.4 Memory Management
-
-**Objective**: Prevent memory leaks and optimize garbage collection.
-
-#### 2.4.1 Reactive Primitive Cleanup
-
-```typescript
-// client/src/state.ts - Enhanced cleanup
-export class Effect {
-  private disposed = false;
-  private cleanupFns: (() => void)[] = [];
-  
-  addCleanup(fn: () => void): void {
-    this.cleanupFns.push(fn);
-  }
-  
-  dispose(): void {
-    if (this.disposed) return;
-    this.disposed = true;
-    
-    // Run all cleanup functions
-    for (const fn of this.cleanupFns) {
-      try { fn(); } catch {}
-    }
-    this.cleanupFns = [];
-    
-    // Unregister from all dependencies
-    for (const dep of this.dependencies) {
-      dep.unsubscribe(this);
-    }
-    this.dependencies.clear();
-  }
-}
-```
-
-#### 2.4.2 WeakRef for Element Bindings
-
-```typescript
-// client/src/dom.ts - Use WeakRef for element bindings
-const elementBindings = new WeakMap<Element, Set<Binding>>();
-
-export function bindElement<T>(
-  element: Element,
-  rune: Rune<T>,
-  options: Partial<Binding> = {}
-): () => void {
-  // WeakMap automatically cleans up when element is GC'd
-  let bindings = elementBindings.get(element);
-  if (!bindings) {
-    bindings = new Set();
-    elementBindings.set(element, bindings);
-  }
-  
-  const binding: Binding = { ... };
-  bindings.add(binding);
-  
-  return () => {
-    bindings.delete(binding);
-    if (bindings.size === 0) {
-      elementBindings.delete(element);
-    }
-  };
-}
-```
-
-#### 2.4.3 Island Cleanup on Navigation
-
-```typescript
-// client/src/island.ts - Cleanup islands on navigation
-export class IslandManager {
-  private cleanupFns: Map<string, () => void> = new Map();
-  
-  registerCleanup(id: string, fn: () => void): void {
-    this.cleanupFns.set(id, fn);
-  }
-  
-  cleanupIsland(id: string): void {
-    const cleanup = this.cleanupFns.get(id);
-    if (cleanup) {
-      cleanup();
-      this.cleanupFns.delete(id);
-    }
-    this.islands.delete(id);
-    this.hydrated.delete(id);
-  }
-  
-  cleanupAll(): void {
-    for (const [id, cleanup] of this.cleanupFns) {
-      cleanup();
-    }
-    this.cleanupFns.clear();
-    this.islands.clear();
-    this.hydrated.clear();
-  }
-}
-```
-
-### 2.5 Caching Optimization
-
-**Objective**: Maximize cache hit rates and minimize redundant operations.
-
-#### 2.5.1 Navigation Cache Enhancement
-
-```typescript
-// client/src/navigation.ts - Enhanced caching
-interface CacheEntry {
-  html: string;
-  head: string;
-  timestamp: number;
-  etag: string;
-  status: 'fresh' | 'stale' | 'fetching';
-}
-
-class NavigationCache {
-  private cache = new Map<string, CacheEntry>();
-  private maxAge = 30000; // 30 seconds
-  private maxSize = 50; // Maximum entries
-  
-  get(url: string): CacheEntry | null {
-    const entry = this.cache.get(url);
-    if (!entry) return null;
-    
-    if (Date.now() - entry.timestamp > this.maxAge) {
-      entry.status = 'stale';
-    }
-    return entry;
-  }
-  
-  set(url: string, html: string, head: string, etag: string): void {
-    // LRU eviction
-    if (this.cache.size >= this.maxSize) {
-      const oldest = [...this.cache.entries()]
-        .sort((a, b) => a[1].timestamp - b[1].timestamp)[0];
-      this.cache.delete(oldest[0]);
-    }
-    
-    this.cache.set(url, {
-      html, head, etag,
-      timestamp: Date.now(),
-      status: 'fresh'
-    });
-  }
-}
+app := gospa.New(gospa.Config{
+    EnableSSE: true,
+    SSEPath:   "/_sse",
+})
 ```
 
-#### 2.5.2 Service Worker for Offline Support
+#### 2. Correct Client Usage
 
 ```javascript
-// client/sw.js - Service worker for runtime caching
-const RUNTIME_CACHE = 'gospa-runtime-v1';
-const STATIC_CACHE = 'gospa-static-v1';
+const clientId = crypto.randomUUID();
+const es = new EventSource(`/_sse/connect?clientId=${clientId}`);
 
-self.addEventListener('install', (event) => {
-  event.waitUntil(
-    caches.open(RUNTIME_CACHE).then((cache) => {
-      return cache.addAll([
-        '/_gospa/runtime.js',
-        '/_gospa/runtime-core.js',
-      ]);
-    })
-  );
-});
+es.onopen = () => console.log('SSE connected');
 
-self.addEventListener('fetch', (event) => {
-  if (event.request.url.includes('/_gospa/')) {
-    event.respondWith(
-      caches.match(event.request).then((response) => {
-        return response || fetch(event.request);
-      })
-    );
-  }
+es.onmessage = (ev) => {
+    console.log('Message:', JSON.parse(ev.data));
+};
+
+es.onerror = (err) => {
+    console.error('SSE error:', err);
+};
+
+// Listen for named events
+es.addEventListener('notification', (ev) => {
+    const data = JSON.parse(ev.data);
+    showToast(data.message);
 });
 ```
 
-#### 2.5.3 WebSocket Message Caching
-
-```typescript
-// client/src/websocket.ts - Message deduplication
-class MessageCache {
-  private seen = new Set<string>();
-  private max = 1000;
-  
-  shouldProcess(message: StateMessage): boolean {
-    const key = `${message.type}:${message.componentId || ''}:${JSON.stringify(message.data || message.diff || {})}`;
-    
-    if (this.seen.has(key)) {
-      return false;
-    }
-    
-    this.seen.add(key);
-    if (this.seen.size > this.max) {
-      // Remove oldest entries
-      const entries = [...this.seen].slice(0, this.max / 2);
-      this.seen = new Set(entries);
-    }
-    
-    return true;
-  }
-}
-```
-
-### 2.6 State Serialization Optimization
-
-**Objective**: Minimize serialization overhead.
-
-#### 2.6.1 Binary State Protocol
-
-```typescript
-// client/src/state.ts - Binary serialization option
-export class StateMap {
-  toBinary(): Uint8Array {
-    const encoder = new TextEncoder();
-    const entries: [string, unknown][] = [];
-    
-    for (const [key, rune] of this.runes) {
-      entries.push([key, rune.get()]);
-    }
-    
-    // Simple binary format: [length][key][value]...
-    const json = JSON.stringify(entries);
-    return encoder.encode(json);
-  }
-  
-  static fromBinary(data: Uint8Array): StateMap {
-    const decoder = new TextDecoder();
-    const json = decoder.decode(data);
-    const entries = JSON.parse(json) as [string, unknown][];
-    
-    const map = new StateMap();
-    for (const [key, value] of entries) {
-      map.set(key, value);
-    }
-    return map;
-  }
-}
-```
-
-#### 2.6.2 State Diffing Enhancement
-
-```typescript
-// client/src/state.ts - Optimized diffing
-export function diffStates(
-  oldState: Record<string, unknown>,
-  newState: Record<string, unknown>
-): Record<string, unknown> {
-  const diff: Record<string, unknown> = {};
-  
-  for (const key in newState) {
-    if (!Object.is(oldState[key], newState[key])) {
-      diff[key] = newState[key];
-    }
-  }
-  
-  for (const key in oldState) {
-    if (!(key in newState)) {
-      diff[key] = null; // Mark for deletion
-    }
-  }
-  
-  return diff;
-}
-```
-
-### 2.7 Hydration Optimization
-
-**Objective**: Minimize hydration blocking time.
-
-#### 2.7.1 Batched Hydration
-
-```typescript
-// client/src/streaming.ts - Batched hydration
-export class StreamingManager {
-  private hydrationBatch: IslandData[] = [];
-  private batchTimeout: number | null = null;
-  
-  private addToHydrationQueue(island: IslandData, priority: 'high' | 'normal' | 'low'): void {
-    if (this.hydratedIslands.has(island.id)) return;
-    
-    this.hydrationBatch.push(island);
-    
-    if (!this.batchTimeout) {
-      this.batchTimeout = window.requestIdleCallback(() => {
-        this.processBatch();
-      }, { timeout: 100 });
-    }
-  }
-  
-  private processBatch(): void {
-    const batch = this.hydrationBatch;
-    this.hydrationBatch = [];
-    this.batchTimeout = null;
-    
-    // Sort by priority
-    batch.sort((a, b) => {
-      const order = { high: 0, normal: 1, low: 2 };
-      return order[a.priority] - order[b.priority];
-    });
-    
-    // Process in chunks to avoid blocking
-    const processChunk = (index: number) => {
-      const chunk = batch.slice(index, index + 5);
-      if (chunk.length === 0) return;
-      
-      chunk.forEach(island => this.hydrateIsland(island));
-      
-      requestAnimationFrame(() => processChunk(index + 5));
-    };
-    
-    processChunk(0);
-  }
-}
-```
-
-#### 2.7.2 Progressive Hydration with requestIdleCallback
-
-```typescript
-// client/src/island.ts - Progressive hydration
-export class IslandManager {
-  private idleCallbackId: number | null = null;
-  
-  scheduleIdleHydration(island: IslandElementData): void {
-    if ('requestIdleCallback' in window) {
-      this.idleCallbackId = (window as any).requestIdleCallback(
-        (deadline: IdleDeadline) => {
-          // Hydrate as many islands as possible within deadline
-          while (deadline.timeRemaining() > 0 && !this.queue.isEmpty()) {
-            const item = this.queue.shift();
-            if (item) this.hydrateIsland(item.island);
-          }
-          
-          // Schedule remaining for next idle period
-          if (!this.queue.isEmpty()) {
-            this.scheduleIdleHydration(island);
-          }
-        },
-        { timeout: island.defer ?? 2000 }
-      );
-    }
-  }
-}
-```
-
----
-
-## Phase 3: Validation Metrics
-
-### 3.1 Performance Budgets
-
-| Metric | Current | Target | Threshold |
-|--------|---------|--------|-----------|
-| Runtime Core Bundle | ~15KB | <12KB | <15KB |
-| Full Runtime Bundle | ~25KB | <20KB | <25KB |
-| Time to Interactive | TBD | <100ms | <200ms |
-| Hydration Time | TBD | <50ms | <100ms |
-| Memory Usage | TBD | <10MB | <20MB |
-| WebSocket Latency | TBD | <10ms | <50ms |
-
-### 3.2 Benchmark Suite
-
-```typescript
-// client/src/__benchmarks__/runtime.bench.ts
-import { test, expect, bench } from 'bun:test';
-
-bench('Rune creation', () => {
-  const rune = new Rune(0);
-  rune.get();
-});
-
-bench('Derived computation', () => {
-  const a = new Rune(1);
-  const b = new Rune(2);
-  const derived = new Derived(() => a.get() + b.get());
-  derived.get();
-});
-
-bench('State update propagation', () => {
-  const rune = new Rune(0);
-  const effect = new Effect(() => rune.get());
-  for (let i = 0; i < 1000; i++) {
-    rune.set(i);
-  }
-  effect.dispose();
-});
-
-bench('StateMap serialization', () => {
-  const map = new StateMap();
-  for (let i = 0; i < 100; i++) {
-    map.set(`key${i}`, { value: i, nested: { data: 'test' } });
-  }
-  map.toJSON();
-});
-```
-
-### 3.3 Continuous Monitoring
-
-**Tasks**:
-- [ ] Add Lighthouse CI to build pipeline
-- [ ] Create performance regression alerts
-- [ ] Set up bundle size tracking
-- [ ] Monitor Core Web Vitals in production
-
----
-
-## Implementation Priority
-
-### High Priority - Immediate Impact
-1. Bundle analysis and tree-shaking validation
-2. DOMPurify lazy loading
-3. Memory leak fixes in reactive primitives
-4. Navigation cache enhancement
-
-### Medium Priority - Significant Improvement
-1. Micro-runtime variants
-2. Preload hints integration
-3. Brotli compression
-4. Batched hydration
-
-### Low Priority - Optimization Polish
-1. Binary state protocol
-2. Service worker caching
-3. WebSocket message deduplication
-4. Progressive hydration refinement
-
----
-
-## Risk Assessment
-
-| Risk | Impact | Mitigation |
-|------|--------|------------|
-| Breaking changes to runtime API | High | Maintain backward compatibility layer |
-| Memory regression from lazy loading | Medium | Comprehensive memory profiling |
-| Compression compatibility issues | Low | Feature detection and fallbacks |
-| Service worker cache invalidation | Medium | Version-based cache keys |
-
----
-
-## Success Criteria
-
-1. **Bundle Size**: 20% reduction in core runtime size
-2. **Load Time**: 30% improvement in Time to Interactive
-3. **Memory**: No memory leaks in 24-hour stress test
-4. **Hydration**: 50% reduction in hydration blocking time
-5. **Cache Hit Rate**: >90% for navigation requests
-
----
-
-## Next Steps
-
-1. Review and approve this plan
-2. Set up bundle analysis tooling
-3. Create benchmark baseline measurements
-4. Begin Phase 1 implementation
-
-
-<!-- FILE: plans/unimplemented-tools-plan.md -->
-================================================================================
-
-# GoSPA Unimplemented Tools — Implementation Plan
-
-Generated: 2026-02-25  
-Status: **FULLY COMPLETED 2026-02-25** — All 10 phases implemented. Zero lint errors. Zero format issues.
-
-This plan covers every API surface that is referenced in documentation, code comments,
-or the website but **not yet implemented**, plus documentation and lint corrections.
-
----
-
-## Summary of Gaps Found
-
-| Category | Item | Location | Priority |
-|----------|------|----------|----------|
-| Config fields | `CompressState`, `StateDiffing` | `gospa.go` | Low |
-| Config fields | `WSReconnectDelay`, `WSMaxReconnect`, `WSHeartbeat` | `gospa.go` | Medium |
-| Config fields | `StateSerializer`, `StateDeserializer` | `gospa.go` | Medium |
-| Config fields | `SSR` (global SSR mode) | `gospa.go` | Low |
-| Middleware | `RequestLoggerMiddleware()` (no-op) | `fiber/middleware.go` | Low |
-| Doc sync | `DEV_TOOLS.md` still says ErrorOverlay/DevTools are "planned" | `docs/DEV_TOOLS.md` | High |
-| Error overlay | Not wired to Fiber's error handler in DevMode | `gospa.go` | High |
-| Website | DevTools page references unimplemented functions | `website/routes/docs/devtools/page.templ` | Medium |
-| gofmt | Three generated files not formatted | `examples/*/routes/generated_routes.go`, `website/routes/generated_routes.go` | High |
-
----
-
-## Phase 1 — Fix gofmt Issues ✅ DONE
-
-### 1.1 Run gofmt on all files
-
-The following files need formatting:
-- `examples/counter/routes/generated_routes.go`
-- `examples/counter-test-prefork/routes/generated_routes.go`
-- `website/routes/generated_routes.go`
-
-**Action:** Run `gofmt -w` on each, or add a `gofmt -w ./...` step.
-
-```bash
-gofmt -w examples/counter/routes/generated_routes.go
-gofmt -w examples/counter-test-prefork/routes/generated_routes.go
-gofmt -w website/routes/generated_routes.go
-```
-
----
-
-## Phase 2 — Fix Documentation Sync ✅ DONE
-
-### 2.1 Update `docs/DEV_TOOLS.md`
-
-**Problem:** Lines 84-92 say `ErrorOverlay` and `DevTools/StateInspectorMiddleware` are "planned but not yet implemented."  
-**Reality:** Both are **fully implemented** in `fiber/error_overlay.go` and `fiber/dev.go`.
-
-**Changes needed:**
-
-**Error Overlay section (line 84-88):**  
-Replace the "Planned" note with actual usage documentation covering:
-- `fiber.ErrorOverlayConfig` struct fields
-- `fiber.NewErrorOverlay(config)` constructor
-- `overlay.RenderOverlay(err, req)` method
-- How to wire it into Fiber's error handler
-
-**State Inspector section (line 90-93):**  
-Replace the "Planned" note with actual usage docs covering:
-- `fiber.NewDevTools(config DevConfig)` — creates dev tools
-- `devTools.Start()` / `devTools.Stop()` lifecycle
-- `fiber.StateInspectorMiddleware(devTools, config)` — add before routes
-- `devTools.DevPanelHandler()` → mount at `/_gospa/dev`
-- `devTools.DevToolsHandler()` → mount WebSocket at `/_gospa/dev/ws`
-- `devTools.LogStateChange(key, oldVal, newVal, source)` — manual logging
-- `devTools.GetStateLog()` / `devTools.GetStateKeys()`
-
-**RequestLoggerMiddleware section (line 96-104):**  
-Update note to accurately say it's a no-op placeholder and document the Fiber logger alternative.
-
-### 2.2 Update `docs/API.md`
-
-Verify the `ErrorOverlay` and `DevTools` APIs are documented (they are mentioned as planned in lines 133-138). Add a proper API reference section.
-
----
-
-## Phase 3 — Wire Error Overlay to DevMode ✅ DONE
-
-### 3.1 Integrate `ErrorOverlay` with Fiber's error handler
-
-**File:** `gospa.go` — `New()` function  
-**Problem:** `fiber/error_overlay.go` is fully implemented but never wired to Fiber's error handler in `gospa.go`. In DevMode, 500 errors should display the overlay HTML instead of a JSON response.
-
-**Implementation:**
+#### 3. Check Event Format
 
 ```go
-// In gospa.go New(), after creating fiberApp:
-if config.DevMode {
-    overlay := fiber.NewErrorOverlay(fiber.DefaultErrorOverlayConfig())
-    fiberApp.Use(func(c *fiberpkg.Ctx) error {
-        err := c.Next()
-        if err != nil {
-            // Render error overlay for HTML requests in dev mode
-            if strings.Contains(string(c.Request().Header.Peek("Accept")), "text/html") {
-                overlayHTML := overlay.RenderOverlay(err, nil)
-                c.Status(500)
-                c.Set("Content-Type", "text/html; charset=utf-8")
-                return c.SendString(overlayHTML)
-            }
-        }
-        return err
-    })
-}
+// Server must send proper SSE format
+routing.SendToClient(clientId, routing.SSEEvent{
+    Event: "notification",  // Event name (optional)
+    Data:  map[string]string{"message": "Hello!"},
+})
 ```
-
-**Files to modify:**
-- `gospa.go`: Add overlay to `setupMiddleware()`, add `strings` import
 
 ---
 
-## Phase 4 — Implement `RequestLoggerMiddleware()` ✅ DONE
+## WebSocket Authentication Issues
 
-### 4.1 Remove the no-op and add actual logging
+### Problem
+WebSocket connects but server rejects messages due to authentication.
 
-**File:** `fiber/middleware.go` — `RequestLoggerMiddleware()`  
-**Current state:** Function returns a handler that calls `c.Next()` and logs nothing.
+### Solution
 
-**Implementation:**
+#### 1. Use Middleware for Auth
 
 ```go
-// RequestLoggerMiddleware logs requests with method, path, status, and duration.
-func RequestLoggerMiddleware() gofiber.Handler {
-    return func(c *gofiber.Ctx) error {
-        start := time.Now()
-        err := c.Next()
-        log.Printf("[%s] %s %d %v",
-            c.Method(),
-            c.Path(),
-            c.Response().StatusCode(),
-            time.Since(start),
-        )
-        return err
-    }
-}
-```
-
-**Files to modify:**
-- `fiber/middleware.go`: Add `log` and `time` imports, implement the body
-
----
-
-## Phase 5 — Implement `WSReconnectDelay`, `WSMaxReconnect`, `WSHeartbeat` Config Fields ✅ DONE
-
-### 5.1 Pass WS config to the client runtime
-
-**Files:** `gospa.go`  
-**Current state:** The three fields exist in `Config` but are never read. The client runtime manages reconnect using its own hardcoded defaults (1s delay, 10 attempts, 30s heartbeat).
-
-**Implementation:** When rendering the init script in `renderRoute()`, pass these values if set:
-
-```go
-// In renderRoute(), in the runtime.init({...}) call, add:
-reconnectDelay := int(a.Config.WSReconnectDelay.Milliseconds())
-if reconnectDelay == 0 {
-    reconnectDelay = 1000 // default 1s
-}
-maxReconnect := a.Config.WSMaxReconnect
-if maxReconnect == 0 {
-    maxReconnect = 10 // default 10 attempts
-}
-heartbeat := int(a.Config.WSHeartbeat.Milliseconds())
-if heartbeat == 0 {
-    heartbeat = 30000 // default 30s
-}
-
-// Inject into script:
-// wsReconnectDelay: %d,
-// wsMaxReconnect: %d,
-// wsHeartbeat: %d,
-```
-
-**Client runtime:** The runtime already supports reconnect config; the Go side just needs to pass values into the `init()` call.
-
-**Files to modify:**
-- `gospa.go`: Read and inject WS config into the rendered script block
-
----
-
-## Phase 6 — Implement `CompressState` ✅ DONE
-
-### 6.1 Compress state JSON with gzip before sending
-
-**File:** `fiber/websocket.go` — `SendState()` and `SendInitWithSession()`  
-**Current state:** State is sent as plain JSON. `CompressState` config field exists but has no effect.
-
-The difficulty: `gospa.Config` is not available inside the `fiber` package. Options:
-1. Pass a `compress bool` flag to `SendState()`.
-2. Add a `CompressState bool` field to `WebSocketConfig`.
-
-**Implementation Plan:**
-1. Add `CompressState bool` to `WebSocketConfig` in `fiber/websocket.go`
-2. In `WebSocketHandler`, read `config.CompressState ` 
-3. In `WSClient`, add a `compressState bool` field set at creation time
-4. In `SendState()` / `SendInitWithSession()`: if `compressState`, gzip the JSON before sending, set a `"compressed": true` flag in the outer message
-5. In `gospa.go` `setupRoutes()`: pass `CompressState: a.Config.CompressState` to `WebSocketConfig`
-6. Client runtime: detect `"compressed": true` and decompress using `DecompressionStream` API
-
-**Files to modify:**
-- `fiber/websocket.go`: Add compress support to `WebSocketConfig`, `WSClient`, `SendState`, `SendInitWithSession`
-- `gospa.go`: Wire `Config.CompressState` to `WebSocketConfig`
-- `client/src/websocket.ts`: Add decompression support
-
----
-
-## Phase 7 — Implement `StateDiffing` ✅ DONE
-
-### 7.1 Send only changed state keys instead of full state
-
-**Current state:** On every state sync, the full state JSON is sent. `StateDiffing` exists but is ignored.
-
-**Implementation Plan:**
-1. In `WSClient`, add a `lastSentState map[string]interface{}` field
-2. In `SendState()`: if `stateDiffing`, compute the diff between `lastSentState` and current state, send only changed keys with a `"type": "patch"` message
-3. Client runtime: handle `"type": "patch"` messages by merging partial state
-
-**Files to modify:**
-- `fiber/websocket.go`: Add `StateDiffing bool` to `WebSocketConfig`, implement diff logic
-- `gospa.go`: Wire `Config.StateDiffing` to `WebSocketConfig`
-- `client/src/websocket.ts`: Handle `"patch"` message type
-
----
-
-## Phase 8 — Implement `StateSerializer` / `StateDeserializer` ✅ DONE
-
-### 8.1 Allow custom serialization for state
-
-**Current state:** State is always JSON-serialized. `StateSerializerFunc` and `StateDeserializerFunc` types exist in `gospa.go` but nothing uses them.
-
-**Implementation Plan:**
-1. Add `Serializer StateSerializerFunc` and `Deserializer StateDeserializerFunc` to `WebSocketConfig`
-2. In `SendState()` / `SendInitWithSession()`: if `Serializer` is set, use it instead of `json.Marshal`
-3. In `DefaultMessageHandler` on `"update"`: if `Deserializer` is set, use it instead of `json.Unmarshal`
-4. In `gospa.go`: wire `Config.StateSerializer/Deserializer` to `WebSocketConfig`
-
-**Files to modify:**
-- `fiber/websocket.go`: Add `Serializer/Deserializer` to `WebSocketConfig`, use in send/receive paths
-- `gospa.go`: Wire `Config.StateSerializer/StateDeserializer`
-
----
-
-## Phase 9 — Update Website Docs ✅ DONE
-
-### 9.1 Update `website/routes/docs/devtools/page.templ`
-
-The State Inspector section references:
-```typescript
-import { enableStateInspector } from 'gospa/runtime';
-enableStateInspector({ logChanges: true, showTimeline: true, highlightUpdates: true });
-window.__GOSPA_STATE_INSPECTOR__.getState();
-```
-
-These functions don't exist. Replace with the real API:
-
-```go
-// Server-side (real API):
-devTools := fiber.NewDevTools(fiber.DevConfig{...})
-app.Use(fiber.StateInspectorMiddleware(devTools, config))
-app.Get("/_gospa/dev", devTools.DevPanelHandler())
-app.Get("/_gospa/dev/ws", devTools.DevToolsHandler())
-```
-
-And:
-```js
-// Client-side (real API):
-window.__GOSPA__.globalState  // Access live state directly
-```
-
-Also fix the Performance Profiling section — `window.__GOSPA_PROFILER__` doesn't exist. Replace with a note that performance profiling is not yet implemented and direct users to browser DevTools.
-
-### 9.2 Fix Error Overlay section in website
-
-Update to show actual working usage with `fiber.NewErrorOverlay(config)` wired into Fiber's error handler. Remove the reference to `displayError()` from `@gospa/runtime` (doesn't exist).
-
----
-
-## Phase 10 — Lint & Format ✅ DONE
-
-### 10.1 Run gofmt
-
-```bash
-gofmt -w ./...
-```
-
-Specifically fixes:
-- `examples/counter/routes/generated_routes.go`
-- `examples/counter-test-prefork/routes/generated_routes.go`
-- `website/routes/generated_routes.go`
-
-### 10.2 Run golangci-lint
-
-```bash
-golangci-lint run --timeout 120s
-```
-
-Verify zero errors before and after all changes.
-
----
-
-## Execution Order
-
-1. **Phase 1** — gofmt (no code risk, trivial)
-2. **Phase 2** — Fix `docs/DEV_TOOLS.md` (docs only)
-3. **Phase 3** — Wire ErrorOverlay to DevMode (small wiring change)
-4. **Phase 4** — Implement `RequestLoggerMiddleware()` (trivial)
-5. **Phase 5** — Pass WS reconnect config to client (low risk)
-6. **Phase 9** — Update website docs (templ/docs only)
-7. **Phase 6** — `CompressState` (medium complexity)
-8. **Phase 7** — `StateDiffing` (medium complexity)
-9. **Phase 8** — `StateSerializer/Deserializer` (medium complexity)
-10. **Phase 10** — Final lint + format pass
-
----
-
-## Files to Modify
-
-| File | Phases |
-|------|--------|
-| `gospa.go` | 3, 5, 6, 7, 8 |
-| `fiber/middleware.go` | 4 |
-| `fiber/websocket.go` | 6, 7, 8 |
-| `docs/DEV_TOOLS.md` | 2 |
-| `docs/API.md` | 2 |
-| `website/routes/docs/devtools/page.templ` | 9 |
-| `examples/counter/routes/generated_routes.go` | 1 |
-| `examples/counter-test-prefork/routes/generated_routes.go` | 1 |
-| `website/routes/generated_routes.go` | 1 |
-
----
-
-## What Is NOT Changing
-
-- The public Go API surface (no breaking changes to existing implemented methods)
-- `CompressState`, `StateDiffing`, `StateSerializer`, `StateDeserializer` fields remain in `Config` — they just get wired up
-- Plugin system untouched
-- Client runtime TypeScript (except for new message type handling)
-- No new required configuration
-
-
-<!-- FILE: plans/website-plan.md -->
-================================================================================
-
-# GoSPA Website Architecture Plan
-
-## Overview
-
-Build a documentation website for GoSPA framework **using GoSPA itself** (dogfooding). The site will showcase the framework's capabilities while providing comprehensive documentation.
-
-## Deep Reasoning Chain
-
-### Psychological Analysis
-- **Target Audience**: Go developers seeking reactive SPA solutions, likely coming from JavaScript frameworks
-- **Cognitive Load**: Developers want quick answers - code samples first, explanations second
-- **Trust Signals**: Performance benchmarks, type safety, comparison table build credibility
-- **Differentiation**: "Svelte-like reactivity in Go" is the key hook - must be prominent
-
-### Technical Analysis
-- **Framework**: GoSPA with Fiber + Templ (the framework documenting itself)
-- **Rendering**: SSR for SEO, client-side hydration for interactivity
-- **Performance**: Sub-15KB runtime aligns with "lightweight" positioning
-- **State Management**: Use GoSPA's own Rune/Derived/Effect primitives for interactive components
-
-### Accessibility Analysis
-- Semantic HTML via Templ components
-- Keyboard navigation for sidebar and code examples
-- High contrast dark theme (Go/terminal aesthetic)
-- Skip links and proper heading hierarchy
-
-### Scalability Analysis
-- File-based routing scales naturally with docs growth
-- Component-based architecture for reusable UI elements
-- Markdown content can be migrated to CMS later if needed
-
----
-
-## Project Structure
-
-```
-website/
-├── main.go                    # GoSPA app entry point
-├── go.mod                     # Go module
-├── go.sum
-├── routes/                    # File-based routing
-│   ├── root_layout.templ      # Base HTML shell with nav
-│   ├── page.templ             # Homepage
-│   ├── docs/
-│   │   ├── layout.templ       # Docs layout with sidebar
-│   │   ├── page.templ         # /docs redirect or overview
-│   │   ├── get-started/
-│   │   │   └── page.templ     # Getting started guide
-│   │   ├── reactive-primitives/
-│   │   │   └── page.templ     # Rune, Derived, Effect docs
-│   │   ├── routing/
-│   │   │   └── page.templ     # File-based routing docs
-│   │   ├── state-management/
-│   │   │   └── page.templ     # State sync, sessions
-│   │   ├── websocket/
-│   │   │   └── page.templ     # WebSocket integration
-│   │   ├── remote-actions/
-│   │   │   └── page.templ     # Remote actions docs
-│   │   ├── security/
-│   │   │   └── page.templ     # CSRF, CORS, XSS
-│   │   ├── client-runtime/
-│   │   │   └── page.templ     # JS API reference
-│   │   └── api/
-│   │       └── page.templ     # Go API reference
-│   └── components/            # Shared Templ components
-│       ├── sidebar.templ
-│       ├── code_block.templ
-│       ├── benchmark_card.templ
-│       └── nav.templ
-├── static/
-│   ├── css/
-│   │   └── styles.css         # Tailwind v4 via CDN or custom
-│   └── js/                    # Any additional client JS
-└── content/                   # Markdown content (optional)
-```
-
----
-
-## Routing Architecture
-
-```mermaid
-graph TD
-    A[/] --> B[Homepage]
-    A --> C[/docs]
-    C --> D[/docs/get-started]
-    C --> E[/docs/reactive-primitives]
-    C --> F[/docs/routing]
-    C --> G[/docs/state-management]
-    C --> H[/docs/websocket]
-    C --> I[/docs/remote-actions]
-    C --> J[/docs/security]
-    C --> K[/docs/client-runtime]
-    C --> L[/docs/api]
-```
-
----
-
-## Homepage Design
-
-### Hero Section
-- **Headline**: "Svelte-like Reactivity for Go"
-- **Subheadline**: "Build reactive SPAs with server-side rendering. Type-safe. Lightweight. Fast."
-- **CTA Buttons**: "Get Started" | "View on GitHub"
-- **Visual**: Animated code comparison (Go + Templ vs React/Svelte)
-
-### Benchmark Visualization Section
-Transform the benchmark data into an interactive, visually compelling display:
-
-```
-┌─────────────────────────────────────────────────────────────────┐
-│  PERFORMANCE BENCHMARK                                           │
-│  ─────────────────────────────────────────────────────────────── │
-│                                                                  │
-│  Peak RPS: 24,345                                               │
-│  ████████████████████████████████████████  24k                  │
-│                                                                  │
-│  Latency @ 150 concurrent: 6.03ms avg                           │
-│  ▓▓▓▓▓▓░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░  6ms                  │
-│                                                                  │
-│  ┌──────────────────────────────────────────────────────────┐   │
-│  │  RPS vs Concurrency                                       │   │
-│  │                                                           │   │
-│  │  25k ┤                                    ●──●──●         │   │
-│  │  20k ┤                           ●──●──●                  │   │
-│  │  15k ┤                    ●──●                            │   │
-│  │  10k ┤              ●──●                                  │   │
-│  │   5k ┤        ●──●                                        │   │
-│  │      └─────────────────────────────────────────────────  │   │
-│  │         5    10    25    50   75   100  150  200         │   │
-│  │                     Concurrency                          │   │
-│  └──────────────────────────────────────────────────────────┘   │
-│                                                                  │
-│  ✓ 100% Success Rate  ✓ 307,600 Total Requests  ✓ 14.6s Total  │
-└─────────────────────────────────────────────────────────────────┘
-```
-
-**Interactive Elements**:
-- Hover over data points for exact values
-- Animated chart on scroll into view
-- Toggle between RPS and Latency views
-
-### Features Grid
-Six feature cards with icons:
-1. **Reactive Primitives** - Rune, Derived, Effect
-2. **File-Based Routing** - SvelteKit-style
-3. **WebSocket Sync** - Real-time state
-4. **Type Safety** - Compile-time validation
-5. **Lightweight Runtime** - <15KB gzipped
-6. **Security Built-in** - CSRF, CORS, XSS protection
-
-### Comparison Table
-| Feature | GoSPA | HTMX | Alpine | SvelteKit |
-|---------|-------|------|--------|-----------|
-| Language | Go | HTML | JS | JS/TS |
-| Runtime Size | <15KB | ~14KB | ~15KB | Varies |
-| SSR | ✅ | ✅ | ❌ | ✅ |
-| Type Safety | ✅ | ❌ | ❌ | ✅ |
-| WebSocket | ✅ | ❌ | ❌ | ✅ |
-| File Routing | ✅ | ❌ | ❌ | ✅ |
-| Reactivity | ✅ | ❌ | ✅ | ✅ |
-
-### Code Example Section
-Show a complete counter example with syntax highlighting:
-- Server-side Go code
-- Templ template
-- Client-side reactivity
-
----
-
-## Documentation Section Design
-
-### Sidebar Navigation
-```
-docs/
-├── Getting Started
-│   └── Quick Start
-├── Core Concepts
-│   ├── Reactive Primitives
-│   ├── Routing
-│   └── State Management
-├── Features
-│   ├── WebSocket Integration
-│   ├── Remote Actions
-│   └── Security
-└── Reference
-    ├── Client Runtime API
-    └── Go API
-```
-
-### Page Layout
-```
-┌─────────────────────────────────────────────────────────────────┐
-│  HEADER: Logo | Search | GitHub | Theme Toggle                  │
-├────────────┬────────────────────────────────────────────────────┤
-│            │                                                    │
-│  SIDEBAR   │   MAIN CONTENT                                     │
-│            │                                                    │
-│  ▸ Getting │   # Page Title                                     │
-│    Started │   ─────────────────────────────────────            │
-│            │                                                    │
-│  ▸ Core    │   Introduction paragraph...                        │
-│    Concepts│                                                    │
-│            │   ## Section                                       │
-│    ▸ Primit│   ────────────────                                 │
-│    ▸ Routin│                                                    │
-│    ▸ State │   ```go                                            │
-│            │   // Code example                                  │
-│  ▸ Features│   ```                                              │
-│    ▸ WebSoc│                                                    │
-│    ▸ Remote│   > Note: Important information                    │
-│    ▸ Securi│                                                    │
-│            │   ## Next Section                                  │
-│  ▸ Referenc│   ...                                              │
-│    ▸ Client│                                                    │
-│    ▸ Go API│   ─────────────────────────────────────            │
-│            │   ← Previous Page    Next Page →                   │
-└────────────┴────────────────────────────────────────────────────┘
-```
-
----
-
-## Components to Build
-
-### Go/Templ Components
-
-| Component | Purpose |
-|-----------|---------|
-| `Sidebar` | Collapsible navigation with active state |
-| `CodeBlock` | Syntax-highlighted code with copy button |
-| `BenchmarkChart` | Interactive SVG/Canvas chart |
-| `FeatureCard` | Icon + title + description |
-| `ComparisonTable` | Feature comparison matrix |
-| `Nav` | Top navigation with mobile menu |
-| `Footer` | Links and copyright |
-| `Breadcrumbs` | Docs navigation path |
-| `Pagination` | Previous/Next page links |
-| `SearchModal` | Command+K search (future) |
-| `ThemeProvider` | Dark/light mode toggle |
-
-### Client-Side Interactive Components
-
-| Component | Purpose | GoSPA Feature Used |
-|-----------|---------|-------------------|
-| `BenchmarkViz` | Animated benchmark charts | Rune for state, Effect for animations |
-| `CodeTabs` | Tabbed code examples | Rune for active tab |
-| `ThemeToggle` | Dark/light mode | Local state (data-gospa-local) |
-| `SidebarCollapse` | Expand/collapse sections | Rune for expanded state |
-| `CopyButton` | Copy code to clipboard | Effect for clipboard API |
-
----
-
-## Benchmark Data Structure
-
-```go
-type BenchmarkData struct {
-    Tests []BenchmarkTest
-    Summary BenchmarkSummary
-}
-
-type BenchmarkTest struct {
-    Name        string
-    Concurrency int
-    Requests    int
-    RPS         float64
-    AvgLatency  string
-    P95Latency  string
-    SuccessRate float64
-}
-
-type BenchmarkSummary struct {
-    PeakRPS          float64
-    PeakConcurrency  int
-    BestLatency      string
-    BestLatencyConc  int
-    TotalRequests    int
-    TotalDuration    string
-    SuccessRate      float64
-}
-```
-
----
-
-## Visual Design Direction
-
-### Aesthetic: **Terminal-Inspired Modern Dark**
-
-**Rationale**: Go developers often work in terminals. A dark, terminal-inspired aesthetic feels native while remaining modern and readable.
-
-**Typography**:
-- Display: JetBrains Mono or Fira Code (monospace for code feel)
-- Body: Inter or system-ui (readable for long docs)
-
-**Color Palette**:
-```css
-:root {
-  --bg-primary: #0a0a0f;      /* Deep black */
-  --bg-secondary: #12121a;    /* Slightly lighter */
-  --bg-tertiary: #1a1a24;     /* Cards, code blocks */
-  --text-primary: #e4e4e7;    /* Off-white */
-  --text-secondary: #a1a1aa;  /* Muted */
-  --text-muted: #71717a;      /* Very muted */
-  --accent-primary: #22d3ee;  /* Cyan - Go-ish */
-  --accent-secondary: #a78bfa;/* Purple - secondary */
-  --accent-success: #22c55e;  /* Green - success */
-  --accent-warning: #f59e0b;  /* Amber - warning */
-  --border: #27272a;          /* Subtle borders */
-}
-```
-
-**Visual Elements**:
-- Subtle grid pattern background (like graph paper)
-- Glowing accent borders on interactive elements
-- Code blocks with line numbers and syntax highlighting
-- Smooth transitions between pages (SPA navigation)
-
----
-
-## Implementation Phases
-
-### Phase 1: Foundation
-1. Initialize GoSPA project in `website/`
-2. Create root layout with navigation
-3. Set up Tailwind CSS v4 via CDN
-4. Create homepage hero section
-
-### Phase 2: Homepage
-1. Build benchmark visualization component
-2. Create features grid
-3. Add comparison table
-4. Implement code example section
-
-### Phase 3: Docs Infrastructure
-1. Create docs layout with sidebar
-2. Implement sidebar navigation
-3. Add breadcrumbs and pagination
-4. Create code block component with copy
-
-### Phase 4: Documentation Pages
-1. Write Getting Started guide
-2. Create Reactive Primitives docs
-3. Create Routing docs
-4. Create remaining feature docs
-5. Create API reference pages
-
-### Phase 5: Polish
-1. Add theme toggle (dark/light)
-2. Implement smooth page transitions
-3. Add search functionality (optional)
-4. Optimize for SEO
-
----
-
-## Technical Considerations
-
-### SEO
-- Use semantic HTML in Templ components
-- Add meta tags in root layout
-- Create sitemap endpoint
-- Use proper heading hierarchy
-
-### Performance
-- Leverage GoSPA's SSR for fast initial load
-- Use client-side navigation for SPA feel
-- Lazy load interactive components
-- Optimize images and assets
-
-### Accessibility
-- ARIA labels for interactive elements
-- Keyboard navigation support
-- Skip links for main content
-- Proper focus management
-
----
-
-## File Dependencies
-
-The website will need to reference:
-- `../docs/API.md` - Source content for API reference
-- `../tests/benchmark.txt` - Performance data for visualization
-- `../README.md` - Feature descriptions and comparison table
-
----
-
-## Next Steps
-
-1. **Approve this plan** - Review and confirm architecture
-2. **Switch to Code mode** - Begin implementation
-3. **Start with Phase 1** - Foundation setup
-
-
-<!-- FILE: plans/website-performance-optimization.md -->
-================================================================================
-
-# Website Performance & Network Optimization Plan
-
-## Executive Summary
-
-The website at `/website` is re-requesting the same image (`gospa1-64.webp`) on every SPA navigation. This is caused by the client-side navigation system replacing the entire `[data-gospa-root]` element, which destroys and recreates DOM elements including the header logo.
-
-## Root Cause Analysis
-
-### Problem 1: SPA Navigation Destroys Persistent Elements
-
-**Location:** [`client/src/navigation.ts:147`](client/src/navigation.ts:147)
-
-```typescript
-// Current behavior - replaces entire root including header
-rootEl.innerHTML = sanitizedContent;
-```
-
-The `updateDOM` function replaces the entire `[data-gospa-root]` element content. This includes:
-- Header with logo image
-- Footer
-- Main content area
-
-When the `<img>` element is destroyed and recreated, the browser treats it as a new resource request, bypassing the cache in some cases.
-
-### Problem 2: Content Hash Detection Insufficient
-
-**Location:** [`website/main.go:64-80`](website/main.go:64)
-
-The `hasContentHash` function requires 4+ character hashes:
-- `gospa1-64.webp` has hash `64` (2 chars) → fails check
-- Gets 1-day cache instead of immutable cache
-
-### Problem 3: Missing ETag Support
-
-No `ETag` or `Last-Modified` headers for conditional requests (`If-None-Match`, `If-Modified-Since`).
-
-### Problem 4: No Resource Hints
-
-Critical assets like the logo are not preloaded, causing delayed loading.
-
----
-
-## Solution Architecture
-
-```mermaid
-flowchart TB
-    subgraph Current Flow
-        A[User clicks doc link] --> B[fetchPageFromServer]
-        B --> C[Server returns full HTML]
-        C --> D[updateDOM replaces data-gospa-root]
-        D --> E[Header img destroyed]
-        E --> F[New img created]
-        F --> G[Browser requests image again]
-    end
-    
-    subgraph Optimized Flow
-        A2[User clicks doc link] --> B2[fetchPageFromServer]
-        B2 --> C2[Server returns page content only]
-        C2 --> D2[updateDOM replaces main only]
-        D2 --> E2[Header/footer preserved]
-        E2 --> F2[No image re-request]
-    end
-```
-
----
-
-## Implementation Plan
-
-### Phase 1: Fix SPA Navigation - Preserve Persistent Elements
-
-**Files to modify:**
-1. `client/src/navigation.ts` - Update DOM update logic
-2. `website/routes/root_layout.templ` - Add content region markers
-
-**Changes:**
-
-#### 1.1 Add Content Region Marker in Layout
-
-In `root_layout.templ`, wrap only the page-specific content:
-
-```templ
-<!-- Add data-gospa-page-content to main content area -->
-<main class="flex-grow z-10 relative">
-    <div data-gospa-page-content>
-        @children
-    </div>
-</main>
-```
-
-#### 1.2 Update Navigation to Target Content Region
-
-In `navigation.ts`, modify `updateDOM`:
-
-```typescript
-async function updateDOM(data: PageData): Promise<void> {
-    // Update title
-    if (data.title) {
-        document.title = data.title;
-    }
-
-    // Target content region only, not entire root
-    const contentEl = document.querySelector('[data-gospa-page-content]');
-    const rootEl = document.querySelector('[data-gospa-root]');
-    
-    if (contentEl) {
-        // Only update the content area - preserves header/footer
-        const sanitizedContent = await safeSanitize(data.content);
-        contentEl.innerHTML = sanitizedContent;
-    } else if (rootEl) {
-        // Fallback for legacy behavior
-        rootEl.innerHTML = await safeSanitize(data.content);
+app.Use(func(c *fiber.Ctx) error {
+    // Skip WebSocket upgrade path
+    if strings.HasPrefix(c.Path(), "/_gospa/ws") {
+        return c.Next()
     }
     
-    // Update head
-    updateHead(data.head);
-    
-    // Re-initialize runtime for new content
-    await initNewContent();
-}
+    // Regular auth check
+    return authMiddleware(c)
+})
+
+// WebSocket-specific auth
+app.Use(fiber.WebSocketMiddlewareWithAuth(func(token string) (bool, string) {
+    userID, err := validateToken(token)
+    return err == nil, userID
+}))
 ```
 
-#### 1.3 Update Server Response
-
-Modify the server to return only the page content, not the full layout:
-
-```typescript
-// In fetchPageFromServer, extract content region
-const contentEl = doc.querySelector('[data-gospa-page-content]');
-const content = contentEl ? contentEl.innerHTML : /* fallback */;
-```
-
-### Phase 2: Improve Cache Headers
-
-**File:** `website/main.go`
-
-#### 2.1 Fix Content Hash Detection
-
-```go
-// hasContentHash checks if filename contains a content hash pattern
-func hasContentHash(path string) bool {
-    // Known static assets that should be cached immutably
-    immutablePatterns := []string{
-        "gospa1-",  // Logo variants
-        "gospa2-",  // Other brand assets
-    }
-    
-    for _, pattern := range immutablePatterns {
-        if strings.Contains(path, pattern) {
-            return true
-        }
-    }
-    
-    // Check for common hash patterns: -abc123, .abc123, _abc123
-    for _, pattern := range []string{"-", ".", "_"} {
-        parts := strings.Split(path, pattern)
-        if len(parts) >= 2 {
-            last := parts[len(parts)-1]
-            if idx := strings.Index(last, "."); idx >= 2 {
-                hash := last[:idx]
-                if isAlphanumeric(hash) && len(hash) >= 4 {
-                    return true
-                }
-            }
-        }
-    }
-    return false
-}
-```
-
-#### 2.2 Add ETag Support
-
-```go
-import "crypto/sha256"
-
-func staticCacheMiddleware(c *fiber.Ctx) error {
-    path := c.Path()
-    
-    if strings.HasPrefix(path, "/static/") {
-        // Generate ETag from file path + mtime
-        etag := generateETag(path)
-        c.Set("ETag", etag)
-        
-        // Check If-None-Match for 304 response
-        if c.Get("If-None-Match") == etag {
-            return c.SendStatus(fiber.StatusNotModified)
-        }
-        
-        if hasContentHash(path) {
-            c.Set("Cache-Control", "public, max-age=31536000, immutable")
-        } else {
-            c.Set("Cache-Control", "public, max-age=86400, stale-while-revalidate=604800")
-        }
-    }
-    
-    return c.Next()
-}
-
-func generateETag(path string) string {
-    // Use path as basis - in production would include file hash/mtime
-    h := sha256.Sum256([]byte(path))
-    return fmt.Sprintf(`"%x"`, h[:8])
-}
-```
-
-### Phase 3: Add Resource Hints
-
-**File:** `website/routes/root_layout.templ`
-
-Add preload directives in the `<head>`:
-
-```templ
-<head>
-    <!-- Preload critical assets -->
-    <link rel="preload" href="/static/gospa1-64.webp" as="image" type="image/webp" />
-    
-    <!-- Preconnect to external origins -->
-    <link rel="preconnect" href="https://fonts.googleapis.com" />
-    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
-    <link rel="preconnect" href="https://unpkg.com" />
-    
-    <!-- DNS prefetch for less critical external resources -->
-    <link rel="dns-prefetch" href="https://fonts.googleapis.com" />
-    
-    <!-- Existing head content... -->
-</head>
-```
-
-### Phase 4: Optional Service Worker for Offline Caching
-
-**File:** `website/static/sw.js` (new file)
+#### 2. Send Auth Token on Connect
 
 ```javascript
-const CACHE_NAME = 'gospa-docs-v1';
-const STATIC_ASSETS = [
-    '/static/gospa1-64.webp',
-    '/static/gospa1-64.ico',
-];
-
-self.addEventListener('install', (event) => {
-    event.waitUntil(
-        caches.open(CACHE_NAME).then((cache) => {
-            return cache.addAll(STATIC_ASSETS);
-        })
-    );
-});
-
-self.addEventListener('fetch', (event) => {
-    if (event.request.destination === 'image') {
-        event.respondWith(
-            caches.match(event.request).then((response) => {
-                return response || fetch(event.request);
-            })
-        );
-    }
+const ws = initWebSocket({
+    url: 'ws://localhost:3000/_gospa/ws',
+    onOpen: () => {
+        // Send auth token as first message
+        ws.send({
+            type: 'auth',
+            token: localStorage.getItem('authToken'),
+        });
+    },
 });
 ```
 
-Register in layout:
+---
 
-```templ
+## Debugging WebSocket Connections
+
+### Enable Debug Logging
+
+```javascript
+const ws = initWebSocket({
+    url: 'ws://localhost:3000/_gospa/ws',
+    debug: true,  // Logs all events to console
+});
+```
+
+### Monitor in DevTools
+
+1. **Network Tab**: Filter by `WS` to see WebSocket frames
+2. **Console**: Look for `[GoSPA]` prefixed logs
+3. **Application > Storage**: Check `sessionStorage` for queued messages
+
+### Server-Side Logging
+
+```go
+app := gospa.New(gospa.Config{
+    DevMode: true,  // Logs all WebSocket activity
+})
+```
+
+---
+
+## Common Mistakes
+
+### Mistake 1: Blocking the Event Loop
+
+```javascript
+// BAD - Blocks other messages
+ws.onMessage = (msg) => {
+    heavyComputation(msg);  // Synchronous, blocks
+};
+
+// GOOD - Use async or yield
+ws.onMessage = async (msg) => {
+    await heavyComputation(msg);  // Non-blocking
+};
+```
+
+### Mistake 2: Not Handling Reconnect
+
+```javascript
+// BAD - No reconnect logic
+ws.onClose = () => {
+    console.log('Connection closed');
+};
+
+// GOOD - Auto-reconnect enabled
+const ws = initWebSocket({
+    url: 'ws://localhost:3000/_gospa/ws',
+    reconnect: true,
+    maxReconnectAttempts: 10,
+    onDisconnect: () => showReconnectingUI(),
+    onConnect: () => hideReconnectingUI(),
+});
+```
+
+### Mistake 3: Sending Before Connected
+
+```javascript
+// BAD - May fail if not connected yet
+ws.send({ type: 'action', data: {} });
+
+// GOOD - Wait for connection
+await ws.connect();
+ws.send({ type: 'action', data: {} });
+
+// Or use queue (automatic in GoSPA)
+const ws = initWebSocket({
+    url: 'ws://localhost:3000/_gospa/ws',
+    queueMessages: true,  // Queue until connected
+});
+```
+
+
+<!-- FILE: docs/07-troubleshooting/04-hmr-dev-server.md -->
+================================================================================
+
+# Troubleshooting HMR & Development Server
+
+## "[HMR] Disconnected" or Connection Issues
+
+### Problem
+Browser console shows:
+
+```
+[HMR] Disconnected
+[HMR] Reconnecting... (1/10)
+Max reconnect attempts reached
+```
+
+### Causes & Solutions
+
+#### 1. Dev Server Not Running
+
+Ensure you're running in development mode:
+
+```bash
+go run main.go  # Dev mode is default
+gospa dev       # Using CLI
+```
+
+#### 2. Wrong HMR Port/Path
+
+Check your HMR configuration:
+
+```go
+app := gospa.New(gospa.Config{
+    DevMode: true,
+    HMR: gospa.HMRConfig{
+        Enabled: true,
+        WSPath:  "/_gospa/hmr/ws",
+    },
+})
+```
+
+Client automatically detects the path, but verify in DevTools Network tab.
+
+#### 3. HTTPS/WSS Mismatch
+
+For HTTPS development sites, ensure WSS is used:
+
+```javascript
+// Automatically handled by GoSPA, but verify:
+const protocol = window.location.protocol === 'https:' ? 'wss:' : 'ws:';
+const hmrUrl = `${protocol}//${window.location.host}/_gospa/hmr/ws`;
+```
+
+---
+
+## Full Page Reload Instead of Hot Update
+
+### Problem
+Changes trigger a full browser reload instead of seamless hot update.
+
+### Causes & Solutions
+
+| Symptom | Cause | Fix |
+|---------|-------|-----|
+| `.go` or `.templ` file changed | Requires server rebuild | Expected - Go templates need re-render |
+| State lost on reload | No state preservation hook | Implement `window.__gospaPreserveState` |
+| CSS changes reload page | File in `IgnorePaths` | Check HMR config |
+
+#### Implementing State Preservation
+
+```javascript
+// In your app initialization
+window.__gospaPreserveState = () => {
+    // Return serializable state
+    return {
+        formData: document.getElementById('myForm').value,
+        scrollPosition: window.scrollY,
+    };
+};
+
+window.__gospaRestoreState = (state) => {
+    // Restore after reload
+    if (state.formData) {
+        document.getElementById('myForm').value = state.formData;
+    }
+    if (state.scrollPosition) {
+        window.scrollTo(0, state.scrollPosition);
+    }
+};
+```
+
+---
+
+## CSS/Style Changes Not Applying
+
+### Problem
+Modifying CSS files doesn't trigger updates, or styles don't refresh.
+
+### Solutions
+
+#### 1. Check CSS is Being Watched
+
+```go
+app := gospa.New(gospa.Config{
+    DevMode: true,
+    HMR: gospa.HMRConfig{
+        Enabled:     true,
+        WatchPaths:  []string{"./static/css", "./styles"},
+        IgnorePaths: []string{"./node_modules"},
+    },
+})
+```
+
+#### 2. Verify CSS Link Tag
+
+Ensure CSS is linked directly (not via JS injection):
+
+```html
+<!-- Good - HMR can detect this -->
+<link rel="stylesheet" href="/static/css/app.css">
+
+<!-- Bad - HMR may miss this -->
 <script>
-if ('serviceWorker' in navigator) {
-    navigator.serviceWorker.register('/static/sw.js');
+    document.head.appendChild(Object.assign(
+        document.createElement('link'),
+        { rel: 'stylesheet', href: '/static/css/app.css' }
+    ));
+</script>
+```
+
+#### 3. Hard Reload if Needed
+
+Sometimes cached styles interfere. Force clear:
+
+```bash
+# Clear browser cache
+Ctrl+Shift+R  # Chrome/Windows
+Cmd+Shift+R   # Chrome/Mac
+```
+
+---
+
+## HMR Works for Some Files but Not Others
+
+### Problem
+Some file types update, others don't.
+
+### Solutions
+
+#### 1. Check File Extensions
+
+GoSPA HMR watches these by default:
+- `.go` - Server files (triggers rebuild)
+- `.templ` - Template files (triggers rebuild)
+- `.css` - Styles (hot update)
+- `.js`, `.ts` - JavaScript (hot update)
+
+Add custom extensions:
+
+```go
+app := gospa.New(gospa.Config{
+    HMR: gospa.HMRConfig{
+        Extensions: []string{".go", ".templ", ".css", ".scss", ".js", ".ts"},
+    },
+})
+```
+
+#### 2. Verify File is in Watched Directory
+
+```go
+// Add additional watch paths
+app := gospa.New(gospa.Config{
+    HMR: gospa.HMRConfig{
+        WatchPaths: []string{
+            "./routes",
+            "./components",
+            "./static",
+            "./assets",  // Add custom paths
+        },
+    },
+})
+```
+
+---
+
+## Dev Server Port Already in Use
+
+### Problem
+
+```
+listen tcp :3000: bind: address already in use
+```
+
+### Solutions
+
+#### 1. Change Port in Config
+
+```go
+app := gospa.New(gospa.Config{
+    Port: 3001,  // Use different port
+})
+```
+
+#### 2. Kill Existing Process
+
+```bash
+# Find and kill process on port 3000
+lsof -ti:3000 | xargs kill -9  # macOS/Linux
+netstat -ano | findstr :3000   # Windows (then taskkill /PID <id>)
+```
+
+---
+
+## Slow Dev Server Startup
+
+### Problem
+Development server takes too long to start.
+
+### Solutions
+
+#### 1. Disable Unused Features
+
+```go
+app := gospa.New(gospa.Config{
+    DevMode:     true,
+    WebSocket:   false,  // Disable if not needed
+    EnableSSE:   false,  // Disable if not needed
+    EnableCSRF:  false,  // Disable in dev
+    CompressState: false, // Disable compression
+})
+```
+
+#### 2. Reduce Watch Scope
+
+```go
+app := gospa.New(gospa.Config{
+    HMR: gospa.HMRConfig{
+        WatchPaths: []string{"./routes"},  // Narrow scope
+        IgnorePaths: []string{
+            "./node_modules",
+            "./.git",
+            "./tmp",
+            "./vendor",
+        },
+    },
+})
+```
+
+---
+
+## "Too Many Open Files" Error
+
+### Problem
+
+```
+fatal error: pipe failed: too many open files
+```
+
+### Solution
+Increase file descriptor limit:
+
+```bash
+# macOS
+ulimit -n 10240
+
+# Linux (temporary)
+ulimit -n 65536
+
+# Linux (permanent) - add to /etc/security/limits.conf
+* soft nofile 65536
+* hard nofile 65536
+```
+
+---
+
+## Template Changes Not Reflecting
+
+### Problem
+Modifying `.templ` files doesn't show changes.
+
+### Solutions
+
+#### 1. Ensure Templ is Installed
+
+```bash
+go install github.com/a-h/templ/cmd/templ@latest
+```
+
+#### 2. Regenerate Templates
+
+```bash
+templ generate  # Or use gospa CLI which handles this
+gospa generate
+```
+
+#### 3. Check Generated Files Are Being Watched
+
+```go
+app := gospa.New(gospa.Config{
+    HMR: gospa.HMRConfig{
+        WatchPaths: []string{
+            "./routes",
+            "./_templ",  // Generated templates
+        },
+    },
+})
+```
+
+---
+
+## DevTools Shows No HMR WebSocket
+
+### Problem
+Can't find HMR WebSocket connection in DevTools.
+
+### Debugging Steps
+
+1. **Check Console for `[HMR]` logs**
+   - Should see `[HMR] Connected` on successful connection
+
+2. **Network Tab > WS Filter**
+   - Look for WebSocket to `/_gospa/hmr/ws`
+   - Check messages being sent/received
+
+3. **Verify DevMode is Enabled**
+
+```javascript
+// In browser console
+console.log(window.__GOSPA_HMR__);  // Should show HMR state
+```
+
+4. **Check for Errors**
+
+```javascript
+// Enable debug logging
+window.__GOSPA_DEBUG__ = true;
+```
+
+---
+
+## Environment Variables Not Reloading
+
+### Problem
+Changes to `.env` files require full server restart.
+
+### Solution
+
+This is expected behavior. GoSPA doesn't hot-reload environment variables. Use a restart:
+
+```bash
+# Use air for auto-restart on .env changes
+air --build.cmd "go run main.go" --build.include_ext "go,templ,env"
+```
+
+Or implement config hot-reload:
+
+```go
+// Custom config watcher
+func watchConfig(app *gospa.Application) {
+    watcher, _ := fsnotify.NewWatcher()
+    watcher.Add(".env")
+    
+    go func() {
+        for event := range watcher.Events {
+            if event.Op&fsnotify.Write == fsnotify.Write {
+                // Reload config
+                loadConfig()
+            }
+        }
+    }()
 }
+```
+
+---
+
+## Common Mistakes
+
+### Mistake 1: Production Build in Dev Mode
+
+```go
+// BAD - Forces dev mode even in production
+app := gospa.New(gospa.Config{
+    DevMode: true,  // Never hardcode in committed code
+})
+
+// GOOD - Use environment variable
+app := gospa.New(gospa.Config{
+    DevMode: os.Getenv("ENV") == "development",
+})
+```
+
+### Mistake 2: Watching Node Modules
+
+```go
+// BAD - Watches too much
+app := gospa.New(gospa.Config{
+    HMR: gospa.HMRConfig{
+        WatchPaths: []string{"."},  // Watches everything!
+    },
+})
+
+// GOOD - Be specific
+app := gospa.New(gospa.Config{
+    HMR: gospa.HMRConfig{
+        WatchPaths:  []string{"./routes", "./static"},
+        IgnorePaths: []string{"./node_modules", "./.git"},
+    },
+})
+```
+
+### Mistake 3: Not Handling HMR Errors
+
+```javascript
+// BAD - Silent failures
+import { initHMR } from '@gospa/runtime';
+initHMR();
+
+// GOOD - Handle errors
+import { initHMR } from '@gospa/runtime';
+initHMR({
+    onError: (error) => {
+        console.error('[HMR] Error:', error);
+        // Optionally show user notification
+    },
+    onConnect: () => console.log('[HMR] Ready'),
+    onDisconnect: () => console.warn('[HMR] Lost connection'),
+});
+```
+
+
+<!-- FILE: docs/07-troubleshooting/05-island-hydration.md -->
+================================================================================
+
+# Troubleshooting Island Hydration & Components
+
+## Island Not Hydrating
+
+### Problem
+The island element appears in the DOM but never becomes interactive. No `gospa:hydrated` event fires.
+
+### Causes & Solutions
+
+#### 1. Missing `data-gospa-island` Attribute
+
+```html
+<!-- BAD - No island attribute -->
+<div id="counter">
+    <button>Count: 0</button>
+</div>
+
+<!-- GOOD - Properly marked island -->
+<div data-gospa-island="Counter" id="counter">
+    <button>Count: 0</button>
+</div>
+```
+
+#### 2. Missing Island Module
+
+Ensure the island module exists at the expected path:
+
+```javascript
+// Default: /islands/{name}.js
+// For data-gospa-island="Counter", expects:
+// GET /islands/Counter.js
+```
+
+Check browser Network tab for 404 errors on island module requests.
+
+#### 3. Island Manager Not Initialized
+
+```javascript
+// Ensure islands are initialized
+import { initIslands } from '@gospa/runtime';
+
+// Auto-initialization with data-gospa-auto on <html>
+// Or manual:
+const manager = initIslands({
+    moduleBasePath: '/islands',
+    defaultTimeout: 30000,
+});
+```
+
+#### 4. JavaScript Error in Island Module
+
+Check console for errors in the island's `hydrate` function:
+
+```javascript
+// /islands/Counter.js
+export default {
+    hydrate(element, props, state) {
+        console.log('Hydrating counter:', element, props, state);
+        // Check for errors here
+    }
+};
+```
+
+---
+
+## "Island Hydration Timeout"
+
+### Problem
+Island takes too long to hydrate and times out.
+
+### Causes & Solutions
+
+#### 1. Large Module Size
+
+```javascript
+// BAD - Heavy imports blocking hydration
+import { HeavyLibrary } from 'heavy-lib';
+
+export default {
+    async hydrate(element, props, state) {
+        const lib = new HeavyLibrary();  // Slow initialization
+    }
+};
+
+// GOOD - Lazy load heavy code
+export default {
+    async hydrate(element, props, state) {
+        const { HeavyLibrary } = await import('heavy-lib');
+        const lib = new HeavyLibrary();
+    }
+};
+```
+
+#### 2. Slow Network
+
+Increase timeout for slow connections:
+
+```javascript
+const manager = initIslands({
+    defaultTimeout: 60000,  // 60 seconds
+});
+```
+
+Or for specific islands:
+
+```html
+<div 
+    data-gospa-island="Chart" 
+    data-gospa-timeout="60000"
+>
+```
+
+---
+
+## Island Hydrates Multiple Times
+
+### Problem
+Island `hydrate` function runs more than once, causing duplicate event listeners or state issues.
+
+### Solution
+Check if already hydrated before running:
+
+```javascript
+export default {
+    hydrate(element, props, state) {
+        // Prevent double hydration
+        if (element.dataset.hydrated) return;
+        element.dataset.hydrated = 'true';
+        
+        // Your hydration logic
+        const button = element.querySelector('button');
+        let count = state.count || 0;
+        
+        button.addEventListener('click', () => {
+            count++;
+            button.textContent = `Count: ${count}`;
+        });
+    }
+};
+```
+
+Or use GoSPA's built-in protection:
+
+```javascript
+import { hydrateIsland } from '@gospa/runtime';
+
+// This is idempotent - only hydrates once
+await hydrateIsland('counter');
+```
+
+---
+
+## Island Not Found in Lazy Mode
+
+### Problem
+Calling `hydrateIsland()` returns `null` or throws "Island not found".
+
+### Causes & Solutions
+
+#### 1. Wrong ID or Name
+
+```javascript
+// HTML
+<div data-gospa-island="Counter" id="my-counter">
+
+// JavaScript - Can use either:
+await hydrateIsland('my-counter');  // By ID
+await hydrateIsland('Counter');      // By island name
+```
+
+#### 2. Island Not in DOM
+
+Ensure island exists before calling:
+
+```javascript
+import { getIslandManager } from '@gospa/runtime';
+
+const manager = getIslandManager();
+const island = manager.getIsland('my-counter');
+
+if (island) {
+    await manager.hydrateIsland(island);
+} else {
+    console.error('Island not found');
+}
+```
+
+#### 3. Discover Islands After DOM Changes
+
+For dynamically added islands:
+
+```javascript
+// Add new island to DOM
+container.innerHTML = `
+    <div data-gospa-island="DynamicChart" id="chart-1">
+        <canvas></canvas>
+    </div>
+`;
+
+// Re-scan for new islands
+const manager = getIslandManager();
+manager.discoverIslands();
+
+// Now hydrate
+await hydrateIsland('chart-1');
+```
+
+---
+
+## Hydration Mode Not Working
+
+### Problem
+`data-gospa-mode` doesn't behave as expected (e.g., `visible` hydrates immediately).
+
+### Solutions
+
+#### Visible Mode Not Triggering
+
+```html
+<!-- Ensure element is initially in viewport or has threshold -->
+<div 
+    data-gospa-island="LazyImage"
+    data-gospa-mode="visible"
+    data-gospa-threshold="100"  <!-- Trigger 100px before visible -->
+>
+```
+
+Check if `IntersectionObserver` is supported (polyfill for older browsers).
+
+#### Idle Mode Never Triggering
+
+```html
+<!-- Add delay if needed -->
+<div 
+    data-gospa-island="Analytics"
+    data-gospa-mode="idle"
+    data-gospa-defer="1000"  <!-- Wait 1s after idle -->
+>
+```
+
+Note: `requestIdleCallback` may never fire on busy main thread. Use with caution for critical UI.
+
+#### Interaction Mode Issues
+
+```html
+<!-- Works with: mouseenter, touchstart, focusin, click -->
+<div 
+    data-gospa-island="Tooltip"
+    data-gospa-mode="interaction"
+>
+```
+
+If not triggering, check CSS doesn't block events:
+
+```css
+/* BAD - Blocks interaction events */
+[data-gospa-island] {
+    pointer-events: none;
+}
+
+/* GOOD - Allow events through */
+[data-gospa-island] {
+    pointer-events: auto;
+}
+```
+
+---
+
+## Props Not Available in Hydrate
+
+### Problem
+`props` parameter is empty or undefined in `hydrate()`.
+
+### Solutions
+
+#### 1. Check JSON Format
+
+```html
+<!-- BAD - Invalid JSON (single quotes) -->
+<div data-gospa-props="{'initial': 10}">
+
+<!-- GOOD - Valid JSON -->
+<div data-gospa-props='{"initial": 10}'>
+```
+
+#### 2. Escape Quotes Properly
+
+```html
+<!-- In templ templates, use proper escaping -->
+<div data-gospa-props={ fmt.Sprintf(`{"message": "%s"}`, escapedMessage) }>
+```
+
+#### 3. Access Props Safely
+
+```javascript
+export default {
+    hydrate(element, props = {}, state = {}) {
+        const initial = props.initial ?? 0;
+        const message = props.message ?? 'Default';
+        
+        console.log('Props:', props);
+        console.log('State:', state);
+    }
+};
+```
+
+---
+
+## State Not Persisting Across Navigation
+
+### Problem
+Island state resets when navigating between pages.
+
+### Solutions
+
+#### 1. Use State Prop
+
+```html
+<div 
+    data-gospa-island="Counter"
+    data-gospa-state='{"count": 5}'
+>
+```
+
+#### 2. Store in URL or Session
+
+```javascript
+export default {
+    hydrate(element, props, state) {
+        // Restore from URL
+        const params = new URLSearchParams(window.location.search);
+        let count = parseInt(params.get('count')) || state.count || 0;
+        
+        const button = element.querySelector('button');
+        button.addEventListener('click', () => {
+            count++;
+            updateURL();
+            render();
+        });
+        
+        function updateURL() {
+            const url = new URL(window.location);
+            url.searchParams.set('count', count);
+            window.history.replaceState({}, '', url);
+        }
+        
+        function render() {
+            button.textContent = `Count: ${count}`;
+        }
+        
+        render();
+    }
+};
+```
+
+#### 3. Use Global State
+
+```javascript
+import { getState } from '@gospa/runtime';
+
+export default {
+    hydrate(element, props, state) {
+        // Access global state that persists across navigation
+        const globalCount = getState('counter');
+    }
+};
+```
+
+---
+
+## Server-Only Island Still Tries to Hydrate
+
+### Problem
+`data-gospa-server-only` island attempts hydration anyway.
+
+### Solution
+Verify attribute value:
+
+```html
+<!-- These all work -->
+<div data-gospa-island="Static" data-gospa-server-only></div>
+<div data-gospa-island="Static" data-gospa-server-only="true"></div>
+<div data-gospa-island="Static" data-gospa-server-only="1"></div>
+
+<!-- Check island manager config -->
+<script>
+    initIslands({
+        respectServerOnly: true,  // Default
+    });
 </script>
 ```
 
 ---
 
-## Expected Results
+## Priority Queue Not Working
 
-| Metric | Before | After |
-|--------|--------|-------|
-| Image requests per navigation | 1 per page | 0 (cached) |
-| Cache hit rate for static assets | ~50% | ~100% |
-| DOM elements replaced | Full root | Content only |
-| 304 responses possible | No | Yes |
+### Problem
+`data-gospa-priority` doesn't affect hydration order.
+
+### Solution
+Priority only affects `immediate` mode islands:
+
+```html
+<!-- High priority - hydrates first -->
+<div 
+    data-gospa-island="Navigation"
+    data-gospa-priority="high"
+    data-gospa-mode="immediate"
+>
+
+<!-- Low priority - hydrates last -->
+<div 
+    data-gospa-island="FooterWidget"
+    data-gospa-priority="low"
+    data-gospa-mode="immediate"
+>
+```
+
+Non-immediate modes (`visible`, `idle`, `interaction`, `lazy`) are not affected by priority.
 
 ---
 
-## Implementation Priority
+## Common Mistakes
 
-1. **High Priority** - Phase 1: Fix SPA Navigation (solves the main issue)
-2. **Medium Priority** - Phase 2: Improve Cache Headers
-3. **Low Priority** - Phase 3: Resource Hints
-4. **Optional** - Phase 4: Service Worker
+### Mistake 1: Modifying Props During Hydration
+
+```javascript
+// BAD - Props should be immutable
+export default {
+    hydrate(element, props) {
+        props.count = 10;  // Don't modify props!
+    }
+};
+
+// GOOD - Use local state
+export default {
+    hydrate(element, props) {
+        let count = props.count || 0;  // Copy to local variable
+        count = 10;  // OK to modify local
+    }
+};
+```
+
+### Mistake 2: Not Cleaning Up Event Listeners
+
+```javascript
+// BAD - Memory leak on re-hydration
+export default {
+    hydrate(element) {
+        element.addEventListener('click', handler);
+    }
+};
+
+// GOOD - Track for cleanup
+export default {
+    hydrate(element) {
+        if (element._cleanup) element._cleanup();
+        
+        const handler = () => console.log('clicked');
+        element.addEventListener('click', handler);
+        
+        element._cleanup = () => {
+            element.removeEventListener('click', handler);
+        };
+    }
+};
+```
+
+### Mistake 3: Expecting Island Before DOM Ready
+
+```javascript
+// BAD - May run before island is registered
+document.addEventListener('DOMContentLoaded', () => {
+    hydrateIsland('counter');  // Might fail
+});
+
+// GOOD - Wait for manager ready
+import { initIslands } from '@gospa/runtime';
+
+const manager = initIslands();
+manager.ready().then(() => {
+    hydrateIsland('counter');
+});
+```
+
+
+<!-- FILE: docs/07-troubleshooting/06-state-synchronization.md -->
+================================================================================
+
+# Troubleshooting State Synchronization
+
+## State Changes Not Syncing to Client
+
+### Problem
+Server state changes (Runes) don't appear on the client.
+
+### Causes & Solutions
+
+#### 1. WebSocket Not Enabled
+
+```go
+app := gospa.New(gospa.Config{
+    WebSocket: true,  // Required for real-time sync
+})
+```
+
+#### 2. Component Not Registered for Sync
+
+```go
+// Register component state for synchronization
+stateMap := state.NewStateMap()
+stateMap.Add("count", count)
+stateMap.Add("user", userRune)
+
+// In your handler, use SyncState
+func HandlePage(c *routing.Context) error {
+    return c.RenderWithState("page", data, stateMap)
+}
+```
+
+#### 3. Not Broadcasting Changes
+
+```go
+// BAD - Set without broadcast
+count.Set(42)
+
+// GOOD - Broadcast to all clients
+app.BroadcastState("count", count.Get())
+
+// Or use automatic sync
+count.Set(42)
+app.SyncComponentState("counter-component", stateMap)
+```
 
 ---
 
-## Testing Checklist
+## Client Changes Not Reaching Server
 
-- [ ] Navigate between doc pages - verify no image re-requests
-- [ ] Check Network tab for 304 responses on repeat visits
-- [ ] Verify header/footer remain interactive after navigation
-- [ ] Test mobile menu still works after SPA navigation
-- [ ] Verify WebSocket reconnection after navigation
-- [ ] Check that state management still functions
+### Problem
+Client state updates don't propagate to the server.
+
+### Solutions
+
+#### 1. Use Synced Rune
+
+```javascript
+import { syncedRune, getWebSocket } from '@gospa/runtime';
+
+const ws = getWebSocket();
+const count = syncedRune('count', 0, ws);
+
+// This automatically sends to server
+count.set(5);
+```
+
+#### 2. Manual State Sync
+
+```javascript
+import { getWebSocket } from '@gospa/runtime';
+
+const ws = getWebSocket();
+
+function updateServerState(key, value) {
+    ws.send({
+        type: 'state:update',
+        key: key,
+        value: value,
+        componentId: 'my-component',
+    });
+}
+
+// Usage
+updateServerState('count', 42);
+```
+
+#### 3. Check WebSocket Connection
+
+```javascript
+const ws = getWebSocket();
+
+if (!ws.isConnected()) {
+    console.error('WebSocket not connected, state will not sync');
+    await ws.connect();
+}
+```
+
+---
+
+## "State Message Too Large" Error
+
+### Problem
+WebSocket closes with error about message size.
+
+### Cause
+State exceeds 64KB limit (WebSocket frame limit).
+
+### Solutions
+
+#### 1. Enable State Diffing
+
+```go
+app := gospa.New(gospa.Config{
+    WebSocket:   true,
+    StateDiffing: true,  // Only send changes, not full state
+})
+```
+
+#### 2. Prune Large Fields
+
+```go
+type User struct {
+    ID       string `json:"id"`
+    Name     string `json:"name"`
+    Avatar   string `json:"avatar,omitempty"`
+    // Exclude large fields from sync
+    History  []Action `json:"-"`  // Don't sync
+}
+
+// Or use a DTO for sync
+type UserSyncDTO struct {
+    ID   string `json:"id"`
+    Name string `json:"name"`
+}
+```
+
+#### 3. Compress State
+
+```go
+app := gospa.New(gospa.Config{
+    WebSocket:     true,
+    CompressState: true,  // Compress before sending
+})
+```
+
+#### 4. Paginate Large Lists
+
+```go
+// BAD - Sync entire list
+items := state.NewRune(allItems)  // 1000+ items
+
+// GOOD - Sync paginated view
+pageItems := state.NewRune(allItems[:20])
+totalPages := state.NewRune(len(allItems) / 20)
+```
+
+---
+
+## Circular Reference Errors
+
+### Problem
+State fails to serialize due to circular references.
+
+### Error
+```
+json: unsupported value: encountered a cycle
+```
+
+### Solutions
+
+#### 1. Use JSON Tags to Exclude
+
+```go
+type Node struct {
+    ID       string  `json:"id"`
+    Value    int     `json:"value"`
+    Parent   *Node   `json:"-"`  // Exclude from JSON
+    Children []*Node `json:"children"`
+}
+```
+
+#### 2. Create DTOs for Sync
+
+```go
+// Domain model with circular refs
+type Category struct {
+    ID       string
+    Parent   *Category
+    Children []*Category
+}
+
+// DTO for synchronization
+type CategoryDTO struct {
+    ID       string   `json:"id"`
+    ParentID string   `json:"parentId"`
+    Children []string `json:"children"` // Just IDs
+}
+
+// Convert before setting state
+categoryRune.Set(toDTO(category))
+```
+
+#### 3. Use Custom Marshal
+
+```go
+type SafeNode struct {
+    *Node
+}
+
+func (n SafeNode) MarshalJSON() ([]byte, error) {
+    // Custom serialization that avoids cycles
+    type nodeJSON struct {
+        ID       string      `json:"id"`
+        Value    int         `json:"value"`
+        Children []nodeJSON  `json:"children"`
+    }
+    
+    var convert func(*Node) nodeJSON
+    convert = func(n *Node) nodeJSON {
+        if n == nil {
+            return nodeJSON{}
+        }
+        children := make([]nodeJSON, len(n.Children))
+        for i, c := range n.Children {
+            children[i] = convert(c)
+        }
+        return nodeJSON{
+            ID:       n.ID,
+            Value:    n.Value,
+            Children: children,
+        }
+    }
+    
+    return json.Marshal(convert(n.Node))
+}
+```
+
+---
+
+## Race Conditions in State Updates
+
+### Problem
+Multiple simultaneous updates cause inconsistent state.
+
+### Solutions
+
+#### 1. Use Server-Side Batching
+
+```go
+state.Batch(func() {
+    count.Set(1)
+    name.Set("updated")
+    items.Set(newItems)
+    // All sent as single atomic update
+})
+```
+
+#### 2. Optimistic Updates with Rollback
+
+```javascript
+import { optimisticUpdate } from '@gospa/runtime';
+
+// Apply immediately, rollback on error
+optimisticUpdate(count, 5, {
+    onConfirm: () => console.log('Server confirmed'),
+    onRollback: (error) => {
+        console.error('Update failed, rolled back:', error);
+    },
+});
+```
+
+#### 3. Version Your State
+
+```go
+type VersionedState struct {
+    Version int         `json:"version"`
+    Data    interface{} `json:"data"`
+}
+
+func (v *VersionedState) Update(fn func(interface{}) interface{}) error {
+    newData := fn(v.Data)
+    
+    // Check for conflicts
+    if v.Version != currentVersion {
+        return errors.New("state conflict detected")
+    }
+    
+    v.Version++
+    v.Data = newData
+    return nil
+}
+```
+
+---
+
+## State Out of Sync After Reconnection
+
+### Problem
+Client reconnects to WebSocket but state is stale.
+
+### Solutions
+
+#### 1. Request Full Sync on Connect
+
+```javascript
+const ws = initWebSocket({
+    url: 'ws://localhost:3000/_gospa/ws',
+    onConnect: () => {
+        // Request current state from server
+        ws.send({ type: 'state:sync:request' });
+    },
+});
+```
+
+Server-side handler:
+
+```go
+func HandleStateSyncRequest(client *Client) {
+    state := getCurrentState()
+    client.Send(StateMessage{
+        Type:  "state:sync:full",
+        State: state,
+    })
+}
+```
+
+#### 2. Use Version Vectors
+
+```go
+type SyncState struct {
+    Data    interface{}       `json:"data"`
+    Version int64             `json:"version"`
+    Vector  map[string]int64  `json:"vector"`  // Per-client versions
+}
+
+// On reconnect, client sends its last known version
+// Server sends only changes since that version
+```
+
+---
+
+## Memory Leaks from Subscriptions
+
+### Problem
+Component unmounts but subscriptions remain active.
+
+### Solutions
+
+#### 1. Always Unsubscribe
+
+```javascript
+import { getState } from '@gospa/runtime';
+
+const count = getState('count');
+
+// Subscribe
+const unsubscribe = count.subscribe((value) => {
+    updateUI(value);
+});
+
+// Cleanup on unmount
+window.addEventListener('beforeunload', unsubscribe);
+
+// Or in component lifecycle
+function destroy() {
+    unsubscribe();
+}
+```
+
+#### 2. Use Effect for Auto-Cleanup
+
+```javascript
+import { Effect } from '@gospa/runtime';
+
+const effect = new Effect(() => {
+    console.log('Count:', count.get());
+    
+    // Cleanup function
+    return () => {
+        console.log('Effect cleaned up');
+    };
+});
+
+effect.dependOn(count);
+
+// Later
+effect.dispose();  // Cleans up subscription
+```
+
+#### 3. WeakMap for Component State
+
+```javascript
+// Use WeakMap so state is GC'd when component is
+const componentStates = new WeakMap();
+
+function mountComponent(element) {
+    const state = createComponentState();
+    componentStates.set(element, state);
+}
+
+function unmountComponent(element) {
+    // No need to manually delete - GC handles it
+    // when element is removed from DOM
+}
+```
+
+---
+
+## Type Errors in State Values
+
+### Problem
+State value type differs between server and client.
+
+### Solutions
+
+#### 1. Consistent Types
+
+```go
+// Server - Use specific types, not interface{}
+count := state.NewRune(0)  // int, not float64
+```
+
+```javascript
+// Client - Match the type
+const count = new Rune(0);  // number, default 0
+```
+
+#### 2. Validate on Receive
+
+```javascript
+ws.onMessage = (msg) => {
+    if (msg.type === 'state:update') {
+        const schema = stateSchemas[msg.key];
+        const validated = schema.validate(msg.value);
+        
+        if (!validated.valid) {
+            console.error('Invalid state received:', validated.errors);
+            return;
+        }
+        
+        updateState(msg.key, validated.value);
+    }
+};
+```
+
+#### 3. Use TypeScript
+
+```typescript
+// Define shared types
+interface AppState {
+    count: number;
+    user: {
+        id: string;
+        name: string;
+    } | null;
+}
+
+// Type-safe state access
+function getState<K extends keyof AppState>(key: K): AppState[K] {
+    return stateMap.get(key) as AppState[K];
+}
+```
+
+---
+
+## Common Mistakes
+
+### Mistake 1: Mutating State Directly
+
+```javascript
+// BAD - Mutates without notification
+const items = getState('items');
+items.push(newItem);  // No notification!
+
+// GOOD - Immutable update
+const items = getState('items');
+setState('items', [...items, newItem]);
+```
+
+### Mistake 2: Not Handling Disconnection
+
+```javascript
+// BAD - Updates fail silently when disconnected
+function increment() {
+    count.set(count.get() + 1);
+}
+
+// GOOD - Queue or notify
+function increment() {
+    if (!ws.isConnected()) {
+        // Queue for later
+        pendingUpdates.push({ key: 'count', value: count.get() + 1 });
+        showOfflineWarning();
+        return;
+    }
+    count.set(count.get() + 1);
+}
+```
+
+### Mistake 3: Syncing Everything
+
+```go
+// BAD - Syncs all state including ephemeral
+type ComponentState struct {
+    User      User      // Sync
+    FormDraft FormData  // Don't sync - ephemeral
+    UIState   UIConfig  // Don't sync - client-only
+}
+
+// GOOD - Selective sync
+type ComponentState struct {
+    User User `json:"user"`  // Only sync user
+    // Other fields excluded with `json:"-"`
+}
+```
+
+### Mistake 4: Ignoring Conflicts
+
+```go
+// BAD - Last write wins
+func UpdateState(key string, value interface{}) {
+    state.Set(key, value)  // Ignores conflicts
+}
+
+// GOOD - Check for conflicts
+func UpdateState(key string, value interface{}, clientVersion int) error {
+    currentVersion := getVersion(key)
+    
+    if clientVersion < currentVersion {
+        return fmt.Errorf("conflict: server has newer version %d vs %d", 
+            currentVersion, clientVersion)
+    }
+    
+    state.Set(key, value)
+    incrementVersion(key)
+    return nil
+}
+```
+
+
+<!-- FILE: docs/07-troubleshooting/07-build-deployment.md -->
+================================================================================
+
+# Troubleshooting Build & Deployment
+
+## Build Fails with "templ not found"
+
+### Problem
+
+```
+exec: "templ": executable file not found in $PATH
+```
+
+### Solution
+
+Install the templ CLI:
+
+```bash
+go install github.com/a-h/templ/cmd/templ@latest
+
+# Verify installation
+templ version
+```
+
+Ensure `$GOPATH/bin` is in your PATH:
+
+```bash
+# Add to ~/.bashrc, ~/.zshrc, etc.
+export PATH=$PATH:$(go env GOPATH)/bin
+```
+
+---
+
+## "undefined: gospa.Config" or Import Errors
+
+### Problem
+Build fails with undefined symbols or import errors.
+
+### Causes & Solutions
+
+#### 1. Missing go.mod Entry
+
+```bash
+# Ensure gospa is in go.mod
+go get github.com/aydenstechdungeon/gospa
+
+# Tidy dependencies
+go mod tidy
+```
+
+#### 2. Wrong Package Name
+
+```go
+// BAD - Wrong import path
+import "github.com/aydenstechdungeon/gospa/pkg/gospa"
+
+// GOOD - Correct import
+import "github.com/aydenstechdungeon/gospa"
+```
+
+#### 3. Version Mismatch
+
+```bash
+# Check installed version
+go list -m github.com/aydenstechdungeon/gospa
+
+# Update to latest
+go get -u github.com/aydenstechdungeon/gospa
+```
+
+---
+
+## Binary Size Too Large
+
+### Problem
+Compiled binary is hundreds of megabytes.
+
+### Solutions
+
+#### 1. Strip Debug Info
+
+```bash
+go build -ldflags="-s -w" -o app .
+```
+
+#### 2. Disable DWARF
+
+```bash
+CGO_ENABLED=0 go build -ldflags="-s -w" -o app .
+```
+
+#### 3. Use UPX Compression (Optional)
+
+```bash
+# Install UPX
+apt-get install upx  # Debian/Ubuntu
+brew install upx     # macOS
+
+# Compress binary
+upx --best -o app-compressed app
+```
+
+#### 4. Remove Unused Features
+
+```go
+app := gospa.New(gospa.Config{
+    // Disable unused features
+    WebSocket:     false,
+    EnableSSE:     false,
+    EnableCSRF:    false,
+    SimpleRuntime: true,  // Use lighter runtime
+})
+```
+
+---
+
+## Template Not Found in Production
+
+### Problem
+App works in dev but templates fail in production build.
+
+### Causes & Solutions
+
+#### 1. Templates Not Generated
+
+```bash
+# Generate templates before build
+templ generate
+
+# Or use go:generate
+//go:generate templ generate
+```
+
+#### 2. Missing Embedded Files
+
+```go
+// Ensure embed directive includes templates
+//go:embed routes/*.templ
+var templates embed.FS
+```
+
+#### 3. Template Path Issues
+
+```go
+// Use relative paths that work in both dev and production
+app := gospa.New(gospa.Config{
+    TemplateDir: "./routes",  // Relative to working dir
+})
+
+// Or use embed.FS for production
+app := gospa.New(gospa.Config{
+    TemplateFS: templates,
+})
+```
+
+---
+
+## Environment Variables Not Loading
+
+### Problem
+`os.Getenv()` returns empty in production.
+
+### Solutions
+
+#### 1. Load .env File
+
+```go
+import "github.com/joho/godotenv"
+
+func init() {
+    // Load .env in development only
+    if os.Getenv("ENV") != "production" {
+        godotenv.Load()
+    }
+}
+```
+
+#### 2. Set Variables in Production
+
+```bash
+# Systemd service
+[Service]
+Environment="DATABASE_URL=postgres://..."
+Environment="PORT=8080"
+
+# Docker
+ENV DATABASE_URL=postgres://...
+ENV PORT=8080
+
+# Kubernetes
+env:
+  - name: DATABASE_URL
+    valueFrom:
+      secretKeyRef:
+        name: db-secret
+        key: url
+```
+
+---
+
+## Static Assets 404 in Production
+
+### Problem
+CSS/JS files return 404 after deployment.
+
+### Solutions
+
+#### 1. Correct Static File Path
+
+```go
+// BAD - Relative path may not work
+app.Static("/static", "./static")
+
+// GOOD - Absolute path or embed
+app.Static("/static", "/app/static")
+
+// Or use embed
+//go:embed static/*
+var staticFiles embed.FS
+
+app.StaticFS("/static", staticFiles)
+```
+
+#### 2. Check File Permissions
+
+```bash
+# Ensure files are readable
+chmod -R 755 ./static
+
+# Verify ownership
+chown -R www-data:www-data ./static
+```
+
+#### 3. Configure CDN (if applicable)
+
+```go
+app := gospa.New(gospa.Config{
+    StaticURL: "https://cdn.example.com",  // CDN URL
+})
+```
+
+---
+
+## Port Already in Use (Production)
+
+### Problem
+
+```
+bind: address already in use
+```
+
+### Solutions
+
+#### 1. Use Environment Port
+
+```go
+port := os.Getenv("PORT")
+if port == "" {
+    port = "3000"
+}
+
+app := gospa.New(gospa.Config{
+    Port: port,
+})
+```
+
+#### 2. Graceful Shutdown
+
+```go
+// Handle SIGTERM properly
+quit := make(chan os.Signal, 1)
+signal.Notify(quit, syscall.SIGINT, syscall.SIGTERM)
+
+go func() {
+    <-quit
+    log.Println("Shutting down...")
+    app.Shutdown()
+}()
+```
+
+#### 3. Kill Existing Process
+
+```bash
+# Find process using port
+lsof -i :8080
+
+# Kill it
+kill -9 <PID>
+```
+
+---
+
+## Docker Build Issues
+
+### Problem
+Docker build fails or image is too large.
+
+### Solutions
+
+#### 1. Multi-Stage Build
+
+```dockerfile
+# Build stage
+FROM golang:1.22-alpine AS builder
+WORKDIR /app
+COPY go.mod go.sum ./
+RUN go mod download
+COPY . .
+RUN go generate ./...
+RUN CGO_ENABLED=0 GOOS=linux go build -ldflags="-s -w" -o main .
+
+# Runtime stage
+FROM alpine:latest
+RUN apk --no-cache add ca-certificates
+WORKDIR /root/
+COPY --from=builder /app/main .
+COPY --from=builder /app/static ./static
+EXPOSE 8080
+CMD ["./main"]
+```
+
+#### 2. BuildKit for Faster Builds
+
+```bash
+DOCKER_BUILDKIT=1 docker build -t myapp .
+```
+
+#### 3. Cache Dependencies
+
+```dockerfile
+# Copy only dependency files first
+COPY go.mod go.sum ./
+RUN go mod download
+
+# Then copy source (cache layer reused if deps unchanged)
+COPY . .
+```
+
+---
+
+## WebSocket Fails Behind Load Balancer
+
+### Problem
+WebSocket connections fail in production behind Nginx/ALB.
+
+### Solutions
+
+#### 1. Nginx Configuration
+
+```nginx
+location /_gospa/ws {
+    proxy_pass http://backend;
+    proxy_http_version 1.1;
+    proxy_set_header Upgrade $http_upgrade;
+    proxy_set_header Connection "upgrade";
+    proxy_set_header Host $host;
+    proxy_set_header X-Real-IP $remote_addr;
+    proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
+    proxy_set_header X-Forwarded-Proto $scheme;
+    
+    # Timeout settings
+    proxy_read_timeout 86400;
+    proxy_send_timeout 86400;
+}
+```
+
+#### 2. AWS ALB Configuration
+
+```yaml
+# Target group settings
+ProtocolVersion: HTTP/1.1
+HealthCheckProtocol: HTTP
+Stickiness: 
+  Enabled: true
+  Type: lb_cookie
+```
+
+#### 3. Enable Proxy Trust
+
+```go
+app := gospa.New(gospa.Config{
+    EnableProxy: true,  // Trust X-Forwarded-* headers
+})
+```
+
+---
+
+## SSL/TLS Certificate Issues
+
+### Problem
+HTTPS fails or shows certificate warnings.
+
+### Solutions
+
+#### 1. Auto HTTPS (Let's Encrypt)
+
+```go
+app := gospa.New(gospa.Config{
+    AutoTLS: true,
+    TLSDomains: []string{"example.com", "www.example.com"},
+})
+```
+
+#### 2. Custom Certificates
+
+```go
+app := gospa.New(gospa.Config{
+    TLSCert: "/path/to/cert.pem",
+    TLSKey:  "/path/to/key.pem",
+})
+```
+
+#### 3. Reverse Proxy SSL (Nginx)
+
+```nginx
+server {
+    listen 443 ssl http2;
+    server_name example.com;
+    
+    ssl_certificate /path/to/cert.pem;
+    ssl_certificate_key /path/to/key.pem;
+    
+    location / {
+        proxy_pass http://localhost:3000;
+        proxy_set_header X-Forwarded-Proto https;
+    }
+}
+```
+
+---
+
+## Memory Leaks in Production
+
+### Problem
+Memory usage grows continuously.
+
+### Solutions
+
+#### 1. Enable Pprof
+
+```go
+import _ "net/http/pprof"
+
+func init() {
+    go func() {
+        log.Println(http.ListenAndServe("localhost:6060", nil))
+    }()
+}
+
+# Analyze
+# go tool pprof http://localhost:6060/debug/pprof/heap
+```
+
+#### 2. Limit Concurrent Connections
+
+```go
+app := gospa.New(gospa.Config{
+    MaxConnections: 1000,
+    ReadTimeout:    30 * time.Second,
+    WriteTimeout:   30 * time.Second,
+})
+```
+
+#### 3. Clean Up WebSocket Clients
+
+```go
+// Set ping interval to detect dead connections
+app := gospa.New(gospa.Config{
+    WSHeartbeat:       30 * time.Second,
+    WSHeartbeatTimeout: 10 * time.Second,
+})
+```
+
+---
+
+## "too many open files" in Production
+
+### Problem
+Server crashes with file descriptor limit errors.
+
+### Solution
+
+#### 1. Increase System Limits
+
+```bash
+# /etc/security/limits.conf
+* soft nofile 65536
+* hard nofile 65536
+
+# Or in systemd service
+[Service]
+LimitNOFILE=65536
+```
+
+#### 2. Reduce Keep-Alive
+
+```go
+app := gospa.New(gospa.Config{
+    IdleTimeout: 60 * time.Second,
+})
+```
+
+---
+
+## Database Connection Issues
+
+### Problem
+Database connections fail or timeout in production.
+
+### Solutions
+
+#### 1. Connection Pooling
+
+```go
+db, err := sql.Open("postgres", dsn)
+if err != nil {
+    log.Fatal(err)
+}
+
+// Configure pool
+db.SetMaxOpenConns(25)
+db.SetMaxIdleConns(10)
+db.SetConnMaxLifetime(5 * time.Minute)
+```
+
+#### 2. Health Checks
+
+```go
+app.Get("/health", func(c *routing.Context) error {
+    if err := db.Ping(); err != nil {
+        return c.Status(503).JSON(map[string]string{
+            "status": "unhealthy",
+            "error": err.Error(),
+        })
+    }
+    return c.JSON(map[string]string{"status": "healthy"})
+})
+```
+
+---
+
+## Common Mistakes
+
+### Mistake 1: Hardcoded Development Values
+
+```go
+// BAD
+app := gospa.New(gospa.Config{
+    DevMode: true,  // Never in production!
+    Port:    "3000",
+})
+
+// GOOD
+app := gospa.New(gospa.Config{
+    DevMode: os.Getenv("ENV") == "development",
+    Port:    getEnv("PORT", "8080"),
+})
+```
+
+### Mistake 2: No Request Timeouts
+
+```go
+// BAD - No timeouts
+app := gospa.New(gospa.Config{})
+
+// GOOD - Always set timeouts
+app := gospa.New(gospa.Config{
+    ReadTimeout:  30 * time.Second,
+    WriteTimeout: 30 * time.Second,
+    IdleTimeout:  120 * time.Second,
+})
+```
+
+### Mistake 3: Logging Sensitive Data
+
+```go
+// BAD
+log.Printf("User login: %s, password: %s", email, password)
+
+// GOOD
+log.Printf("User login attempt: %s", email)
+// Never log passwords, tokens, or PII
+```
+
+### Mistake 4: Not Handling Panics
+
+```go
+// BAD - Panic crashes server
+app.Get("/api/data", func(c *routing.Context) error {
+    result := riskyOperation()  // May panic
+    return c.JSON(result)
+})
+
+// GOOD - Recover from panics
+app.Use(func(c *routing.Context) error {
+    defer func() {
+        if r := recover(); r != nil {
+            log.Printf("Panic recovered: %v", r)
+            c.Status(500).JSON(map[string]string{
+                "error": "Internal server error",
+            })
+        }
+    }()
+    return c.Next()
+})
+```
+
+
+<!-- FILE: docs/README.md -->
+================================================================================
+
+# GoSPA Documentation
+
+This directory contains the complete documentation for GoSPA. The documentation is organized to guide users from their first steps through advanced topics.
+
+## Structure
+
+```
+docs/
+├── 01-getting-started/     # Installation and first steps
+├── 02-core-concepts/       # Essential concepts
+├── 03-features/            # Feature guides
+├── 04-api-reference/       # API documentation
+├── 05-advanced/            # Advanced topics
+└── 06-migration/           # Version migration guides
+```
+
+## Quick Navigation
+
+### Getting Started
+- [Quick Start](01-getting-started/01-quick-start.md) - Installation and first app
+- [Tutorial](01-getting-started/02-tutorial.md) - Build a todo app
+
+### Core Concepts
+- [Architecture](02-core-concepts/01-architecture.md) - How GoSPA works
+- [Rendering](02-core-concepts/02-rendering.md) - SSR, SPA, and islands
+- [State](02-core-concepts/03-state.md) - Reactive state management
+- [Components](02-core-concepts/04-components.md) - Component system
+- [Islands](02-core-concepts/05-islands.md) - Partial hydration
+- [Routing](02-core-concepts/06-routing.md) - Route parameters and navigation
+
+### Features
+- [Client Runtime](03-features/01-client-runtime.md) - Runtime variants and selection
+- [Runtime API](03-features/02-runtime-api.md) - Client-side API reference
+- [Realtime](03-features/03-realtime.md) - SSE and WebSocket
+- [Security](03-features/04-security.md) - Security model and CSP
+- [Dev Tools](03-features/05-dev-tools.md) - HMR and debugging
+
+### API Reference
+- [Core API](04-api-reference/01-core-api.md) - Go API documentation
+- [Configuration](04-api-reference/02-configuration.md) - Config options
+- [CLI](04-api-reference/03-cli.md) - Command line interface
+- [Plugins](04-api-reference/04-plugins.md) - Plugin system
+
+### Advanced
+- [Error Handling](05-advanced/01-error-handling.md)
+- [State Pruning](05-advanced/02-state-pruning.md)
+
+### Migration
+- [v1 to v2](06-migration/01-v1-to-v2.md) - Migrating from v1.x to v2.0
+
+## Website Integration
+
+This documentation structure is designed to be consumed by the GoSPA website. Each folder represents a documentation section, and files are ordered by their numerical prefix.
+
+To render these docs on the website:
+1. Read `README.md` for structure
+2. Parse each section folder
+3. Render markdown files in numerical order
+4. Use frontmatter (if present) for metadata
+
 
