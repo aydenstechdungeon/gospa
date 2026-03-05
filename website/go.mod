@@ -4,7 +4,7 @@ go 1.26.0
 
 require (
 	github.com/a-h/templ v0.3.1001
-	github.com/aydenstechdungeon/gospa v0.1.13
+	github.com/aydenstechdungeon/gospa v0.1.14
 	github.com/gofiber/fiber/v2 v2.52.12
 )
 
@@ -14,7 +14,7 @@ require (
 	github.com/gofiber/websocket/v2 v2.2.1 // indirect
 	github.com/google/uuid v1.6.0 // indirect
 	github.com/klauspost/compress v1.17.9 // indirect
-	github.com/mattn/go-colorable v0.1.13 // indirect
+	github.com/mattn/go-colorable v0.1.14 // indirect
 	github.com/mattn/go-isatty v0.0.20 // indirect
 	github.com/mattn/go-runewidth v0.0.16 // indirect
 	github.com/rivo/uniseg v0.2.0 // indirect
