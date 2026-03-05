@@ -147,13 +147,26 @@ async function fetchPageFromServer(path: string): Promise<PageData | null> {
 		// Check if this is a docs page
 		const isDocsPage = !!doc.querySelector('[data-gospa-docs-content]');
 
-		// Extract content - for docs pages, get the specific docs content area
-		// Otherwise fall back to standard content areas
+		// Check if current page is docs
+		const currentIsDocsPage = !!document.querySelector('[data-gospa-docs-content]');
+
+		// Extract content based on page type transition
 		let content: string;
-		if (isDocsPage) {
+		
+		if (isDocsPage && currentIsDocsPage) {
+			// Docs -> Docs: Only extract inner content (sidebar persists)
 			const docsContentEl = doc.querySelector('[data-gospa-docs-content]');
 			content = docsContentEl ? docsContentEl.innerHTML : '';
+		} else if (isDocsPage && !currentIsDocsPage) {
+			// Non-docs -> Docs: Extract FULL page content including sidebar
+			const pageContentEl = doc.querySelector('[data-gospa-page-content]');
+			content = pageContentEl ? pageContentEl.innerHTML : doc.body.innerHTML;
+		} else if (!isDocsPage && currentIsDocsPage) {
+			// Docs -> Non-docs: Extract FULL page content (remove sidebar)
+			const pageContentEl = doc.querySelector('[data-gospa-page-content]');
+			content = pageContentEl ? pageContentEl.innerHTML : doc.body.innerHTML;
 		} else {
+			// Non-docs -> Non-docs: Standard content replacement
 			const contentEl = doc.querySelector('[data-gospa-page-content]');
 			const rootEl = doc.querySelector('[data-gospa-root]');
 			const mainEl = doc.querySelector('main');
@@ -201,21 +214,24 @@ async function updateDOM(data: PageData): Promise<void> {
 
 	const pageContent = await prepareContent(data.content);
 
-	// Handle docs content specifically to preserve sidebar
-	if (data.isDocsPage) {
+	// Check current page type
+	const currentIsDocsPage = !!document.querySelector('[data-gospa-docs-content]');
+
+	// Handle page transitions
+	if (data.isDocsPage && currentIsDocsPage) {
+		// Docs -> Docs: Only replace the inner docs content (sidebar persists)
 		const docsContentEl = document.querySelector('[data-gospa-docs-content]');
 		if (docsContentEl) {
-			// We're navigating between docs pages - only replace the docs content
 			docsContentEl.innerHTML = pageContent;
-		} else {
-			// Transitioning from non-docs to docs - replace full page content
-			const contentEl = document.querySelector('[data-gospa-page-content]');
-			if (contentEl) {
-				contentEl.innerHTML = pageContent;
-			}
+		}
+	} else if ((data.isDocsPage && !currentIsDocsPage) || (!data.isDocsPage && currentIsDocsPage)) {
+		// Cross-type transition: Replace FULL page content (includes sidebar addition/removal)
+		const contentEl = document.querySelector('[data-gospa-page-content]');
+		if (contentEl) {
+			contentEl.innerHTML = pageContent;
 		}
 	} else {
-		// Non-docs page: standard full content replacement
+		// Non-docs -> Non-docs: Standard full content replacement
 		const contentEl = document.querySelector('[data-gospa-page-content]');
 		const rootEl = document.querySelector('[data-gospa-root]');
 
