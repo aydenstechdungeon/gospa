@@ -220,7 +220,7 @@ func DerivedFrom[T any](compute func() T, observables ...Observable) *Derived[T]
 	return d
 }
 
-// Derived2 creates a derived value from two runses with a combine function.
+// Derived2 creates a derived value from two runes with a combine function.
 func Derived2[A, B, T any](a *Rune[A], b *Rune[B], combine func(A, B) T) *Derived[T] {
 	return DerivedFrom(func() T {
 		return combine(a.Get(), b.Get())

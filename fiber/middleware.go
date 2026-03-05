@@ -88,9 +88,15 @@ func StateMiddleware(config Config) gofiber.Handler {
 			return err
 		}
 
-		// Escape the JSON to prevent XSS and script tag breakouts
-		// We replace < with \u003c for complete safety inside a <script> tag
+		// Escape the JSON to prevent XSS and script tag breakouts inside <script>.
+		// Must escape <, >, and & to their Unicode escapes — this matches what
+		// encoding/json does with HTMLEscape(true) and prevents:
+		//   </script> tag injection via <
+		//   attribute injection via >
+		//   entity decoding issues via &
 		escapedJSON := strings.ReplaceAll(stateJSON, "<", "\\u003c")
+		escapedJSON = strings.ReplaceAll(escapedJSON, ">", "\\u003e")
+		escapedJSON = strings.ReplaceAll(escapedJSON, "&", "\\u0026")
 		stateScript := `<script>window.__GOSPA_STATE__ = ` + escapedJSON + `;</script>`
 		if config.DevMode {
 			stateScript += `<script src="` + config.RuntimeScript + `" type="module"></script>`

@@ -307,6 +307,12 @@ func New(config Config) *App {
 		config.SSGCacheMaxEntries = 10000
 	}
 
+	// Default hydration mode: "immediate" means components hydrate as soon as the
+	// runtime is ready. Other valid values: "lazy", "visible", "idle".
+	if config.HydrationMode == "" {
+		config.HydrationMode = "immediate"
+	}
+
 	if config.WSMaxMessageSize == 0 {
 		config.WSMaxMessageSize = 64 * 1024
 	}
@@ -469,6 +475,10 @@ func (a *App) setupRoutes() {
 	// WebSocket endpoint (always registered since hub is always created)
 	if a.Hub != nil {
 		handlers := []fiberpkg.Handler{}
+		// SECURITY: Always enforce per-IP rate limiting before the WebSocket upgrade.
+		// This prevents a flood of connections from exhausting the hub's Clients map
+		// before any application-level auth/middleware has a chance to run.
+		handlers = append(handlers, fiber.WebSocketUpgradeMiddleware())
 		if a.Config.WebSocketMiddleware != nil {
 			handlers = append(handlers, a.Config.WebSocketMiddleware)
 		}
@@ -909,7 +919,7 @@ runtime.init({
 		timeout: %d
 	}
 });
-</script>`, runtimePath, wsUrl, devMode, a.Config.SimpleRuntimeSVGs, a.Config.DisableSanitization, wsReconnectDelay, wsMaxReconnect, wsHeartbeat, a.Config.HydrationMode, a.Config.HydrationTimeout)
+</script>`, jsEscape(runtimePath), jsEscape(wsUrl), devMode, a.Config.SimpleRuntimeSVGs, a.Config.DisableSanitization, wsReconnectDelay, wsMaxReconnect, wsHeartbeat, jsEscape(a.Config.HydrationMode), a.Config.HydrationTimeout)
 		_, _ = fmt.Fprint(w, `</body></html>`)
 		_ = w.Flush()
 	})
@@ -1157,6 +1167,18 @@ func (a *App) applyPPRSlots(route *routing.Route, shell []byte, path string, opt
 		result = bytes.ReplaceAll(result, placeholder, replacement)
 	}
 	return result, nil
+}
+
+// jsEscape escapes a string for safe interpolation inside a JavaScript
+// single-quoted string literal (e.g. '...'). It prevents script injection
+// via Config values like AppName or WebSocketPath that are written directly
+// into inline <script> blocks.
+func jsEscape(s string) string {
+	s = strings.ReplaceAll(s, `\`, `\\`)
+	s = strings.ReplaceAll(s, `'`, `\'`)
+	s = strings.ReplaceAll(s, "\n", `\n`)
+	s = strings.ReplaceAll(s, "\r", `\r`)
+	return s
 }
 
 // Run starts the application on the given address.

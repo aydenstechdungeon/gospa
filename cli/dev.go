@@ -316,24 +316,6 @@ func (w *DevWatcher) checkDir(dir string) {
 	}
 }
 
-func startServerWithConfig(ctx context.Context, config *DevConfig) *exec.Cmd {
-	// Build and run the server
-	args := []string{"run", "."}
-	cmd := exec.CommandContext(ctx, "go", args...)
-	cmd.Stdout = os.Stdout
-	cmd.Stderr = os.Stderr
-	cmd.Env = append(os.Environ(), "GOSPA_DEV=1")
-
-	if err := cmd.Start(); err != nil {
-		fmt.Fprintf(os.Stderr, "Error starting server: %v\n", err)
-		return nil
-	}
-
-	fmt.Printf("Server running at http://%s:%d\n", config.Host, config.Port)
-
-	return cmd
-}
-
 func handleFileChange(event FileEvent, restartCh chan struct{}, ctx context.Context) {
 	ext := filepath.Ext(event.File)
 
@@ -431,7 +413,7 @@ func (s *DevServer) Start() error {
 	}
 
 	// Start server
-	s.server = startServerWithConfig(context.Background(), s.config)
+	s.server = startServerProcess(context.Background(), s.config)
 
 	// Handle reloads
 	go s.handleReloads()

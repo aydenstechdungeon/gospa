@@ -53,7 +53,10 @@ func (s *MemoryStorage) Get(key string) ([]byte, error) {
 		_ = s.Delete(key)
 		return nil, ErrNotFound
 	}
-	return entry.val, nil
+	// Return a defensive copy to prevent callers from mutating internal storage.
+	buf := make([]byte, len(entry.val))
+	copy(buf, entry.val)
+	return buf, nil
 }
 
 // Set stores a value in the in-memory store.

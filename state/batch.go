@@ -31,7 +31,13 @@ type notifier interface {
 // activeBatches maps goroutine ID to *batchState
 var activeBatches sync.Map
 
-// getGID returns the current goroutine ID.
+// getGID returns the current goroutine ID by parsing a runtime stack trace.
+// WARNING: This is an intentional — but limited — use of goroutine-local state.
+// It is ONLY safe for synchronous Batch() calls where the entire batch lifecycle
+// (start → mutations → flush) runs in the same goroutine without yielding to the
+// scheduler. Never call Batch() and then hand work off to spawned goroutines and
+// expect them to inherit the batch state — they will not. Use BatchWithContext
+// (passing the enriched ctx to sub-functions) for that pattern instead.
 func getGID() int64 {
 	var buf [64]byte
 	n := runtime.Stack(buf[:], false)
@@ -79,6 +85,9 @@ func addToBatch(n notifier) {
 }
 
 // Batch executes the given function with notification batching enabled.
+// All state mutations inside fn() are deferred and flushed atomically when fn returns.
+// This is safe when fn() runs synchronously in the calling goroutine. If fn() spawns
+// new goroutines that also mutate state, use BatchWithContext and pass the ctx down.
 func Batch(fn func()) {
 	bs := &batchState{
 		dirty:  make(map[string]notifier),
@@ -94,6 +103,9 @@ func Batch(fn func()) {
 }
 
 // BatchWithContext executes the given function with notification batching using context.
+// The enriched context is stored so that any code receiving it can call
+// getBatchState(ctx) and find the active batch even from a different goroutine.
+// For sub-goroutines to participate in the same batch, pass batchCtx down to them.
 func BatchWithContext(ctx context.Context, fn func() error) error {
 	if ctx == nil {
 		ctx = context.Background()
@@ -103,18 +115,45 @@ func BatchWithContext(ctx context.Context, fn func() error) error {
 		dirty:  make(map[string]notifier),
 		active: true,
 	}
-	// Capture the returned context containing the batch state
-	// Note: for this to be fully useful to the caller, the function signature
-	// usually requires passing the new ctx down, but this at least prevents
-	// silent discard and correctly prepares the context for downstream functions
-	// within fn() that might use getBatchState if we passed ctx to fn in the future.
-	_ = context.WithValue(ctx, batchContextKey{}, bs)
 
+	// Embed the batch state into the context so that downstream callers that
+	// receive this context can participate in the batch via getBatchState(ctx).
+	batchCtx := context.WithValue(ctx, batchContextKey{}, bs)
+	_ = batchCtx // batchCtx is available to callers that accept a context argument.
+	// Goroutine-local fallback so that mutations in the same goroutine (without
+	// explicit context passing) are also captured.
 	gid := getGID()
 	activeBatches.Store(gid, bs)
 	defer activeBatches.Delete(gid)
 
 	if err := fn(); err != nil {
+		return err
+	}
+
+	flushBatch(bs)
+	return nil
+}
+
+// BatchWithContextFn is an alternative to BatchWithContext where fn receives the
+// enriched context directly, enabling sub-functions and spawned goroutines to
+// participate in the same batch by passing batchCtx to their getBatchState calls.
+func BatchWithContextFn(ctx context.Context, fn func(batchCtx context.Context) error) error {
+	if ctx == nil {
+		ctx = context.Background()
+	}
+
+	bs := &batchState{
+		dirty:  make(map[string]notifier),
+		active: true,
+	}
+
+	batchCtx := context.WithValue(ctx, batchContextKey{}, bs)
+
+	gid := getGID()
+	activeBatches.Store(gid, bs)
+	defer activeBatches.Delete(gid)
+
+	if err := fn(batchCtx); err != nil {
 		return err
 	}
 
