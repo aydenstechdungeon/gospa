@@ -1,16 +1,16 @@
 module counter
 
-go 1.24.0
+go 1.26.0
 
 require (
-	github.com/a-h/templ v0.3.977
+	github.com/a-h/templ v0.3.1001
 	github.com/aydenstechdungeon/gospa v0.1.14
 )
 
 require (
 	github.com/andybalholm/brotli v1.1.0 // indirect
 	github.com/fasthttp/websocket v1.5.3 // indirect
-	github.com/gofiber/fiber/v2 v2.52.11 // indirect
+	github.com/gofiber/fiber/v2 v2.52.12 // indirect
 	github.com/gofiber/websocket/v2 v2.2.1 // indirect
 	github.com/google/uuid v1.6.0 // indirect
 	github.com/klauspost/compress v1.17.9 // indirect
