@@ -51,13 +51,47 @@ func Page() templ.Component {
     minify: true                  # Minify in production (default: true)
     sourceMap: false              # Generate source maps (default: false)
     plugins:                      # Additional Tailwind plugins
-      - typography
-      - forms
-      - aspect-ratio`, "yaml", "gospa.yaml").Render(ctx, templ_7745c5c3_Buffer)
+      typography: true            # @tailwindcss/typography
+      forms: true                 # @tailwindcss/forms
+      aspectRatio: true           # @tailwindcss/aspect-ratio
+      autoprefixer: true          # Add vendor prefixes
+      cssnano: false              # Advanced minification
+      postcssNested: true         # Nested CSS support
+
+    # Critical CSS extraction for performance
+    criticalCSS:
+      enabled: false              # Enable critical CSS extraction
+      criticalOutput: ./static/css/critical.css      # Inlined in HTML
+      nonCriticalOutput: ./static/css/non-critical.css  # Async loaded
+      inlineMaxSize: 14336        # Max bytes for inline CSS (14KB default)
+      dimensions:                 # Viewport sizes for critical CSS
+        - width: 1300
+          height: 900
+          name: desktop
+        - width: 500
+          height: 900
+          name: mobile
+
+    # CSS bundle splitting for multi-page apps
+    bundles:
+      - name: marketing
+        input: ./styles/marketing.css
+        output: ./static/css/marketing.css
+        content:                    # Content paths for this bundle
+          - ./routes/marketing/**/*.templ
+        criticalCSS:
+          enabled: true
+          criticalOutput: ./static/css/marketing.critical.css
+          nonCriticalOutput: ./static/css/marketing.non-critical.css
+      - name: dashboard
+        input: ./styles/dashboard.css
+        output: ./static/css/dashboard.css
+        content:
+          - ./routes/dashboard/**/*.templ`, "yaml", "gospa.yaml").Render(ctx, templ_7745c5c3_Buffer)
 		if templ_7745c5c3_Err != nil {
 			return templ_7745c5c3_Err
 		}
-		templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 3, "</section><section class=\"space-y-6\"><h2 class=\"text-2xl font-bold border-b border-[var(--border)] pb-2\">CLI Commands</h2><div class=\"rounded-3xl border border-[var(--border)] overflow-hidden\"><table class=\"w-full text-left text-sm\"><thead class=\"bg-[var(--bg-secondary)] text-[var(--text-muted)] uppercase tracking-wider\"><tr><th class=\"px-6 py-4 font-bold\">Command</th><th class=\"px-6 py-4 font-bold\">Alias</th><th class=\"px-6 py-4 font-bold\">Description</th></tr></thead> <tbody class=\"divide-y divide-[var(--border)]\"><tr><td class=\"px-6 py-4 mono text-[var(--accent-primary)] font-bold\">gospa add:postcss</td><td class=\"px-6 py-4 text-[var(--text-muted)]\">ap</td><td class=\"px-6 py-4 text-[var(--text-secondary)]\">Install PostCSS deps and create config</td></tr><tr><td class=\"px-6 py-4 mono text-[var(--accent-primary)] font-bold\">gospa postcss:build</td><td class=\"px-6 py-4 text-[var(--text-muted)]\">pb</td><td class=\"px-6 py-4 text-[var(--text-secondary)]\">Build CSS for production</td></tr><tr><td class=\"px-6 py-4 mono text-[var(--accent-primary)] font-bold\">gospa postcss:watch</td><td class=\"px-6 py-4 text-[var(--text-muted)]\">pw</td><td class=\"px-6 py-4 text-[var(--text-secondary)]\">Watch and rebuild CSS on changes</td></tr><tr><td class=\"px-6 py-4 mono text-[var(--accent-primary)] font-bold\">gospa postcss:config</td><td class=\"px-6 py-4 text-[var(--text-muted)]\">pc</td><td class=\"px-6 py-4 text-[var(--text-secondary)]\">Generate PostCSS configuration file</td></tr></tbody></table></div></section><section class=\"space-y-6\"><h2 class=\"text-2xl font-bold border-b border-[var(--border)] pb-2\">Lifecycle Hooks</h2><div class=\"grid gap-4 md:grid-cols-3\">")
+		templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 3, "</section><section class=\"space-y-6\"><h2 class=\"text-2xl font-bold border-b border-[var(--border)] pb-2\">CLI Commands</h2><div class=\"rounded-3xl border border-[var(--border)] overflow-hidden\"><table class=\"w-full text-left text-sm\"><thead class=\"bg-[var(--bg-secondary)] text-[var(--text-muted)] uppercase tracking-wider\"><tr><th class=\"px-6 py-4 font-bold\">Command</th><th class=\"px-6 py-4 font-bold\">Alias</th><th class=\"px-6 py-4 font-bold\">Description</th></tr></thead> <tbody class=\"divide-y divide-[var(--border)]\"><tr><td class=\"px-6 py-4 mono text-[var(--accent-primary)] font-bold\">gospa add:postcss</td><td class=\"px-6 py-4 text-[var(--text-muted)]\">ap</td><td class=\"px-6 py-4 text-[var(--text-secondary)]\">Install PostCSS deps and create config</td></tr><tr><td class=\"px-6 py-4 mono text-[var(--accent-primary)] font-bold\">gospa postcss:build</td><td class=\"px-6 py-4 text-[var(--text-muted)]\">pb</td><td class=\"px-6 py-4 text-[var(--text-secondary)]\">Build CSS for production</td></tr><tr><td class=\"px-6 py-4 mono text-[var(--accent-primary)] font-bold\">gospa postcss:watch</td><td class=\"px-6 py-4 text-[var(--text-muted)]\">pw</td><td class=\"px-6 py-4 text-[var(--text-secondary)]\">Watch and rebuild CSS on changes</td></tr><tr><td class=\"px-6 py-4 mono text-[var(--accent-primary)] font-bold\">gospa postcss:config</td><td class=\"px-6 py-4 text-[var(--text-muted)]\">pc</td><td class=\"px-6 py-4 text-[var(--text-secondary)]\">Generate PostCSS configuration file</td></tr><tr><td class=\"px-6 py-4 mono text-[var(--accent-primary)] font-bold\">gospa postcss:critical</td><td class=\"px-6 py-4 text-[var(--text-muted)]\">pcr</td><td class=\"px-6 py-4 text-[var(--text-secondary)]\">Extract critical CSS for above-the-fold content</td></tr><tr><td class=\"px-6 py-4 mono text-[var(--accent-primary)] font-bold\">gospa postcss:bundles</td><td class=\"px-6 py-4 text-[var(--text-muted)]\">pbd</td><td class=\"px-6 py-4 text-[var(--text-secondary)]\">Build all CSS bundles</td></tr></tbody></table></div></section><section class=\"space-y-6\"><h2 class=\"text-2xl font-bold border-b border-[var(--border)] pb-2\">Lifecycle Hooks</h2><div class=\"grid gap-4 md:grid-cols-3\">")
 		if templ_7745c5c3_Err != nil {
 			return templ_7745c5c3_Err
 		}
@@ -73,7 +107,93 @@ func Page() templ.Component {
 		if templ_7745c5c3_Err != nil {
 			return templ_7745c5c3_Err
 		}
-		templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 4, "</div></section><section class=\"space-y-6\"><h2 class=\"text-2xl font-bold border-b border-[var(--border)] pb-2\">Available Plugins</h2><div class=\"grid gap-4 md:grid-cols-2\">")
+		templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 4, "</div></section><section class=\"space-y-6\"><h2 class=\"text-2xl font-bold border-b border-[var(--border)] pb-2\">Critical CSS and Async Loading</h2><p class=\"text-[var(--text-secondary)] mb-4\">Improve page load performance by extracting critical CSS (above-the-fold) and loading non-critical CSS asynchronously. Critical CSS is inlined directly in the HTML, eliminating render-blocking requests for initial page paint.</p><h3 class=\"text-lg font-bold text-[var(--accent-primary)] mb-2\">Setup</h3><p class=\"text-[var(--text-secondary)] mb-4\">1. Enable critical CSS in your configuration:</p>")
+		if templ_7745c5c3_Err != nil {
+			return templ_7745c5c3_Err
+		}
+		templ_7745c5c3_Err = components.CodeBlock(`plugins:
+  postcss:
+    criticalCSS:
+      enabled: true
+      criticalOutput: ./static/css/critical.css      # Inlined in HTML head
+      nonCriticalOutput: ./static/css/non-critical.css  # Loaded asynchronously
+      inlineMaxSize: 14336        # Max bytes for inline CSS (14KB = single round-trip)
+      dimensions:                 # Viewport sizes for critical CSS detection
+        - width: 1300
+          height: 900
+          name: desktop
+        - width: 500
+          height: 900
+          name: mobile`, "yaml", "gospa.yaml").Render(ctx, templ_7745c5c3_Buffer)
+		if templ_7745c5c3_Err != nil {
+			return templ_7745c5c3_Err
+		}
+		templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 5, "<p class=\"text-[var(--text-secondary)] mb-4 mt-6\">2. Extract critical CSS:</p>")
+		if templ_7745c5c3_Err != nil {
+			return templ_7745c5c3_Err
+		}
+		templ_7745c5c3_Err = components.CodeBlock(`gospa postcss:critical`, "bash", "terminal").Render(ctx, templ_7745c5c3_Buffer)
+		if templ_7745c5c3_Err != nil {
+			return templ_7745c5c3_Err
+		}
+		templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 6, "<p class=\"text-[var(--text-secondary)] mb-4 mt-6\">3. Import the postcss package in your layout:</p>")
+		if templ_7745c5c3_Err != nil {
+			return templ_7745c5c3_Err
+		}
+		templ_7745c5c3_Err = components.CodeBlock(`import (
+	"github.com/aydenstechdungeon/gospa/plugin/postcss"
+	// ... other imports
+)`, "go", "layout.templ").Render(ctx, templ_7745c5c3_Buffer)
+		if templ_7745c5c3_Err != nil {
+			return templ_7745c5c3_Err
+		}
+		templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 7, "<p class=\"text-[var(--text-secondary)] mb-4 mt-6\">4. Use the helper functions in your templates:</p>")
+		if templ_7745c5c3_Err != nil {
+			return templ_7745c5c3_Err
+		}
+		templ_7745c5c3_Err = components.CodeBlock(`<!-- Inlined Critical CSS (render-blocking, single round-trip) -->
+@templ.Raw("<style>" + postcss.CriticalCSS("./static/css/critical.css") + "</style>")
+
+<!-- Note: Path is relative to your app's working directory -->
+<!-- For apps running from root: "./website/static/css/critical.css" -->
+<!-- For apps running from website dir: "./static/css/critical.css" -->
+
+<!-- Async load non-critical CSS (non-blocking) -->
+@templ.Raw(postcss.AsyncCSS("/static/css/non-critical.css"))`, "templ", "root_layout.templ").Render(ctx, templ_7745c5c3_Buffer)
+		if templ_7745c5c3_Err != nil {
+			return templ_7745c5c3_Err
+		}
+		templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 8, "<h3 class=\"text-lg font-bold text-[var(--accent-primary)] mt-6 mb-2\">How It Works</h3><ul class=\"list-disc list-inside space-y-2 text-[var(--text-secondary)]\"><li><strong>Critical CSS</strong> - Above-the-fold styles for initial render, inlined in HTML <code>&lt;head&gt;</code></li><li><strong>Non-critical CSS</strong> - Below-the-fold styles loaded asynchronously via preload link</li><li><strong>14KB limit</strong> - Ensures critical CSS fits in a single TCP round-trip (HTTP/2 packet)</li><li><strong>CSS-safe extraction</strong> - Splits at complete CSS rules, never mid-declaration</li></ul><h3 class=\"text-lg font-bold text-[var(--accent-primary)] mt-6 mb-2\">Helper Functions</h3><div class=\"rounded-xl border border-[var(--border)] bg-[var(--bg-secondary)] p-4 space-y-4\"><div><code class=\"text-sm text-[var(--accent-primary)]\">postcss.CriticalCSS(path string) string</code><p class=\"text-sm text-[var(--text-muted)] mt-1\">Reads critical CSS file and returns content for inlining. Returns empty string if file doesn't exist.</p></div><div><code class=\"text-sm text-[var(--accent-primary)]\">postcss.AsyncCSS(path string) string</code><p class=\"text-sm text-[var(--text-muted)] mt-1\">Generates HTML for async CSS loading with preload and noscript fallback.</p></div><div><code class=\"text-sm text-[var(--accent-primary)]\">postcss.CriticalCSSWithFallback(path, fallback string) string</code><p class=\"text-sm text-[var(--text-muted)] mt-1\">Like CriticalCSS but returns fallback content if file doesn't exist (useful for development).</p></div></div><p class=\"text-sm text-[var(--text-muted)] mt-6\"><strong>Performance tip:</strong> The AsyncCSS helper generates <code>&lt;link rel=\"preload\"&gt;</code> with an onload handler that switches to stylesheet once loaded. This prevents render-blocking while ensuring styles apply immediately when available.</p></section><section class=\"space-y-6\"><h2 class=\"text-2xl font-bold border-b border-[var(--border)] pb-2\">CSS Bundle Splitting</h2><p class=\"text-[var(--text-secondary)] mb-4\">For multi-page applications, split CSS into separate bundles to reduce per-page payload. Each bundle scans only its specified content paths for Tailwind class detection.</p>")
+		if templ_7745c5c3_Err != nil {
+			return templ_7745c5c3_Err
+		}
+		templ_7745c5c3_Err = components.CodeBlock(`plugins:
+  postcss:
+    bundles:
+      - name: marketing
+        input: ./styles/marketing.css
+        output: ./static/css/marketing.css
+        content:
+          - ./routes/marketing/**/*.templ
+      - name: dashboard
+        input: ./styles/dashboard.css
+        output: ./static/css/dashboard.css
+        content:
+          - ./routes/dashboard/**/*.templ
+        criticalCSS:
+          enabled: true`, "yaml", "gospa.yaml").Render(ctx, templ_7745c5c3_Buffer)
+		if templ_7745c5c3_Err != nil {
+			return templ_7745c5c3_Err
+		}
+		templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 9, "<p class=\"text-[var(--text-secondary)] mb-4 mt-6\">Build all bundles:</p>")
+		if templ_7745c5c3_Err != nil {
+			return templ_7745c5c3_Err
+		}
+		templ_7745c5c3_Err = components.CodeBlock(`gospa postcss:bundles`, "bash", "terminal").Render(ctx, templ_7745c5c3_Buffer)
+		if templ_7745c5c3_Err != nil {
+			return templ_7745c5c3_Err
+		}
+		templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 10, "<p class=\"text-sm text-[var(--text-muted)] mt-4\">Each bundle can have its own critical CSS extraction, allowing you to inline only the styles needed for that section of your app.</p></section><section class=\"space-y-6\"><h2 class=\"text-2xl font-bold border-b border-[var(--border)] pb-2\">Available Plugins</h2><div class=\"grid gap-4 md:grid-cols-2\">")
 		if templ_7745c5c3_Err != nil {
 			return templ_7745c5c3_Err
 		}
@@ -89,7 +209,19 @@ func Page() templ.Component {
 		if templ_7745c5c3_Err != nil {
 			return templ_7745c5c3_Err
 		}
-		templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 5, "</div><p class=\"text-sm text-[var(--text-muted)] mt-4\">Note: Container queries and line-clamp are built into Tailwind v4 and don't require separate plugins.</p></section><section class=\"space-y-6\"><h2 class=\"text-2xl font-bold border-b border-[var(--border)] pb-2\">Generated Configuration</h2><p class=\"text-[var(--text-secondary)] mb-4\">The plugin generates a postcss.config.js file:</p>")
+		templ_7745c5c3_Err = extensionCard("Autoprefixer", "autoprefixer", "Add vendor prefixes for browser compatibility.").Render(ctx, templ_7745c5c3_Buffer)
+		if templ_7745c5c3_Err != nil {
+			return templ_7745c5c3_Err
+		}
+		templ_7745c5c3_Err = extensionCard("CSSNano", "cssnano", "Advanced CSS minification.").Render(ctx, templ_7745c5c3_Buffer)
+		if templ_7745c5c3_Err != nil {
+			return templ_7745c5c3_Err
+		}
+		templ_7745c5c3_Err = extensionCard("PostCSS Nested", "postcss-nested", "Support for nested CSS syntax.").Render(ctx, templ_7745c5c3_Buffer)
+		if templ_7745c5c3_Err != nil {
+			return templ_7745c5c3_Err
+		}
+		templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 11, "</div><p class=\"text-sm text-[var(--text-muted)] mt-4\">Note: Container queries and line-clamp are built into Tailwind v4 and don't require separate plugins.</p></section><section class=\"space-y-6\"><h2 class=\"text-2xl font-bold border-b border-[var(--border)] pb-2\">Generated Configuration</h2><p class=\"text-[var(--text-secondary)] mb-4\">The plugin generates a postcss.config.js file:</p>")
 		if templ_7745c5c3_Err != nil {
 			return templ_7745c5c3_Err
 		}
@@ -101,7 +233,7 @@ func Page() templ.Component {
 		if templ_7745c5c3_Err != nil {
 			return templ_7745c5c3_Err
 		}
-		templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 6, "</section><section class=\"space-y-6\"><h2 class=\"text-2xl font-bold border-b border-[var(--border)] pb-2\">Usage Example</h2>")
+		templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 12, "</section><section class=\"space-y-6\"><h2 class=\"text-2xl font-bold border-b border-[var(--border)] pb-2\">Usage Example</h2>")
 		if templ_7745c5c3_Err != nil {
 			return templ_7745c5c3_Err
 		}
@@ -134,7 +266,7 @@ func Page() templ.Component {
 		if templ_7745c5c3_Err != nil {
 			return templ_7745c5c3_Err
 		}
-		templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 7, "</section><section class=\"space-y-6\"><h2 class=\"text-2xl font-bold border-b border-[var(--border)] pb-2\">Dependencies</h2><div class=\"rounded-xl border border-[var(--border)] bg-[var(--bg-secondary)] p-4\"><p class=\"text-[var(--text-secondary)] mb-3\">Bun packages (auto-installed):</p><code class=\"text-sm text-[var(--accent-primary)]\">postcss-cli, tailwindcss/postcss, tailwindcss/typography, tailwindcss/forms, tailwindcss/aspect-ratio</code></div></section></div>")
+		templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 13, "</section><section class=\"space-y-6\"><h2 class=\"text-2xl font-bold border-b border-[var(--border)] pb-2\">Dependencies</h2><div class=\"rounded-xl border border-[var(--border)] bg-[var(--bg-secondary)] p-4\"><p class=\"text-[var(--text-secondary)] mb-3\">Bun packages (auto-installed):</p><code class=\"text-sm text-[var(--accent-primary)]\">postcss-cli, tailwindcss/postcss, tailwindcss/typography, tailwindcss/forms, tailwindcss/aspect-ratio</code></div></section></div>")
 		if templ_7745c5c3_Err != nil {
 			return templ_7745c5c3_Err
 		}
@@ -163,46 +295,46 @@ func extensionCard(name string, pkg string, description string) templ.Component 
 			templ_7745c5c3_Var2 = templ.NopComponent
 		}
 		ctx = templ.ClearChildren(ctx)
-		templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 8, "<div class=\"p-4 rounded-xl border border-[var(--border)] bg-[var(--bg-secondary)]\"><h3 class=\"font-bold mb-1\">")
+		templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 14, "<div class=\"p-4 rounded-xl border border-[var(--border)] bg-[var(--bg-secondary)]\"><h3 class=\"font-bold mb-1\">")
 		if templ_7745c5c3_Err != nil {
 			return templ_7745c5c3_Err
 		}
 		var templ_7745c5c3_Var3 string
 		templ_7745c5c3_Var3, templ_7745c5c3_Err = templ.JoinStringErrs(name)
 		if templ_7745c5c3_Err != nil {
-			return templ.Error{Err: templ_7745c5c3_Err, FileName: `routes/docs/plugins/postcss/page.templ`, Line: 149, Col: 35}
+			return templ.Error{Err: templ_7745c5c3_Err, FileName: `routes/docs/plugins/postcss/page.templ`, Line: 300, Col: 35}
 		}
 		_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ.EscapeString(templ_7745c5c3_Var3))
 		if templ_7745c5c3_Err != nil {
 			return templ_7745c5c3_Err
 		}
-		templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 9, "</h3><code class=\"text-xs text-[var(--text-muted)] block mb-2\">")
+		templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 15, "</h3><code class=\"text-xs text-[var(--text-muted)] block mb-2\">")
 		if templ_7745c5c3_Err != nil {
 			return templ_7745c5c3_Err
 		}
 		var templ_7745c5c3_Var4 string
 		templ_7745c5c3_Var4, templ_7745c5c3_Err = templ.JoinStringErrs(pkg)
 		if templ_7745c5c3_Err != nil {
-			return templ.Error{Err: templ_7745c5c3_Err, FileName: `routes/docs/plugins/postcss/page.templ`, Line: 150, Col: 65}
+			return templ.Error{Err: templ_7745c5c3_Err, FileName: `routes/docs/plugins/postcss/page.templ`, Line: 301, Col: 65}
 		}
 		_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ.EscapeString(templ_7745c5c3_Var4))
 		if templ_7745c5c3_Err != nil {
 			return templ_7745c5c3_Err
 		}
-		templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 10, "</code><p class=\"text-sm text-[var(--text-muted)]\">")
+		templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 16, "</code><p class=\"text-sm text-[var(--text-muted)]\">")
 		if templ_7745c5c3_Err != nil {
 			return templ_7745c5c3_Err
 		}
 		var templ_7745c5c3_Var5 string
 		templ_7745c5c3_Var5, templ_7745c5c3_Err = templ.JoinStringErrs(description)
 		if templ_7745c5c3_Err != nil {
-			return templ.Error{Err: templ_7745c5c3_Err, FileName: `routes/docs/plugins/postcss/page.templ`, Line: 151, Col: 59}
+			return templ.Error{Err: templ_7745c5c3_Err, FileName: `routes/docs/plugins/postcss/page.templ`, Line: 302, Col: 59}
 		}
 		_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ.EscapeString(templ_7745c5c3_Var5))
 		if templ_7745c5c3_Err != nil {
 			return templ_7745c5c3_Err
 		}
-		templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 11, "</p></div>")
+		templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 17, "</p></div>")
 		if templ_7745c5c3_Err != nil {
 			return templ_7745c5c3_Err
 		}
@@ -231,33 +363,33 @@ func hookCard(name string, description string) templ.Component {
 			templ_7745c5c3_Var6 = templ.NopComponent
 		}
 		ctx = templ.ClearChildren(ctx)
-		templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 12, "<div class=\"p-4 rounded-xl border border-[var(--border)] bg-[var(--bg-secondary)]\"><h3 class=\"font-bold mb-1 text-[var(--accent-primary)]\">")
+		templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 18, "<div class=\"p-4 rounded-xl border border-[var(--border)] bg-[var(--bg-secondary)]\"><h3 class=\"font-bold mb-1 text-[var(--accent-primary)]\">")
 		if templ_7745c5c3_Err != nil {
 			return templ_7745c5c3_Err
 		}
 		var templ_7745c5c3_Var7 string
 		templ_7745c5c3_Var7, templ_7745c5c3_Err = templ.JoinStringErrs(name)
 		if templ_7745c5c3_Err != nil {
-			return templ.Error{Err: templ_7745c5c3_Err, FileName: `routes/docs/plugins/postcss/page.templ`, Line: 157, Col: 64}
+			return templ.Error{Err: templ_7745c5c3_Err, FileName: `routes/docs/plugins/postcss/page.templ`, Line: 308, Col: 64}
 		}
 		_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ.EscapeString(templ_7745c5c3_Var7))
 		if templ_7745c5c3_Err != nil {
 			return templ_7745c5c3_Err
 		}
-		templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 13, "</h3><p class=\"text-sm text-[var(--text-muted)]\">")
+		templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 19, "</h3><p class=\"text-sm text-[var(--text-muted)]\">")
 		if templ_7745c5c3_Err != nil {
 			return templ_7745c5c3_Err
 		}
 		var templ_7745c5c3_Var8 string
 		templ_7745c5c3_Var8, templ_7745c5c3_Err = templ.JoinStringErrs(description)
 		if templ_7745c5c3_Err != nil {
-			return templ.Error{Err: templ_7745c5c3_Err, FileName: `routes/docs/plugins/postcss/page.templ`, Line: 158, Col: 59}
+			return templ.Error{Err: templ_7745c5c3_Err, FileName: `routes/docs/plugins/postcss/page.templ`, Line: 309, Col: 59}
 		}
 		_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ.EscapeString(templ_7745c5c3_Var8))
 		if templ_7745c5c3_Err != nil {
 			return templ_7745c5c3_Err
 		}
-		templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 14, "</p></div>")
+		templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 20, "</p></div>")
 		if templ_7745c5c3_Err != nil {
 			return templ_7745c5c3_Err
 		}

@@ -142,9 +142,43 @@ plugins:
     minify: true                  # Minify in production (default: true)
     source_map: false             # Generate source maps (default: false)
     plugins:                      # PostCSS plugins to enable
-      - typography                # @tailwindcss/typography
-      - forms                     # @tailwindcss/forms
-      - aspect-ratio              # @tailwindcss/aspect-ratio
+      typography: true            # @tailwindcss/typography
+      forms: true                 # @tailwindcss/forms
+      aspectRatio: true           # @tailwindcss/aspect-ratio
+      autoprefixer: true          # Add vendor prefixes
+      cssnano: false              # Advanced minification
+      postcssNested: true         # Nested CSS support
+
+    # Critical CSS extraction for performance
+    criticalCSS:
+      enabled: false              # Enable critical CSS extraction
+      criticalOutput: ./static/css/critical.css      # Inlined in HTML
+      nonCriticalOutput: ./static/css/non-critical.css  # Async loaded
+      inlineMaxSize: 14336        # Max bytes for inline CSS (14KB default)
+      dimensions:                 # Viewport sizes for critical CSS
+        - width: 1300
+          height: 900
+          name: desktop
+        - width: 500
+          height: 900
+          name: mobile
+
+    # CSS bundle splitting for multi-page apps
+    bundles:
+      - name: marketing
+        input: ./styles/marketing.css
+        output: ./static/css/marketing.css
+        content:                    # Content paths for this bundle
+          - ./routes/marketing/**/*.templ
+        criticalCSS:
+          enabled: true
+          criticalOutput: ./static/css/marketing.critical.css
+          nonCriticalOutput: ./static/css/marketing.non-critical.css
+      - name: dashboard
+        input: ./styles/dashboard.css
+        output: ./static/css/dashboard.css
+        content:
+          - ./routes/dashboard/**/*.templ
 ```
 
 **CLI Commands:**
@@ -154,6 +188,76 @@ plugins:
 | `postcss:build` | `pb` | Build CSS for production |
 | `postcss:watch` | `pw` | Watch and rebuild CSS on changes |
 | `postcss:config` | `pc` | Generate PostCSS configuration file |
+| `postcss:critical` | `pcr` | Extract critical CSS for above-the-fold content |
+| `postcss:bundles` | `pbd` | Build all CSS bundles |
+
+### Critical CSS and Async Loading
+
+The PostCSS plugin supports critical CSS extraction to improve page load performance:
+
+1. **Critical CSS** - Above-the-fold styles that are inlined directly in the HTML `<head>`
+2. **Non-critical CSS** - Below-the-fold styles that are loaded asynchronously
+
+**Setup:**
+
+1. Enable critical CSS in your `gospa.yaml`:
+```yaml
+plugins:
+  postcss:
+    criticalCSS:
+      enabled: true
+      criticalOutput: ./static/css/critical.css
+      nonCriticalOutput: ./static/css/non-critical.css
+```
+
+2. Extract critical CSS:
+```bash
+gospa postcss:critical
+```
+
+3. Use in your templates:
+```templ
+// Inline critical CSS
+<style>
+{{ CriticalCSS "/css/critical.css" }}
+</style>
+
+// Async load non-critical CSS
+{{ AsyncCSS "/css/non-critical.css" }}
+```
+
+**How it works:**
+The `CriticalCSS` helper reads the critical CSS file and inlines it. The `AsyncCSS` helper generates a preload link that loads the non-critical CSS asynchronously:
+
+```html
+<link rel="preload" href="/css/non-critical.css" as="style" onload="this.onload=null;this.rel='stylesheet'">
+<noscript><link rel="stylesheet" href="/css/non-critical.css"></noscript>
+```
+
+### CSS Bundle Splitting
+
+For multi-page applications, you can split CSS into separate bundles to reduce per-page payload:
+
+```yaml
+plugins:
+  postcss:
+    bundles:
+      - name: marketing
+        input: ./styles/marketing.css
+        output: ./static/css/marketing.css
+        content:
+          - ./routes/marketing/**/*.templ
+      - name: app
+        input: ./styles/app.css
+        output: ./static/css/app.css
+        content:
+          - ./routes/app/**/*.templ
+```
+
+Each bundle:
+- Scans only its specified content paths for Tailwind class detection
+- Can have its own critical CSS extraction
+- Is built independently with `gospa postcss:bundles`
 
 **Usage:**
 1. Run `gospa add:postcss` to install dependencies and create `postcss.config.js`

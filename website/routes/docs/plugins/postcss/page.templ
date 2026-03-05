@@ -31,9 +31,43 @@ templ Page() {
     minify: true                  # Minify in production (default: true)
     sourceMap: false              # Generate source maps (default: false)
     plugins:                      # Additional Tailwind plugins
-      - typography
-      - forms
-      - aspect-ratio`, "yaml", "gospa.yaml")
+      typography: true            # @tailwindcss/typography
+      forms: true                 # @tailwindcss/forms
+      aspectRatio: true           # @tailwindcss/aspect-ratio
+      autoprefixer: true          # Add vendor prefixes
+      cssnano: false              # Advanced minification
+      postcssNested: true         # Nested CSS support
+
+    # Critical CSS extraction for performance
+    criticalCSS:
+      enabled: false              # Enable critical CSS extraction
+      criticalOutput: ./static/css/critical.css      # Inlined in HTML
+      nonCriticalOutput: ./static/css/non-critical.css  # Async loaded
+      inlineMaxSize: 14336        # Max bytes for inline CSS (14KB default)
+      dimensions:                 # Viewport sizes for critical CSS
+        - width: 1300
+          height: 900
+          name: desktop
+        - width: 500
+          height: 900
+          name: mobile
+
+    # CSS bundle splitting for multi-page apps
+    bundles:
+      - name: marketing
+        input: ./styles/marketing.css
+        output: ./static/css/marketing.css
+        content:                    # Content paths for this bundle
+          - ./routes/marketing/**/*.templ
+        criticalCSS:
+          enabled: true
+          criticalOutput: ./static/css/marketing.critical.css
+          nonCriticalOutput: ./static/css/marketing.non-critical.css
+      - name: dashboard
+        input: ./styles/dashboard.css
+        output: ./static/css/dashboard.css
+        content:
+          - ./routes/dashboard/**/*.templ`, "yaml", "gospa.yaml")
 		</section>
 
 		<section class="space-y-6">
@@ -68,6 +102,16 @@ templ Page() {
 							<td class="px-6 py-4 text-[var(--text-muted)]">pc</td>
 							<td class="px-6 py-4 text-[var(--text-secondary)]">Generate PostCSS configuration file</td>
 						</tr>
+						<tr>
+							<td class="px-6 py-4 mono text-[var(--accent-primary)] font-bold">gospa postcss:critical</td>
+							<td class="px-6 py-4 text-[var(--text-muted)]">pcr</td>
+							<td class="px-6 py-4 text-[var(--text-secondary)]">Extract critical CSS for above-the-fold content</td>
+						</tr>
+						<tr>
+							<td class="px-6 py-4 mono text-[var(--accent-primary)] font-bold">gospa postcss:bundles</td>
+							<td class="px-6 py-4 text-[var(--text-muted)]">pbd</td>
+							<td class="px-6 py-4 text-[var(--text-secondary)]">Build all CSS bundles</td>
+						</tr>
 					</tbody>
 				</table>
 			</div>
@@ -83,11 +127,118 @@ templ Page() {
 		</section>
 
 		<section class="space-y-6">
+			<h2 class="text-2xl font-bold border-b border-[var(--border)] pb-2">Critical CSS and Async Loading</h2>
+			<p class="text-[var(--text-secondary)] mb-4">
+				Improve page load performance by extracting critical CSS (above-the-fold) and loading non-critical CSS asynchronously.
+				Critical CSS is inlined directly in the HTML, eliminating render-blocking requests for initial page paint.
+			</p>
+			
+			<h3 class="text-lg font-bold text-[var(--accent-primary)] mb-2">Setup</h3>
+			<p class="text-[var(--text-secondary)] mb-4">1. Enable critical CSS in your configuration:</p>
+			@components.CodeBlock(`plugins:
+  postcss:
+    criticalCSS:
+      enabled: true
+      criticalOutput: ./static/css/critical.css      # Inlined in HTML head
+      nonCriticalOutput: ./static/css/non-critical.css  # Loaded asynchronously
+      inlineMaxSize: 14336        # Max bytes for inline CSS (14KB = single round-trip)
+      dimensions:                 # Viewport sizes for critical CSS detection
+        - width: 1300
+          height: 900
+          name: desktop
+        - width: 500
+          height: 900
+          name: mobile`, "yaml", "gospa.yaml")
+			
+			<p class="text-[var(--text-secondary)] mb-4 mt-6">2. Extract critical CSS:</p>
+			@components.CodeBlock(`gospa postcss:critical`, "bash", "terminal")
+			
+			<p class="text-[var(--text-secondary)] mb-4 mt-6">3. Import the postcss package in your layout:</p>
+			@components.CodeBlock(`import (
+	"github.com/aydenstechdungeon/gospa/plugin/postcss"
+	// ... other imports
+)`, "go", "layout.templ")
+			
+			<p class="text-[var(--text-secondary)] mb-4 mt-6">4. Use the helper functions in your templates:</p>
+			@components.CodeBlock(`<!-- Inlined Critical CSS (render-blocking, single round-trip) -->
+@templ.Raw("<style>" + postcss.CriticalCSS("./static/css/critical.css") + "</style>")
+
+<!-- Note: Path is relative to your app's working directory -->
+<!-- For apps running from root: "./website/static/css/critical.css" -->
+<!-- For apps running from website dir: "./static/css/critical.css" -->
+
+<!-- Async load non-critical CSS (non-blocking) -->
+@templ.Raw(postcss.AsyncCSS("/static/css/non-critical.css"))`, "templ", "root_layout.templ")
+			
+			<h3 class="text-lg font-bold text-[var(--accent-primary)] mt-6 mb-2">How It Works</h3>
+			<ul class="list-disc list-inside space-y-2 text-[var(--text-secondary)]">
+				<li><strong>Critical CSS</strong> - Above-the-fold styles for initial render, inlined in HTML <code>&lt;head&gt;</code></li>
+				<li><strong>Non-critical CSS</strong> - Below-the-fold styles loaded asynchronously via preload link</li>
+				<li><strong>14KB limit</strong> - Ensures critical CSS fits in a single TCP round-trip (HTTP/2 packet)</li>
+				<li><strong>CSS-safe extraction</strong> - Splits at complete CSS rules, never mid-declaration</li>
+			</ul>
+			
+			<h3 class="text-lg font-bold text-[var(--accent-primary)] mt-6 mb-2">Helper Functions</h3>
+			<div class="rounded-xl border border-[var(--border)] bg-[var(--bg-secondary)] p-4 space-y-4">
+				<div>
+					<code class="text-sm text-[var(--accent-primary)]">postcss.CriticalCSS(path string) string</code>
+					<p class="text-sm text-[var(--text-muted)] mt-1">Reads critical CSS file and returns content for inlining. Returns empty string if file doesn't exist.</p>
+				</div>
+				<div>
+					<code class="text-sm text-[var(--accent-primary)]">postcss.AsyncCSS(path string) string</code>
+					<p class="text-sm text-[var(--text-muted)] mt-1">Generates HTML for async CSS loading with preload and noscript fallback.</p>
+				</div>
+				<div>
+					<code class="text-sm text-[var(--accent-primary)]">postcss.CriticalCSSWithFallback(path, fallback string) string</code>
+					<p class="text-sm text-[var(--text-muted)] mt-1">Like CriticalCSS but returns fallback content if file doesn't exist (useful for development).</p>
+				</div>
+			</div>
+			
+			<p class="text-sm text-[var(--text-muted)] mt-6">
+				<strong>Performance tip:</strong> The AsyncCSS helper generates <code>&lt;link rel="preload"&gt;</code> with an onload handler
+				that switches to stylesheet once loaded. This prevents render-blocking while ensuring styles apply immediately when available.
+			</p>
+		</section>
+
+		<section class="space-y-6">
+			<h2 class="text-2xl font-bold border-b border-[var(--border)] pb-2">CSS Bundle Splitting</h2>
+			<p class="text-[var(--text-secondary)] mb-4">
+				For multi-page applications, split CSS into separate bundles to reduce per-page payload. Each bundle scans only its specified content paths for Tailwind class detection.
+			</p>
+			
+			@components.CodeBlock(`plugins:
+  postcss:
+    bundles:
+      - name: marketing
+        input: ./styles/marketing.css
+        output: ./static/css/marketing.css
+        content:
+          - ./routes/marketing/**/*.templ
+      - name: dashboard
+        input: ./styles/dashboard.css
+        output: ./static/css/dashboard.css
+        content:
+          - ./routes/dashboard/**/*.templ
+        criticalCSS:
+          enabled: true`, "yaml", "gospa.yaml")
+			
+			<p class="text-[var(--text-secondary)] mb-4 mt-6">Build all bundles:</p>
+			@components.CodeBlock(`gospa postcss:bundles`, "bash", "terminal")
+			
+			<p class="text-sm text-[var(--text-muted)] mt-4">
+				Each bundle can have its own critical CSS extraction, allowing you to inline only the styles needed for that section of your app.
+			</p>
+		</section>
+
+		<section class="space-y-6">
 			<h2 class="text-2xl font-bold border-b border-[var(--border)] pb-2">Available Plugins</h2>
 			<div class="grid gap-4 md:grid-cols-2">
 				@extensionCard("Typography", "tailwindcss/typography", "Beautiful typographic defaults with prose classes.")
 				@extensionCard("Forms", "tailwindcss/forms", "Form element styling and normalization.")
 				@extensionCard("Aspect Ratio", "tailwindcss/aspect-ratio", "Aspect ratio utilities for responsive media.")
+				@extensionCard("Autoprefixer", "autoprefixer", "Add vendor prefixes for browser compatibility.")
+				@extensionCard("CSSNano", "cssnano", "Advanced CSS minification.")
+				@extensionCard("PostCSS Nested", "postcss-nested", "Support for nested CSS syntax.")
 			</div>
 			<p class="text-sm text-[var(--text-muted)] mt-4">
 				Note: Container queries and line-clamp are built into Tailwind v4 and don't require separate plugins.
