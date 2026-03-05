@@ -230,7 +230,6 @@ templ Layout(title string) {
 		<meta name="description" content="A GoSPA application"/>
 		<title>{ title }</title>
 		<link rel="stylesheet" href="/static/css/style.css"/>
-		@gospatempl.RuntimeScript("/_gospa/runtime.js")
 	</head>
 	<body>
 		<main>
