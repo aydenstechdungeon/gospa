@@ -2,6 +2,10 @@ module github.com/aydenstechdungeon/gospa
 
 go 1.26.0
 
+// Replace directive for local development - allows go.work to use local modules
+// without trying to resolve versions from the registry
+replace github.com/aydenstechdungeon/gospa => .
+
 require (
 	github.com/a-h/templ v0.3.1001
 	github.com/andybalholm/brotli v1.1.0
