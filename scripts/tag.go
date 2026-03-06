@@ -1,0 +1,196 @@
+package main
+
+import (
+	"fmt"
+	"io/fs"
+	"os"
+	"os/exec"
+	"path/filepath"
+	"regexp"
+	"strings"
+)
+
+func main() {
+	if len(os.Args) < 2 {
+		fmt.Println("Usage: go run scripts/tag.go <tag>")
+		os.Exit(1)
+	}
+	newTag := os.Args[1]
+	if !strings.HasPrefix(newTag, "v") {
+		fmt.Println("Error: tag must start with 'v' (e.g. v0.1.0)")
+		os.Exit(1)
+	}
+	newVersion := strings.TrimPrefix(newTag, "v")
+
+	modData, err := os.ReadFile("go.mod")
+	if err != nil {
+		fmt.Println("Error: Could not read go.mod:", err)
+		os.Exit(1)
+	}
+	modLines := strings.Split(string(modData), "\n")
+	if len(modLines) == 0 || !strings.HasPrefix(modLines[0], "module ") {
+		fmt.Println("Error: Could not determine module name from go.mod")
+		os.Exit(1)
+	}
+	moduleName := strings.TrimSpace(strings.TrimPrefix(modLines[0], "module "))
+	fmt.Println("Detected module:", moduleName)
+
+	out, _ := exec.Command("git", "tag", "--sort=-v:refname").Output()
+	var oldTag string
+	tags := strings.Split(strings.TrimSpace(string(out)), "\n")
+	if len(tags) > 0 && tags[0] != "" {
+		oldTag = tags[0]
+	}
+
+	if oldTag != "" && oldTag != newTag {
+		oldVersion := strings.TrimPrefix(oldTag, "v")
+		fmt.Printf("Bumping version from %s to %s...\n", oldTag, newTag)
+
+		updateGospaGo(oldVersion, newVersion)
+
+		dirsWithMod := make(map[string]bool)
+
+		filepath.WalkDir(".", func(path string, d fs.DirEntry, err error) error {
+			if err != nil {
+				return nil
+			}
+			if d.IsDir() {
+				if d.Name() == "vendor" || d.Name() == ".git" {
+					return filepath.SkipDir
+				}
+				return nil
+			}
+
+			if d.Name() == "go.mod" {
+				if updateModFile(path, moduleName, oldVersion, newVersion, oldTag, newTag) {
+					dirsWithMod[filepath.Dir(path)] = true
+				}
+				return nil
+			}
+
+			if d.Name() == "go.sum" {
+				return nil
+			}
+
+			ext := filepath.Ext(d.Name())
+			if ext == ".go" || ext == ".md" || ext == ".templ" {
+				if filepath.Base(path) == "gospa.go" {
+					return nil
+				}
+				if updateOtherFile(path, moduleName, oldVersion, newVersion, oldTag, newTag) {
+					fmt.Println("Updating references in", path)
+				}
+			}
+			return nil
+		})
+
+		if len(dirsWithMod) > 0 {
+			fmt.Println("\nRegenerating go.sum files...")
+			for dir := range dirsWithMod {
+				fmt.Println("  Running go mod tidy in", dir)
+				cmd := exec.Command("go", "mod", "tidy")
+				cmd.Dir = dir
+				cmd.Run()
+			}
+		}
+
+		// Run in root just in case
+		exec.Command("go", "mod", "tidy").Run()
+
+		// Commit
+		exec.Command("git", "add", "-A").Run()
+		err = exec.Command("git", "diff", "--cached", "--quiet").Run()
+		if err != nil {
+			exec.Command("git", "commit", "-m", "chore: bump version to "+newTag).Run()
+		} else {
+			fmt.Println("No changes to commit")
+		}
+	} else if oldTag == newTag {
+		fmt.Println("Tag", newTag, "is already the latest tag.")
+	}
+
+	branchOut, _ := exec.Command("git", "rev-parse", "--abbrev-ref", "HEAD").Output()
+	branch := strings.TrimSpace(string(branchOut))
+
+	fmt.Printf("\nTagging %s and pushing to %s...\n", newTag, branch)
+	exec.Command("git", "tag", "-f", newTag).Run()
+
+	cmd1 := exec.Command("git", "push", "origin", branch)
+	cmd1.Stdout = os.Stdout
+	cmd1.Stderr = os.Stderr
+	cmd1.Run()
+
+	cmd2 := exec.Command("git", "push", "-f", "origin", newTag)
+	cmd2.Stdout = os.Stdout
+	cmd2.Stderr = os.Stderr
+	cmd2.Run()
+
+	fmt.Println("\nSuccessfully updated tag", newTag)
+}
+
+func updateGospaGo(oldVersion, newVersion string) {
+	data, err := os.ReadFile("gospa.go")
+	if err != nil {
+		return
+	}
+	content := string(data)
+	oldLine := fmt.Sprintf("const Version = %q", oldVersion)
+	newLine := fmt.Sprintf("const Version = %q", newVersion)
+	if strings.Contains(content, oldLine) {
+		fmt.Println("Updating gospa.go version...")
+		content = strings.Replace(content, oldLine, newLine, 1)
+		os.WriteFile("gospa.go", []byte(content), 0644)
+	}
+}
+
+func updateModFile(path, moduleName, oldVersion, newVersion, oldTag, newTag string) bool {
+	data, err := os.ReadFile(path)
+	if err != nil {
+		return false
+	}
+	content := string(data)
+	changed := false
+
+	oldStr := moduleName + " v" + oldVersion
+	newStr := moduleName + " v" + newVersion
+	if strings.Contains(content, oldStr) {
+		content = strings.ReplaceAll(content, oldStr, newStr)
+		changed = true
+	}
+
+	oldStr2 := moduleName + " " + oldTag
+	newStr2 := moduleName + " " + newTag
+	if strings.Contains(content, oldStr2) {
+		content = strings.ReplaceAll(content, oldStr2, newStr2)
+		changed = true
+	}
+
+	if changed {
+		fmt.Println("Updating", path)
+		os.WriteFile(path, []byte(content), 0644)
+	}
+	return changed
+}
+
+func updateOtherFile(path, moduleName, oldVersion, newVersion, oldTag, newTag string) bool {
+	data, err := os.ReadFile(path)
+	if err != nil {
+		return false
+	}
+	content := string(data)
+
+	// regex to find `moduleName... oldTag` or `moduleName... vOldVersion`
+	modRegexPart := regexp.QuoteMeta(moduleName)
+	pattern := fmt.Sprintf(`(%s(?:/[A-Za-z0-9_.-]+)*)[ @]v?%s\b`, modRegexPart, regexp.QuoteMeta(oldVersion))
+	re := regexp.MustCompile(pattern)
+
+	newContent := re.ReplaceAllStringFunc(content, func(match string) string {
+		return strings.Replace(strings.Replace(match, oldTag, newTag, 1), oldVersion, newVersion, 1)
+	})
+
+	if newContent != content {
+		os.WriteFile(path, []byte(newContent), 0644)
+		return true
+	}
+	return false
+}
