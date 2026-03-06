@@ -30,15 +30,21 @@ RUN rm -rf dist generated node_modules && \
 
 # 4. Handle GoSPA CLI
 # Detect context: if we have the full repo, build locally. Otherwise, install from remote.
+# IMPORTANT: For best results on Render, set 'Docker Build Context' to '.' in Settings.
 RUN if [ -f "cmd/gospa/main.go" ]; then \
-    echo "Building GoSPA CLI from local source..." && \
+    echo "Found local GoSPA source. Building CLI..." && \
     go mod download && \
-    go build -o /usr/local/bin/gospa ./cmd/gospa; \
-    else \
-    echo "Local GoSPA source not found in context, installing via go install..." && \
+    go build -v -o /usr/local/bin/gospa ./cmd/gospa; \
+elif [ -f "go.mod" ] && grep -q "module github.com/aydenstechdungeon/gospa/website" go.mod; then \
+    echo "Context appears to be 'website/' subdirectory. Installing GoSPA CLI from remote..." && \
+    echo "Note: To build from local source, set Docker Build Context to '.' in Render settings." && \
+    GOPROXY=direct go install github.com/aydenstechdungeon/gospa/cmd/gospa@main && \
+    cp /go/bin/gospa /usr/local/bin/gospa; \
+else \
+    echo "Unknown context. Attempting remote install..." && \
     GOPROXY=direct go install github.com/aydenstechdungeon/gospa/cmd/gospa@latest && \
     cp /go/bin/gospa /usr/local/bin/gospa; \
-    fi
+fi
 
 # 5. Build the website
 # Detect if we are in the repository root or the website subdirectory
