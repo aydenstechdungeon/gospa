@@ -83,6 +83,11 @@ templ Page() {
 gospa generate
 go run .
 ```
+or
+```bash
+gospa dev
+go run .
+```
 
 ## Core Concepts
 
