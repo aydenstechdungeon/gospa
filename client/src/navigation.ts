@@ -260,6 +260,7 @@ async function updateDOM(data: PageData): Promise<void> {
 }
 
 // Update head elements - smart reconciliation to avoid CSS flashes
+// and clean up elements that are no longer needed
 function updateHead(headHtml: string): void {
 	// Parse head HTML to extract elements
 	const parser = new DOMParser();
@@ -274,6 +275,9 @@ function updateHead(headHtml: string): void {
 		document.title = newTitle;
 	}
 
+	// Track which GoSPA-managed elements are still needed
+	const neededSelectors = new Set<string>();
+
 	// 2. Smart reconciliation for link tags (CSS)
 	// Never remove existing stylesheets to avoid FOUC (Flash of Unstyled Content)
 	const newLinkElements = Array.from(newHead.querySelectorAll('link'));
@@ -282,8 +286,11 @@ function updateHead(headHtml: string): void {
 		const href = newEl.getAttribute('href');
 		const rel = newEl.getAttribute('rel');
 
-		// Check if this link already exists in the document
+		// Build a unique selector for tracking
 		const selector = href ? `link[href="${href}"]` : null;
+		if (selector) neededSelectors.add(selector);
+
+		// Check if this link already exists in the document
 		const existingEl = selector ? document.head.querySelector(selector) : null;
 
 		if (!existingEl) {
@@ -302,11 +309,13 @@ function updateHead(headHtml: string): void {
 		const property = newEl.getAttribute('property');
 		const httpEquiv = newEl.getAttribute('http-equiv');
 
-		// Build selector to find existing meta
+		// Build selector to find existing meta and for tracking
 		let selector = '';
 		if (name) selector = `meta[name="${name}"]`;
 		else if (property) selector = `meta[property="${property}"]`;
 		else if (httpEquiv) selector = `meta[http-equiv="${httpEquiv}"]`;
+
+		if (selector) neededSelectors.add(selector);
 
 		const existingEl = selector ? document.head.querySelector(selector) : null;
 
@@ -328,6 +337,9 @@ function updateHead(headHtml: string): void {
 	newStyleElements.forEach(newEl => {
 		const id = newEl.id;
 		const selector = id ? `style#${id}` : null;
+
+		if (selector) neededSelectors.add(selector);
+
 		const existingEl = selector ? document.head.querySelector(selector) : null;
 
 		if (!existingEl) {
@@ -340,6 +352,10 @@ function updateHead(headHtml: string): void {
 	// 5. Handle scripts separately if marked
 	newHead.querySelectorAll('script[data-gospa-head]').forEach(el => {
 		const src = el.getAttribute('src');
+		const selector = src ? `script[src="${src}"]` : `script`;
+
+		neededSelectors.add(selector);
+
 		const existingEl = src ? document.head.querySelector(`script[src="${src}"]`) : null;
 
 		if (!existingEl) {
@@ -347,6 +363,58 @@ function updateHead(headHtml: string): void {
 			Array.from(el.attributes).forEach(attr => script.setAttribute(attr.name, attr.value));
 			script.textContent = el.textContent;
 			document.head.appendChild(script);
+		}
+	});
+
+	// 6. Clean up old GoSPA-managed head elements that are no longer needed
+	// This prevents memory leaks and DOM bloat during long SPA sessions
+	const existingGoSPAElements = document.head.querySelectorAll('[data-gospa-head]');
+	existingGoSPAElements.forEach(el => {
+		let shouldRemove = true;
+
+		// Check if this element matches any of the needed selectors
+		for (const needed of neededSelectors) {
+			if (el.matches(needed)) {
+				shouldRemove = false;
+				break;
+			}
+		}
+
+		// For link and meta elements, also check by attribute patterns
+		if (el.matches('link[href]')) {
+			const href = el.getAttribute('href');
+			if (href && neededSelectors.has(`link[href="${href}"]`)) {
+				shouldRemove = false;
+			}
+		} else if (el.matches('meta[name]')) {
+			const name = el.getAttribute('name');
+			if (name && neededSelectors.has(`meta[name="${name}"]`)) {
+				shouldRemove = false;
+			}
+		} else if (el.matches('meta[property]')) {
+			const property = el.getAttribute('property');
+			if (property && neededSelectors.has(`meta[property="${property}"]`)) {
+				shouldRemove = false;
+			}
+		} else if (el.matches('meta[http-equiv]')) {
+			const httpEquiv = el.getAttribute('http-equiv');
+			if (httpEquiv && neededSelectors.has(`meta[http-equiv="${httpEquiv}"]`)) {
+				shouldRemove = false;
+			}
+		} else if (el.matches('style[id]')) {
+			const id = el.id;
+			if (id && neededSelectors.has(`style#${id}`)) {
+				shouldRemove = false;
+			}
+		} else if (el.matches('script[data-gospa-head]')) {
+			const src = el.getAttribute('src');
+			if (src && neededSelectors.has(`script[src="${src}"]`)) {
+				shouldRemove = false;
+			}
+		}
+
+		if (shouldRemove) {
+			el.remove();
 		}
 	});
 }

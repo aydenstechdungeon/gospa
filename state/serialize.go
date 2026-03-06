@@ -3,6 +3,7 @@
 package state
 
 import (
+	"bytes"
 	"encoding/json"
 	"fmt"
 	"reflect"
@@ -191,24 +192,111 @@ func (sm *StateMap) Diff(other *StateMap) *StateMapComparison {
 	}
 }
 
-// deepEqualValues compares two values for equality.
-// Helper for Diff method.
+// deepEqualValues compares two values for equality with optimized paths for common types.
+// Uses fast path for primitives and type-specific comparisons, avoiding expensive
+// JSON marshaling except as final fallback for complex nested structures.
 func deepEqualValues(a, b interface{}) bool {
-	if a == nil && b == nil {
-		return true
+	// Fast path: identical pointers (but skip for maps/slices - not comparable)
+	// We check types first to avoid panics on incomparable types
+	if a != nil && b != nil {
+		aType := reflect.TypeOf(a)
+		bType := reflect.TypeOf(b)
+		// Maps and slices can't be compared with == in Go
+		if aType.Kind() != reflect.Map && aType.Kind() != reflect.Slice &&
+			aType.Kind() != reflect.Array && aType == bType && a == b {
+			return true
+		}
 	}
+
+	// Handle nil cases
 	if a == nil || b == nil {
+		return a == b
+	}
+
+	// Type check - different types can't be equal
+	typeA, typeB := fmt.Sprintf("%T", a), fmt.Sprintf("%T", b)
+	if typeA != typeB {
 		return false
 	}
 
-	// Use JSON marshaling for reliable comparison
+	// Fast paths for common primitive types
+	switch av := a.(type) {
+	case string:
+		bv, ok := b.(string)
+		return ok && av == bv
+	case int:
+		bv, ok := b.(int)
+		return ok && av == bv
+	case int64:
+		bv, ok := b.(int64)
+		return ok && av == bv
+	case float64:
+		bv, ok := b.(float64)
+		return ok && av == bv
+	case bool:
+		bv, ok := b.(bool)
+		return ok && av == bv
+	case []byte:
+		bv, ok := b.([]byte)
+		return ok && bytes.Equal(av, bv)
+	case map[string]interface{}:
+		bv, ok := b.(map[string]interface{})
+		if !ok || len(av) != len(bv) {
+			return false
+		}
+		for k, v := range av {
+			if bvVal, exists := bv[k]; !exists || !deepEqualValues(v, bvVal) {
+				return false
+			}
+		}
+		return true
+	case []interface{}:
+		bv, ok := b.([]interface{})
+		if !ok || len(av) != len(bv) {
+			return false
+		}
+		for i := range av {
+			if !deepEqualValues(av[i], bv[i]) {
+				return false
+			}
+		}
+		return true
+	}
+
+	// Reflection-based comparison for slices/arrays
+	av := reflect.ValueOf(a)
+	bv := reflect.ValueOf(b)
+
+	switch av.Kind() {
+	case reflect.Slice, reflect.Array:
+		if av.Len() != bv.Len() {
+			return false
+		}
+		for i := 0; i < av.Len(); i++ {
+			if !deepEqualValues(av.Index(i).Interface(), bv.Index(i).Interface()) {
+				return false
+			}
+		}
+		return true
+	case reflect.Map:
+		// Maps are not directly comparable - use JSON marshaling fallback
+		// This handles types like map[string]int, map[string]float64, etc.
+		aJSON, err1 := json.Marshal(a)
+		bJSON, err2 := json.Marshal(b)
+		if err1 != nil || err2 != nil {
+			return fmt.Sprintf("%v", a) == fmt.Sprintf("%v", b)
+		}
+		return bytes.Equal(aJSON, bJSON)
+	}
+
+	// Final fallback: JSON comparison for other complex nested structures
 	aJSON, err1 := json.Marshal(a)
 	bJSON, err2 := json.Marshal(b)
 	if err1 != nil || err2 != nil {
 		// Fallback to string comparison
 		return fmt.Sprintf("%v", a) == fmt.Sprintf("%v", b)
 	}
-	return string(aJSON) == string(bJSON)
+	return bytes.Equal(aJSON, bJSON)
 }
 
 // ForEach iterates over all observables in the state map
