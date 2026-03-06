@@ -68,7 +68,7 @@ graph TD
 // client/package.json - Add analyze script
 {
   "scripts": {
-    "analyze": "bun build ./src/runtime.ts --outdir ./dist --target browser --splitting --format esm --sourcemap && bunx bundle-analyzer ./dist"
+    "analyze": "bun build ./src/runtime.ts --outdir ./dist --target browser --splitting --format esm --sourcemap && bun x bundle-analyzer ./dist"
   }
 }
 ```

@@ -505,7 +505,7 @@ func (p *PostCSSPlugin) watchWithContext(projectDir string) {
 			args = append(args, "--map")
 		}
 
-		cmd := exec.CommandContext(ctx, "bunx", args...)
+		cmd := exec.CommandContext(ctx, "bun", append([]string{"x"}, args...)...)
 		cmd.Dir = projectDir
 		cmd.Stdout = os.Stdout
 		cmd.Stderr = os.Stderr
@@ -549,7 +549,7 @@ func (p *PostCSSPlugin) compile(projectDir string) error {
 		args = append(args, "--map")
 	}
 
-	cmd := exec.Command("bunx", args...)
+	cmd := exec.Command("bun", append([]string{"x"}, args...)...)
 	cmd.Stdout = os.Stdout
 	cmd.Stderr = os.Stderr
 
@@ -776,7 +776,7 @@ func (p *PostCSSPlugin) bundlesCommand(args []string) error {
 			args = append(args, "--map")
 		}
 
-		cmd := exec.Command("bunx", args...)
+		cmd := exec.Command("bun", append([]string{"x"}, args...)...)
 		cmd.Dir = projectDir
 		cmd.Stdout = os.Stdout
 		cmd.Stderr = os.Stderr
