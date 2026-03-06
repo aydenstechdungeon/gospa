@@ -4,6 +4,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"html"
+	"log"
 	"runtime/debug"
 
 	"github.com/aydenstechdungeon/gospa/state"
@@ -117,7 +118,12 @@ func ErrorHandler(config ErrorHandlerConfig) fiberpkg.ErrorHandler {
 		case *fiberpkg.Error:
 			appErr = NewAppError(ErrorCodeInternal, e.Message, e.Code)
 		default:
-			appErr = NewAppError(ErrorCodeInternal, err.Error(), fiberpkg.StatusInternalServerError)
+			log.Printf("GoSPA error handler caught internal error: %v", err)
+			message := "Internal server error"
+			if config.DevMode {
+				message = err.Error()
+			}
+			appErr = NewAppError(ErrorCodeInternal, message, fiberpkg.StatusInternalServerError)
 			if config.DevMode {
 				appErr = appErr.WithStack(string(debug.Stack()))
 			}
@@ -302,7 +308,12 @@ func PanicHandler(config ErrorHandlerConfig) fiberpkg.Handler {
 					err = fmt.Errorf("%v", v)
 				}
 
-				appErr := NewAppError(ErrorCodeInternal, err.Error(), fiberpkg.StatusInternalServerError).
+				message := "Internal server error"
+				if config.DevMode {
+					message = err.Error()
+				}
+
+				appErr := NewAppError(ErrorCodeInternal, message, fiberpkg.StatusInternalServerError).
 					WithRecover(true)
 
 				if config.DevMode {

@@ -18,7 +18,6 @@ go install github.com/aydenstechdungeon/gospa/cmd/gospa@latest
 | `generate` | - | Generate route registration code |
 | `prune` | - | Remove unused state from state stores |
 | `add` | - | Add a feature (e.g., tailwind) |
-| `clean` | - | Remove build artifacts and generated files |
 | `version` | `-v`, `--version` | Show GoSPA version |
 | `help` | `-h`, `--help` | Show help message |
 
@@ -525,34 +524,10 @@ gospa prune --store session
 gospa prune --all
 ```
 
-### Automatic Pruning
+### Operational Notes
 
-For production applications, consider enabling automatic pruning in your app configuration:
-
-```go
-app := gospa.New(gospa.Config{
-    EnableStatePrune:    true,
-    StatePruneInterval: 30 * time.Minute,
-    StatePruneMaxAge:   2 * time.Hour,
-})
-```
-
----
-
-## `gospa clean`
-
-Removes build artifacts and generated files.
-
-```bash
-gospa clean
-```
-
-### What Gets Removed
-
-- `dist/` directory
-- `node_modules/` directory
-- `*_templ.go` files (generated templ files)
-- `*_templ.txt` files
+- `gospa prune` is a manual maintenance command.
+- The current `gospa.Config` type does not expose automatic state-pruning fields.
 
 ---
 
@@ -611,10 +586,6 @@ plugins:
     otp_enabled: true
 ```
 
-### Plugin Cache
-
-External plugins are cached in `~/.gospa/plugins/`. This allows plugins to be downloaded and reused across projects.
-
 ### Creating Custom Plugins
 
 Plugins implement the `Plugin` interface:
@@ -633,7 +604,7 @@ type CLIPlugin interface {
 }
 ```
 
-See [PLUGINS.md](./PLUGINS.md) for detailed plugin development guide.
+See [`04-plugins.md`](docs/04-api-reference/04-plugins.md) for the detailed plugin development guide.
 
 ---
 

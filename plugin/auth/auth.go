@@ -7,6 +7,7 @@ import (
 	"crypto/rand"
 	"crypto/sha1"
 	"crypto/sha256"
+	"crypto/subtle"
 	"encoding/base32"
 	"encoding/hex"
 	"fmt"
@@ -22,6 +23,11 @@ import (
 	"github.com/gofiber/fiber/v2"
 	"github.com/golang-jwt/jwt/v5"
 	"golang.org/x/oauth2"
+)
+
+const (
+	oauthStateCookiePrefix = "gospa_oauth_state_"
+	oauthStateTTL          = 10 * time.Minute
 )
 
 // TOTP aliases for backward compatibility and documentation consistency.
@@ -127,6 +133,38 @@ type BackupCode struct {
 	UsedAt *time.Time
 }
 
+func oauthStateCookieName(provider string) string {
+	return oauthStateCookiePrefix + strings.ToLower(provider)
+}
+
+func setOAuthStateCookie(c *fiber.Ctx, provider, state string) {
+	secure := c.Protocol() == "https" || strings.EqualFold(c.Get("X-Forwarded-Proto"), "https")
+	c.Cookie(&fiber.Cookie{
+		Name:     oauthStateCookieName(provider),
+		Value:    state,
+		Path:     "/",
+		HTTPOnly: true,
+		SameSite: "Lax",
+		Secure:   secure,
+		MaxAge:   int(oauthStateTTL.Seconds()),
+		Expires:  time.Now().Add(oauthStateTTL),
+	})
+}
+
+func clearOAuthStateCookie(c *fiber.Ctx, provider string) {
+	secure := c.Protocol() == "https" || strings.EqualFold(c.Get("X-Forwarded-Proto"), "https")
+	c.Cookie(&fiber.Cookie{
+		Name:     oauthStateCookieName(provider),
+		Value:    "",
+		Path:     "/",
+		HTTPOnly: true,
+		SameSite: "Lax",
+		Secure:   secure,
+		MaxAge:   -1,
+		Expires:  time.Unix(0, 0),
+	})
+}
+
 // CreateToken creates a new JWT token.
 func (p *AuthPlugin) CreateToken(userID, email, role string) (string, error) {
 	claims := Claims{
@@ -198,7 +236,13 @@ func (p *AuthPlugin) OAuthRedirect(providerName string) fiber.Handler {
 			Scopes: provider.Scopes,
 		}
 
-		url := conf.AuthCodeURL("state")
+		state, err := generateRandomSecret(32)
+		if err != nil {
+			return c.Status(fiber.StatusInternalServerError).JSON(fiber.Map{"error": "failed to initialize oauth state"})
+		}
+		setOAuthStateCookie(c, providerName, state)
+
+		url := conf.AuthCodeURL(state)
 		return c.Redirect(url)
 	}
 }
@@ -210,6 +254,14 @@ func (p *AuthPlugin) OAuthCallback(providerName string) fiber.Handler {
 		if code == "" {
 			return c.Status(fiber.StatusBadRequest).JSON(fiber.Map{"error": "missing code"})
 		}
+
+		returnedState := c.Query("state")
+		expectedState := c.Cookies(oauthStateCookieName(providerName))
+		if returnedState == "" || expectedState == "" || subtle.ConstantTimeCompare([]byte(returnedState), []byte(expectedState)) != 1 {
+			clearOAuthStateCookie(c, providerName)
+			return c.Status(fiber.StatusForbidden).JSON(fiber.Map{"error": "invalid oauth state"})
+		}
+		clearOAuthStateCookie(c, providerName)
 
 		provider, err := p.getProvider(providerName)
 		if err != nil {
@@ -537,6 +589,8 @@ package auth
 
 import (
 	"context"
+	"crypto/rand"
+	"crypto/subtle"
 	"crypto/hmac"
 	"crypto/sha256"
 	"encoding/hex"
@@ -546,10 +600,57 @@ import (
 	"net/http"
 	"sort"
 	"strings"
+	"time"
 
+	"github.com/gofiber/fiber/v2"
 	"golang.org/x/oauth2"
 	"golang.org/x/oauth2/endpoints"
 )
+
+const (
+	oauthStateCookiePrefix = "gospa_oauth_state_"
+	oauthStateTTL          = 10 * time.Minute
+)
+
+func oauthStateCookieName(provider string) string {
+	return oauthStateCookiePrefix + strings.ToLower(provider)
+}
+
+func generateOAuthState(length int) (string, error) {
+	bytes := make([]byte, length)
+	if _, err := rand.Read(bytes); err != nil {
+		return "", err
+	}
+	return hex.EncodeToString(bytes), nil
+}
+
+func setOAuthStateCookie(c *fiber.Ctx, provider, state string) {
+	secure := c.Protocol() == "https" || strings.EqualFold(c.Get("X-Forwarded-Proto"), "https")
+	c.Cookie(&fiber.Cookie{
+		Name:     oauthStateCookieName(provider),
+		Value:    state,
+		Path:     "/",
+		HTTPOnly: true,
+		SameSite: "Lax",
+		Secure:   secure,
+		MaxAge:   int(oauthStateTTL.Seconds()),
+		Expires:  time.Now().Add(oauthStateTTL),
+	})
+}
+
+func clearOAuthStateCookie(c *fiber.Ctx, provider string) {
+	secure := c.Protocol() == "https" || strings.EqualFold(c.Get("X-Forwarded-Proto"), "https")
+	c.Cookie(&fiber.Cookie{
+		Name:     oauthStateCookieName(provider),
+		Value:    "",
+		Path:     "/",
+		HTTPOnly: true,
+		SameSite: "Lax",
+		Secure:   secure,
+		MaxAge:   -1,
+		Expires:  time.Unix(0, 0),
+	})
+}
 
 // UserInfo represents user information from OAuth providers.
 type UserInfo struct {
@@ -614,6 +715,27 @@ func FetchUserInfo(ctx context.Context, provider string, token *oauth2.Token) (*
 	}
 
 	return parseUserInfo(provider, body)
+}
+
+// BeginOAuthRedirect stores a per-request OAuth state and returns the provider redirect URL.
+func BeginOAuthRedirect(c *fiber.Ctx, provider string, config *oauth2.Config) (string, error) {
+	state, err := generateOAuthState(32)
+	if err != nil {
+		return "", err
+	}
+	setOAuthStateCookie(c, provider, state)
+	return config.AuthCodeURL(state), nil
+}
+
+// ValidateOAuthCallbackState validates and clears the state cookie for an OAuth callback.
+func ValidateOAuthCallbackState(c *fiber.Ctx, provider string) bool {
+	returnedState := c.Query("state")
+	expectedState := c.Cookies(oauthStateCookieName(provider))
+	clearOAuthStateCookie(c, provider)
+	if returnedState == "" || expectedState == "" {
+		return false
+	}
+	return subtle.ConstantTimeCompare([]byte(returnedState), []byte(expectedState)) == 1
 }
 
 func parseUserInfo(provider string, body []byte) (*UserInfo, error) {

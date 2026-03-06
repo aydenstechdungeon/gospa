@@ -42,7 +42,6 @@ go mod tidy
 package main
 
 import (
-    "context"
     "log"
     _ "myapp/routes" // Import routes to trigger init()
     
@@ -81,7 +80,8 @@ templ Page() {
 ### 4. Run
 
 ```bash
-go run main.go
+gospa generate
+go run .
 ```
 
 ## Core Concepts
@@ -208,15 +208,8 @@ new GoSPA.Effect(() => {
     console.log('Count:', count.get())
 })
 
-// DOM binding
-GoSPA.bindElement('element-id', count)
-
-// Navigation
-GoSPA.navigate('/about')
-GoSPA.prefetch('/blog')
-
-// Transitions
-GoSPA.fade(element, { duration: 300 })
+// Remote action helper
+GoSPA.remote('saveData', { count: count.get() })
 ```
 
 #### Runtime Variants: Default vs Secure
@@ -225,13 +218,13 @@ GoSPA follows a **"trust the server"** security model (similar to SvelteKit). Th
 
 **Default Runtime (`gospa`) — Recommended for most apps:**
 ```typescript
-import { init } from 'gospa';
+import { init } from '@gospa/client';
 init(); // ~15KB, no sanitizer needed
 ```
 
 **Secure Runtime (`gospa/runtime-secure`) — For user-generated content:**
 ```typescript
-import { init, sanitize } from 'gospa/runtime-secure';
+import { init, sanitize } from '@gospa/client/runtime-secure';
 init(); // ~35KB, includes DOMPurify
 
 // Sanitize user-generated HTML
@@ -255,7 +248,7 @@ const clean = await sanitize(userComment);
 - JSON data
 - Any content already escaped by Templ on the server
 
-See [`docs/RUNTIME.md`](docs/RUNTIME.md) for complete runtime selection guide.
+See [`docs/03-features/01-client-runtime.md`](docs/03-features/01-client-runtime.md) for the complete runtime selection guide.
 
 ### Remote Actions
 
@@ -293,7 +286,7 @@ app := gospa.New(gospa.Config{
 
 ```typescript
 // Call from client
-import { remote } from '@gospa/runtime';
+import { remote } from '@gospa/client';
 
 const result = await remote('saveData', { id: 123 });
 
@@ -321,7 +314,7 @@ app := gospa.New(gospa.Config{
 
 > **Security By Default:** 
 > When you set `EnableCSRF: true`, GoSPA automatically wires both the token issuer 
-> and validator middlewares for you. You do not need to wire them manually!
+> and validator middlewares for you. The built-in client remote helper sends the `X-CSRF-Token` header automatically for same-origin requests.
 
 ### Rendering Strategies
 
@@ -368,7 +361,7 @@ app := gospa.New(gospa.Config{
 })
 ```
 
-See [`docs/RENDERING.md`](docs/RENDERING.md) for full documentation.
+See [`docs/02-core-concepts/02-rendering.md`](docs/02-core-concepts/02-rendering.md) for full rendering documentation.
 
 ### Partial Hydration
 
@@ -449,9 +442,9 @@ gospa dev             # Development server with hot reload
 gospa build           # Production build
 ```
 
-Run any command with `--help` (e.g., `gospa build --help`) to see all available options and flags.
+Run any command with `--help` (for example `gospa build --help`) to see all available options and flags.
 
-For more details, see the [CLI Reference](https://gospa.dev/docs/cli).
+For more details, see [`docs/04-api-reference/03-cli.md`](docs/04-api-reference/03-cli.md).
 
 ## Plugin Ecosystem
 
@@ -482,13 +475,12 @@ plugins:
     input: ./images
     output: ./static/images
     formats: [webp, jpeg]
-    sizes: [320, 640, 1280, 1920]
+    widths: [320, 640, 1280, 1920]
   auth:
     jwt_secret: ${JWT_SECRET}
-    oauth:
-      google:
-        client_id: ${GOOGLE_CLIENT_ID}
-        client_secret: ${GOOGLE_CLIENT_SECRET}
+    oauth_providers: [google]
+    google_client_id: ${GOOGLE_CLIENT_ID}
+    google_client_secret: ${GOOGLE_CLIENT_SECRET}
 ```
 
 ### Plugin Hooks
@@ -498,6 +490,8 @@ Plugins integrate at key lifecycle points:
 - `BeforeGenerate` / `AfterGenerate` — Code generation
 - `BeforeDev` / `AfterDev` — Development server
 - `BeforeBuild` / `AfterBuild` — Production build
+
+The current repository documents the built-in plugin model only. Dynamic plugin installation and external shared-library loading are not part of the checked-in CLI surface.
 
 ### Creating Custom Plugins
 
@@ -522,12 +516,12 @@ func (p *MyPlugin) OnHook(hook plugin.Hook, ctx map[string]interface{}) error {
 }
 func (p *MyPlugin) Commands() []plugin.Command {
     return []plugin.Command{
-        {Name: "my-plugin:run", Short: "mp", Description: "Run my plugin"},
+        {Name: "my-plugin:run", Alias: "mp", Description: "Run my plugin"},
     }
 }
 ```
 
-See [`docs/PLUGINS.md`](docs/PLUGINS.md) for complete plugin documentation.
+See [`docs/04-api-reference/04-plugins.md`](docs/04-api-reference/04-plugins.md) for complete plugin documentation.
 
 ## Architecture
 

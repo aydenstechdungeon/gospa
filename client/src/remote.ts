@@ -32,6 +32,16 @@ export interface RemoteResult<T = unknown> {
 // Default remote prefix - matches server default
 let remotePrefix = '/_gospa/remote';
 
+function getCookie(name: string): string | undefined {
+	if (typeof document === 'undefined') return undefined;
+
+	const cookie = document.cookie
+		.split('; ')
+		.find((row) => row.startsWith(`${name}=`));
+
+	return cookie ? decodeURIComponent(cookie.split('=').slice(1).join('=')) : undefined;
+}
+
 /**
  * Configure the remote action client
  */
@@ -73,39 +83,52 @@ export async function remote<T = unknown>(
 ): Promise<RemoteResult<T>> {
 	const url = `${remotePrefix}/${encodeURIComponent(name)}`;
 	const timeout = options.timeout ?? 30000;
+	const externalSignal = options.signal;
 
-	// Only create AbortController if we need timeout or to combine with external signal
-	const controller = (timeout !== undefined || options.signal)
-		? new AbortController()
-		: null;
-	const timeoutId = controller ? setTimeout(() => controller.abort(), timeout) : null;
-
-	// Track external signal listener for cleanup
-	let abortListener: (() => void) | undefined;
-
-	// Use provided signal or create one from our controller
-	if (options.signal && controller) {
-		abortListener = () => controller.abort();
-		options.signal.addEventListener('abort', abortListener);
+	if (externalSignal?.aborted) {
+		return {
+			error: 'Request aborted',
+			code: 'NETWORK_ERROR',
+			status: 0,
+			ok: false,
+		};
 	}
 
-	// Determine the signal to use for fetch
-	const fetchSignal = controller?.signal ?? options.signal;
+	const controller = new AbortController();
+	const csrfToken = getCookie('csrf_token');
+
+	let abortListener: (() => void) | undefined;
+	if (externalSignal) {
+		abortListener = () => controller.abort();
+		externalSignal.addEventListener('abort', abortListener);
+	}
+
+	let timeoutId: ReturnType<typeof setTimeout> | undefined;
+	const timeoutPromise = new Promise<never>((_, reject) => {
+		timeoutId = setTimeout(() => {
+			controller.abort();
+			reject(new Error('__GOSPA_TIMEOUT__'));
+		}, timeout);
+	});
 
 	try {
-		const response = await fetch(url, {
-			method: 'POST',
-			headers: {
-				'Content-Type': 'application/json',
-				'Accept': 'application/json',
-				...options.headers,
-			},
-			body: input !== undefined ? JSON.stringify(input) : undefined,
-			signal: fetchSignal,
-			credentials: 'same-origin',
-		});
+		const response = await Promise.race([
+			fetch(url, {
+				method: 'POST',
+				headers: {
+					'Content-Type': 'application/json',
+					'Accept': 'application/json',
+					...(csrfToken ? { 'X-CSRF-Token': csrfToken } : {}),
+					...options.headers,
+				},
+				body: input !== undefined ? JSON.stringify(input) : undefined,
+				signal: controller.signal,
+				credentials: 'same-origin',
+			}),
+			timeoutPromise,
+		]);
 
-		if (timeoutId !== null) clearTimeout(timeoutId);
+		if (timeoutId !== undefined) clearTimeout(timeoutId);
 
 		// Parse response body
 		let data: T | undefined;
@@ -142,13 +165,22 @@ export async function remote<T = unknown>(
 			ok: response.ok,
 		};
 	} catch (err) {
-		if (timeoutId !== null) clearTimeout(timeoutId);
+		if (timeoutId !== undefined) clearTimeout(timeoutId);
+
+		if (err instanceof Error && err.message === '__GOSPA_TIMEOUT__') {
+			return {
+				error: 'Request timeout',
+				code: 'TIMEOUT',
+				status: 0,
+				ok: false,
+			};
+		}
 
 		if (err instanceof Error) {
 			if (err.name === 'AbortError') {
 				return {
-					error: 'Request timeout',
-					code: 'TIMEOUT',
+					error: externalSignal?.aborted ? 'Request aborted' : err.message,
+					code: 'NETWORK_ERROR',
 					status: 0,
 					ok: false,
 				};
@@ -169,8 +201,8 @@ export async function remote<T = unknown>(
 		};
 	} finally {
 		// Clean up external signal listener to prevent memory leaks
-		if (abortListener && options.signal) {
-			options.signal.removeEventListener('abort', abortListener);
+		if (abortListener && externalSignal) {
+			externalSignal.removeEventListener('abort', abortListener);
 		}
 	}
 }

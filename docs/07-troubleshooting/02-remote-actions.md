@@ -136,11 +136,9 @@ CSRF protection is enabled but the token is missing/invalid.
 app := gospa.New(gospa.Config{
     EnableCSRF: true,
 })
-
-// Order matters! SetToken must come before protection
-app.Use(fiber.CSRFSetTokenMiddleware())  // Issues cookie
-app.Use(fiber.CSRFTokenMiddleware())      // Validates header
 ```
+
+With `EnableCSRF: true`, GoSPA wires the middleware automatically. You only need to add `CSRFSetTokenMiddleware()` and `CSRFTokenMiddleware()` yourself if you are building a custom Fiber stack outside the default app setup.
 
 #### 2. Check cookies are enabled
 
@@ -150,7 +148,7 @@ The client reads the `csrf_token` cookie. If cookies are disabled, remote action
 
 Check browser dev tools:
 1. Look for `csrf_token` cookie in Application → Cookies
-2. Check that `X-CSRF-Token` header is sent in the request
+2. Check that `X-CSRF-Token` header is sent in the request. The built-in `remote()` helper sends it automatically for same-origin requests.
 
 ## "ACTION_FAILED" Error
 
@@ -216,7 +214,7 @@ app := gospa.New(gospa.Config{
 If you change this, ensure the client knows:
 
 ```javascript
-import { configureRemote } from '@gospa/runtime';
+import { configureRemote } from '@gospa/client';
 
 configureRemote({ prefix: '/api/rpc' });
 ```

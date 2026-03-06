@@ -50,8 +50,8 @@ func main() {
 
 		dirsWithMod := make(map[string]bool)
 
-		filepath.WalkDir(".", func(path string, d fs.DirEntry, err error) error {
-			if err != nil {
+		err = filepath.WalkDir(".", func(path string, d fs.DirEntry, walkErr error) error {
+			if walkErr != nil {
 				return nil
 			}
 			if d.IsDir() {
@@ -84,24 +84,38 @@ func main() {
 			return nil
 		})
 
+		if err != nil {
+			fmt.Println("Error walking directory:", err)
+		}
+
 		if len(dirsWithMod) > 0 {
 			fmt.Println("\nRegenerating go.sum files...")
 			for dir := range dirsWithMod {
 				fmt.Println("  Running go mod tidy in", dir)
 				cmd := exec.Command("go", "mod", "tidy")
 				cmd.Dir = dir
-				cmd.Run()
+				if runErr := cmd.Run(); runErr != nil {
+					fmt.Printf("Warning: go mod tidy failed in %s: %v\n", dir, runErr)
+				}
 			}
 		}
 
 		// Run in root just in case
-		exec.Command("go", "mod", "tidy").Run()
+		if err := exec.Command("go", "mod", "tidy").Run(); err != nil {
+			fmt.Println("Warning: go mod tidy failed:", err)
+		}
 
 		// Commit
-		exec.Command("git", "add", "-A").Run()
+		if err := exec.Command("git", "add", "-A").Run(); err != nil {
+			fmt.Println("Error: git add failed:", err)
+			os.Exit(1)
+		}
 		err = exec.Command("git", "diff", "--cached", "--quiet").Run()
 		if err != nil {
-			exec.Command("git", "commit", "-m", "chore: bump version to "+newTag).Run()
+			if err := exec.Command("git", "commit", "-m", "chore: bump version to "+newTag).Run(); err != nil {
+				fmt.Println("Error: git commit failed:", err)
+				os.Exit(1)
+			}
 		} else {
 			fmt.Println("No changes to commit")
 		}
@@ -113,17 +127,26 @@ func main() {
 	branch := strings.TrimSpace(string(branchOut))
 
 	fmt.Printf("\nTagging %s and pushing to %s...\n", newTag, branch)
-	exec.Command("git", "tag", "-f", newTag).Run()
+	if err := exec.Command("git", "tag", "-f", newTag).Run(); err != nil {
+		fmt.Println("Error: git tag failed:", err)
+		os.Exit(1)
+	}
 
 	cmd1 := exec.Command("git", "push", "origin", branch)
 	cmd1.Stdout = os.Stdout
 	cmd1.Stderr = os.Stderr
-	cmd1.Run()
+	if err := cmd1.Run(); err != nil {
+		fmt.Println("Error: git push failed:", err)
+		os.Exit(1)
+	}
 
 	cmd2 := exec.Command("git", "push", "-f", "origin", newTag)
 	cmd2.Stdout = os.Stdout
 	cmd2.Stderr = os.Stderr
-	cmd2.Run()
+	if err := cmd2.Run(); err != nil {
+		fmt.Println("Error: git push failed:", err)
+		os.Exit(1)
+	}
 
 	fmt.Println("\nSuccessfully updated tag", newTag)
 }
@@ -139,7 +162,9 @@ func updateGospaGo(oldVersion, newVersion string) {
 	if strings.Contains(content, oldLine) {
 		fmt.Println("Updating gospa.go version...")
 		content = strings.Replace(content, oldLine, newLine, 1)
-		os.WriteFile("gospa.go", []byte(content), 0644)
+		if err := os.WriteFile("gospa.go", []byte(content), 0644); err != nil {
+			fmt.Println("Error writing gospa.go:", err)
+		}
 	}
 }
 
@@ -167,7 +192,9 @@ func updateModFile(path, moduleName, oldVersion, newVersion, oldTag, newTag stri
 
 	if changed {
 		fmt.Println("Updating", path)
-		os.WriteFile(path, []byte(content), 0644)
+		if err := os.WriteFile(path, []byte(content), 0644); err != nil {
+			fmt.Println("Error writing", path, ":", err)
+		}
 	}
 	return changed
 }
@@ -189,7 +216,10 @@ func updateOtherFile(path, moduleName, oldVersion, newVersion, oldTag, newTag st
 	})
 
 	if newContent != content {
-		os.WriteFile(path, []byte(newContent), 0644)
+		if err := os.WriteFile(path, []byte(newContent), 0644); err != nil {
+			fmt.Println("Error writing", path, ":", err)
+			return false
+		}
 		return true
 	}
 	return false

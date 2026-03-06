@@ -9,7 +9,6 @@ GoSPA features a powerful plugin system that allows you to extend and customize 
 - [Plugin Configuration](#plugin-configuration)
 - [Creating Custom Plugins](#creating-custom-plugins)
 - [Plugin API Reference](#plugin-api-reference)
-- [External Plugins](#external-plugins)
 
 ## Architecture Overview
 
@@ -105,7 +104,7 @@ plugins:
 @import 'tailwindcss';
 
 @theme {
-    --font-display: 'Inter', sans-serif;
+    --font-display: 'Satoshi', sans-serif;
     --color-primary: oklch(0.6 0.2 250);
 }
 ```
@@ -509,7 +508,7 @@ plugins:
       - twitter
     otp_enabled: true
     otp_issuer: MyGoSPAApp
-    backup_codes_count: 10
+    backup_code_count: 10
 ```
 
 **CLI Commands:**
@@ -571,14 +570,14 @@ plugins:
 import "github.com/aydenstechdungeon/gospa/plugin/auth"
 
 // Initialize auth
-authPlugin := auth.New(auth.Config{
+authPlugin := auth.New(&auth.Config{
     JWTSecret:  "your-secret",
-    JWTExpiry:  24 * time.Hour,
+    JWTExpiry:  24,
     OTPEnabled: true,
 })
 
 // Create JWT token
-token, err := authPlugin.CreateToken(userID)
+token, err := authPlugin.CreateToken(userID, userEmail, role)
 
 // Validate token
 claims, err := authPlugin.ValidateToken(token)
@@ -590,7 +589,7 @@ otpSecret, qrURL, err := authPlugin.GenerateOTP(userEmail)
 valid := authPlugin.VerifyOTP(secret, code)
 
 // Generate backup codes
-backupCodes := authPlugin.GenerateBackupCodes(10)
+backupCodes, err := auth.GenerateBackupCodes(10)
 ```
 
 **Dependencies:**
@@ -891,60 +890,6 @@ const (
 )
 ```
 
-## External Plugins
-
-### Plugin Cache
-
-External plugins are cached in `~/.gospa/plugins/`:
-
-```
-~/.gospa/plugins/
-├── plugin-name/
-│   ├── plugin.so      # Compiled plugin
-│   ├── plugin.yaml    # Plugin metadata
-│   └── version.txt    # Version info
-```
-
-### Installing External Plugins
-
-```bash
-# Install from GitHub
-gospa plugin install github.com/user/gospa-plugin-name
-
-# Install from local path
-gospa plugin install ./local-plugin
-
-# List installed plugins
-gospa plugin list
-
-# Update a plugin
-gospa plugin update plugin-name
-
-# Remove a plugin
-gospa plugin remove plugin-name
-```
-
-### Publishing Plugins
-
-1. Create a Go module with your plugin
-2. Include a `plugin.yaml` manifest:
-
-```yaml
-name: my-plugin
-version: 1.0.0
-description: My custom GoSPA plugin
-author: Your Name
-repository: github.com/user/gospa-plugin-name
-gospa_version: ">=0.1.3"
-```
-
-3. Build as shared library:
-```bash
-go build -buildmode=plugin -o my-plugin.so
-```
-
-4. Publish to GitHub with release tags
-
 ## Best Practices
 
 1. **Keep plugins focused**: Each plugin should do one thing well
@@ -956,6 +901,10 @@ go build -buildmode=plugin -o my-plugin.so
 7. **Provide CLI commands**: Make common tasks accessible via CLI
 8. **Support environment variables**: Allow sensitive values via env vars
 
+## Scope Note
+
+This document covers the built-in plugin model that exists in the current codebase. Dynamic external plugin installation and shared-library plugin loading are not documented here because they are not part of the currently implemented CLI surface.
+
 ## Troubleshooting
 
 ### Plugin Not Loading
@@ -963,7 +912,7 @@ go build -buildmode=plugin -o my-plugin.so
 1. Check plugin is registered in `init()` function
 2. Verify dependencies are installed
 3. Check `gospa.yaml` configuration
-4. Run `gospa doctor` to diagnose issues
+4. Review the CLI output for plugin initialization errors
 
 ### Dependency Issues
 
@@ -985,4 +934,4 @@ bun add package-name
 
 1. Check YAML syntax is correct
 2. Verify environment variables are set
-3. Run `gospa config validate` to check configuration
+3. Re-run the command and inspect any configuration parsing errors

@@ -342,6 +342,8 @@ type WSClient struct {
 	State     *state.StateMap
 	mu        sync.Mutex
 	closed    bool
+	// maxMessageSize is the per-connection inbound frame size limit.
+	maxMessageSize int64
 	// optional features wired from WebSocketConfig at creation time
 	compress     bool
 	stateDiffing bool
@@ -519,6 +521,7 @@ func NewWSClient(id string, conn *websocket.Conn) *WSClient {
 		Send:             make(chan []byte, 256),
 		State:            state.NewStateMap(),
 		closed:           false,
+		maxMessageSize:   maxWSMessageSize,
 		actionTokens:     10.0,
 		actionLastRefill: time.Now(),
 		lastSentState:    make(map[string]interface{}), // Initialize to prevent nil pointer
@@ -540,7 +543,7 @@ func (c *WSClient) ReadPump(hub *WSHub, onMessage func(*WSClient, WSMessage)) {
 	}()
 
 	// Limit inbound message size to prevent DoS attacks
-	c.Conn.SetReadLimit(maxWSMessageSize)
+	c.Conn.SetReadLimit(c.maxMessageSize)
 	_ = c.Conn.SetReadDeadline(time.Now().Add(pongWait))
 	c.Conn.SetPongHandler(func(string) error {
 		_ = c.Conn.SetReadDeadline(time.Now().Add(pongWait))
@@ -956,6 +959,9 @@ func WebSocketHandler(config WebSocketConfig) fiberpkg.Handler {
 		// Create client with placeholder session (will be updated after auth)
 		client := NewWSClient(connID, c)
 		client.SessionID = "" // Will be set after session validation
+		if config.WSMaxMessageSize > 0 {
+			client.maxMessageSize = int64(config.WSMaxMessageSize)
+		}
 		// Wire optional features from config
 		client.compress = config.CompressState
 		client.stateDiffing = config.StateDiffing

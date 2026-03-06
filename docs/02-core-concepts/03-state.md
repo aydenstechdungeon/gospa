@@ -710,7 +710,7 @@ Parses JSON message.
 ### Sync Limitations
 
 When using WebSocket state synchronization between client and server, keep the following limitations in mind:
-- **Max Message Size:** Messages are strictly limited to `64KB`. Payload states larger than this will cause the WebSocket connection to close with an error. Use `StateDiffing` in `gospa.Config` to mitigate this for large objects.
+- **Max Message Size:** The default WebSocket message limit is `64KB`, but you can change it with `WSMaxMessageSize` in `gospa.Config`. Payload states larger than the configured limit will cause the WebSocket connection to close with an error. Use `StateDiffing` in `gospa.Config` to mitigate this for large objects.
 - **Circular References:** The built-in state JSON serialization does **not** support circular references in your structs/maps. Attempting to sync circular state will result in serialization failures.
 
 ---

@@ -71,16 +71,15 @@ Choose the appropriate runtime based on your needs:
 
 | Runtime | Size | Sanitizer | Use Case |
 |---------|------|-----------|----------|
-| `gospa` (default) | ~15KB | None (trust server) | **Recommended**: Server-rendered apps with CSP |
-| `gospa/runtime-secure` | ~35KB | DOMPurify (full) | Apps with user-generated content (comments, wikis) |
-| `gospa/simple` | ~18KB | Simple (basic) | **Deprecated**: Will be removed in v2.0 |
-| `gospa/core` | ~12KB | None | Custom implementations |
-| `gospa/micro` | ~3KB | None | State-only, no DOM operations |
+| `@gospa/client` (default) | ~15KB | None (trust server) | **Recommended**: Server-rendered apps with CSP |
+| `@gospa/client/runtime-secure` | ~35KB | DOMPurify (full) | Apps with user-generated content (comments, wikis) |
+
+Only these two entrypoints are exported by the current package manifest. Internal runtime bundles such as `runtime-simple`, `runtime-core`, and `runtime-micro` exist in the source tree but are not public import paths.
 
 ### Default Runtime (`gospa`)
 
 ```typescript
-import { init } from 'gospa';
+import { init } from '@gospa/client';
 
 // No sanitization - trusts server-rendered HTML
 // Bundle size: ~15KB
@@ -96,7 +95,7 @@ init();
 ### Secure Runtime (`gospa/runtime-secure`)
 
 ```typescript
-import { init, sanitize } from 'gospa/runtime-secure';
+import { init, sanitize } from '@gospa/client/runtime-secure';
 
 // Includes DOMPurify for user-generated content
 // Bundle size: ~35KB
@@ -127,7 +126,7 @@ const clean = await sanitize(userComment);
 ### Using DOMPurify (Secure Runtime)
 
 ```typescript
-import { sanitize, sanitizeSync, isSanitizerReady, preloadSanitizer } from 'gospa/runtime-secure';
+import { sanitize, sanitizeSync, isSanitizerReady, preloadSanitizer } from '@gospa/client/runtime-secure';
 
 // Async sanitization (recommended)
 const clean = await sanitize(untrustedHtml);
@@ -145,16 +144,7 @@ if (isSanitizerReady()) {
 
 ### Custom Sanitizer Configuration
 
-```typescript
-import { setSanitizer } from 'gospa';
-import DOMPurify from 'dompurify';
-
-// Set custom sanitizer (even in default runtime)
-setSanitizer((html) => DOMPurify.sanitize(html, {
-  ALLOWED_TAGS: ['b', 'i', 'em', 'strong', 'p', 'br'],
-  ALLOWED_ATTR: []
-}));
-```
+The current public runtime API does not export a `setSanitizer()` hook. If you need custom sanitization rules today, sanitize HTML before passing it into GoSPA or use [`@gospa/client/runtime-secure`](client/package.json) with your own wrapper module around DOMPurify.
 
 ## DOM Clobbering Protection
 
@@ -167,7 +157,9 @@ When using DOMPurify (via `runtime-secure`), GoSPA prevents DOM Clobbering attac
 
 ## CSRF Protection Setup
 
-GoSPA uses a **two-middleware pattern** for CSRF protection:
+When `EnableCSRF` is enabled in your `gospa.Config`, GoSPA installs both CSRF middlewares automatically.
+
+If you need to wire them manually in a custom Fiber stack, GoSPA uses a **two-middleware pattern** for CSRF protection:
 
 ```go
 app.Use(fiber.CSRFSetTokenMiddleware())
@@ -231,11 +223,11 @@ If you're upgrading from GoSPA v1.x:
 
 1. **Default runtime no longer includes DOMPurify**
    - Most apps don't need to change anything (Templ already protects you)
-   - If you display user-generated HTML, switch to `gospa/runtime-secure`
+   - If you display user-generated HTML, switch to `@gospa/client/runtime-secure`
 
-2. **runtime-simple is deprecated**
-   - Use `gospa` instead (trusts server by default)
-   - Or use `gospa/runtime-secure` if you need sanitization
+2. **Legacy internal runtime bundles are not public imports**
+   - Use `@gospa/client` for the default trust-the-server runtime
+   - Use `@gospa/client/runtime-secure` if you need sanitization
 
 3. **Remove `DisableSanitization: true` from server config**
    - It's no longer needed (and no longer exists)

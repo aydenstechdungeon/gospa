@@ -373,10 +373,14 @@ async function initNewContent(): Promise<void> {
 		const newElement = element.cloneNode(true) as Element;
 		element.parentNode?.replaceChild(newElement, element);
 
-		newElement.addEventListener(eventType, () => {
+		newElement.addEventListener(eventType, async () => {
 			if (ws && ws.readyState === WebSocket.OPEN) {
-				ws.send(JSON.stringify({ action }));
+				ws.send(JSON.stringify({ type: 'action', action }));
+				return;
 			}
+
+			const websocketModule = await import('./websocket.ts');
+			websocketModule.sendAction(action);
 		});
 	});
 

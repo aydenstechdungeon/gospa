@@ -33,9 +33,9 @@
     "eslint": "^8.57.0",
     "typescript-eslint": "^7.1.1"
   },
-  "optionalDependencies": {
-    "dompurify": "^3.3.1"
-  },
+	"optionalDependencies": {
+		"dompurify": "^3.3.2"
+	},
   "peerDependenciesMeta": {
     "dompurify": {
       "optional": true
