@@ -1,0 +1,5 @@
+@import './main.css';
+
+/* Content paths for docs bundle */
+@source "../routes/docs/**/*.templ";
+@source "../components/**/*.templ";

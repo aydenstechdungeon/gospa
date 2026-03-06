@@ -1,0 +1,6 @@
+@import './main.css';
+
+/* Content paths for website bundle */
+@source "../routes/*.go";
+@source "../routes/*.templ";
+@source "../components/**/*.templ";

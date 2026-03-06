@@ -10,3 +10,18 @@ plugins:
     output: static/css/main.css
     # Enable watching in development
     watch: true
+    bundles:
+      - name: website
+        input: styles/website.css
+        output: static/css/website.css
+        criticalCSS:
+          enabled: true
+          criticalOutput: static/css/website.critical.css
+          nonCriticalOutput: static/css/website.non-critical.css
+      - name: docs
+        input: styles/docs.css
+        output: static/css/docs.css
+        criticalCSS:
+          enabled: true
+          criticalOutput: static/css/docs.critical.css
+          nonCriticalOutput: static/css/docs.non-critical.css

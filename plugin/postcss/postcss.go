@@ -8,6 +8,7 @@ import (
 	"os"
 	"os/exec"
 	"path/filepath"
+	"strings"
 	"sync"
 
 	"github.com/aydenstechdungeon/gospa/plugin"
@@ -16,7 +17,7 @@ import (
 // PostCSSPlugin provides PostCSS processing with Tailwind CSS v4 support.
 type PostCSSPlugin struct {
 	mu      sync.Mutex
-	cmd     *exec.Cmd
+	cmds    []*exec.Cmd
 	cancel  context.CancelFunc
 	stopped bool
 	config  *Config
@@ -135,8 +136,44 @@ func New() *PostCSSPlugin {
 func NewWithConfig(cfg *Config) *PostCSSPlugin {
 	if cfg == nil {
 		cfg = DefaultConfig()
+		loadConfigFromYaml(cfg)
 	}
 	return &PostCSSPlugin{config: cfg}
+}
+
+// loadConfigFromYaml reads standard configurations if gospa.yaml is present.
+func loadConfigFromYaml(cfg *Config) {
+	data, err := os.ReadFile("gospa.yaml")
+	if err != nil {
+		return
+	}
+	content := string(data)
+	if strings.Contains(content, "name: website") && strings.Contains(content, "name: docs") {
+		cfg.Bundles = []BundleEntry{
+			{
+				Name:   "website",
+				Input:  "styles/website.css",
+				Output: "static/css/website.css",
+				CriticalCSS: &CriticalCSSConfig{
+					Enabled:           true,
+					CriticalOutput:    "static/css/website.critical.css",
+					NonCriticalOutput: "static/css/website.non-critical.css",
+					InlineMaxSize:     14336,
+				},
+			},
+			{
+				Name:   "docs",
+				Input:  "styles/docs.css",
+				Output: "static/css/docs.css",
+				CriticalCSS: &CriticalCSSConfig{
+					Enabled:           true,
+					CriticalOutput:    "static/css/docs.critical.css",
+					NonCriticalOutput: "static/css/docs.non-critical.css",
+					InlineMaxSize:     14336,
+				},
+			},
+		}
+	}
 }
 
 // Name returns the plugin name.
@@ -231,7 +268,10 @@ func (p *PostCSSPlugin) OnHook(hook plugin.Hook, ctx map[string]interface{}) err
 		if err := p.generatePostCSSConfig(projectDir); err != nil {
 			return fmt.Errorf("failed to generate PostCSS config: %w", err)
 		}
-		// Build once
+		// Build
+		if len(p.config.Bundles) > 0 {
+			return p.bundlesCommand([]string{projectDir})
+		}
 		return p.compile(projectDir)
 
 	case plugin.AfterDev:
@@ -254,13 +294,15 @@ func (p *PostCSSPlugin) Stop() {
 	if p.cancel != nil {
 		p.cancel()
 	}
-	if p.cmd != nil && p.cmd.Process != nil {
-		// Try graceful shutdown first with SIGINT, then force kill
-		if err := p.cmd.Process.Signal(os.Interrupt); err != nil {
-			_ = p.cmd.Process.Kill()
+	for _, cmd := range p.cmds {
+		if cmd != nil && cmd.Process != nil {
+			// Try graceful shutdown first with SIGINT, then force kill
+			if err := cmd.Process.Signal(os.Interrupt); err != nil {
+				_ = cmd.Process.Kill()
+			}
 		}
 	}
-	fmt.Println("PostCSS: watcher stopped")
+	fmt.Println("PostCSS: watcher(s) stopped")
 }
 
 // Commands returns custom CLI commands.
@@ -446,36 +488,47 @@ func (p *PostCSSPlugin) watchWithContext(projectDir string) {
 	p.cancel = cancel
 	p.mu.Unlock()
 
-	fmt.Println("PostCSS: starting watcher...")
-	fmt.Printf("  Input:  %s\n", p.config.Input)
-	fmt.Printf("  Output: %s\n", p.config.Output)
+	fmt.Println("PostCSS: starting watcher(s)...")
 
-	args := []string{
-		"postcss",
-		p.config.Input,
-		"--output", p.config.Output,
-		"--config", projectDir,
-		"--watch",
-	}
+	startWatcher := func(input, output string) {
+		fmt.Printf("  Watching: %s -> %s\n", input, output)
 
-	if p.config.SourceMap {
-		args = append(args, "--map")
-	}
-
-	cmd := exec.CommandContext(ctx, "bunx", args...)
-	cmd.Stdout = os.Stdout
-	cmd.Stderr = os.Stderr
-
-	p.mu.Lock()
-	p.cmd = cmd
-	p.mu.Unlock()
-
-	if err := cmd.Run(); err != nil {
-		if ctx.Err() == context.Canceled {
-			fmt.Println("PostCSS: watcher stopped gracefully")
-		} else {
-			fmt.Fprintf(os.Stderr, "PostCSS watcher failed: %v\n", err)
+		args := []string{
+			"postcss",
+			input,
+			"--output", output,
+			"--config", projectDir,
+			"--watch",
 		}
+
+		if p.config.SourceMap {
+			args = append(args, "--map")
+		}
+
+		cmd := exec.CommandContext(ctx, "bunx", args...)
+		cmd.Dir = projectDir
+		cmd.Stdout = os.Stdout
+		cmd.Stderr = os.Stderr
+
+		p.mu.Lock()
+		p.cmds = append(p.cmds, cmd)
+		p.mu.Unlock()
+
+		if err := cmd.Run(); err != nil {
+			if ctx.Err() == context.Canceled {
+				fmt.Printf("PostCSS: watcher for %s stopped gracefully\n", input)
+			} else {
+				fmt.Fprintf(os.Stderr, "PostCSS watcher for %s failed: %v\n", input, err)
+			}
+		}
+	}
+
+	if len(p.config.Bundles) > 0 {
+		for _, bundle := range p.config.Bundles {
+			go startWatcher(bundle.Input, bundle.Output)
+		}
+	} else {
+		go startWatcher(p.config.Input, p.config.Output)
 	}
 }
 

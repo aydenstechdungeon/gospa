@@ -22,7 +22,7 @@
   - Size: 10323 bytes
 
 [03-state](docs/02-core-concepts/03-state.md)
-  - Size: 17173 bytes
+  - Size: 17260 bytes
 
 [04-components](docs/02-core-concepts/04-components.md)
   - Size: 12728 bytes
@@ -46,7 +46,7 @@
   - Size: 5658 bytes
 
 [04-security](docs/03-features/04-security.md)
-  - Size: 8239 bytes
+  - Size: 8506 bytes
 
 [05-dev-tools](docs/03-features/05-dev-tools.md)
   - Size: 4925 bytes
@@ -64,10 +64,10 @@
   - Size: 15593 bytes
 
 [03-cli](docs/04-api-reference/03-cli.md)
-  - Size: 16802 bytes
+  - Size: 16286 bytes
 
 [04-plugins](docs/04-api-reference/04-plugins.md)
-  - Size: 25791 bytes
+  - Size: 25038 bytes
 
 
 ### Advanced
@@ -91,7 +91,7 @@
   - Size: 4933 bytes
 
 [02-remote-actions](docs/07-troubleshooting/02-remote-actions.md)
-  - Size: 8185 bytes
+  - Size: 8314 bytes
 
 [03-websocket-connections](docs/07-troubleshooting/03-websocket-connections.md)
   - Size: 8654 bytes

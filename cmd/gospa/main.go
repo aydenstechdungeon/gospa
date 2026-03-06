@@ -8,15 +8,17 @@ import (
 
 	"github.com/aydenstechdungeon/gospa/cli"
 	"github.com/aydenstechdungeon/gospa/plugin"
+	"github.com/aydenstechdungeon/gospa/plugin/postcss"
 	"github.com/aydenstechdungeon/gospa/plugin/tailwind"
 )
 
 // Version is the current version of GoSPA
-const Version = "0.1.16"
+const Version = "0.1.19"
 
 func main() {
 	// Register built-in plugins
 	plugin.Register(tailwind.New())
+	plugin.Register(postcss.New())
 
 	printer := cli.NewColorPrinter()
 
@@ -68,9 +70,17 @@ func main() {
 		cli.PrintBanner()
 		printUsage(printer)
 	default:
-		printer.Error("Unknown command: %s", cmd)
-		printer.Info("Run 'gospa help' for usage information")
-		os.Exit(1)
+		// Try to run plugin command directly
+		found, err := plugin.RunCommand(cmd, os.Args[2:])
+		if err != nil {
+			printer.Error("Plugin command failed: %v", err)
+			os.Exit(1)
+		}
+		if !found {
+			printer.Error("Unknown command: %s", cmd)
+			printer.Info("Run 'gospa help' for usage information")
+			os.Exit(1)
+		}
 	}
 }
 

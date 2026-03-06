@@ -1914,8 +1914,7 @@ body {
   background: var(--text-muted);
 }
 .grid-bg {
-  background-image: linear-gradient(to right, var(--border) 1px, transparent 1px),
-		linear-gradient(to bottom, var(--border) 1px, transparent 1px);
+  background-image: linear-gradient(to right, var(--border) 1px, transparent 1px),	linear-gradient(to bottom, var(--border) 1px, transparent 1px);
   background-size: 40px 40px;
   -webkit-mask-image: radial-gradient(ellipse 60% 50% at 50% 0%, #000 70%, transparent 100%);
           mask-image: radial-gradient(ellipse 60% 50% at 50% 0%, #000 70%, transparent 100%);

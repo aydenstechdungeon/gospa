@@ -49,7 +49,6 @@ go mod tidy
 package main
 
 import (
-    "context"
     "log"
     _ "myapp/routes" // Import routes to trigger init()
     
@@ -88,7 +87,12 @@ templ Page() {
 ### 4. Run
 
 ```bash
-go run main.go
+gospa generate
+go run .
+```
+or
+```bash
+gospa dev
 ```
 
 ## Core Concepts
@@ -215,15 +219,8 @@ new GoSPA.Effect(() => {
     console.log('Count:', count.get())
 })
 
-// DOM binding
-GoSPA.bindElement('element-id', count)
-
-// Navigation
-GoSPA.navigate('/about')
-GoSPA.prefetch('/blog')
-
-// Transitions
-GoSPA.fade(element, { duration: 300 })
+// Remote action helper
+GoSPA.remote('saveData', { count: count.get() })
 ```
 
 #### Runtime Variants: Default vs Secure
@@ -232,13 +229,13 @@ GoSPA follows a **"trust the server"** security model (similar to SvelteKit). Th
 
 **Default Runtime (`gospa`) — Recommended for most apps:**
 ```typescript
-import { init } from 'gospa';
+import { init } from '@gospa/client';
 init(); // ~15KB, no sanitizer needed
 ```
 
 **Secure Runtime (`gospa/runtime-secure`) — For user-generated content:**
 ```typescript
-import { init, sanitize } from 'gospa/runtime-secure';
+import { init, sanitize } from '@gospa/client/runtime-secure';
 init(); // ~35KB, includes DOMPurify
 
 // Sanitize user-generated HTML
@@ -262,7 +259,7 @@ const clean = await sanitize(userComment);
 - JSON data
 - Any content already escaped by Templ on the server
 
-See [`docs/RUNTIME.md`](docs/RUNTIME.md) for complete runtime selection guide.
+See [`docs/03-features/01-client-runtime.md`](docs/03-features/01-client-runtime.md) for the complete runtime selection guide.
 
 ### Remote Actions
 
@@ -300,7 +297,7 @@ app := gospa.New(gospa.Config{
 
 ```typescript
 // Call from client
-import { remote } from '@gospa/runtime';
+import { remote } from '@gospa/client';
 
 const result = await remote('saveData', { id: 123 });
 
@@ -328,7 +325,7 @@ app := gospa.New(gospa.Config{
 
 > **Security By Default:** 
 > When you set `EnableCSRF: true`, GoSPA automatically wires both the token issuer 
-> and validator middlewares for you. You do not need to wire them manually!
+> and validator middlewares for you. The built-in client remote helper sends the `X-CSRF-Token` header automatically for same-origin requests.
 
 ### Rendering Strategies
 
@@ -375,7 +372,7 @@ app := gospa.New(gospa.Config{
 })
 ```
 
-See [`docs/RENDERING.md`](docs/RENDERING.md) for full documentation.
+See [`docs/02-core-concepts/02-rendering.md`](docs/02-core-concepts/02-rendering.md) for full rendering documentation.
 
 ### Partial Hydration
 
@@ -456,9 +453,9 @@ gospa dev             # Development server with hot reload
 gospa build           # Production build
 ```
 
-Run any command with `--help` (e.g., `gospa build --help`) to see all available options and flags.
+Run any command with `--help` (for example `gospa build --help`) to see all available options and flags.
 
-For more details, see the [CLI Reference](https://gospa.dev/docs/cli).
+For more details, see [`docs/04-api-reference/03-cli.md`](docs/04-api-reference/03-cli.md).
 
 ## Plugin Ecosystem
 
@@ -489,13 +486,12 @@ plugins:
     input: ./images
     output: ./static/images
     formats: [webp, jpeg]
-    sizes: [320, 640, 1280, 1920]
+    widths: [320, 640, 1280, 1920]
   auth:
     jwt_secret: ${JWT_SECRET}
-    oauth:
-      google:
-        client_id: ${GOOGLE_CLIENT_ID}
-        client_secret: ${GOOGLE_CLIENT_SECRET}
+    oauth_providers: [google]
+    google_client_id: ${GOOGLE_CLIENT_ID}
+    google_client_secret: ${GOOGLE_CLIENT_SECRET}
 ```
 
 ### Plugin Hooks
@@ -505,6 +501,8 @@ Plugins integrate at key lifecycle points:
 - `BeforeGenerate` / `AfterGenerate` — Code generation
 - `BeforeDev` / `AfterDev` — Development server
 - `BeforeBuild` / `AfterBuild` — Production build
+
+The current repository documents the built-in plugin model only. Dynamic plugin installation and external shared-library loading are not part of the checked-in CLI surface.
 
 ### Creating Custom Plugins
 
@@ -529,12 +527,12 @@ func (p *MyPlugin) OnHook(hook plugin.Hook, ctx map[string]interface{}) error {
 }
 func (p *MyPlugin) Commands() []plugin.Command {
     return []plugin.Command{
-        {Name: "my-plugin:run", Short: "mp", Description: "Run my plugin"},
+        {Name: "my-plugin:run", Alias: "mp", Description: "Run my plugin"},
     }
 }
 ```
 
-See [`docs/PLUGINS.md`](docs/PLUGINS.md) for complete plugin documentation.
+See [`docs/04-api-reference/04-plugins.md`](docs/04-api-reference/04-plugins.md) for complete plugin documentation.
 
 ## Architecture
 
@@ -2502,7 +2500,7 @@ Parses JSON message.
 ### Sync Limitations
 
 When using WebSocket state synchronization between client and server, keep the following limitations in mind:
-- **Max Message Size:** Messages are strictly limited to `64KB`. Payload states larger than this will cause the WebSocket connection to close with an error. Use `StateDiffing` in `gospa.Config` to mitigate this for large objects.
+- **Max Message Size:** The default WebSocket message limit is `64KB`, but you can change it with `WSMaxMessageSize` in `gospa.Config`. Payload states larger than the configured limit will cause the WebSocket connection to close with an error. Use `StateDiffing` in `gospa.Config` to mitigate this for large objects.
 - **Circular References:** The built-in state JSON serialization does **not** support circular references in your structs/maps. Attempting to sync circular state will result in serialization failures.
 
 ---
@@ -6333,16 +6331,15 @@ Choose the appropriate runtime based on your needs:
 
 | Runtime | Size | Sanitizer | Use Case |
 |---------|------|-----------|----------|
-| `gospa` (default) | ~15KB | None (trust server) | **Recommended**: Server-rendered apps with CSP |
-| `gospa/runtime-secure` | ~35KB | DOMPurify (full) | Apps with user-generated content (comments, wikis) |
-| `gospa/simple` | ~18KB | Simple (basic) | **Deprecated**: Will be removed in v2.0 |
-| `gospa/core` | ~12KB | None | Custom implementations |
-| `gospa/micro` | ~3KB | None | State-only, no DOM operations |
+| `@gospa/client` (default) | ~15KB | None (trust server) | **Recommended**: Server-rendered apps with CSP |
+| `@gospa/client/runtime-secure` | ~35KB | DOMPurify (full) | Apps with user-generated content (comments, wikis) |
+
+Only these two entrypoints are exported by the current package manifest. Internal runtime bundles such as `runtime-simple`, `runtime-core`, and `runtime-micro` exist in the source tree but are not public import paths.
 
 ### Default Runtime (`gospa`)
 
 ```typescript
-import { init } from 'gospa';
+import { init } from '@gospa/client';
 
 // No sanitization - trusts server-rendered HTML
 // Bundle size: ~15KB
@@ -6358,7 +6355,7 @@ init();
 ### Secure Runtime (`gospa/runtime-secure`)
 
 ```typescript
-import { init, sanitize } from 'gospa/runtime-secure';
+import { init, sanitize } from '@gospa/client/runtime-secure';
 
 // Includes DOMPurify for user-generated content
 // Bundle size: ~35KB
@@ -6389,7 +6386,7 @@ const clean = await sanitize(userComment);
 ### Using DOMPurify (Secure Runtime)
 
 ```typescript
-import { sanitize, sanitizeSync, isSanitizerReady, preloadSanitizer } from 'gospa/runtime-secure';
+import { sanitize, sanitizeSync, isSanitizerReady, preloadSanitizer } from '@gospa/client/runtime-secure';
 
 // Async sanitization (recommended)
 const clean = await sanitize(untrustedHtml);
@@ -6407,16 +6404,7 @@ if (isSanitizerReady()) {
 
 ### Custom Sanitizer Configuration
 
-```typescript
-import { setSanitizer } from 'gospa';
-import DOMPurify from 'dompurify';
-
-// Set custom sanitizer (even in default runtime)
-setSanitizer((html) => DOMPurify.sanitize(html, {
-  ALLOWED_TAGS: ['b', 'i', 'em', 'strong', 'p', 'br'],
-  ALLOWED_ATTR: []
-}));
-```
+The current public runtime API does not export a `setSanitizer()` hook. If you need custom sanitization rules today, sanitize HTML before passing it into GoSPA or use [`@gospa/client/runtime-secure`](client/package.json) with your own wrapper module around DOMPurify.
 
 ## DOM Clobbering Protection
 
@@ -6429,7 +6417,9 @@ When using DOMPurify (via `runtime-secure`), GoSPA prevents DOM Clobbering attac
 
 ## CSRF Protection Setup
 
-GoSPA uses a **two-middleware pattern** for CSRF protection:
+When `EnableCSRF` is enabled in your `gospa.Config`, GoSPA installs both CSRF middlewares automatically.
+
+If you need to wire them manually in a custom Fiber stack, GoSPA uses a **two-middleware pattern** for CSRF protection:
 
 ```go
 app.Use(fiber.CSRFSetTokenMiddleware())
@@ -6493,11 +6483,11 @@ If you're upgrading from GoSPA v1.x:
 
 1. **Default runtime no longer includes DOMPurify**
    - Most apps don't need to change anything (Templ already protects you)
-   - If you display user-generated HTML, switch to `gospa/runtime-secure`
+   - If you display user-generated HTML, switch to `@gospa/client/runtime-secure`
 
-2. **runtime-simple is deprecated**
-   - Use `gospa` instead (trusts server by default)
-   - Or use `gospa/runtime-secure` if you need sanitization
+2. **Legacy internal runtime bundles are not public imports**
+   - Use `@gospa/client` for the default trust-the-server runtime
+   - Use `@gospa/client/runtime-secure` if you need sanitization
 
 3. **Remove `DisableSanitization: true` from server config**
    - It's no longer needed (and no longer exists)
@@ -8713,7 +8703,6 @@ go install github.com/aydenstechdungeon/gospa/cmd/gospa@latest
 | `generate` | - | Generate route registration code |
 | `prune` | - | Remove unused state from state stores |
 | `add` | - | Add a feature (e.g., tailwind) |
-| `clean` | - | Remove build artifacts and generated files |
 | `version` | `-v`, `--version` | Show GoSPA version |
 | `help` | `-h`, `--help` | Show help message |
 
@@ -9220,34 +9209,10 @@ gospa prune --store session
 gospa prune --all
 ```
 
-### Automatic Pruning
+### Operational Notes
 
-For production applications, consider enabling automatic pruning in your app configuration:
-
-```go
-app := gospa.New(gospa.Config{
-    EnableStatePrune:    true,
-    StatePruneInterval: 30 * time.Minute,
-    StatePruneMaxAge:   2 * time.Hour,
-})
-```
-
----
-
-## `gospa clean`
-
-Removes build artifacts and generated files.
-
-```bash
-gospa clean
-```
-
-### What Gets Removed
-
-- `dist/` directory
-- `node_modules/` directory
-- `*_templ.go` files (generated templ files)
-- `*_templ.txt` files
+- `gospa prune` is a manual maintenance command.
+- The current `gospa.Config` type does not expose automatic state-pruning fields.
 
 ---
 
@@ -9306,10 +9271,6 @@ plugins:
     otp_enabled: true
 ```
 
-### Plugin Cache
-
-External plugins are cached in `~/.gospa/plugins/`. This allows plugins to be downloaded and reused across projects.
-
 ### Creating Custom Plugins
 
 Plugins implement the `Plugin` interface:
@@ -9328,7 +9289,7 @@ type CLIPlugin interface {
 }
 ```
 
-See [PLUGINS.md](./PLUGINS.md) for detailed plugin development guide.
+See [`04-plugins.md`](docs/04-api-reference/04-plugins.md) for the detailed plugin development guide.
 
 ---
 
@@ -9409,7 +9370,6 @@ GoSPA features a powerful plugin system that allows you to extend and customize 
 - [Plugin Configuration](#plugin-configuration)
 - [Creating Custom Plugins](#creating-custom-plugins)
 - [Plugin API Reference](#plugin-api-reference)
-- [External Plugins](#external-plugins)
 
 ## Architecture Overview
 
@@ -9505,7 +9465,7 @@ plugins:
 @import 'tailwindcss';
 
 @theme {
-    --font-display: 'Inter', sans-serif;
+    --font-display: 'Satoshi', sans-serif;
     --color-primary: oklch(0.6 0.2 250);
 }
 ```
@@ -9909,7 +9869,7 @@ plugins:
       - twitter
     otp_enabled: true
     otp_issuer: MyGoSPAApp
-    backup_codes_count: 10
+    backup_code_count: 10
 ```
 
 **CLI Commands:**
@@ -9971,14 +9931,14 @@ plugins:
 import "github.com/aydenstechdungeon/gospa/plugin/auth"
 
 // Initialize auth
-authPlugin := auth.New(auth.Config{
+authPlugin := auth.New(&auth.Config{
     JWTSecret:  "your-secret",
-    JWTExpiry:  24 * time.Hour,
+    JWTExpiry:  24,
     OTPEnabled: true,
 })
 
 // Create JWT token
-token, err := authPlugin.CreateToken(userID)
+token, err := authPlugin.CreateToken(userID, userEmail, role)
 
 // Validate token
 claims, err := authPlugin.ValidateToken(token)
@@ -9990,7 +9950,7 @@ otpSecret, qrURL, err := authPlugin.GenerateOTP(userEmail)
 valid := authPlugin.VerifyOTP(secret, code)
 
 // Generate backup codes
-backupCodes := authPlugin.GenerateBackupCodes(10)
+backupCodes, err := auth.GenerateBackupCodes(10)
 ```
 
 **Dependencies:**
@@ -10291,60 +10251,6 @@ const (
 )
 ```
 
-## External Plugins
-
-### Plugin Cache
-
-External plugins are cached in `~/.gospa/plugins/`:
-
-```
-~/.gospa/plugins/
-├── plugin-name/
-│   ├── plugin.so      # Compiled plugin
-│   ├── plugin.yaml    # Plugin metadata
-│   └── version.txt    # Version info
-```
-
-### Installing External Plugins
-
-```bash
-# Install from GitHub
-gospa plugin install github.com/user/gospa-plugin-name
-
-# Install from local path
-gospa plugin install ./local-plugin
-
-# List installed plugins
-gospa plugin list
-
-# Update a plugin
-gospa plugin update plugin-name
-
-# Remove a plugin
-gospa plugin remove plugin-name
-```
-
-### Publishing Plugins
-
-1. Create a Go module with your plugin
-2. Include a `plugin.yaml` manifest:
-
-```yaml
-name: my-plugin
-version: 1.0.0
-description: My custom GoSPA plugin
-author: Your Name
-repository: github.com/user/gospa-plugin-name
-gospa_version: ">=0.1.3"
-```
-
-3. Build as shared library:
-```bash
-go build -buildmode=plugin -o my-plugin.so
-```
-
-4. Publish to GitHub with release tags
-
 ## Best Practices
 
 1. **Keep plugins focused**: Each plugin should do one thing well
@@ -10356,6 +10262,10 @@ go build -buildmode=plugin -o my-plugin.so
 7. **Provide CLI commands**: Make common tasks accessible via CLI
 8. **Support environment variables**: Allow sensitive values via env vars
 
+## Scope Note
+
+This document covers the built-in plugin model that exists in the current codebase. Dynamic external plugin installation and shared-library plugin loading are not documented here because they are not part of the currently implemented CLI surface.
+
 ## Troubleshooting
 
 ### Plugin Not Loading
@@ -10363,7 +10273,7 @@ go build -buildmode=plugin -o my-plugin.so
 1. Check plugin is registered in `init()` function
 2. Verify dependencies are installed
 3. Check `gospa.yaml` configuration
-4. Run `gospa doctor` to diagnose issues
+4. Review the CLI output for plugin initialization errors
 
 ### Dependency Issues
 
@@ -10385,7 +10295,7 @@ bun add package-name
 
 1. Check YAML syntax is correct
 2. Verify environment variables are set
-3. Run `gospa config validate` to check configuration
+3. Re-run the command and inspect any configuration parsing errors
 
 
 <!-- FILE: docs/05-advanced/01-error-handling.md -->
@@ -11494,11 +11404,9 @@ CSRF protection is enabled but the token is missing/invalid.
 app := gospa.New(gospa.Config{
     EnableCSRF: true,
 })
-
-// Order matters! SetToken must come before protection
-app.Use(fiber.CSRFSetTokenMiddleware())  // Issues cookie
-app.Use(fiber.CSRFTokenMiddleware())      // Validates header
 ```
+
+With `EnableCSRF: true`, GoSPA wires the middleware automatically. You only need to add `CSRFSetTokenMiddleware()` and `CSRFTokenMiddleware()` yourself if you are building a custom Fiber stack outside the default app setup.
 
 #### 2. Check cookies are enabled
 
@@ -11508,7 +11416,7 @@ The client reads the `csrf_token` cookie. If cookies are disabled, remote action
 
 Check browser dev tools:
 1. Look for `csrf_token` cookie in Application → Cookies
-2. Check that `X-CSRF-Token` header is sent in the request
+2. Check that `X-CSRF-Token` header is sent in the request. The built-in `remote()` helper sends it automatically for same-origin requests.
 
 ## "ACTION_FAILED" Error
 
@@ -11574,7 +11482,7 @@ app := gospa.New(gospa.Config{
 If you change this, ensure the client knows:
 
 ```javascript
-import { configureRemote } from '@gospa/runtime';
+import { configureRemote } from '@gospa/client';
 
 configureRemote({ prefix: '/api/rpc' });
 ```
