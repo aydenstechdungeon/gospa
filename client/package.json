@@ -27,15 +27,16 @@
     "build:empty": "rm -r ../embed/*.js && bun run build:embed"
   },
   "devDependencies": {
+    "@types/bun": "^1.3.10",
     "@types/dompurify": "^3.2.0",
-    "typescript": "^5.3.3",
-    "prettier": "^3.2.5",
     "eslint": "^8.57.0",
+    "prettier": "^3.2.5",
+    "typescript": "^5.3.3",
     "typescript-eslint": "^7.1.1"
   },
-	"optionalDependencies": {
-		"dompurify": "^3.3.2"
-	},
+  "optionalDependencies": {
+    "dompurify": "^3.3.2"
+  },
   "peerDependenciesMeta": {
     "dompurify": {
       "optional": true
