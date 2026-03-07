@@ -74,8 +74,8 @@ The request body isn't valid JSON.
 Ensure you're sending proper JSON:
 
 ```javascript
-// BAD - Missing quotes on keys
-GoSPA.remote('action', { name: "value" })
+// BAD - Manually stringifying json which causes double stringification
+GoSPA.remote('action', '{"name": "value"}')
 
 // GOOD - This is automatically handled by GoSPA
 GoSPA.remote('action', { name: "value" })
@@ -155,7 +155,7 @@ Check browser dev tools:
 ### Problem
 ```json
 {
-    "error": "something went wrong",
+    "error": "Internal server error",
     "code": "ACTION_FAILED"
 }
 ```

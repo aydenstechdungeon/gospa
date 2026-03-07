@@ -494,8 +494,14 @@ func (a *App) setupRoutes() {
 	}
 
 	// Remote Actions endpoint
-	a.Fiber.Post(a.Config.RemotePrefix+"/:name", func(c *fiberpkg.Ctx) error {
+	a.Fiber.Post(a.Config.RemotePrefix+"/:name", fiber.RemoteActionRateLimitMiddleware(), func(c *fiberpkg.Ctx) error {
 		name := c.Params("name")
+		if len(name) > 256 {
+			return c.Status(fiberpkg.StatusBadRequest).JSON(fiberpkg.Map{
+				"error": "Action name too long",
+				"code":  "INVALID_ACTION_NAME",
+			})
+		}
 		fn, ok := routing.GetRemoteAction(name)
 		if !ok {
 			return c.Status(fiberpkg.StatusNotFound).JSON(fiberpkg.Map{

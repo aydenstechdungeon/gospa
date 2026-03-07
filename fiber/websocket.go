@@ -64,6 +64,23 @@ func (rl *ConnectionRateLimiter) SetStorage(storage store.Storage) {
 // Global connection rate limiter (singleton)
 var globalConnRateLimiter = NewConnectionRateLimiter(store.NewMemoryStorage())
 
+// Global remote action rate limiter (singleton, separate from websocket connections)
+// Uses more aggressive rate limits (burst=50, refill=20/sec) suitable for API calls.
+var globalRemoteActionRateLimiter = func() *ConnectionRateLimiter {
+	rl := NewConnectionRateLimiter(store.NewMemoryStorage())
+	rl.maxTokens = 50.0
+	rl.refillRate = 20.0
+	return rl
+}()
+
+// SetRemoteActionRateLimiter configures the global remote action rate limiter limits.
+func SetRemoteActionRateLimiter(maxTokens float64, refillRate float64) {
+	globalRemoteActionRateLimiter.mu.Lock()
+	defer globalRemoteActionRateLimiter.mu.Unlock()
+	globalRemoteActionRateLimiter.maxTokens = maxTokens
+	globalRemoteActionRateLimiter.refillRate = refillRate
+}
+
 // NewConnectionRateLimiter creates a rate limiter with sensible defaults.
 func NewConnectionRateLimiter(storage store.Storage) *ConnectionRateLimiter {
 	rl := &ConnectionRateLimiter{
@@ -567,7 +584,8 @@ func (c *WSClient) ReadPump(hub *WSHub, onMessage func(*WSClient, WSMessage)) {
 
 		// Sanitize field lengths to prevent injection via long strings
 		if len(msg.Action) > maxActionNameLen {
-			msg.Action = msg.Action[:maxActionNameLen]
+			c.SendError("Action name too long")
+			continue
 		}
 
 		onMessage(c, msg)
@@ -1214,6 +1232,9 @@ func DefaultMessageHandler(client *WSClient, msg WSMessage) {
 		// For the examples, we can use a global registry for now
 		if handler, ok := GetActionHandler(action); ok {
 			handler(client, msg.Payload)
+			sendResponse(map[string]interface{}{
+				"type": "action_ack",
+			})
 		} else {
 			sendResponse(map[string]interface{}{
 				"type":  "error",
@@ -1292,6 +1313,21 @@ func WebSocketUpgradeMiddleware() fiberpkg.Handler {
 		}
 
 		// WebSocket upgrade will be handled by the websocket handler
+		return c.Next()
+	}
+}
+
+// RemoteActionRateLimitMiddleware enforces per-IP rate limiting for the HTTP remote action endpoint.
+// It uses a separate global rate limiter optimized for HTTP action workloads.
+func RemoteActionRateLimitMiddleware() fiberpkg.Handler {
+	return func(c *fiberpkg.Ctx) error {
+		clientIP := GetIPFromContext(c)
+		if !globalRemoteActionRateLimiter.Allow(clientIP) {
+			log.Printf("HTTP Remote Action rate limit exceeded for IP: %s", clientIP)
+			return c.Status(fiberpkg.StatusTooManyRequests).JSON(fiberpkg.Map{
+				"error": "Rate limit exceeded. Please try again later.",
+			})
+		}
 		return c.Next()
 	}
 }

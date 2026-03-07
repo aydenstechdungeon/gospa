@@ -85,6 +85,15 @@ export async function remote<T = unknown>(
 	const timeout = options.timeout ?? 30000;
 	const externalSignal = options.signal;
 
+	const forbiddenHeaders = ['x-csrf-token', 'content-type', 'accept'];
+	if (options.headers) {
+		for (const key of Object.keys(options.headers)) {
+			if (forbiddenHeaders.includes(key.toLowerCase())) {
+				return { error: `Invalid custom header: ${key}`, code: 'INVALID_HEADER', status: 0, ok: false };
+			}
+		}
+	}
+
 	if (externalSignal?.aborted) {
 		return {
 			error: 'Request aborted',
