@@ -107,11 +107,11 @@ func TestNew_WSDefaults(t *testing.T) {
 	if app.Config.WSMaxMessageSize != 64*1024 {
 		t.Errorf("expected WSMaxMessageSize=64KB, got %d", app.Config.WSMaxMessageSize)
 	}
-	if app.Config.WSConnRateLimit != 0.2 {
-		t.Errorf("expected WSConnRateLimit=0.2, got %f", app.Config.WSConnRateLimit)
+	if app.Config.WSConnRateLimit != 1.5 {
+		t.Errorf("expected WSConnRateLimit=1.5, got %f", app.Config.WSConnRateLimit)
 	}
-	if app.Config.WSConnBurst != 5.0 {
-		t.Errorf("expected WSConnBurst=5.0, got %f", app.Config.WSConnBurst)
+	if app.Config.WSConnBurst != 15.0 {
+		t.Errorf("expected WSConnBurst=15.0, got %f", app.Config.WSConnBurst)
 	}
 }
 

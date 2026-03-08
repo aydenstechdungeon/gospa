@@ -182,6 +182,8 @@ export class Rune<T> implements Notifier, Disposable {
 	private readonly _subscribers: Set<Subscriber<T>> = new Set();
 	private _dirty: boolean = false;
 	private _disposed: boolean = false;
+	private _hasPendingOldValue: boolean = false;
+	private _pendingOldValue?: T;
 
 	constructor(initialValue: T) {
 		this._value = initialValue;
@@ -221,18 +223,25 @@ export class Rune<T> implements Notifier, Disposable {
 	}
 
 	private _notifySubscribers(oldValue: T): void {
+		if (!this._hasPendingOldValue) {
+			this._hasPendingOldValue = true;
+			this._pendingOldValue = oldValue;
+		}
+
 		if (batchDepth > 0) {
 			pendingNotifications.add(this);
 			return;
 		}
-		// Auto-batch: schedule notification for next microtask if not already scheduled
-		pendingNotifications.add(this);
-		scheduleAutoBatch();
+		this.notify(oldValue);
 	}
 
 	notify(prevValue?: T): void {
 		const value = this._value;
-		const old = prevValue !== undefined ? prevValue : value;
+		const old = this._hasPendingOldValue
+			? (this._pendingOldValue as T)
+			: (prevValue !== undefined ? prevValue : value);
+		this._hasPendingOldValue = false;
+		this._pendingOldValue = undefined;
 		this._subscribers.forEach(fn => fn(value, old));
 	}
 
@@ -402,6 +411,7 @@ export class Effect implements Notifier {
 	private readonly _fn: EffectFn;
 	private _cleanup: (() => void) | void;
 	private readonly _dependencies: Set<Rune<unknown>> = new Set();
+	private readonly _depUnsubs: Map<Rune<unknown>, Unsubscribe> = new Map();
 	private readonly _id: number;
 	private _active: boolean = true;
 	private _disposed: boolean = false;
@@ -422,7 +432,9 @@ export class Effect implements Notifier {
 			this._cleanup = undefined;
 		}
 
-		// Clear old dependencies
+		const oldDeps = new Set(this._dependencies);
+
+		// Clear old dependencies (re-collected during run)
 		this._dependencies.clear();
 
 		// Push to effect stack
@@ -435,6 +447,23 @@ export class Effect implements Notifier {
 			effectStack.pop();
 			currentEffect = effectStack[effectStack.length - 1] || null;
 		}
+
+		oldDeps.forEach(dep => {
+			if (!this._dependencies.has(dep)) {
+				const unsub = this._depUnsubs.get(dep);
+				if (unsub) {
+					unsub();
+					this._depUnsubs.delete(dep);
+				}
+			}
+		});
+
+		this._dependencies.forEach(dep => {
+			if (!oldDeps.has(dep)) {
+				const unsub = dep.subscribe(() => this.notify());
+				this._depUnsubs.set(dep, unsub);
+			}
+		});
 	}
 
 	addDependency(rune: Rune<unknown>): void {
@@ -459,6 +488,8 @@ export class Effect implements Notifier {
 			this._cleanup();
 		}
 		this._disposed = true;
+		this._depUnsubs.forEach(unsub => unsub());
+		this._depUnsubs.clear();
 		this._dependencies.clear();
 	}
 
@@ -482,12 +513,14 @@ export function watch<T>(
 ): Unsubscribe {
 	const sourceArray = Array.isArray(sources) ? sources : [sources];
 	const unsubscribers: Unsubscribe[] = [];
+	let previousValues = sourceArray.map(source => source.get());
 
 	sourceArray.forEach(source => {
 		unsubscribers.push(
-			source.subscribe((value, oldValue) => {
+			source.subscribe(() => {
 				const values = sourceArray.map(s => s.get());
-				const oldValues = sourceArray.map(s => oldValue);
+				const oldValues = previousValues;
+				previousValues = [...values];
 				callback(
 					Array.isArray(sources) ? values : values[0],
 					Array.isArray(sources) ? oldValues : oldValues[0]

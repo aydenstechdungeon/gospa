@@ -8199,8 +8199,8 @@ app := gospa.New(gospa.Config{
 | `WSMaxReconnect` | `int` | `0` | Maximum number of reconnect attempts (0 for unlimited) |
 | `WSHeartbeat` | `time.Duration` | `0` | Interval for heartbeat messages to keep connection alive |
 | `WSMaxMessageSize` | `int` | `65536` | Maximum payload size for WebSocket messages (default 64KB) |
-| `WSConnRateLimit` | `float64` | `0.2` | Refilling rate in connections per second for WebSocket upgrades |
-| `WSConnBurst` | `float64` | `5.0` | Burst capacity for WebSocket connection upgrades |
+| `WSConnRateLimit` | `float64` | `1.5` | Refilling rate in connections per second for WebSocket upgrades |
+| `WSConnBurst` | `float64` | `15.0` | Burst capacity for WebSocket connection upgrades |
 
 ### Performance Options
 
@@ -8388,8 +8388,8 @@ WSHeartbeat: 30 * time.Second,
 ### Rate Limiting (Built-in)
 
 GoSPA includes an automatic, non-configurable token bucket rate limiter for WebSocket upgrades to prevent DoS attacks. The default limits are:
-- **Burst Capacity:** 5 concurrent connection requests per IP
-- **Refill Rate:** 0.2 tokens per second (1 connection allowed every 5 seconds)
+- **Burst Capacity:** 15 concurrent connection requests per IP
+- **Refill Rate:** 1.5 tokens per second (~1 connection every 0.67 seconds)
 
 If an IP exceeds this limit, they will receive a `429 Too Many Requests` response.
 
