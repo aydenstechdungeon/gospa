@@ -42,6 +42,19 @@ func main() {
 		WSReconnectDelay:      1 * time.Second,
 		WSMaxReconnect:        5,
 		HydrationMode:         "immediate",
+		NavigationOptions: gospa.NavigationOptions{
+			SpeculativePrefetching: &gospa.NavigationSpeculativePrefetchingConfig{
+				Enabled:        boolPtr(true),
+				TTL:            intPtr(45000),
+				HoverDelay:     intPtr(80),
+				ViewportMargin: intPtr(220),
+			},
+			ServiceWorkerNavigationCaching: &gospa.NavigationServiceWorkerCachingConfig{
+				Enabled:   boolPtr(true),
+				CacheName: "gospa-docs-navigation-cache",
+				Path:      "/gospa-navigation-sw.js",
+			},
+		},
 	})
 
 	// Legacy redirects after documentation restructuring
@@ -75,6 +88,14 @@ func main() {
 	if err := app.Run(port); err != nil {
 		log.Fatal(err)
 	}
+}
+
+func boolPtr(v bool) *bool {
+	return &v
+}
+
+func intPtr(v int) *int {
+	return &v
 }
 
 // cacheMiddleware adds Cache-Control headers for static assets and pages

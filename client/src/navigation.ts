@@ -9,10 +9,55 @@ const state = {
 };
 
 // Navigation options
-export interface NavigationOptions {
+export interface NavigateOptions {
 	replace?: boolean;
 	scrollToTop?: boolean;
 	preserveState?: boolean;
+}
+
+export interface SpeculativePrefetchingConfig {
+	enabled?: boolean;
+	ttl?: number;
+	hoverDelay?: number;
+	viewportMargin?: number;
+}
+
+export interface URLParsingCacheConfig {
+	enabled?: boolean;
+	maxSize?: number;
+	ttl?: number;
+}
+
+export interface IdleCallbackBatchUpdatesConfig {
+	enabled?: boolean;
+	fallbackToMicrotask?: boolean;
+}
+
+export interface LazyRuntimeInitializationConfig {
+	enabled?: boolean;
+	deferBindings?: boolean;
+}
+
+export interface ServiceWorkerNavigationCachingConfig {
+	enabled?: boolean;
+	cacheName?: string;
+	path?: string;
+}
+
+export interface ViewTransitionsConfig {
+	enabled?: boolean;
+	fallbackToClassic?: boolean;
+}
+
+export interface NavigationOptions {
+	ignoredExtensions?: string[];
+	appendExtensions?: string[];
+	speculativePrefetching?: SpeculativePrefetchingConfig;
+	urlParsingCache?: URLParsingCacheConfig;
+	idleCallbackBatchUpdates?: IdleCallbackBatchUpdatesConfig;
+	lazyRuntimeInitialization?: LazyRuntimeInitializationConfig;
+	serviceWorkerNavigationCaching?: ServiceWorkerNavigationCachingConfig;
+	viewTransitions?: ViewTransitionsConfig;
 }
 
 // Navigation event handlers
@@ -95,47 +140,147 @@ export function appendIgnoredExtensions(extensions: string[]): void {
 	setIgnoredExtensions([...IGNORED_EXTENSIONS, ...extensions]);
 }
 
+
+const DEFAULT_NAVIGATION_OPTIONS: Required<Omit<NavigationOptions, "ignoredExtensions" | "appendExtensions">> = {
+	speculativePrefetching: {
+		enabled: false,
+		ttl: 30_000,
+		hoverDelay: 60,
+		viewportMargin: 150,
+	},
+	urlParsingCache: {
+		enabled: true,
+		maxSize: 100,
+		ttl: 30_000,
+	},
+	idleCallbackBatchUpdates: {
+		enabled: true,
+		fallbackToMicrotask: true,
+	},
+	lazyRuntimeInitialization: {
+		enabled: true,
+		deferBindings: true,
+	},
+	serviceWorkerNavigationCaching: {
+		enabled: false,
+		cacheName: 'gospa-navigation-cache',
+		path: '/gospa-navigation-sw.js',
+	},
+	viewTransitions: {
+		enabled: true,
+		fallbackToClassic: true,
+	},
+};
+
+let navigationOptionsConfig: Required<Omit<NavigationOptions, "ignoredExtensions" | "appendExtensions">> = {
+	...DEFAULT_NAVIGATION_OPTIONS,
+	speculativePrefetching: { ...DEFAULT_NAVIGATION_OPTIONS.speculativePrefetching },
+	urlParsingCache: { ...DEFAULT_NAVIGATION_OPTIONS.urlParsingCache },
+	idleCallbackBatchUpdates: { ...DEFAULT_NAVIGATION_OPTIONS.idleCallbackBatchUpdates },
+	lazyRuntimeInitialization: { ...DEFAULT_NAVIGATION_OPTIONS.lazyRuntimeInitialization },
+	serviceWorkerNavigationCaching: { ...DEFAULT_NAVIGATION_OPTIONS.serviceWorkerNavigationCaching },
+	viewTransitions: { ...DEFAULT_NAVIGATION_OPTIONS.viewTransitions },
+};
+
+interface CachedURL {
+	url: URL;
+	expiresAt: number;
+}
+
+const parsedURLCache = new Map<string, CachedURL>();
+const hoverPrefetchTimers = new Map<string, number>();
+let prefetchObserver: IntersectionObserver | null = null;
+let clickDelegateContainer: Element | Document = document;
+
+export function setNavigationOptions(config: NavigationOptions): void {
+	if (config.ignoredExtensions) {
+		setIgnoredExtensions(config.ignoredExtensions);
+	}
+	if (config.appendExtensions) {
+		appendIgnoredExtensions(config.appendExtensions);
+	}
+
+	navigationOptionsConfig = {
+		...navigationOptionsConfig,
+		speculativePrefetching: { ...navigationOptionsConfig.speculativePrefetching, ...(config.speculativePrefetching ?? {}) },
+		urlParsingCache: { ...navigationOptionsConfig.urlParsingCache, ...(config.urlParsingCache ?? {}) },
+		idleCallbackBatchUpdates: { ...navigationOptionsConfig.idleCallbackBatchUpdates, ...(config.idleCallbackBatchUpdates ?? {}) },
+		lazyRuntimeInitialization: { ...navigationOptionsConfig.lazyRuntimeInitialization, ...(config.lazyRuntimeInitialization ?? {}) },
+		serviceWorkerNavigationCaching: { ...navigationOptionsConfig.serviceWorkerNavigationCaching, ...(config.serviceWorkerNavigationCaching ?? {}) },
+		viewTransitions: { ...navigationOptionsConfig.viewTransitions, ...(config.viewTransitions ?? {}) },
+	};
+}
+
+export function appendNavigationOptions(config: NavigationOptions): void {
+	setNavigationOptions(config);
+}
+
+function getCachedURL(href: string): URL | null {
+	const cacheCfg = navigationOptionsConfig.urlParsingCache;
+	if (!cacheCfg.enabled) {
+		try {
+			return new URL(href, window.location.origin);
+		} catch {
+			return null;
+		}
+	}
+
+	const now = Date.now();
+	const cached = parsedURLCache.get(href);
+	if (cached && cached.expiresAt > now) {
+		parsedURLCache.delete(href);
+		parsedURLCache.set(href, cached);
+		return cached.url;
+	}
+
+	if (cached) {
+		parsedURLCache.delete(href);
+	}
+
+	let parsed: URL;
+	try {
+		parsed = new URL(href, window.location.origin);
+	} catch {
+		return null;
+	}
+
+	parsedURLCache.set(href, {
+		url: parsed,
+		expiresAt: now + Math.max(1000, cacheCfg.ttl ?? 30000),
+	});
+
+	while (parsedURLCache.size > Math.max(1, cacheCfg.maxSize ?? 100)) {
+		const first = parsedURLCache.keys().next().value;
+		if (!first) break;
+		parsedURLCache.delete(first);
+	}
+
+	return parsed;
+}
+
 // Check if a link is internal (same origin)
 function isInternalLink(link: HTMLAnchorElement): boolean {
 	const href = link.getAttribute('href');
 
-	// Skip obviously non-navigable schemas and hashes instantly
-	if (!href ||
-		href.startsWith('#') ||
-		href.startsWith('javascript:') ||
-		href.startsWith('mailto:') ||
-		href.startsWith('tel:') ||
-		href.startsWith('sms:') ||
-		href.startsWith('blob:') ||
-		href.startsWith('data:')
-	) {
+	if (!href || href.startsWith('#') || href.startsWith('javascript:') || href.startsWith('mailto:') || href.startsWith('tel:') || href.startsWith('sms:') || href.startsWith('blob:') || href.startsWith('data:')) {
 		return false;
 	}
 
-	let urlObj: URL;
-	try {
-		// Parse the URL exactly once
-		urlObj = new URL(href, window.location.origin);
-	} catch {
+	const urlObj = getCachedURL(href);
+	if (!urlObj) {
 		return false;
 	}
 
-	// 1. External origin check
 	if (urlObj.origin !== window.location.origin) {
 		return false;
 	}
 
-	// 2. Target & Download attributes
-	if (link.hasAttribute('data-external') ||
-		link.hasAttribute('download') ||
-		link.getAttribute('target') === '_blank') {
+	if (link.hasAttribute('data-external') || link.hasAttribute('download') || link.getAttribute('target') === '_blank') {
 		return false;
 	}
 
-	// 3. File extension check (optimized trailing segment lookahead)
 	const pathname = urlObj.pathname;
 	const lastSegment = pathname.slice(pathname.lastIndexOf('/') + 1);
-
 	const dot = lastSegment.lastIndexOf('.');
 	if (dot !== -1 && dot < lastSegment.length - 1) {
 		const ext = lastSegment.slice(dot + 1).toLowerCase();
@@ -161,7 +306,11 @@ function isDocsPage(path: string): boolean {
 }
 
 // Prefetch cache
-const prefetchCache = new Map<string, PageData>();
+interface PrefetchEntry {
+	data: PageData;
+	expiresAt: number;
+}
+const prefetchCache = new Map<string, PrefetchEntry>();
 
 // Fetch page content from server
 async function fetchPageFromServer(path: string): Promise<PageData | null> {
@@ -231,10 +380,11 @@ async function fetchPageFromServer(path: string): Promise<PageData | null> {
 // Get page data (from cache or server)
 async function getPageData(path: string): Promise<PageData | null> {
 	const cached = prefetchCache.get(path);
-	if (cached) {
+	if (cached && cached.expiresAt > Date.now()) {
 		prefetchCache.delete(path);
-		return cached;
+		return cached.data;
 	}
+	if (cached) prefetchCache.delete(path);
 	return fetchPageFromServer(path);
 }
 
@@ -243,6 +393,89 @@ async function getPageData(path: string): Promise<PageData | null> {
 async function prepareContent(html: string): Promise<string> {
 	// Return HTML as-is - server is trusted, CSP provides XSS protection
 	return html;
+}
+
+function patchAttributes(current: Element, incoming: Element): void {
+	for (const attr of Array.from(current.attributes)) {
+		if (!incoming.hasAttribute(attr.name)) {
+			current.removeAttribute(attr.name);
+		}
+	}
+
+	for (const attr of Array.from(incoming.attributes)) {
+		if (current.getAttribute(attr.name) !== attr.value) {
+			current.setAttribute(attr.name, attr.value);
+		}
+	}
+}
+
+function patchNode(currentNode: Node, incomingNode: Node): void {
+	if (currentNode.nodeType !== incomingNode.nodeType) {
+		currentNode.parentNode?.replaceChild(incomingNode.cloneNode(true), currentNode);
+		return;
+	}
+
+	if (currentNode.nodeType === Node.TEXT_NODE) {
+		if (currentNode.textContent !== incomingNode.textContent) {
+			currentNode.textContent = incomingNode.textContent;
+		}
+		return;
+	}
+
+	if (!(currentNode instanceof Element) || !(incomingNode instanceof Element)) {
+		return;
+	}
+
+	if (currentNode.tagName !== incomingNode.tagName) {
+		currentNode.parentNode?.replaceChild(incomingNode.cloneNode(true), currentNode);
+		return;
+	}
+
+	patchAttributes(currentNode, incomingNode);
+
+	const currentChildren = Array.from(currentNode.childNodes);
+	const incomingChildren = Array.from(incomingNode.childNodes);
+	const max = Math.max(currentChildren.length, incomingChildren.length);
+
+	for (let i = 0; i < max; i += 1) {
+		const currentChild = currentChildren[i];
+		const incomingChild = incomingChildren[i];
+		if (!currentChild && incomingChild) {
+			currentNode.appendChild(incomingChild.cloneNode(true));
+			continue;
+		}
+		if (currentChild && !incomingChild) {
+			currentChild.remove();
+			continue;
+		}
+		if (currentChild && incomingChild) {
+			patchNode(currentChild, incomingChild);
+		}
+	}
+}
+
+function patchInnerHTML(target: Element, nextHTML: string): void {
+	const template = document.createElement('template');
+	template.innerHTML = nextHTML;
+	const incomingChildren = Array.from(template.content.childNodes);
+	const existingChildren = Array.from(target.childNodes);
+	const max = Math.max(existingChildren.length, incomingChildren.length);
+
+	for (let i = 0; i < max; i += 1) {
+		const currentChild = existingChildren[i];
+		const incomingChild = incomingChildren[i];
+		if (!currentChild && incomingChild) {
+			target.appendChild(incomingChild.cloneNode(true));
+			continue;
+		}
+		if (currentChild && !incomingChild) {
+			currentChild.remove();
+			continue;
+		}
+		if (currentChild && incomingChild) {
+			patchNode(currentChild, incomingChild);
+		}
+	}
 }
 
 // Update the DOM with new content
@@ -262,13 +495,13 @@ async function updateDOM(data: PageData): Promise<void> {
 		// Docs -> Docs: Only replace the inner docs content (sidebar persists)
 		const docsContentEl = document.querySelector('[data-gospa-docs-content]');
 		if (docsContentEl) {
-			docsContentEl.innerHTML = pageContent;
+			patchInnerHTML(docsContentEl, pageContent);
 		}
 	} else if ((data.isDocsPage && !currentIsDocsPage) || (!data.isDocsPage && currentIsDocsPage)) {
 		// Cross-type transition: Replace FULL page content (includes sidebar addition/removal)
 		const contentEl = document.querySelector('[data-gospa-page-content]');
 		if (contentEl) {
-			contentEl.innerHTML = pageContent;
+			patchInnerHTML(contentEl, pageContent);
 		}
 	} else {
 		// Non-docs -> Non-docs: Standard full content replacement
@@ -277,15 +510,15 @@ async function updateDOM(data: PageData): Promise<void> {
 
 		if (contentEl) {
 			// Preferred: update only the content region, preserving header/footer
-			contentEl.innerHTML = pageContent;
+			patchInnerHTML(contentEl, pageContent);
 		} else if (rootEl) {
 			// Fallback: update entire root (legacy behavior)
-			rootEl.innerHTML = pageContent;
+			patchInnerHTML(rootEl, pageContent);
 		} else {
 			// Last resort: update main or body
 			const mainEl = document.querySelector('main');
 			if (mainEl) {
-				mainEl.innerHTML = pageContent;
+				patchInnerHTML(mainEl, pageContent);
 			} else {
 				document.body.innerHTML = pageContent;
 			}
@@ -293,10 +526,31 @@ async function updateDOM(data: PageData): Promise<void> {
 	}
 
 	// Update head (managed head elements)
-	updateHead(data.head);
+	runOnIdle(() => updateHead(data.head));
 
 	// Re-initialize runtime for new content
 	await initNewContent();
+}
+
+
+function runOnIdle(callback: () => void): void {
+	const idleCfg = navigationOptionsConfig.idleCallbackBatchUpdates;
+	if (!idleCfg.enabled) {
+		callback();
+		return;
+	}
+
+	if ('requestIdleCallback' in window) {
+		(window as any).requestIdleCallback(() => callback());
+		return;
+	}
+
+	if (idleCfg.fallbackToMicrotask) {
+		queueMicrotask(callback);
+		return;
+	}
+
+	setTimeout(callback, 0);
 }
 
 // Update head elements - smart reconciliation to avoid CSS flashes
@@ -460,16 +714,11 @@ function updateHead(headHtml: string): void {
 }
 
 // Initialize new content (re-run runtime setup)
-async function initNewContent(): Promise<void> {
-	// Re-setup event handlers and bindings for new DOM content
+async function initCriticalContent(): Promise<void> {
 	const eventElements = document.querySelectorAll('[data-on]');
-	const boundElements = document.querySelectorAll('[data-bind]');
-
-	// Get WebSocket from global context
 	const gospa = (window as any).__gospa__;
 	const ws = gospa?._ws;
 
-	// Setup event handlers
 	eventElements.forEach((element) => {
 		const attr = element.getAttribute('data-on');
 		if (!attr) return;
@@ -477,7 +726,6 @@ async function initNewContent(): Promise<void> {
 		const [eventType, action] = attr.split(':');
 		if (!eventType || !action) return;
 
-		// Remove old listener if any (using clone technique)
 		const newElement = element.cloneNode(true) as Element;
 		element.parentNode?.replaceChild(newElement, element);
 
@@ -491,8 +739,12 @@ async function initNewContent(): Promise<void> {
 			websocketModule.sendAction(action);
 		});
 	});
+}
 
-	// Setup bindings
+async function initDeferredBindings(): Promise<void> {
+	const boundElements = document.querySelectorAll('[data-bind]');
+	const gospa = (window as any).__gospa__;
+
 	for (const element of boundElements) {
 		const attr = element.getAttribute('data-bind');
 		if (!attr) continue;
@@ -503,15 +755,12 @@ async function initNewContent(): Promise<void> {
 		const rune = gospa?.state?.get(stateKey);
 		if (!rune) continue;
 
-		// Bind element to rune
 		const update = async (value: any) => {
 			switch (bindingType) {
 				case 'text':
 					element.textContent = value;
 					break;
 				case 'html':
-					// HTML content is trusted - Templ auto-escapes on the server
-					// For user-generated content, use 'gospa/runtime-secure' with DOMPurify
 					element.innerHTML = value;
 					break;
 				case 'value':
@@ -531,8 +780,33 @@ async function initNewContent(): Promise<void> {
 	}
 }
 
+async function initNewContent(): Promise<void> {
+	await initCriticalContent();
+	if (!navigationOptionsConfig.lazyRuntimeInitialization.enabled || !navigationOptionsConfig.lazyRuntimeInitialization.deferBindings) {
+		await initDeferredBindings();
+		return;
+	}
+
+	runOnIdle(() => {
+		void initDeferredBindings();
+	});
+}
+
+
+async function performDOMUpdateWithTransitions(data: PageData): Promise<void> {
+	const viewCfg = navigationOptionsConfig.viewTransitions;
+	const canTransition = viewCfg.enabled && 'startViewTransition' in document;
+	if (!canTransition) {
+		await updateDOM(data);
+		return;
+	}
+
+	const transition = (document as any).startViewTransition(() => updateDOM(data));
+	await transition.finished;
+}
+
 // Navigate to a new path
-export async function navigate(path: string, options: NavigationOptions = {}): Promise<boolean> {
+export async function navigate(path: string, options: NavigateOptions = {}): Promise<boolean> {
 	// Don't navigate if already at this path
 	if (path === state.currentPath && !options.replace) {
 		return false;
@@ -566,7 +840,7 @@ export async function navigate(path: string, options: NavigationOptions = {}): P
 			}
 
 			state.currentPath = path;
-			await updateDOM(data);
+			await performDOMUpdateWithTransitions(data);
 
 			if (options.scrollToTop !== false) {
 				if (data.isDocsPage && document.querySelector('[data-gospa-docs-content]')) {
@@ -650,39 +924,109 @@ function handlePopState(event: PopStateEvent): void {
 	});
 }
 
+function getAnchorFromPath(path: EventTarget[]): HTMLAnchorElement | null {
+	for (const target of path) {
+		if (!(target instanceof Element)) continue;
+		if (target instanceof HTMLAnchorElement && target.hasAttribute('href')) {
+			return target;
+		}
+		const candidate = target.closest('a[href]');
+		if (candidate instanceof HTMLAnchorElement) {
+			return candidate;
+		}
+	}
+	return null;
+}
+
 // Handle link clicks
 function handleLinkClick(event: MouseEvent): void {
-	// Only handle left clicks without modifiers
 	if (event.button !== 0 || event.metaKey || event.ctrlKey || event.shiftKey || event.altKey) {
 		return;
 	}
 
-	// Find the closest anchor element
-	const target = event.target as Element;
-	const link = target.closest('a[href]');
-
+	const path = (event.composedPath?.() ?? []) as EventTarget[];
+	const link = getAnchorFromPath(path);
 	if (!link) return;
+	if (!isInternalLink(link)) return;
 
-	// Check if it's an internal link
-	if (!isInternalLink(link as HTMLAnchorElement)) {
-		return;
-	}
-
-	// Prevent default navigation
 	event.preventDefault();
-
-	// Get the href
 	const href = link.getAttribute('href');
 	if (!href) return;
+	void navigate(href);
+}
 
-	// Navigate
-	navigate(href);
+function setupSpeculativePrefetching(): void {
+	const cfg = navigationOptionsConfig.speculativePrefetching;
+	if (!cfg.enabled) return;
+
+	if ('IntersectionObserver' in window) {
+		prefetchObserver?.disconnect();
+		prefetchObserver = new IntersectionObserver((entries) => {
+			for (const entry of entries) {
+				if (!entry.isIntersecting) continue;
+				const anchor = entry.target as HTMLAnchorElement;
+				const href = anchor.getAttribute('href');
+				if (!href || !isInternalLink(anchor)) continue;
+				void prefetch(href);
+				prefetchObserver?.unobserve(anchor);
+			}
+		}, { rootMargin: `${cfg.viewportMargin ?? 150}px` });
+
+		document.querySelectorAll('a[href]').forEach((anchor) => {
+			if (anchor instanceof HTMLAnchorElement && isInternalLink(anchor)) {
+				prefetchObserver?.observe(anchor);
+			}
+		});
+	}
+
+	window.addEventListener('mouseover', handleHoverPrefetch);
+}
+
+function handleHoverPrefetch(event: MouseEvent): void {
+	const cfg = navigationOptionsConfig.speculativePrefetching;
+	if (!cfg.enabled) return;
+	const target = event.target;
+	if (!(target instanceof Element)) return;
+	const anchor = target.closest('a[href]');
+	if (!(anchor instanceof HTMLAnchorElement) || !isInternalLink(anchor)) return;
+	const href = anchor.getAttribute('href');
+	if (!href) return;
+	if (hoverPrefetchTimers.has(href)) return;
+	const timer = window.setTimeout(() => {
+		hoverPrefetchTimers.delete(href);
+		void prefetch(href);
+	}, Math.max(0, cfg.hoverDelay ?? 60));
+	hoverPrefetchTimers.set(href, timer);
+}
+
+function teardownSpeculativePrefetching(): void {
+	window.removeEventListener('mouseover', handleHoverPrefetch);
+	prefetchObserver?.disconnect();
+	prefetchObserver = null;
+	for (const timer of hoverPrefetchTimers.values()) {
+		clearTimeout(timer);
+	}
+	hoverPrefetchTimers.clear();
+}
+
+async function registerNavigationServiceWorker(): Promise<void> {
+	const cfg = navigationOptionsConfig.serviceWorkerNavigationCaching;
+	if (!cfg.enabled || !('serviceWorker' in navigator)) return;
+	try {
+		const path = cfg.path ?? "/gospa-navigation-sw.js";
+		const swPath = cfg.cacheName ? `${path}?cacheName=${encodeURIComponent(cfg.cacheName)}` : path;
+		await navigator.serviceWorker.register(swPath, { scope: '/' });
+	} catch (error) {
+		console.warn('[GoSPA] Service worker registration failed:', error);
+	}
 }
 
 // Initialize navigation
 export function initNavigation(): void {
 	// Setup link click handler
-	document.addEventListener('click', handleLinkClick);
+	const root = document.querySelector('[data-gospa-page-content], [data-gospa-root]');
+	clickDelegateContainer = root ?? document;
+	clickDelegateContainer.addEventListener('click', handleLinkClick as EventListener);
 
 	// Setup popstate handler
 	window.addEventListener('popstate', handlePopState);
@@ -696,7 +1040,13 @@ export function initNavigation(): void {
 		if (config.appendExtensions) {
 			appendIgnoredExtensions(config.appendExtensions);
 		}
+		if (config.navigationOptions) {
+			setNavigationOptions(config.navigationOptions);
+		}
 	}
+
+	setupSpeculativePrefetching();
+	void registerNavigationServiceWorker();
 
 	// Mark as SPA-enabled
 	document.documentElement.setAttribute('data-gospa-spa', 'true');
@@ -704,21 +1054,29 @@ export function initNavigation(): void {
 
 // Cleanup navigation
 export function destroyNavigation(): void {
-	document.removeEventListener('click', handleLinkClick);
+	clickDelegateContainer.removeEventListener('click', handleLinkClick as EventListener);
 	window.removeEventListener('popstate', handlePopState);
+	teardownSpeculativePrefetching();
 	document.documentElement.removeAttribute('data-gospa-spa');
 }
 
 // Prefetch a page for faster navigation
 export async function prefetch(path: string): Promise<void> {
-	if (prefetchCache.has(path)) return;
+	const existing = prefetchCache.get(path);
+	if (existing && existing.expiresAt > Date.now()) return;
+	if (existing) prefetchCache.delete(path);
 
 	const data = await fetchPageFromServer(path);
 	if (data) {
-		prefetchCache.set(path, data);
-
-		// Clean up cache after 30 seconds
-		setTimeout(() => prefetchCache.delete(path), 30000);
+		const ttl = Math.max(1000, navigationOptionsConfig.speculativePrefetching.ttl ?? 30000);
+		const expiresAt = Date.now() + ttl;
+		prefetchCache.set(path, { data, expiresAt });
+		setTimeout(() => {
+			const current = prefetchCache.get(path);
+			if (current && current.expiresAt <= Date.now()) {
+				prefetchCache.delete(path);
+			}
+		}, ttl + 50);
 	}
 }
 
@@ -754,6 +1112,11 @@ declare global {
 		__gospa__?: {
 			state: Map<string, any>;
 			_ws?: WebSocket;
+		};
+		__GOSPA_CONFIG__?: {
+			ignoredExtensions?: string[];
+			appendExtensions?: string[];
+			navigationOptions?: NavigationOptions;
 		};
 	}
 }

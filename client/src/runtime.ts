@@ -48,6 +48,9 @@ import {
 	initNavigation,
 	destroyNavigation,
 	createNavigationState,
+	setNavigationOptions,
+	appendNavigationOptions,
+	type NavigateOptions,
 	type NavigationOptions
 } from './navigation.ts';
 import { setupTransitions, fade, fly, slide, scale, blur, crossfade } from './transition.ts';
@@ -89,8 +92,10 @@ export {
 	onAfterNavigate,
 	initNavigation,
 	destroyNavigation,
-	createNavigationState
+	createNavigationState,
+	setNavigationOptions,
+	appendNavigationOptions
 };
 
 // Export types
-export type { NavigationOptions, StateMessage };
+export type { NavigateOptions, NavigationOptions, StateMessage };
