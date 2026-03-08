@@ -297,13 +297,8 @@ interface PageData {
 	content: string;
 	title: string;
 	head: string;
-	isDocsPage: boolean;
 }
 
-// Check if path is a docs page
-function isDocsPage(path: string): boolean {
-	return path.startsWith('/docs');
-}
 
 // Prefetch cache
 interface PrefetchEntry {
@@ -333,34 +328,21 @@ async function fetchPageFromServer(path: string): Promise<PageData | null> {
 		const parser = new DOMParser();
 		const doc = parser.parseFromString(html, 'text/html');
 
-		// Check if this is a docs page
-		const isDocsPage = !!doc.querySelector('[data-gospa-docs-content]');
-
-		// Check if current page is docs
-		const currentIsDocsPage = !!document.querySelector('[data-gospa-docs-content]');
-
-		// Extract content based on page type transition
+		// Extract content
 		let content: string;
 
-		if (isDocsPage && currentIsDocsPage) {
-			// Docs -> Docs: Only extract inner content (sidebar persists)
-			const docsContentEl = doc.querySelector('[data-gospa-docs-content]');
-			content = docsContentEl ? docsContentEl.innerHTML : '';
-		} else if (isDocsPage && !currentIsDocsPage) {
-			// Non-docs -> Docs: Extract FULL page content including sidebar
-			const pageContentEl = doc.querySelector('[data-gospa-page-content]');
-			content = pageContentEl ? pageContentEl.innerHTML : doc.body.innerHTML;
-		} else if (!isDocsPage && currentIsDocsPage) {
-			// Docs -> Non-docs: Extract FULL page content (remove sidebar)
-			const pageContentEl = doc.querySelector('[data-gospa-page-content]');
-			content = pageContentEl ? pageContentEl.innerHTML : doc.body.innerHTML;
+		const rootEl = doc.querySelector('[data-gospa-root]');
+		const pageContentEl = doc.querySelector('[data-gospa-page-content]');
+		const mainEl = doc.querySelector('main');
+
+		if (rootEl) {
+			content = rootEl.innerHTML;
+		} else if (pageContentEl) {
+			content = pageContentEl.innerHTML;
+		} else if (mainEl) {
+			content = mainEl.innerHTML;
 		} else {
-			// Non-docs -> Non-docs: Standard content replacement
-			const contentEl = doc.querySelector('[data-gospa-page-content]');
-			const rootEl = doc.querySelector('[data-gospa-root]');
-			const mainEl = doc.querySelector('main');
-			content = contentEl ? contentEl.innerHTML :
-				(rootEl ? rootEl.innerHTML : (mainEl ? mainEl.innerHTML : doc.body.innerHTML));
+			content = doc.body.innerHTML;
 		}
 
 		// Extract title
@@ -370,7 +352,7 @@ async function fetchPageFromServer(path: string): Promise<PageData | null> {
 		const headEl = doc.querySelector('head');
 		const head = headEl ? headEl.innerHTML : '';
 
-		return { content, title, head, isDocsPage };
+		return { content, title, head };
 	} catch (error) {
 		console.error('[GoSPA] Navigation error:', error);
 		return null;
@@ -410,6 +392,10 @@ function patchAttributes(current: Element, incoming: Element): void {
 }
 
 function patchNode(currentNode: Node, incomingNode: Node): void {
+	if (currentNode.isEqualNode(incomingNode)) {
+		return;
+	}
+
 	if (currentNode.nodeType !== incomingNode.nodeType) {
 		currentNode.parentNode?.replaceChild(incomingNode.cloneNode(true), currentNode);
 		return;
@@ -427,6 +413,16 @@ function patchNode(currentNode: Node, incomingNode: Node): void {
 	}
 
 	if (currentNode.tagName !== incomingNode.tagName) {
+		currentNode.parentNode?.replaceChild(incomingNode.cloneNode(true), currentNode);
+		return;
+	}
+
+	// Prevent morphing structurally unrelated elements
+	if (
+		(currentNode.id && currentNode.id !== incomingNode.id) ||
+		(incomingNode.id && currentNode.id !== incomingNode.id) ||
+		(currentNode.getAttribute('data-gospa-page') !== incomingNode.getAttribute('data-gospa-page'))
+	) {
 		currentNode.parentNode?.replaceChild(incomingNode.cloneNode(true), currentNode);
 		return;
 	}
@@ -479,50 +475,25 @@ function patchInnerHTML(target: Element, nextHTML: string): void {
 }
 
 // Update the DOM with new content
-async function updateDOM(data: PageData): Promise<void> {
+async function updateDOM(data: PageData, pageContent: string): Promise<void> {
 	// Update title
 	if (data.title) {
 		document.title = data.title;
 	}
 
-	const pageContent = await prepareContent(data.content);
+	// Try to update from outer-most to inner-most based on what's available
+	const rootEl = document.querySelector('[data-gospa-root]');
+	const contentEl = document.querySelector('[data-gospa-page-content]');
+	const mainEl = document.querySelector('main');
 
-	// Check current page type
-	const currentIsDocsPage = !!document.querySelector('[data-gospa-docs-content]');
-
-	// Handle page transitions
-	if (data.isDocsPage && currentIsDocsPage) {
-		// Docs -> Docs: Only replace the inner docs content (sidebar persists)
-		const docsContentEl = document.querySelector('[data-gospa-docs-content]');
-		if (docsContentEl) {
-			patchInnerHTML(docsContentEl, pageContent);
-		}
-	} else if ((data.isDocsPage && !currentIsDocsPage) || (!data.isDocsPage && currentIsDocsPage)) {
-		// Cross-type transition: Replace FULL page content (includes sidebar addition/removal)
-		const contentEl = document.querySelector('[data-gospa-page-content]');
-		if (contentEl) {
-			patchInnerHTML(contentEl, pageContent);
-		}
+	if (rootEl) {
+		patchInnerHTML(rootEl, pageContent);
+	} else if (contentEl) {
+		patchInnerHTML(contentEl, pageContent);
+	} else if (mainEl) {
+		patchInnerHTML(mainEl, pageContent);
 	} else {
-		// Non-docs -> Non-docs: Standard full content replacement
-		const contentEl = document.querySelector('[data-gospa-page-content]');
-		const rootEl = document.querySelector('[data-gospa-root]');
-
-		if (contentEl) {
-			// Preferred: update only the content region, preserving header/footer
-			patchInnerHTML(contentEl, pageContent);
-		} else if (rootEl) {
-			// Fallback: update entire root (legacy behavior)
-			patchInnerHTML(rootEl, pageContent);
-		} else {
-			// Last resort: update main or body
-			const mainEl = document.querySelector('main');
-			if (mainEl) {
-				patchInnerHTML(mainEl, pageContent);
-			} else {
-				document.body.innerHTML = pageContent;
-			}
-		}
+		document.body.innerHTML = pageContent;
 	}
 
 	// Update head (managed head elements)
@@ -793,15 +764,25 @@ async function initNewContent(): Promise<void> {
 }
 
 
-async function performDOMUpdateWithTransitions(data: PageData): Promise<void> {
+async function performDOMUpdateWithTransitions(data: PageData, options: NavigateOptions): Promise<void> {
 	const viewCfg = navigationOptionsConfig.viewTransitions;
 	const canTransition = viewCfg.enabled && 'startViewTransition' in document;
+
+	const pageContent = await prepareContent(data.content);
+
+	const update = async () => {
+		await updateDOM(data, pageContent);
+		if (options.scrollToTop !== false) {
+			window.scrollTo(0, 0);
+		}
+	};
+
 	if (!canTransition) {
-		await updateDOM(data);
+		await update();
 		return;
 	}
 
-	const transition = (document as any).startViewTransition(() => updateDOM(data));
+	const transition = (document as any).startViewTransition(update);
 	await transition.finished;
 }
 
@@ -840,17 +821,7 @@ export async function navigate(path: string, options: NavigateOptions = {}): Pro
 			}
 
 			state.currentPath = path;
-			await performDOMUpdateWithTransitions(data);
-
-			if (options.scrollToTop !== false) {
-				if (data.isDocsPage && document.querySelector('[data-gospa-docs-content]')) {
-					// For docs navigation, scroll the main content area, not the whole page
-					// This preserves sidebar scroll position
-					window.scrollTo(0, 0);
-				} else {
-					window.scrollTo(0, 0);
-				}
-			}
+			await performDOMUpdateWithTransitions(data, options);
 
 			afterNavCallbacks.forEach(cb => cb(path));
 			document.dispatchEvent(new CustomEvent('gospa:navigated', { detail: { path } }));
@@ -913,7 +884,7 @@ function handlePopState(event: PopStateEvent): void {
 	getPageData(path).then(data => {
 		if (data) {
 			state.currentPath = path;
-			updateDOM(data).then(() => {
+			performDOMUpdateWithTransitions(data, { scrollToTop: false }).then(() => {
 				afterNavCallbacks.forEach(cb => cb(path));
 				document.dispatchEvent(new CustomEvent('gospa:navigated', { detail: { path } }));
 			});

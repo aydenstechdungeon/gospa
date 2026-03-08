@@ -73,6 +73,12 @@ func main() {
 		return c.SendFile("./static/llms-full.md")
 	})
 
+	// Service Worker route
+	app.Get("/gospa-navigation-sw.js", func(c *fiber.Ctx) error {
+		c.Set("Content-Type", "application/javascript")
+		return c.SendFile("./static/gospa-navigation-sw.js")
+	})
+
 	// Add cache headers middleware for static assets and pages
 	if !devMode {
 		app.Use(cacheMiddleware)

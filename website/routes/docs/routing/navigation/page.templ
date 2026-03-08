@@ -33,14 +33,14 @@ templ Page() {
 		<section class="space-y-6">
 			<h2 class="text-2xl font-bold">Navigation Optimizer Impact</h2>
 			<p class="text-[var(--text-secondary)]">Each optimization can be configured independently and measured with browser DevTools (TTI, layout shift, and next-click latency).</p>
-			@components.CodeBlock("const optimizer = {
+			@components.CodeBlock(`const optimizer = {
 	speculativePrefetching: { enabled: true, ttl: 45000, hoverDelay: 80, viewportMargin: 220 },
 	urlParsingCache: { enabled: true, maxSize: 100, ttl: 30000 },
 	idleCallbackBatchUpdates: { enabled: true, fallbackToMicrotask: true },
 	lazyRuntimeInitialization: { enabled: true, deferBindings: true },
 	serviceWorkerNavigationCaching: { enabled: true, cacheName: 'gospa-docs-navigation-cache', path: '/gospa-navigation-sw.js' },
 	viewTransitions: { enabled: true, fallbackToClassic: true },
-};", "typescript", "optimizer.ts")
+};`, "typescript", "optimizer.ts")
 			<div class="grid md:grid-cols-2 gap-4">
 				<div class="p-4 rounded-xl border border-[var(--border)] bg-[var(--bg-secondary)]">
 					<h3 class="font-semibold mb-2">1) Speculative Prefetching</h3>

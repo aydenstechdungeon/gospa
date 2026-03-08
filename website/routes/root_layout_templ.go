@@ -388,8 +388,24 @@ func RootLayout(title string, children templ.Component, runtimePath string, path
 
 func initGoSPA(runtimePath, wsUrl string, debug bool, hydrationMode string, hydrationTimeout int) templ.ComponentScript {
 	return templ.ComponentScript{
-		Name: `__templ_initGoSPA_c065`,
-		Function: `function __templ_initGoSPA_c065(runtimePath, wsUrl, debug, hydrationMode, hydrationTimeout){import(runtimePath).then(runtime => {
+		Name: `__templ_initGoSPA_937d`,
+		Function: `function __templ_initGoSPA_937d(runtimePath, wsUrl, debug, hydrationMode, hydrationTimeout){window.__GOSPA_CONFIG__ = {
+		navigationOptions: {
+			speculativePrefetching: {
+				enabled: true,
+				ttl: 45000,
+				hoverDelay: 80,
+				viewportMargin: 220,
+			},
+			serviceWorkerNavigationCaching: {
+				enabled: true,
+				cacheName: 'gospa-docs-navigation-cache',
+				path: '/gospa-navigation-sw.js',
+			},
+		}
+	};
+
+	import(runtimePath).then(runtime => {
 		runtime.init({
 			wsUrl: wsUrl,
 			debug: debug,
@@ -400,8 +416,8 @@ func initGoSPA(runtimePath, wsUrl string, debug bool, hydrationMode string, hydr
 		});
 	});
 }`,
-		Call:       templ.SafeScript(`__templ_initGoSPA_c065`, runtimePath, wsUrl, debug, hydrationMode, hydrationTimeout),
-		CallInline: templ.SafeScriptInline(`__templ_initGoSPA_c065`, runtimePath, wsUrl, debug, hydrationMode, hydrationTimeout),
+		Call:       templ.SafeScript(`__templ_initGoSPA_937d`, runtimePath, wsUrl, debug, hydrationMode, hydrationTimeout),
+		CallInline: templ.SafeScriptInline(`__templ_initGoSPA_937d`, runtimePath, wsUrl, debug, hydrationMode, hydrationTimeout),
 	}
 }
 
