@@ -93,9 +93,9 @@ type Config struct {
 
 	// WSMaxMessageSize limits the maximum payload size for WebSocket messages (default 64KB).
 	WSMaxMessageSize int
-	// WSConnRateLimit sets the refilling rate in connections per second for WebSocket upgrades (default 2.0).
+	// WSConnRateLimit sets the refilling rate in connections per second for WebSocket upgrades (default 1.5).
 	WSConnRateLimit float64
-	// WSConnBurst sets the burst capacity for WebSocket connection upgrades (default 20.0).
+	// WSConnBurst sets the burst capacity for WebSocket connection upgrades (default 15.0).
 	WSConnBurst float64
 
 	// Hydration Options
@@ -317,10 +317,10 @@ func New(config Config) *App {
 		config.WSMaxMessageSize = 64 * 1024
 	}
 	if config.WSConnRateLimit == 0 {
-		config.WSConnRateLimit = 2.0
+		config.WSConnRateLimit = 1.5
 	}
 	if config.WSConnBurst == 0 {
-		config.WSConnBurst = 20.0
+		config.WSConnBurst = 15.0
 	}
 	// Configure global rate limiter
 	fiber.SetConnectionRateLimiter(config.WSConnBurst, config.WSConnRateLimit)
