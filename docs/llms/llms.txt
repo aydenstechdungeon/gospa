@@ -31,7 +31,7 @@
   - Size: 7147 bytes
 
 [06-routing](docs/02-core-concepts/06-routing.md)
-  - Size: 12116 bytes
+  - Size: 14399 bytes
 
 
 ### Features
@@ -40,7 +40,7 @@
   - Size: 6602 bytes
 
 [02-runtime-api](docs/03-features/02-runtime-api.md)
-  - Size: 40870 bytes
+  - Size: 40221 bytes
 
 [03-realtime](docs/03-features/03-realtime.md)
   - Size: 5658 bytes
@@ -58,10 +58,10 @@
 ### API Reference
 
 [01-core-api](docs/04-api-reference/01-core-api.md)
-  - Size: 34115 bytes
+  - Size: 33717 bytes
 
 [02-configuration](docs/04-api-reference/02-configuration.md)
-  - Size: 15593 bytes
+  - Size: 14828 bytes
 
 [03-cli](docs/04-api-reference/03-cli.md)
   - Size: 16286 bytes
@@ -91,7 +91,7 @@
   - Size: 4933 bytes
 
 [02-remote-actions](docs/07-troubleshooting/02-remote-actions.md)
-  - Size: 8314 bytes
+  - Size: 8357 bytes
 
 [03-websocket-connections](docs/07-troubleshooting/03-websocket-connections.md)
   - Size: 8654 bytes

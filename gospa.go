@@ -190,13 +190,6 @@ type Config struct {
 	// PubSub defines the messaging backend for multi-process broadcasting. Defaults to in-memory.
 	PubSub store.PubSub
 
-	// IgnoredExtensions is a list of file extensions that the SPA router should ignore.
-	// If nil, a default list of common non-HTML extensions is used.
-	IgnoredExtensions []string
-
-	// AppendIgnoredExtensions is a list of file extensions to add to the default list.
-	AppendIgnoredExtensions []string
-
 	// NavigationOptions configures optional client-side navigation behavior and performance optimizations.
 	NavigationOptions NavigationOptions
 }
@@ -960,8 +953,6 @@ func (a *App) renderRoute(c *fiberpkg.Ctx, route *routing.Route) error {
 		_, _ = fmt.Fprintf(w, `<script type="module">
 import * as runtime from '%s';
 window.__GOSPA_CONFIG__ = {
-	ignoredExtensions: %s,
-	appendExtensions: %s,
 	navigationOptions: %s,
 };
 runtime.init({
@@ -977,7 +968,7 @@ runtime.init({
 		timeout: %d
 	}
 });
-</script>`, jsEscape(runtimePath), toJS(a.Config.IgnoredExtensions), toJS(a.Config.AppendIgnoredExtensions), toJS(a.Config.NavigationOptions), jsEscape(wsUrl), devMode, a.Config.SimpleRuntimeSVGs, a.Config.DisableSanitization, wsReconnectDelay, wsMaxReconnect, wsHeartbeat, jsEscape(a.Config.HydrationMode), a.Config.HydrationTimeout)
+</script>`, jsEscape(runtimePath), toJS(a.Config.NavigationOptions), jsEscape(wsUrl), devMode, a.Config.SimpleRuntimeSVGs, a.Config.DisableSanitization, wsReconnectDelay, wsMaxReconnect, wsHeartbeat, jsEscape(a.Config.HydrationMode), a.Config.HydrationTimeout)
 		_, _ = fmt.Fprint(w, `</body></html>`)
 		_ = w.Flush()
 	})
@@ -1042,18 +1033,17 @@ func (a *App) buildRootLayoutProps(c *fiberpkg.Ctx, params map[string]string) ma
 		wsHB = 30000
 	}
 	props := map[string]interface{}{
-		"appName":             a.Config.AppName,
-		"runtimePath":         a.getRuntimePath(),
-		"path":                c.Path(),
-		"debug":               a.Config.DevMode,
-		"wsUrl":               a.getWSUrl(c),
-		"hydrationMode":       a.Config.HydrationMode,
-		"hydrationTimeout":    a.Config.HydrationTimeout,
-		"wsReconnectDelay":    wsRD,
-		"wsMaxReconnect":      wsMR,
-		"wsHeartbeat":         wsHB,
-		"ignoredExtensions":   a.Config.IgnoredExtensions,
-		"appendExtensions":    a.Config.AppendIgnoredExtensions,
+		"appName":          a.Config.AppName,
+		"runtimePath":      a.getRuntimePath(),
+		"path":             c.Path(),
+		"debug":            a.Config.DevMode,
+		"wsUrl":            a.getWSUrl(c),
+		"hydrationMode":    a.Config.HydrationMode,
+		"hydrationTimeout": a.Config.HydrationTimeout,
+		"wsReconnectDelay": wsRD,
+		"wsMaxReconnect":   wsMR,
+		"wsHeartbeat":      wsHB,
+
 		"navigationOptions":   a.Config.NavigationOptions,
 		"disableSanitization": a.Config.DisableSanitization,
 	}

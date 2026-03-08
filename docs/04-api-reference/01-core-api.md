@@ -104,8 +104,6 @@ type Config struct {
 
 	// Routing Options
 	DisableSPA               bool     // Disable SPA navigation completely
-	IgnoredExtensions        []string // List of file extensions to always ignore (overrides default)
-	AppendIgnoredExtensions  []string // List of file extensions to add to default ignored list
 	SSR                      bool     // Enables server side rendering for dynamic components
 
 	// Remote Action Options
@@ -138,8 +136,6 @@ type Config struct {
 - `WSMaxReconnect`: Maximum reconnect attempts passed to the client. Default: 10.
 - `WSHeartbeat`: Heartbeat ping interval passed to the client. Default: 30s.
 - `SSR`: **Planned** — not yet implemented.
-- `IgnoredExtensions`: Completely replaces the default list of file extensions ignored by the SPA router.
-- `AppendIgnoredExtensions`: Adds to the default list of file extensions ignored by the SPA router.
 - `EnableCSRF`: Enables CSRF protection. Must wire up **both** `fiber.CSRFSetTokenMiddleware()` (issues cookie) **and** `fiber.CSRFTokenMiddleware()` (validates).
 - `SSGCacheMaxEntries`: Caps the SSG page cache with FIFO eviction. Default 500.
 - `Prefork`, `Storage`, `PubSub`: Used for horizontal scaling. See `store/redis` for the Redis implementation.

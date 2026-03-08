@@ -1184,29 +1184,7 @@ document.addEventListener('gospa:navigated', (event) => {
 });
 ```
 
-### Navigation Configuration
 
-Configure which file extensions the SPA router should ignore. By default, GoSPA ignores common non-HTML file types (e.g., `.png`, `.pdf`, `.zip`) to ensure they trigger a normal browser download or navigation.
-
-#### setIgnoredExtensions
-
-Completely replace the default list of ignored extensions.
-
-```typescript
-import { setIgnoredExtensions } from '@gospa/runtime';
-
-setIgnoredExtensions(['pdf', 'docx', 'custom']);
-```
-
-#### appendIgnoredExtensions
-
-Add new extensions to the existing ignored list.
-
-```typescript
-import { appendIgnoredExtensions } from '@gospa/runtime';
-
-appendIgnoredExtensions(['bak', 'tmp']);
-```
 
 ---
 

@@ -79,8 +79,7 @@ app := gospa.New(gospa.Config{
 | Option | Type | Default | Description |
 |--------|------|---------|-------------|
 | `DisableSPA` | `bool` | `false` | Disable SPA navigation completely |
-| `IgnoredExtensions` | `[]string` | `nil` | List of file extensions the SPA router should ignore (overrides default) |
-| `AppendIgnoredExtensions` | `[]string` | `nil` | List of file extensions to add to the default ignored list |
+
 | `SSR` | `bool` | `false` | Global SSR mode |
 
 ### Distributed & Scaling Options
@@ -322,21 +321,7 @@ Enable global Server-Side Rendering mode.
 SSR: true,
 ```
 
-### IgnoredExtensions & AppendIgnoredExtensions
 
-Customize which file extensions the SPA router ignores. By default, GoSPA ignores common file types like `.pdf`, `.zip`, `.png`, etc. to ensure they trigger a normal browser download or navigation instead of an SPA transition.
-
-Use `IgnoredExtensions` to **completely replace** the default list:
-
-```go
-IgnoredExtensions: []string{"pdf", "docx", "custom"},
-```
-
-Use `AppendIgnoredExtensions` to **add to** the default list:
-
-```go
-AppendIgnoredExtensions: []string{"bak", "tmp"},
-```
 
 ### Prefork, Storage, and PubSub
 

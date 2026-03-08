@@ -49,7 +49,6 @@ import {
 	destroyNavigation,
 	createNavigationState,
 	setNavigationOptions,
-	appendNavigationOptions,
 	type NavigateOptions,
 	type NavigationOptions
 } from './navigation.ts';
@@ -93,8 +92,7 @@ export {
 	initNavigation,
 	destroyNavigation,
 	createNavigationState,
-	setNavigationOptions,
-	appendNavigationOptions
+	setNavigationOptions
 };
 
 // Export types

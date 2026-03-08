@@ -50,8 +50,6 @@ export interface ViewTransitionsConfig {
 }
 
 export interface NavigationOptions {
-	ignoredExtensions?: string[];
-	appendExtensions?: string[];
 	speculativePrefetching?: SpeculativePrefetchingConfig;
 	urlParsingCache?: URLParsingCacheConfig;
 	idleCallbackBatchUpdates?: IdleCallbackBatchUpdatesConfig;
@@ -76,72 +74,9 @@ export function onAfterNavigate(cb: NavigationCallback): () => void {
 	return () => afterNavCallbacks.delete(cb);
 }
 
-// Common file extensions that should be ignored by the SPA router
-let IGNORED_EXTENSIONS = [
-	// Text, Documents & E-books
-	'txt', 'md', 'pdf', 'csv', 'tsv', 'doc', 'docx', 'xls', 'xlsx', 'ppt', 'pptx', 'rtf', 'ods', 'odt', 'odp', 'epub', 'mobi', 'azw3', 'djvu',
-	// Data, Config & Logs
-	'json', 'xml', 'sql', 'sqlite', 'db', 'yaml', 'yml', 'toml', 'ini', 'log', 'env', 'bak', 'tmp', 'swp', 'lock',
-	// Images
-	'png', 'jpg', 'jpeg', 'gif', 'svg', 'webp', 'avif', 'heic', 'heif', 'ico', 'bmp', 'tif', 'tiff', 'apng', 'jp2', 'jxl',
-	// Audio & Playlists
-	'mp3', 'wav', 'ogg', 'm4a', 'flac', 'aac', 'opus', 'm3u', 'm3u8', 'mid', 'midi', 'aif', 'aiff',
-	// Video
-	'mp4', 'webm', 'mov', 'mkv', 'avi', 'wmv', 'ogv', 'm4v', '3gp', '3g2', 'ts',
-	// 3D & AR
-	'glb', 'gltf', 'obj', 'stl', 'usdz',
-	// Archives
-	'zip', 'tar', 'gz', '7z', 'rar', 'bz2', 'xz', 'tgz', 'br', 'zst', 'lz', 'lzma', 'cab', 'ar', 'cpio',
-	// Executables, Packages & Scripts
-	'iso', 'dmg', 'bin', 'exe', 'msi', 'appimage', 'deb', 'rpm', 'apk', 'jar', 'sh', 'bat', 'cmd', 'ps1',
-	// Web Assets & PWA
-	'js', 'jsx', 'mjs', 'cjs', 'ts', 'tsx', 'css', 'scss', 'sass', 'less', 'wasm', 'map', 'webmanifest',
-	// Fonts
-	'woff', 'woff2', 'ttf', 'otf', 'eot',
-	// Certs & Security
-	'pem', 'crt', 'cer', 'der', 'key',
-	// Events & Contacts
-	'ics', 'vcf'
-];
-
-let IGNORED_EXTENSIONS_SET = new Set<string>();
-
-/**
- * Configure the ignored extensions for the SPA router
- */
-export function setIgnoredExtensions(extensions: string[]): void {
-	if (!extensions || extensions.length === 0) return;
-	IGNORED_EXTENSIONS = extensions;
-
-	IGNORED_EXTENSIONS_SET.clear();
-	for (const ext of extensions) {
-		// Handle legacy regex-like shorthand (e.g., 'docx?', 'jpe?g') for backwards compatibility
-		const i = ext.indexOf('?');
-		if (i !== -1) {
-			// e.g. 'jpe?g' -> 'jpeg' (withChar) & 'jpg' (withoutChar)
-			const withChar = ext.slice(0, i) + ext.slice(i + 1);
-			const withoutChar = ext.slice(0, i - 1) + ext.slice(i + 1);
-			IGNORED_EXTENSIONS_SET.add(withChar.toLowerCase());
-			IGNORED_EXTENSIONS_SET.add(withoutChar.toLowerCase());
-		} else {
-			IGNORED_EXTENSIONS_SET.add(ext.toLowerCase());
-		}
-	}
-}
-
-// Initialize the optimized lookup set
-setIgnoredExtensions(IGNORED_EXTENSIONS);
-
-/**
- * Append to the current list of ignored extensions
- */
-export function appendIgnoredExtensions(extensions: string[]): void {
-	if (!extensions || extensions.length === 0) return;
-	setIgnoredExtensions([...IGNORED_EXTENSIONS, ...extensions]);
-}
 
 
-const DEFAULT_NAVIGATION_OPTIONS: Required<Omit<NavigationOptions, "ignoredExtensions" | "appendExtensions">> = {
+const DEFAULT_NAVIGATION_OPTIONS: Required<NavigationOptions> = {
 	speculativePrefetching: {
 		enabled: false,
 		ttl: 30_000,
@@ -172,7 +107,7 @@ const DEFAULT_NAVIGATION_OPTIONS: Required<Omit<NavigationOptions, "ignoredExten
 	},
 };
 
-let navigationOptionsConfig: Required<Omit<NavigationOptions, "ignoredExtensions" | "appendExtensions">> = {
+let navigationOptionsConfig: Required<NavigationOptions> = {
 	...DEFAULT_NAVIGATION_OPTIONS,
 	speculativePrefetching: { ...DEFAULT_NAVIGATION_OPTIONS.speculativePrefetching },
 	urlParsingCache: { ...DEFAULT_NAVIGATION_OPTIONS.urlParsingCache },
@@ -193,12 +128,6 @@ let prefetchObserver: IntersectionObserver | null = null;
 let clickDelegateContainer: Element | Document = document;
 
 export function setNavigationOptions(config: NavigationOptions): void {
-	if (config.ignoredExtensions) {
-		setIgnoredExtensions(config.ignoredExtensions);
-	}
-	if (config.appendExtensions) {
-		appendIgnoredExtensions(config.appendExtensions);
-	}
 
 	navigationOptionsConfig = {
 		...navigationOptionsConfig,
@@ -211,9 +140,7 @@ export function setNavigationOptions(config: NavigationOptions): void {
 	};
 }
 
-export function appendNavigationOptions(config: NavigationOptions): void {
-	setNavigationOptions(config);
-}
+
 
 function getCachedURL(href: string): URL | null {
 	const cacheCfg = navigationOptionsConfig.urlParsingCache;
@@ -275,16 +202,25 @@ function isInternalLink(link: HTMLAnchorElement): boolean {
 		return false;
 	}
 
-	if (link.hasAttribute('data-external') || link.hasAttribute('download') || link.getAttribute('target') === '_blank') {
+	// Explicit manual overrides to bypass SPA routing
+	if (link.hasAttribute('data-gospa-reload') || link.hasAttribute('data-external') || link.hasAttribute('download') || link.getAttribute('target') === '_blank') {
 		return false;
 	}
 
+	// Explicit manual override to force SPA routing (bypasses dot heuristic)
+	if (link.hasAttribute('data-gospa-link')) {
+		return true;
+	}
+
+	// The Heuristic: URLs with a file extension in the last segment are treated as assets by default.
+	// This entirely replaces the brittle 100+ item IGNORED_EXTENSIONS blacklist.
 	const pathname = urlObj.pathname;
 	const lastSegment = pathname.slice(pathname.lastIndexOf('/') + 1);
-	const dot = lastSegment.lastIndexOf('.');
-	if (dot !== -1 && dot < lastSegment.length - 1) {
-		const ext = lastSegment.slice(dot + 1).toLowerCase();
-		if (IGNORED_EXTENSIONS_SET.has(ext)) {
+	const dotIndex = lastSegment.lastIndexOf('.');
+	if (dotIndex !== -1 && dotIndex < lastSegment.length - 1) {
+		const ext = lastSegment.slice(dotIndex + 1).toLowerCase();
+		// Only explicitly allow known HTML page extensions to bypass this rule
+		if (ext !== 'html' && ext !== 'htm') {
 			return false;
 		}
 	}
@@ -319,6 +255,15 @@ async function fetchPageFromServer(path: string): Promise<PageData | null> {
 
 		if (!response.ok) {
 			console.error('[GoSPA] Navigation failed:', response.status);
+			return null;
+		}
+
+		// Security & Robustness Phase: Validate Content-Type
+		// If the server unexpectedly returned JSON, an image, or binary data, abort SPA navigation.
+		// This prevents attempting to parse non-HTML data, which causes fatal JS errors.
+		const contentType = response.headers.get('content-type');
+		if (contentType && !contentType.includes('text/html')) {
+			console.warn(`[GoSPA] Intercepted non-HTML response (${contentType}) for path ${path}. Falling back to standard navigation.`);
 			return null;
 		}
 
@@ -1005,12 +950,6 @@ export function initNavigation(): void {
 	// Check for global configuration
 	const config = (window as any).__GOSPA_CONFIG__;
 	if (config) {
-		if (config.ignoredExtensions) {
-			setIgnoredExtensions(config.ignoredExtensions);
-		}
-		if (config.appendExtensions) {
-			appendIgnoredExtensions(config.appendExtensions);
-		}
 		if (config.navigationOptions) {
 			setNavigationOptions(config.navigationOptions);
 		}
@@ -1085,8 +1024,6 @@ declare global {
 			_ws?: WebSocket;
 		};
 		__GOSPA_CONFIG__?: {
-			ignoredExtensions?: string[];
-			appendExtensions?: string[];
 			navigationOptions?: NavigationOptions;
 		};
 	}

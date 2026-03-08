@@ -3885,6 +3885,60 @@ func Search(c *fiber.Ctx) error {
 5. **Clone when modifying**: Clone params before modification if original needed
 6. **Use wildcards sparingly**: Wildcards are greedy, use specific patterns when possible
 
+---
+
+## Navigation Options Configuration
+
+GoSPA now supports a `NavigationOptions` config block (server-side in `gospa.Config`) that is forwarded to the client router.
+
+```go
+app := gospa.New(gospa.Config{
+    NavigationOptions: gospa.NavigationOptions{
+        SpeculativePrefetching: &gospa.NavigationSpeculativePrefetchingConfig{
+            Enabled:        ptr(true),
+            TTL:            ptr(30000),
+            HoverDelay:     ptr(80),
+            ViewportMargin: ptr(200),
+        },
+        URLParsingCache: &gospa.NavigationURLParsingCacheConfig{
+            Enabled: ptr(true),
+            MaxSize: ptr(100),
+            TTL: ptr(30000),
+        },
+        IdleCallbackBatchUpdates: &gospa.NavigationIdleCallbackBatchUpdatesConfig{
+            Enabled: ptr(true),
+            FallbackToMicrotask: ptr(true),
+        },
+        LazyRuntimeInitialization: &gospa.NavigationLazyRuntimeInitializationConfig{
+            Enabled: ptr(true),
+            DeferBindings: ptr(true),
+        },
+        ServiceWorkerNavigationCaching: &gospa.NavigationServiceWorkerCachingConfig{
+            Enabled: ptr(true),
+            CacheName: "gospa-navigation-cache",
+            Path: "/gospa-navigation-sw.js",
+        },
+        ViewTransitions: &gospa.NavigationViewTransitionsConfig{
+            Enabled: ptr(true),
+            FallbackToClassic: ptr(true),
+        },
+    },
+})
+```
+
+### What each optimization does
+
+- **Speculative prefetching**: prefetches likely next pages via viewport observation and hover intent.
+- **Optimized click handling**: routes through delegated container listeners and `event.composedPath()`.
+- **Incremental DOM patching**: updates changed nodes/attributes while keeping existing listeners where possible.
+- **URL parsing cache**: uses an LRU-style URL cache with configurable TTL.
+- **Idle head updates**: defers non-critical head reconciliation with `requestIdleCallback`.
+- **Lazy runtime initialization**: initializes critical event wiring first, defers bindings.
+- **Service worker navigation caching**: enables offline-friendly HTML fallback cache.
+- **View Transitions API**: uses native transitions where supported, with graceful fallback.
+
+> `ptr` above is a helper for pointer literals (e.g. `func ptr[T any](v T) *T { return &v }`).
+
 
 <!-- FILE: docs/03-features/01-client-runtime.md -->
 ================================================================================
@@ -5373,29 +5427,7 @@ document.addEventListener('gospa:navigated', (event) => {
 });
 ```
 
-### Navigation Configuration
 
-Configure which file extensions the SPA router should ignore. By default, GoSPA ignores common non-HTML file types (e.g., `.png`, `.pdf`, `.zip`) to ensure they trigger a normal browser download or navigation.
-
-#### setIgnoredExtensions
-
-Completely replace the default list of ignored extensions.
-
-```typescript
-import { setIgnoredExtensions } from '@gospa/runtime';
-
-setIgnoredExtensions(['pdf', 'docx', 'custom']);
-```
-
-#### appendIgnoredExtensions
-
-Add new extensions to the existing ignored list.
-
-```typescript
-import { appendIgnoredExtensions } from '@gospa/runtime';
-
-appendIgnoredExtensions(['bak', 'tmp']);
-```
 
 ---
 
@@ -6838,8 +6870,6 @@ type Config struct {
 
 	// Routing Options
 	DisableSPA               bool     // Disable SPA navigation completely
-	IgnoredExtensions        []string // List of file extensions to always ignore (overrides default)
-	AppendIgnoredExtensions  []string // List of file extensions to add to default ignored list
 	SSR                      bool     // Enables server side rendering for dynamic components
 
 	// Remote Action Options
@@ -6872,8 +6902,6 @@ type Config struct {
 - `WSMaxReconnect`: Maximum reconnect attempts passed to the client. Default: 10.
 - `WSHeartbeat`: Heartbeat ping interval passed to the client. Default: 30s.
 - `SSR`: **Planned** — not yet implemented.
-- `IgnoredExtensions`: Completely replaces the default list of file extensions ignored by the SPA router.
-- `AppendIgnoredExtensions`: Adds to the default list of file extensions ignored by the SPA router.
 - `EnableCSRF`: Enables CSRF protection. Must wire up **both** `fiber.CSRFSetTokenMiddleware()` (issues cookie) **and** `fiber.CSRFTokenMiddleware()` (validates).
 - `SSGCacheMaxEntries`: Caps the SSG page cache with FIFO eviction. Default 500.
 - `Prefork`, `Storage`, `PubSub`: Used for horizontal scaling. See `store/redis` for the Redis implementation.
@@ -8233,8 +8261,7 @@ app := gospa.New(gospa.Config{
 | Option | Type | Default | Description |
 |--------|------|---------|-------------|
 | `DisableSPA` | `bool` | `false` | Disable SPA navigation completely |
-| `IgnoredExtensions` | `[]string` | `nil` | List of file extensions the SPA router should ignore (overrides default) |
-| `AppendIgnoredExtensions` | `[]string` | `nil` | List of file extensions to add to the default ignored list |
+
 | `SSR` | `bool` | `false` | Global SSR mode |
 
 ### Distributed & Scaling Options
@@ -8476,21 +8503,7 @@ Enable global Server-Side Rendering mode.
 SSR: true,
 ```
 
-### IgnoredExtensions & AppendIgnoredExtensions
 
-Customize which file extensions the SPA router ignores. By default, GoSPA ignores common file types like `.pdf`, `.zip`, `.png`, etc. to ensure they trigger a normal browser download or navigation instead of an SPA transition.
-
-Use `IgnoredExtensions` to **completely replace** the default list:
-
-```go
-IgnoredExtensions: []string{"pdf", "docx", "custom"},
-```
-
-Use `AppendIgnoredExtensions` to **add to** the default list:
-
-```go
-AppendIgnoredExtensions: []string{"bak", "tmp"},
-```
 
 ### Prefork, Storage, and PubSub
 
@@ -11342,8 +11355,8 @@ The request body isn't valid JSON.
 Ensure you're sending proper JSON:
 
 ```javascript
-// BAD - Missing quotes on keys
-GoSPA.remote('action', { name: "value" })
+// BAD - Manually stringifying json which causes double stringification
+GoSPA.remote('action', '{"name": "value"}')
 
 // GOOD - This is automatically handled by GoSPA
 GoSPA.remote('action', { name: "value" })
@@ -11423,7 +11436,7 @@ Check browser dev tools:
 ### Problem
 ```json
 {
-    "error": "something went wrong",
+    "error": "Internal server error",
     "code": "ACTION_FAILED"
 }
 ```
