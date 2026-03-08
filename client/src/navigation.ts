@@ -33,27 +33,33 @@ export function onAfterNavigate(cb: NavigationCallback): () => void {
 
 // Common file extensions that should be ignored by the SPA router
 let IGNORED_EXTENSIONS = [
-	// Text & Documents
-	'txt', 'md', 'pdf', 'csv', 'docx?', 'xlsx?', 'pptx?', 'rtf', 'ods', 'odt', 'odp',
-	// Data & Config
-	'json', 'xml', 'sql', 'sqlite', 'db', 'yaml', 'yml', 'toml',
+	// Text, Documents & E-books
+	'txt', 'md', 'pdf', 'csv', 'tsv', 'doc', 'docx', 'xls', 'xlsx', 'ppt', 'pptx', 'rtf', 'ods', 'odt', 'odp', 'epub', 'mobi', 'azw3', 'djvu',
+	// Data, Config & Logs
+	'json', 'xml', 'sql', 'sqlite', 'db', 'yaml', 'yml', 'toml', 'ini', 'log', 'env', 'bak', 'tmp', 'swp', 'lock',
 	// Images
-	'png', 'jpe?g', 'gif', 'svg', 'webp', 'avif', 'ico', 'bmp', 'tiff?',
-	// Audio
-	'mp3', 'wav', 'ogg', 'm4a', 'flac', 'aac', 'opus',
+	'png', 'jpg', 'jpeg', 'gif', 'svg', 'webp', 'avif', 'heic', 'heif', 'ico', 'bmp', 'tif', 'tiff', 'apng', 'jp2', 'jxl',
+	// Audio & Playlists
+	'mp3', 'wav', 'ogg', 'm4a', 'flac', 'aac', 'opus', 'm3u', 'm3u8', 'mid', 'midi', 'aif', 'aiff',
 	// Video
-	'mp4', 'webm', 'mov', 'mkv', 'avi', 'wmv', 'ogv', 'm4v',
+	'mp4', 'webm', 'mov', 'mkv', 'avi', 'wmv', 'ogv', 'm4v', '3gp', '3g2', 'ts',
+	// 3D & AR
+	'glb', 'gltf', 'obj', 'stl', 'usdz',
 	// Archives
-	'zip', 'tar', 'gz', '7z', 'rar', 'bz2', 'xz', 'tgz', 'br', 'zst', 'lz', 'lzma',
-	// Executables & Packages
-	'iso', 'dmg', 'bin', 'exe', 'msi', 'appimage', 'deb', 'rpm', 'apk', 'jar',
-	// Web Assets
-	'js', 'mjs', 'cjs', 'ts', 'css', 'wasm', 'map',
+	'zip', 'tar', 'gz', '7z', 'rar', 'bz2', 'xz', 'tgz', 'br', 'zst', 'lz', 'lzma', 'cab', 'ar', 'cpio',
+	// Executables, Packages & Scripts
+	'iso', 'dmg', 'bin', 'exe', 'msi', 'appimage', 'deb', 'rpm', 'apk', 'jar', 'sh', 'bat', 'cmd', 'ps1',
+	// Web Assets & PWA
+	'js', 'jsx', 'mjs', 'cjs', 'ts', 'tsx', 'css', 'scss', 'sass', 'less', 'wasm', 'map', 'webmanifest',
 	// Fonts
-	'woff2?', 'ttf', 'otf', 'eot',
+	'woff', 'woff2', 'ttf', 'otf', 'eot',
+	// Certs & Security
+	'pem', 'crt', 'cer', 'der', 'key',
+	// Events & Contacts
+	'ics', 'vcf'
 ];
 
-let IGNORED_EXTENSIONS_REGEX = new RegExp(`\\.(${IGNORED_EXTENSIONS.join('|')})$`, 'i');
+let IGNORED_EXTENSIONS_SET = new Set<string>();
 
 /**
  * Configure the ignored extensions for the SPA router
@@ -61,8 +67,25 @@ let IGNORED_EXTENSIONS_REGEX = new RegExp(`\\.(${IGNORED_EXTENSIONS.join('|')})$
 export function setIgnoredExtensions(extensions: string[]): void {
 	if (!extensions || extensions.length === 0) return;
 	IGNORED_EXTENSIONS = extensions;
-	IGNORED_EXTENSIONS_REGEX = new RegExp(`\\.(${IGNORED_EXTENSIONS.join('|')})$`, 'i');
+
+	IGNORED_EXTENSIONS_SET.clear();
+	for (const ext of extensions) {
+		// Handle legacy regex-like shorthand (e.g., 'docx?', 'jpe?g') for backwards compatibility
+		const i = ext.indexOf('?');
+		if (i !== -1) {
+			// e.g. 'jpe?g' -> 'jpeg' (withChar) & 'jpg' (withoutChar)
+			const withChar = ext.slice(0, i) + ext.slice(i + 1);
+			const withoutChar = ext.slice(0, i - 1) + ext.slice(i + 1);
+			IGNORED_EXTENSIONS_SET.add(withChar.toLowerCase());
+			IGNORED_EXTENSIONS_SET.add(withoutChar.toLowerCase());
+		} else {
+			IGNORED_EXTENSIONS_SET.add(ext.toLowerCase());
+		}
+	}
 }
+
+// Initialize the optimized lookup set
+setIgnoredExtensions(IGNORED_EXTENSIONS);
 
 /**
  * Append to the current list of ignored extensions
@@ -75,33 +98,50 @@ export function appendIgnoredExtensions(extensions: string[]): void {
 // Check if a link is internal (same origin)
 function isInternalLink(link: HTMLAnchorElement): boolean {
 	const href = link.getAttribute('href');
-	if (!href || href.startsWith('#') || href.startsWith('javascript:')) {
+
+	// Skip obviously non-navigable schemas and hashes instantly
+	if (!href ||
+		href.startsWith('#') ||
+		href.startsWith('javascript:') ||
+		href.startsWith('mailto:') ||
+		href.startsWith('tel:') ||
+		href.startsWith('sms:') ||
+		href.startsWith('blob:') ||
+		href.startsWith('data:')
+	) {
 		return false;
 	}
 
-	// Check for external links
-	if (href.startsWith('http://') || href.startsWith('https://') || href.startsWith('//')) {
-		try {
-			const url = new URL(href, window.location.origin);
-			if (url.origin !== window.location.origin) {
-				return false;
-			}
-		} catch {
-			return false;
-		}
+	let urlObj: URL;
+	try {
+		// Parse the URL exactly once
+		urlObj = new URL(href, window.location.origin);
+	} catch {
+		return false;
 	}
 
-	// Check for special attributes that disable SPA nav
+	// 1. External origin check
+	if (urlObj.origin !== window.location.origin) {
+		return false;
+	}
+
+	// 2. Target & Download attributes
 	if (link.hasAttribute('data-external') ||
 		link.hasAttribute('download') ||
 		link.getAttribute('target') === '_blank') {
 		return false;
 	}
 
-	// Ignore common file extensions that aren't HTML routes
-	const urlObj = new URL(href, window.location.origin);
-	if (IGNORED_EXTENSIONS_REGEX.test(urlObj.pathname)) {
-		return false;
+	// 3. File extension check (optimized trailing segment lookahead)
+	const pathname = urlObj.pathname;
+	const lastSegment = pathname.slice(pathname.lastIndexOf('/') + 1);
+
+	const dot = lastSegment.lastIndexOf('.');
+	if (dot !== -1 && dot < lastSegment.length - 1) {
+		const ext = lastSegment.slice(dot + 1).toLowerCase();
+		if (IGNORED_EXTENSIONS_SET.has(ext)) {
+			return false;
+		}
 	}
 
 	return true;
@@ -152,7 +192,7 @@ async function fetchPageFromServer(path: string): Promise<PageData | null> {
 
 		// Extract content based on page type transition
 		let content: string;
-		
+
 		if (isDocsPage && currentIsDocsPage) {
 			// Docs -> Docs: Only extract inner content (sidebar persists)
 			const docsContentEl = doc.querySelector('[data-gospa-docs-content]');
@@ -470,10 +510,10 @@ async function initNewContent(): Promise<void> {
 					element.textContent = value;
 					break;
 				case 'html':
-						// HTML content is trusted - Templ auto-escapes on the server
-						// For user-generated content, use 'gospa/runtime-secure' with DOMPurify
-						element.innerHTML = value;
-						break;
+					// HTML content is trusted - Templ auto-escapes on the server
+					// For user-generated content, use 'gospa/runtime-secure' with DOMPurify
+					element.innerHTML = value;
+					break;
 				case 'value':
 					(element as HTMLInputElement).value = value;
 					break;
