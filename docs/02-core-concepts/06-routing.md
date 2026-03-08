@@ -453,3 +453,57 @@ func Search(c *fiber.Ctx) error {
 4. **URL encode**: Let PathBuilder handle URL encoding
 5. **Clone when modifying**: Clone params before modification if original needed
 6. **Use wildcards sparingly**: Wildcards are greedy, use specific patterns when possible
+
+---
+
+## Navigation Options Configuration
+
+GoSPA now supports a `NavigationOptions` config block (server-side in `gospa.Config`) that is forwarded to the client router.
+
+```go
+app := gospa.New(gospa.Config{
+    NavigationOptions: gospa.NavigationOptions{
+        SpeculativePrefetching: &gospa.NavigationSpeculativePrefetchingConfig{
+            Enabled:        ptr(true),
+            TTL:            ptr(30000),
+            HoverDelay:     ptr(80),
+            ViewportMargin: ptr(200),
+        },
+        URLParsingCache: &gospa.NavigationURLParsingCacheConfig{
+            Enabled: ptr(true),
+            MaxSize: ptr(100),
+            TTL: ptr(30000),
+        },
+        IdleCallbackBatchUpdates: &gospa.NavigationIdleCallbackBatchUpdatesConfig{
+            Enabled: ptr(true),
+            FallbackToMicrotask: ptr(true),
+        },
+        LazyRuntimeInitialization: &gospa.NavigationLazyRuntimeInitializationConfig{
+            Enabled: ptr(true),
+            DeferBindings: ptr(true),
+        },
+        ServiceWorkerNavigationCaching: &gospa.NavigationServiceWorkerCachingConfig{
+            Enabled: ptr(true),
+            CacheName: "gospa-navigation-cache",
+            Path: "/gospa-navigation-sw.js",
+        },
+        ViewTransitions: &gospa.NavigationViewTransitionsConfig{
+            Enabled: ptr(true),
+            FallbackToClassic: ptr(true),
+        },
+    },
+})
+```
+
+### What each optimization does
+
+- **Speculative prefetching**: prefetches likely next pages via viewport observation and hover intent.
+- **Optimized click handling**: routes through delegated container listeners and `event.composedPath()`.
+- **Incremental DOM patching**: updates changed nodes/attributes while keeping existing listeners where possible.
+- **URL parsing cache**: uses an LRU-style URL cache with configurable TTL.
+- **Idle head updates**: defers non-critical head reconciliation with `requestIdleCallback`.
+- **Lazy runtime initialization**: initializes critical event wiring first, defers bindings.
+- **Service worker navigation caching**: enables offline-friendly HTML fallback cache.
+- **View Transitions API**: uses native transitions where supported, with graceful fallback.
+
+> `ptr` above is a helper for pointer literals (e.g. `func ptr[T any](v T) *T { return &v }`).

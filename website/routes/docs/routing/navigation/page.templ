@@ -31,6 +31,53 @@ templ Page() {
 		</section>
 
 		<section class="space-y-6">
+			<h2 class="text-2xl font-bold">Navigation Optimizer Impact</h2>
+			<p class="text-[var(--text-secondary)]">Each optimization can be configured independently and measured with browser DevTools (TTI, layout shift, and next-click latency).</p>
+			@components.CodeBlock("const optimizer = {
+	speculativePrefetching: { enabled: true, ttl: 45000, hoverDelay: 80, viewportMargin: 220 },
+	urlParsingCache: { enabled: true, maxSize: 100, ttl: 30000 },
+	idleCallbackBatchUpdates: { enabled: true, fallbackToMicrotask: true },
+	lazyRuntimeInitialization: { enabled: true, deferBindings: true },
+	serviceWorkerNavigationCaching: { enabled: true, cacheName: 'gospa-docs-navigation-cache', path: '/gospa-navigation-sw.js' },
+	viewTransitions: { enabled: true, fallbackToClassic: true },
+};", "typescript", "optimizer.ts")
+			<div class="grid md:grid-cols-2 gap-4">
+				<div class="p-4 rounded-xl border border-[var(--border)] bg-[var(--bg-secondary)]">
+					<h3 class="font-semibold mb-2">1) Speculative Prefetching</h3>
+					<p class="text-sm text-[var(--text-secondary)]">Viewport + hover intent prefetch reduces click-to-paint latency on docs navigation.</p>
+				</div>
+				<div class="p-4 rounded-xl border border-[var(--border)] bg-[var(--bg-secondary)]">
+					<h3 class="font-semibold mb-2">2) Optimized Click Delegation</h3>
+					<p class="text-sm text-[var(--text-secondary)]">Container-scoped listener with composedPath avoids expensive global target walks.</p>
+				</div>
+				<div class="p-4 rounded-xl border border-[var(--border)] bg-[var(--bg-secondary)]">
+					<h3 class="font-semibold mb-2">3) Incremental DOM Patching</h3>
+					<p class="text-sm text-[var(--text-secondary)]">Only changed nodes/attrs are patched, preserving listeners and minimizing churn.</p>
+				</div>
+				<div class="p-4 rounded-xl border border-[var(--border)] bg-[var(--bg-secondary)]">
+					<h3 class="font-semibold mb-2">4) URL Parsing Cache</h3>
+					<p class="text-sm text-[var(--text-secondary)]">LRU-style URL parsing cache removes repeated `new URL(...)` overhead on dense pages.</p>
+				</div>
+				<div class="p-4 rounded-xl border border-[var(--border)] bg-[var(--bg-secondary)]">
+					<h3 class="font-semibold mb-2">5) Idle Batch Head Updates</h3>
+					<p class="text-sm text-[var(--text-secondary)]">Moves non-critical head reconciliation to idle periods.</p>
+				</div>
+				<div class="p-4 rounded-xl border border-[var(--border)] bg-[var(--bg-secondary)]">
+					<h3 class="font-semibold mb-2">6) Lazy Runtime Init</h3>
+					<p class="text-sm text-[var(--text-secondary)]">Critical handlers attach immediately; bindings are deferred to idle.</p>
+				</div>
+				<div class="p-4 rounded-xl border border-[var(--border)] bg-[var(--bg-secondary)]">
+					<h3 class="font-semibold mb-2">7) Service Worker HTML Cache</h3>
+					<p class="text-sm text-[var(--text-secondary)]">Network-first with cache fallback keeps docs navigable during flaky connectivity.</p>
+				</div>
+				<div class="p-4 rounded-xl border border-[var(--border)] bg-[var(--bg-secondary)]">
+					<h3 class="font-semibold mb-2">8) View Transitions API</h3>
+					<p class="text-sm text-[var(--text-secondary)]">Smooth route transitions when supported, classic updates otherwise.</p>
+				</div>
+			</div>
+		</section>
+
+		<section class="space-y-6">
 			<h2 class="text-2xl font-bold">Route Params</h2>
 			@components.CodeBlock("import { useParams, useSearchParams } from '@gospa/runtime';\n\n// Route params\nconst params = useParams();\nconsole.log(params.slug);\n\n// Query params\nconst searchParams = useSearchParams();\nconsole.log(searchParams.page);\n\n// With defaults\nconst page = searchParams.get('page', '1');\n\n// Update query params\nsearchParams.set('page', '2');", "typescript", "params_ts.ts")
 		</section>

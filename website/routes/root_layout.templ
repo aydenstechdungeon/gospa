@@ -270,6 +270,22 @@ templ RootLayout(title string, children templ.Component, runtimePath string, pat
 }
 
 script initGoSPA(runtimePath, wsUrl string, debug bool, hydrationMode string, hydrationTimeout int) {
+	window.__GOSPA_CONFIG__ = {
+		navigationOptions: {
+			speculativePrefetching: {
+				enabled: true,
+				ttl: 45000,
+				hoverDelay: 80,
+				viewportMargin: 220,
+			},
+			serviceWorkerNavigationCaching: {
+				enabled: true,
+				cacheName: 'gospa-docs-navigation-cache',
+				path: '/gospa-navigation-sw.js',
+			},
+		}
+	};
+
 	import(runtimePath).then(runtime => {
 		runtime.init({
 			wsUrl: wsUrl,

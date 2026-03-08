@@ -8,6 +8,7 @@ import (
 	"context"
 	"crypto/sha256"
 	"encoding/binary"
+	"encoding/json"
 	"fmt"
 	"io"
 	"io/fs"
@@ -40,6 +41,49 @@ type StateDeserializerFunc func([]byte, interface{}) error
 
 // Version is the current version of GoSPA.
 const Version = "0.1.21"
+
+type NavigationSpeculativePrefetchingConfig struct {
+	Enabled        *bool `json:"enabled,omitempty"`
+	TTL            *int  `json:"ttl,omitempty"`
+	HoverDelay     *int  `json:"hoverDelay,omitempty"`
+	ViewportMargin *int  `json:"viewportMargin,omitempty"`
+}
+
+type NavigationURLParsingCacheConfig struct {
+	Enabled *bool `json:"enabled,omitempty"`
+	MaxSize *int  `json:"maxSize,omitempty"`
+	TTL     *int  `json:"ttl,omitempty"`
+}
+
+type NavigationIdleCallbackBatchUpdatesConfig struct {
+	Enabled             *bool `json:"enabled,omitempty"`
+	FallbackToMicrotask *bool `json:"fallbackToMicrotask,omitempty"`
+}
+
+type NavigationLazyRuntimeInitializationConfig struct {
+	Enabled       *bool `json:"enabled,omitempty"`
+	DeferBindings *bool `json:"deferBindings,omitempty"`
+}
+
+type NavigationServiceWorkerCachingConfig struct {
+	Enabled   *bool  `json:"enabled,omitempty"`
+	CacheName string `json:"cacheName,omitempty"`
+	Path      string `json:"path,omitempty"`
+}
+
+type NavigationViewTransitionsConfig struct {
+	Enabled           *bool `json:"enabled,omitempty"`
+	FallbackToClassic *bool `json:"fallbackToClassic,omitempty"`
+}
+
+type NavigationOptions struct {
+	SpeculativePrefetching         *NavigationSpeculativePrefetchingConfig    `json:"speculativePrefetching,omitempty"`
+	URLParsingCache                *NavigationURLParsingCacheConfig           `json:"urlParsingCache,omitempty"`
+	IdleCallbackBatchUpdates       *NavigationIdleCallbackBatchUpdatesConfig  `json:"idleCallbackBatchUpdates,omitempty"`
+	LazyRuntimeInitialization      *NavigationLazyRuntimeInitializationConfig `json:"lazyRuntimeInitialization,omitempty"`
+	ServiceWorkerNavigationCaching *NavigationServiceWorkerCachingConfig      `json:"serviceWorkerNavigationCaching,omitempty"`
+	ViewTransitions                *NavigationViewTransitionsConfig           `json:"viewTransitions,omitempty"`
+}
 
 // Config holds the application configuration.
 type Config struct {
@@ -152,6 +196,9 @@ type Config struct {
 
 	// AppendIgnoredExtensions is a list of file extensions to add to the default list.
 	AppendIgnoredExtensions []string
+
+	// NavigationOptions configures optional client-side navigation behavior and performance optimizations.
+	NavigationOptions NavigationOptions
 }
 
 // DefaultConfig returns the default configuration.
@@ -912,6 +959,11 @@ func (a *App) renderRoute(c *fiberpkg.Ctx, route *routing.Route) error {
 		_, _ = fmt.Fprintf(w, `<script src="%s" type="module"></script>`, runtimePath)
 		_, _ = fmt.Fprintf(w, `<script type="module">
 import * as runtime from '%s';
+window.__GOSPA_CONFIG__ = {
+	ignoredExtensions: %s,
+	appendExtensions: %s,
+	navigationOptions: %s,
+};
 runtime.init({
 	wsUrl: '%s',
 	debug: %v,
@@ -925,7 +977,7 @@ runtime.init({
 		timeout: %d
 	}
 });
-</script>`, jsEscape(runtimePath), jsEscape(wsUrl), devMode, a.Config.SimpleRuntimeSVGs, a.Config.DisableSanitization, wsReconnectDelay, wsMaxReconnect, wsHeartbeat, jsEscape(a.Config.HydrationMode), a.Config.HydrationTimeout)
+</script>`, jsEscape(runtimePath), toJS(a.Config.IgnoredExtensions), toJS(a.Config.AppendIgnoredExtensions), toJS(a.Config.NavigationOptions), jsEscape(wsUrl), devMode, a.Config.SimpleRuntimeSVGs, a.Config.DisableSanitization, wsReconnectDelay, wsMaxReconnect, wsHeartbeat, jsEscape(a.Config.HydrationMode), a.Config.HydrationTimeout)
 		_, _ = fmt.Fprint(w, `</body></html>`)
 		_ = w.Flush()
 	})
@@ -1002,6 +1054,7 @@ func (a *App) buildRootLayoutProps(c *fiberpkg.Ctx, params map[string]string) ma
 		"wsHeartbeat":         wsHB,
 		"ignoredExtensions":   a.Config.IgnoredExtensions,
 		"appendExtensions":    a.Config.AppendIgnoredExtensions,
+		"navigationOptions":   a.Config.NavigationOptions,
 		"disableSanitization": a.Config.DisableSanitization,
 	}
 	for k, v := range params {
@@ -1173,6 +1226,14 @@ func (a *App) applyPPRSlots(route *routing.Route, shell []byte, path string, opt
 		result = bytes.ReplaceAll(result, placeholder, replacement)
 	}
 	return result, nil
+}
+
+func toJS(v interface{}) string {
+	b, err := json.Marshal(v)
+	if err != nil {
+		return "null"
+	}
+	return string(b)
 }
 
 // jsEscape escapes a string for safe interpolation inside a JavaScript
