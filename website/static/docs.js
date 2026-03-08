@@ -4,31 +4,39 @@
     let searchIndex = null;
     let fuse = null;
     let sidebarScrollPos = 0;
+    let searchInitializationPromise = null;
 
     async function initSearch() {
         if (searchIndex) return;
-        try {
-            const response = await fetch('/static/docs_search_index.json');
-            searchIndex = await response.json();
+        if (searchInitializationPromise) return searchInitializationPromise;
 
-            // Wait for Fuse to be available (it will be loaded via script tag)
-            if (typeof Fuse === 'undefined') {
-                await new Promise(resolve => {
-                    const script = document.createElement('script');
-                    script.src = 'https://cdn.jsdelivr.net/npm/fuse.js@7.0.0';
-                    script.onload = resolve;
-                    document.head.appendChild(script);
+        searchInitializationPromise = (async () => {
+            try {
+                const response = await fetch('/static/docs_search_index.json');
+                searchIndex = await response.json();
+
+                // Wait for Fuse to be available (it will be loaded via script tag)
+                if (typeof Fuse === 'undefined') {
+                    await new Promise(resolve => {
+                        const script = document.createElement('script');
+                        script.src = 'https://cdn.jsdelivr.net/npm/fuse.js@7.0.0/dist/fuse.basic.min.js';
+                        script.onload = resolve;
+                        document.head.appendChild(script);
+                    });
+                }
+
+                fuse = new Fuse(searchIndex, {
+                    keys: ['title', 'description', 'sections.title', 'content'],
+                    threshold: 0.3,
+                    includeMatches: true
                 });
+            } catch (err) {
+                console.error('Failed to initialize search:', err);
+                searchInitializationPromise = null; // Reset on failure so we can try again
             }
+        })();
 
-            fuse = new Fuse(searchIndex, {
-                keys: ['title', 'description', 'sections.title', 'content'],
-                threshold: 0.3,
-                includeMatches: true
-            });
-        } catch (err) {
-            console.error('Failed to initialize search:', err);
-        }
+        return searchInitializationPromise;
     }
 
     function updateToC() {
@@ -115,20 +123,20 @@
     function updateSidebarActiveState() {
         const currentPath = window.location.pathname;
         const sidebarLinks = document.querySelectorAll('#docs-sidebar a');
-        
+
         sidebarLinks.forEach(link => {
             const href = link.getAttribute('href');
             if (!href) return;
-            
+
             // Remove active classes
             link.classList.remove('bg-[var(--accent-primary)]/10', 'text-[var(--accent-primary)]', 'font-semibold', 'border-l-2', 'border-[var(--accent-primary)]', 'rounded-l-none');
             link.classList.add('text-[var(--text-secondary)]');
-            
+
             // Add active classes if this is the current page
             const normalizedHref = href.replace(/\/$/, '');
             const normalizedPath = currentPath.replace(/\/$/, '');
-            
-            if (normalizedPath === normalizedHref || 
+
+            if (normalizedPath === normalizedHref ||
                 (normalizedHref !== '/docs' && normalizedPath.startsWith(normalizedHref))) {
                 link.classList.remove('text-[var(--text-secondary)]');
                 link.classList.add('bg-[var(--accent-primary)]/10', 'text-[var(--accent-primary)]', 'font-semibold', 'border-l-2', 'border-[var(--accent-primary)]', 'rounded-l-none');
@@ -150,7 +158,7 @@
         // Find the best match (prioritize content matches)
         const contentMatch = result.matches.find(m => m.key === 'content');
         const match = contentMatch || result.matches[0];
-        
+
         if (!match.value) {
             return result.item.description || result.item.content.substring(0, 120) + '...';
         }
@@ -159,21 +167,21 @@
         const [start, end] = match.indices[0];
         const contextRadius = 60;
         const text = match.value;
-        
+
         // Calculate snippet boundaries
         let snippetStart = Math.max(0, start - contextRadius);
         let snippetEnd = Math.min(text.length, end + contextRadius);
-        
+
         // Expand to word boundaries
         while (snippetStart > 0 && text[snippetStart - 1] !== ' ') snippetStart--;
         while (snippetEnd < text.length && text[snippetEnd] !== ' ') snippetEnd++;
-        
+
         let snippet = text.substring(snippetStart, snippetEnd);
-        
+
         // Add ellipsis if truncated
         if (snippetStart > 0) snippet = '...' + snippet;
         if (snippetEnd < text.length) snippet = snippet + '...';
-        
+
         return snippet;
     }
 
@@ -181,12 +189,12 @@
     function highlightSnippet(snippet, query) {
         const terms = query.toLowerCase().split(/\s+/).filter(t => t.length > 0);
         let highlighted = snippet;
-        
+
         terms.forEach(term => {
             const regex = new RegExp(`(${escapeRegex(term)})`, 'gi');
             highlighted = highlighted.replace(regex, '<mark class="bg-[var(--accent-primary)]/20 text-[var(--accent-primary)] px-0.5 rounded">$1</mark>');
         });
-        
+
         return highlighted;
     }
 
@@ -198,12 +206,11 @@
     document.addEventListener('gospa:navigated', () => {
         // Save sidebar scroll before DOM update
         saveSidebarScroll();
-        
+
         // Update docs-specific content
         updateToC();
         updateSidebarActiveState();
-        initSearch();
-        
+
         // Restore sidebar scroll after a brief delay to allow DOM to settle
         setTimeout(() => {
             restoreSidebarScroll();
@@ -214,32 +221,64 @@
     window.addEventListener('load', () => {
         updateToC();
         updateSidebarActiveState();
-        initSearch();
     });
+
+    // Strategy: Lazy load search on interaction or intent (hover)
+    function openSearch() {
+        initSearch();
+        document.getElementById('search-modal')?.classList.remove('hidden');
+        document.getElementById('search-input')?.focus();
+    }
 
     // Search UI interaction
     document.addEventListener('keydown', (e) => {
         if ((e.metaKey || e.ctrlKey) && e.key === 'k') {
             e.preventDefault();
-            document.getElementById('search-modal')?.classList.remove('hidden');
-            document.getElementById('search-input')?.focus();
+            openSearch();
         }
     });
 
     // Global event delegation for search
     document.addEventListener('click', (e) => {
         if (e.target.closest('[data-action="open-search"]')) {
-            document.getElementById('search-modal')?.classList.remove('hidden');
-            document.getElementById('search-input')?.focus();
+            openSearch();
         }
         if (e.target.closest('[data-action="close-search"]') || (e.target.id === 'search-modal')) {
             document.getElementById('search-modal')?.classList.add('hidden');
         }
     });
 
+    // Pre-load logic: Pre-fetch search index when the user hovers over the search button
+    document.addEventListener('mouseover', (e) => {
+        if (e.target.closest('[data-action="open-search"]')) {
+            initSearch();
+        }
+    }, { once: false });
+
     document.addEventListener('input', (e) => {
         if (e.target.id === 'search-input') {
             const query = e.target.value;
+
+            // Handle initialization state if typing starts before Fuse is ready
+            if (!fuse && query.length > 0) {
+                const list = document.getElementById('search-results');
+                if (list) {
+                    list.innerHTML = `
+                        <div class="p-12 text-center flex flex-col items-center gap-4">
+                            <div class="w-8 h-8 border-2 border-[var(--accent-primary)] border-t-transparent rounded-full animate-spin"></div>
+                            <div class="text-[var(--text-muted)] text-sm font-medium">Initializing search engine...</div>
+                        </div>
+                    `;
+                }
+                initSearch().then(() => {
+                    // Re-trigger search after initialization if query is still the same
+                    if (e.target.value === query) {
+                        e.target.dispatchEvent(new Event('input', { bubbles: true }));
+                    }
+                });
+                return;
+            }
+
             const results = handleSearch(query);
             const list = document.getElementById('search-results');
             if (!list) return;
