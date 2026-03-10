@@ -80,8 +80,6 @@ app := gospa.New(gospa.Config{
 |--------|------|---------|-------------|
 | `DisableSPA` | `bool` | `false` | Disable SPA navigation completely |
 
-| `SSR` | `bool` | `false` | Global SSR mode |
-
 ### Distributed & Scaling Options
 
 | Option | Type | Default | Description |
@@ -313,13 +311,7 @@ Disable SPA navigation completely. All navigation will trigger full page loads.
 DisableSPA: true,  // Traditional multi-page app behavior
 ```
 
-### SSR
 
-Enable global Server-Side Rendering mode.
-
-```go
-SSR: true,
-```
 
 
 

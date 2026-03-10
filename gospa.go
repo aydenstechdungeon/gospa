@@ -163,8 +163,6 @@ type Config struct {
 
 	// Routing Options
 	DisableSPA bool // Disable SPA navigation completely
-	// NOTE: SSR (global SSR mode) is planned but not yet implemented — currently all pages are SSR by default.
-	SSR bool
 
 	// Rendering Strategy Defaults
 	// DefaultRenderStrategy sets the fallback strategy for pages that do not

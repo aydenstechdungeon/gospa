@@ -15,7 +15,6 @@ or the website but **not yet implemented**, plus documentation and lint correcti
 | Config fields | `CompressState`, `StateDiffing` | `gospa.go` | Low |
 | Config fields | `WSReconnectDelay`, `WSMaxReconnect`, `WSHeartbeat` | `gospa.go` | Medium |
 | Config fields | `StateSerializer`, `StateDeserializer` | `gospa.go` | Medium |
-| Config fields | `SSR` (global SSR mode) | `gospa.go` | Low |
 | Middleware | `RequestLoggerMiddleware()` (no-op) | `fiber/middleware.go` | Low |
 | Doc sync | `DEV_TOOLS.md` still says ErrorOverlay/DevTools are "planned" | `docs/DEV_TOOLS.md` | High |
 | Error overlay | Not wired to Fiber's error handler in DevMode | `gospa.go` | High |
