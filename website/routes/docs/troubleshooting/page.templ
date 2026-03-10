@@ -95,19 +95,31 @@ func init() {
 			<p class="text-[var(--text-secondary)]">
 				When CSRF protection is enabled, remote actions may fail with:
 			</p>
-			@components.CodeBlock(`{ "error": "CSRF token missing or invalid", "code": "CSRF_ERROR" }`, "json", "")
+			@components.CodeBlock(`{ "error": "CSRF token mismatch" }`, "json", "")
 
-			<h3 class="text-lg font-semibold mt-6">Solution: Correct Middleware Order</h3>
+			<h3 class="text-lg font-semibold mt-6">Solution: Enable CSRF in Config</h3>
 			<p class="text-[var(--text-secondary)]">
-				The <code class="mono">CSRFSetTokenMiddleware</code> must come before <code class="mono">CSRFTokenMiddleware</code>:
+				For the default GoSPA app setup, enabling <code class="mono">EnableCSRF</code> is enough:
 			</p>
 			@components.CodeBlock(`app := gospa.New(gospa.Config{
     EnableCSRF: true,
-})
+})`, "go", "main.go")
+		</section>
 
-// Order matters!
-app.Use(fiber.CSRFSetTokenMiddleware())  // Issues cookie first
-app.Use(fiber.CSRFTokenMiddleware())      // Then validates`, "go", "main.go")
+		<section id="remote-middleware" class="space-y-6">
+			<h2 class="text-2xl font-bold border-b border-[var(--border)] pb-2">"unauthorized" from RemoteActionMiddleware</h2>
+			<p class="text-[var(--text-secondary)]">
+				If a global remote action guard is configured, requests can fail before action execution.
+			</p>
+			@components.CodeBlock(`{ "error": "unauthorized" }`, "json", "")
+			@components.CodeBlock(`app := gospa.New(gospa.Config{
+    RemoteActionMiddleware: func(c *fiber.Ctx) error {
+        if c.Locals("user") == nil {
+            return c.Status(fiber.StatusUnauthorized).JSON(fiber.Map{"error": "unauthorized"})
+        }
+        return c.Next()
+    },
+})`, "go", "main.go")
 		</section>
 
 		<section id="network-errors" class="space-y-6">
@@ -303,6 +315,18 @@ templ generate
 # Build application
 go build -o app .`, "bash", "")
 
+
+			<h3 class="text-lg font-semibold mt-6">Pre-Deployment Quality Checks</h3>
+			<p class="text-[var(--text-secondary)]">
+				Run the repository quality script before shipping:
+			</p>
+			@components.CodeBlock(`./scripts/quality-check.sh
+
+# Include race checks
+./scripts/quality-check.sh --with-race
+
+# Skip tools not installed locally
+./scripts/quality-check.sh --skip-golangci --skip-vulncheck --skip-staticcheck`, "bash", "")
 			<h3 class="text-lg font-semibold mt-6">Docker Multi-Stage Build</h3>
 			@components.CodeBlock(`FROM golang:1.22-alpine AS builder
 WORKDIR /app
