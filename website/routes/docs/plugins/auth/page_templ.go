@@ -207,7 +207,7 @@ func main() {
     
     // OAuth routes
     app.Get("/auth/google", authPlugin.OAuthRedirect("google"))
-    app.Get("/auth/callback/google", authPlugin.OAuthCallback("google"))
+    app.Get("/auth/callback/google", authPlugin.OAuthCallback("google")) // returns {"success": true} after exchange
     
     // Protected route
     app.Get("/protected", authPlugin.RequireAuth(), func(c *fiber.Ctx) error {
