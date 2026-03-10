@@ -193,10 +193,14 @@ func (p *AuthPlugin) ValidateToken(tokenString string) (*Claims, error) {
 	if err != nil {
 		return nil, err
 	}
-	if claims, ok := token.Claims.(*Claims); ok && token.Valid {
-		return claims, nil
+	claims, ok := token.Claims.(*Claims)
+	if !ok || !token.Valid {
+		return nil, fmt.Errorf("invalid token")
 	}
-	return nil, fmt.Errorf("invalid token")
+	if claims.Issuer != p.config.Issuer {
+		return nil, fmt.Errorf("invalid issuer")
+	}
+	return claims, nil
 }
 
 // RequireAuth returns a middleware that requires authentication.
@@ -282,22 +286,23 @@ func (p *AuthPlugin) OAuthCallback(providerName string) fiber.Handler {
 			Scopes: provider.Scopes,
 		}
 
-		token, err := conf.Exchange(c.Context(), code)
+		_, err = conf.Exchange(c.Context(), code)
 		if err != nil {
 			return c.Status(fiber.StatusInternalServerError).JSON(fiber.Map{"error": "token exchange failed"})
 		}
 
-		// In a real app, you'd fetch user info from provider.UserURL here
-		// For now, we'll just return the token
-		return c.JSON(token)
+		// SECURITY: Never return upstream provider tokens directly to the browser.
+		// Applications should fetch provider user info server-side and mint an app session/JWT.
+		return c.JSON(fiber.Map{"success": true})
 	}
 }
 
 // EnableOTPHandler returns a handler that generates OTP setup info.
 func (p *AuthPlugin) EnableOTPHandler() fiber.Handler {
 	return func(c *fiber.Ctx) error {
-		user := c.Locals("user").(*User)
-		if user == nil {
+		userAny := c.Locals("user")
+		user, ok := userAny.(*User)
+		if !ok || user == nil {
 			return c.Status(fiber.StatusUnauthorized).JSON(fiber.Map{"error": "unauthorized"})
 		}
 

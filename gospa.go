@@ -175,6 +175,8 @@ type Config struct {
 	// Remote Action Options
 	MaxRequestBodySize int    // Maximum allowed size for remote action request bodies
 	RemotePrefix       string // Prefix for remote action endpoints (default "/_gospa/remote")
+	// RemoteActionMiddleware allows injecting authorization/tenant checks before remote action handlers.
+	RemoteActionMiddleware fiberpkg.Handler
 
 	// Security Options
 	AllowedOrigins []string // Allowed CORS origins
@@ -540,7 +542,11 @@ func (a *App) setupRoutes() {
 	}
 
 	// Remote Actions endpoint
-	a.Fiber.Post(a.Config.RemotePrefix+"/:name", fiber.RemoteActionRateLimitMiddleware(), func(c *fiberpkg.Ctx) error {
+	remoteHandlers := []fiberpkg.Handler{fiber.RemoteActionRateLimitMiddleware()}
+	if a.Config.RemoteActionMiddleware != nil {
+		remoteHandlers = append(remoteHandlers, a.Config.RemoteActionMiddleware)
+	}
+	remoteHandlers = append(remoteHandlers, func(c *fiberpkg.Ctx) error {
 		name := c.Params("name")
 		if len(name) > 256 {
 			return c.Status(fiberpkg.StatusBadRequest).JSON(fiberpkg.Map{
@@ -605,6 +611,7 @@ func (a *App) setupRoutes() {
 			"code": "SUCCESS",
 		})
 	})
+	a.Fiber.Post(a.Config.RemotePrefix+"/:name", remoteHandlers...)
 
 	// Static files
 	if _, err := os.Stat(a.Config.StaticDir); err == nil {

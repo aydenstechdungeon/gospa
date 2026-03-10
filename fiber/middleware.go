@@ -356,13 +356,8 @@ func SPANavigationMiddleware() gofiber.Handler {
 		if len(body) == 0 {
 			return nil
 		}
-		bodyStr := string(body)
-
 		// Set a custom header to indicate this is a partial response
 		c.Set("X-GoSPA-Partial", "true")
-
-		// The client expects full HTML and will parse out main, title, and head elements
-		c.Response().SetBodyString(bodyStr)
 
 		return nil
 	}
