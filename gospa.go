@@ -40,7 +40,7 @@ type StateSerializerFunc func(interface{}) ([]byte, error)
 type StateDeserializerFunc func([]byte, interface{}) error
 
 // Version is the current version of GoSPA.
-const Version = "0.1.22"
+const Version = "0.1.23"
 
 // NavigationSpeculativePrefetchingConfig configures speculative prefetching
 type NavigationSpeculativePrefetchingConfig struct {
