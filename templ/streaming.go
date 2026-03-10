@@ -62,7 +62,7 @@ type StreamWriter struct {
 }
 
 // NewStreamWriter creates a new stream writer.
-func NewStreamWriter(w io.Writer, flusher interface{ Flush() error }, bufferSize int) *StreamWriter {
+func NewStreamWriter(w io.Writer, flusher interface{ Flush() error }, _ int) *StreamWriter {
 	sw := &StreamWriter{
 		w:       w,
 		flusher: flusher,
@@ -217,7 +217,7 @@ if (window.__GOSPA_ISLANDS__ && window.__GOSPA_ISLAND_MANAGER__) {
 }
 
 // streamIslands streams island data progressively.
-func (sr *StreamRenderer) streamIslands(ctx context.Context, sw *StreamWriter, opts StreamOptions) error {
+func (sr *StreamRenderer) streamIslands(_ context.Context, sw *StreamWriter, opts StreamOptions) error {
 	islands := component.GetAllIslands()
 
 	// Sort islands by priority
@@ -235,11 +235,12 @@ func (sr *StreamRenderer) streamIslands(ctx context.Context, sw *StreamWriter, o
 			}
 		}
 
-		if isCritical || island.Config.Priority == component.PriorityHigh {
+		switch {
+		case isCritical || island.Config.Priority == component.PriorityHigh:
 			highPriority = append(highPriority, island)
-		} else if island.Config.Priority == component.PriorityLow {
+		case island.Config.Priority == component.PriorityLow:
 			lowPriority = append(lowPriority, island)
-		} else {
+		default:
 			normalPriority = append(normalPriority, island)
 		}
 	}
@@ -329,7 +330,7 @@ type DeferredIsland struct {
 }
 
 // Deferred renders a deferred island with a placeholder.
-func Deferred(name string, placeholder templ.Component, loader func() (templ.Component, error)) templ.Component {
+func Deferred(name string, placeholder templ.Component, _ func() (templ.Component, error)) templ.Component {
 	return templ.ComponentFunc(func(ctx context.Context, w io.Writer) error {
 		// Render placeholder
 		if placeholder != nil {

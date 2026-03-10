@@ -67,7 +67,7 @@ func (p Params) ToJSON() ([]byte, error) {
 	return json.Marshal(p)
 }
 
-// FromJSON creates Params from JSON.
+// ParamsFromJSON creates Params from JSON.
 func ParamsFromJSON(data []byte) (Params, error) {
 	var p Params
 	if err := json.Unmarshal(data, &p); err != nil {

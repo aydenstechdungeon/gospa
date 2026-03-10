@@ -13,8 +13,8 @@ import (
 	"github.com/aydenstechdungeon/gospa/plugin"
 )
 
-// ValidationPlugin provides form validation capabilities.
-type ValidationPlugin struct {
+// Plugin provides form validation capabilities.
+type Plugin struct {
 	config *Config
 }
 
@@ -73,24 +73,24 @@ func DefaultConfig() *Config {
 }
 
 // New creates a new Validation plugin.
-func New(cfg *Config) *ValidationPlugin {
+func New(cfg *Config) *Plugin {
 	if cfg == nil {
 		cfg = DefaultConfig()
 	}
-	return &ValidationPlugin{config: cfg}
+	return &Plugin{config: cfg}
 }
 
 // Name returns the plugin name.
-func (p *ValidationPlugin) Name() string {
+func (p *Plugin) Name() string {
 	return "validation"
 }
 
 // Init initializes the validation plugin.
-func (p *ValidationPlugin) Init() error {
+func (p *Plugin) Init() error {
 	// Create directories
 	dirs := []string{p.config.SchemasDir, p.config.OutputDir}
 	for _, dir := range dirs {
-		if err := os.MkdirAll(dir, 0755); err != nil {
+		if err := os.MkdirAll(dir, 0750); err != nil {
 			return fmt.Errorf("failed to create directory %s: %w", dir, err)
 		}
 	}
@@ -98,7 +98,7 @@ func (p *ValidationPlugin) Init() error {
 }
 
 // Dependencies returns required dependencies.
-func (p *ValidationPlugin) Dependencies() []plugin.Dependency {
+func (p *Plugin) Dependencies() []plugin.Dependency {
 	deps := []plugin.Dependency{
 		// Go validator for server-side
 		{Type: plugin.DepGo, Name: "github.com/go-playground/validator/v10", Version: "latest"},
@@ -115,7 +115,7 @@ func (p *ValidationPlugin) Dependencies() []plugin.Dependency {
 }
 
 // OnHook handles lifecycle hooks.
-func (p *ValidationPlugin) OnHook(hook plugin.Hook, ctx map[string]interface{}) error {
+func (p *Plugin) OnHook(hook plugin.Hook, ctx map[string]interface{}) error {
 	switch hook {
 	case plugin.BeforeBuild, plugin.BeforeDev:
 		projectDir, _ := ctx["project_dir"].(string)
@@ -135,7 +135,7 @@ func (p *ValidationPlugin) OnHook(hook plugin.Hook, ctx map[string]interface{}) 
 }
 
 // Commands returns custom CLI commands.
-func (p *ValidationPlugin) Commands() []plugin.Command {
+func (p *Plugin) Commands() []plugin.Command {
 	return []plugin.Command{
 		{
 			Name:        "validation:generate",
@@ -176,12 +176,12 @@ func (p *ValidationPlugin) Commands() []plugin.Command {
 }
 
 // generateValidation generates validation code from schemas.
-func (p *ValidationPlugin) generateValidation(projectDir string) error {
+func (p *Plugin) generateValidation(projectDir string) error {
 	schemasDir := filepath.Join(projectDir, p.config.SchemasDir)
 	outputDir := filepath.Join(projectDir, p.config.OutputDir)
 
 	// Ensure output directory exists
-	if err := os.MkdirAll(outputDir, 0755); err != nil {
+	if err := os.MkdirAll(outputDir, 0750); err != nil {
 		return err
 	}
 
@@ -202,7 +202,7 @@ func (p *ValidationPlugin) generateValidation(projectDir string) error {
 
 		// Read schema file
 		schemaPath := filepath.Join(schemasDir, entry.Name())
-		data, err := os.ReadFile(schemaPath)
+		data, err := os.ReadFile(filepath.Clean(schemaPath))
 		if err != nil {
 			return fmt.Errorf("failed to read schema %s: %w", entry.Name(), err)
 		}
@@ -238,7 +238,7 @@ func (p *ValidationPlugin) generateValidation(projectDir string) error {
 }
 
 // generateTypes generates TypeScript type definitions.
-func (p *ValidationPlugin) generateTypes(schema Schema, outputDir string) error {
+func (p *Plugin) generateTypes(schema Schema, outputDir string) error {
 	var sb strings.Builder
 	sb.WriteString("// Auto-generated TypeScript types from schema\n")
 	sb.WriteString("// Do not edit manually\n\n")
@@ -264,11 +264,11 @@ func (p *ValidationPlugin) generateTypes(schema Schema, outputDir string) error 
 	sb.WriteString("}\n")
 
 	filename := fmt.Sprintf("%s.types.ts", schema.Name)
-	return os.WriteFile(filepath.Join(outputDir, filename), []byte(sb.String()), 0644)
+	return os.WriteFile(filepath.Join(outputDir, filename), []byte(sb.String()), 0600)
 }
 
 // generateValibotSchema generates Valibot validation schema.
-func (p *ValidationPlugin) generateValibotSchema(schema Schema, outputDir string) error {
+func (p *Plugin) generateValibotSchema(schema Schema, outputDir string) error {
 	var sb strings.Builder
 	sb.WriteString("// Auto-generated Valibot validation schema\n")
 	sb.WriteString("// Do not edit manually\n\n")
@@ -297,11 +297,11 @@ func (p *ValidationPlugin) generateValibotSchema(schema Schema, outputDir string
 	fmt.Fprintf(&sb, "export type %s = v.InferOutput<typeof %sSchema>;\n", schema.Name, schema.Name)
 
 	filename := fmt.Sprintf("%s.schema.ts", schema.Name)
-	return os.WriteFile(filepath.Join(outputDir, filename), []byte(sb.String()), 0644)
+	return os.WriteFile(filepath.Join(outputDir, filename), []byte(sb.String()), 0600)
 }
 
 // generateGoValidation generates Go validation structs.
-func (p *ValidationPlugin) generateGoValidation(schema Schema, outputDir string) error {
+func (p *Plugin) generateGoValidation(schema Schema, outputDir string) error {
 	var sb strings.Builder
 	sb.WriteString("// Auto-generated Go validation structs\n")
 	sb.WriteString("// Do not edit manually\n\n")
@@ -326,11 +326,11 @@ func (p *ValidationPlugin) generateGoValidation(schema Schema, outputDir string)
 	sb.WriteString("}\n")
 
 	filename := fmt.Sprintf("%s.go", schema.Name)
-	return os.WriteFile(filepath.Join(outputDir, filename), []byte(sb.String()), 0644)
+	return os.WriteFile(filepath.Join(outputDir, filename), []byte(sb.String()), 0600)
 }
 
 // fieldToValibot converts a field schema to Valibot validator.
-func (p *ValidationPlugin) fieldToValibot(field FieldSchema) string {
+func (p *Plugin) fieldToValibot(field FieldSchema) string {
 	switch field.Type {
 	case "string":
 		return p.stringToValibot(field)
@@ -352,15 +352,15 @@ func (p *ValidationPlugin) fieldToValibot(field FieldSchema) string {
 }
 
 // stringToValibot generates Valibot string validator.
-func (p *ValidationPlugin) stringToValibot(field FieldSchema) string {
+func (p *Plugin) stringToValibot(field FieldSchema) string {
 	var parts []string
 	parts = append(parts, "v.string()")
 
-	if min, ok := field.Min.(float64); ok {
-		parts = append(parts, fmt.Sprintf("v.minLength(%d)", int(min)))
+	if minVal, ok := field.Min.(float64); ok {
+		parts = append(parts, fmt.Sprintf("v.minLength(%d)", int(minVal)))
 	}
-	if max, ok := field.Max.(float64); ok {
-		parts = append(parts, fmt.Sprintf("v.maxLength(%d)", int(max)))
+	if maxVal, ok := field.Max.(float64); ok {
+		parts = append(parts, fmt.Sprintf("v.maxLength(%d)", int(maxVal)))
 	}
 	if field.Pattern != "" {
 		parts = append(parts, fmt.Sprintf("v.regex(/%s/)", field.Pattern))
@@ -373,19 +373,15 @@ func (p *ValidationPlugin) stringToValibot(field FieldSchema) string {
 }
 
 // numberToValibot generates Valibot number validator.
-func (p *ValidationPlugin) numberToValibot(field FieldSchema) string {
+func (p *Plugin) numberToValibot(field FieldSchema) string {
 	var parts []string
-	if field.Type == "integer" {
-		parts = append(parts, "v.number()")
-	} else {
-		parts = append(parts, "v.number()")
-	}
+	parts = append(parts, "v.number()")
 
-	if min, ok := field.Min.(float64); ok {
-		parts = append(parts, fmt.Sprintf("v.minValue(%d)", int(min)))
+	if minVal, ok := field.Min.(float64); ok {
+		parts = append(parts, fmt.Sprintf("v.minValue(%d)", int(minVal)))
 	}
-	if max, ok := field.Max.(float64); ok {
-		parts = append(parts, fmt.Sprintf("v.maxValue(%d)", int(max)))
+	if maxVal, ok := field.Max.(float64); ok {
+		parts = append(parts, fmt.Sprintf("v.maxValue(%d)", int(maxVal)))
 	}
 
 	if len(parts) == 1 {
@@ -395,7 +391,7 @@ func (p *ValidationPlugin) numberToValibot(field FieldSchema) string {
 }
 
 // generateValidateTags generates Go validate tags.
-func (p *ValidationPlugin) generateValidateTags(field FieldSchema) string {
+func (p *Plugin) generateValidateTags(field FieldSchema) string {
 	var tags []string
 
 	if field.Required {
@@ -411,19 +407,19 @@ func (p *ValidationPlugin) generateValidateTags(field FieldSchema) string {
 		tags = append(tags, "uuid")
 	}
 
-	if min, ok := field.Min.(float64); ok {
+	if minVal, ok := field.Min.(float64); ok {
 		if field.Type == "string" {
-			tags = append(tags, fmt.Sprintf("min=%d", int(min)))
+			tags = append(tags, fmt.Sprintf("min=%d", int(minVal)))
 		} else {
-			tags = append(tags, fmt.Sprintf("gte=%d", int(min)))
+			tags = append(tags, fmt.Sprintf("gte=%d", int(minVal)))
 		}
 	}
 
-	if max, ok := field.Max.(float64); ok {
+	if maxVal, ok := field.Max.(float64); ok {
 		if field.Type == "string" {
-			tags = append(tags, fmt.Sprintf("max=%d", int(max)))
+			tags = append(tags, fmt.Sprintf("max=%d", int(maxVal)))
 		} else {
-			tags = append(tags, fmt.Sprintf("lte=%d", int(max)))
+			tags = append(tags, fmt.Sprintf("lte=%d", int(maxVal)))
 		}
 	}
 
@@ -431,7 +427,7 @@ func (p *ValidationPlugin) generateValidateTags(field FieldSchema) string {
 }
 
 // goTypeToTS converts Go type to TypeScript type.
-func (p *ValidationPlugin) goTypeToTS(typ string) string {
+func (p *Plugin) goTypeToTS(typ string) string {
 	switch typ {
 	case "string", "email", "url", "uuid":
 		return "string"
@@ -449,7 +445,7 @@ func (p *ValidationPlugin) goTypeToTS(typ string) string {
 }
 
 // tsTypeToGo converts TypeScript type to Go type.
-func (p *ValidationPlugin) tsTypeToGo(typ string) string {
+func (p *Plugin) tsTypeToGo(typ string) string {
 	switch typ {
 	case "string", "email", "url", "uuid":
 		return "string"
@@ -467,7 +463,7 @@ func (p *ValidationPlugin) tsTypeToGo(typ string) string {
 }
 
 // capitalize capitalizes the first letter of a string.
-func (p *ValidationPlugin) capitalize(s string) string {
+func (p *Plugin) capitalize(s string) string {
 	if len(s) == 0 {
 		return s
 	}
@@ -475,7 +471,7 @@ func (p *ValidationPlugin) capitalize(s string) string {
 }
 
 // createSchema creates a new validation schema template.
-func (p *ValidationPlugin) createSchema(name string) error {
+func (p *Plugin) createSchema(name string) error {
 	schema := Schema{
 		Name: name,
 		Fields: map[string]FieldSchema{
@@ -493,11 +489,11 @@ func (p *ValidationPlugin) createSchema(name string) error {
 	}
 
 	filename := fmt.Sprintf("%s.json", name)
-	return os.WriteFile(filepath.Join(p.config.SchemasDir, filename), data, 0644)
+	return os.WriteFile(filepath.Join(p.config.SchemasDir, filename), data, 0600)
 }
 
 // listSchemas lists all validation schemas.
-func (p *ValidationPlugin) listSchemas(projectDir string) error {
+func (p *Plugin) listSchemas(projectDir string) error {
 	schemasDir := filepath.Join(projectDir, p.config.SchemasDir)
 
 	entries, err := os.ReadDir(schemasDir)
@@ -516,9 +512,9 @@ func (p *ValidationPlugin) listSchemas(projectDir string) error {
 }
 
 // GetConfig returns the current configuration.
-func (p *ValidationPlugin) GetConfig() *Config {
+func (p *Plugin) GetConfig() *Config {
 	return p.config
 }
 
-// Ensure ValidationPlugin implements CLIPlugin interface.
-var _ plugin.CLIPlugin = (*ValidationPlugin)(nil)
+// Ensure Plugin implements CLIPlugin interface.
+var _ plugin.CLIPlugin = (*Plugin)(nil)

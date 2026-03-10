@@ -1,3 +1,4 @@
+// Package redis provides a Redis-backed implementation of the store.Storage interface.
 package redis
 
 import (

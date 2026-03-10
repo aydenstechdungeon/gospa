@@ -17,9 +17,13 @@ import (
 type RouteType int
 
 const (
+	// RouteTypePage represents a page route.
 	RouteTypePage RouteType = iota
+	// RouteTypeLayout represents a layout component route
 	RouteTypeLayout
+	// RouteTypeError represents an error component route
 	RouteTypeError
+	// RouteTypeAPI represents an API component route
 	RouteTypeAPI
 )
 
@@ -163,7 +167,7 @@ func (r *Router) parseRoute(relPath string) (*Route, error) {
 }
 
 // filePathToURLPath converts a file path to a URL path pattern.
-func (r *Router) filePathToURLPath(relPath string, routeType RouteType) string {
+func (r *Router) filePathToURLPath(relPath string, _ RouteType) string {
 	// Remove file extension
 	path := strings.TrimSuffix(relPath, filepath.Ext(relPath))
 
@@ -191,8 +195,7 @@ func (r *Router) filePathToURLPath(relPath string, routeType RouteType) string {
 		}
 	case strings.Contains(path, "+server"):
 		// API route: remove +server suffix
-		idx := strings.Index(path, "+server")
-		path = path[:idx]
+		path = strings.TrimSuffix(path, "+server")
 	}
 
 	// Clean the path
@@ -306,7 +309,7 @@ func extractParams(path string) (params []string, isDynamic bool, isCatchAll boo
 
 // calculatePriority calculates route priority for matching.
 // Lower values = higher priority.
-func calculatePriority(path string, isDynamic bool, isCatchAll bool) int {
+func calculatePriority(path string, _ bool, _ bool) int {
 	segments := strings.Split(path, "/")
 	priority := 0
 

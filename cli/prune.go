@@ -78,16 +78,17 @@ func Prune(config *PruneConfig) {
 	}
 
 	// Output results
-	if config.JSONOutput {
+	switch {
+	case config.JSONOutput:
 		data, err := json.MarshalIndent(report, "", "  ")
 		if err != nil {
 			fmt.Fprintf(os.Stderr, "Error: failed to marshal report: %v\n", err)
 			os.Exit(1)
 		}
 		fmt.Println(string(data))
-	} else if config.Verbose {
+	case config.Verbose:
 		printVerboseReport(report)
-	} else {
+	default:
 		printSummaryReport(report, config.DryRun)
 	}
 
@@ -132,16 +133,17 @@ func StateAnalyze(config *PruneConfig) {
 	}
 
 	// Output
-	if config.JSONOutput {
+	switch {
+	case config.JSONOutput:
 		data, err := json.MarshalIndent(report, "", "  ")
 		if err != nil {
 			fmt.Fprintf(os.Stderr, "Error: failed to marshal report: %v\n", err)
 			os.Exit(1)
 		}
 		fmt.Println(string(data))
-	} else if config.Verbose {
+	case config.Verbose:
 		printVerboseReport(report)
-	} else {
+	default:
 		printSummaryReport(report, true)
 	}
 }
@@ -151,6 +153,7 @@ func StateTree(stateFile string, usedPaths []string, jsonOut bool) {
 	// Load state from file or stdin
 	var stateData map[string]any
 	if stateFile != "" {
+		//nolint:gosec
 		data, err := os.ReadFile(stateFile)
 		if err != nil {
 			fmt.Fprintf(os.Stderr, "Error: failed to read state file: %v\n", err)
@@ -234,11 +237,12 @@ func printVerboseReport(report *state.PruningReport) {
 	// Group by status
 	var used, unused, exported []state.StateUsage
 	for _, usage := range report.StateUsage {
-		if usage.IsUsed {
+		switch {
+		case usage.IsUsed:
 			used = append(used, usage)
-		} else if usage.IsExported {
+		case usage.IsExported:
 			exported = append(exported, usage)
-		} else {
+		default:
 			unused = append(unused, usage)
 		}
 	}

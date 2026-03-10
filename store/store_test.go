@@ -113,14 +113,14 @@ func TestMemoryStorage_Overwrite(t *testing.T) {
 	}
 }
 
-func TestMemoryStorage_ConcurrentAccess(t *testing.T) {
+func TestMemoryStorage_ConcurrentAccess(_ *testing.T) {
 	s := NewMemoryStorage()
 	var wg sync.WaitGroup
 
 	// Concurrent writes
 	for i := 0; i < 50; i++ {
 		wg.Add(1)
-		go func(n int) {
+		go func(_ int) {
 			defer wg.Done()
 			key := "concurrent"
 			_ = s.Set(key, []byte("value"), 0)
@@ -199,7 +199,7 @@ func TestMemoryPubSub_MultipleSubscribers(t *testing.T) {
 
 	for i := 0; i < 3; i++ {
 		idx := i
-		_ = ps.Subscribe("multi", func(msg []byte) {
+		_ = ps.Subscribe("multi", func(_ []byte) {
 			received <- idx
 		})
 	}
@@ -256,7 +256,7 @@ func TestMemoryPubSub_ConcurrentPublish(t *testing.T) {
 	ps := NewMemoryPubSub()
 	received := make(chan struct{}, 100)
 
-	_ = ps.Subscribe("concurrent", func(msg []byte) {
+	_ = ps.Subscribe("concurrent", func(_ []byte) {
 		received <- struct{}{}
 	})
 
@@ -292,7 +292,7 @@ func TestMemoryPubSub_PublishDoesNotBlockSubscriber(t *testing.T) {
 	done := make(chan struct{})
 
 	// Subscriber that blocks for a while
-	_ = ps.Subscribe("blocking", func(msg []byte) {
+	_ = ps.Subscribe("blocking", func(_ []byte) {
 		time.Sleep(200 * time.Millisecond)
 		close(done)
 	})

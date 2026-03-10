@@ -48,7 +48,7 @@ func Generate(routesDir string) error {
 	}
 
 	// Write to file
-	if err := os.WriteFile(outputPath, []byte(code), 0644); err != nil {
+	if err := os.WriteFile(outputPath, []byte(code), 0600); err != nil {
 		return fmt.Errorf("writing file: %w", err)
 	}
 
@@ -61,7 +61,7 @@ func Generate(routesDir string) error {
 	modulePath, _ := getModuleInfo(routesDir)
 	routeGen := NewRouteTypeScriptGenerator(routes, modulePath)
 	generatedDir := filepath.Join(routesDir, "..", "generated")
-	if err := os.MkdirAll(generatedDir, 0755); err != nil {
+	if err := os.MkdirAll(generatedDir, 0750); err != nil {
 		fmt.Printf("Warning: failed to create generated directory: %v\n", err)
 	} else if err := routeGen.GenerateRoutesFile(generatedDir); err != nil {
 		fmt.Printf("Warning: failed to generate route helpers: %v\n", err)
@@ -189,7 +189,7 @@ func parseRoute(relPath, routesDir string) RouteInfo {
 
 // parseTemplGoFile parses a _templ.go file to extract the component function name and parameters.
 func parseTemplGoFile(path string) (string, []FuncParam) {
-	content, err := os.ReadFile(path)
+	content, err := os.ReadFile(filepath.Clean(path))
 	if err != nil {
 		return "", nil
 	}
@@ -531,7 +531,7 @@ func getModuleInfo(dir string) (moduleName string, moduleRoot string) {
 	// Walk up directories to find go.mod
 	for {
 		goModPath := filepath.Join(curr, "go.mod")
-		content, err := os.ReadFile(goModPath)
+		content, err := os.ReadFile(filepath.Clean(goModPath))
 		if err == nil {
 			// Parse module path from go.mod
 			lines := strings.Split(string(content), "\n")

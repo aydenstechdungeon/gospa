@@ -239,6 +239,8 @@ func (c *Component) Destroy() {
 type ComponentFunc func(*Component) templ.Component
 
 // DefineComponent defines a new component with a render function.
+//
+//nolint:revive // changing signature breaks API
 func DefineComponent(name string, render ComponentFunc, opts ...ComponentOption) *Component {
 	c := NewComponent(name, opts...)
 	return c
@@ -407,7 +409,7 @@ type Slot struct {
 	Content templ.Component
 }
 
-// Slot creates a new slot.
+// NewSlot creates a new slot.
 func NewSlot(name string, content templ.Component) Slot {
 	return Slot{Name: name, Content: content}
 }

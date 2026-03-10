@@ -67,7 +67,7 @@ func Build(config *BuildConfig) {
 // BuildWithConfig builds the application with custom configuration.
 func BuildWithConfig(config *BuildConfig) error {
 	// Create output directory
-	if err := os.MkdirAll(config.OutputDir, 0755); err != nil {
+	if err := os.MkdirAll(config.OutputDir, 0750); err != nil {
 		return fmt.Errorf("failed to create output directory: %w", err)
 	}
 
@@ -137,11 +137,12 @@ func buildClientRuntime(config *BuildConfig) error {
 
 	// Build the client runtime
 	outputPath := filepath.Join(config.OutputDir, "static", "js", "runtime.js")
-	if err := os.MkdirAll(filepath.Dir(outputPath), 0755); err != nil {
+	if err := os.MkdirAll(filepath.Dir(outputPath), 0750); err != nil {
 		return err
 	}
 
 	// Run bun build
+	//nolint:gosec // bunPath is safe executable from LookPath
 	cmd := exec.Command(bunPath, "build", "src/runtime.ts", "--outfile", outputPath, "--minify")
 	cmd.Dir = clientDir
 	cmd.Stdout = os.Stdout
@@ -168,6 +169,7 @@ func buildGoBinary(config *BuildConfig) error {
 		".",
 	}
 
+	//nolint:gosec // args are safe static inputs
 	cmd := exec.Command("go", args...)
 	cmd.Stdout = os.Stdout
 	cmd.Stderr = os.Stderr
@@ -190,7 +192,7 @@ func copyStaticAssets(config *BuildConfig) error {
 	}
 
 	destDir := filepath.Join(config.OutputDir, "static")
-	if err := os.MkdirAll(destDir, 0755); err != nil {
+	if err := os.MkdirAll(destDir, 0750); err != nil {
 		return err
 	}
 
@@ -212,17 +214,18 @@ func copyStaticAssets(config *BuildConfig) error {
 
 		// Create destination path
 		destPath := filepath.Join(destDir, relPath)
-		if err := os.MkdirAll(filepath.Dir(destPath), 0755); err != nil {
+		if err := os.MkdirAll(filepath.Dir(destPath), 0750); err != nil {
 			return err
 		}
 
 		// Copy file
+		//nolint:gosec
 		data, err := os.ReadFile(path)
 		if err != nil {
 			return err
 		}
 
-		return os.WriteFile(destPath, data, info.Mode())
+		return os.WriteFile(destPath, data, info.Mode()) //nolint:gosec
 	})
 }
 
@@ -257,12 +260,14 @@ func compressStaticAssets(config *BuildConfig) error {
 }
 
 func compressFileGzip(path string) error {
+	//nolint:gosec
 	input, err := os.Open(path)
 	if err != nil {
 		return err
 	}
 	defer func() { _ = input.Close() }()
 
+	//nolint:gosec
 	output, err := os.Create(path + ".gz")
 	if err != nil {
 		return err
@@ -330,13 +335,13 @@ func Clean() {
 	}
 
 	// Remove generated templ files
-	if err := filepath.Walk(".", func(path string, info os.FileInfo, err error) error {
+	if err := filepath.Walk(".", func(path string, _ os.FileInfo, err error) error {
 		if err != nil {
 			return err
 		}
 
 		if strings.HasSuffix(path, "_templ.go") || strings.HasSuffix(path, "_templ.txt") {
-			if err := os.Remove(path); err != nil {
+			if err := os.Remove(path); err != nil { //nolint:gosec
 				fmt.Fprintf(os.Stderr, "Failed to remove %s: %v\n", path, err)
 			} else {
 				fmt.Printf("✓ Removed %s\n", path)

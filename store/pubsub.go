@@ -1,3 +1,4 @@
+// Package store provides pubsub state backends for GoSPA.
 package store
 
 import (

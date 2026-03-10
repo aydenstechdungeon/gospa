@@ -1,3 +1,4 @@
+// Package plugin provides the plugin system for GoSPA.
 package plugin
 
 import (

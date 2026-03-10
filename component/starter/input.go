@@ -4,15 +4,25 @@ package starter
 type InputType string
 
 const (
-	InputText     InputType = "text"
-	InputEmail    InputType = "email"
+	// InputText is a text field
+	InputText InputType = "text"
+	// InputEmail is an email field
+	InputEmail InputType = "email"
+	// InputPassword is a password field
 	InputPassword InputType = "password"
-	InputNumber   InputType = "number"
-	InputTel      InputType = "tel"
-	InputURL      InputType = "url"
-	InputSearch   InputType = "search"
-	InputDate     InputType = "date"
-	InputTime     InputType = "time"
+	// InputNumber is a number field
+	InputNumber InputType = "number"
+	// InputTel is a telephone field
+	InputTel InputType = "tel"
+	// InputURL is a URL field
+	InputURL InputType = "url"
+	// InputSearch is a search field
+	InputSearch InputType = "search"
+	// InputDate is a date field
+	InputDate InputType = "date"
+	// InputTime is a time field
+	InputTime InputType = "time"
+	// InputDateTime is a datetime-local field
 	InputDateTime InputType = "datetime-local"
 )
 
@@ -20,9 +30,12 @@ const (
 type InputSize string
 
 const (
-	InputSmall  InputSize = "small"
+	// InputSmall is a small input
+	InputSmall InputSize = "small"
+	// InputMedium is a medium input
 	InputMedium InputSize = "medium"
-	InputLarge  InputSize = "large"
+	// InputLarge is a large input
+	InputLarge InputSize = "large"
 )
 
 // InputProps defines the properties for an input component
@@ -95,11 +108,12 @@ func InputClasses(props InputProps) string {
 
 	// State classes
 	var stateClass string
-	if props.Disabled {
+	switch {
+	case props.Disabled:
 		stateClass = "bg-gray-100 border-gray-300 text-gray-500 cursor-not-allowed"
-	} else if props.Error {
+	case props.Error:
 		stateClass = "bg-white border-red-500 text-gray-900 focus:ring-red-500 focus:border-red-500"
-	} else {
+	default:
 		stateClass = "bg-white border-gray-300 text-gray-900 focus:ring-blue-500 focus:border-blue-500 hover:border-gray-400"
 	}
 
@@ -136,11 +150,12 @@ func MergeInputProps(props InputProps) InputProps {
 // LabelClasses returns CSS classes for input labels
 func LabelClasses(props InputProps) string {
 	base := "block text-sm font-medium mb-1"
-	if props.Disabled {
+	switch {
+	case props.Disabled:
 		base += " text-gray-400"
-	} else if props.Error {
+	case props.Error:
 		base += " text-red-700"
-	} else {
+	default:
 		base += " text-gray-700"
 	}
 	return base

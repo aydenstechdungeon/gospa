@@ -46,7 +46,7 @@ func CreateProjectWithConfig(config *ProjectConfig) error {
 
 func createProject(config *ProjectConfig) error {
 	// Create project directory
-	if err := os.MkdirAll(config.OutputDir, 0755); err != nil {
+	if err := os.MkdirAll(config.OutputDir, 0750); err != nil {
 		return fmt.Errorf("failed to create project directory: %w", err)
 	}
 
@@ -60,7 +60,7 @@ func createProject(config *ProjectConfig) error {
 
 	for _, dir := range dirs {
 		path := filepath.Join(config.OutputDir, dir)
-		if err := os.MkdirAll(path, 0755); err != nil {
+		if err := os.MkdirAll(path, 0750); err != nil {
 			return fmt.Errorf("failed to create directory %s: %w", dir, err)
 		}
 	}
@@ -112,7 +112,7 @@ require (
 `, config.Module)
 
 	path := filepath.Join(config.OutputDir, "go.mod")
-	return os.WriteFile(path, []byte(content), 0644)
+	return os.WriteFile(path, []byte(content), 0600)
 }
 
 func createMainGo(config *ProjectConfig) error {
@@ -147,7 +147,7 @@ func main() {
 `, config.Module, config.Name)
 
 	path := filepath.Join(config.OutputDir, "main.go")
-	return os.WriteFile(path, []byte(content), 0644)
+	return os.WriteFile(path, []byte(content), 0600)
 }
 
 func createHomePage(config *ProjectConfig) error {
@@ -213,7 +213,7 @@ templ Page() {
 `
 
 	path := filepath.Join(config.OutputDir, "routes", "page.templ")
-	return os.WriteFile(path, []byte(content), 0644)
+	return os.WriteFile(path, []byte(content), 0600)
 }
 
 func createLayout(config *ProjectConfig) error {
@@ -242,7 +242,7 @@ templ Layout(title string) {
 `
 
 	path := filepath.Join(config.OutputDir, "routes", "layout.templ")
-	return os.WriteFile(path, []byte(content), 0644)
+	return os.WriteFile(path, []byte(content), 0600)
 }
 
 func createCSSFile(config *ProjectConfig) error {
@@ -384,7 +384,7 @@ body {
 `
 
 	path := filepath.Join(config.OutputDir, "static", "css", "style.css")
-	return os.WriteFile(path, []byte(content), 0644)
+	return os.WriteFile(path, []byte(content), 0600)
 }
 
 func createGitignore(config *ProjectConfig) error {
@@ -429,7 +429,7 @@ Thumbs.db
 `
 
 	path := filepath.Join(config.OutputDir, ".gitignore")
-	return os.WriteFile(path, []byte(content), 0644)
+	return os.WriteFile(path, []byte(content), 0600)
 }
 
 func getGitUsername() string {

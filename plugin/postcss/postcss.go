@@ -15,6 +15,8 @@ import (
 )
 
 // PostCSSPlugin provides PostCSS processing with Tailwind CSS v4 support.
+//
+//nolint:revive // changing name would break API
 type PostCSSPlugin struct {
 	mu      sync.Mutex
 	cmds    []*exec.Cmd
@@ -185,12 +187,12 @@ func (p *PostCSSPlugin) Name() string {
 func (p *PostCSSPlugin) Init() error {
 	// Create output directory
 	outputDir := filepath.Dir(p.config.Output)
-	if err := os.MkdirAll(outputDir, 0755); err != nil {
+	if err := os.MkdirAll(outputDir, 0750); err != nil {
 		return fmt.Errorf("failed to create output directory: %w", err)
 	}
 	// Create input directory
 	inputDir := filepath.Dir(p.config.Input)
-	if err := os.MkdirAll(inputDir, 0755); err != nil {
+	if err := os.MkdirAll(inputDir, 0750); err != nil {
 		return fmt.Errorf("failed to create input directory: %w", err)
 	}
 	return nil
@@ -359,7 +361,7 @@ func (p *PostCSSPlugin) SetConfig(cfg *Config) {
 }
 
 // install installs and configures PostCSS.
-func (p *PostCSSPlugin) install(args []string) error {
+func (p *PostCSSPlugin) install(_ []string) error {
 	fmt.Println("Installing PostCSS with Tailwind CSS v4...")
 
 	// Install dependencies
@@ -433,7 +435,7 @@ func (p *PostCSSPlugin) install(args []string) error {
 
 	// Create output directory
 	outputDir := filepath.Dir(p.config.Output)
-	if err := os.MkdirAll(outputDir, 0755); err != nil {
+	if err := os.MkdirAll(outputDir, 0750); err != nil {
 		return fmt.Errorf("failed to create output directory: %w", err)
 	}
 
@@ -505,7 +507,7 @@ func (p *PostCSSPlugin) watchWithContext(projectDir string) {
 			args = append(args, "--map")
 		}
 
-		cmd := exec.CommandContext(ctx, "bun", append([]string{"x"}, args...)...)
+		cmd := exec.CommandContext(ctx, "bun", append([]string{"x"}, args...)...) //nolint:gosec
 		cmd.Dir = projectDir
 		cmd.Stdout = os.Stdout
 		cmd.Stderr = os.Stderr
@@ -549,7 +551,7 @@ func (p *PostCSSPlugin) compile(projectDir string) error {
 		args = append(args, "--map")
 	}
 
-	cmd := exec.Command("bun", append([]string{"x"}, args...)...)
+	cmd := exec.Command("bun", append([]string{"x"}, args...)...) //nolint:gosec
 	cmd.Stdout = os.Stdout
 	cmd.Stderr = os.Stderr
 
@@ -600,7 +602,7 @@ export default {
 };
 `
 
-	return os.WriteFile(configPath, []byte(content), 0644)
+	return os.WriteFile(configPath, []byte(content), 0600)
 }
 
 // generateMainCSS generates a main CSS file with Tailwind imports.
@@ -656,11 +658,11 @@ func (p *PostCSSPlugin) generateMainCSS(cssPath string) error {
 
 	// Ensure directory exists
 	dir := filepath.Dir(cssPath)
-	if err := os.MkdirAll(dir, 0755); err != nil {
+	if err := os.MkdirAll(dir, 0750); err != nil {
 		return err
 	}
 
-	return os.WriteFile(cssPath, []byte(content), 0644)
+	return os.WriteFile(cssPath, []byte(content), 0600)
 }
 
 // criticalCommand extracts critical CSS for above-the-fold content.
@@ -691,12 +693,12 @@ func (p *PostCSSPlugin) criticalCommand(args []string) error {
 
 	// Create output directories
 	criticalDir := filepath.Dir(p.config.CriticalCSS.CriticalOutput)
-	if err := os.MkdirAll(criticalDir, 0755); err != nil {
+	if err := os.MkdirAll(criticalDir, 0750); err != nil {
 		return fmt.Errorf("failed to create critical CSS directory: %w", err)
 	}
 
 	nonCriticalDir := filepath.Dir(p.config.CriticalCSS.NonCriticalOutput)
-	if err := os.MkdirAll(nonCriticalDir, 0755); err != nil {
+	if err := os.MkdirAll(nonCriticalDir, 0750); err != nil {
 		return fmt.Errorf("failed to create non-critical CSS directory: %w", err)
 	}
 
@@ -715,13 +717,14 @@ func (p *PostCSSPlugin) criticalCommand(args []string) error {
 	criticalCSS := fullCSS[:criticalSize]
 	nonCriticalCSS := fullCSS[criticalSize:]
 
-	// Write critical CSS
-	if err := os.WriteFile(p.config.CriticalCSS.CriticalOutput, criticalCSS, 0644); err != nil {
+	//nolint:gosec
+	if err := os.WriteFile(p.config.CriticalCSS.CriticalOutput, criticalCSS, 0600); err != nil {
 		return fmt.Errorf("failed to write critical CSS: %w", err)
 	}
 
 	// Write non-critical CSS
-	if err := os.WriteFile(p.config.CriticalCSS.NonCriticalOutput, nonCriticalCSS, 0644); err != nil {
+	//nolint:gosec
+	if err := os.WriteFile(p.config.CriticalCSS.NonCriticalOutput, nonCriticalCSS, 0600); err != nil {
 		return fmt.Errorf("failed to write non-critical CSS: %w", err)
 	}
 
@@ -776,7 +779,7 @@ func (p *PostCSSPlugin) bundlesCommand(args []string) error {
 			args = append(args, "--map")
 		}
 
-		cmd := exec.Command("bun", append([]string{"x"}, args...)...)
+		cmd := exec.Command("bun", append([]string{"x"}, args...)...) //nolint:gosec
 		cmd.Dir = projectDir
 		cmd.Stdout = os.Stdout
 		cmd.Stderr = os.Stderr
@@ -824,17 +827,17 @@ func (p *PostCSSPlugin) generateBundleCSS(cssPath string, bundle BundleEntry) er
 
 	// Ensure directory exists
 	dir := filepath.Dir(cssPath)
-	if err := os.MkdirAll(dir, 0755); err != nil {
+	if err := os.MkdirAll(dir, 0750); err != nil {
 		return err
 	}
 
-	return os.WriteFile(cssPath, []byte(content), 0644)
+	return os.WriteFile(cssPath, []byte(content), 0600)
 }
 
 // extractCriticalForBundle extracts critical CSS for a specific bundle.
 func (p *PostCSSPlugin) extractCriticalForBundle(projectDir string, bundle BundleEntry) error {
 	fullCSSPath := filepath.Join(projectDir, bundle.Output)
-	fullCSS, err := os.ReadFile(fullCSSPath)
+	fullCSS, err := os.ReadFile(filepath.Clean(fullCSSPath))
 	if err != nil {
 		return fmt.Errorf("failed to read bundle CSS: %w", err)
 	}
@@ -856,12 +859,12 @@ func (p *PostCSSPlugin) extractCriticalForBundle(projectDir string, bundle Bundl
 
 	// Create output directories
 	criticalDir := filepath.Dir(criticalOutput)
-	if err := os.MkdirAll(criticalDir, 0755); err != nil {
+	if err := os.MkdirAll(criticalDir, 0750); err != nil {
 		return fmt.Errorf("failed to create critical CSS directory: %w", err)
 	}
 
 	nonCriticalDir := filepath.Dir(nonCriticalOutput)
-	if err := os.MkdirAll(nonCriticalDir, 0755); err != nil {
+	if err := os.MkdirAll(nonCriticalDir, 0750); err != nil {
 		return fmt.Errorf("failed to create non-critical CSS directory: %w", err)
 	}
 
@@ -884,12 +887,14 @@ func (p *PostCSSPlugin) extractCriticalForBundle(projectDir string, bundle Bundl
 	nonCriticalCSS := fullCSS[criticalSize:]
 
 	// Write critical CSS
-	if err := os.WriteFile(criticalOutput, criticalCSS, 0644); err != nil {
+	//nolint:gosec
+	if err := os.WriteFile(criticalOutput, criticalCSS, 0600); err != nil {
 		return fmt.Errorf("failed to write critical CSS: %w", err)
 	}
 
 	// Write non-critical CSS
-	if err := os.WriteFile(nonCriticalOutput, nonCriticalCSS, 0644); err != nil {
+	//nolint:gosec
+	if err := os.WriteFile(nonCriticalOutput, nonCriticalCSS, 0600); err != nil {
 		return fmt.Errorf("failed to write non-critical CSS: %w", err)
 	}
 
@@ -903,6 +908,7 @@ func (p *PostCSSPlugin) extractCriticalForBundle(projectDir string, bundle Bundl
 // This can be used in your template files to inline critical CSS.
 func GenerateCriticalCSSHelper(projectDir, criticalCSSPath string) (string, error) {
 	fullPath := filepath.Join(projectDir, criticalCSSPath)
+	//nolint:gosec
 	css, err := os.ReadFile(fullPath)
 	if err != nil {
 		return "", fmt.Errorf("failed to read critical CSS: %w", err)
@@ -922,6 +928,7 @@ func GenerateAsyncCSSScript(cssPath string) string {
 func CriticalCSS(path string) string {
 	// Try to read from the file system at runtime
 	// This allows the critical CSS to be extracted at build time and read at runtime
+	//nolint:gosec
 	css, err := os.ReadFile(path)
 	if err != nil {
 		// Return empty string if file doesn't exist (will be handled gracefully)
@@ -941,6 +948,7 @@ func AsyncCSS(path string) string {
 // or returns a fallback message if the file doesn't exist.
 // Useful for development where critical CSS might not be extracted yet.
 func CriticalCSSWithFallback(path, fallback string) string {
+	//nolint:gosec
 	css, err := os.ReadFile(path)
 	if err != nil {
 		return fallback

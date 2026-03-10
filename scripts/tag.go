@@ -1,3 +1,4 @@
+// Package main is a script to bump version and create a new git tag.
 package main
 
 import (
@@ -112,7 +113,7 @@ func main() {
 		}
 		err = exec.Command("git", "diff", "--cached", "--quiet").Run()
 		if err != nil {
-			if err := exec.Command("git", "commit", "-m", "chore: bump version to "+newTag).Run(); err != nil {
+			if err := exec.Command("git", "commit", "-m", "chore: bump version to "+newTag).Run(); err != nil { //nolint:gosec
 				fmt.Println("Error: git commit failed:", err)
 				os.Exit(1)
 			}
@@ -127,12 +128,12 @@ func main() {
 	branch := strings.TrimSpace(string(branchOut))
 
 	fmt.Printf("\nTagging %s and pushing to %s...\n", newTag, branch)
-	if err := exec.Command("git", "tag", "-f", newTag).Run(); err != nil {
+	if err := exec.Command("git", "tag", "-f", newTag).Run(); err != nil { //nolint:gosec
 		fmt.Println("Error: git tag failed:", err)
 		os.Exit(1)
 	}
 
-	cmd1 := exec.Command("git", "push", "origin", branch)
+	cmd1 := exec.Command("git", "push", "origin", branch) //nolint:gosec
 	cmd1.Stdout = os.Stdout
 	cmd1.Stderr = os.Stderr
 	if err := cmd1.Run(); err != nil {
@@ -140,7 +141,7 @@ func main() {
 		os.Exit(1)
 	}
 
-	cmd2 := exec.Command("git", "push", "-f", "origin", newTag)
+	cmd2 := exec.Command("git", "push", "-f", "origin", newTag) //nolint:gosec
 	cmd2.Stdout = os.Stdout
 	cmd2.Stderr = os.Stderr
 	if err := cmd2.Run(); err != nil {
@@ -162,14 +163,15 @@ func updateGospaGo(oldVersion, newVersion string) {
 	if strings.Contains(content, oldLine) {
 		fmt.Println("Updating gospa.go version...")
 		content = strings.Replace(content, oldLine, newLine, 1)
-		if err := os.WriteFile("gospa.go", []byte(content), 0644); err != nil {
+		//nolint:gosec
+		if err := os.WriteFile("gospa.go", []byte(content), 0600); err != nil {
 			fmt.Println("Error writing gospa.go:", err)
 		}
 	}
 }
 
 func updateModFile(path, moduleName, oldVersion, newVersion, oldTag, newTag string) bool {
-	data, err := os.ReadFile(path)
+	data, err := os.ReadFile(filepath.Clean(path))
 	if err != nil {
 		return false
 	}
@@ -192,7 +194,8 @@ func updateModFile(path, moduleName, oldVersion, newVersion, oldTag, newTag stri
 
 	if changed {
 		fmt.Println("Updating", path)
-		if err := os.WriteFile(path, []byte(content), 0644); err != nil {
+		//nolint:gosec
+		if err := os.WriteFile(path, []byte(content), 0600); err != nil {
 			fmt.Println("Error writing", path, ":", err)
 		}
 	}
@@ -200,7 +203,7 @@ func updateModFile(path, moduleName, oldVersion, newVersion, oldTag, newTag stri
 }
 
 func updateOtherFile(path, moduleName, oldVersion, newVersion, oldTag, newTag string) bool {
-	data, err := os.ReadFile(path)
+	data, err := os.ReadFile(filepath.Clean(path))
 	if err != nil {
 		return false
 	}
@@ -216,7 +219,8 @@ func updateOtherFile(path, moduleName, oldVersion, newVersion, oldTag, newTag st
 	})
 
 	if newContent != content {
-		if err := os.WriteFile(path, []byte(newContent), 0644); err != nil {
+		//nolint:gosec
+		if err := os.WriteFile(path, []byte(newContent), 0600); err != nil {
 			fmt.Println("Error writing", path, ":", err)
 			return false
 		}

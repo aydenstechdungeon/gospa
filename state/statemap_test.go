@@ -54,7 +54,7 @@ func TestStateMap_Remove(t *testing.T) {
 	}
 }
 
-func TestStateMap_RemoveNonExistent(t *testing.T) {
+func TestStateMap_RemoveNonExistent(_ *testing.T) {
 	sm := NewStateMap()
 	// Should not panic
 	sm.Remove("nonexistent")
@@ -137,7 +137,7 @@ func TestStateMap_ForEach(t *testing.T) {
 	sm.Add("c", NewRune(3))
 
 	seen := map[string]bool{}
-	sm.ForEach(func(key string, value any) {
+	sm.ForEach(func(key string, _ any) {
 		seen[key] = true
 	})
 	for _, key := range []string{"a", "b", "c"} {
@@ -220,7 +220,7 @@ func TestStateMap_OnChange(t *testing.T) {
 	sm := NewStateMap()
 	r := NewRune(0)
 	notifications := make(chan struct{}, 10)
-	sm.OnChange = func(key string, value any) {
+	sm.OnChange = func(_ string, _ any) {
 		notifications <- struct{}{}
 	}
 	sm.Add("count", r)
@@ -236,7 +236,7 @@ func TestStateMap_OnChange(t *testing.T) {
 
 // ─── StateMap concurrent access ───────────────────────────────────────────────
 
-func TestStateMap_ConcurrentAccess(t *testing.T) {
+func TestStateMap_ConcurrentAccess(_ *testing.T) {
 	sm := NewStateMap()
 	var wg sync.WaitGroup
 

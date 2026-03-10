@@ -149,7 +149,7 @@ func TestEffect_Dispose(t *testing.T) {
 	}
 }
 
-func TestEffect_DoubleDispose_NoPanic(t *testing.T) {
+func TestEffect_DoubleDispose_NoPanic(_ *testing.T) {
 	e := NewEffect(func() CleanupFunc { return nil })
 	e.Dispose()
 	e.Dispose() // second dispose should not panic
@@ -252,7 +252,7 @@ func TestWatch_Unsubscribe(t *testing.T) {
 	var mu sync.Mutex
 	callCount := 0
 
-	unsub := Watch(count, func(v int) {
+	unsub := Watch(count, func(_ int) {
 		mu.Lock()
 		callCount++
 		mu.Unlock()
@@ -313,7 +313,7 @@ func TestWatch3_Comprehensive(t *testing.T) {
 	var mu sync.Mutex
 	called := false
 
-	unsub := Watch3(a, b, c, func(x, y, z int) {
+	unsub := Watch3(a, b, c, func(_, _, _ int) {
 		mu.Lock()
 		called = true
 		mu.Unlock()

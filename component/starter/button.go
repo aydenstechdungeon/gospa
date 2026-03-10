@@ -9,21 +9,31 @@ import (
 type ButtonVariant string
 
 const (
-	ButtonPrimary   ButtonVariant = "primary"
+	// ButtonPrimary is a primary button
+	ButtonPrimary ButtonVariant = "primary"
+	// ButtonSecondary is a secondary button
 	ButtonSecondary ButtonVariant = "secondary"
-	ButtonOutline   ButtonVariant = "outline"
-	ButtonGhost     ButtonVariant = "ghost"
-	ButtonDanger    ButtonVariant = "danger"
+	// ButtonOutline is an outline button
+	ButtonOutline ButtonVariant = "outline"
+	// ButtonGhost is a ghost button
+	ButtonGhost ButtonVariant = "ghost"
+	// ButtonDanger is a danger button
+	ButtonDanger ButtonVariant = "danger"
 )
 
 // ButtonSize defines the size of a button
 type ButtonSize string
 
 const (
+	// ButtonSizeXS is an extra small button
 	ButtonSizeXS ButtonSize = "xs"
+	// ButtonSizeSM is a small button
 	ButtonSizeSM ButtonSize = "sm"
+	// ButtonSizeMD is a medium button
 	ButtonSizeMD ButtonSize = "md"
+	// ButtonSizeLG is a large button
 	ButtonSizeLG ButtonSize = "lg"
+	// ButtonSizeXL is an extra large button
 	ButtonSizeXL ButtonSize = "xl"
 )
 

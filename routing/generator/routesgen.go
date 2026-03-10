@@ -80,7 +80,7 @@ func (g *RouteTypeScriptGenerator) GenerateRoutesFile(outputDir string) error {
 
 	// Write to file
 	outPath := filepath.Join(outputDir, "routes.ts")
-	return os.WriteFile(outPath, []byte(sb.String()), 0644)
+	return os.WriteFile(outPath, []byte(sb.String()), 0600)
 }
 
 // generateRoutePaths generates the route path type definitions.
@@ -96,15 +96,11 @@ func (g *RouteTypeScriptGenerator) generateRoutePaths(sb *strings.Builder) {
 		return g.routes[i].URLPath < g.routes[j].URLPath
 	})
 
-	for i, route := range g.routes {
+	for _, route := range g.routes {
 		if route.IsLayout {
 			continue
 		}
-		if i > 0 {
-			sb.WriteString("  | ")
-		} else {
-			sb.WriteString("  | ")
-		}
+		sb.WriteString("  | ")
 		fmt.Fprintf(sb, "%q\n", route.URLPath)
 	}
 

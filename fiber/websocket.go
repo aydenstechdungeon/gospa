@@ -277,7 +277,7 @@ func (s *SessionStore) RemoveSession(token string) {
 // RemoveClientSessions removes all sessions for a client ID.
 // NOTE: Depending on the storage backend, this might not be easily achievable without secondary indices.
 // For KV-only stores, this operation shouldn't be relied upon.
-func (s *SessionStore) RemoveClientSessions(clientID string) {
+func (s *SessionStore) RemoveClientSessions(_ string) {
 	// Not practically supported in KV stores without key scanning.
 	// Since sessions expire naturally through TTL, this is a no-op for now.
 }
@@ -1333,7 +1333,7 @@ func RemoteActionRateLimitMiddleware() fiberpkg.Handler {
 }
 
 // StateSyncHandler creates a handler for state synchronization.
-func StateSyncHandler(hub *WSHub) fiberpkg.Handler {
+func StateSyncHandler(_ *WSHub) fiberpkg.Handler {
 	return func(c *fiberpkg.Ctx) error {
 		// Get session token from header
 		// SECURITY (P3): query params deprecated due to potential leakage in server logs

@@ -12,7 +12,7 @@ import (
 
 // RuntimeScript returns the script tag for the GoSPA client runtime.
 func RuntimeScript(src string) templ.Component {
-	return templ.ComponentFunc(func(ctx context.Context, w io.Writer) error {
+	return templ.ComponentFunc(func(_ context.Context, w io.Writer) error {
 		_, err := fmt.Fprintf(w, `<script src="%s" type="module"></script>`, templ.EscapeString(src))
 		return err
 	})
@@ -20,7 +20,7 @@ func RuntimeScript(src string) templ.Component {
 
 // RuntimeScriptInline returns an inline script tag with the runtime code.
 func RuntimeScriptInline(code string) templ.Component {
-	return templ.ComponentFunc(func(ctx context.Context, w io.Writer) error {
+	return templ.ComponentFunc(func(_ context.Context, w io.Writer) error {
 		_, err := fmt.Fprintf(w, `<script>%s</script>`, code)
 		return err
 	})
@@ -28,7 +28,7 @@ func RuntimeScriptInline(code string) templ.Component {
 
 // CSS returns a link tag for a stylesheet.
 func CSS(href string) templ.Component {
-	return templ.ComponentFunc(func(ctx context.Context, w io.Writer) error {
+	return templ.ComponentFunc(func(_ context.Context, w io.Writer) error {
 		_, err := fmt.Fprintf(w, `<link rel="stylesheet" href="%s">`, templ.EscapeString(href))
 		return err
 	})
@@ -36,7 +36,7 @@ func CSS(href string) templ.Component {
 
 // CSSInline returns an inline style tag.
 func CSSInline(css string) templ.Component {
-	return templ.ComponentFunc(func(ctx context.Context, w io.Writer) error {
+	return templ.ComponentFunc(func(_ context.Context, w io.Writer) error {
 		_, err := fmt.Fprintf(w, `<style>%s</style>`, css)
 		return err
 	})
@@ -44,7 +44,7 @@ func CSSInline(css string) templ.Component {
 
 // Meta returns a meta tag.
 func Meta(name, content string) templ.Component {
-	return templ.ComponentFunc(func(ctx context.Context, w io.Writer) error {
+	return templ.ComponentFunc(func(_ context.Context, w io.Writer) error {
 		_, err := fmt.Fprintf(w, `<meta name="%s" content="%s">`, templ.EscapeString(name), templ.EscapeString(content))
 		return err
 	})
@@ -52,7 +52,7 @@ func Meta(name, content string) templ.Component {
 
 // MetaProperty returns a meta property tag (for Open Graph, etc.).
 func MetaProperty(property, content string) templ.Component {
-	return templ.ComponentFunc(func(ctx context.Context, w io.Writer) error {
+	return templ.ComponentFunc(func(_ context.Context, w io.Writer) error {
 		_, err := fmt.Fprintf(w, `<meta property="%s" content="%s">`, templ.EscapeString(property), templ.EscapeString(content))
 		return err
 	})
@@ -60,7 +60,7 @@ func MetaProperty(property, content string) templ.Component {
 
 // Title returns a title tag.
 func Title(title string) templ.Component {
-	return templ.ComponentFunc(func(ctx context.Context, w io.Writer) error {
+	return templ.ComponentFunc(func(_ context.Context, w io.Writer) error {
 		_, err := fmt.Fprintf(w, `<title>%s</title>`, templ.EscapeString(title))
 		return err
 	})
@@ -68,7 +68,7 @@ func Title(title string) templ.Component {
 
 // Favicon returns a link tag for a favicon.
 func Favicon(href string) templ.Component {
-	return templ.ComponentFunc(func(ctx context.Context, w io.Writer) error {
+	return templ.ComponentFunc(func(_ context.Context, w io.Writer) error {
 		_, err := fmt.Fprintf(w, `<link rel="icon" href="%s">`, templ.EscapeString(href))
 		return err
 	})
@@ -218,7 +218,7 @@ type SPAConfig struct {
 
 // Raw renders raw HTML content.
 func Raw(html string) templ.Component {
-	return templ.ComponentFunc(func(ctx context.Context, w io.Writer) error {
+	return templ.ComponentFunc(func(_ context.Context, w io.Writer) error {
 		_, err := w.Write([]byte(html))
 		return err
 	})
@@ -226,7 +226,7 @@ func Raw(html string) templ.Component {
 
 // HTMLContent renders HTML content safely (already escaped).
 func HTMLContent(html string) templ.Component {
-	return templ.ComponentFunc(func(ctx context.Context, w io.Writer) error {
+	return templ.ComponentFunc(func(_ context.Context, w io.Writer) error {
 		_, err := templ.JoinStringErrs(html)
 		if err != nil {
 			return err
@@ -238,7 +238,7 @@ func HTMLContent(html string) templ.Component {
 
 // TextContent renders text content (HTML escaped).
 func TextContent(text string) templ.Component {
-	return templ.ComponentFunc(func(ctx context.Context, w io.Writer) error {
+	return templ.ComponentFunc(func(_ context.Context, w io.Writer) error {
 		_, err := io.WriteString(w, templ.EscapeString(text))
 		return err
 	})
@@ -460,7 +460,7 @@ func Fragment(components ...templ.Component) templ.Component {
 
 // Empty renders nothing.
 func Empty() templ.Component {
-	return templ.ComponentFunc(func(ctx context.Context, w io.Writer) error {
+	return templ.ComponentFunc(func(_ context.Context, _ io.Writer) error {
 		return nil
 	})
 }
@@ -623,14 +623,14 @@ func (h *HeadManager) AddHeadLink(rel, href string, extraAttrs ...map[string]str
 }
 
 // AddHeadScript adds a script tag.
-func (h *HeadManager) AddHeadScript(src string, async, defer_ bool) *HeadManager {
+func (h *HeadManager) AddHeadScript(src string, async, deferAttr bool) *HeadManager {
 	attrs := map[string]string{
 		"src": src,
 	}
 	if async {
 		attrs["async"] = ""
 	}
-	if defer_ {
+	if deferAttr {
 		attrs["defer"] = ""
 	}
 	h.elements = append(h.elements, HeadElement{
@@ -697,7 +697,7 @@ func (h *HeadManager) Render() templ.Component {
 		}
 	}
 
-	return templ.ComponentFunc(func(ctx context.Context, w io.Writer) error {
+	return templ.ComponentFunc(func(_ context.Context, w io.Writer) error {
 		for _, el := range sorted {
 			if err := renderHeadElement(el, w); err != nil {
 				return err
@@ -765,6 +765,7 @@ func renderHeadElement(el HeadElement, w io.Writer) error {
 	}
 }
 
+//nolint:revive // custom implementation
 func min(a, b int) int {
 	if a < b {
 		return a
@@ -774,7 +775,7 @@ func min(a, b int) int {
 
 // HeadTitle creates a title tag with data-gospa-head attribute.
 func HeadTitle(title string) templ.Component {
-	return templ.ComponentFunc(func(ctx context.Context, w io.Writer) error {
+	return templ.ComponentFunc(func(_ context.Context, w io.Writer) error {
 		_, err := fmt.Fprintf(w, `<title data-gospa-head="title">%s</title>`, templ.EscapeString(title))
 		return err
 	})
@@ -782,7 +783,7 @@ func HeadTitle(title string) templ.Component {
 
 // HeadMeta creates a meta tag with data-gospa-head attribute.
 func HeadMeta(name, content string) templ.Component {
-	return templ.ComponentFunc(func(ctx context.Context, w io.Writer) error {
+	return templ.ComponentFunc(func(_ context.Context, w io.Writer) error {
 		_, err := fmt.Fprintf(w, `<meta name="%s" content="%s" data-gospa-head="meta-%s">`, templ.EscapeString(name), templ.EscapeString(content), templ.EscapeString(name))
 		return err
 	})
@@ -790,7 +791,7 @@ func HeadMeta(name, content string) templ.Component {
 
 // HeadMetaProp creates a meta property tag with data-gospa-head attribute.
 func HeadMetaProp(property, content string) templ.Component {
-	return templ.ComponentFunc(func(ctx context.Context, w io.Writer) error {
+	return templ.ComponentFunc(func(_ context.Context, w io.Writer) error {
 		_, err := fmt.Fprintf(w, `<meta property="%s" content="%s" data-gospa-head="meta-prop-%s">`, templ.EscapeString(property), templ.EscapeString(content), templ.EscapeString(property))
 		return err
 	})
@@ -798,7 +799,7 @@ func HeadMetaProp(property, content string) templ.Component {
 
 // HeadLink creates a link tag with data-gospa-head attribute.
 func HeadLink(rel, href string, extraAttrs ...map[string]string) templ.Component {
-	return templ.ComponentFunc(func(ctx context.Context, w io.Writer) error {
+	return templ.ComponentFunc(func(_ context.Context, w io.Writer) error {
 		attrs := map[string]string{
 			"rel":             rel,
 			"href":            href,
@@ -829,15 +830,15 @@ func HeadLink(rel, href string, extraAttrs ...map[string]string) templ.Component
 }
 
 // HeadScript creates a script tag with data-gospa-head attribute.
-func HeadScript(src string, async, defer_ bool) templ.Component {
-	return templ.ComponentFunc(func(ctx context.Context, w io.Writer) error {
+func HeadScript(src string, async, deferAttr bool) templ.Component {
+	return templ.ComponentFunc(func(_ context.Context, w io.Writer) error {
 		attrs := map[string]string{
 			"src": src,
 		}
 		if async {
 			attrs["async"] = ""
 		}
-		if defer_ {
+		if deferAttr {
 			attrs["defer"] = ""
 		}
 		_, err := fmt.Fprintf(w, `<script`)
@@ -861,7 +862,7 @@ func HeadScript(src string, async, defer_ bool) templ.Component {
 
 // HeadStyle creates a stylesheet link with data-gospa-head attribute.
 func HeadStyle(href string) templ.Component {
-	return templ.ComponentFunc(func(ctx context.Context, w io.Writer) error {
+	return templ.ComponentFunc(func(_ context.Context, w io.Writer) error {
 		_, err := fmt.Fprintf(w, `<link rel="stylesheet" href="%s" data-gospa-head="style-%s">`, templ.EscapeString(href), templ.EscapeString(href))
 		return err
 	})

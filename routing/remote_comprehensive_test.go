@@ -9,7 +9,7 @@ import (
 
 func TestRegisterAndGetRemoteAction(t *testing.T) {
 	name := "testAction_unique_7a3f"
-	RegisterRemoteAction(name, func(ctx context.Context, input interface{}) (interface{}, error) {
+	RegisterRemoteAction(name, func(_ context.Context, _ interface{}) (interface{}, error) {
 		return "result", nil
 	})
 	fn, ok := GetRemoteAction(name)
@@ -30,7 +30,7 @@ func TestGetRemoteAction_NotFound(t *testing.T) {
 
 func TestRemoteAction_Invocation(t *testing.T) {
 	name := "addAction_unique_7b4f"
-	RegisterRemoteAction(name, func(ctx context.Context, input interface{}) (interface{}, error) {
+	RegisterRemoteAction(name, func(_ context.Context, input interface{}) (interface{}, error) {
 		x := input.(float64)
 		return x + 10, nil
 	})
@@ -51,7 +51,7 @@ func TestRemoteAction_Invocation(t *testing.T) {
 
 func TestRemoteAction_WithNilInput(t *testing.T) {
 	name := "nilInputAction_unique_9c3e"
-	RegisterRemoteAction(name, func(ctx context.Context, input interface{}) (interface{}, error) {
+	RegisterRemoteAction(name, func(_ context.Context, input interface{}) (interface{}, error) {
 		if input != nil {
 			return nil, nil
 		}
@@ -70,10 +70,10 @@ func TestRemoteAction_WithNilInput(t *testing.T) {
 
 func TestRemoteAction_OverwriteExisting(t *testing.T) {
 	name := "overwriteAction_unique_1d2e"
-	RegisterRemoteAction(name, func(ctx context.Context, input interface{}) (interface{}, error) {
+	RegisterRemoteAction(name, func(_ context.Context, _ interface{}) (interface{}, error) {
 		return "first", nil
 	})
-	RegisterRemoteAction(name, func(ctx context.Context, input interface{}) (interface{}, error) {
+	RegisterRemoteAction(name, func(_ context.Context, _ interface{}) (interface{}, error) {
 		return "second", nil
 	})
 
@@ -87,11 +87,11 @@ func TestRemoteAction_OverwriteExisting(t *testing.T) {
 	}
 }
 
-func TestRemoteAction_ConcurrentRegistration(t *testing.T) {
+func TestRemoteAction_ConcurrentRegistration(_ *testing.T) {
 	done := make(chan struct{})
 	go func() {
 		for i := 0; i < 50; i++ {
-			RegisterRemoteAction("concurrent_remote_action", func(ctx context.Context, input interface{}) (interface{}, error) {
+			RegisterRemoteAction("concurrent_remote_action", func(_ context.Context, _ interface{}) (interface{}, error) {
 				return nil, nil
 			})
 		}

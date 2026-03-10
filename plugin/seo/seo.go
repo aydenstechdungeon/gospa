@@ -51,8 +51,8 @@ type Organization struct {
 	Logo string `json:"logo"`
 }
 
-// SEOPlugin provides SEO optimization capabilities.
-type SEOPlugin struct {
+// Plugin provides SEO optimization capabilities.
+type Plugin struct {
 	config *Config
 }
 
@@ -142,7 +142,7 @@ func DefaultConfig() *Config {
 
 // Meta returns a component with meta tags.
 func Meta(p MetaParams) templ.Component {
-	return templ.ComponentFunc(func(ctx context.Context, w io.Writer) error {
+	return templ.ComponentFunc(func(_ context.Context, w io.Writer) error {
 		var sb strings.Builder
 		fmt.Fprintf(&sb, "<title>%s</title>\n", html.EscapeString(p.Title))
 		fmt.Fprintf(&sb, "<meta name=\"description\" content=\"%s\">\n", html.EscapeString(p.Description))
@@ -162,7 +162,7 @@ func Meta(p MetaParams) templ.Component {
 
 // OpenGraph returns a component with Open Graph tags.
 func OpenGraph(p OGParams) templ.Component {
-	return templ.ComponentFunc(func(ctx context.Context, w io.Writer) error {
+	return templ.ComponentFunc(func(_ context.Context, w io.Writer) error {
 		var sb strings.Builder
 		fmt.Fprintf(&sb, "<meta property=\"og:type\" content=\"%s\">\n", html.EscapeString(p.Type))
 		fmt.Fprintf(&sb, "<meta property=\"og:title\" content=\"%s\">\n", html.EscapeString(p.Title))
@@ -178,7 +178,7 @@ func OpenGraph(p OGParams) templ.Component {
 
 // TwitterCard returns a component with Twitter Card tags.
 func TwitterCard(p TwitterParams) templ.Component {
-	return templ.ComponentFunc(func(ctx context.Context, w io.Writer) error {
+	return templ.ComponentFunc(func(_ context.Context, w io.Writer) error {
 		var sb strings.Builder
 		fmt.Fprintf(&sb, "<meta name=\"twitter:card\" content=\"%s\">\n", html.EscapeString(p.Card))
 		fmt.Fprintf(&sb, "<meta name=\"twitter:title\" content=\"%s\">\n", html.EscapeString(p.Title))
@@ -198,7 +198,7 @@ var defaultPlugin = New(DefaultConfig())
 
 // StructuredData generates JSON-LD structured data.
 func StructuredData(data any) templ.Component {
-	return templ.ComponentFunc(func(ctx context.Context, w io.Writer) error {
+	return templ.ComponentFunc(func(_ context.Context, w io.Writer) error {
 		jsonData, err := json.MarshalIndent(data, "", "  ")
 		if err != nil {
 			return err
@@ -214,37 +214,37 @@ func MetaTags(config MetaConfig) string {
 }
 
 // New creates a new SEO plugin.
-func New(cfg *Config) *SEOPlugin {
+func New(cfg *Config) *Plugin {
 	if cfg == nil {
 		cfg = DefaultConfig()
 	}
-	p := &SEOPlugin{config: cfg}
+	p := &Plugin{config: cfg}
 	return p
 }
 
 // Name returns the plugin name.
-func (p *SEOPlugin) Name() string {
+func (p *Plugin) Name() string {
 	return "seo"
 }
 
 // Init initializes the SEO plugin.
-func (p *SEOPlugin) Init() error {
+func (p *Plugin) Init() error {
 	// Create output directory
-	if err := os.MkdirAll(p.config.OutputDir, 0755); err != nil {
+	if err := os.MkdirAll(p.config.OutputDir, 0750); err != nil {
 		return fmt.Errorf("failed to create output directory: %w", err)
 	}
 	return nil
 }
 
 // Dependencies returns required dependencies.
-func (p *SEOPlugin) Dependencies() []plugin.Dependency {
+func (p *Plugin) Dependencies() []plugin.Dependency {
 	return []plugin.Dependency{
 		// No external dependencies required
 	}
 }
 
 // OnHook handles lifecycle hooks.
-func (p *SEOPlugin) OnHook(hook plugin.Hook, ctx map[string]interface{}) error {
+func (p *Plugin) OnHook(hook plugin.Hook, ctx map[string]interface{}) error {
 	switch hook {
 	case plugin.AfterBuild, plugin.AfterGenerate:
 		projectDir, _ := ctx["project_dir"].(string)
@@ -257,7 +257,7 @@ func (p *SEOPlugin) OnHook(hook plugin.Hook, ctx map[string]interface{}) error {
 }
 
 // Commands returns custom CLI commands.
-func (p *SEOPlugin) Commands() []plugin.Command {
+func (p *Plugin) Commands() []plugin.Command {
 	return []plugin.Command{
 		{
 			Name:        "seo:generate",
@@ -297,7 +297,7 @@ func (p *SEOPlugin) Commands() []plugin.Command {
 }
 
 // generateSEOFiles generates all SEO files.
-func (p *SEOPlugin) generateSEOFiles(projectDir string) error {
+func (p *Plugin) generateSEOFiles(projectDir string) error {
 	// Load pages from routes
 	pages, err := p.discoverPages(projectDir)
 	if err != nil {
@@ -325,7 +325,7 @@ func (p *SEOPlugin) generateSEOFiles(projectDir string) error {
 }
 
 // discoverPages discovers pages from the routes directory.
-func (p *SEOPlugin) discoverPages(projectDir string) ([]PageSEO, error) {
+func (p *Plugin) discoverPages(projectDir string) ([]PageSEO, error) {
 	routesDir := filepath.Join(projectDir, p.config.RoutesDir)
 	var pages []PageSEO
 
@@ -373,7 +373,7 @@ func (p *SEOPlugin) discoverPages(projectDir string) ([]PageSEO, error) {
 }
 
 // generateSitemap generates sitemap.xml.
-func (p *SEOPlugin) generateSitemap(pages []PageSEO) error {
+func (p *Plugin) generateSitemap(pages []PageSEO) error {
 	var sb strings.Builder
 	sb.WriteString(`<?xml version="1.0" encoding="UTF-8"?>` + "\n")
 	sb.WriteString(`<urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">` + "\n")
@@ -395,11 +395,11 @@ func (p *SEOPlugin) generateSitemap(pages []PageSEO) error {
 	sb.WriteString("</urlset>\n")
 
 	sitemapPath := filepath.Join(p.config.OutputDir, "sitemap.xml")
-	return os.WriteFile(sitemapPath, []byte(sb.String()), 0644)
+	return os.WriteFile(sitemapPath, []byte(sb.String()), 0600)
 }
 
 // generateRobots generates robots.txt.
-func (p *SEOPlugin) generateRobots() error {
+func (p *Plugin) generateRobots() error {
 	var sb strings.Builder
 	sb.WriteString("# robots.txt for " + p.config.SiteName + "\n")
 	sb.WriteString("User-agent: *\n")
@@ -408,11 +408,11 @@ func (p *SEOPlugin) generateRobots() error {
 	sb.WriteString("Sitemap: " + p.config.SiteURL + "/sitemap.xml\n")
 
 	robotsPath := filepath.Join(p.config.OutputDir, "robots.txt")
-	return os.WriteFile(robotsPath, []byte(sb.String()), 0644)
+	return os.WriteFile(robotsPath, []byte(sb.String()), 0600)
 }
 
 // generateMetaTags generates meta tags for a page.
-func (p *SEOPlugin) generateMetaTags(pagePath string) error {
+func (p *Plugin) generateMetaTags(pagePath string) error {
 	page := PageSEO{
 		Path:        pagePath,
 		Title:       p.config.DefaultTitle,
@@ -458,7 +458,7 @@ func (p *SEOPlugin) generateMetaTags(pagePath string) error {
 }
 
 // generateStructuredData generates JSON-LD structured data.
-func (p *SEOPlugin) generateStructuredData(typeName string) error {
+func (p *Plugin) generateStructuredData(typeName string) error {
 	var data map[string]interface{}
 
 	switch typeName {
@@ -516,7 +516,7 @@ func (p *SEOPlugin) generateStructuredData(typeName string) error {
 }
 
 // GeneratePageMeta generates meta tags for a specific page.
-func (p *SEOPlugin) GeneratePageMeta(page PageSEO) string {
+func (p *Plugin) GeneratePageMeta(page PageSEO) string {
 	var sb strings.Builder
 
 	title := page.Title
@@ -577,9 +577,9 @@ func (p *SEOPlugin) GeneratePageMeta(page PageSEO) string {
 }
 
 // GetConfig returns the current configuration.
-func (p *SEOPlugin) GetConfig() *Config {
+func (p *Plugin) GetConfig() *Config {
 	return p.config
 }
 
-// Ensure SEOPlugin implements CLIPlugin interface.
-var _ plugin.CLIPlugin = (*SEOPlugin)(nil)
+// Ensure Plugin implements CLIPlugin interface.
+var _ plugin.CLIPlugin = (*Plugin)(nil)

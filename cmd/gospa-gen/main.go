@@ -79,7 +79,8 @@ func watch(routesDir string) {
 		return nil
 	})
 	if err != nil {
-		log.Fatal(err)
+		log.Println(err)
+		return
 	}
 
 	fmt.Println("Watching", routesDir, "for changes...")
@@ -224,17 +225,18 @@ func filePathToURLPath(relPath string) (string, []string) {
 
 	for _, part := range parts {
 		// Check for dynamic segment [param]
-		if strings.HasPrefix(part, "[") && strings.HasSuffix(part, "]") {
+		switch {
+		case strings.HasPrefix(part, "[") && strings.HasSuffix(part, "]"):
 			param := strings.Trim(part, "[]")
 			params = append(params, param)
 			urlParts = append(urlParts, ":"+param)
-		} else if strings.HasPrefix(part, "[...") {
+		case strings.HasPrefix(part, "[..."):
 			// Catch-all route [...rest]
 			param := strings.TrimPrefix(part, "[...")
 			param = strings.TrimSuffix(param, "]")
 			params = append(params, param)
 			urlParts = append(urlParts, "*")
-		} else {
+		default:
 			urlParts = append(urlParts, part)
 		}
 	}
@@ -257,18 +259,19 @@ func generateRegistrationFile(routes []RouteInfo) error {
 	sb.WriteString("func init() {\n")
 
 	for _, route := range routes {
-		if route.IsRootLayout {
+		switch {
+		case route.IsRootLayout:
 			sb.WriteString(generateRootLayoutRegistration(route))
-		} else if route.IsLayout {
+		case route.IsLayout:
 			sb.WriteString(generateLayoutRegistration(route))
-		} else {
+		default:
 			sb.WriteString(generatePageRegistration(route))
 		}
 	}
 
 	sb.WriteString("}\n")
 
-	return os.WriteFile("routes_registration.go", []byte(sb.String()), 0644)
+	return os.WriteFile("routes_registration.go", []byte(sb.String()), 0600)
 }
 
 // generatePageRegistration generates registration code for a page component.

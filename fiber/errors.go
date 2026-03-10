@@ -15,15 +15,24 @@ import (
 type ErrorCode string
 
 const (
-	ErrorCodeInternal     ErrorCode = "INTERNAL_ERROR"
-	ErrorCodeNotFound     ErrorCode = "NOT_FOUND"
-	ErrorCodeBadRequest   ErrorCode = "BAD_REQUEST"
+	// ErrorCodeInternal represents an internal server error
+	ErrorCodeInternal ErrorCode = "INTERNAL_ERROR"
+	// ErrorCodeNotFound represents a resource not found error
+	ErrorCodeNotFound ErrorCode = "NOT_FOUND"
+	// ErrorCodeBadRequest represents a bad request error
+	ErrorCodeBadRequest ErrorCode = "BAD_REQUEST"
+	// ErrorCodeUnauthorized represents an unauthorized error
 	ErrorCodeUnauthorized ErrorCode = "UNAUTHORIZED"
-	ErrorCodeForbidden    ErrorCode = "FORBIDDEN"
-	ErrorCodeConflict     ErrorCode = "CONFLICT"
-	ErrorCodeValidation   ErrorCode = "VALIDATION_ERROR"
-	ErrorCodeTimeout      ErrorCode = "TIMEOUT"
-	ErrorCodeUnavailable  ErrorCode = "SERVICE_UNAVAILABLE"
+	// ErrorCodeForbidden represents a forbidden error
+	ErrorCodeForbidden ErrorCode = "FORBIDDEN"
+	// ErrorCodeConflict represents a conflict error
+	ErrorCodeConflict ErrorCode = "CONFLICT"
+	// ErrorCodeValidation represents a validation error
+	ErrorCodeValidation ErrorCode = "VALIDATION_ERROR"
+	// ErrorCodeTimeout represents a timeout error
+	ErrorCodeTimeout ErrorCode = "TIMEOUT"
+	// ErrorCodeUnavailable represents a service unavailable error
+	ErrorCodeUnavailable ErrorCode = "SERVICE_UNAVAILABLE"
 )
 
 // AppError represents an application error.
@@ -65,8 +74,8 @@ func (e *AppError) WithStack(stack string) *AppError {
 }
 
 // WithRecover sets whether state can be recovered.
-func (e *AppError) WithRecover(recover bool) *AppError {
-	e.Recover = recover
+func (e *AppError) WithRecover(recoverFlag bool) *AppError {
+	e.Recover = recoverFlag
 	return e
 }
 

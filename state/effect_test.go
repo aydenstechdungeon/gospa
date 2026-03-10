@@ -255,7 +255,7 @@ func TestWatch3(t *testing.T) {
 	var callCount int
 	var mu sync.Mutex
 
-	unsub := Watch3(a, b, c, func(x, y, z int) {
+	unsub := Watch3(a, b, c, func(_, _, _ int) {
 		mu.Lock()
 		callCount++
 		mu.Unlock()

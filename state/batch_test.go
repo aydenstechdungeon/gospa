@@ -11,7 +11,7 @@ func TestBatch(t *testing.T) {
 	var callCount int
 	var mu sync.Mutex
 
-	unsub := count.Subscribe(func(v int) {
+	unsub := count.Subscribe(func(_ int) {
 		mu.Lock()
 		callCount++
 		mu.Unlock()
@@ -81,7 +81,7 @@ func TestNestedBatch(t *testing.T) {
 	var callCount int
 	var mu sync.Mutex
 
-	unsub := count.Subscribe(func(v int) {
+	unsub := count.Subscribe(func(_ int) {
 		mu.Lock()
 		callCount++
 		mu.Unlock()

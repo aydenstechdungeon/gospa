@@ -77,7 +77,7 @@ func GenerateWithConfig(config *GenerateConfig) error {
 
 func generateTypesWithConfig(config *GenerateConfig) error {
 	// Create output directory
-	if err := os.MkdirAll(config.OutputDir, 0755); err != nil {
+	if err := os.MkdirAll(config.OutputDir, 0750); err != nil {
 		return fmt.Errorf("failed to create output directory: %w", err)
 	}
 
@@ -112,7 +112,7 @@ func generateTypesWithConfig(config *GenerateConfig) error {
 
 func generateRoutesWithConfig(config *GenerateConfig) error {
 	// Create output directory
-	if err := os.MkdirAll(config.OutputDir, 0755); err != nil {
+	if err := os.MkdirAll(config.OutputDir, 0750); err != nil {
 		return fmt.Errorf("failed to create output directory: %w", err)
 	}
 
@@ -338,10 +338,8 @@ func parseTemplRoute(filename, baseDir string) (*RouteDefinition, error) {
 		path = "/" + strings.ReplaceAll(dir, string(filepath.Separator), "/")
 	}
 
-	// Handle page.templ files
-	if file == "page.templ" {
-		// Path is already correct
-	} else {
+	// Handle non-page.templ files
+	if file != "page.templ" {
 		// Add filename to path
 		path = path + "/" + strings.TrimSuffix(file, ".templ")
 	}
@@ -417,7 +415,7 @@ func writeTypeScriptFile(outputDir string, types map[string]TypeScriptType) erro
 
 	// Write to file
 	outputPath := filepath.Join(outputDir, "types.ts")
-	return os.WriteFile(outputPath, []byte(sb.String()), 0644)
+	return os.WriteFile(outputPath, []byte(sb.String()), 0600)
 }
 
 func writeRoutesFile(outputDir string, routes []RouteDefinition) error {
@@ -465,5 +463,5 @@ func writeRoutesFile(outputDir string, routes []RouteDefinition) error {
 
 	// Write to file
 	outputPath := filepath.Join(outputDir, "routes.ts")
-	return os.WriteFile(outputPath, []byte(sb.String()), 0644)
+	return os.WriteFile(outputPath, []byte(sb.String()), 0600)
 }

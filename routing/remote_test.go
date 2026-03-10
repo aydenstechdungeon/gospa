@@ -13,7 +13,7 @@ func TestRegisterRemoteAction(t *testing.T) {
 	globalRemoteRegistry.mu.Unlock()
 
 	// Register a simple action
-	RegisterRemoteAction("testAction", func(ctx context.Context, input interface{}) (interface{}, error) {
+	RegisterRemoteAction("testAction", func(_ context.Context, _ interface{}) (interface{}, error) {
 		return "result", nil
 	})
 
@@ -53,7 +53,7 @@ func TestRemoteActionWithInput(t *testing.T) {
 	globalRemoteRegistry.mu.Unlock()
 
 	// Register action that processes input
-	RegisterRemoteAction("addOne", func(ctx context.Context, input interface{}) (interface{}, error) {
+	RegisterRemoteAction("addOne", func(_ context.Context, input interface{}) (interface{}, error) {
 		if num, ok := input.(float64); ok {
 			return num + 1, nil
 		}
@@ -85,7 +85,7 @@ func TestRemoteActionWithError(t *testing.T) {
 	globalRemoteRegistry.mu.Unlock()
 
 	// Register action that returns error
-	RegisterRemoteAction("errorAction", func(ctx context.Context, input interface{}) (interface{}, error) {
+	RegisterRemoteAction("errorAction", func(_ context.Context, _ interface{}) (interface{}, error) {
 		return nil, errors.New("something went wrong")
 	})
 
@@ -113,7 +113,7 @@ func TestRemoteActionWithContext(t *testing.T) {
 	globalRemoteRegistry.mu.Unlock()
 
 	// Register action that checks context
-	RegisterRemoteAction("contextAction", func(ctx context.Context, input interface{}) (interface{}, error) {
+	RegisterRemoteAction("contextAction", func(ctx context.Context, _ interface{}) (interface{}, error) {
 		select {
 		case <-ctx.Done():
 			return nil, ctx.Err()
@@ -153,13 +153,13 @@ func TestMultipleRemoteActions(t *testing.T) {
 	globalRemoteRegistry.mu.Unlock()
 
 	// Register multiple actions
-	RegisterRemoteAction("action1", func(ctx context.Context, input interface{}) (interface{}, error) {
+	RegisterRemoteAction("action1", func(_ context.Context, _ interface{}) (interface{}, error) {
 		return "result1", nil
 	})
-	RegisterRemoteAction("action2", func(ctx context.Context, input interface{}) (interface{}, error) {
+	RegisterRemoteAction("action2", func(_ context.Context, _ interface{}) (interface{}, error) {
 		return "result2", nil
 	})
-	RegisterRemoteAction("action3", func(ctx context.Context, input interface{}) (interface{}, error) {
+	RegisterRemoteAction("action3", func(_ context.Context, _ interface{}) (interface{}, error) {
 		return "result3", nil
 	})
 
@@ -188,12 +188,12 @@ func TestOverwriteRemoteAction(t *testing.T) {
 	globalRemoteRegistry.mu.Unlock()
 
 	// Register initial action
-	RegisterRemoteAction("overwrite", func(ctx context.Context, input interface{}) (interface{}, error) {
+	RegisterRemoteAction("overwrite", func(_ context.Context, _ interface{}) (interface{}, error) {
 		return "first", nil
 	})
 
 	// Overwrite with new action
-	RegisterRemoteAction("overwrite", func(ctx context.Context, input interface{}) (interface{}, error) {
+	RegisterRemoteAction("overwrite", func(_ context.Context, _ interface{}) (interface{}, error) {
 		return "second", nil
 	})
 
@@ -215,7 +215,7 @@ func TestRemoteActionConcurrentAccess(t *testing.T) {
 	globalRemoteRegistry.mu.Unlock()
 
 	// Register action
-	RegisterRemoteAction("concurrent", func(ctx context.Context, input interface{}) (interface{}, error) {
+	RegisterRemoteAction("concurrent", func(_ context.Context, _ interface{}) (interface{}, error) {
 		return "ok", nil
 	})
 

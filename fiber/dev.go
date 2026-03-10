@@ -586,7 +586,7 @@ func devPanelHTML() string {
 }
 
 // DebugMiddleware logs requests and state changes.
-func DebugMiddleware(devTools *DevTools) fiberpkg.Handler {
+func DebugMiddleware(_ *DevTools) fiberpkg.Handler {
 	return func(c *fiberpkg.Ctx) error {
 		start := time.Now()
 

@@ -28,8 +28,8 @@ const (
 	LevelHigh
 )
 
-// QRCodePlugin is the QR code generation plugin for GoSPA.
-type QRCodePlugin struct {
+// Plugin is the QR code generation plugin for GoSPA.
+type Plugin struct {
 	// DefaultSize is the default QR code size in pixels.
 	DefaultSize int
 	// DefaultLevel is the default error correction level.
@@ -61,11 +61,11 @@ type Config struct {
 	DefaultLevel string `yaml:"default_level" json:"defaultLevel"`
 }
 
-var _ plugin.Plugin = (*QRCodePlugin)(nil)
+var _ plugin.Plugin = (*Plugin)(nil)
 
 // NewPlugin creates a new QR code plugin with default settings.
-func NewPlugin() *QRCodePlugin {
-	return &QRCodePlugin{
+func NewPlugin() *Plugin {
+	return &Plugin{
 		DefaultSize:       256,
 		DefaultLevel:      LevelMedium,
 		DefaultForeground: color.Black,
@@ -74,7 +74,7 @@ func NewPlugin() *QRCodePlugin {
 }
 
 // NewWithConfig creates a new QR code plugin with configuration.
-func NewWithConfig(cfg Config) *QRCodePlugin {
+func NewWithConfig(cfg Config) *Plugin {
 	p := NewPlugin()
 	if cfg.DefaultSize > 0 {
 		p.DefaultSize = cfg.DefaultSize
@@ -91,17 +91,17 @@ func NewWithConfig(cfg Config) *QRCodePlugin {
 }
 
 // Name returns the plugin name.
-func (p *QRCodePlugin) Name() string {
+func (p *Plugin) Name() string {
 	return "qrcode"
 }
 
 // Init initializes the plugin.
-func (p *QRCodePlugin) Init() error {
+func (p *Plugin) Init() error {
 	return nil
 }
 
 // Dependencies returns the plugin dependencies.
-func (p *QRCodePlugin) Dependencies() []plugin.Dependency {
+func (p *Plugin) Dependencies() []plugin.Dependency {
 	return nil
 }
 
@@ -128,7 +128,7 @@ func WithColors(foreground, background color.Color) Option {
 }
 
 // NewQRCode creates a new QR code with the given content and options.
-func (p *QRCodePlugin) NewQRCode(content string, opts ...Option) *QRCode {
+func (p *Plugin) NewQRCode(content string, opts ...Option) *QRCode {
 	qr := &QRCode{
 		Content:    content,
 		Level:      p.DefaultLevel,
@@ -143,23 +143,23 @@ func (p *QRCodePlugin) NewQRCode(content string, opts ...Option) *QRCode {
 }
 
 // Generate generates a QR code image for the given content.
-func (p *QRCodePlugin) Generate(content string, opts ...Option) (image.Image, error) {
+func (p *Plugin) Generate(content string, opts ...Option) (image.Image, error) {
 	return p.NewQRCode(content, opts...).Generate()
 }
 
 // GeneratePNG generates a PNG-encoded QR code.
-func (p *QRCodePlugin) GeneratePNG(content string, opts ...Option) ([]byte, error) {
+func (p *Plugin) GeneratePNG(content string, opts ...Option) ([]byte, error) {
 	return p.NewQRCode(content, opts...).PNG()
 }
 
 // GenerateDataURL generates a data URL for the QR code.
-func (p *QRCodePlugin) GenerateDataURL(content string, opts ...Option) (string, error) {
+func (p *Plugin) GenerateDataURL(content string, opts ...Option) (string, error) {
 	return p.NewQRCode(content, opts...).DataURL()
 }
 
 // ForOTP generates a QR code for OTP/TOTP setup.
 // The URL should be in the format: otpauth://totp/Issuer:Account?secret=XXX&issuer=Issuer
-func (p *QRCodePlugin) ForOTP(otpURL string, opts ...Option) (string, error) {
+func (p *Plugin) ForOTP(otpURL string, opts ...Option) (string, error) {
 	// Default to larger size for OTP codes
 	opts = append([]Option{WithSize(300)}, opts...)
 	return p.GenerateDataURL(otpURL, opts...)
@@ -216,7 +216,7 @@ func (qr *QRCode) DataURL() (string, error) {
 }
 
 // GenerateWithLogo generates a QR code with a logo in the center.
-func (p *QRCodePlugin) GenerateWithLogo(content string, logo image.Image, opts ...Option) (image.Image, error) {
+func (p *Plugin) GenerateWithLogo(content string, logo image.Image, opts ...Option) (image.Image, error) {
 	qr := p.NewQRCode(content, opts...)
 
 	// Generate base QR code
@@ -274,7 +274,7 @@ func overlayLogo(qr image.Image, logo image.Image, size int) (image.Image, error
 }
 
 // GeneratePNGWithLogo generates a PNG QR code with a logo.
-func (p *QRCodePlugin) GeneratePNGWithLogo(content string, logo image.Image, opts ...Option) ([]byte, error) {
+func (p *Plugin) GeneratePNGWithLogo(content string, logo image.Image, opts ...Option) ([]byte, error) {
 	img, err := p.GenerateWithLogo(content, logo, opts...)
 	if err != nil {
 		return nil, err

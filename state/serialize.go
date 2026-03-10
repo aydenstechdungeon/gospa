@@ -17,6 +17,8 @@ type Serializable interface {
 }
 
 // StateMap is a collection of generic observables for component state
+//
+//nolint:revive // changing name would break API
 type StateMap struct {
 	mu           sync.RWMutex
 	observables  map[string]Observable
@@ -139,6 +141,8 @@ func (sm *StateMap) Remove(name string) *StateMap {
 
 // StateMapComparison represents a diff between two StateMaps
 // with added, removed, and changed keys.
+//
+//nolint:revive // changing name would break API
 type StateMapComparison struct {
 	Added   map[string]interface{} `json:"added"`
 	Removed map[string]interface{} `json:"removed"`
@@ -387,6 +391,8 @@ func extractValue(r interface{}) interface{} {
 }
 
 // StateSnapshot represents a snapshot of component state at a point in time
+//
+//nolint:revive // changing name would break API
 type StateSnapshot struct {
 	ComponentID string                 `json:"componentId"`
 	State       map[string]interface{} `json:"state"`
@@ -413,6 +419,8 @@ func (s *StateSnapshot) MarshalJSON() ([]byte, error) {
 }
 
 // StateDiff represents a change in state
+//
+//nolint:revive // changing name would break API
 type StateDiff struct {
 	ComponentID string      `json:"componentId"`
 	Key         string      `json:"key"`
@@ -443,6 +451,8 @@ func (d *StateDiff) MarshalJSON() ([]byte, error) {
 }
 
 // StateMessage represents a message sent between server and client
+//
+//nolint:revive // changing name would break API
 type StateMessage struct {
 	Type        string      `json:"type"` // "init", "update", "sync", "error"
 	ComponentID string      `json:"componentId,omitempty"`
@@ -518,10 +528,12 @@ func currentTimeMillis() int64 {
 	return time.Now().UnixMilli()
 }
 
-// ValidateState validates state against a schema
+// Validator validates state against a schema
 type Validator func(interface{}) error
 
 // StateValidator validates state values
+//
+//nolint:revive // changing name would break API
 type StateValidator struct {
 	validators map[string]Validator
 }

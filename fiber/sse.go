@@ -110,14 +110,15 @@ func NewSSEBroker(config *SSEConfig) *SSEBroker {
 		b.mutex.RLock()
 		defer b.mutex.RUnlock()
 
-		if sseMsg.Target == "all" {
+		switch {
+		case sseMsg.Target == "all":
 			for _, client := range b.clients {
 				select {
 				case client.Channel <- sseMsg.Event:
 				default:
 				}
 			}
-		} else if len(sseMsg.Target) > 6 && sseMsg.Target[:6] == "topic:" {
+		case len(sseMsg.Target) > 6 && sseMsg.Target[:6] == "topic:":
 			topic := sseMsg.Target[6:]
 			for _, client := range b.clients {
 				if client.Topics[topic] {
@@ -127,7 +128,7 @@ func NewSSEBroker(config *SSEConfig) *SSEBroker {
 					}
 				}
 			}
-		} else if len(sseMsg.Target) > 7 && sseMsg.Target[:7] == "client:" {
+		case len(sseMsg.Target) > 7 && sseMsg.Target[:7] == "client:":
 			clientID := sseMsg.Target[7:]
 			if client, exists := b.clients[clientID]; exists {
 				select {

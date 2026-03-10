@@ -1,121 +1,255 @@
-cli/dev.go:65:27: Error return value of `serverCmd.Process.Signal` is not checked (errcheck)
-		serverCmd.Process.Signal(os.Interrupt)
-		                        ^
-cli/dev.go:66:17: Error return value of `serverCmd.Wait` is not checked (errcheck)
-		serverCmd.Wait()
-		              ^
-cli/dev.go:124:27: Error return value of `serverCmd.Process.Signal` is not checked (errcheck)
-		serverCmd.Process.Signal(os.Interrupt)
-		                        ^
-cli/dev.go:125:17: Error return value of `serverCmd.Wait` is not checked (errcheck)
-		serverCmd.Wait()
-		              ^
-cli/dev.go:221:15: Error return value of `filepath.Walk` is not checked (errcheck)
-	filepath.Walk(dir, func(path string, info os.FileInfo, err error) error {
-	             ^
-cli/dev.go:306:28: Error return value of `serverCmd.Process.Signal` is not checked (errcheck)
-			serverCmd.Process.Signal(os.Interrupt)
-			                        ^
-cli/dev.go:307:18: Error return value of `serverCmd.Wait` is not checked (errcheck)
-			serverCmd.Wait()
-			              ^
-cli/dev.go:405:26: Error return value of `s.server.Process.Signal` is not checked (errcheck)
-		s.server.Process.Signal(os.Interrupt)
-		                       ^
-cli/dev.go:406:16: Error return value of `s.server.Wait` is not checked (errcheck)
-		s.server.Wait()
-		             ^
-fiber/dev.go:115:15: Error return value of `filepath.Walk` is not checked (errcheck)
-	filepath.Walk(dir, func(path string, info os.FileInfo, err error) error {
-	             ^
-fiber/dev.go:133:17: Error return value of `filepath.Walk` is not checked (errcheck)
-			filepath.Walk(dir, func(path string, info os.FileInfo, err error) error {
-			             ^
-fiber/dev.go:313:11: Error return value of `c.Close` is not checked (errcheck)
-			c.Close()
-			       ^
-fiber/errors.go:121:21: Error return value of `appErr.WithStack` is not checked (errcheck)
-				appErr.WithStack(string(debug.Stack()))
-				                ^
-fiber/errors.go:289:22: Error return value of `appErr.WithStack` is not checked (errcheck)
-					appErr.WithStack(string(debug.Stack()))
-					                ^
-fiber/websocket.go:150:15: Error return value of `c.Conn.Close` is not checked (errcheck)
-		c.Conn.Close()
-		            ^
-fiber/websocket.go:171:20: Error return value of `c.Conn.Close` is not checked (errcheck)
-	defer c.Conn.Close()
-	                  ^
-fiber/websocket.go:213:12: Error return value of `c.SendJSON` is not checked (errcheck)
-	c.SendJSON(map[string]interface{}{
-	          ^
-fiber/websocket.go:227:12: Error return value of `c.SendJSON` is not checked (errcheck)
-	c.SendJSON(map[string]interface{}{
-	          ^
-fiber/websocket.go:329:18: Error return value of `client.SendJSON` is not checked (errcheck)
-		client.SendJSON(map[string]interface{}{
-		               ^
-fiber/websocket.go:341:18: Error return value of `client.SendJSON` is not checked (errcheck)
-		client.SendJSON(map[string]interface{}{
-		               ^
-gospa.go:243:15: Error return value of `fmt.Fprintf` is not checked (errcheck)
-			fmt.Fprintf(w, `<div data-gospa-page="%s">Page: %s</div>`, route.Path, route.Path)
-			           ^
-gospa.go:268:16: Error return value of `fmt.Fprintf` is not checked (errcheck)
-				fmt.Fprintf(w, `<div data-gospa-layout="%s">`, layout.Path)
-				           ^
-gospa.go:272:15: Error return value of `fmt.Fprint` is not checked (errcheck)
-				fmt.Fprint(w, `</div>`)
-				          ^
-gospa.go:282:12: Error return value of `fmt.Fprint` is not checked (errcheck)
-	fmt.Fprint(c, `<!DOCTYPE html><html lang="en"><head><meta charset="UTF-8"><meta name="viewport" content="width=device-width, initial-scale=1.0"><title>`)
-	          ^
-gospa.go:283:12: Error return value of `fmt.Fprint` is not checked (errcheck)
-	fmt.Fprint(c, a.Config.AppName)
-	          ^
-gospa.go:296:14: Error return value of `fmt.Fprintf` is not checked (errcheck)
-		fmt.Fprintf(c, `<script src="%s"></script>`, a.Config.RuntimeScript)
-		           ^
-cli/dev.go:411:2: S1000: should use for range instead of for { select {} } (staticcheck)
-	for {
+gospa.go:348:2: ifElseChain: rewrite if-else to switch statement (gocritic)
+	if config.SSGCacheMaxEntries == 0 {
 	^
-cli/generate.go:364:4: S1017: should replace this if statement with an unconditional strings.TrimPrefix (staticcheck)
-			if strings.HasPrefix(param, "...") {
-			^
-cmd/gospa-gen/main.go:210:2: QF1012: Use fmt.Fprintf(...) instead of WriteString(fmt.Sprintf(...)) (staticcheck)
-	sb.WriteString(fmt.Sprintf("\trouting.RegisterPage(%q, func(props map[string]interface{}) templ.Component {\n", route.URLPath))
-	^
-cmd/gospa-gen/main.go:215:4: QF1012: Use fmt.Fprintf(...) instead of WriteString(fmt.Sprintf(...)) (staticcheck)
-			sb.WriteString(fmt.Sprintf("\t\t%s, _ := props[%q].(string)\n", param, param))
-			^
-cmd/gospa-gen/main.go:217:3: QF1012: Use fmt.Fprintf(...) instead of WriteString(fmt.Sprintf(...)) (staticcheck)
-		sb.WriteString(fmt.Sprintf("\t\treturn %s(%s)\n", route.ComponentFn, strings.Join(route.Params, ", ")))
+templ/bind.go:272:3: ifElseChain: rewrite if-else to switch statement (gocritic)
+		if binding.Attr != "" {
 		^
-fiber/errors.go:280:12: SA1006: printf-style function with dynamic format string and no further arguments should use print-style function instead (staticcheck)
-					err = fmt.Errorf(v)
-					      ^
-routing/generator/generate.go:327:22: SA1019: strings.Title has been deprecated since Go 1.18 and an alternative has been available since Go 1.0: The rule Title uses for word boundaries does not handle Unicode punctuation properly. Use golang.org/x/text/cases instead. (staticcheck)
-		result.WriteString(strings.Title(part))
-		                   ^
-templ/layout.go:68:14: ST1023: should omit type templ.Component from declaration; it will be inferred from the right-hand side (staticcheck)
-	var current templ.Component = lc.Page
-	            ^
-cmd/gospa-gen/main.go:242:5: var componentPattern is unused (unused)
-var componentPattern = regexp.MustCompile(`^templ\s+([A-Z][a-zA-Z0-9]*)\s*\(`)
-    ^
-fiber/dev.go:58:2: field lastEvent is unused (unused)
-	lastEvent time.Time
+templ/streaming.go:238:3: ifElseChain: rewrite if-else to switch statement (gocritic)
+		if isCritical || island.Config.Priority == component.PriorityHigh {
+		^
+cli/build.go:145:9: G204: Subprocess launched with variable (gosec)
+	cmd := exec.Command(bunPath, "build", "src/runtime.ts", "--outfile", outputPath, "--minify")
+	       ^
+cli/build.go:171:9: G204: Subprocess launched with variable (gosec)
+	cmd := exec.Command("go", args...)
+	       ^
+plugin/auth/auth.go:1176:16: G101: Potential hardcoded credentials (gosec)
+		"microsoft": {
+			Name:         "Microsoft",
+			ClientID:     p.config.MicrosoftClientID,
+			ClientSecret: p.config.MicrosoftClientSecret,
+			AuthURL:      "https://login.microsoftonline.com/common/oauth2/v2.0/authorize",
+			TokenURL:     "https://login.microsoftonline.com/common/oauth2/v2.0/token",
+			UserURL:      "https://graph.microsoft.com/v1.0/me",
+			Scopes:       []string{"openid", "email", "profile"},
+		},
+plugin/auth/auth.go:1185:14: G101: Potential hardcoded credentials (gosec)
+		"discord": {
+			Name:         "Discord",
+			ClientID:     p.config.DiscordClientID,
+			ClientSecret: p.config.DiscordClientSecret,
+			AuthURL:      "https://discord.com/api/oauth2/authorize",
+			TokenURL:     "https://discord.com/api/oauth2/token",
+			UserURL:      "https://discord.com/api/users/@me",
+			Scopes:       []string{"identify", "email"},
+		},
+plugin/auth/auth.go:1203:14: G101: Potential hardcoded credentials (gosec)
+		"twitter": {
+			Name:         "Twitter",
+			ClientID:     p.config.TwitterClientID,
+			ClientSecret: p.config.TwitterClientSecret,
+			AuthURL:      "https://twitter.com/i/oauth2/authorize",
+			TokenURL:     "https://api.twitter.com/2/oauth2/token",
+			UserURL:      "https://api.twitter.com/2/users/me",
+			Scopes:       []string{"tweet.read", "users.read"},
+		},
+plugin/postcss/postcss.go:508:10: G204: Subprocess launched with a potential tainted input or cmd arguments (gosec)
+		cmd := exec.CommandContext(ctx, "bun", append([]string{"x"}, args...)...)
+		       ^
+plugin/postcss/postcss.go:552:9: G204: Subprocess launched with a potential tainted input or cmd arguments (gosec)
+	cmd := exec.Command("bun", append([]string{"x"}, args...)...)
+	       ^
+plugin/postcss/postcss.go:779:10: G204: Subprocess launched with a potential tainted input or cmd arguments (gosec)
+		cmd := exec.Command("bun", append([]string{"x"}, args...)...)
+		       ^
+plugin/postcss/postcss.go:837:18: G304: Potential file inclusion via variable (gosec)
+	fullCSS, err := os.ReadFile(fullCSSPath)
+	                ^
+plugin/tailwind/tailwind.go:76:12: G301: Expect directory permissions to be 0750 or less (gosec)
+	if err := os.MkdirAll(outputDir, 0755); err != nil {
+	          ^
+plugin/tailwind/tailwind.go:192:12: G301: Expect directory permissions to be 0750 or less (gosec)
+	if err := os.MkdirAll(inputDir, 0755); err != nil {
+	          ^
+routing/generator/generate.go:51:12: G306: Expect WriteFile permissions to be 0600 or less (gosec)
+	if err := os.WriteFile(outputPath, []byte(code), 0644); err != nil {
+	          ^
+routing/generator/generate.go:64:12: G301: Expect directory permissions to be 0750 or less (gosec)
+	if err := os.MkdirAll(generatedDir, 0755); err != nil {
+	          ^
+routing/generator/generate.go:192:18: G304: Potential file inclusion via variable (gosec)
+	content, err := os.ReadFile(path)
+	                ^
+routing/generator/generate.go:534:19: G304: Potential file inclusion via variable (gosec)
+		content, err := os.ReadFile(goModPath)
+		                ^
+routing/generator/routesgen.go:83:9: G306: Expect WriteFile permissions to be 0600 or less (gosec)
+	return os.WriteFile(outPath, []byte(sb.String()), 0644)
+	       ^
+routing/generator/tsgen.go:100:9: G306: Expect WriteFile permissions to be 0600 or less (gosec)
+	return os.WriteFile(outPath, []byte(sb.String()), 0644)
+	       ^
+scripts/tag.go:166:25: G703: Path traversal via taint analysis (gosec)
+		if err := os.WriteFile("gospa.go", []byte(content), 0600); err != nil {
+		                      ^
+scripts/tag.go:196:25: G703: Path traversal via taint analysis (gosec)
+		if err := os.WriteFile(path, []byte(content), 0600); err != nil {
+		                      ^
+scripts/tag.go:220:25: G703: Path traversal via taint analysis (gosec)
+		if err := os.WriteFile(path, []byte(newContent), 0600); err != nil {
+		                      ^
+tests/benchmark.go:61:9: G204: Subprocess launched with variable (gosec)
+	cmd := exec.Command(serverPath)
+	       ^
+component/reactive_detection.go:29:2: directive `//nolint:revive // changing name would break API` is unused for linter "revive" (nolintlint)
+	//nolint:revive // changing name would break API
 	^
-routing/generator/generate.go:334:6: func generateLayoutCallArgs is unused (unused)
-func generateLayoutCallArgs(params []FuncParam, fnName string) string {
+component/props.go:223:1: exported: comment on exported function PropsFromJSON should be of the form "PropsFromJSON ..." (revive)
+// FromJSON creates Props from JSON.
+^
+component/reactive_detection.go:31:2: exported: exported const BoundaryTypeDerived should have comment (or a comment on this block) or be unexported (revive)
+	BoundaryTypeDerived   BoundaryType = "derived"
+	^
+fiber/compression.go:244:70: unused-parameter: parameter 'contentType' seems to be unused, consider removing or renaming it as _ (revive)
+func (s *StaticCompressionMiddleware) CompressStatic(content []byte, contentType string) *CompressedContent {
+                                                                     ^
+fiber/dev.go:589:22: unused-parameter: parameter 'devTools' seems to be unused, consider removing or renaming it as _ (revive)
+func DebugMiddleware(devTools *DevTools) fiberpkg.Handler {
+                     ^
+fiber/errors.go:18:2: exported: exported const ErrorCodeInternal should have comment (or a comment on this block) or be unexported (revive)
+	ErrorCodeInternal     ErrorCode = "INTERNAL_ERROR"
+	^
+fiber/errors.go:68:32: redefines-builtin-id: redefinition of the built-in function recover (revive)
+func (e *AppError) WithRecover(recover bool) *AppError {
+                               ^
+fiber/websocket.go:280:45: unused-parameter: parameter 'clientID' seems to be unused, consider removing or renaming it as _ (revive)
+func (s *SessionStore) RemoveClientSessions(clientID string) {
+                                            ^
+fiber/websocket.go:1336:23: unused-parameter: parameter 'hub' seems to be unused, consider removing or renaming it as _ (revive)
+func StateSyncHandler(hub *WSHub) fiberpkg.Handler {
+                      ^
+gospa.go:989:34: unused-parameter: parameter 'ctx' seems to be unused, consider removing or renaming it as _ (revive)
+	return templ.ComponentFunc(func(ctx context.Context, w io.Writer) error {
+	                                ^
+plugin/postcss/postcss.go:18:6: exported: type name will be used as postcss.PostCSSPlugin by other packages, and that stutters; consider calling this Plugin (revive)
+type PostCSSPlugin struct {
      ^
-routing/generator/generate.go:385:6: func generatePageCall is unused (unused)
-func generatePageCall(route RouteInfo) string {
+plugin/seo/seo.go:201:34: unused-parameter: parameter 'ctx' seems to be unused, consider removing or renaming it as _ (revive)
+	return templ.ComponentFunc(func(ctx context.Context, w io.Writer) error {
+	                                ^
+plugin/tailwind/tailwind.go:46:6: exported: type name will be used as tailwind.TailwindPlugin by other packages, and that stutters; consider calling this Plugin (revive)
+type TailwindPlugin struct {
      ^
-state/effect.go:217:5: var globalScheduler is unused (unused)
-var globalScheduler = &Scheduler{}
-    ^
-39 issues:
-* errcheck: 26
-* staticcheck: 8
-* unused: 5
+plugin/tailwind/tailwind.go:91:51: unused-parameter: parameter 'ctx' seems to be unused, consider removing or renaming it as _ (revive)
+func (p *TailwindPlugin) OnHook(hook plugin.Hook, ctx map[string]interface{}) error {
+                                                  ^
+plugin/tailwind/tailwind.go:178:34: unused-parameter: parameter 'args' seems to be unused, consider removing or renaming it as _ (revive)
+func (p *TailwindPlugin) install(args []string) error {
+                                 ^
+plugin/tailwind/tailwind.go:250:39: unused-parameter: parameter 'args' seems to be unused, consider removing or renaming it as _ (revive)
+func (p *TailwindPlugin) buildCommand(args []string) error {
+                                      ^
+plugin/tailwind/tailwind.go:255:39: unused-parameter: parameter 'args' seems to be unused, consider removing or renaming it as _ (revive)
+func (p *TailwindPlugin) watchCommand(args []string) error {
+                                      ^
+routing/auto.go:20:2: exported: exported const RouteTypePage should have comment (or a comment on this block) or be unexported (revive)
+	RouteTypePage RouteType = iota
+	^
+routing/auto.go:166:52: unused-parameter: parameter 'routeType' seems to be unused, consider removing or renaming it as _ (revive)
+func (r *Router) filePathToURLPath(relPath string, routeType RouteType) string {
+                                                   ^
+routing/auto.go:308:37: unused-parameter: parameter 'isDynamic' seems to be unused, consider removing or renaming it as _ (revive)
+func calculatePriority(path string, isDynamic bool, isCatchAll bool) int {
+                                    ^
+routing/params.go:70:1: exported: comment on exported function ParamsFromJSON should be of the form "ParamsFromJSON ..." (revive)
+// FromJSON creates Params from JSON.
+^
+routing/registry_test.go:20:33: unused-parameter: parameter 'props' seems to be unused, consider removing or renaming it as _ (revive)
+	reg.RegisterPage("/test", func(props map[string]interface{}) templ.Component {
+	                               ^
+routing/registry_test.go:31:33: unused-parameter: parameter 'props' seems to be unused, consider removing or renaming it as _ (revive)
+	reg.RegisterPage("/home", func(props map[string]interface{}) templ.Component {
+	                               ^
+routing/registry_test.go:41:33: unused-parameter: parameter 'props' seems to be unused, consider removing or renaming it as _ (revive)
+	reg.RegisterPage("/home", func(props map[string]interface{}) templ.Component {
+	                               ^
+routing/registry_test.go:93:40: unused-parameter: parameter 'children' seems to be unused, consider removing or renaming it as _ (revive)
+	reg.RegisterLayout("/dashboard", func(children templ.Component, props map[string]interface{}) templ.Component {
+	                                      ^
+routing/registry_test.go:131:30: unused-parameter: parameter 'children' seems to be unused, consider removing or renaming it as _ (revive)
+	reg.RegisterRootLayout(func(children templ.Component, props map[string]interface{}) templ.Component {
+	                            ^
+routing/registry_test.go:200:32: unused-parameter: parameter 't' seems to be unused, consider removing or renaming it as _ (revive)
+func TestRegistry_ThreadSafety(t *testing.T) {
+                               ^
+routing/registry_test.go:209:43: unused-parameter: parameter 'children' seems to be unused, consider removing or renaming it as _ (revive)
+			reg.RegisterLayout("/concurrent", func(children templ.Component, props map[string]interface{}) templ.Component {
+			                                       ^
+routing/remote.go:11:6: exported: exported type RemoteRegistry should have comment or be unexported (revive)
+type RemoteRegistry struct {
+     ^
+routing/remote_comprehensive_test.go:90:46: unused-parameter: parameter 't' seems to be unused, consider removing or renaming it as _ (revive)
+func TestRemoteAction_ConcurrentRegistration(t *testing.T) {
+                                             ^
+routing/remote_test.go:116:66: unused-parameter: parameter 'input' seems to be unused, consider removing or renaming it as _ (revive)
+	RegisterRemoteAction("contextAction", func(ctx context.Context, input interface{}) (interface{}, error) {
+	                                                                ^
+state/batch_test.go:14:32: unused-parameter: parameter 'v' seems to be unused, consider removing or renaming it as _ (revive)
+	unsub := count.Subscribe(func(v int) {
+	                              ^
+state/batch_test.go:84:32: unused-parameter: parameter 'v' seems to be unused, consider removing or renaming it as _ (revive)
+	unsub := count.Subscribe(func(v int) {
+	                              ^
+state/derived_comprehensive_test.go:119:32: unused-parameter: parameter 'v' seems to be unused, consider removing or renaming it as _ (revive)
+	unsub := count.Subscribe(func(v int) {
+	                              ^
+state/serialize.go:20:6: exported: type name will be used as state.StateMap by other packages, and that stutters; consider calling this Map (revive)
+type StateMap struct {
+     ^
+state/serialize.go:142:6: exported: type name will be used as state.StateMapComparison by other packages, and that stutters; consider calling this MapComparison (revive)
+type StateMapComparison struct {
+     ^
+state/serialize.go:390:6: exported: type name will be used as state.StateSnapshot by other packages, and that stutters; consider calling this Snapshot (revive)
+type StateSnapshot struct {
+     ^
+state/serialize.go:416:6: exported: type name will be used as state.StateDiff by other packages, and that stutters; consider calling this Diff (revive)
+type StateDiff struct {
+     ^
+state/serialize.go:446:6: exported: type name will be used as state.StateMessage by other packages, and that stutters; consider calling this Message (revive)
+type StateMessage struct {
+     ^
+state/serialize.go:525:6: exported: type name will be used as state.StateValidator by other packages, and that stutters; consider calling this Validator (revive)
+type StateValidator struct {
+     ^
+store/pubsub.go:1:1: package-comments: should have a package comment (revive)
+package store
+^
+store/store_test.go:116:41: unused-parameter: parameter 't' seems to be unused, consider removing or renaming it as _ (revive)
+func TestMemoryStorage_ConcurrentAccess(t *testing.T) {
+                                        ^
+templ/component.go:242:35: unused-parameter: parameter 'render' seems to be unused, consider removing or renaming it as _ (revive)
+func DefineComponent(name string, render ComponentFunc, opts ...ComponentOption) *Component {
+                                  ^
+templ/component.go:410:1: exported: comment on exported function NewSlot should be of the form "NewSlot ..." (revive)
+// Slot creates a new slot.
+^
+templ/layout.go:112:34: redefines-builtin-id: redefinition of the built-in type error (revive)
+func (lc *LayoutChain) WithError(error templ.Component) *LayoutChain {
+                                 ^
+templ/layout.go:134:1: exported: comment on exported method LayoutProps.WithData should be of the form "WithData ..." (revive)
+// WithLayoutData adds data to layout props.
+^
+templ/render.go:626:56: var-naming: don't use underscores in Go names; method parameter defer_ should be defer (revive)
+func (h *HeadManager) AddHeadScript(src string, async, defer_ bool) *HeadManager {
+                                                       ^
+templ/render.go:768:1: redefines-builtin-id: redefinition of the built-in function min (revive)
+func min(a, b int) int {
+	if a < b {
+		return a
+	}
+	return b
+}
+templ/render.go:832:36: var-naming: don't use underscores in Go names; func parameter defer_ should be defer (revive)
+func HeadScript(src string, async, defer_ bool) templ.Component {
+                                   ^
+templ/streaming.go:65:71: unused-parameter: parameter 'bufferSize' seems to be unused, consider removing or renaming it as _ (revive)
+func NewStreamWriter(w io.Writer, flusher interface{ Flush() error }, bufferSize int) *StreamWriter {
+                                                                      ^
+templ/streaming.go:332:57: unused-parameter: parameter 'loader' seems to be unused, consider removing or renaming it as _ (revive)
+func Deferred(name string, placeholder templ.Component, loader func() (templ.Component, error)) templ.Component {
+                                                        ^
+75 issues:
+* gocritic: 3
+* gosec: 21
+* nolintlint: 1
+* revive: 50

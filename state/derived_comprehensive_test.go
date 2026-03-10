@@ -116,7 +116,7 @@ func TestDerived_Subscribe(t *testing.T) {
 	// Subscribe to count changes and re-read derived value after each change
 	var mu sync.Mutex
 	var observed []int
-	unsub := count.Subscribe(func(v int) {
+	unsub := count.Subscribe(func(_ int) {
 		mu.Lock()
 		observed = append(observed, doubled.Get())
 		mu.Unlock()
@@ -144,7 +144,7 @@ func TestDerived_Unsubscribe(t *testing.T) {
 
 	var mu sync.Mutex
 	notified := 0
-	unsub := doubled.Subscribe(func(v int) {
+	unsub := doubled.Subscribe(func(_ int) {
 		mu.Lock()
 		notified++
 		mu.Unlock()
@@ -194,13 +194,13 @@ func TestDerived_MarshalJSON(t *testing.T) {
 
 // ─── Derived.Dispose ──────────────────────────────────────────────────────────
 
-func TestDerived_Dispose(t *testing.T) {
+func TestDerived_Dispose(_ *testing.T) {
 	count := NewRune(1)
 	d := DerivedFrom(func() int { return count.Get() }, count)
 
 	var mu sync.Mutex
 	notified := false
-	d.Subscribe(func(v int) {
+	d.Subscribe(func(_ int) {
 		mu.Lock()
 		notified = true
 		mu.Unlock()

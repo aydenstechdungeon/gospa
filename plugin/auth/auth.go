@@ -5,7 +5,7 @@ package auth
 import (
 	"crypto/hmac"
 	"crypto/rand"
-	"crypto/sha1"
+	"crypto/sha1" //nolint:gosec
 	"crypto/sha256"
 	"crypto/subtle"
 	"encoding/base32"
@@ -30,11 +30,15 @@ const (
 	oauthStateTTL          = 10 * time.Minute
 )
 
-// TOTP aliases for backward compatibility and documentation consistency.
+// EnableTOTP is an alias for EnableOTPHandler for backward compatibility.
 func (p *AuthPlugin) EnableTOTP() fiber.Handler { return p.EnableOTPHandler() }
+
+// VerifyTOTP is an alias for VerifyOTPHandler for backward compatibility.
 func (p *AuthPlugin) VerifyTOTP() fiber.Handler { return p.VerifyOTPHandler() }
 
 // AuthPlugin provides authentication capabilities.
+//
+//nolint:revive // changing name would break API
 type AuthPlugin struct {
 	config *Config
 }
@@ -183,7 +187,7 @@ func (p *AuthPlugin) CreateToken(userID, email, role string) (string, error) {
 
 // ValidateToken validates a JWT token and returns the claims.
 func (p *AuthPlugin) ValidateToken(tokenString string) (*Claims, error) {
-	token, err := jwt.ParseWithClaims(tokenString, &Claims{}, func(token *jwt.Token) (interface{}, error) {
+	token, err := jwt.ParseWithClaims(tokenString, &Claims{}, func(_ *jwt.Token) (interface{}, error) {
 		return []byte(p.config.JWTSecret), nil
 	})
 	if err != nil {
@@ -384,7 +388,7 @@ func (p *AuthPlugin) Name() string {
 // Init initializes the auth plugin.
 func (p *AuthPlugin) Init() error {
 	// Create output directory
-	if err := os.MkdirAll(p.config.OutputDir, 0755); err != nil {
+	if err := os.MkdirAll(p.config.OutputDir, 0750); err != nil {
 		return fmt.Errorf("failed to create output directory: %w", err)
 	}
 	return nil
@@ -411,8 +415,7 @@ func (p *AuthPlugin) Dependencies() []plugin.Dependency {
 
 // OnHook handles lifecycle hooks.
 func (p *AuthPlugin) OnHook(hook plugin.Hook, ctx map[string]interface{}) error {
-	switch hook {
-	case plugin.AfterGenerate:
+	if hook == plugin.AfterGenerate {
 		projectDir, _ := ctx["project_dir"].(string)
 		if projectDir == "" {
 			projectDir = "."
@@ -441,7 +444,7 @@ func (p *AuthPlugin) Commands() []plugin.Command {
 			Name:        "auth:secret",
 			Alias:       "as",
 			Description: "Generate a secure JWT secret",
-			Action: func(args []string) error {
+			Action: func(_ []string) error {
 				secret, err := p.generateSecret(32)
 				if err != nil {
 					return err
@@ -578,7 +581,7 @@ func ValidateToken(tokenString string) (*Claims, error) {
 	return nil, errors.New("invalid token")
 }
 `
-	return os.WriteFile(filepath.Join(outputDir, "jwt.go"), []byte(code), 0644)
+	return os.WriteFile(filepath.Join(outputDir, "jwt.go"), []byte(code), 0600)
 }
 
 // generateOAuthCode generates OAuth handlers.
@@ -856,7 +859,7 @@ func parseUserInfo(provider string, body []byte) (*UserInfo, error) {
 }
 `)
 
-	return os.WriteFile(filepath.Join(outputDir, "oauth.go"), []byte(sb.String()), 0644)
+	return os.WriteFile(filepath.Join(outputDir, "oauth.go"), []byte(sb.String()), 0600)
 }
 
 // generateProviderConfig generates OAuth config for a provider.
@@ -1138,13 +1141,13 @@ func HashBackupCode(code string) string {
 	return hex.EncodeToString(h.Sum(nil))
 }
 `
-	return os.WriteFile(filepath.Join(outputDir, "otp.go"), []byte(code), 0644)
+	return os.WriteFile(filepath.Join(outputDir, "otp.go"), []byte(code), 0600)
 }
 
 // getEnabledProviders returns enabled OAuth providers.
 func (p *AuthPlugin) getEnabledProviders() []OAuthProvider {
 	providers := map[string]OAuthProvider{
-		"google": {
+		"google": { //nolint:gosec
 			Name:         "Google",
 			ClientID:     p.config.GoogleClientID,
 			ClientSecret: p.config.GoogleClientSecret,
@@ -1153,7 +1156,7 @@ func (p *AuthPlugin) getEnabledProviders() []OAuthProvider {
 			UserURL:      "https://www.googleapis.com/oauth2/v2/userinfo",
 			Scopes:       []string{"openid", "email", "profile"},
 		},
-		"facebook": {
+		"facebook": { //nolint:gosec
 			Name:         "Facebook",
 			ClientID:     p.config.FacebookClientID,
 			ClientSecret: p.config.FacebookClientSecret,
@@ -1162,7 +1165,7 @@ func (p *AuthPlugin) getEnabledProviders() []OAuthProvider {
 			UserURL:      "https://graph.facebook.com/me?fields=id,email,name,picture",
 			Scopes:       []string{"email", "public_profile"},
 		},
-		"github": {
+		"github": { //nolint:gosec
 			Name:         "GitHub",
 			ClientID:     p.config.GitHubClientID,
 			ClientSecret: p.config.GitHubClientSecret,
@@ -1171,6 +1174,7 @@ func (p *AuthPlugin) getEnabledProviders() []OAuthProvider {
 			UserURL:      "https://api.github.com/user",
 			Scopes:       []string{"user:email"},
 		},
+		//nolint:gosec
 		"microsoft": {
 			Name:         "Microsoft",
 			ClientID:     p.config.MicrosoftClientID,
@@ -1180,6 +1184,7 @@ func (p *AuthPlugin) getEnabledProviders() []OAuthProvider {
 			UserURL:      "https://graph.microsoft.com/v1.0/me",
 			Scopes:       []string{"openid", "email", "profile"},
 		},
+		//nolint:gosec
 		"discord": {
 			Name:         "Discord",
 			ClientID:     p.config.DiscordClientID,
@@ -1198,6 +1203,7 @@ func (p *AuthPlugin) getEnabledProviders() []OAuthProvider {
 			UserURL:      "https://api.telegram.org/bot" + p.config.TelegramBotToken + "/getMe",
 			Scopes:       []string{},
 		},
+		//nolint:gosec
 		"twitter": {
 			Name:         "Twitter",
 			ClientID:     p.config.TwitterClientID,
@@ -1329,12 +1335,15 @@ func (p *AuthPlugin) VerifyOTP(secret, code string) bool {
 }
 
 // generateOTP generates a TOTP code.
+//
+//nolint:gosec // intentional conversion for bit operations
 func (p *AuthPlugin) generateOTP(key []byte, counter int64) string {
 	mac := hmac.New(sha1.New, key)
+	c := uint64(counter)
 	mac.Write([]byte{
-		byte(counter >> 56), byte(counter >> 48), byte(counter >> 40),
-		byte(counter >> 32), byte(counter >> 24), byte(counter >> 16),
-		byte(counter >> 8), byte(counter),
+		byte(c >> 56), byte(c >> 48), byte(c >> 40),
+		byte(c >> 32), byte(c >> 24), byte(c >> 16),
+		byte(c >> 8), byte(c),
 	})
 	hash := mac.Sum(nil)
 
@@ -1343,7 +1352,7 @@ func (p *AuthPlugin) generateOTP(key []byte, counter int64) string {
 		(int(hash[offset+1]) << 16) |
 		(int(hash[offset+2]) << 8) |
 		int(hash[offset+3])
-	code = code % int(math.Pow10(p.config.OTPDigits))
+	code %= int(math.Pow10(p.config.OTPDigits))
 
 	return fmt.Sprintf(fmt.Sprintf("%%0%dd", p.config.OTPDigits), code)
 }

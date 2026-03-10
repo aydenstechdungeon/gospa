@@ -42,6 +42,7 @@ type StateDeserializerFunc func([]byte, interface{}) error
 // Version is the current version of GoSPA.
 const Version = "0.1.22"
 
+// NavigationSpeculativePrefetchingConfig configures speculative prefetching
 type NavigationSpeculativePrefetchingConfig struct {
 	Enabled        *bool `json:"enabled,omitempty"`
 	TTL            *int  `json:"ttl,omitempty"`
@@ -49,33 +50,39 @@ type NavigationSpeculativePrefetchingConfig struct {
 	ViewportMargin *int  `json:"viewportMargin,omitempty"`
 }
 
+// NavigationURLParsingCacheConfig configures the URL parsing cache
 type NavigationURLParsingCacheConfig struct {
 	Enabled *bool `json:"enabled,omitempty"`
 	MaxSize *int  `json:"maxSize,omitempty"`
 	TTL     *int  `json:"ttl,omitempty"`
 }
 
+// NavigationIdleCallbackBatchUpdatesConfig configures idle callback batching
 type NavigationIdleCallbackBatchUpdatesConfig struct {
 	Enabled             *bool `json:"enabled,omitempty"`
 	FallbackToMicrotask *bool `json:"fallbackToMicrotask,omitempty"`
 }
 
+// NavigationLazyRuntimeInitializationConfig configures lazy runtime init
 type NavigationLazyRuntimeInitializationConfig struct {
 	Enabled       *bool `json:"enabled,omitempty"`
 	DeferBindings *bool `json:"deferBindings,omitempty"`
 }
 
+// NavigationServiceWorkerCachingConfig configures service worker caching
 type NavigationServiceWorkerCachingConfig struct {
 	Enabled   *bool  `json:"enabled,omitempty"`
 	CacheName string `json:"cacheName,omitempty"`
 	Path      string `json:"path,omitempty"`
 }
 
+// NavigationViewTransitionsConfig configures view transitions
 type NavigationViewTransitionsConfig struct {
 	Enabled           *bool `json:"enabled,omitempty"`
 	FallbackToClassic *bool `json:"fallbackToClassic,omitempty"`
 }
 
+// NavigationOptions configures client-side navigation
 type NavigationOptions struct {
 	SpeculativePrefetching         *NavigationSpeculativePrefetchingConfig    `json:"speculativePrefetching,omitempty"`
 	URLParsingCache                *NavigationURLParsingCacheConfig           `json:"urlParsingCache,omitempty"`
@@ -267,7 +274,7 @@ func decodeSsgEntry(data []byte) (ssgEntry, bool) {
 	createdAtNano := binary.LittleEndian.Uint64(data[0:8])
 	return ssgEntry{
 		html:      data[8:],
-		createdAt: time.Unix(0, int64(createdAtNano)),
+		createdAt: time.Unix(0, int64(createdAtNano)), //nolint:gosec
 	}, true
 }
 
@@ -338,12 +345,13 @@ func New(config Config) *App {
 	//   - -1: unlimited entries (no eviction) - NOT recommended in production
 	//   - 1-10000: use specified value (values >10000 are capped at 10000)
 	// Note: There is no "disable cache" option. To disable, use SSR strategy instead.
-	if config.SSGCacheMaxEntries == 0 {
+	switch {
+	case config.SSGCacheMaxEntries == 0:
 		config.SSGCacheMaxEntries = 500
-	} else if config.SSGCacheMaxEntries < 0 {
+	case config.SSGCacheMaxEntries < 0:
 		// Normalize all negative values to -1 for "unlimited"
 		config.SSGCacheMaxEntries = -1
-	} else if config.SSGCacheMaxEntries > 10000 {
+	case config.SSGCacheMaxEntries > 10000:
 		config.SSGCacheMaxEntries = 10000
 	}
 
@@ -768,9 +776,7 @@ func (a *App) renderRoute(c *fiberpkg.Ctx, route *routing.Route) error {
 			p, hit := a.pprShellCache[cacheKey]
 			if hit {
 				// Check TTL on access
-				if a.Config.SSGCacheTTL > 0 && time.Since(p.createdAt) >= a.Config.SSGCacheTTL {
-					// TTL expired, treat as cache miss
-				} else {
+				if a.Config.SSGCacheTTL <= 0 || time.Since(p.createdAt) < a.Config.SSGCacheTTL {
 					shell = p.html
 					shellHit = true
 				}
@@ -860,50 +866,46 @@ func (a *App) renderRoute(c *fiberpkg.Ctx, route *routing.Route) error {
 				}
 				c.Set("Cache-Control", "no-store")
 				return c.Send(result)
-			} else {
-				// Another goroutine is building; wait for it to finish
-				waitChan := actual.(chan struct{})
-				<-waitChan
+			}
+			// Another goroutine is building; wait for it to finish
+			waitChan := actual.(chan struct{})
+			<-waitChan
 
-				var shellHTML []byte
-				var shellOk bool
-				if a.Config.Storage != nil && !a.Config.Prefork {
-					if data, err := a.Config.Storage.Get("gospa:ppr:" + cacheKey); err == nil {
-						shellHTML = data
+			var shellHTML []byte
+			var shellOk bool
+			if a.Config.Storage != nil && !a.Config.Prefork {
+				if data, err := a.Config.Storage.Get("gospa:ppr:" + cacheKey); err == nil {
+					shellHTML = data
+					shellOk = true
+				}
+			} else {
+				a.pprShellMu.RLock()
+				p, hit := a.pprShellCache[cacheKey]
+				if hit {
+					if a.Config.SSGCacheTTL <= 0 || time.Since(p.createdAt) < a.Config.SSGCacheTTL {
+						shellHTML = p.html
 						shellOk = true
 					}
-				} else {
-					a.pprShellMu.RLock()
-					p, hit := a.pprShellCache[cacheKey]
-					if hit {
-						// Check TTL on access
-						if a.Config.SSGCacheTTL > 0 && time.Since(p.createdAt) >= a.Config.SSGCacheTTL {
-							// TTL expired, treat as cache miss
-						} else {
-							shellHTML = p.html
-							shellOk = true
-						}
-					}
-					a.pprShellMu.RUnlock()
 				}
-				if shellOk {
-					result, err := a.applyPPRSlots(route, shellHTML, c.Path(), opts)
-					if err != nil {
-						log.Printf("PPR slot error: %v", err)
-						return c.Status(fiberpkg.StatusInternalServerError).SendString("Render error")
-					}
-					c.Set("Cache-Control", "no-store")
-					return c.Send(result)
-				}
-				// Shell still not ready, fall back to SSR (render inline)
-				var fallbackBuf bytes.Buffer
-				if err := wrappedContent.Render(c.Context(), &fallbackBuf); err != nil {
-					log.Printf("PPR fallback render error: %v", err)
+				a.pprShellMu.RUnlock()
+			}
+			if shellOk {
+				result, err := a.applyPPRSlots(route, shellHTML, c.Path(), opts)
+				if err != nil {
+					log.Printf("PPR slot error: %v", err)
 					return c.Status(fiberpkg.StatusInternalServerError).SendString("Render error")
 				}
 				c.Set("Cache-Control", "no-store")
-				return c.Send(fallbackBuf.Bytes())
+				return c.Send(result)
 			}
+			// Shell still not ready, fall back to SSR (render inline)
+			var fallbackBuf bytes.Buffer
+			if err := wrappedContent.Render(c.Context(), &fallbackBuf); err != nil {
+				log.Printf("PPR fallback render error: %v", err)
+				return c.Status(fiberpkg.StatusInternalServerError).SendString("Render error")
+			}
+			c.Set("Cache-Control", "no-store")
+			return c.Send(fallbackBuf.Bytes())
 		}
 
 		// ─── SSR (default) ────────────────────────────────────────────────
@@ -922,7 +924,7 @@ func (a *App) renderRoute(c *fiberpkg.Ctx, route *routing.Route) error {
 	if c.Secure() {
 		protocol = "wss://"
 	}
-	wsUrl := protocol + string(c.Request().Host()) + a.Config.WebSocketPath
+	wsURL := protocol + string(c.Request().Host()) + a.Config.WebSocketPath
 	runtimePath := a.getRuntimePath()
 	appName := a.Config.AppName
 	devMode := a.Config.DevMode
@@ -968,7 +970,7 @@ runtime.init({
 		timeout: %d
 	}
 });
-</script>`, jsEscape(runtimePath), toJS(a.Config.NavigationOptions), jsEscape(wsUrl), devMode, a.Config.SimpleRuntimeSVGs, a.Config.DisableSanitization, wsReconnectDelay, wsMaxReconnect, wsHeartbeat, jsEscape(a.Config.HydrationMode), a.Config.HydrationTimeout)
+</script>`, jsEscape(runtimePath), toJS(a.Config.NavigationOptions), jsEscape(wsURL), devMode, a.Config.SimpleRuntimeSVGs, a.Config.DisableSanitization, wsReconnectDelay, wsMaxReconnect, wsHeartbeat, jsEscape(a.Config.HydrationMode), a.Config.HydrationTimeout)
 		_, _ = fmt.Fprint(w, `</body></html>`)
 		_ = w.Flush()
 	})
@@ -985,7 +987,7 @@ func (a *App) buildPageContent(route *routing.Route, params map[string]string, p
 		}
 		return pageFunc(props)
 	}
-	return templ.ComponentFunc(func(ctx context.Context, w io.Writer) error {
+	return templ.ComponentFunc(func(_ context.Context, w io.Writer) error {
 		_, _ = fmt.Fprintf(w, `<div data-gospa-page="%s">Page: %s</div>`, route.Path, route.Path)
 		return nil
 	})
@@ -1211,8 +1213,11 @@ func (a *App) applyPPRSlots(route *routing.Route, shell []byte, path string, opt
 		}
 		placeholder := []byte(templpkg.SlotPlaceholder(slotName))
 		open := []byte(fmt.Sprintf(`<div data-gospa-slot="%s">`, slotName))
-		close := []byte(`</div>`)
-		replacement := append(open, append(slotBuf.Bytes(), close...)...)
+		closeTag := []byte(`</div>`)
+		replacement := make([]byte, 0, len(open)+slotBuf.Len()+len(closeTag))
+		replacement = append(replacement, open...)
+		replacement = append(replacement, slotBuf.Bytes()...)
+		replacement = append(replacement, closeTag...)
 		result = bytes.ReplaceAll(result, placeholder, replacement)
 	}
 	return result, nil
@@ -1239,7 +1244,6 @@ func jsEscape(s string) string {
 }
 
 // Run starts the application on the given address.
-
 func (a *App) Run(addr string) error {
 	// Scan routes if not already done
 	if len(a.Router.GetRoutes()) == 0 {

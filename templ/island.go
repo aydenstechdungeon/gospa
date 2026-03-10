@@ -269,7 +269,7 @@ func renderIslandWrapper(island *component.Island, attrs map[string]string, opts
 
 // IslandScript generates the script tag for island hydration.
 func IslandScript() templ.Component {
-	return templ.ComponentFunc(func(ctx context.Context, w io.Writer) error {
+	return templ.ComponentFunc(func(_ context.Context, w io.Writer) error {
 		script := `<script data-gospa-islands="true">
 window.__GOSPA_ISLANDS__ = window.__GOSPA_ISLANDS__ || [];
 document.querySelectorAll('[data-gospa-island]').forEach(function(el) {
@@ -311,7 +311,7 @@ func SerializeIslands() (string, error) {
 
 // IslandDataScript generates a script with serialized island data.
 func IslandDataScript() templ.Component {
-	return templ.ComponentFunc(func(ctx context.Context, w io.Writer) error {
+	return templ.ComponentFunc(func(_ context.Context, w io.Writer) error {
 		data, err := SerializeIslands()
 		if err != nil {
 			return err

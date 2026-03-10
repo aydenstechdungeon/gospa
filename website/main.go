@@ -41,7 +41,7 @@ func main() {
 		WSHeartbeat:           30 * time.Second,
 		WSReconnectDelay:      1 * time.Second,
 		WSMaxReconnect:        5,
-		HydrationMode:         "immediate",
+		HydrationMode:         "lazy",
 		NavigationOptions: gospa.NavigationOptions{
 			SpeculativePrefetching: &gospa.NavigationSpeculativePrefetchingConfig{
 				Enabled:        boolPtr(true),

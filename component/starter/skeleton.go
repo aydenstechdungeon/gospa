@@ -20,9 +20,13 @@ type SkeletonProps struct {
 type SkeletonVariant string
 
 const (
-	SkeletonVariantText    SkeletonVariant = "text"
-	SkeletonVariantCircle  SkeletonVariant = "circle"
-	SkeletonVariantRect    SkeletonVariant = "rect"
+	// SkeletonVariantText is a text skeleton
+	SkeletonVariantText SkeletonVariant = "text"
+	// SkeletonVariantCircle is a circle skeleton
+	SkeletonVariantCircle SkeletonVariant = "circle"
+	// SkeletonVariantRect is a rectangle skeleton
+	SkeletonVariantRect SkeletonVariant = "rect"
+	// SkeletonVariantRounded is a rounded skeleton
 	SkeletonVariantRounded SkeletonVariant = "rounded"
 )
 

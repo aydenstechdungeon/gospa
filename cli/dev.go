@@ -126,7 +126,7 @@ func startDevWithConfig(config *DevConfig) error {
 			case <-ctx.Done():
 				return
 			case event := <-watcher.Events:
-				handleFileChange(event, restartCh, ctx)
+				handleFileChange(ctx, event, restartCh)
 			case err := <-watcher.Errors:
 				fmt.Fprintf(os.Stderr, "Watcher error: %v\n", err)
 			}
@@ -175,9 +175,13 @@ type FileEvent struct {
 type FileOp int
 
 const (
+	// FileOpCreate is a file creation event
 	FileOpCreate FileOp = iota
+	// FileOpModify is a file modification event
 	FileOpModify
+	// FileOpDelete is a file deletion event
 	FileOpDelete
+	// FileOpRename is a file rename event
 	FileOpRename
 )
 
@@ -316,7 +320,7 @@ func (w *DevWatcher) checkDir(dir string) {
 	}
 }
 
-func handleFileChange(event FileEvent, restartCh chan struct{}, ctx context.Context) {
+func handleFileChange(_ context.Context, event FileEvent, restartCh chan struct{}) {
 	ext := filepath.Ext(event.File)
 
 	switch ext {

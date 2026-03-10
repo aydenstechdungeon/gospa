@@ -109,8 +109,8 @@ func NewLayoutChain(page templ.Component, layouts ...*Layout) *LayoutChain {
 }
 
 // WithError sets the error component for the layout chain.
-func (lc *LayoutChain) WithError(error templ.Component) *LayoutChain {
-	lc.Error = error
+func (lc *LayoutChain) WithError(errComponent templ.Component) *LayoutChain {
+	lc.Error = errComponent
 	return lc
 }
 
@@ -131,7 +131,7 @@ func LayoutComponent(name string, render LayoutFunc, loader ...LayoutLoader) *La
 	return l
 }
 
-// WithLayoutData adds data to layout props.
+// WithData adds data to layout props.
 func (p LayoutProps) WithData(data map[string]any) LayoutProps {
 	if p.Data == nil {
 		p.Data = make(map[string]any)

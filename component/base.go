@@ -10,9 +10,13 @@ import (
 )
 
 // ComponentID is a unique identifier for a component.
+//
+//nolint:revive // changing name would break API
 type ComponentID string
 
 // ComponentName is the name of a component.
+//
+//nolint:revive // changing name would break API
 type ComponentName string
 
 // BaseComponent is the base implementation of a component.
@@ -247,6 +251,8 @@ func WithSlots(slots map[string]Slot) Option {
 }
 
 // ComponentTree represents a tree of components.
+//
+//nolint:revive // changing name would break API
 type ComponentTree struct {
 	root      Component
 	lookup    map[ComponentID]Component

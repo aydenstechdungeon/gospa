@@ -220,7 +220,7 @@ func (p Props) ToJSON() (string, error) {
 	return string(data), err
 }
 
-// FromJSON creates Props from JSON.
+// PropsFromJSON creates Props from JSON.
 func PropsFromJSON(data string) (Props, error) {
 	var p Props
 	if err := json.Unmarshal([]byte(data), &p); err != nil {

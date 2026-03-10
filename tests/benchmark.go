@@ -1,3 +1,4 @@
+// Package main is the benchmark tool for GoSPA.
 package main
 
 import (
@@ -57,6 +58,7 @@ func main() {
 
 	// Start the server
 	fmt.Println("🚀 Starting server...")
+	//nolint:gosec
 	cmd := exec.Command(serverPath)
 	cmd.Dir = serverDir
 
@@ -366,19 +368,20 @@ func main() {
 	// Classify based on peak RPS
 	var performanceClass string
 	var performanceEmoji string
-	if bestRPS.stats.RequestsPerSecond >= 20000 {
+	switch {
+	case bestRPS.stats.RequestsPerSecond >= 20000:
 		performanceClass = "EXCELLENT"
 		performanceEmoji = "🚀🚀🚀"
-	} else if bestRPS.stats.RequestsPerSecond >= 10000 {
+	case bestRPS.stats.RequestsPerSecond >= 10000:
 		performanceClass = "VERY GOOD"
 		performanceEmoji = "🚀🚀"
-	} else if bestRPS.stats.RequestsPerSecond >= 5000 {
+	case bestRPS.stats.RequestsPerSecond >= 5000:
 		performanceClass = "GOOD"
 		performanceEmoji = "🚀"
-	} else if bestRPS.stats.RequestsPerSecond >= 1000 {
+	case bestRPS.stats.RequestsPerSecond >= 1000:
 		performanceClass = "ACCEPTABLE"
 		performanceEmoji = "✓"
-	} else {
+	default:
 		performanceClass = "NEEDS IMPROVEMENT"
 		performanceEmoji = "⚠️"
 	}
@@ -493,7 +496,7 @@ func runBenchmark(url string, concurrent int, totalRequests int) BenchmarkStats 
 func makeRequest(url string, results chan<- RequestResult) {
 	start := time.Now()
 
-	resp, err := http.Get(url)
+	resp, err := http.Get(url) //nolint:gosec // intentional for benchmarking
 	if err != nil {
 		results <- RequestResult{
 			StatusCode: 0,

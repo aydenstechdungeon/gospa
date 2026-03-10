@@ -10,14 +10,14 @@ import (
 
 // stubComponent returns a no-op templ.Component for test use.
 func stubComponent() templ.Component {
-	return templ.ComponentFunc(func(ctx context.Context, w io.Writer) error { return nil })
+	return templ.ComponentFunc(func(_ context.Context, _ io.Writer) error { return nil })
 }
 
 // ─── Registry ─────────────────────────────────────────────────────────────────
 
 func TestRegistryRegisterAndGetPage(t *testing.T) {
 	reg := NewRegistry()
-	reg.RegisterPage("/test", func(props map[string]interface{}) templ.Component {
+	reg.RegisterPage("/test", func(_ map[string]interface{}) templ.Component {
 		return stubComponent()
 	})
 	fn := reg.GetPage("/test")
@@ -28,7 +28,7 @@ func TestRegistryRegisterAndGetPage(t *testing.T) {
 
 func TestRegistry_RegisterPage(t *testing.T) {
 	reg := NewRegistry()
-	reg.RegisterPage("/home", func(props map[string]interface{}) templ.Component {
+	reg.RegisterPage("/home", func(_ map[string]interface{}) templ.Component {
 		return stubComponent()
 	})
 	if !reg.HasPage("/home") {
@@ -38,7 +38,7 @@ func TestRegistry_RegisterPage(t *testing.T) {
 
 func TestRegistry_RegisterPageDefaultsToSSR(t *testing.T) {
 	reg := NewRegistry()
-	reg.RegisterPage("/home", func(props map[string]interface{}) templ.Component {
+	reg.RegisterPage("/home", func(_ map[string]interface{}) templ.Component {
 		return stubComponent()
 	})
 	opts := reg.GetRouteOptions("/home")
@@ -49,7 +49,7 @@ func TestRegistry_RegisterPageDefaultsToSSR(t *testing.T) {
 
 func TestRegistry_RegisterPageWithOptions_SSG(t *testing.T) {
 	reg := NewRegistry()
-	reg.RegisterPageWithOptions("/cacheme", func(props map[string]interface{}) templ.Component {
+	reg.RegisterPageWithOptions("/cacheme", func(_ map[string]interface{}) templ.Component {
 		return stubComponent()
 	}, RouteOptions{Strategy: StrategySSG})
 	opts := reg.GetRouteOptions("/cacheme")
@@ -60,7 +60,7 @@ func TestRegistry_RegisterPageWithOptions_SSG(t *testing.T) {
 
 func TestRegistry_RegisterPageWithOptions_ISR(t *testing.T) {
 	reg := NewRegistry()
-	reg.RegisterPageWithOptions("/revalidate", func(props map[string]interface{}) templ.Component {
+	reg.RegisterPageWithOptions("/revalidate", func(_ map[string]interface{}) templ.Component {
 		return stubComponent()
 	}, RouteOptions{
 		Strategy: StrategyISR,
@@ -73,7 +73,7 @@ func TestRegistry_RegisterPageWithOptions_ISR(t *testing.T) {
 
 func TestRegistry_RegisterPageWithOptions_PPR(t *testing.T) {
 	reg := NewRegistry()
-	reg.RegisterPageWithOptions("/ppr", func(props map[string]interface{}) templ.Component {
+	reg.RegisterPageWithOptions("/ppr", func(_ map[string]interface{}) templ.Component {
 		return stubComponent()
 	}, RouteOptions{
 		Strategy:     StrategyPPR,
@@ -90,7 +90,7 @@ func TestRegistry_RegisterPageWithOptions_PPR(t *testing.T) {
 
 func TestRegistry_RegisterLayout(t *testing.T) {
 	reg := NewRegistry()
-	reg.RegisterLayout("/dashboard", func(children templ.Component, props map[string]interface{}) templ.Component {
+	reg.RegisterLayout("/dashboard", func(_ templ.Component, _ map[string]interface{}) templ.Component {
 		return stubComponent()
 	})
 	if !reg.HasLayout("/dashboard") {
@@ -128,7 +128,7 @@ func TestRegistry_GetRouteOptionsDefault(t *testing.T) {
 
 func TestRegistry_RegisterRootLayout(t *testing.T) {
 	reg := NewRegistry()
-	reg.RegisterRootLayout(func(children templ.Component, props map[string]interface{}) templ.Component {
+	reg.RegisterRootLayout(func(_ templ.Component, _ map[string]interface{}) templ.Component {
 		return stubComponent()
 	})
 	fn := reg.GetRootLayout()
@@ -147,7 +147,7 @@ func TestRegistry_RootLayoutNilBeforeRegistration(t *testing.T) {
 
 func TestRegistry_RegisterSlot(t *testing.T) {
 	reg := NewRegistry()
-	reg.RegisterSlot("/page", "sidebar", func(props map[string]interface{}) templ.Component {
+	reg.RegisterSlot("/page", "sidebar", func(_ map[string]interface{}) templ.Component {
 		return stubComponent()
 	})
 	fn := reg.GetSlot("/page", "sidebar")
@@ -166,10 +166,10 @@ func TestRegistry_GetNonExistentSlot(t *testing.T) {
 
 func TestRegistry_SlotMultipleSlotsPerPage(t *testing.T) {
 	reg := NewRegistry()
-	reg.RegisterSlot("/page", "header", func(props map[string]interface{}) templ.Component {
+	reg.RegisterSlot("/page", "header", func(_ map[string]interface{}) templ.Component {
 		return stubComponent()
 	})
-	reg.RegisterSlot("/page", "footer", func(props map[string]interface{}) templ.Component {
+	reg.RegisterSlot("/page", "footer", func(_ map[string]interface{}) templ.Component {
 		return stubComponent()
 	})
 	if reg.GetSlot("/page", "header") == nil {
@@ -183,10 +183,10 @@ func TestRegistry_SlotMultipleSlotsPerPage(t *testing.T) {
 func TestRegistry_SlotOverwrite(t *testing.T) {
 	reg := NewRegistry()
 	called := false
-	reg.RegisterSlot("/page", "slot", func(props map[string]interface{}) templ.Component {
+	reg.RegisterSlot("/page", "slot", func(_ map[string]interface{}) templ.Component {
 		return stubComponent()
 	})
-	reg.RegisterSlot("/page", "slot", func(props map[string]interface{}) templ.Component {
+	reg.RegisterSlot("/page", "slot", func(_ map[string]interface{}) templ.Component {
 		called = true
 		return stubComponent()
 	})
@@ -197,16 +197,16 @@ func TestRegistry_SlotOverwrite(t *testing.T) {
 	_ = called // second registration should overwrite first
 }
 
-func TestRegistry_ThreadSafety(t *testing.T) {
+func TestRegistry_ThreadSafety(_ *testing.T) {
 	reg := NewRegistry()
 	done := make(chan struct{})
 
 	go func() {
 		for i := 0; i < 100; i++ {
-			reg.RegisterPage("/concurrent", func(props map[string]interface{}) templ.Component {
+			reg.RegisterPage("/concurrent", func(_ map[string]interface{}) templ.Component {
 				return stubComponent()
 			})
-			reg.RegisterLayout("/concurrent", func(children templ.Component, props map[string]interface{}) templ.Component {
+			reg.RegisterLayout("/concurrent", func(_ templ.Component, _ map[string]interface{}) templ.Component {
 				return stubComponent()
 			})
 		}
@@ -233,7 +233,7 @@ func TestGlobalRegistry(t *testing.T) {
 
 func TestGlobalRegisterPage(t *testing.T) {
 	const path = "/global_test_page_unique_7f3b"
-	RegisterPage(path, func(props map[string]interface{}) templ.Component {
+	RegisterPage(path, func(_ map[string]interface{}) templ.Component {
 		return stubComponent()
 	})
 	if !HasPage(path) {
@@ -247,7 +247,7 @@ func TestGlobalRegisterPage(t *testing.T) {
 
 func TestGlobalRegisterLayout(t *testing.T) {
 	const path = "/global_test_layout_unique_7f3b"
-	RegisterLayout(path, func(children templ.Component, props map[string]interface{}) templ.Component {
+	RegisterLayout(path, func(_ templ.Component, _ map[string]interface{}) templ.Component {
 		return stubComponent()
 	})
 	if !HasLayout(path) {

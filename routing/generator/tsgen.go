@@ -97,7 +97,7 @@ func GenerateTypeScriptDefinitions(routesDir string) error {
 	}
 
 	outPath := filepath.Join(routesDir, "types.d.ts")
-	return os.WriteFile(outPath, []byte(sb.String()), 0644)
+	return os.WriteFile(outPath, []byte(sb.String()), 0600)
 }
 
 func mapGoTypeToTS(expr ast.Expr) string {

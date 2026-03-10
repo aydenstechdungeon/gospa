@@ -54,12 +54,12 @@ func TestBatch_MultipleRunes(t *testing.T) {
 	aNotifs := 0
 	bNotifs := 0
 
-	ua := a.Subscribe(func(v int) {
+	ua := a.Subscribe(func(_ int) {
 		mu.Lock()
 		aNotifs++
 		mu.Unlock()
 	})
-	ub := b.Subscribe(func(v int) {
+	ub := b.Subscribe(func(_ int) {
 		mu.Lock()
 		bNotifs++
 		mu.Unlock()
@@ -85,7 +85,7 @@ func TestBatch_NoChangeNoNotification(t *testing.T) {
 	var mu sync.Mutex
 	notified := false
 
-	unsub := r.Subscribe(func(v int) {
+	unsub := r.Subscribe(func(_ int) {
 		mu.Lock()
 		notified = true
 		mu.Unlock()
@@ -223,7 +223,7 @@ func TestIsInBatch(t *testing.T) {
 
 // ─── FlushPendingNotifications ────────────────────────────────────────────────
 
-func TestFlushPendingNotifications_OutsideBatch(t *testing.T) {
+func TestFlushPendingNotifications_OutsideBatch(_ *testing.T) {
 	// Calling outside batch should be a no-op (not panic)
 	FlushPendingNotifications(context.TODO())
 }
@@ -271,7 +271,7 @@ func TestBatch_NestedCallsWorkCorrectly(t *testing.T) {
 	var mu sync.Mutex
 	notifications := 0
 
-	unsub := r.Subscribe(func(v int) {
+	unsub := r.Subscribe(func(_ int) {
 		mu.Lock()
 		notifications++
 		mu.Unlock()

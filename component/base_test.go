@@ -254,11 +254,11 @@ func TestComponentTreeLifecycleHooks(t *testing.T) {
 
 	mountCalled := false
 	updateCalled := false
-	tree.OnMount("root", func(c Component) {
+	tree.OnMount("root", func(_ Component) {
 		mountCalled = true
 	})
 
-	tree.OnUpdate("root", func(c Component) {
+	tree.OnUpdate("root", func(_ Component) {
 		updateCalled = true
 	})
 

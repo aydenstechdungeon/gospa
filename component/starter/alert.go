@@ -4,10 +4,14 @@ package starter
 type AlertVariant string
 
 const (
-	AlertVariantInfo    AlertVariant = "info"
+	// AlertVariantInfo is an info alert
+	AlertVariantInfo AlertVariant = "info"
+	// AlertVariantSuccess is a success alert
 	AlertVariantSuccess AlertVariant = "success"
+	// AlertVariantWarning is a warning alert
 	AlertVariantWarning AlertVariant = "warning"
-	AlertVariantError   AlertVariant = "error"
+	// AlertVariantError is an error alert
+	AlertVariantError AlertVariant = "error"
 )
 
 // AlertProps defines the properties for an alert component
@@ -71,20 +75,28 @@ func DefaultAlertProps() AlertProps {
 type BadgeVariant string
 
 const (
+	// BadgeVariantDefault is a default badge
 	BadgeVariantDefault BadgeVariant = "default"
+	// BadgeVariantPrimary is a primary badge
 	BadgeVariantPrimary BadgeVariant = "primary"
+	// BadgeVariantSuccess is a success badge
 	BadgeVariantSuccess BadgeVariant = "success"
+	// BadgeVariantWarning is a warning badge
 	BadgeVariantWarning BadgeVariant = "warning"
-	BadgeVariantError   BadgeVariant = "error"
+	// BadgeVariantError is an error badge
+	BadgeVariantError BadgeVariant = "error"
 )
 
 // BadgeSize defines the size of a badge
 type BadgeSize string
 
 const (
-	BadgeSizeSmall  BadgeSize = "small"
+	// BadgeSizeSmall is a small badge
+	BadgeSizeSmall BadgeSize = "small"
+	// BadgeSizeMedium is a medium badge
 	BadgeSizeMedium BadgeSize = "medium"
-	BadgeSizeLarge  BadgeSize = "large"
+	// BadgeSizeLarge is a large badge
+	BadgeSizeLarge BadgeSize = "large"
 )
 
 // BadgeProps defines the properties for a badge component

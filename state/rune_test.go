@@ -66,7 +66,7 @@ func TestRuneUnsubscribe(t *testing.T) {
 	var count int
 	var mu sync.Mutex
 
-	unsub := r.Subscribe(func(v int) {
+	unsub := r.Subscribe(func(_ int) {
 		mu.Lock()
 		count++
 		mu.Unlock()
@@ -96,7 +96,7 @@ func TestRuneUpdate(t *testing.T) {
 	}
 }
 
-func TestRuneConcurrentAccess(t *testing.T) {
+func TestRuneConcurrentAccess(_ *testing.T) {
 	r := NewRune(0)
 	var wg sync.WaitGroup
 
@@ -203,7 +203,7 @@ func TestRuneNoNotificationOnEqualValue(t *testing.T) {
 	var count int
 	var mu sync.Mutex
 
-	unsub := r.Subscribe(func(v int) {
+	unsub := r.Subscribe(func(_ int) {
 		mu.Lock()
 		count++
 		mu.Unlock()
@@ -225,7 +225,7 @@ func TestRuneStringEquality(t *testing.T) {
 	var count int
 	var mu sync.Mutex
 
-	unsub := r.Subscribe(func(v string) {
+	unsub := r.Subscribe(func(_ string) {
 		mu.Lock()
 		count++
 		mu.Unlock()
@@ -256,7 +256,7 @@ func TestRuneSliceEquality(t *testing.T) {
 	var count int
 	var mu sync.Mutex
 
-	unsub := r.Subscribe(func(v []int) {
+	unsub := r.Subscribe(func(_ []int) {
 		mu.Lock()
 		count++
 		mu.Unlock()

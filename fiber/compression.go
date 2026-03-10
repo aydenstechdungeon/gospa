@@ -241,7 +241,7 @@ func NewStaticCompressionMiddleware(config CompressionConfig) *StaticCompression
 
 // CompressStatic pre-compresses static content and caches it.
 // Use this for embedding static assets that don't change.
-func (s *StaticCompressionMiddleware) CompressStatic(content []byte, contentType string) *CompressedContent {
+func (s *StaticCompressionMiddleware) CompressStatic(content []byte, _ string) *CompressedContent {
 	result := &CompressedContent{
 		Original: content,
 	}

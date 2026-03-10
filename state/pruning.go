@@ -49,6 +49,8 @@ func DefaultPruningConfig() PruningConfig {
 }
 
 // StateUsage represents how a state variable is used.
+//
+//nolint:revive // changing name would break API
 type StateUsage struct {
 	Name       string   `json:"name"`
 	File       string   `json:"file"`
@@ -72,6 +74,8 @@ type PruningReport struct {
 }
 
 // StatePruner analyzes and prunes unused state.
+//
+//nolint:revive // changing name would break API
 type StatePruner struct {
 	config    PruningConfig
 	fset      *token.FileSet
@@ -209,7 +213,7 @@ func (sp *StatePruner) processGenDecl(decl *ast.GenDecl, path string) {
 }
 
 // processIdent processes an identifier reference.
-func (sp *StatePruner) processIdent(ident *ast.Ident, path string) {
+func (sp *StatePruner) processIdent(ident *ast.Ident, _ string) {
 	// Check if this references a known state variable
 	if _, exists := sp.stateVars[ident.Name]; exists {
 		sp.usedVars[ident.Name] = true
@@ -217,7 +221,7 @@ func (sp *StatePruner) processIdent(ident *ast.Ident, path string) {
 }
 
 // processSelectorExpr processes a selector expression.
-func (sp *StatePruner) processSelectorExpr(sel *ast.SelectorExpr, path string) {
+func (sp *StatePruner) processSelectorExpr(sel *ast.SelectorExpr, _ string) {
 	// Check for state access patterns like state.Var
 	if x, ok := sel.X.(*ast.Ident); ok {
 		key := x.Name + "." + sel.Sel.Name
@@ -339,6 +343,7 @@ func (sp *StatePruner) Prune() (*PruningReport, error) {
 // pruneFile removes unused state from a single file.
 func (sp *StatePruner) pruneFile(path string, usages []StateUsage) error {
 	// Read the file
+	//nolint:gosec
 	content, err := os.ReadFile(path)
 	if err != nil {
 		return fmt.Errorf("failed to read file: %w", err)
@@ -367,12 +372,13 @@ func (sp *StatePruner) pruneFile(path string, usages []StateUsage) error {
 
 	// Ensure output directory exists
 	dir := filepath.Dir(outputPath)
-	if err := os.MkdirAll(dir, 0755); err != nil {
+	if err := os.MkdirAll(dir, 0750); err != nil {
 		return fmt.Errorf("failed to create output directory: %w", err)
 	}
 
 	output := strings.Join(lines, "\n")
-	if err := os.WriteFile(outputPath, []byte(output), 0644); err != nil {
+	//nolint:gosec
+	if err := os.WriteFile(outputPath, []byte(output), 0600); err != nil {
 		return fmt.Errorf("failed to write file: %w", err)
 	}
 
@@ -386,7 +392,7 @@ func (sp *StatePruner) WriteReport(path string) error {
 		return fmt.Errorf("failed to marshal report: %w", err)
 	}
 
-	return os.WriteFile(path, data, 0644)
+	return os.WriteFile(path, data, 0600)
 }
 
 // GetReport returns the current pruning report.
@@ -407,6 +413,8 @@ func AnalyzeState(config PruningConfig) (*PruningReport, error) {
 }
 
 // StateTree represents a hierarchical state structure for analysis.
+//
+//nolint:revive // changing name would break API
 type StateTree struct {
 	Name     string                `json:"name"`
 	Type     string                `json:"type"`

@@ -254,7 +254,7 @@ func (cs *ComponentState) StateAttrs() templ.Attributes {
 
 // InitScript generates the component initialization script.
 func (cs *ComponentState) InitScript() templ.Component {
-	return templ.ComponentFunc(func(ctx context.Context, w io.Writer) error {
+	return templ.ComponentFunc(func(_ context.Context, w io.Writer) error {
 		json, err := cs.ToJSON()
 		if err != nil {
 			return err
@@ -269,11 +269,12 @@ func (cs *ComponentState) RenderBindings() templ.Attributes {
 	attrs := make(templ.Attributes)
 	for key, binding := range cs.Bindings {
 		attrKey := fmt.Sprintf("data-bind-%s", binding.Type)
-		if binding.Attr != "" {
+		switch {
+		case binding.Attr != "":
 			attrs[attrKey] = fmt.Sprintf("%s:%s:%s", binding.Attr, key, binding.Transform)
-		} else if binding.Transform != "" {
+		case binding.Transform != "":
 			attrs[attrKey] = fmt.Sprintf("%s:%s", key, binding.Transform)
-		} else {
+		default:
 			attrs[attrKey] = key
 		}
 	}
@@ -282,11 +283,15 @@ func (cs *ComponentState) RenderBindings() templ.Attributes {
 }
 
 // SafeHTML marks a string as safe HTML.
+//
+//nolint:gosec // intentional for templ rendering
 func SafeHTML(s string) template.HTML {
 	return template.HTML(s)
 }
 
 // SafeAttr marks a string as a safe attribute value.
+//
+//nolint:gosec // intentional for templ rendering
 func SafeAttr(s string) template.HTMLAttr {
 	return template.HTMLAttr(s)
 }

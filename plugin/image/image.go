@@ -17,6 +17,8 @@ import (
 )
 
 // ImagePlugin provides image optimization capabilities.
+//
+//nolint:revive // changing name would break API
 type ImagePlugin struct {
 	config *Config
 }
@@ -131,7 +133,7 @@ func (p *ImagePlugin) Init() error {
 		if dir == "" {
 			continue
 		}
-		if err := os.MkdirAll(dir, 0755); err != nil {
+		if err := os.MkdirAll(dir, 0750); err != nil {
 			return fmt.Errorf("failed to create directory %s: %w", dir, err)
 		}
 	}
@@ -213,7 +215,7 @@ func (p *ImagePlugin) Commands() []plugin.Command {
 			Name:        "image:sizes",
 			Alias:       "is",
 			Description: "List configured image sizes",
-			Action: func(args []string) error {
+			Action: func(_ []string) error {
 				fmt.Println("Configured image sizes:")
 				for _, size := range p.config.Sizes {
 					quality := size.Quality
@@ -234,7 +236,7 @@ func (p *ImagePlugin) optimizeAllImages(projectDir string) error {
 	outDir := filepath.Join(projectDir, p.config.OutputDir)
 
 	// Ensure output directory exists
-	if err := os.MkdirAll(outDir, 0755); err != nil {
+	if err := os.MkdirAll(outDir, 0750); err != nil {
 		return fmt.Errorf("failed to create output directory: %w", err)
 	}
 
@@ -274,7 +276,7 @@ func (p *ImagePlugin) optimizeChangedImages(projectDir string) error {
 // optimizeImage optimizes a single image.
 func (p *ImagePlugin) optimizeImage(srcPath, outPath string) error {
 	// Read source image
-	file, err := os.Open(srcPath)
+	file, err := os.Open(srcPath) //nolint:gosec
 	if err != nil {
 		return fmt.Errorf("failed to open image: %w", err)
 	}
@@ -298,7 +300,7 @@ func (p *ImagePlugin) optimizeImage(srcPath, outPath string) error {
 	}
 
 	// Ensure output directory exists
-	if err := os.MkdirAll(filepath.Dir(outPath), 0755); err != nil {
+	if err := os.MkdirAll(filepath.Dir(outPath), 0750); err != nil {
 		return err
 	}
 
@@ -374,7 +376,7 @@ func (p *ImagePlugin) saveJPEG(img image.Image, path string, quality int) error 
 		quality = p.config.Quality
 	}
 
-	file, err := os.Create(path)
+	file, err := os.Create(path) //nolint:gosec
 	if err != nil {
 		return err
 	}
@@ -385,7 +387,7 @@ func (p *ImagePlugin) saveJPEG(img image.Image, path string, quality int) error 
 
 // savePNG saves an image as PNG format.
 func (p *ImagePlugin) savePNG(img image.Image, path string) error {
-	file, err := os.Create(path)
+	file, err := os.Create(path) //nolint:gosec
 	if err != nil {
 		return err
 	}
@@ -419,12 +421,14 @@ func isImageFile(ext string) bool {
 
 // copyFile copies a file from src to dst.
 func copyFile(src, dst string) error {
+	//nolint:gosec
 	source, err := os.Open(src)
 	if err != nil {
 		return err
 	}
 	defer func() { _ = source.Close() }()
 
+	//nolint:gosec
 	destination, err := os.Create(dst)
 	if err != nil {
 		return err

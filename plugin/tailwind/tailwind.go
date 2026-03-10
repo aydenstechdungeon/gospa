@@ -43,6 +43,8 @@ func DefaultConfig() *Config {
 }
 
 // TailwindPlugin provides Tailwind CSS v4 processing.
+//
+//nolint:revive // changing name would break API
 type TailwindPlugin struct {
 	mu      sync.Mutex
 	cmd     *exec.Cmd
@@ -73,7 +75,7 @@ func (p *TailwindPlugin) Name() string {
 func (p *TailwindPlugin) Init() error {
 	// Ensure output directory exists
 	outputDir := filepath.Dir(p.config.Output)
-	if err := os.MkdirAll(outputDir, 0755); err != nil {
+	if err := os.MkdirAll(outputDir, 0750); err != nil {
 		return fmt.Errorf("failed to create output directory: %w", err)
 	}
 	return nil
@@ -88,7 +90,7 @@ func (p *TailwindPlugin) Dependencies() []plugin.Dependency {
 }
 
 // OnHook handles lifecycle hooks.
-func (p *TailwindPlugin) OnHook(hook plugin.Hook, ctx map[string]interface{}) error {
+func (p *TailwindPlugin) OnHook(hook plugin.Hook, _ map[string]interface{}) error {
 	switch hook {
 	case plugin.BeforeDev:
 		if p.isConfigured() {
@@ -175,7 +177,7 @@ func (p *TailwindPlugin) isConfigured() bool {
 }
 
 // install installs and configures Tailwind CSS v4.
-func (p *TailwindPlugin) install(args []string) error {
+func (p *TailwindPlugin) install(_ []string) error {
 	fmt.Println("Installing Tailwind CSS v4...")
 
 	// 1. Install dependencies with bun
@@ -189,13 +191,13 @@ func (p *TailwindPlugin) install(args []string) error {
 
 	// 2. Create input directory
 	inputDir := filepath.Dir(p.config.Input)
-	if err := os.MkdirAll(inputDir, 0755); err != nil {
+	if err := os.MkdirAll(inputDir, 0750); err != nil {
 		return fmt.Errorf("failed to create input directory: %w", err)
 	}
 
 	// 3. Create output directory
 	outputDir := filepath.Dir(p.config.Output)
-	if err := os.MkdirAll(outputDir, 0755); err != nil {
+	if err := os.MkdirAll(outputDir, 0750); err != nil {
 		return fmt.Errorf("failed to create output directory: %w", err)
 	}
 
@@ -214,7 +216,7 @@ func (p *TailwindPlugin) install(args []string) error {
 
 /* Your custom styles below */
 `
-		if err := os.WriteFile(p.config.Input, []byte(appCSS), 0644); err != nil {
+		if err := os.WriteFile(p.config.Input, []byte(appCSS), 0600); err != nil {
 			return fmt.Errorf("failed to create input CSS: %w", err)
 		}
 		fmt.Printf("Created %s\n", p.config.Input)
@@ -229,7 +231,7 @@ export default {
   content: %v,
 } satisfies Config;
 `, formatContentArray(p.config.Content))
-		if err := os.WriteFile("tailwind.config.ts", []byte(configContent), 0644); err != nil {
+		if err := os.WriteFile("tailwind.config.ts", []byte(configContent), 0600); err != nil {
 			return fmt.Errorf("failed to create tailwind.config.ts: %w", err)
 		}
 		fmt.Println("Created tailwind.config.ts")
@@ -247,12 +249,12 @@ export default {
 }
 
 // buildCommand is the CLI command for building.
-func (p *TailwindPlugin) buildCommand(args []string) error {
+func (p *TailwindPlugin) buildCommand(_ []string) error {
 	return p.compile()
 }
 
 // watchCommand is the CLI command for watching.
-func (p *TailwindPlugin) watchCommand(args []string) error {
+func (p *TailwindPlugin) watchCommand(_ []string) error {
 	p.watchWithContext()
 	// Block forever
 	select {}
@@ -281,7 +283,7 @@ func (p *TailwindPlugin) watchWithContext() {
 		args = append(args, "--content", path)
 	}
 
-	cmd := exec.CommandContext(ctx, "bun", append([]string{"x"}, args...)...)
+	cmd := exec.CommandContext(ctx, "bun", append([]string{"x"}, args...)...) //nolint:gosec
 	cmd.Stdout = os.Stdout
 	cmd.Stderr = os.Stderr
 
@@ -315,7 +317,7 @@ func (p *TailwindPlugin) compile() error {
 		args = append(args, "--minify")
 	}
 
-	cmd := exec.Command("bun", append([]string{"x"}, args...)...)
+	cmd := exec.Command("bun", append([]string{"x"}, args...)...) //nolint:gosec
 	cmd.Stdout = os.Stdout
 	cmd.Stderr = os.Stderr
 

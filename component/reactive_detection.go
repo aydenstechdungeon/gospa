@@ -25,12 +25,18 @@ type ReactiveBoundary struct {
 type BoundaryType string
 
 const (
-	BoundaryTypeState     BoundaryType = "state"
-	BoundaryTypeDerived   BoundaryType = "derived"
-	BoundaryTypeEffect    BoundaryType = "effect"
+	// BoundaryTypeState represents a state boundary.
+	BoundaryTypeState BoundaryType = "state"
+	// BoundaryTypeDerived indicates an automatically derived dependency
+	BoundaryTypeDerived BoundaryType = "derived"
+	// BoundaryTypeEffect indicates an effect dependency
+	BoundaryTypeEffect BoundaryType = "effect"
+	// BoundaryTypeComponent indicates a component boundary
 	BoundaryTypeComponent BoundaryType = "component"
-	BoundaryTypeEvent     BoundaryType = "event"
-	BoundaryTypeComputed  BoundaryType = "computed"
+	// BoundaryTypeEvent indicates an event handler boundary
+	BoundaryTypeEvent BoundaryType = "event"
+	// BoundaryTypeComputed indicates a computed property boundary
+	BoundaryTypeComputed BoundaryType = "computed"
 )
 
 // ReactiveDetector detects reactive boundaries in templ components.
@@ -281,6 +287,8 @@ func (rd *ReactiveDetector) AnalyzeComponent(source, filePath, componentName str
 }
 
 // ComponentAnalysis contains detailed analysis of a component.
+//
+//nolint:revive // changing name would break API
 type ComponentAnalysis struct {
 	ComponentName     string             `json:"componentName"`
 	FilePath          string             `json:"filePath"`

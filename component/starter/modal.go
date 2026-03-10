@@ -4,10 +4,14 @@ package starter
 type ModalSize string
 
 const (
-	ModalSizeSmall  ModalSize = "small"
+	// ModalSizeSmall is a small modal
+	ModalSizeSmall ModalSize = "small"
+	// ModalSizeMedium is a medium modal
 	ModalSizeMedium ModalSize = "medium"
-	ModalSizeLarge  ModalSize = "large"
-	ModalSizeFull   ModalSize = "full"
+	// ModalSizeLarge is a large modal
+	ModalSizeLarge ModalSize = "large"
+	// ModalSizeFull is a full modal
+	ModalSizeFull ModalSize = "full"
 )
 
 // ModalProps defines the properties for a modal component

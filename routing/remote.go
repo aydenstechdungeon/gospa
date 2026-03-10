@@ -8,6 +8,7 @@ import (
 // RemoteActionFunc is a type-safe server function that can be called remotely from the client.
 type RemoteActionFunc func(ctx context.Context, input interface{}) (interface{}, error)
 
+// RemoteRegistry is a registry for remote actions.
 type RemoteRegistry struct {
 	mu      sync.RWMutex
 	actions map[string]RemoteActionFunc
