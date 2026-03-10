@@ -120,8 +120,7 @@ Or reduce your payload size by:
 ### Problem
 ```json
 {
-    "error": "CSRF token missing or invalid",
-    "code": "CSRF_ERROR"
+    "error": "CSRF token mismatch"
 }
 ```
 
@@ -149,6 +148,33 @@ The client reads the `csrf_token` cookie. If cookies are disabled, remote action
 Check browser dev tools:
 1. Look for `csrf_token` cookie in Application → Cookies
 2. Check that `X-CSRF-Token` header is sent in the request. The built-in `remote()` helper sends it automatically for same-origin requests.
+
+
+## "unauthorized" Error (Global Remote Middleware)
+
+### Problem
+```json
+{
+    "error": "unauthorized"
+}
+```
+
+### Cause
+A `RemoteActionMiddleware` blocked the request before the action handler ran.
+
+### Solution
+Make sure your middleware allows authenticated requests to continue:
+
+```go
+app := gospa.New(gospa.Config{
+    RemoteActionMiddleware: func(c *fiber.Ctx) error {
+        if c.Locals("user") == nil {
+            return c.Status(fiber.StatusUnauthorized).JSON(fiber.Map{"error": "unauthorized"})
+        }
+        return c.Next()
+    },
+})
+```
 
 ## "ACTION_FAILED" Error
 

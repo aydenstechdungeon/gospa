@@ -17,6 +17,7 @@ templ Page() {
 			<a href="#calling-template" class="text-sm font-medium hover:text-[var(--accent-primary)] transition-colors">Calling from Template</a>
 			<a href="#calling-script" class="text-sm font-medium hover:text-[var(--accent-primary)] transition-colors">Calling from Script</a>
 			<a href="#csrf-protection" class="text-sm font-medium hover:text-[var(--accent-primary)] transition-colors">CSRF Protection</a>
+			<a href="#global-guards" class="text-sm font-medium hover:text-[var(--accent-primary)] transition-colors">Global Guards</a>
 		</nav>
 
 		<section id="defining" class="space-y-6">
@@ -129,19 +130,29 @@ const result = await createUser({ username: 'ayden', email: 'ayden@example.com' 
 		<section id="csrf-protection" class="space-y-6">
 			<h2 class="text-2xl font-bold border-b border-[var(--border)] pb-2">CSRF Protection</h2>
 			<p class="text-[var(--text-secondary)]">
-				When CSRF protection is enabled in your app configuration, remote actions require a valid CSRF token. The token is automatically set as a cookie by the middleware.
+				When <code class="mono">EnableCSRF</code> is true, GoSPA wires CSRF middleware automatically in the default app setup.
 			</p>
-			@components.CodeBlock(`// Server configuration
-app := gospa.New(gospa.Config{
+			@components.CodeBlock(`app := gospa.New(gospa.Config{
     EnableCSRF: true,
-})
-
-// Middleware setup (required)
-app.Use(fiber.CSRFSetTokenMiddleware())  // Issues csrf_token cookie
-app.Use(fiber.CSRFTokenMiddleware())       // Validates X-CSRF-Token header`, "go", "csrf.go")
+})`, "go", "main.go")
 			<p class="text-[var(--text-secondary)]">
-				The client automatically reads the <code class="mono">csrf_token</code> cookie and sends it as the <code class="mono">X-CSRF-Token</code> header with each remote action request.
+				The client reads the <code class="mono">csrf_token</code> cookie and sends <code class="mono">X-CSRF-Token</code> automatically with <code class="mono">GoSPA.remote()</code> requests.
 			</p>
+		</section>
+
+		<section id="global-guards" class="space-y-6">
+			<h2 class="text-2xl font-bold border-b border-[var(--border)] pb-2">Global Guards</h2>
+			<p class="text-[var(--text-secondary)]">
+				Use <code class="mono">RemoteActionMiddleware</code> to enforce auth/policy checks before every remote action.
+			</p>
+			@components.CodeBlock(`app := gospa.New(gospa.Config{
+    RemoteActionMiddleware: func(c *fiber.Ctx) error {
+        if c.Locals("user") == nil {
+            return c.Status(fiber.StatusUnauthorized).JSON(fiber.Map{"error": "unauthorized"})
+        }
+        return c.Next()
+    },
+})`, "go", "main.go")
 		</section>
 
 		<div class="bg-amber-500/5 border border-amber-500/20 p-6 rounded-2xl">

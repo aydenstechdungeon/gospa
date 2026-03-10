@@ -103,12 +103,12 @@ type Config struct {
 	StateDeserializer StateDeserializerFunc // Custom deserialization for inbound state
 
 	// Routing Options
-	DisableSPA               bool     // Disable SPA navigation completely
-	SSR                      bool     // Enables server side rendering for dynamic components
+	DisableSPA bool // Disable SPA navigation completely
 
 	// Remote Action Options
-	MaxRequestBodySize int    // Maximum allowed size for remote action request bodies
-	RemotePrefix       string // Prefix for remote action endpoints
+	MaxRequestBodySize      int            // Maximum allowed size for remote action request bodies
+	RemotePrefix            string         // Prefix for remote action endpoints
+	RemoteActionMiddleware  fiber.Handler  // Optional middleware run before remote actions
 
 	// Security Options
 	AllowedOrigins []string // Allowed CORS origins
@@ -135,8 +135,8 @@ type Config struct {
 - `WSReconnectDelay`: Initial reconnect delay passed to the client WebSocket runtime. Default: 1s.
 - `WSMaxReconnect`: Maximum reconnect attempts passed to the client. Default: 10.
 - `WSHeartbeat`: Heartbeat ping interval passed to the client. Default: 30s.
-- `SSR`: **Planned** — not yet implemented.
-- `EnableCSRF`: Enables CSRF protection. Must wire up **both** `fiber.CSRFSetTokenMiddleware()` (issues cookie) **and** `fiber.CSRFTokenMiddleware()` (validates).
+- `RemoteActionMiddleware`: Apply global auth/tenant/policy checks for every remote action request before the action handler runs.
+- `EnableCSRF`: Enables automatic CSRF setup in `gospa.New(...)`. Add CSRF middleware manually only when building a custom Fiber stack outside default app setup.
 - `SSGCacheMaxEntries`: Caps the SSG page cache with FIFO eviction. Default 500.
 - `Prefork`, `Storage`, `PubSub`: Used for horizontal scaling. See `store/redis` for the Redis implementation.
 

@@ -601,3 +601,34 @@ app.Use(func(c *routing.Context) error {
     return c.Next()
 })
 ```
+
+
+---
+
+## Running Quality & Security Checks Before Deploy
+
+Use the repository script to run Bun + Go checks in one command:
+
+```bash
+./scripts/quality-check.sh
+```
+
+Default checks:
+- `bun check` (root script)
+- `gofmt` check
+- `go vet`
+- `staticcheck`
+- `golangci-lint`
+- `govulncheck`
+- `go build`
+- `go test`
+
+Examples:
+
+```bash
+# Include race detector
+./scripts/quality-check.sh --with-race
+
+# Skip tools not installed in local env
+./scripts/quality-check.sh --skip-golangci --skip-vulncheck --skip-staticcheck
+```

@@ -54,6 +54,7 @@ templ Page() {
 					<tbody class="divide-y divide-[var(--border)]">
 						<tr><td class="px-4 py-2 font-mono text-[var(--accent-primary)]">AllowedOrigins</td><td class="px-4 py-2">[]string</td><td class="px-4 py-2">[]</td><td class="px-4 py-2">Allowed CORS origins</td></tr>
 						<tr><td class="px-4 py-2 font-mono text-[var(--accent-primary)]">EnableCSRF</td><td class="px-4 py-2">bool</td><td class="px-4 py-2">false</td><td class="px-4 py-2">Enable automatic CSRF protection</td></tr>
+					<tr><td class="px-4 py-2 font-mono text-[var(--accent-primary)]">RemoteActionMiddleware</td><td class="px-4 py-2">fiber.Handler</td><td class="px-4 py-2">nil</td><td class="px-4 py-2">Optional global middleware for remote action auth/policy checks</td></tr>
 					</tbody>
 				</table>
 			</div>

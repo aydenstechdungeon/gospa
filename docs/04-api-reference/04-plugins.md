@@ -579,8 +579,11 @@ authPlugin := auth.New(&auth.Config{
 // Create JWT token
 token, err := authPlugin.CreateToken(userID, userEmail, role)
 
-// Validate token
+// Validate token (includes issuer validation)
 claims, err := authPlugin.ValidateToken(token)
+
+// OAuth callback exchanges provider code server-side and returns a success response.
+// It does not expose provider access tokens directly in the JSON response.
 
 // Generate OTP for 2FA
 otpSecret, qrURL, err := authPlugin.GenerateOTP(userEmail)

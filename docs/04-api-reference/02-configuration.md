@@ -94,13 +94,14 @@ app := gospa.New(gospa.Config{
 |--------|------|---------|-------------|
 | `MaxRequestBodySize` | `int` | `4194304` (4MB) | Max size for remote action request bodies |
 | `RemotePrefix` | `string` | `"/_gospa/remote"` | Prefix for remote action endpoints |
+| `RemoteActionMiddleware` | `fiber.Handler` | `nil` | Optional middleware to enforce global auth/policy checks before remote actions |
 
 ### Security Options
 
 | Option | Type | Default | Description |
 |--------|------|---------|-------------|
 | `AllowedOrigins` | `[]string` | `[]` | Allowed CORS origins |
-| `EnableCSRF` | `bool` | `false` | Enable automatic CSRF protection |
+| `EnableCSRF` | `bool` | `false` | Enable automatic CSRF protection (wired by gospa.New) |
 
 ---
 
@@ -357,6 +358,20 @@ URL prefix for remote action endpoints.
 RemotePrefix: "/api/remote",  // Remote actions at /api/remote/:name
 ```
 
+### RemoteActionMiddleware
+
+Optional middleware executed for all remote action requests before the action handler. Use this for global authorization, tenant checks, and request policy enforcement.
+
+```go
+RemoteActionMiddleware: func(c *fiber.Ctx) error {
+    // Example: enforce authenticated user context
+    if c.Locals("user") == nil {
+        return c.Status(fiber.StatusUnauthorized).JSON(fiber.Map{"error": "unauthorized"})
+    }
+    return c.Next()
+},
+```
+
 ### AllowedOrigins
 
 CORS allowed origins. Set to allow cross-origin requests.
@@ -370,7 +385,7 @@ AllowedOrigins: []string{
 
 ### EnableCSRF
 
-Enable automatic CSRF protection. Adds CSRF token to forms and validates on POST requests.
+Enable automatic CSRF protection (wired by gospa.New). Adds CSRF token to forms and validates on POST requests.
 
 ```go
 EnableCSRF: true,
