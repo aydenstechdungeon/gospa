@@ -9,13 +9,13 @@ export interface Route {
 }
 
 export const routes: Route[] = [
-  {"Path":"/components/benchmarks","File":"components/benchmarks.templ","Params":[],"IsDynamic":false,"IsCatchAll":false},
   {"Path":"/components/callout","File":"components/callout.templ","Params":[],"IsDynamic":false,"IsCatchAll":false},
   {"Path":"/components/code_block","File":"components/code_block.templ","Params":[],"IsDynamic":false,"IsCatchAll":false},
   {"Path":"/components/dual_code_block","File":"components/dual_code_block.templ","Params":[],"IsDynamic":false,"IsCatchAll":false},
   {"Path":"/components/features","File":"components/features.templ","Params":[],"IsDynamic":false,"IsCatchAll":false},
   {"Path":"/components/hero","File":"components/hero.templ","Params":[],"IsDynamic":false,"IsCatchAll":false},
   {"Path":"/components/sidebar","File":"components/sidebar.templ","Params":[],"IsDynamic":false,"IsCatchAll":false},
+  {"Path":"/components/single_binary","File":"components/single_binary.templ","Params":[],"IsDynamic":false,"IsCatchAll":false},
   {"Path":"/routes/docs/api/client","File":"routes/docs/api/client/page.templ","Params":[],"IsDynamic":false,"IsCatchAll":false},
   {"Path":"/routes/docs/api/core","File":"routes/docs/api/core/page.templ","Params":[],"IsDynamic":false,"IsCatchAll":false},
   {"Path":"/routes/docs/api/fiber","File":"routes/docs/api/fiber/page.templ","Params":[],"IsDynamic":false,"IsCatchAll":false},
@@ -76,13 +76,13 @@ export const routes: Route[] = [
 ];
 
 export const routeMap: Record<string, Route> = {
-  '/components/benchmarks': routes.find(r => r.path === '/components/benchmarks')!,
   '/components/callout': routes.find(r => r.path === '/components/callout')!,
   '/components/code_block': routes.find(r => r.path === '/components/code_block')!,
   '/components/dual_code_block': routes.find(r => r.path === '/components/dual_code_block')!,
   '/components/features': routes.find(r => r.path === '/components/features')!,
   '/components/hero': routes.find(r => r.path === '/components/hero')!,
   '/components/sidebar': routes.find(r => r.path === '/components/sidebar')!,
+  '/components/single_binary': routes.find(r => r.path === '/components/single_binary')!,
   '/routes/docs/api/client': routes.find(r => r.path === '/routes/docs/api/client')!,
   '/routes/docs/api/core': routes.find(r => r.path === '/routes/docs/api/core')!,
   '/routes/docs/api/fiber': routes.find(r => r.path === '/routes/docs/api/fiber')!,

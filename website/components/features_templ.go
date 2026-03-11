@@ -29,7 +29,7 @@ func Features() templ.Component {
 			templ_7745c5c3_Var1 = templ.NopComponent
 		}
 		ctx = templ.ClearChildren(ctx)
-		templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 1, "<section class=\"py-24 max-w-7xl mx-auto px-4\"><div class=\"text-center mb-16\"><h2 class=\"text-3xl md:text-5xl font-bold mb-4\">Built for <span class=\"bg-gradient-to-r from-[var(--accent-secondary)] to-[var(--accent-primary)] bg-clip-text text-transparent\">Modern Engineers</span></h2><p class=\"text-[var(--text-secondary)] max-w-2xl mx-auto\">GoSPA combines the productivity of modern JS frameworks with the robustness and performance of Go. Everything you need to build scalable SPAs.</p></div><div class=\"grid md:grid-cols-2 lg:grid-cols-3 gap-6\">")
+		templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 1, "<section class=\"py-24 max-w-7xl mx-auto px-4\"><div class=\"text-center mb-16\"><h2 class=\"text-3xl md:text-5xl font-bold mb-4\">Built for <span class=\"bg-gradient-to-r from-[var(--accent-secondary)] to-[var(--accent-primary)] bg-clip-text text-transparent\">Modern Engineers</span></h2><p class=\"text-[var(--text-secondary)] text-lg md:text-xl max-w-2xl mx-auto leading-relaxed\">GoSPA combines the productivity of modern JS frameworks with the robustness and performance of Go. Everything you need to build scalable SPAs.</p></div><div class=\"grid md:grid-cols-2 lg:grid-cols-3 gap-6\">")
 		if templ_7745c5c3_Err != nil {
 			return templ_7745c5c3_Err
 		}
