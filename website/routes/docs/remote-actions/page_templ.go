@@ -38,7 +38,7 @@ func Page() templ.Component {
 		templ_7745c5c3_Err = components.CodeBlock(`import "github.com/aydenstechdungeon/gospa/routing"
 
 func init() {
-    routing.RegisterRemoteAction("greet", func(ctx context.Context, input any) (any, error) {
+    routing.RegisterRemoteAction("greet", func(ctx context.Context, rc routing.RemoteContext, input any) (any, error) {
         name := input.(string)
         return "Hello, " + name, nil
     })
@@ -55,7 +55,7 @@ func init() {
     Email    string `+"`"+`json:"email"`+"`"+`
 }
 
-routing.RegisterRemoteAction("createUser", func(ctx context.Context, input any) (any, error) {
+routing.RegisterRemoteAction("createUser", func(ctx context.Context, rc routing.RemoteContext, input any) (any, error) {
     var data CreateUser
     // Map input to struct...
     if data.Username == "" {

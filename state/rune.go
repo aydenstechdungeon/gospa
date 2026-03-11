@@ -3,11 +3,12 @@
 package state
 
 import (
-	"encoding/json"
 	"reflect"
 	"strconv"
 	"sync"
 	"sync/atomic"
+
+	json "github.com/goccy/go-json"
 )
 
 // Unsubscribe is a function returned by Subscribe to remove the subscription.

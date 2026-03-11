@@ -10,19 +10,19 @@ import (
 	"testing"
 
 	"github.com/aydenstechdungeon/gospa/routing"
-	"github.com/gofiber/fiber/v2"
+	"github.com/gofiber/fiber/v3"
 )
 
 func TestRemoteActionMiddleware_BlocksRequestBeforeHandler(t *testing.T) {
 	var called atomic.Bool
 	actionName := "test_remote_middleware_block"
-	routing.RegisterRemoteAction(actionName, func(_ context.Context, _ interface{}) (interface{}, error) {
+	routing.RegisterRemoteAction(actionName, func(_ context.Context, _ routing.RemoteContext, _ interface{}) (interface{}, error) {
 		called.Store(true)
 		return map[string]string{"ok": "true"}, nil
 	})
 
 	app := New(Config{
-		RemoteActionMiddleware: func(c *fiber.Ctx) error {
+		RemoteActionMiddleware: func(c fiber.Ctx) error {
 			return c.Status(fiber.StatusUnauthorized).JSON(fiber.Map{"error": "blocked"})
 		},
 	})

@@ -22,10 +22,13 @@ The action hasn't been registered on the server yet.
 ```go
 package routes
 
-import "github.com/aydenstechdungeon/gospa/routing"
+import (
+    "context"
+    "github.com/aydenstechdungeon/gospa/routing"
+)
 
 func init() {
-    routing.RegisterRemoteAction("saveData", func(ctx context.Context, input any) (any, error) {
+    routing.RegisterRemoteAction("saveData", func(ctx context.Context, rc routing.RemoteContext, input any) (any, error) {
         return "saved", nil
     })
 }
@@ -193,8 +196,8 @@ Your action handler returned an error.
 Add logging to your action:
 
 ```go
-routing.RegisterRemoteAction("processData", func(ctx context.Context, input any) (any, error) {
-    log.Printf("Received input: %+v", input)
+routing.RegisterRemoteAction("processData", func(ctx context.Context, rc routing.RemoteContext, input any) (any, error) {
+    log.Printf("Received input: %+v from IP: %s", input, rc.IP)
     
     data, ok := input.(map[string]any)
     if !ok {
@@ -265,7 +268,7 @@ Some ad blockers may block requests to `/_gospa/*`. Try:
 JSON numbers become `float64`, not `int`:
 
 ```go
-routing.RegisterRemoteAction("add", func(ctx context.Context, input any) (any, error) {
+routing.RegisterRemoteAction("add", func(ctx context.Context, rc routing.RemoteContext, input any) (any, error) {
     // BAD - This will panic!
     num := input.(int)  // JSON numbers are float64
     
@@ -287,7 +290,7 @@ type AddInput struct {
     B int `json:"b"`
 }
 
-routing.RegisterRemoteAction("add", func(ctx context.Context, input any) (any, error) {
+routing.RegisterRemoteAction("add", func(ctx context.Context, rc routing.RemoteContext, input any) (any, error) {
     var data AddInput
     
     // Convert map to struct
@@ -341,11 +344,11 @@ Wrap your actions with logging:
 
 ```go
 func loggedAction(name string, fn routing.RemoteActionFunc) routing.RemoteActionFunc {
-    return func(ctx context.Context, input any) (any, error) {
-        log.Printf("[RemoteAction:%s] Input: %+v", name, input)
+    return func(ctx context.Context, rc routing.RemoteContext, input any) (any, error) {
+        log.Printf("[RemoteAction:%s] IP: %s Input: %+v", name, rc.IP, input)
         start := time.Now()
         
-        result, err := fn(ctx, input)
+        result, err := fn(ctx, rc, input)
         
         log.Printf("[RemoteAction:%s] Duration: %v, Error: %v", 
             name, time.Since(start), err)
@@ -353,8 +356,9 @@ func loggedAction(name string, fn routing.RemoteActionFunc) routing.RemoteAction
     }
 }
 
-routing.RegisterRemoteAction("process", loggedAction("process", func(ctx context.Context, input any) (any, error) {
+routing.RegisterRemoteAction("process", loggedAction("process", func(ctx context.Context, rc routing.RemoteContext, input any) (any, error) {
     // Your logic here
+    return nil, nil
 }))
 ```
 
@@ -370,13 +374,13 @@ routing.RegisterRemoteAction("process", loggedAction("process", func(ctx context
 
 ```go
 // BAD - May hang indefinitely
-routing.RegisterRemoteAction("slow", func(ctx context.Context, input any) (any, error) {
+routing.RegisterRemoteAction("slow", func(ctx context.Context, rc routing.RemoteContext, input any) (any, error) {
     result := slowOperation()  // No timeout handling
     return result, nil
 })
 
 // GOOD - Respect context
-routing.RegisterRemoteAction("slow", func(ctx context.Context, input any) (any, error) {
+routing.RegisterRemoteAction("slow", func(ctx context.Context, rc routing.RemoteContext, input any) (any, error) {
     done := make(chan any)
     go func() {
         done <- slowOperation()
@@ -395,12 +399,12 @@ routing.RegisterRemoteAction("slow", func(ctx context.Context, input any) (any, 
 
 ```go
 // BAD - No auth check
-routing.RegisterRemoteAction("deleteUser", func(ctx context.Context, input any) (any, error) {
+routing.RegisterRemoteAction("deleteUser", func(ctx context.Context, rc routing.RemoteContext, input any) (any, error) {
     return deleteUser(input.(string)), nil
 })
 
-// GOOD - Check permissions
-routing.RegisterRemoteAction("deleteUser", func(ctx context.Context, input any) (any, error) {
+// GOOD - Check permissions (could check rc.SessionID or context)
+routing.RegisterRemoteAction("deleteUser", func(ctx context.Context, rc routing.RemoteContext, input any) (any, error) {
     user := auth.GetUser(ctx)  // Extract from context
     if !user.IsAdmin {
         return nil, errors.New("unauthorized")

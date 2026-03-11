@@ -53,6 +53,8 @@ export interface RuntimeConfig {
 	 *  WARNING: Disabling sanitization may expose XSS vulnerabilities with user-generated content.
 	 */
 	disableSanitization?: boolean;
+	/** WebSocket serialization format */
+	serializationFormat?: 'json' | 'msgpack';
 }
 
 // Global component registry
@@ -89,7 +91,8 @@ export function init(options: RuntimeConfig = {}): void {
 		wsModule = import('./websocket.ts').then(mod => {
 			const ws = mod.initWebSocket({
 				url: config.wsUrl!,
-				onMessage: handleServerMessage
+				onMessage: handleServerMessage,
+				serializationFormat: config.serializationFormat
 			});
 			ws.connect().catch(err => {
 				if (config.onConnectionError) {

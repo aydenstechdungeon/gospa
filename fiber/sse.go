@@ -5,14 +5,15 @@ package fiber
 import (
 	"crypto/rand"
 	"encoding/hex"
-	"encoding/json"
 	"fmt"
 	"sync"
 	"time"
 
+	json "github.com/goccy/go-json"
+
 	"github.com/aydenstechdungeon/gospa/store"
-	fiberpkg "github.com/gofiber/fiber/v2"
-	"github.com/gofiber/fiber/v2/middleware/cors"
+	fiberpkg "github.com/gofiber/fiber/v3"
+	"github.com/gofiber/fiber/v3/middleware/cors"
 )
 
 // SSEEvent represents a Server-Sent Event.
@@ -266,8 +267,8 @@ func (b *SSEBroker) GetClientsByTopic(topic string) []*SSEClient {
 }
 
 // SSEHandler returns a Fiber handler for SSE connections.
-func (b *SSEBroker) SSEHandler(clientIDFunc func(*fiberpkg.Ctx) string) fiberpkg.Handler {
-	return func(c *fiberpkg.Ctx) error {
+func (b *SSEBroker) SSEHandler(clientIDFunc func(fiberpkg.Ctx) string) fiberpkg.Handler {
+	return func(c fiberpkg.Ctx) error {
 		// Set SSE headers
 		c.Set("Content-Type", "text/event-stream")
 		c.Set("Cache-Control", "no-cache")
@@ -332,13 +333,13 @@ func (b *SSEBroker) SSEHandler(clientIDFunc func(*fiberpkg.Ctx) string) fiberpkg
 //
 // Inside your authMw, reject if the session user ID doesn't match the clientId in the request body.
 func (b *SSEBroker) SSESubscribeHandler() fiberpkg.Handler {
-	return func(c *fiberpkg.Ctx) error {
+	return func(c fiberpkg.Ctx) error {
 		var req struct {
 			ClientID string   `json:"clientId"`
 			Topics   []string `json:"topics"`
 		}
 
-		if err := c.BodyParser(&req); err != nil {
+		if err := json.Unmarshal(c.Body(), &req); err != nil {
 			return c.Status(400).JSON(fiberpkg.Map{"error": "invalid request"})
 		}
 
@@ -371,13 +372,13 @@ func (b *SSEBroker) clientExists(clientID string) bool {
 
 // SSEUnsubscribeHandler returns a handler for unsubscribing from topics.
 func (b *SSEBroker) SSEUnsubscribeHandler() fiberpkg.Handler {
-	return func(c *fiberpkg.Ctx) error {
+	return func(c fiberpkg.Ctx) error {
 		var req struct {
 			ClientID string   `json:"clientId"`
 			Topics   []string `json:"topics"`
 		}
 
-		if err := c.BodyParser(&req); err != nil {
+		if err := json.Unmarshal(c.Body(), &req); err != nil {
 			return c.Status(400).JSON(fiberpkg.Map{"error": "invalid request"})
 		}
 
@@ -398,7 +399,7 @@ func (b *SSEBroker) SSEUnsubscribeHandler() fiberpkg.Handler {
 }
 
 // writeSSEEvent writes an SSE event to the response.
-func writeSSEEvent(c *fiberpkg.Ctx, event SSEEvent) error {
+func writeSSEEvent(c fiberpkg.Ctx, event SSEEvent) error {
 	// Write event ID if present
 	if event.ID != "" {
 		_, _ = fmt.Fprintf(c, "id: %s\n", event.ID)
@@ -447,27 +448,20 @@ func generateClientID() string {
 
 // SetupSSE sets up SSE routes on a Fiber app.
 func SetupSSE(app *fiberpkg.App, broker *SSEBroker, basePath string, corsConfig *cors.Config) {
-	// Create router group
 	sse := app.Group(basePath)
 
-	// Apply CORS if configured
 	if corsConfig != nil {
 		sse.Use(cors.New(*corsConfig))
 	}
 
-	// SSE connection endpoint
-	sse.Get("/connect", broker.SSEHandler(func(c *fiberpkg.Ctx) string {
+	sse.Get("/connect", broker.SSEHandler(func(c fiberpkg.Ctx) string {
 		return c.Query("clientId", "")
 	}))
 
-	// Subscribe endpoint
 	sse.Post("/subscribe", broker.SSESubscribeHandler())
-
-	// Unsubscribe endpoint
 	sse.Post("/unsubscribe", broker.SSEUnsubscribeHandler())
 
-	// Stats endpoint
-	sse.Get("/stats", func(c *fiberpkg.Ctx) error {
+	sse.Get("/stats", func(c fiberpkg.Ctx) error {
 		return c.JSON(fiberpkg.Map{
 			"clientCount": broker.ClientCount(),
 		})

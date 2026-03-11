@@ -14,7 +14,7 @@ const (
 	defaultImage       = "https://raw.githubusercontent.com/aydenstechdungeon/gospa/refs/heads/main/gospa1%20512.webp"
 )
 
-templ RootLayout(title string, children templ.Component, runtimePath string, path string, wsUrl string, debug bool, hydrationMode string, hydrationTimeout int) {
+templ RootLayout(title string, children templ.Component, runtimePath string, path string, wsUrl string, debug bool, hydrationMode string, hydrationTimeout int, serializationFormat string) {
 	<!DOCTYPE html>
 	<html lang="en" class="dark" data-gospa-auto>
 		<head>
@@ -267,13 +267,13 @@ templ RootLayout(title string, children templ.Component, runtimePath string, pat
 				</div>
 			</footer>
 			</div>
-			@initGoSPA(runtimePath, wsUrl, debug, hydrationMode, hydrationTimeout)
+			@initGoSPA(runtimePath, wsUrl, debug, hydrationMode, hydrationTimeout, serializationFormat)
 			@setupGlobalActions()
 		</body>
 	</html>
 }
 
-script initGoSPA(runtimePath, wsUrl string, debug bool, hydrationMode string, hydrationTimeout int) {
+script initGoSPA(runtimePath, wsUrl string, debug bool, hydrationMode string, hydrationTimeout int, serializationFormat string) {
 	window.__GOSPA_CONFIG__ = {
 		navigationOptions: {
 			speculativePrefetching: {
@@ -297,7 +297,8 @@ script initGoSPA(runtimePath, wsUrl string, debug bool, hydrationMode string, hy
 			hydration: {
 				mode: hydrationMode,
 				timeout: hydrationTimeout
-			}
+			},
+			serializationFormat: serializationFormat
 		});
 	});
 }

@@ -5,8 +5,17 @@ import (
 	"sync"
 )
 
+// RemoteContext provides HTTP request details to a remote action.
+type RemoteContext struct {
+	IP        string
+	UserAgent string
+	RequestID string
+	SessionID string
+	Headers   map[string]string
+}
+
 // RemoteActionFunc is a type-safe server function that can be called remotely from the client.
-type RemoteActionFunc func(ctx context.Context, input interface{}) (interface{}, error)
+type RemoteActionFunc func(ctx context.Context, rc RemoteContext, input interface{}) (interface{}, error)
 
 // RemoteRegistry is a registry for remote actions.
 type RemoteRegistry struct {

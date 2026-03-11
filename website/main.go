@@ -14,7 +14,7 @@ import (
 
 	"github.com/aydenstechdungeon/gospa"
 	"github.com/aydenstechdungeon/gospa/routing"
-	"github.com/gofiber/fiber/v2"
+	"github.com/gofiber/fiber/v3"
 )
 
 // Cached file hashes for ETags - computed once at startup for static files
@@ -37,12 +37,18 @@ func main() {
 		CompressState:         true,                // Compress WebSocket messages
 		StateDiffing:          true,                // Only send state diffs
 		EnableWebSocket:       true,
-		SimpleRuntime:         false,
+		SerializationFormat:   gospa.SerializationMsgPack,
 		WSHeartbeat:           30 * time.Second,
 		WSReconnectDelay:      1 * time.Second,
 		WSMaxReconnect:        5,
-		HydrationMode:         "lazy",
+		HydrationMode:         "idle",
 		NavigationOptions: gospa.NavigationOptions{
+			IdleCallbackBatchUpdates: &gospa.NavigationIdleCallbackBatchUpdatesConfig{
+				Enabled: boolPtr(true),
+			},
+			URLParsingCache: &gospa.NavigationURLParsingCacheConfig{
+				Enabled: boolPtr(true),
+			},
 			SpeculativePrefetching: &gospa.NavigationSpeculativePrefetchingConfig{
 				Enabled:        boolPtr(true),
 				TTL:            intPtr(45000),
@@ -58,23 +64,23 @@ func main() {
 	})
 
 	// Legacy redirects after documentation restructuring
-	app.Get("/docs/getstarted", func(c *fiber.Ctx) error {
-		return c.Redirect("/docs/getstarted/installation", fiber.StatusMovedPermanently)
+	app.Get("/docs/getstarted", func(c fiber.Ctx) error {
+		return c.Redirect().Status(301).To("/docs/getstarted/installation")
 	})
-	app.Get("/docs/client-runtime", func(c *fiber.Ctx) error {
-		return c.Redirect("/docs/client-runtime/overview", fiber.StatusMovedPermanently)
+	app.Get("/docs/client-runtime", func(c fiber.Ctx) error {
+		return c.Redirect().Status(301).To("/docs/client-runtime/overview")
 	})
 
 	// LLM support routes
-	app.Get("/llms.txt", func(c *fiber.Ctx) error {
+	app.Get("/llms.txt", func(c fiber.Ctx) error {
 		return c.SendFile("./static/llms.txt")
 	})
-	app.Get("/llms-full.md", func(c *fiber.Ctx) error {
+	app.Get("/llms-full.md", func(c fiber.Ctx) error {
 		return c.SendFile("./static/llms-full.md")
 	})
 
 	// Service Worker route
-	app.Get("/gospa-navigation-sw.js", func(c *fiber.Ctx) error {
+	app.Get("/gospa-navigation-sw.js", func(c fiber.Ctx) error {
 		c.Set("Content-Type", "application/javascript")
 		return c.SendFile("./static/gospa-navigation-sw.js")
 	})
@@ -105,7 +111,7 @@ func intPtr(v int) *int {
 }
 
 // cacheMiddleware adds Cache-Control headers for static assets and pages
-func cacheMiddleware(c *fiber.Ctx) error {
+func cacheMiddleware(c fiber.Ctx) error {
 	path := c.Path()
 
 	// Apply cache headers for static assets
@@ -125,7 +131,7 @@ func cacheMiddleware(c *fiber.Ctx) error {
 				c.Set("ETag", etag)
 				if match := c.Get("If-None-Match"); match != "" {
 					if strings.Contains(match, etag) {
-						return c.SendStatus(fiber.StatusNotModified)
+						return c.SendStatus(304)
 					}
 				}
 			}
@@ -151,7 +157,7 @@ func cacheMiddleware(c *fiber.Ctx) error {
 			// Check If-None-Match for 304 response
 			if match := c.Get("If-None-Match"); match != "" {
 				if strings.Contains(match, etag) {
-					return c.SendStatus(fiber.StatusNotModified)
+					return c.SendStatus(304)
 				}
 			}
 		}

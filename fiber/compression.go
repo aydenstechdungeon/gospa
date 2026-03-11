@@ -8,7 +8,7 @@ import (
 	"sync"
 
 	"github.com/andybalholm/brotli"
-	gofiber "github.com/gofiber/fiber/v2"
+	gofiber "github.com/gofiber/fiber/v3"
 )
 
 // CompressionConfig configures response compression.
@@ -88,7 +88,7 @@ func BrotliGzipMiddleware(config CompressionConfig) gofiber.Handler {
 		},
 	}
 
-	return func(c *gofiber.Ctx) error {
+	return func(c gofiber.Ctx) error {
 		// Skip compression for certain paths
 		path := c.Path()
 		for _, skipPath := range config.SkipPaths {
@@ -283,7 +283,7 @@ type CompressedContent struct {
 }
 
 // ServeCompressed serves the best compression for the client.
-func (s *StaticCompressionMiddleware) ServeCompressed(c *gofiber.Ctx, content *CompressedContent, contentType string) error {
+func (s *StaticCompressionMiddleware) ServeCompressed(c gofiber.Ctx, content *CompressedContent, contentType string) error {
 	acceptEncoding := strings.ToLower(c.Get("Accept-Encoding"))
 
 	// Try Brotli first (best compression)

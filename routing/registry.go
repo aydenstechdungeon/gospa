@@ -14,6 +14,10 @@ type ComponentFunc func(props map[string]interface{}) templ.Component
 // LayoutFunc is a function that returns a templ.Component for layouts.
 type LayoutFunc func(children templ.Component, props map[string]interface{}) templ.Component
 
+// MiddlewareFunc represents a generic middleware handler.
+// Typically this is downcast to fiber.Handler when registering routes.
+type MiddlewareFunc interface{}
+
 // RenderStrategy defines how a page is rendered.
 type RenderStrategy string
 
@@ -44,6 +48,16 @@ type RouteOptions struct {
 	// and re-rendered per-request. Each name must match a slot registered with
 	// RegisterSlot for this page path.
 	DynamicSlots []string
+
+	// Optional per-route rate limiter config.
+	RateLimit *RateLimitOptions
+}
+
+// RateLimitOptions holds configuration for per-route rate limiters.
+type RateLimitOptions struct {
+	MaxRequests int
+	Window      time.Duration
+	Message     string
 }
 
 // SlotFunc returns a templ.Component for a named PPR dynamic slot.
@@ -55,6 +69,9 @@ type Registry struct {
 	pages       map[string]ComponentFunc
 	pageOptions map[string]RouteOptions
 	layouts     map[string]LayoutFunc
+	errors      map[string]ComponentFunc
+	middlewares map[string]MiddlewareFunc
+	loadings    map[string]ComponentFunc
 	rootLayout  LayoutFunc
 	// slots maps pagePath → slotName → SlotFunc for PPR.
 	slots map[string]map[string]SlotFunc
@@ -69,6 +86,9 @@ func NewRegistry() *Registry {
 		pages:       make(map[string]ComponentFunc),
 		pageOptions: make(map[string]RouteOptions),
 		layouts:     make(map[string]LayoutFunc),
+		errors:      make(map[string]ComponentFunc),
+		middlewares: make(map[string]MiddlewareFunc),
+		loadings:    make(map[string]ComponentFunc),
 		slots:       make(map[string]map[string]SlotFunc),
 	}
 }
@@ -103,6 +123,27 @@ func (r *Registry) RegisterLayout(path string, fn LayoutFunc) {
 	r.layouts[path] = fn
 }
 
+// RegisterMiddleware registers a middleware function for a route path.
+func (r *Registry) RegisterMiddleware(path string, fn MiddlewareFunc) {
+	r.mu.Lock()
+	defer r.mu.Unlock()
+	r.middlewares[path] = fn
+}
+
+// RegisterLoading registers a loading component for a route path.
+func (r *Registry) RegisterLoading(path string, fn ComponentFunc) {
+	r.mu.Lock()
+	defer r.mu.Unlock()
+	r.loadings[path] = fn
+}
+
+// RegisterError registers an error component for a route path.
+func (r *Registry) RegisterError(path string, fn ComponentFunc) {
+	r.mu.Lock()
+	defer r.mu.Unlock()
+	r.errors[path] = fn
+}
+
 // GetPage returns the page component for a path.
 func (r *Registry) GetPage(path string) ComponentFunc {
 	r.mu.RLock()
@@ -115,6 +156,27 @@ func (r *Registry) GetLayout(path string) LayoutFunc {
 	r.mu.RLock()
 	defer r.mu.RUnlock()
 	return r.layouts[path]
+}
+
+// GetMiddleware returns the middleware function for a path.
+func (r *Registry) GetMiddleware(path string) MiddlewareFunc {
+	r.mu.RLock()
+	defer r.mu.RUnlock()
+	return r.middlewares[path]
+}
+
+// GetLoading returns the loading component for a path.
+func (r *Registry) GetLoading(path string) ComponentFunc {
+	r.mu.RLock()
+	defer r.mu.RUnlock()
+	return r.loadings[path]
+}
+
+// GetError returns the error component for a path.
+func (r *Registry) GetError(path string) ComponentFunc {
+	r.mu.RLock()
+	defer r.mu.RUnlock()
+	return r.errors[path]
 }
 
 // RegisterRootLayout registers the root layout component.
@@ -189,6 +251,21 @@ func RegisterLayout(path string, fn LayoutFunc) {
 	globalRegistry.RegisterLayout(path, fn)
 }
 
+// RegisterMiddleware registers a middleware function in the global registry.
+func RegisterMiddleware(path string, fn MiddlewareFunc) {
+	globalRegistry.RegisterMiddleware(path, fn)
+}
+
+// RegisterLoading registers a loading component in the global registry.
+func RegisterLoading(path string, fn ComponentFunc) {
+	globalRegistry.RegisterLoading(path, fn)
+}
+
+// RegisterError registers an error component in the global registry.
+func RegisterError(path string, fn ComponentFunc) {
+	globalRegistry.RegisterError(path, fn)
+}
+
 // GetPage returns the page component from the global registry.
 func GetPage(path string) ComponentFunc {
 	return globalRegistry.GetPage(path)
@@ -197,6 +274,21 @@ func GetPage(path string) ComponentFunc {
 // GetLayout returns the layout component from the global registry.
 func GetLayout(path string) LayoutFunc {
 	return globalRegistry.GetLayout(path)
+}
+
+// GetMiddleware returns the middleware function from the global registry.
+func GetMiddleware(path string) MiddlewareFunc {
+	return globalRegistry.GetMiddleware(path)
+}
+
+// GetLoading returns the loading component from the global registry.
+func GetLoading(path string) ComponentFunc {
+	return globalRegistry.GetLoading(path)
+}
+
+// GetError returns the error component from the global registry.
+func GetError(path string) ComponentFunc {
+	return globalRegistry.GetError(path)
 }
 
 // RegisterRootLayout registers the root layout in the global registry.

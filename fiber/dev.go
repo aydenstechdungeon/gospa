@@ -11,8 +11,8 @@ import (
 	"time"
 
 	"github.com/aydenstechdungeon/gospa/state"
-	fiberpkg "github.com/gofiber/fiber/v2"
-	websocket "github.com/gofiber/websocket/v2"
+	websocket "github.com/gofiber/contrib/v3/websocket"
+	fiberpkg "github.com/gofiber/fiber/v3"
 )
 
 // DevConfig holds development configuration.
@@ -387,7 +387,7 @@ func (d *DevTools) sendStateKeys(c *websocket.Conn) {
 
 // DevPanelHandler creates a handler for the dev panel UI.
 func (d *DevTools) DevPanelHandler() fiberpkg.Handler {
-	return func(c *fiberpkg.Ctx) error {
+	return func(c fiberpkg.Ctx) error {
 		html := devPanelHTML()
 		c.Set("Content-Type", "text/html; charset=utf-8")
 		return c.SendString(html)
@@ -587,7 +587,7 @@ func devPanelHTML() string {
 
 // DebugMiddleware logs requests and state changes.
 func DebugMiddleware(_ *DevTools) fiberpkg.Handler {
-	return func(c *fiberpkg.Ctx) error {
+	return func(c fiberpkg.Ctx) error {
 		start := time.Now()
 
 		err := c.Next()
@@ -601,7 +601,7 @@ func DebugMiddleware(_ *DevTools) fiberpkg.Handler {
 
 // StateInspectorMiddleware inspects state changes.
 func StateInspectorMiddleware(devTools *DevTools, config Config) fiberpkg.Handler {
-	return func(c *fiberpkg.Ctx) error {
+	return func(c fiberpkg.Ctx) error {
 		// Get state before
 		var beforeState map[string]interface{}
 		if stateMap, ok := c.Locals(config.StateKey).(*state.StateMap); ok && stateMap != nil {

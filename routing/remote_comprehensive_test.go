@@ -9,7 +9,7 @@ import (
 
 func TestRegisterAndGetRemoteAction(t *testing.T) {
 	name := "testAction_unique_7a3f"
-	RegisterRemoteAction(name, func(_ context.Context, _ interface{}) (interface{}, error) {
+	RegisterRemoteAction(name, func(_ context.Context, _ RemoteContext, _ interface{}) (interface{}, error) {
 		return "result", nil
 	})
 	fn, ok := GetRemoteAction(name)
@@ -30,7 +30,7 @@ func TestGetRemoteAction_NotFound(t *testing.T) {
 
 func TestRemoteAction_Invocation(t *testing.T) {
 	name := "addAction_unique_7b4f"
-	RegisterRemoteAction(name, func(_ context.Context, input interface{}) (interface{}, error) {
+	RegisterRemoteAction(name, func(_ context.Context, _ RemoteContext, input interface{}) (interface{}, error) {
 		x := input.(float64)
 		return x + 10, nil
 	})
@@ -40,7 +40,7 @@ func TestRemoteAction_Invocation(t *testing.T) {
 		t.Fatalf("action %q should be registered", name)
 	}
 
-	result, err := fn(context.Background(), float64(5))
+	result, err := fn(context.Background(), RemoteContext{}, float64(5))
 	if err != nil {
 		t.Fatalf("action invocation failed: %v", err)
 	}
@@ -51,7 +51,7 @@ func TestRemoteAction_Invocation(t *testing.T) {
 
 func TestRemoteAction_WithNilInput(t *testing.T) {
 	name := "nilInputAction_unique_9c3e"
-	RegisterRemoteAction(name, func(_ context.Context, input interface{}) (interface{}, error) {
+	RegisterRemoteAction(name, func(_ context.Context, _ RemoteContext, input interface{}) (interface{}, error) {
 		if input != nil {
 			return nil, nil
 		}
@@ -59,7 +59,7 @@ func TestRemoteAction_WithNilInput(t *testing.T) {
 	})
 
 	fn, _ := GetRemoteAction(name)
-	result, err := fn(context.Background(), nil)
+	result, err := fn(context.Background(), RemoteContext{}, nil)
 	if err != nil {
 		t.Fatalf("unexpected error: %v", err)
 	}
@@ -70,10 +70,10 @@ func TestRemoteAction_WithNilInput(t *testing.T) {
 
 func TestRemoteAction_OverwriteExisting(t *testing.T) {
 	name := "overwriteAction_unique_1d2e"
-	RegisterRemoteAction(name, func(_ context.Context, _ interface{}) (interface{}, error) {
+	RegisterRemoteAction(name, func(_ context.Context, _ RemoteContext, _ interface{}) (interface{}, error) {
 		return "first", nil
 	})
-	RegisterRemoteAction(name, func(_ context.Context, _ interface{}) (interface{}, error) {
+	RegisterRemoteAction(name, func(_ context.Context, _ RemoteContext, _ interface{}) (interface{}, error) {
 		return "second", nil
 	})
 
@@ -81,7 +81,7 @@ func TestRemoteAction_OverwriteExisting(t *testing.T) {
 	if !ok {
 		t.Fatal("action should exist")
 	}
-	result, _ := fn(context.Background(), nil)
+	result, _ := fn(context.Background(), RemoteContext{}, nil)
 	if result != "second" {
 		t.Errorf("expected overwritten 'second', got %v", result)
 	}
@@ -91,7 +91,7 @@ func TestRemoteAction_ConcurrentRegistration(_ *testing.T) {
 	done := make(chan struct{})
 	go func() {
 		for i := 0; i < 50; i++ {
-			RegisterRemoteAction("concurrent_remote_action", func(_ context.Context, _ interface{}) (interface{}, error) {
+			RegisterRemoteAction("concurrent_remote_action", func(_ context.Context, _ RemoteContext, _ interface{}) (interface{}, error) {
 				return nil, nil
 			})
 		}

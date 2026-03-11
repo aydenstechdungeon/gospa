@@ -6,9 +6,8 @@ import (
 	"crypto/rand"
 	"encoding/base64"
 	"encoding/hex"
-	"encoding/json"
 	"fmt"
-	"log"
+	"log/slog"
 	"reflect"
 	"strings"
 	"sync"
@@ -16,8 +15,10 @@ import (
 
 	"github.com/aydenstechdungeon/gospa/state"
 	"github.com/aydenstechdungeon/gospa/store"
-	fiberpkg "github.com/gofiber/fiber/v2"
-	websocket "github.com/gofiber/websocket/v2"
+	websocket "github.com/gofiber/contrib/v3/websocket"
+	fiberpkg "github.com/gofiber/fiber/v3"
+	json "github.com/goccy/go-json"
+	"github.com/vmihailenco/msgpack/v5"
 )
 
 const (
@@ -59,6 +60,14 @@ func (rl *ConnectionRateLimiter) SetStorage(storage store.Storage) {
 	rl.mu.Lock()
 	defer rl.mu.Unlock()
 	rl.storage = storage
+}
+
+// SetLimits configures the burst capacity and refill rate for this specific limiter instance.
+func (rl *ConnectionRateLimiter) SetLimits(maxTokens float64, refillRate float64) {
+	rl.mu.Lock()
+	defer rl.mu.Unlock()
+	rl.maxTokens = maxTokens
+	rl.refillRate = refillRate
 }
 
 // Global connection rate limiter (singleton)
@@ -180,7 +189,7 @@ func (rl *ConnectionRateLimiter) Allow(ip string) bool {
 // GetIPFromContext extracts the client IP from the Fiber context.
 // Uses Fiber's built-in IP extraction which handles X-Forwarded-For
 // based on the app's Proxy settings (TrustedProxies, etc).
-func GetIPFromContext(c *fiberpkg.Ctx) string {
+func GetIPFromContext(c fiberpkg.Ctx) string {
 	return c.IP()
 }
 
@@ -291,7 +300,7 @@ var globalSessionStore = NewSessionStore(store.NewMemoryStorage())
 func generateSecureToken() string {
 	b := make([]byte, 32)
 	if _, err := rand.Read(b); err != nil {
-		log.Printf("CRITICAL: crypto/rand.Read failed: %v", err)
+		slog.Default().Error("CRITICAL: crypto/rand.Read failed", "err", err)
 		return ""
 	}
 	return hex.EncodeToString(b)
@@ -364,8 +373,6 @@ type WSClient struct {
 	// optional features wired from WebSocketConfig at creation time
 	compress     bool
 	stateDiffing bool
-	serializer   func(interface{}) ([]byte, error)
-	deserializer func([]byte, interface{}) error
 	// lastSentState holds the snapshot used for StateDiffing
 	lastSentStateMu sync.Mutex
 	lastSentState   map[string]interface{}
@@ -373,23 +380,28 @@ type WSClient struct {
 	actionMu         sync.Mutex
 	actionTokens     float64
 	actionLastRefill time.Time
+	// transport
+	format string
+	// Custom serializer/deserializer from config
+	serializer   func(interface{}) ([]byte, error)
+	deserializer func([]byte, interface{}) error
 }
 
 // WSMessage represents a WebSocket message.
 type WSMessage struct {
-	Type         string                 `json:"type"`
-	ComponentID  string                 `json:"componentId,omitempty"`
-	Action       string                 `json:"action,omitempty"`
-	Data         map[string]interface{} `json:"data,omitempty"`
-	Payload      json.RawMessage        `json:"payload,omitempty"`
-	SessionToken string                 `json:"sessionToken,omitempty"` // SECURITY: Token sent in message, not URL
-	ClientID     string                 `json:"clientId,omitempty"`     // Client ID for session association
+	Type         string                 `json:"type" msgpack:"type"`
+	ComponentID  string                 `json:"componentId,omitempty" msgpack:"componentId,omitempty"`
+	Action       string                 `json:"action,omitempty" msgpack:"action,omitempty"`
+	Data         map[string]interface{} `json:"data,omitempty" msgpack:"data,omitempty"`
+	Payload      interface{}            `json:"payload,omitempty" msgpack:"payload,omitempty"`
+	SessionToken string                 `json:"sessionToken,omitempty" msgpack:"sessionToken,omitempty"`
+	ClientID     string                 `json:"clientId,omitempty" msgpack:"clientId,omitempty"`
 }
 
 // WSStateUpdate represents a state update message.
 type WSStateUpdate struct {
-	Key   string      `json:"key"`
-	Value interface{} `json:"value"`
+	Key   string      `json:"key" msgpack:"key"`
+	Value interface{} `json:"value" msgpack:"value"`
 }
 
 // WSHub maintains the set of active clients and broadcasts messages.
@@ -456,7 +468,7 @@ func (h *WSHub) Run() {
 			}
 			h.Clients[client.ID] = client
 			h.mu.Unlock()
-			log.Printf("Client connected: %s", client.ID)
+			slog.Default().Info("client connected", "id", client.ID)
 
 		case client := <-h.Unregister:
 			h.mu.Lock()
@@ -466,7 +478,7 @@ func (h *WSHub) Run() {
 				client.Close()
 			}
 			h.mu.Unlock()
-			log.Printf("Client disconnected: %s", client.ID)
+			slog.Default().Info("client disconnected", "id", client.ID)
 
 		case message := <-h.Broadcast:
 			// Instead of directly sending to local clients, publish to the PubSub system.
@@ -531,8 +543,8 @@ func (h *WSHub) ClientCount() int {
 }
 
 // NewWSClient creates a new WebSocket client.
-func NewWSClient(id string, conn *websocket.Conn) *WSClient {
-	client := &WSClient{
+func NewWSClient(id string, conn *websocket.Conn, config WebSocketConfig) *WSClient {
+	return &WSClient{
 		ID:               id,
 		Conn:             conn,
 		Send:             make(chan []byte, 256),
@@ -541,9 +553,13 @@ func NewWSClient(id string, conn *websocket.Conn) *WSClient {
 		maxMessageSize:   maxWSMessageSize,
 		actionTokens:     10.0,
 		actionLastRefill: time.Now(),
-		lastSentState:    make(map[string]interface{}), // Initialize to prevent nil pointer
+		lastSentState:    make(map[string]interface{}),
+		compress:         config.CompressState,
+		stateDiffing:     config.StateDiffing,
+		format:           config.SerializationFormat,
+		serializer:       config.Serializer,
+		deserializer:     config.Deserializer,
 	}
-	return client
 }
 
 // maxWSMessageSize is the maximum WebSocket message size we accept (64KB).
@@ -571,13 +587,13 @@ func (c *WSClient) ReadPump(hub *WSHub, onMessage func(*WSClient, WSMessage)) {
 		_, message, err := c.Conn.ReadMessage()
 		if err != nil {
 			if websocket.IsUnexpectedCloseError(err, websocket.CloseGoingAway, websocket.CloseNormalClosure, websocket.CloseAbnormalClosure) {
-				log.Printf("WebSocket disconnect (client %s): %v", c.ID, err)
+				slog.Default().Warn("ws disconnect", "client", c.ID, "err", err)
 			}
 			break
 		}
 
 		var msg WSMessage
-		if err := json.Unmarshal(message, &msg); err != nil {
+		if err := c.Unmarshal(message, &msg); err != nil {
 			c.SendError("Invalid message format")
 			continue
 		}
@@ -608,7 +624,11 @@ func (c *WSClient) WritePump() {
 				c.mu.Unlock()
 				return
 			}
-			err := c.Conn.WriteMessage(websocket.TextMessage, message)
+			messageType := websocket.TextMessage
+			if c.format == "msgpack" {
+				messageType = websocket.BinaryMessage
+			}
+			err := c.Conn.WriteMessage(messageType, message)
 			c.mu.Unlock()
 
 			if err != nil {
@@ -630,9 +650,31 @@ func (c *WSClient) WritePump() {
 	}
 }
 
-// SendJSON sends a JSON message to the client.
+// Marshal marshals a value using the client's configured format.
+func (c *WSClient) Marshal(v interface{}) ([]byte, error) {
+	if c.serializer != nil {
+		return c.serializer(v)
+	}
+	if c.format == "msgpack" {
+		return msgpack.Marshal(v)
+	}
+	return json.Marshal(v)
+}
+
+// Unmarshal unmarshals a value using the client's configured format.
+func (c *WSClient) Unmarshal(data []byte, v interface{}) error {
+	if c.deserializer != nil {
+		return c.deserializer(data, v)
+	}
+	if c.format == "msgpack" {
+		return msgpack.Unmarshal(data, v)
+	}
+	return json.Unmarshal(data, v)
+}
+
+// SendJSON sends a message to the client using the configured format.
 func (c *WSClient) SendJSON(v interface{}) error {
-	data, err := json.Marshal(v)
+	data, err := c.Marshal(v)
 	if err != nil {
 		return err
 	}
@@ -693,14 +735,23 @@ func (c *WSClient) SendState() {
 		c.lastSentStateMu.Unlock()
 	}
 
-	var stateJSON []byte
+	var stateData interface{}
 	var err error
 	if c.serializer != nil {
-		stateJSON, err = c.serializer(stateMap)
+		stateData, err = c.serializer(stateMap)
+		// If using JSON format, custom serializer output ([]byte) must be RawMessage
+		if err == nil && c.format != "msgpack" {
+			if b, ok := stateData.([]byte); ok {
+				stateData = json.RawMessage(b)
+			}
+		}
 	} else {
-		var s string
-		s, err = c.State.ToJSON()
-		stateJSON = []byte(s)
+		if c.format == "msgpack" {
+			stateData = stateMap
+		} else {
+			s, _ := c.State.ToJSON()
+			stateData = json.RawMessage(s)
+		}
 	}
 	if err != nil {
 		c.SendError("Failed to serialize state")
@@ -708,7 +759,7 @@ func (c *WSClient) SendState() {
 	}
 	c.sendEncodedPayload(map[string]interface{}{
 		"type":  "init",
-		"state": json.RawMessage(stateJSON),
+		"state": stateData,
 	})
 }
 
@@ -721,14 +772,22 @@ func (c *WSClient) SendInitWithSession(sessionToken string) {
 		c.lastSentStateMu.Unlock()
 	}
 
-	var stateJSON []byte
+	var stateData interface{}
 	var err error
 	if c.serializer != nil {
-		stateJSON, err = c.serializer(stateMap)
+		stateData, err = c.serializer(stateMap)
+		if err == nil && c.format != "msgpack" {
+			if b, ok := stateData.([]byte); ok {
+				stateData = json.RawMessage(b)
+			}
+		}
 	} else {
-		var s string
-		s, err = c.State.ToJSON()
-		stateJSON = []byte(s)
+		if c.format == "msgpack" {
+			stateData = stateMap
+		} else {
+			s, _ := c.State.ToJSON()
+			stateData = json.RawMessage(s)
+		}
 	}
 	if err != nil {
 		c.SendError("Failed to serialize state")
@@ -736,7 +795,7 @@ func (c *WSClient) SendInitWithSession(sessionToken string) {
 	}
 	c.sendEncodedPayload(map[string]interface{}{
 		"type":         "init",
-		"state":        json.RawMessage(stateJSON),
+		"state":        stateData,
 		"sessionToken": sessionToken,
 		"clientId":     c.SessionID,
 	})
@@ -744,9 +803,9 @@ func (c *WSClient) SendInitWithSession(sessionToken string) {
 
 // sendEncodedPayload marshals msg and optionally gzip-compresses it before
 // queueing on the Send channel.
-func (c *WSClient) sendEncodedPayload(msg map[string]interface{}) {
+func (c *WSClient) sendEncodedPayload(payload interface{}) {
 	if c.compress {
-		data, err := json.Marshal(msg)
+		data, err := c.Marshal(payload)
 		if err != nil {
 			c.SendError(fmt.Sprintf("state encode error: %v", err))
 			return
@@ -763,7 +822,7 @@ func (c *WSClient) sendEncodedPayload(msg map[string]interface{}) {
 		})
 		return
 	}
-	_ = c.SendJSON(msg)
+	_ = c.SendJSON(payload)
 }
 
 // compressBytes gzip-compresses data and returns the compressed bytes.
@@ -929,6 +988,8 @@ type WebSocketConfig struct {
 	Serializer func(interface{}) ([]byte, error)
 	// Deserializer overrides JSON for inbound state deserialization.
 	Deserializer func([]byte, interface{}) error
+	// SerializationFormat sets the underlying format for all WebSocket communications.
+	SerializationFormat string
 	// WSMaxMessageSize limits the maximum payload size for WebSocket messages.
 	WSMaxMessageSize int
 }
@@ -951,13 +1012,14 @@ func WebSocketHandler(config WebSocketConfig) fiberpkg.Handler {
 	// Apply defaults for nil config values
 	if config.Hub == nil {
 		config.Hub = NewWSHub(nil)
-		// When creating a default hub here, start it since caller didn't
 		go config.Hub.Run()
 	}
 	if config.GenerateID == nil {
 		config.GenerateID = generateComponentID
 	}
 
+	// Fiber v3: websocket.New returns a fiber.Handler (func(Ctx) error)
+	// The websocket upgrade check is performed inside websocket.New.
 	return websocket.New(func(c *websocket.Conn) {
 		if config.WSMaxMessageSize > 0 {
 			c.SetReadLimit(int64(config.WSMaxMessageSize))
@@ -975,7 +1037,7 @@ func WebSocketHandler(config WebSocketConfig) fiberpkg.Handler {
 		connID := "conn_" + generateSecureToken()[:8]
 
 		// Create client with placeholder session (will be updated after auth)
-		client := NewWSClient(connID, c)
+		client := NewWSClient(connID, c, config)
 		client.SessionID = "" // Will be set after session validation
 		if config.WSMaxMessageSize > 0 {
 			client.maxMessageSize = int64(config.WSMaxMessageSize)
@@ -995,13 +1057,13 @@ func WebSocketHandler(config WebSocketConfig) fiberpkg.Handler {
 		// Wait for first message (should be init with session token)
 		_, firstMsg, err := c.ReadMessage()
 		if err != nil {
-			log.Printf("Failed to read initial message: %v", err)
+			slog.Default().Warn("failed to read initial ws message", "err", err)
 			_ = c.Close()
 			return
 		}
 
 		var initMsg WSMessage
-		if err := json.Unmarshal(firstMsg, &initMsg); err != nil {
+		if err := client.Unmarshal(firstMsg, &initMsg); err != nil {
 			client.SendError("Invalid initial message format")
 			_ = c.Close()
 			return
@@ -1013,7 +1075,7 @@ func WebSocketHandler(config WebSocketConfig) fiberpkg.Handler {
 			if prevSessionID, ok := globalSessionStore.ValidateSession(initMsg.SessionToken); ok {
 				// Check if we have saved state for this session
 				if savedState, hasState := globalClientStateStore.Get(prevSessionID); hasState {
-					log.Printf("Restoring session state for %s", prevSessionID)
+					slog.Default().Debug("restoring session state", "sessionID", prevSessionID)
 					sessionID = prevSessionID
 					restoredState = savedState
 					sessionToken = initMsg.SessionToken
@@ -1138,20 +1200,39 @@ func DefaultMessageHandler(client *WSClient, msg WSMessage) {
 
 	switch msg.Type {
 	case "init":
-		stateStr, _ := client.State.ToJSON()
+		var stateData interface{}
+		if client.format == "msgpack" {
+			stateData = client.State.ToMap()
+		} else {
+			stateStr, _ := client.State.ToJSON()
+			stateData = json.RawMessage([]byte(stateStr))
+		}
 		sendResponse(map[string]interface{}{
 			"type":        "init",
 			"componentId": msg.ComponentID,
-			"state":       json.RawMessage([]byte(stateStr)),
+			"state":       stateData,
 		})
 
 	case "update":
 		var update WSStateUpdate
 		var unmarshalErr error
+		payloadBytes, payloadIsBytes := msg.Payload.([]byte)
 		if client.deserializer != nil {
-			unmarshalErr = client.deserializer(msg.Payload, &update)
+			if payloadIsBytes {
+				unmarshalErr = client.deserializer(payloadBytes, &update)
+			} else {
+				// Try to re-marshal if it's already a map (JSON case)
+				b, _ := json.Marshal(msg.Payload)
+				unmarshalErr = client.deserializer(b, &update)
+			}
 		} else {
-			unmarshalErr = json.Unmarshal(msg.Payload, &update)
+			if payloadIsBytes {
+				unmarshalErr = json.Unmarshal(payloadBytes, &update)
+			} else {
+				// Already unmarshaled by json into interface{}
+				b, _ := json.Marshal(msg.Payload)
+				unmarshalErr = json.Unmarshal(b, &update)
+			}
 		}
 		if unmarshalErr != nil {
 			sendResponse(map[string]interface{}{
@@ -1225,13 +1306,21 @@ func DefaultMessageHandler(client *WSClient, msg WSMessage) {
 		}
 
 		// Look for action handlers in the hub or app
-		// For now, we'll just log and broadcast if no dedicated handler
-		log.Printf("Action received: %s (Client: %s)", action, client.ID)
+		slog.Default().Debug("ws action received", "action", action, "client", client.ID)
 
-		// This is where we will hook into the app's action handlers
-		// For the examples, we can use a global registry for now
 		if handler, ok := GetActionHandler(action); ok {
-			handler(client, msg.Payload)
+			var payload interface{}
+			if b, ok := msg.Payload.([]byte); ok {
+				// If it's a byte slice, it's either RawMessage or direct binary
+				if client.format == "msgpack" {
+					payload = b // Keep as bytes for msgpack (handler might decode it)
+				} else {
+					payload = json.RawMessage(b)
+				}
+			} else {
+				payload = msg.Payload
+			}
+			handler(client, payload)
 			sendResponse(map[string]interface{}{
 				"type": "action_ack",
 			})
@@ -1251,7 +1340,7 @@ func DefaultMessageHandler(client *WSClient, msg WSMessage) {
 }
 
 // ActionHandler is a function that handles a WebSocket action.
-type ActionHandler func(client *WSClient, payload json.RawMessage)
+type ActionHandler func(client *WSClient, payload interface{})
 
 // ConnectHandler is a function that handles a new WebSocket connection.
 type ConnectHandler func(client *WSClient)
@@ -1294,36 +1383,33 @@ func callConnectHandlers(client *WSClient) {
 	}
 }
 
-// WebSocketUpgradeMiddleware upgrades HTTP connections to WebSocket.
-// It also enforces per-IP rate limiting to prevent connection DoS attacks.
+// WebSocketUpgradeMiddleware enforces per-IP rate limiting before WebSocket upgrade.
 func WebSocketUpgradeMiddleware() fiberpkg.Handler {
-	return func(c *fiberpkg.Ctx) error {
+	return func(c fiberpkg.Ctx) error {
 		// Check if WebSocket upgrade request
-		if string(c.Request().Header.Peek("Upgrade")) != "websocket" {
+		if !c.IsWebSocket() {
 			return c.Next()
 		}
 
 		// SECURITY: Apply per-IP rate limiting for WebSocket connections
 		clientIP := GetIPFromContext(c)
 		if !globalConnRateLimiter.Allow(clientIP) {
-			log.Printf("WebSocket connection rate limit exceeded for IP: %s", clientIP)
+			slog.Default().Warn("ws rate limit exceeded", "ip", clientIP)
 			return c.Status(fiberpkg.StatusTooManyRequests).JSON(fiberpkg.Map{
 				"error": "Rate limit exceeded. Please try again later.",
 			})
 		}
 
-		// WebSocket upgrade will be handled by the websocket handler
 		return c.Next()
 	}
 }
 
 // RemoteActionRateLimitMiddleware enforces per-IP rate limiting for the HTTP remote action endpoint.
-// It uses a separate global rate limiter optimized for HTTP action workloads.
 func RemoteActionRateLimitMiddleware() fiberpkg.Handler {
-	return func(c *fiberpkg.Ctx) error {
+	return func(c fiberpkg.Ctx) error {
 		clientIP := GetIPFromContext(c)
 		if !globalRemoteActionRateLimiter.Allow(clientIP) {
-			log.Printf("HTTP Remote Action rate limit exceeded for IP: %s", clientIP)
+			slog.Default().Warn("remote action rate limit exceeded", "ip", clientIP)
 			return c.Status(fiberpkg.StatusTooManyRequests).JSON(fiberpkg.Map{
 				"error": "Rate limit exceeded. Please try again later.",
 			})
@@ -1334,10 +1420,7 @@ func RemoteActionRateLimitMiddleware() fiberpkg.Handler {
 
 // StateSyncHandler creates a handler for state synchronization.
 func StateSyncHandler(_ *WSHub) fiberpkg.Handler {
-	return func(c *fiberpkg.Ctx) error {
-		// Get session token from header
-		// SECURITY (P3): query params deprecated due to potential leakage in server logs
-		// or Referer headers. Only accepting HTTP headers securely.
+	return func(c fiberpkg.Ctx) error {
 		sessionToken := c.Get("X-Session-Token")
 
 		if sessionToken == "" {
@@ -1353,7 +1436,6 @@ func StateSyncHandler(_ *WSHub) fiberpkg.Handler {
 			})
 		}
 
-		// Get shared state map
 		stateMap, ok := globalClientStateStore.Get(sessionID)
 		if !ok {
 			return c.Status(fiberpkg.StatusNotFound).JSON(fiberpkg.Map{
@@ -1361,7 +1443,6 @@ func StateSyncHandler(_ *WSHub) fiberpkg.Handler {
 			})
 		}
 
-		// Parse state update
 		var update WSStateUpdate
 		if err := json.Unmarshal(c.Body(), &update); err != nil {
 			return c.Status(fiberpkg.StatusBadRequest).JSON(fiberpkg.Map{
@@ -1369,7 +1450,6 @@ func StateSyncHandler(_ *WSHub) fiberpkg.Handler {
 			})
 		}
 
-		// Update state - this triggers the shared OnChange safely, broadcasting to all tabs
 		if obs, ok := stateMap.Get(update.Key); ok {
 			if settable, isSettable := obs.(state.Settable); isSettable {
 				_ = settable.SetAny(update.Value)

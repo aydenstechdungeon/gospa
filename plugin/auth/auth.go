@@ -19,8 +19,9 @@ import (
 	"strings"
 	"time"
 
+	json "github.com/goccy/go-json"
 	"github.com/aydenstechdungeon/gospa/plugin"
-	"github.com/gofiber/fiber/v2"
+	"github.com/gofiber/fiber/v3"
 	"github.com/golang-jwt/jwt/v5"
 	"golang.org/x/oauth2"
 )
@@ -141,7 +142,7 @@ func oauthStateCookieName(provider string) string {
 	return oauthStateCookiePrefix + strings.ToLower(provider)
 }
 
-func setOAuthStateCookie(c *fiber.Ctx, provider, state string) {
+func setOAuthStateCookie(c fiber.Ctx, provider, state string) {
 	secure := c.Protocol() == "https" || strings.EqualFold(c.Get("X-Forwarded-Proto"), "https")
 	c.Cookie(&fiber.Cookie{
 		Name:     oauthStateCookieName(provider),
@@ -155,7 +156,7 @@ func setOAuthStateCookie(c *fiber.Ctx, provider, state string) {
 	})
 }
 
-func clearOAuthStateCookie(c *fiber.Ctx, provider string) {
+func clearOAuthStateCookie(c fiber.Ctx, provider string) {
 	secure := c.Protocol() == "https" || strings.EqualFold(c.Get("X-Forwarded-Proto"), "https")
 	c.Cookie(&fiber.Cookie{
 		Name:     oauthStateCookieName(provider),
@@ -205,7 +206,7 @@ func (p *AuthPlugin) ValidateToken(tokenString string) (*Claims, error) {
 
 // RequireAuth returns a middleware that requires authentication.
 func (p *AuthPlugin) RequireAuth() fiber.Handler {
-	return func(c *fiber.Ctx) error {
+	return func(c fiber.Ctx) error {
 		authHeader := c.Get("Authorization")
 		if authHeader == "" {
 			return c.Status(fiber.StatusUnauthorized).JSON(fiber.Map{"error": "missing authorization header"})
@@ -228,7 +229,7 @@ func (p *AuthPlugin) RequireAuth() fiber.Handler {
 
 // OAuthRedirect returns a handler that redirects to an OAuth provider.
 func (p *AuthPlugin) OAuthRedirect(providerName string) fiber.Handler {
-	return func(c *fiber.Ctx) error {
+	return func(c fiber.Ctx) error {
 		provider, err := p.getProvider(providerName)
 		if err != nil {
 			return c.Status(fiber.StatusBadRequest).JSON(fiber.Map{"error": err.Error()})
@@ -251,13 +252,13 @@ func (p *AuthPlugin) OAuthRedirect(providerName string) fiber.Handler {
 		setOAuthStateCookie(c, providerName, state)
 
 		url := conf.AuthCodeURL(state)
-		return c.Redirect(url)
+		return c.Redirect().Status(fiber.StatusFound).To(url)
 	}
 }
 
 // OAuthCallback returns a handler that handles the OAuth callback.
 func (p *AuthPlugin) OAuthCallback(providerName string) fiber.Handler {
-	return func(c *fiber.Ctx) error {
+	return func(c fiber.Ctx) error {
 		code := c.Query("code")
 		if code == "" {
 			return c.Status(fiber.StatusBadRequest).JSON(fiber.Map{"error": "missing code"})
@@ -299,7 +300,7 @@ func (p *AuthPlugin) OAuthCallback(providerName string) fiber.Handler {
 
 // EnableOTPHandler returns a handler that generates OTP setup info.
 func (p *AuthPlugin) EnableOTPHandler() fiber.Handler {
-	return func(c *fiber.Ctx) error {
+	return func(c fiber.Ctx) error {
 		userAny := c.Locals("user")
 		user, ok := userAny.(*User)
 		if !ok || user == nil {
@@ -320,12 +321,12 @@ func (p *AuthPlugin) EnableOTPHandler() fiber.Handler {
 
 // VerifyOTPHandler returns a handler that verifies an OTP code.
 func (p *AuthPlugin) VerifyOTPHandler() fiber.Handler {
-	return func(c *fiber.Ctx) error {
+	return func(c fiber.Ctx) error {
 		var req struct {
 			Secret string `json:"secret"`
 			Code   string `json:"code"`
 		}
-		if err := c.BodyParser(&req); err != nil {
+		if err := json.Unmarshal(c.Body(), &req); err != nil {
 			return c.Status(fiber.StatusBadRequest).JSON(fiber.Map{"error": "invalid request"})
 		}
 
@@ -533,6 +534,7 @@ import (
 	"os"
 	"time"
 
+	json "github.com/goccy/go-json"
 	"github.com/golang-jwt/jwt/v5"
 )
 
@@ -602,7 +604,6 @@ import (
 	"crypto/hmac"
 	"crypto/sha256"
 	"encoding/hex"
-	"encoding/json"
 	"fmt"
 	"io"
 	"net/http"
@@ -610,7 +611,8 @@ import (
 	"strings"
 	"time"
 
-	"github.com/gofiber/fiber/v2"
+	json "github.com/goccy/go-json"
+	"github.com/gofiber/fiber/v3"
 	"golang.org/x/oauth2"
 	"golang.org/x/oauth2/endpoints"
 )

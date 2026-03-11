@@ -9,7 +9,37 @@ The error handling system in `fiber/errors.go` provides:
 - **AppError**: Structured application errors with codes
 - **ErrorCode**: Typed error codes for categorization
 - **ErrorHandler**: Middleware for consistent error responses
-- **Error Pages**: Custom error page support
+- **Error Boundaries**: File-based `_error.templ` boundaries for robust UI recovery
+
+---
+
+## Error Boundaries (`_error.templ`)
+
+GoSPA supports React-style Error Boundaries via the `_error.templ` file convention. When placed in any `routes/` directory, it will automatically catch any panics or errors that occur during the Server-Side Rendering (SSR) of that route or its children.
+
+### Creating an Error Boundary
+
+Simply create a `_error.templ` file in your route segment:
+
+```templ
+// routes/admin/_error.templ
+package admin
+
+import "fmt"
+
+templ Error(props map[string]any) {
+    <div class="error-boundary bg-red-100 p-4 rounded text-red-900">
+        <h2 class="text-xl font-bold">Something went wrong in the admin panel!</h2>
+        <p class="mt-2"><strong>Error:</strong> { props["error"].(string) }</p>
+        <p><strong>Status Code:</strong> { fmt.Sprint(props["code"]) }</p>
+        <p><strong>Path:</strong> { props["path"].(string) }</p>
+    </div>
+}
+```
+
+### How it works 
+
+If `page.templ` inside `/admin` panics during rendering or returns an error during data fetching, the router catches it, halts the broken response stream, and seamlessly renders the nearest `_error.templ` file instead. The `props` map is automatically injected with the `error` string, HTTP `code`, and request `path`.
 
 ---
 

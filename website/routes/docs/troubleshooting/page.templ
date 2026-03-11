@@ -82,7 +82,7 @@ templ Page() {
 import "github.com/aydenstechdungeon/gospa/routing"
 
 func init() {
-    routing.RegisterRemoteAction("saveData", func(ctx context.Context, input any) (any, error) {
+    routing.RegisterRemoteAction("saveData", func(ctx context.Context, rc routing.RemoteContext, input any) (any, error) {
         return "saved", nil
     })
 }`, "go", "routes/init.go")

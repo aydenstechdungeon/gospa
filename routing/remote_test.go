@@ -13,7 +13,7 @@ func TestRegisterRemoteAction(t *testing.T) {
 	globalRemoteRegistry.mu.Unlock()
 
 	// Register a simple action
-	RegisterRemoteAction("testAction", func(_ context.Context, _ interface{}) (interface{}, error) {
+	RegisterRemoteAction("testAction", func(_ context.Context, _ RemoteContext, _ interface{}) (interface{}, error) {
 		return "result", nil
 	})
 
@@ -24,7 +24,7 @@ func TestRegisterRemoteAction(t *testing.T) {
 	}
 
 	// Verify it works
-	result, err := fn(context.Background(), nil)
+	result, err := fn(context.Background(), RemoteContext{}, nil)
 	if err != nil {
 		t.Errorf("Expected no error, got %v", err)
 	}
@@ -53,7 +53,7 @@ func TestRemoteActionWithInput(t *testing.T) {
 	globalRemoteRegistry.mu.Unlock()
 
 	// Register action that processes input
-	RegisterRemoteAction("addOne", func(_ context.Context, input interface{}) (interface{}, error) {
+	RegisterRemoteAction("addOne", func(_ context.Context, _ RemoteContext, input interface{}) (interface{}, error) {
 		if num, ok := input.(float64); ok {
 			return num + 1, nil
 		}
@@ -69,7 +69,7 @@ func TestRemoteActionWithInput(t *testing.T) {
 	}
 
 	// Test with float64 (JSON numbers)
-	result, err := fn(context.Background(), float64(5))
+	result, err := fn(context.Background(), RemoteContext{}, float64(5))
 	if err != nil {
 		t.Errorf("Expected no error, got %v", err)
 	}
@@ -85,7 +85,7 @@ func TestRemoteActionWithError(t *testing.T) {
 	globalRemoteRegistry.mu.Unlock()
 
 	// Register action that returns error
-	RegisterRemoteAction("errorAction", func(_ context.Context, _ interface{}) (interface{}, error) {
+	RegisterRemoteAction("errorAction", func(_ context.Context, _ RemoteContext, _ interface{}) (interface{}, error) {
 		return nil, errors.New("something went wrong")
 	})
 
@@ -94,7 +94,7 @@ func TestRemoteActionWithError(t *testing.T) {
 		t.Fatal("Expected action to be registered")
 	}
 
-	result, err := fn(context.Background(), nil)
+	result, err := fn(context.Background(), RemoteContext{}, nil)
 	if err == nil {
 		t.Error("Expected error, got nil")
 	}
@@ -113,7 +113,7 @@ func TestRemoteActionWithContext(t *testing.T) {
 	globalRemoteRegistry.mu.Unlock()
 
 	// Register action that checks context
-	RegisterRemoteAction("contextAction", func(ctx context.Context, _ interface{}) (interface{}, error) {
+	RegisterRemoteAction("contextAction", func(ctx context.Context, _ RemoteContext, _ interface{}) (interface{}, error) {
 		select {
 		case <-ctx.Done():
 			return nil, ctx.Err()
@@ -128,7 +128,7 @@ func TestRemoteActionWithContext(t *testing.T) {
 	}
 
 	// Test with active context
-	result, err := fn(context.Background(), nil)
+	result, err := fn(context.Background(), RemoteContext{}, nil)
 	if err != nil {
 		t.Errorf("Expected no error, got %v", err)
 	}
@@ -140,7 +140,7 @@ func TestRemoteActionWithContext(t *testing.T) {
 	ctx, cancel := context.WithCancel(context.Background())
 	cancel()
 
-	_, err = fn(ctx, nil)
+	_, err = fn(ctx, RemoteContext{}, nil)
 	if err == nil {
 		t.Error("Expected context cancelled error")
 	}
@@ -153,13 +153,13 @@ func TestMultipleRemoteActions(t *testing.T) {
 	globalRemoteRegistry.mu.Unlock()
 
 	// Register multiple actions
-	RegisterRemoteAction("action1", func(_ context.Context, _ interface{}) (interface{}, error) {
+	RegisterRemoteAction("action1", func(_ context.Context, _ RemoteContext, _ interface{}) (interface{}, error) {
 		return "result1", nil
 	})
-	RegisterRemoteAction("action2", func(_ context.Context, _ interface{}) (interface{}, error) {
+	RegisterRemoteAction("action2", func(_ context.Context, _ RemoteContext, _ interface{}) (interface{}, error) {
 		return "result2", nil
 	})
-	RegisterRemoteAction("action3", func(_ context.Context, _ interface{}) (interface{}, error) {
+	RegisterRemoteAction("action3", func(_ context.Context, _ RemoteContext, _ interface{}) (interface{}, error) {
 		return "result3", nil
 	})
 
@@ -172,9 +172,9 @@ func TestMultipleRemoteActions(t *testing.T) {
 		t.Error("Expected all actions to be registered")
 	}
 
-	result1, _ := fn1(context.Background(), nil)
-	result2, _ := fn2(context.Background(), nil)
-	result3, _ := fn3(context.Background(), nil)
+	result1, _ := fn1(context.Background(), RemoteContext{}, nil)
+	result2, _ := fn2(context.Background(), RemoteContext{}, nil)
+	result3, _ := fn3(context.Background(), RemoteContext{}, nil)
 
 	if result1 != "result1" || result2 != "result2" || result3 != "result3" {
 		t.Error("Expected correct results from all actions")
@@ -188,12 +188,12 @@ func TestOverwriteRemoteAction(t *testing.T) {
 	globalRemoteRegistry.mu.Unlock()
 
 	// Register initial action
-	RegisterRemoteAction("overwrite", func(_ context.Context, _ interface{}) (interface{}, error) {
+	RegisterRemoteAction("overwrite", func(_ context.Context, _ RemoteContext, _ interface{}) (interface{}, error) {
 		return "first", nil
 	})
 
 	// Overwrite with new action
-	RegisterRemoteAction("overwrite", func(_ context.Context, _ interface{}) (interface{}, error) {
+	RegisterRemoteAction("overwrite", func(_ context.Context, _ RemoteContext, _ interface{}) (interface{}, error) {
 		return "second", nil
 	})
 
@@ -202,7 +202,7 @@ func TestOverwriteRemoteAction(t *testing.T) {
 		t.Fatal("Expected action to be registered")
 	}
 
-	result, _ := fn(context.Background(), nil)
+	result, _ := fn(context.Background(), RemoteContext{}, nil)
 	if result != "second" {
 		t.Error("Expected overwritten action to return 'second'")
 	}
@@ -215,7 +215,7 @@ func TestRemoteActionConcurrentAccess(t *testing.T) {
 	globalRemoteRegistry.mu.Unlock()
 
 	// Register action
-	RegisterRemoteAction("concurrent", func(_ context.Context, _ interface{}) (interface{}, error) {
+	RegisterRemoteAction("concurrent", func(_ context.Context, _ RemoteContext, _ interface{}) (interface{}, error) {
 		return "ok", nil
 	})
 
@@ -227,7 +227,7 @@ func TestRemoteActionConcurrentAccess(t *testing.T) {
 			if !ok {
 				t.Error("Expected action to be found")
 			}
-			result, err := fn(context.Background(), nil)
+			result, err := fn(context.Background(), RemoteContext{}, nil)
 			if err != nil || result != "ok" {
 				t.Error("Expected successful execution")
 			}

@@ -1,12 +1,13 @@
 package search
 
 import (
-	"encoding/json"
 	"io/fs"
 	"os"
 	"path/filepath"
 	"regexp"
 	"strings"
+
+	json "github.com/goccy/go-json"
 )
 
 type DocPage struct {

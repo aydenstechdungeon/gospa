@@ -25,6 +25,10 @@ const (
 	RouteTypeError
 	// RouteTypeAPI represents an API component route
 	RouteTypeAPI
+	// RouteTypeMiddleware represents a middleware route
+	RouteTypeMiddleware
+	// RouteTypeLoading represents a loading component route
+	RouteTypeLoading
 )
 
 // Route represents a parsed route from the filesystem.
@@ -95,8 +99,8 @@ func (r *Router) Scan() error {
 			return nil
 		}
 
-		// Only process .templ files
-		if !strings.HasSuffix(path, ".templ") {
+		// Only process .templ files and _middleware.go
+		if !strings.HasSuffix(path, ".templ") && filepath.Base(path) != "_middleware.go" {
 			return nil
 		}
 
@@ -141,6 +145,10 @@ func (r *Router) parseRoute(relPath string) (*Route, error) {
 		routeType = RouteTypeLayout
 	case fileName == "error.templ":
 		routeType = RouteTypeError
+	case fileName == "_middleware.go":
+		routeType = RouteTypeMiddleware
+	case fileName == "_loading.templ" || fileName == "loading.templ":
+		routeType = RouteTypeLoading
 	case strings.HasSuffix(fileName, "+server.go"):
 		routeType = RouteTypeAPI
 	}
@@ -192,6 +200,18 @@ func (r *Router) filePathToURLPath(relPath string, _ RouteType) string {
 			path = ""
 		} else {
 			path = strings.TrimSuffix(path, "error")
+		}
+	case path == "_middleware.go" || strings.HasSuffix(path, "/_middleware.go"):
+		if path == "_middleware.go" {
+			path = ""
+		} else {
+			path = strings.TrimSuffix(path, "_middleware.go")
+		}
+	case path == "_loading" || strings.HasSuffix(path, "/_loading") || path == "loading" || strings.HasSuffix(path, "/loading"):
+		if path == "_loading" || path == "loading" {
+			path = ""
+		} else {
+			path = strings.TrimSuffix(strings.TrimSuffix(path, "_loading"), "loading")
 		}
 	case strings.Contains(path, "+server"):
 		// API route: remove +server suffix
@@ -491,6 +511,28 @@ func (r *Router) GetLayouts() []*Route {
 	return layouts
 }
 
+// GetMiddlewares returns all middleware routes.
+func (r *Router) GetMiddlewares() []*Route {
+	mws := make([]*Route, 0)
+	for _, route := range r.routes {
+		if route.Type == RouteTypeMiddleware {
+			mws = append(mws, route)
+		}
+	}
+	return mws
+}
+
+// GetLoadings returns all loading routes.
+func (r *Router) GetLoadings() []*Route {
+	loadings := make([]*Route, 0)
+	for _, route := range r.routes {
+		if route.Type == RouteTypeLoading {
+			loadings = append(loadings, route)
+		}
+	}
+	return loadings
+}
+
 // RouteRegex returns a regex pattern for the route.
 // The regex is compiled once and cached for performance.
 func (r *Route) RouteRegex() *regexp.Regexp {
@@ -567,6 +609,51 @@ func (r *Router) ResolveLayoutChain(route *Route) []*Route {
 	if layout, ok := layouts["/"]; ok {
 		if len(chain) == 0 || chain[0].Path != "/" {
 			chain = append([]*Route{layout}, chain...)
+		}
+	}
+
+	return chain
+}
+
+// ResolveMiddlewareChain resolves the complete middleware chain for a matched route.
+// It returns all middlewares from root to the nearest parent, ordered root-first.
+func (r *Router) ResolveMiddlewareChain(route *Route) []*Route {
+	if route == nil {
+		return nil
+	}
+
+	chain := make([]*Route, 0)
+
+	// Collect all middlewares
+	mws := make(map[string]*Route)
+	for _, rt := range r.routes {
+		if rt.Type == RouteTypeMiddleware {
+			mws[rt.Path] = rt
+		}
+	}
+
+	path := route.Path
+	if route.Type == RouteTypePage || route.Type == RouteTypeError {
+		if mw, ok := mws[path]; ok {
+			chain = append([]*Route{mw}, chain...)
+		}
+	}
+
+	for {
+		parent := parentDir(path)
+		if parent == path {
+			break
+		}
+		if mw, ok := mws[parent]; ok {
+			chain = append([]*Route{mw}, chain...)
+		}
+		path = parent
+	}
+
+	// Check for root middleware
+	if mw, ok := mws["/"]; ok {
+		if len(chain) == 0 || chain[0].Path != "/" {
+			chain = append([]*Route{mw}, chain...)
 		}
 	}
 

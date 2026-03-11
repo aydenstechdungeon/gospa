@@ -36,6 +36,7 @@ templ Page() {
 						<tr><td class="px-4 py-2 font-mono text-[var(--accent-primary)]">WSMaxMessageSize</td><td class="px-4 py-2">int</td><td class="px-4 py-2">65536</td><td class="px-4 py-2">Max message size in bytes</td></tr>
 						<tr><td class="px-4 py-2 font-mono text-[var(--accent-primary)]">WSConnRateLimit</td><td class="px-4 py-2">float64</td><td class="px-4 py-2">1.5</td><td class="px-4 py-2">Max upgrades/sec per IP</td></tr>
 						<tr><td class="px-4 py-2 font-mono text-[var(--accent-primary)]">WSConnBurst</td><td class="px-4 py-2">float64</td><td class="px-4 py-2">15.0</td><td class="px-4 py-2">Burst capacity for upgrades</td></tr>
+						<tr><td class="px-4 py-2 font-mono text-[var(--accent-primary)]">SerializationFormat</td><td class="px-4 py-2">string</td><td class="px-4 py-2">"json"</td><td class="px-4 py-2">Serialization format: "json" or "msgpack"</td></tr>
 					</tbody>
 				</table>
 			</div>
@@ -58,6 +59,7 @@ templ Page() {
 						<tr><td class="px-4 py-2 font-mono text-[var(--accent-primary)]">StateDiffing</td><td class="px-4 py-2">bool</td><td class="px-4 py-2">false</td><td class="px-4 py-2">Send only changed state fields</td></tr>
 						<tr><td class="px-4 py-2 font-mono text-[var(--accent-primary)]">CacheTemplates</td><td class="px-4 py-2">bool</td><td class="px-4 py-2">false</td><td class="px-4 py-2">Cache parsed templates</td></tr>
 						<tr><td class="px-4 py-2 font-mono text-[var(--accent-primary)]">SimpleRuntime</td><td class="px-4 py-2">bool</td><td class="px-4 py-2">false</td><td class="px-4 py-2">Use lightweight client runtime</td></tr>
+						<tr><td class="px-4 py-2 font-mono text-[var(--accent-primary)]">DisableSanitization</td><td class="px-4 py-2">bool</td><td class="px-4 py-2">false</td><td class="px-4 py-2">Trust server-rendered HTML (Faster)</td></tr>
 					</tbody>
 				</table>
 			</div>
@@ -80,9 +82,10 @@ func main() {
         WSMaxReconnect:    10,
         WSHeartbeat:       30 * time.Second,
         
-        CompressState:  true,
-        StateDiffing:   true,
-        CacheTemplates: true,
+        CompressState:       true,
+        StateDiffing:        true,
+        CacheTemplates:      true,
+        SerializationFormat: "msgpack",
     })
     
     app.Run(":3000")

@@ -41,5 +41,8 @@
     "dompurify": {
       "optional": true
     }
+  },
+  "dependencies": {
+    "@msgpack/msgpack": "^3.1.3"
   }
 }

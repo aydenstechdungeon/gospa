@@ -1,6 +1,10 @@
-# Server-Sent Events (SSE)
+# Realtime: SSE and WebSockets
 
-GoSPA provides first-class support for Server-Sent Events (SSE) via the `fiber.SSEBroker`. SSE enables real-time, server-to-client push without the full bidirectionality of WebSockets — ideal for notifications, status updates, and live counters.
+GoSPA provides two primary realtime communication mechanisms: **Server-Sent Events (SSE)** for one-way server-to-client updates, and **WebSockets** for full-duplex state synchronization.
+
+---
+
+## Server-Sent Events (SSE)
 
 ---
 
@@ -205,3 +209,43 @@ func main() {
 ## Heartbeat
 
 When `HeartbeatInterval > 0`, the broker sends a comment line (`: heartbeat`) at the configured interval. This keeps proxies from closing idle connections. The browser `EventSource` ignores comment lines; they are invisible to `onmessage` handlers.
+
+---
+
+## WebSockets
+
+WebSockets in GoSPA are primarily used for **State Synchronization**. When enabled, any state object marked as synced will automatically replicate changes between the server and all connected clients.
+
+### High-Performance Serialization
+
+GoSPA uses specialized serialization libraries to ensure minimal latency and CPU overhead:
+
+1. **JSON (Default)**: Powered by `goccy/go-json`, which is significantly faster than the Go standard library's `encoding/json`.
+2. **MessagePack**: A binary serialization format that reduces payload sizes and improves parsing performance. Enable it with:
+
+```go
+app := gospa.New(gospa.Config{
+    SerializationFormat: "msgpack",
+})
+```
+
+### Bandwidth Optimization
+
+For large state objects or frequent updates, GoSPA provides built-in optimizations:
+
+- **State Diffing**: Only transmits changed keys instead of the entire object.
+- **GZIP Compression**: Automatically compresses large payloads using the browser's `DecompressionStream` API.
+
+```go
+app := gospa.New(gospa.Config{
+    StateDiffing:  true,
+    CompressState: true,
+})
+```
+
+### Stability and Reliability
+
+The GoSPA WebSocket client includes:
+- **Auto-Reconnect**: Exponential backoff on connection loss.
+- **Message Batching**: Coalesces rapid state changes into single network frames.
+- **Binary Tags**: Strict field mapping for MessagePack ensures cross-language compatibility.

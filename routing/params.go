@@ -1,12 +1,13 @@
 package routing
 
 import (
-	"encoding/json"
 	"fmt"
 	"net/url"
 	"regexp"
 	"strconv"
 	"strings"
+
+	json "github.com/goccy/go-json"
 )
 
 // Params represents route parameters extracted from URL.

@@ -7,14 +7,14 @@ import (
 	"sync"
 
 	"github.com/a-h/templ"
-	fiberpkg "github.com/gofiber/fiber/v2"
+	fiberpkg "github.com/gofiber/fiber/v3"
 )
 
 // Handler is a generic HTTP handler function.
-type Handler func(c *fiberpkg.Ctx) error
+type Handler func(c fiberpkg.Ctx) error
 
 // Middleware is a Fiber middleware function.
-type Middleware func(c *fiberpkg.Ctx) error
+type Middleware func(c fiberpkg.Ctx) error
 
 // ManualRoute represents a manually registered route.
 type ManualRoute struct {
@@ -262,7 +262,7 @@ func (mr *ManualRouter) registerRouteToFiber(app *fiberpkg.App, route *ManualRou
 	for i := len(route.Middleware) - 1; i >= 0; i-- {
 		mw := route.Middleware[i]
 		h := handler
-		handler = func(c *fiberpkg.Ctx) error {
+		handler = func(c fiberpkg.Ctx) error {
 			if err := mw(c); err != nil {
 				return err
 			}
@@ -303,8 +303,12 @@ func (mr *ManualRouter) registerGroupToFiber(app *fiberpkg.App, group *RouteGrou
 		fiberMiddleware[i] = mw
 	}
 
-	// Create Fiber group
-	fg := app.Group(group.Prefix, fiberMiddleware...)
+	// Create Fiber group (v3 Group accepts ...any)
+	mwAny := make([]any, len(fiberMiddleware))
+	for i, mw := range fiberMiddleware {
+		mwAny[i] = mw
+	}
+	fg := app.Group(group.Prefix, mwAny...)
 
 	// Register routes
 	for _, route := range group.Routes {
@@ -314,7 +318,7 @@ func (mr *ManualRouter) registerGroupToFiber(app *fiberpkg.App, group *RouteGrou
 		for i := len(route.Middleware) - 1; i >= 0; i-- {
 			mw := route.Middleware[i]
 			h := handler
-			handler = func(c *fiberpkg.Ctx) error {
+			handler = func(c fiberpkg.Ctx) error {
 				if err := mw(c); err != nil {
 					return err
 				}
@@ -361,8 +365,12 @@ func (mr *ManualRouter) registerNestedGroupToFiber(fg fiberpkg.Router, group *Ro
 		fiberMiddleware[i] = mw
 	}
 
-	// Create nested Fiber group
-	nfg := fg.Group(group.Prefix, fiberMiddleware...)
+	// Create nested Fiber group (v3 Group accepts ...any)
+	nmwAny := make([]any, len(fiberMiddleware))
+	for i, mw := range fiberMiddleware {
+		nmwAny[i] = mw
+	}
+	nfg := fg.Group(group.Prefix, nmwAny...)
 
 	// Register routes
 	for _, route := range group.Routes {
@@ -371,7 +379,7 @@ func (mr *ManualRouter) registerNestedGroupToFiber(fg fiberpkg.Router, group *Ro
 		for i := len(route.Middleware) - 1; i >= 0; i-- {
 			mw := route.Middleware[i]
 			h := handler
-			handler = func(c *fiberpkg.Ctx) error {
+			handler = func(c fiberpkg.Ctx) error {
 				if err := mw(c); err != nil {
 					return err
 				}

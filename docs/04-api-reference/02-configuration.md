@@ -31,8 +31,9 @@ app := gospa.New(gospa.Config{
 | Option | Type | Default | Description |
 |--------|------|---------|-------------|
 | `DefaultState` | `map[string]interface{}` | `{}` | Initial state for new sessions |
-| `StateSerializer` | `StateSerializerFunc` | JSON | Custom state serialization function |
-| `StateDeserializer` | `StateDeserializerFunc` | JSON | Custom state deserialization function |
+| `SerializationFormat` | `string` | `"json"` | Serialization for WebSocket: `"json"` (goccy/go-json) or `"msgpack"` |
+| `StateSerializer` | `StateSerializerFunc` | Auto | Overrides default outbound state serialization |
+| `StateDeserializer` | `StateDeserializerFunc` | Auto | Overrides default inbound state deserialization |
 
 ### WebSocket Options
 
@@ -57,6 +58,7 @@ app := gospa.New(gospa.Config{
 | `CacheTemplates` | `bool` | `false` | Enable template caching for SSG, ISR, and PPR pages (recommended for production) |
 | `SimpleRuntime` | `bool` | `false` | Use lightweight ~11KB runtime without DOMPurify |
 | `SimpleRuntimeSVGs` | `bool` | `false` | Allow SVG/math elements in simple runtime (security risk for untrusted content) |
+| `DisableSanitization` | `bool` | `false` | Trusts server-rendered HTML without DOMPurify (SvelteKit-like model) |
 | `SSGCacheMaxEntries` | `int` | `500` | FIFO eviction limit shared by SSG, ISR, and PPR shell caches. `-1` = unbounded. |
 | `SSGCacheTTL` | `time.Duration` | `0` | Expiration time for SSG cache entries. `0` means cache forever. |
 
@@ -102,6 +104,7 @@ app := gospa.New(gospa.Config{
 |--------|------|---------|-------------|
 | `AllowedOrigins` | `[]string` | `[]` | Allowed CORS origins |
 | `EnableCSRF` | `bool` | `false` | Enable automatic CSRF protection (wired by gospa.New) |
+| `NavigationOptions` | `NavigationOptions` | Default | Advanced client-side navigation tuning |
 
 ---
 
@@ -168,9 +171,20 @@ DefaultState: map[string]interface{}{
 }
 ```
 
+### SerializationFormat
+
+Sets the underlying format for all WebSocket communications. 
+
+- `"json"` (Default): Uses the high-performance `goccy/go-json` library for 2-3x faster serialization than standard library.
+- `"msgpack"`: binary MessagePack format for even smaller payloads and faster parsing on supported clients.
+
+```go
+SerializationFormat: "msgpack"
+```
+
 ### StateSerializer / StateDeserializer
 
-Custom serialization for state. Useful for complex types or compression.
+Custom serialization for state. Overrides the default selected by `SerializationFormat`.
 
 ```go
 StateSerializer: func(state interface{}) ([]byte, error) {
@@ -270,6 +284,16 @@ SimpleRuntime: true,  // ~30% smaller runtime, no DOMPurify
 ```
 
 See [Runtime Selection Guide](./RUNTIME.md) for details.
+
+### DisableSanitization
+
+Disables client-side HTML sanitization for SPA navigation. When enabled, GoSPA trusts server-rendered HTML (which is auto-escaped by Templ) without running it through DOMPurify. This provides a SvelteKit-like security model and slightly better performance.
+
+```go
+DisableSanitization: true
+```
+
+> ⚠️ **Warning**: You must manually ensure any user-generated content is sanitized on the server if you disable this option.
 
 ### SimpleRuntimeSVGs
 
@@ -390,6 +414,31 @@ Enable automatic CSRF protection (wired by gospa.New). Adds CSRF token to forms 
 ```go
 EnableCSRF: true,
 ```
+
+### NavigationOptions
+
+Fine-tune client-side navigation behavior for maximum performance.
+
+```go
+NavigationOptions: gospa.NavigationOptions{
+    SpeculativePrefetching: &gospa.NavigationSpeculativePrefetchingConfig{
+        Enabled: ptr(true),
+        TTL:     ptr(45000), // 45 seconds
+    },
+    URLParsingCache: &gospa.NavigationURLParsingCacheConfig{
+        Enabled: ptr(true),
+        MaxSize: ptr(500),
+    },
+}
+```
+
+Available sub-configs:
+- `SpeculativePrefetching`: Fetches links on hover/viewport entry.
+- `URLParsingCache`: Caches internal URL parsing results.
+- `IdleCallbackBatchUpdates`: Batches state updates during browser idle time.
+- `LazyRuntimeInitialization`: Defers boot logic until first interaction.
+- `ServiceWorkerNavigationCaching`: Offloads page caching to a Service Worker.
+- `ViewTransitions`: Enables the View Transitions API for smooth page fades.
 
 ---
 

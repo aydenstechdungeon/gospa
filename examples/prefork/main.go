@@ -6,7 +6,7 @@ import (
 
 	"github.com/aydenstechdungeon/gospa"
 	"github.com/aydenstechdungeon/gospa/store/redis"
-	"github.com/gofiber/fiber/v2"
+	"github.com/gofiber/fiber/v3"
 	redisclient "github.com/redis/go-redis/v9"
 )
 
@@ -40,8 +40,8 @@ func main() {
 
 	// Since we are running outside the standard components example setup
 	// We disable SPA for this trivial example or add a barebones route
-	app.Fiber.Get("/", func(c *fiber.Ctx) error {
-		return c.SendString("GoSPA Prefork Example Running! Refresh and watch the process ID change depending on Fiber's load balancer.")
+	app.Fiber.Get("/", func(c fiber.Ctx) error {
+		return c.SendString("GoSPA Prefork Example Running!")
 	})
 
 	log.Fatal(app.Run(":3000"))

@@ -5,9 +5,8 @@ import (
 	"crypto/rand"
 	"crypto/subtle"
 	"encoding/hex"
-	"encoding/json"
 	"fmt"
-	"log"
+	"log/slog"
 	"strings"
 	"time"
 
@@ -15,7 +14,8 @@ import (
 	"github.com/aydenstechdungeon/gospa/embed"
 	"github.com/aydenstechdungeon/gospa/state"
 	gospatempl "github.com/aydenstechdungeon/gospa/templ"
-	gofiber "github.com/gofiber/fiber/v2"
+	json "github.com/goccy/go-json"
+	gofiber "github.com/gofiber/fiber/v3"
 )
 
 // Config holds the SPA middleware configuration.
@@ -30,6 +30,8 @@ type Config struct {
 	DevMode bool
 	// DefaultState is the initial state for new sessions
 	DefaultState map[string]interface{}
+	// Logger is the structured logger. Defaults to slog.Default().
+	Logger *slog.Logger
 }
 
 // DefaultConfig returns the default configuration.
@@ -40,12 +42,13 @@ func DefaultConfig() Config {
 		ComponentIDKey: "gospa.componentID",
 		DevMode:        false,
 		DefaultState:   make(map[string]interface{}),
+		Logger:         slog.Default(),
 	}
 }
 
 // SPAMiddleware creates a Fiber middleware for SPA support.
 func SPAMiddleware(config Config) gofiber.Handler {
-	return func(c *gofiber.Ctx) error {
+	return func(c gofiber.Ctx) error {
 		// Initialize state for this request
 		stateMap := state.NewStateMap()
 		for k, v := range config.DefaultState {
@@ -66,7 +69,7 @@ func SPAMiddleware(config Config) gofiber.Handler {
 
 // StateMiddleware creates middleware that injects state into responses.
 func StateMiddleware(config Config) gofiber.Handler {
-	return func(c *gofiber.Ctx) error {
+	return func(c gofiber.Ctx) error {
 		err := c.Next()
 
 		// Only inject state for HTML responses
@@ -89,11 +92,6 @@ func StateMiddleware(config Config) gofiber.Handler {
 		}
 
 		// Escape the JSON to prevent XSS and script tag breakouts inside <script>.
-		// Must escape <, >, and & to their Unicode escapes — this matches what
-		// encoding/json does with HTMLEscape(true) and prevents:
-		//   </script> tag injection via <
-		//   attribute injection via >
-		//   entity decoding issues via &
 		escapedJSON := strings.ReplaceAll(stateJSON, "<", "\\u003c")
 		escapedJSON = strings.ReplaceAll(escapedJSON, ">", "\\u003e")
 		escapedJSON = strings.ReplaceAll(escapedJSON, "&", "\\u0026")
@@ -103,7 +101,6 @@ func StateMiddleware(config Config) gofiber.Handler {
 		}
 
 		// Inject before </body>
-		// Using bytes.Replace instead of string for better performance
 		body = bytes.Replace(body, []byte("</body>"), append([]byte(stateScript), []byte("</body>")...), 1)
 		c.Response().SetBody(body)
 
@@ -117,11 +114,11 @@ func RuntimeMiddleware(simple bool) gofiber.Handler {
 	runtimeJS, err := embed.RuntimeJS(simple)
 	if err != nil {
 		// Return a middleware that serves an error if runtime is not available
-		return func(c *gofiber.Ctx) error {
+		return func(c gofiber.Ctx) error {
 			return c.Status(gofiber.StatusInternalServerError).SendString("Runtime not available")
 		}
 	}
-	return func(c *gofiber.Ctx) error {
+	return func(c gofiber.Ctx) error {
 		c.Set("Content-Type", "application/javascript")
 		c.Set("Cache-Control", "public, max-age=31536000, immutable")
 		return c.Send(runtimeJS)
@@ -129,9 +126,8 @@ func RuntimeMiddleware(simple bool) gofiber.Handler {
 }
 
 // RuntimeMiddlewareWithContent serves a custom runtime script.
-// This is provided for advanced use cases where a custom runtime is needed.
 func RuntimeMiddlewareWithContent(runtimeContent []byte) gofiber.Handler {
-	return func(c *gofiber.Ctx) error {
+	return func(c gofiber.Ctx) error {
 		c.Set("Content-Type", "application/javascript")
 		c.Set("Cache-Control", "public, max-age=31536000")
 		return c.Send(runtimeContent)
@@ -139,21 +135,15 @@ func RuntimeMiddlewareWithContent(runtimeContent []byte) gofiber.Handler {
 }
 
 // CSRFSetTokenMiddleware issues and rotates the CSRF cookie on safe HTTP methods.
-// Use this alongside CSRFTokenMiddleware: the setter runs on GETs to rotate the token,
-// the validator runs on mutating methods to verify it.
-// SECURITY: The token is rotated on every GET/HEAD to prevent token fixation attacks.
 func CSRFSetTokenMiddleware() gofiber.Handler {
-	return func(c *gofiber.Ctx) error {
+	return func(c gofiber.Ctx) error {
 		// Only issue/rotate tokens on safe methods
 		if c.Method() != "GET" && c.Method() != "HEAD" {
 			return c.Next()
 		}
 
-		// Always rotate — issuing a fresh token every GET prevents fixation attacks
-		// where a token stolen from an XSS/log leakage remains valid indefinitely.
 		token, err := generateCSRFToken()
 		if err != nil {
-			// Non-critical: skip token rotation, don't block the request
 			return c.Next()
 		}
 		c.Cookie(&gofiber.Cookie{
@@ -162,7 +152,7 @@ func CSRFSetTokenMiddleware() gofiber.Handler {
 			HTTPOnly: false, // Must be readable by JS to set the X-CSRF-Token header
 			SameSite: "Strict",
 			Secure:   c.Protocol() == "https",
-			Path:     "/", // Ensure cookie covers entire site, not just request path
+			Path:     "/",
 		})
 
 		return c.Next()
@@ -179,15 +169,13 @@ func generateCSRFToken() (string, error) {
 }
 
 // CSRFTokenMiddleware validates CSRF tokens on mutating requests.
-// IMPORTANT: Use CSRFSetTokenMiddleware() as well so the token is actually issued.
 func CSRFTokenMiddleware() gofiber.Handler {
-	return func(c *gofiber.Ctx) error {
+	return func(c gofiber.Ctx) error {
 		// Skip for GET, HEAD, OPTIONS
 		if c.Method() == "GET" || c.Method() == "HEAD" || c.Method() == "OPTIONS" {
 			return c.Next()
 		}
 
-		// Check for CSRF token in header with constant-time comparison
 		token := c.Get("X-CSRF-Token")
 		cookie := c.Cookies("csrf_token")
 
@@ -203,18 +191,12 @@ func CSRFTokenMiddleware() gofiber.Handler {
 
 // PreloadConfig configures preload headers for critical resources.
 type PreloadConfig struct {
-	// RuntimeScript is the path to the runtime JS
-	RuntimeScript string
-	// NavigationScript is the path to the navigation module
+	RuntimeScript    string
 	NavigationScript string
-	// WebSocketScript is the path to the WebSocket module
-	WebSocketScript string
-	// CoreScript is the path to the core runtime
-	CoreScript string
-	// MicroScript is the path to the micro runtime
-	MicroScript string
-	// Enabled determines if preload headers are added
-	Enabled bool
+	WebSocketScript  string
+	CoreScript       string
+	MicroScript      string
+	Enabled          bool
 }
 
 // DefaultPreloadConfig returns the default preload configuration.
@@ -230,16 +212,13 @@ func DefaultPreloadConfig() PreloadConfig {
 }
 
 // PreloadHeadersMiddleware adds HTTP Link headers for preloading critical resources.
-// This allows browsers to start fetching critical scripts before parsing HTML,
-// reducing time-to-interactive (TTI).
 func PreloadHeadersMiddleware(config PreloadConfig) gofiber.Handler {
-	return func(c *gofiber.Ctx) error {
+	return func(c gofiber.Ctx) error {
 		err := c.Next()
 		if err != nil {
 			return err
 		}
 
-		// Only add preload headers for HTML responses
 		contentType := string(c.Response().Header.ContentType())
 		if !strings.Contains(contentType, "text/html") {
 			return nil
@@ -249,25 +228,14 @@ func PreloadHeadersMiddleware(config PreloadConfig) gofiber.Handler {
 			return nil
 		}
 
-		// Build Link header with preload hints
-		// Priority: runtime-core (smallest), then full runtime
-		// Navigation and WebSocket are lazy-loaded, so we use preconnect instead
 		var links []string
-
-		// Preload the core runtime (smallest, essential for hydration)
 		if config.CoreScript != "" {
 			links = append(links, fmt.Sprintf("<%s>; rel=preload; as=script", config.CoreScript))
 		}
-
-		// Preload full runtime if needed (for full SPA experience)
 		if config.RuntimeScript != "" {
 			links = append(links, fmt.Sprintf("<%s>; rel=preload; as=script", config.RuntimeScript))
 		}
-
-		// Preconnect for lazy-loaded modules (starts DNS + TCP + TLS early)
-		// These are fetched on-demand, so preconnect is more efficient than preload
 		if config.NavigationScript != "" {
-			// Extract origin for preconnect if it's an external URL
 			links = append(links, fmt.Sprintf("<%s>; rel=modulepreload", config.NavigationScript))
 		}
 
@@ -280,15 +248,13 @@ func PreloadHeadersMiddleware(config PreloadConfig) gofiber.Handler {
 }
 
 // PreloadHeadersMiddlewareMinimal adds minimal preload headers for micro-runtime.
-// Use this for pages that only need basic reactivity without full SPA features.
 func PreloadHeadersMiddlewareMinimal(config PreloadConfig) gofiber.Handler {
-	return func(c *gofiber.Ctx) error {
+	return func(c gofiber.Ctx) error {
 		err := c.Next()
 		if err != nil {
 			return err
 		}
 
-		// Only add preload headers for HTML responses
 		contentType := string(c.Response().Header.ContentType())
 		if !strings.Contains(contentType, "text/html") {
 			return nil
@@ -298,7 +264,6 @@ func PreloadHeadersMiddlewareMinimal(config PreloadConfig) gofiber.Handler {
 			return nil
 		}
 
-		// Only preload the micro runtime for minimal pages
 		if config.MicroScript != "" {
 			c.Set("Link", fmt.Sprintf("<%s>; rel=preload; as=script", config.MicroScript))
 		}
@@ -309,27 +274,22 @@ func PreloadHeadersMiddlewareMinimal(config PreloadConfig) gofiber.Handler {
 
 // SecurityHeadersMiddleware adds security headers.
 func SecurityHeadersMiddleware() gofiber.Handler {
-	return func(c *gofiber.Ctx) error {
+	return func(c gofiber.Ctx) error {
 		if c.Protocol() == "https" || c.Get("X-Forwarded-Proto") == "https" {
 			c.Set("Strict-Transport-Security", "max-age=31536000; includeSubDomains; preload")
 		}
 		c.Set("X-Content-Type-Options", "nosniff")
 		c.Set("X-Frame-Options", "DENY")
-		c.Set("X-XSS-Protection", "0") // 0 is recommended since XSS auditor is deprecated
+		c.Set("X-XSS-Protection", "0")
 		c.Set("Referrer-Policy", "strict-origin-when-cross-origin")
 		return c.Next()
 	}
 }
 
 // SPANavigationMiddleware detects SPA navigation requests and modifies response.
-// When a request has the X-Requested-With: GoSPA-Navigate header, it strips the
-// full HTML shell and returns only the main content for partial page updates.
 func SPANavigationMiddleware() gofiber.Handler {
-	return func(c *gofiber.Ctx) error {
-		// Check if this is an SPA navigation request
+	return func(c gofiber.Ctx) error {
 		isSPANavigate := c.Get("X-Requested-With") == "GoSPA-Navigate"
-
-		// Store in locals for handlers to check
 		c.Locals("gospa.spa_navigate", isSPANavigate)
 
 		err := c.Next()
@@ -337,7 +297,6 @@ func SPANavigationMiddleware() gofiber.Handler {
 			return err
 		}
 
-		// Only process HTML responses for SPA navigation
 		if !isSPANavigate {
 			return nil
 		}
@@ -347,16 +306,10 @@ func SPANavigationMiddleware() gofiber.Handler {
 			return nil
 		}
 
-		// For SPA navigation, we need to ensure the response contains
-		// the main content, title, and head elements with proper attributes
-		// The client-side will parse and extract these
 		body := c.Response().Body()
-
-		// Guard: streaming responses have empty body at this point — skip
 		if len(body) == 0 {
 			return nil
 		}
-		// Set a custom header to indicate this is a partial response
 		c.Set("X-GoSPA-Partial", "true")
 
 		return nil
@@ -364,7 +317,7 @@ func SPANavigationMiddleware() gofiber.Handler {
 }
 
 // IsSPANavigation returns true if the current request is an SPA navigation.
-func IsSPANavigation(c *gofiber.Ctx) bool {
+func IsSPANavigation(c gofiber.Ctx) bool {
 	if isSPA, ok := c.Locals("gospa.spa_navigate").(bool); ok {
 		return isSPA
 	}
@@ -372,21 +325,14 @@ func IsSPANavigation(c *gofiber.Ctx) bool {
 }
 
 // CORSMiddleware handles CORS for API routes.
-// SECURITY: When "*" is in allowedOrigins, Access-Control-Allow-Origin is set to "*"
-// WITHOUT Allow-Credentials (the two are mutually exclusive per the CORS spec).
-// Credentialed access is only enabled for explicitly named origins.
 func CORSMiddleware(allowedOrigins []string) gofiber.Handler {
-	return func(c *gofiber.Ctx) error {
+	return func(c gofiber.Ctx) error {
 		origin := c.Get("Origin")
 
-		// Handle null Origin header (e.g., from file:// URLs or some mobile apps)
-		// Security: null Origin is treated as a distinct origin, not a wildcard match
 		if origin == "" {
-			// No Origin header present (same-origin request or non-browser client)
 			return c.Next()
 		}
 
-		// Determine if wildcard is configured and check for exact match
 		wildcard := false
 		exactMatch := false
 		for _, o := range allowedOrigins {
@@ -398,27 +344,21 @@ func CORSMiddleware(allowedOrigins []string) gofiber.Handler {
 			}
 		}
 
-		// Always set Vary: Origin to prevent CDN caching issues with CORS
-		// This ensures caches store separate responses per origin
 		c.Set("Vary", "Origin")
 
 		if exactMatch {
-			// Explicit origin match: allow credentials
 			c.Set("Access-Control-Allow-Origin", origin)
 			c.Set("Access-Control-Allow-Credentials", "true")
 			c.Set("Access-Control-Allow-Methods", "GET,POST,PUT,DELETE,PATCH,OPTIONS")
 			c.Set("Access-Control-Allow-Headers", "Content-Type,Authorization,X-CSRF-Token")
 			c.Set("Access-Control-Expose-Headers", "X-GoSPA-Partial")
 		} else if wildcard {
-			// Wildcard: cannot combine with Allow-Credentials per CORS spec
 			c.Set("Access-Control-Allow-Origin", "*")
 			c.Set("Access-Control-Allow-Methods", "GET,POST,PUT,DELETE,PATCH,OPTIONS")
 			c.Set("Access-Control-Allow-Headers", "Content-Type,Authorization,X-CSRF-Token")
 			c.Set("Access-Control-Expose-Headers", "X-GoSPA-Partial")
 		}
-		// If no match and no wildcard, don't set CORS headers (browser will block)
 
-		// Handle preflight
 		if c.Method() == "OPTIONS" {
 			return c.SendStatus(gofiber.StatusNoContent)
 		}
@@ -428,17 +368,16 @@ func CORSMiddleware(allowedOrigins []string) gofiber.Handler {
 }
 
 // RequestLoggerMiddleware logs requests with method, path, status code, and duration.
-// Output format: [METHOD] /path STATUS duration
-// For structured logging, use Fiber's built-in logger middleware instead.
 func RequestLoggerMiddleware() gofiber.Handler {
-	return func(c *gofiber.Ctx) error {
+	logger := slog.Default()
+	return func(c gofiber.Ctx) error {
 		start := time.Now()
 		err := c.Next()
-		log.Printf("[%s] %s %d %v",
-			c.Method(),
-			c.Path(),
-			c.Response().StatusCode(),
-			time.Since(start),
+		logger.Info("request",
+			"method", c.Method(),
+			"path", c.Path(),
+			"status", c.Response().StatusCode(),
+			"duration", time.Since(start),
 		)
 		return err
 	}
@@ -446,7 +385,7 @@ func RequestLoggerMiddleware() gofiber.Handler {
 
 // RecoveryMiddleware recovers from panics.
 func RecoveryMiddleware() gofiber.Handler {
-	return func(c *gofiber.Ctx) error {
+	return func(c gofiber.Ctx) error {
 		defer func() {
 			if r := recover(); r != nil {
 				_ = c.Status(gofiber.StatusInternalServerError).JSON(gofiber.Map{
@@ -459,7 +398,7 @@ func RecoveryMiddleware() gofiber.Handler {
 }
 
 // GetComponentID extracts the component ID from context.
-func GetComponentID(c *gofiber.Ctx, config Config) string {
+func GetComponentID(c gofiber.Ctx, config Config) string {
 	if id, ok := c.Locals(config.ComponentIDKey).(string); ok {
 		return id
 	}
@@ -467,7 +406,7 @@ func GetComponentID(c *gofiber.Ctx, config Config) string {
 }
 
 // GetState extracts the state map from context.
-func GetState(c *gofiber.Ctx, config Config) *state.StateMap {
+func GetState(c gofiber.Ctx, config Config) *state.StateMap {
 	if s, ok := c.Locals(config.StateKey).(*state.StateMap); ok {
 		return s
 	}
@@ -475,13 +414,11 @@ func GetState(c *gofiber.Ctx, config Config) *state.StateMap {
 }
 
 // RenderComponent renders a Templ component with state.
-func RenderComponent(c *gofiber.Ctx, config Config, component templ.Component, componentName string) error {
+func RenderComponent(c gofiber.Ctx, config Config, component templ.Component, componentName string) error {
 	stateMap := GetState(c, config)
 
-	// Create component with options
 	opts := []gospatempl.ComponentOption{}
 	if stateMap != nil {
-		// Add state values to component
 		stateData := make(map[string]any)
 		if jsonData, err := stateMap.ToJSON(); err == nil {
 			_ = json.Unmarshal([]byte(jsonData), &stateData)
@@ -490,8 +427,6 @@ func RenderComponent(c *gofiber.Ctx, config Config, component templ.Component, c
 	}
 
 	wrapper := gospatempl.NewComponent(componentName, opts...)
-
-	// Render component with wrapper
 	rendered := gospatempl.RenderComponent(wrapper, component)
 
 	c.Set("Content-Type", "text/html")
@@ -509,20 +444,16 @@ func randomString(length int) string {
 	b := make([]byte, length)
 	randomBytes := make([]byte, length)
 
-	// Use crypto/rand for cryptographically secure random generation
 	if _, err := rand.Read(randomBytes); err != nil {
-		// This should never happen with crypto/rand on modern systems
-		// If it does, we panic as this is a critical security function
 		panic(fmt.Sprintf("failed to generate secure random: %v", err))
 	}
 
 	for i := 0; i < length; {
 		idx := int(randomBytes[i])
-		if idx < 248 { // 62 * 4 = 248 (eliminates modulo bias)
+		if idx < 248 {
 			b[i] = charset[idx%len(charset)]
 			i++
 		} else {
-			// Reroll byte
 			if _, err := rand.Read(randomBytes[i : i+1]); err != nil {
 				panic(fmt.Sprintf("failed to generate secure random: %v", err))
 			}
@@ -532,31 +463,30 @@ func randomString(length int) string {
 }
 
 // JSONResponse sends a JSON response.
-func JSONResponse(c *gofiber.Ctx, status int, data interface{}) error {
+func JSONResponse(c gofiber.Ctx, status int, data interface{}) error {
 	return c.Status(status).JSON(data)
 }
 
 // JSONError sends a JSON error response.
-func JSONError(c *gofiber.Ctx, status int, message string) error {
+func JSONError(c gofiber.Ctx, status int, message string) error {
 	return c.Status(status).JSON(gofiber.Map{
 		"error": message,
 	})
 }
 
 // ParseBody parses request body into a struct.
-func ParseBody(c *gofiber.Ctx, v interface{}) error {
+func ParseBody(c gofiber.Ctx, v interface{}) error {
 	return json.Unmarshal(c.Body(), v)
 }
 
 // GetSessionState gets or creates session state.
-func GetSessionState(c *gofiber.Ctx, config Config) map[string]interface{} {
+func GetSessionState(c gofiber.Ctx, config Config) map[string]interface{} {
 	stateMap := GetState(c, config)
 	if stateMap == nil {
 		return make(map[string]interface{})
 	}
 
 	result := make(map[string]interface{})
-	// Extract values from state map
 	jsonData, err := stateMap.ToJSON()
 	if err != nil {
 		return result
@@ -566,7 +496,7 @@ func GetSessionState(c *gofiber.Ctx, config Config) map[string]interface{} {
 }
 
 // SetSessionState sets session state.
-func SetSessionState(c *gofiber.Ctx, config Config, key string, value interface{}) {
+func SetSessionState(c gofiber.Ctx, config Config, key string, value interface{}) {
 	stateMap := GetState(c, config)
 	if stateMap == nil {
 		return

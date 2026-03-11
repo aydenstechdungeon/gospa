@@ -22,7 +22,7 @@ const (
 	defaultImage       = "https://raw.githubusercontent.com/aydenstechdungeon/gospa/refs/heads/main/gospa1%20512.webp"
 )
 
-func RootLayout(title string, children templ.Component, runtimePath string, path string, wsUrl string, debug bool, hydrationMode string, hydrationTimeout int) templ.Component {
+func RootLayout(title string, children templ.Component, runtimePath string, path string, wsUrl string, debug bool, hydrationMode string, hydrationTimeout int, serializationFormat string) templ.Component {
 	return templruntime.GeneratedTemplate(func(templ_7745c5c3_Input templruntime.GeneratedComponentInput) (templ_7745c5c3_Err error) {
 		templ_7745c5c3_W, ctx := templ_7745c5c3_Input.Writer, templ_7745c5c3_Input.Context
 		if templ_7745c5c3_CtxErr := ctx.Err(); templ_7745c5c3_CtxErr != nil {
@@ -370,7 +370,7 @@ func RootLayout(title string, children templ.Component, runtimePath string, path
 		if templ_7745c5c3_Err != nil {
 			return templ_7745c5c3_Err
 		}
-		templ_7745c5c3_Err = initGoSPA(runtimePath, wsUrl, debug, hydrationMode, hydrationTimeout).Render(ctx, templ_7745c5c3_Buffer)
+		templ_7745c5c3_Err = initGoSPA(runtimePath, wsUrl, debug, hydrationMode, hydrationTimeout, serializationFormat).Render(ctx, templ_7745c5c3_Buffer)
 		if templ_7745c5c3_Err != nil {
 			return templ_7745c5c3_Err
 		}
@@ -386,10 +386,10 @@ func RootLayout(title string, children templ.Component, runtimePath string, path
 	})
 }
 
-func initGoSPA(runtimePath, wsUrl string, debug bool, hydrationMode string, hydrationTimeout int) templ.ComponentScript {
+func initGoSPA(runtimePath, wsUrl string, debug bool, hydrationMode string, hydrationTimeout int, serializationFormat string) templ.ComponentScript {
 	return templ.ComponentScript{
-		Name: `__templ_initGoSPA_937d`,
-		Function: `function __templ_initGoSPA_937d(runtimePath, wsUrl, debug, hydrationMode, hydrationTimeout){window.__GOSPA_CONFIG__ = {
+		Name: `__templ_initGoSPA_6fab`,
+		Function: `function __templ_initGoSPA_6fab(runtimePath, wsUrl, debug, hydrationMode, hydrationTimeout, serializationFormat){window.__GOSPA_CONFIG__ = {
 		navigationOptions: {
 			speculativePrefetching: {
 				enabled: true,
@@ -412,12 +412,13 @@ func initGoSPA(runtimePath, wsUrl string, debug bool, hydrationMode string, hydr
 			hydration: {
 				mode: hydrationMode,
 				timeout: hydrationTimeout
-			}
+			},
+			serializationFormat: serializationFormat
 		});
 	});
 }`,
-		Call:       templ.SafeScript(`__templ_initGoSPA_937d`, runtimePath, wsUrl, debug, hydrationMode, hydrationTimeout),
-		CallInline: templ.SafeScriptInline(`__templ_initGoSPA_937d`, runtimePath, wsUrl, debug, hydrationMode, hydrationTimeout),
+		Call:       templ.SafeScript(`__templ_initGoSPA_6fab`, runtimePath, wsUrl, debug, hydrationMode, hydrationTimeout, serializationFormat),
+		CallInline: templ.SafeScriptInline(`__templ_initGoSPA_6fab`, runtimePath, wsUrl, debug, hydrationMode, hydrationTimeout, serializationFormat),
 	}
 }
 

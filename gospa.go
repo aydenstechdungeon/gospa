@@ -8,16 +8,16 @@ import (
 	"context"
 	"crypto/sha256"
 	"encoding/binary"
-	"encoding/json"
 	"fmt"
 	"io"
 	"io/fs"
-	"log"
-	"net/http"
+	"log/slog"
 	"os"
 	"strings"
 	"sync"
 	"time"
+
+	json "github.com/goccy/go-json"
 
 	templ "github.com/a-h/templ"
 	"github.com/aydenstechdungeon/gospa/embed"
@@ -26,11 +26,12 @@ import (
 	"github.com/aydenstechdungeon/gospa/state"
 	"github.com/aydenstechdungeon/gospa/store"
 	templpkg "github.com/aydenstechdungeon/gospa/templ"
-	fiberpkg "github.com/gofiber/fiber/v2"
-	"github.com/gofiber/fiber/v2/middleware/compress"
-	"github.com/gofiber/fiber/v2/middleware/filesystem"
-	"github.com/gofiber/fiber/v2/middleware/logger"
-	"github.com/gofiber/fiber/v2/middleware/recover"
+	fiberpkg "github.com/gofiber/fiber/v3"
+	"github.com/gofiber/fiber/v3/middleware/compress"
+	"github.com/gofiber/fiber/v3/middleware/logger"
+	recovermw "github.com/gofiber/fiber/v3/middleware/recover"
+	"github.com/gofiber/fiber/v3/middleware/static"
+	"github.com/valyala/fasthttp"
 )
 
 // StateSerializerFunc defines a function for state serialization
@@ -41,6 +42,12 @@ type StateDeserializerFunc func([]byte, interface{}) error
 
 // Version is the current version of GoSPA.
 const Version = "0.1.23"
+
+// Serialization formats
+const (
+	SerializationJSON    = "json"
+	SerializationMsgPack = "msgpack"
+)
 
 // NavigationSpeculativePrefetchingConfig configures speculative prefetching
 type NavigationSpeculativePrefetchingConfig struct {
@@ -116,6 +123,8 @@ type Config struct {
 	WebSocketPath string
 	// WebSocketMiddleware allows injecting session/auth middleware before WebSocket upgrade.
 	WebSocketMiddleware fiberpkg.Handler
+	// Logger is the structured logger. Defaults to slog.Default().
+	Logger *slog.Logger
 
 	// Performance Options
 	// CompressState enables gzip compression of outbound WebSocket state payloads.
@@ -156,8 +165,11 @@ type Config struct {
 	HydrationTimeout int // ms before force hydrate (used with "visible" and "idle" modes)
 
 	// Serialization Options
-	// StateSerializer overrides JSON for outbound WebSocket state serialization.
-	// StateDeserializer overrides JSON for inbound WebSocket state deserialization.
+	// SerializationFormat sets the underlying format for all WebSocket communications.
+	// Supported values: "json" (default, using goccy/go-json) | "msgpack".
+	SerializationFormat string
+	// StateSerializer overrides the default state serialization for outbound WebSocket payloads.
+	// StateDeserializer overrides the default state deserialization for inbound WebSocket payloads.
 	StateSerializer   StateSerializerFunc
 	StateDeserializer StateDeserializerFunc
 
@@ -215,6 +227,7 @@ func DefaultConfig() Config {
 		WebSocketPath:      "/_gospa/ws",
 		RemotePrefix:       "/_gospa/remote",
 		MaxRequestBodySize: 4 * 1024 * 1024, // Default 4MB
+		SerializationFormat: SerializationJSON,
 	}
 }
 
@@ -239,9 +252,9 @@ func (a *App) getRuntimePath() string {
 }
 
 // getWSUrl returns the WebSocket URL for the current request.
-func (a *App) getWSUrl(c *fiberpkg.Ctx) string {
+func (a *App) getWSUrl(c fiberpkg.Ctx) string {
 	protocol := "ws://"
-	if c.Secure() {
+	if c.Protocol() == "https" {
 		protocol = "wss://"
 	}
 	return protocol + string(c.Request().Host()) + a.Config.WebSocketPath
@@ -364,8 +377,12 @@ func New(config Config) *App {
 	if config.WSMaxMessageSize == 0 {
 		config.WSMaxMessageSize = 64 * 1024
 	}
+
 	if config.WSConnRateLimit == 0 {
 		config.WSConnRateLimit = 1.5
+	}
+	if config.Logger == nil {
+		config.Logger = slog.Default()
 	}
 	if config.WSConnBurst == 0 {
 		config.WSConnBurst = 15.0
@@ -375,13 +392,13 @@ func New(config Config) *App {
 
 	if config.Storage == nil {
 		if config.Prefork {
-			log.Println("CRITICAL WARNING: Prefork is enabled with in-memory Storage. User sessions and reactive state will NOT be shared between processes. Data will be lost or inconsistent!")
+			config.Logger.Warn("Prefork enabled with in-memory Storage: sessions will NOT be shared between processes")
 		}
 		config.Storage = store.NewMemoryStorage()
 	}
 	if config.PubSub == nil {
 		if config.Prefork {
-			log.Println("CRITICAL WARNING: Prefork is enabled with in-memory PubSub. WebSocket broadcasts and state sync will NOT work across child processes!")
+			config.Logger.Warn("Prefork enabled with in-memory PubSub: WebSocket broadcasts will NOT work across processes")
 		}
 		config.PubSub = store.NewMemoryPubSub()
 	}
@@ -401,12 +418,10 @@ func New(config Config) *App {
 	// Create Fiber app
 	fiberConfig := fiberpkg.Config{
 		AppName:      config.AppName,
-		Prefork:      config.Prefork,
 		ServerHeader: "GoSPA",
 	}
 	if config.DevMode {
-		log.Println("WARNING: DevMode is enabled. This exposes detailed stack traces and should be disabled in production.")
-		fiberConfig.EnablePrintRoutes = true
+		config.Logger.Warn("DevMode is enabled — disable in production")
 		fiberConfig.ServerHeader = "GoSPA/" + Version
 	}
 	fiberApp := fiberpkg.New(fiberConfig)
@@ -448,7 +463,9 @@ func New(config Config) *App {
 // setupMiddleware configures the middleware stack.
 func (a *App) setupMiddleware() {
 	// Recovery middleware
-	a.Fiber.Use(recover.New())
+	a.Fiber.Use(recovermw.New(recovermw.Config{
+		EnableStackTrace: true,
+	}))
 
 	// Logger middleware
 	if a.Config.DevMode {
@@ -457,7 +474,7 @@ func (a *App) setupMiddleware() {
 
 	// Compression
 	a.Fiber.Use(compress.New(compress.Config{
-		Level: compress.LevelDefault,
+		Level: compress.LevelBestSpeed,
 	}))
 
 	// Security headers
@@ -485,16 +502,15 @@ func (a *App) setupMiddleware() {
 	spaConfig.RuntimeScript = a.Config.RuntimeScript
 	a.Fiber.Use(fiber.SPAMiddleware(spaConfig))
 
-	// DevMode error overlay: for HTML-accepting requests that error, render the
-	// rich HTML overlay instead of a plain JSON error.
+	// DevMode error overlay
 	if a.Config.DevMode {
 		overlay := fiber.NewErrorOverlay(fiber.DefaultErrorOverlayConfig())
-		a.Fiber.Use(func(c *fiberpkg.Ctx) error {
+		a.Fiber.Use(func(c fiberpkg.Ctx) error {
 			err := c.Next()
 			if err == nil {
 				return nil
 			}
-			accept := string(c.Request().Header.Peek("Accept"))
+			accept := c.Get("Accept")
 			if strings.Contains(accept, "text/html") {
 				overlayHTML := overlay.RenderOverlay(err, nil)
 				c.Status(fiberpkg.StatusInternalServerError)
@@ -512,12 +528,12 @@ func (a *App) setupRoutes() {
 	a.Fiber.Get(a.getRuntimePath(), fiber.RuntimeMiddleware(a.Config.SimpleRuntime))
 
 	// Serve other runtime chunks from the embedded filesystem with long-term caching
-	a.Fiber.Use("/_gospa/", func(c *fiberpkg.Ctx) error {
+	a.Fiber.Use("/_gospa/", func(c fiberpkg.Ctx) error {
 		c.Set("Cache-Control", "public, max-age=31536000, immutable")
 		return c.Next()
 	})
-	a.Fiber.Use("/_gospa/", filesystem.New(filesystem.Config{
-		Root: http.FS(embed.RuntimeFS()),
+	a.Fiber.Use("/_gospa/", static.New("", static.Config{
+		FS: embed.RuntimeFS(),
 	}))
 
 	// WebSocket endpoint (always registered since hub is always created)
@@ -531,14 +547,21 @@ func (a *App) setupRoutes() {
 			handlers = append(handlers, a.Config.WebSocketMiddleware)
 		}
 		handlers = append(handlers, fiber.WebSocketHandler(fiber.WebSocketConfig{
-			Hub:              a.Hub,
-			CompressState:    a.Config.CompressState,
-			StateDiffing:     a.Config.StateDiffing,
-			Serializer:       a.Config.StateSerializer,
-			Deserializer:     a.Config.StateDeserializer,
-			WSMaxMessageSize: a.Config.WSMaxMessageSize,
+			Hub:                 a.Hub,
+			CompressState:       a.Config.CompressState,
+			StateDiffing:        a.Config.StateDiffing,
+			Serializer:          a.Config.StateSerializer,
+			Deserializer:        a.Config.StateDeserializer,
+			SerializationFormat: a.Config.SerializationFormat,
+			WSMaxMessageSize:    a.Config.WSMaxMessageSize,
 		}))
-		a.Fiber.Get(a.Config.WebSocketPath, handlers...)
+		// In Fiber v3 Get/Post/etc. take (path, handler any, ...any), not (path, ...Handler).
+		// Build a []any from our handlers slice and spread.
+		hAny := make([]any, len(handlers))
+		for i, h := range handlers {
+			hAny[i] = h
+		}
+		a.Fiber.Get(a.Config.WebSocketPath, hAny[0], hAny[1:]...)
 	}
 
 	// Remote Actions endpoint
@@ -546,7 +569,7 @@ func (a *App) setupRoutes() {
 	if a.Config.RemoteActionMiddleware != nil {
 		remoteHandlers = append(remoteHandlers, a.Config.RemoteActionMiddleware)
 	}
-	remoteHandlers = append(remoteHandlers, func(c *fiberpkg.Ctx) error {
+	remoteHandlers = append(remoteHandlers, func(c fiberpkg.Ctx) error {
 		name := c.Params("name")
 		if len(name) > 256 {
 			return c.Status(fiberpkg.StatusBadRequest).JSON(fiberpkg.Map{
@@ -586,7 +609,7 @@ func (a *App) setupRoutes() {
 					"code":  "REQUEST_TOO_LARGE",
 				})
 			}
-			if err := c.BodyParser(&input); err != nil {
+			if err := json.Unmarshal(c.Body(), &input); err != nil {
 				return c.Status(fiberpkg.StatusBadRequest).JSON(fiberpkg.Map{
 					"error": "Invalid input JSON",
 					"code":  "INVALID_JSON",
@@ -594,10 +617,23 @@ func (a *App) setupRoutes() {
 			}
 		}
 
-		result, err := fn(c.Context(), input)
+		headers := make(map[string]string)
+		for key, value := range c.Request().Header.All() {
+			headers[string(key)] = string(value)
+		}
+
+		rc := routing.RemoteContext{
+			IP:        c.IP(),
+			UserAgent: string(c.Request().Header.UserAgent()),
+			RequestID: c.GetRespHeader("X-Request-Id"),
+			SessionID: c.Get("X-Session-Id"),
+			Headers:   headers,
+		}
+
+		result, err := fn(c.Context(), rc, input)
 		if err != nil {
-			// Log the actual error internally for debugging — never expose to client
-			log.Printf("Remote action %q error: %v", name, err)
+			// Log the actual error internally
+			a.Logger().Error("remote action error", "action", name, "err", err)
 			// SECURITY: Return a generic message to prevent internal detail leakage
 			// (DB strings, file paths, stack info, etc. must not reach the browser)
 			return c.Status(fiberpkg.StatusInternalServerError).JSON(fiberpkg.Map{
@@ -611,16 +647,18 @@ func (a *App) setupRoutes() {
 			"code": "SUCCESS",
 		})
 	})
-	a.Fiber.Post(a.Config.RemotePrefix+"/:name", remoteHandlers...)
+	// Convert remoteHandlers ([]Handler) to []any for v3 routing
+	rhAny := make([]any, len(remoteHandlers))
+	for i, h := range remoteHandlers {
+		rhAny[i] = h
+	}
+	a.Fiber.Post(a.Config.RemotePrefix+"/:name", rhAny[0], rhAny[1:]...)
 
 	// Static files
 	if _, err := os.Stat(a.Config.StaticDir); err == nil {
-		a.Fiber.Use(a.Config.StaticPrefix, filesystem.New(filesystem.Config{
-			Root:   http.Dir(a.Config.StaticDir),
-			MaxAge: 31536000,
-		}))
+		a.Fiber.Use(a.Config.StaticPrefix, static.New(a.Config.StaticDir))
 		// Serve favicon from static dir if requested at root
-		a.Fiber.Get("/favicon.ico", func(c *fiberpkg.Ctx) error {
+		a.Fiber.Get("/favicon.ico", func(c fiberpkg.Ctx) error {
 			favPath := a.Config.StaticDir + "/favicon.ico"
 			if _, err := os.Stat(favPath); err == nil {
 				return c.SendFile(favPath)
@@ -629,7 +667,7 @@ func (a *App) setupRoutes() {
 		})
 	} else {
 		// Prevent 404 errors for default favicon requests
-		a.Fiber.Get("/favicon.ico", func(c *fiberpkg.Ctx) error {
+		a.Fiber.Get("/favicon.ico", func(c fiberpkg.Ctx) error {
 			return c.SendStatus(fiberpkg.StatusNoContent)
 		})
 	}
@@ -638,6 +676,14 @@ func (a *App) setupRoutes() {
 // Scan scans the routes directory and builds the route tree.
 func (a *App) Scan() error {
 	return a.Router.Scan()
+}
+
+// Logger returns the configured logger.
+func (a *App) Logger() *slog.Logger {
+	if a.Config.Logger != nil {
+		return a.Config.Logger
+	}
+	return slog.Default()
 }
 
 // RegisterRoutes registers all scanned routes with Fiber.
@@ -650,16 +696,102 @@ func (a *App) RegisterRoutes() error {
 	for _, route := range a.Router.GetPages() {
 		// Capture route for closure
 		r := route
-		a.Fiber.Get(r.Path, func(c *fiberpkg.Ctx) error {
+		opts := routing.GetRouteOptions(r.Path)
+
+		// Setup route-specific rate limiter if configured
+		var handlers []any
+		if opts.RateLimit != nil {
+			rl := fiber.NewConnectionRateLimiter(a.Config.Storage)
+			windowSecs := opts.RateLimit.Window.Seconds()
+			if windowSecs <= 0 {
+				windowSecs = 1
+			}
+			rl.SetLimits(float64(opts.RateLimit.MaxRequests), float64(opts.RateLimit.MaxRequests)/windowSecs)
+			msg := opts.RateLimit.Message
+			if msg == "" {
+				msg = "Too many requests"
+			}
+
+			handlers = append(handlers, func(c fiberpkg.Ctx) error {
+				if !rl.Allow(c.IP()) {
+					return c.Status(fiberpkg.StatusTooManyRequests).SendString(msg)
+				}
+				return c.Next()
+			})
+		}
+
+		// Apply middlewares globally registered for this route
+		mws := a.Router.ResolveMiddlewareChain(r)
+		for _, mwRoute := range mws {
+			if fn := routing.GetMiddleware(mwRoute.Path); fn != nil {
+				if mwHandler, ok := fn.(func(fiberpkg.Ctx) error); ok {
+					handlers = append(handlers, mwHandler)
+				} else if mwHandler, ok := fn.(fiberpkg.Handler); ok {
+					handlers = append(handlers, mwHandler)
+				} else {
+					a.Logger().Error("skipping invalid middleware signature", "path", mwRoute.Path)
+				}
+			}
+		}
+
+		handlers = append(handlers, func(c fiberpkg.Ctx) error {
 			return a.renderRoute(c, r)
 		})
+
+		a.Fiber.Get(r.Path, handlers[0], handlers[1:]...)
 	}
 
 	return nil
 }
 
+// renderError renders the appropriate error boundary for a path.
+func (a *App) renderError(c fiberpkg.Ctx, statusCode int, errToDisplay error) error {
+	path := c.Path()
+	errRoute := a.Router.GetErrorRoute(path)
+	if errRoute == nil {
+		return c.Status(statusCode).SendString(errToDisplay.Error())
+	}
+
+	errCompFn := routing.GetError(errRoute.Path)
+	if errCompFn == nil {
+		// Fallback to basic string if error comp isn't registered
+		return c.Status(statusCode).SendString(errToDisplay.Error())
+	}
+
+	props := map[string]interface{}{
+		"error": errToDisplay.Error(),
+		"code":  statusCode,
+		"path":  path,
+	}
+
+	content := errCompFn(props)
+	params := make(map[string]string)
+
+	// Apply layouts to the error content
+	layouts := a.Router.ResolveLayoutChain(errRoute)
+	content = a.wrapWithLayouts(content, layouts, params, path)
+
+	rootLayoutFunc := routing.GetRootLayout()
+	var wrappedContent templ.Component
+	if rootLayoutFunc != nil {
+		rootProps := a.buildRootLayoutProps(c, params)
+		wrappedContent = rootLayoutFunc(content, rootProps)
+	} else {
+		wrappedContent = content
+	}
+
+	var buf bytes.Buffer
+	if rerr := wrappedContent.Render(c.Context(), &buf); rerr != nil {
+		a.Logger().Error("Error rendering error boundary", "err", rerr)
+		return c.Status(statusCode).SendString("Internal Server Error")
+	}
+
+	c.Set("Content-Type", "text/html")
+	return c.Status(statusCode).Send(buf.Bytes())
+}
+
 // renderRoute renders a route with its layout chain.
-func (a *App) renderRoute(c *fiberpkg.Ctx, route *routing.Route) error {
+func (a *App) renderRoute(c fiberpkg.Ctx, route *routing.Route) error {
 	cacheKey := c.Path()
 	// SECURITY (P1): Removed query string from cache key to prevent cache-busting DoS attacks.
 	// An attacker spamming /path?random=1..n would fill the FIFO cache with junk keys,
@@ -742,6 +874,7 @@ func (a *App) renderRoute(c *fiberpkg.Ctx, route *routing.Route) error {
 				if _, alreadyRunning := a.isrRevalidating.LoadOrStore(cacheKey, true); !alreadyRunning {
 					// Capture values for goroutine closure.
 					routeSnap := route
+					//nolint:gosec // Background revalidation intentionally detaches from request context
 					go func() {
 						defer a.isrRevalidating.Delete(cacheKey)
 						// Limit concurrent revalidations with semaphore
@@ -752,9 +885,10 @@ func (a *App) renderRoute(c *fiberpkg.Ctx, route *routing.Route) error {
 							// Too many concurrent revalidations, skip this one
 							return
 						}
+						// Use context.Background() because the request context will be cancelled after the response is sent
 						freshHTML, err := a.buildPageHTML(context.Background(), routeSnap, nil)
 						if err != nil {
-							log.Printf("ISR background render error for %s: %v", cacheKey, err)
+							a.Logger().Error("ISR background render error", "path", cacheKey, "err", err)
 							return
 						}
 						a.storeSsgEntry(cacheKey, freshHTML)
@@ -792,7 +926,7 @@ func (a *App) renderRoute(c *fiberpkg.Ctx, route *routing.Route) error {
 		if shellHit {
 			result, err := a.applyPPRSlots(route, shell, c.Path(), opts)
 			if err != nil {
-				log.Printf("PPR slot error: %v", err)
+				a.Logger().Error("PPR slot error", "err", err)
 			}
 			c.Set("Content-Type", "text/html")
 			c.Set("Cache-Control", "no-store")
@@ -819,8 +953,8 @@ func (a *App) renderRoute(c *fiberpkg.Ctx, route *routing.Route) error {
 		if a.Config.CacheTemplates && effStrategy == routing.StrategySSG {
 			var buf bytes.Buffer
 			if err := wrappedContent.Render(ctx, &buf); err != nil {
-				log.Printf("SSG render error: %v", err)
-				return c.Status(fiberpkg.StatusInternalServerError).SendString("Render error")
+				a.Logger().Error("SSG render error", "err", err)
+				return a.renderError(c, fiberpkg.StatusInternalServerError, err)
 			}
 			a.storeSsgEntry(cacheKey, buf.Bytes())
 			c.Set("Cache-Control", "public, max-age=31536000, immutable")
@@ -839,8 +973,8 @@ func (a *App) renderRoute(c *fiberpkg.Ctx, route *routing.Route) error {
 			}
 			var buf bytes.Buffer
 			if err := wrappedContent.Render(ctx, &buf); err != nil {
-				log.Printf("ISR render error: %v", err)
-				return c.Status(fiberpkg.StatusInternalServerError).SendString("Render error")
+				a.Logger().Error("ISR render error", "err", err)
+				return a.renderError(c, fiberpkg.StatusInternalServerError, err)
 			}
 			a.storeSsgEntry(cacheKey, buf.Bytes())
 			c.Set("Cache-Control", fmt.Sprintf("public, s-maxage=%d, stale-while-revalidate=%d", ttlSec, ttlSec))
@@ -858,16 +992,27 @@ func (a *App) renderRoute(c *fiberpkg.Ctx, route *routing.Route) error {
 					a.pprShellBuilding.Delete(cacheKey)
 				}()
 				shellCtx := templpkg.WithPPRShellBuild(context.Background())
+
+				// 3e: If a loading component exists, use it as the PPR shell content
+				shellContent := wrappedContent
+				if loadingFn := routing.GetLoading(route.Path); loadingFn != nil {
+					props := map[string]interface{}{}
+					ld := loadingFn(props)
+					ld = a.wrapWithLayouts(ld, layouts, params, c.Path())
+					rootProps := a.buildRootLayoutProps(c, params)
+					shellContent = rootLayoutFunc(ld, rootProps)
+				}
+
 				var shellBuf bytes.Buffer
-				if err := wrappedContent.Render(shellCtx, &shellBuf); err != nil {
-					log.Printf("PPR shell render error: %v", err)
-					return c.Status(fiberpkg.StatusInternalServerError).SendString("Render error")
+				if err := shellContent.Render(shellCtx, &shellBuf); err != nil {
+					a.Logger().Error("PPR shell render error", "err", err)
+					return a.renderError(c, fiberpkg.StatusInternalServerError, err)
 				}
 				a.storePprShell(cacheKey, shellBuf.Bytes())
 				result, err := a.applyPPRSlots(route, shellBuf.Bytes(), c.Path(), opts)
 				if err != nil {
-					log.Printf("PPR slot error: %v", err)
-					return c.Status(fiberpkg.StatusInternalServerError).SendString("Render error")
+					a.Logger().Error("PPR slot error", "err", err)
+					return a.renderError(c, fiberpkg.StatusInternalServerError, err)
 				}
 				c.Set("Cache-Control", "no-store")
 				return c.Send(result)
@@ -897,8 +1042,8 @@ func (a *App) renderRoute(c *fiberpkg.Ctx, route *routing.Route) error {
 			if shellOk {
 				result, err := a.applyPPRSlots(route, shellHTML, c.Path(), opts)
 				if err != nil {
-					log.Printf("PPR slot error: %v", err)
-					return c.Status(fiberpkg.StatusInternalServerError).SendString("Render error")
+					a.Logger().Error("PPR slot error", "err", err)
+					return a.renderError(c, fiberpkg.StatusInternalServerError, err)
 				}
 				c.Set("Cache-Control", "no-store")
 				return c.Send(result)
@@ -906,27 +1051,54 @@ func (a *App) renderRoute(c *fiberpkg.Ctx, route *routing.Route) error {
 			// Shell still not ready, fall back to SSR (render inline)
 			var fallbackBuf bytes.Buffer
 			if err := wrappedContent.Render(c.Context(), &fallbackBuf); err != nil {
-				log.Printf("PPR fallback render error: %v", err)
-				return c.Status(fiberpkg.StatusInternalServerError).SendString("Render error")
+				a.Logger().Error("PPR fallback render error", "err", err)
+				return a.renderError(c, fiberpkg.StatusInternalServerError, err)
 			}
 			c.Set("Cache-Control", "no-store")
 			return c.Send(fallbackBuf.Bytes())
 		}
 
 		// ─── SSR (default) ────────────────────────────────────────────────
+		errRoute := a.Router.GetErrorRoute(c.Path())
+		if errRoute != nil {
+			// If error boundary exists, we must buffer instead of streaming to catch panics/errors
+			var buf bytes.Buffer
+			err := func() (err error) {
+				defer func() {
+					if r := recover(); r != nil {
+						err = fmt.Errorf("panic during render: %v", r)
+					}
+				}()
+				return wrappedContent.Render(ctx, &buf)
+			}()
+
+			if err != nil {
+				a.Logger().Error("SSR render error (buffered)", "err", err)
+				return a.renderError(c, fiberpkg.StatusInternalServerError, err)
+			}
+
+			c.Set("Cache-Control", "no-store")
+			return c.Send(buf.Bytes())
+		}
+
 		c.Set("Cache-Control", "no-store")
-		c.Context().SetBodyStreamWriter(func(w *bufio.Writer) {
+		c.Response().SetBodyStreamWriter(fasthttp.StreamWriter(func(w *bufio.Writer) {
+			defer func() {
+				if r := recover(); r != nil {
+					a.Logger().Error("panic during streaming render", "err", r)
+				}
+			}()
 			if err := wrappedContent.Render(ctx, w); err != nil {
-				log.Printf("Streaming render error: %v", err)
+				a.Logger().Error("streaming render error", "err", err)
 			}
 			_ = w.Flush()
-		})
+		}))
 		return nil
 	}
 
 	// No root layout registered — minimal fallback HTML wrapper.
 	protocol := "ws://"
-	if c.Secure() {
+	if c.Protocol() == "https" {
 		protocol = "wss://"
 	}
 	wsURL := protocol + string(c.Request().Host()) + a.Config.WebSocketPath
@@ -948,12 +1120,12 @@ func (a *App) renderRoute(c *fiberpkg.Ctx, route *routing.Route) error {
 	}
 
 	c.Set("Cache-Control", "no-store")
-	c.Context().SetBodyStreamWriter(func(w *bufio.Writer) {
+	c.Response().SetBodyStreamWriter(fasthttp.StreamWriter(func(w *bufio.Writer) {
 		_, _ = fmt.Fprint(w, `<!DOCTYPE html><html lang="en" data-gospa-auto><head><meta charset="UTF-8"><meta name="viewport" content="width=device-width, initial-scale=1.0"><title>`)
 		_, _ = fmt.Fprint(w, appName)
 		_, _ = fmt.Fprint(w, `</title></head><body><div id="app" data-gospa-root><main>`)
 		if err := content.Render(ctx, w); err != nil {
-			log.Printf("Streaming render error: %v", err)
+			a.Logger().Error("streaming render error", "err", err)
 		}
 		_, _ = fmt.Fprint(w, `</main></div>`)
 		_, _ = fmt.Fprintf(w, `<script src="%s" type="module"></script>`, runtimePath)
@@ -978,7 +1150,7 @@ runtime.init({
 </script>`, jsEscape(runtimePath), toJS(a.Config.NavigationOptions), jsEscape(wsURL), devMode, a.Config.SimpleRuntimeSVGs, a.Config.DisableSanitization, wsReconnectDelay, wsMaxReconnect, wsHeartbeat, jsEscape(a.Config.HydrationMode), a.Config.HydrationTimeout)
 		_, _ = fmt.Fprint(w, `</body></html>`)
 		_ = w.Flush()
-	})
+	}))
 	return nil
 }
 
@@ -1026,7 +1198,7 @@ func (a *App) wrapWithLayouts(content templ.Component, layouts []*routing.Route,
 }
 
 // buildRootLayoutProps assembles the props map expected by the root layout function.
-func (a *App) buildRootLayoutProps(c *fiberpkg.Ctx, params map[string]string) map[string]interface{} {
+func (a *App) buildRootLayoutProps(c fiberpkg.Ctx, params map[string]string) map[string]interface{} {
 	wsRD := int(a.Config.WSReconnectDelay.Milliseconds())
 	if wsRD <= 0 {
 		wsRD = 1000
@@ -1050,6 +1222,7 @@ func (a *App) buildRootLayoutProps(c *fiberpkg.Ctx, params map[string]string) ma
 		"wsReconnectDelay": wsRD,
 		"wsMaxReconnect":   wsMR,
 		"wsHeartbeat":      wsHB,
+		"serializationFormat": a.Config.SerializationFormat,
 
 		"navigationOptions":   a.Config.NavigationOptions,
 		"disableSanitization": a.Config.DisableSanitization,
@@ -1109,6 +1282,7 @@ func (a *App) buildPageHTML(ctx context.Context, route *routing.Route, params ma
 		"wsReconnectDelay": wsRD,
 		"wsMaxReconnect":   wsMR,
 		"wsHeartbeat":      wsHB,
+		"serializationFormat": string(a.Config.SerializationFormat),
 	}
 	for k, v := range params {
 		rootProps[k] = v
@@ -1213,7 +1387,7 @@ func (a *App) applyPPRSlots(route *routing.Route, shell []byte, path string, opt
 		}
 		var slotBuf bytes.Buffer
 		if err := slotFn(slotProps).Render(context.Background(), &slotBuf); err != nil {
-			log.Printf("PPR slot %q render error: %v", slotName, err)
+			a.Logger().Error("PPR slot render error", "slot", slotName, "err", err)
 			continue
 		}
 		placeholder := []byte(templpkg.SlotPlaceholder(slotName))
@@ -1263,7 +1437,7 @@ func (a *App) Run(addr string) error {
 	}
 
 	// Start server
-	log.Printf("GoSPA %s starting on %s", Version, addr)
+	a.Logger().Info("starting GoSPA", "version", Version, "addr", addr)
 	return a.Fiber.Listen(addr)
 }
 
@@ -1282,8 +1456,11 @@ func (a *App) RunTLS(addr, certFile, keyFile string) error {
 	}
 
 	// Start server with TLS
-	log.Printf("GoSPA %s starting on %s (TLS)", Version, addr)
-	return a.Fiber.ListenTLS(addr, certFile, keyFile)
+	a.Logger().Info("starting GoSPA (TLS)", "version", Version, "addr", addr)
+	return a.Fiber.Listen(addr, fiberpkg.ListenConfig{
+		CertFile:    certFile,
+		CertKeyFile: keyFile,
+	})
 }
 
 // Shutdown gracefully shuts down the application.
@@ -1306,32 +1483,64 @@ func (a *App) Use(middleware ...fiberpkg.Handler) {
 
 // Get adds a GET route.
 func (a *App) Get(path string, handlers ...fiberpkg.Handler) {
-	a.Fiber.Get(path, handlers...)
+	if len(handlers) == 0 {
+		return
+	}
+	hAny := make([]any, len(handlers)-1)
+	for i, h := range handlers[1:] {
+		hAny[i] = h
+	}
+	a.Fiber.Get(path, handlers[0], hAny...)
 }
 
 // Post adds a POST route.
 func (a *App) Post(path string, handlers ...fiberpkg.Handler) {
-	a.Fiber.Post(path, handlers...)
+	if len(handlers) == 0 {
+		return
+	}
+	hAny := make([]any, len(handlers)-1)
+	for i, h := range handlers[1:] {
+		hAny[i] = h
+	}
+	a.Fiber.Post(path, handlers[0], hAny...)
 }
 
 // Put adds a PUT route.
 func (a *App) Put(path string, handlers ...fiberpkg.Handler) {
-	a.Fiber.Put(path, handlers...)
+	if len(handlers) == 0 {
+		return
+	}
+	hAny := make([]any, len(handlers)-1)
+	for i, h := range handlers[1:] {
+		hAny[i] = h
+	}
+	a.Fiber.Put(path, handlers[0], hAny...)
 }
 
 // Delete adds a DELETE route.
 func (a *App) Delete(path string, handlers ...fiberpkg.Handler) {
-	a.Fiber.Delete(path, handlers...)
+	if len(handlers) == 0 {
+		return
+	}
+	hAny := make([]any, len(handlers)-1)
+	for i, h := range handlers[1:] {
+		hAny[i] = h
+	}
+	a.Fiber.Delete(path, handlers[0], hAny...)
 }
 
 // Group creates a route group.
 func (a *App) Group(prefix string, handlers ...fiberpkg.Handler) fiberpkg.Router {
-	return a.Fiber.Group(prefix, handlers...)
+	hAny := make([]any, len(handlers))
+	for i, h := range handlers {
+		hAny[i] = h
+	}
+	return a.Fiber.Group(prefix, hAny...)
 }
 
-// Static serves static files.
+// Static serves static files via the static middleware.
 func (a *App) Static(prefix, root string) {
-	a.Fiber.Static(prefix, root)
+	a.Fiber.Use(prefix, static.New(root))
 }
 
 // GetHub returns the WebSocket hub.

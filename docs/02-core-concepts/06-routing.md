@@ -1,8 +1,79 @@
-# GoSPA Route Parameters
+# GoSPA Routing & Parameters
 
-GoSPA provides a comprehensive route parameter handling system for extracting, validating, and building URLs with path and query parameters.
+GoSPA provides a comprehensive file-based routing system with special file conventions, alongside robust route parameter handling for extracting, validating, and building URLs with path and query parameters.
 
-## Overview
+## Special Routing Files
+
+GoSPA uses special filenames within the `routes/` directory to construct the application layout, middleware chain, error boundaries, and loading states automatically.
+
+| Filename | Purpose | Scope |
+|----------|---------|-------|
+| `page.templ` | Renders the primary component for a route directory. | Current route |
+| `layout.templ` | Wraps all nested child pages inside a particular directory segment. | Segment and children |
+| `root_layout.templ` | The outermost HTML wrapper (`<html>`, `<body>`). Must include the GoSPA scripts. | Global (root only) |
+| `_middleware.go` | Segment-scoped middleware intercepting requests before they hit pages. | Segment and children |
+| `_error.templ` | Error boundary. If a page panics or returns an error during SSR, it falls back to this. | Segment and children |
+| `_loading.templ` | Automatically compiled as the default static shell during PPR (Partial Page Rendering) if no dynamic slots are provided. | Segment and children |
+
+### Middleware Files (`_middleware.go`)
+
+Middleware files automatically apply their `Handler` to all routes in their directory and subdirectories. They are executed in a top-down hierarchy.
+
+```go
+// routes/admin/_middleware.go
+package admin
+
+import (
+    "github.com/aydenstechdungeon/gospa/routing"
+    "github.com/gofiber/fiber/v3"
+)
+
+func init() {
+    routing.RegisterMiddleware("/admin", func(c fiber.Ctx) error {
+        if !isAdmin(c) {
+            return c.Redirect().Status(302).To("/login")
+        }
+        return c.Next()
+    })
+}
+```
+
+### Error Boundaries (`_error.templ`)
+
+Error boundaries catch rendering errors and panics that occur during the SSR phase. They receive the error message, HTTP status code, and current path.
+
+```templ
+// routes/admin/_error.templ
+package admin
+
+templ Error(props map[string]any) {
+    <div class="error-boundary">
+        <h2>Something went wrong in the admin panel!</h2>
+        <p>Error: { props["error"].(string) }</p>
+        <p>Code: { fmt.Sprint(props["code"]) }</p>
+    </div>
+}
+```
+
+### Loading Shells (`_loading.templ`)
+
+When using Partial Page Rendering (`routing.StrategyPPR`), the `_loading.templ` template serves as the initial HTML shell sent to the client while the dynamic content generates in the background.
+
+```templ
+// routes/dashboard/_loading.templ
+package dashboard
+
+templ Loading(props map[string]any) {
+    <div class="skeleton-loader">
+        <div class="skeleton-header"></div>
+        <div class="skeleton-content"></div>
+    </div>
+}
+```
+
+---
+
+## Route Parameters
 
 The parameter system in `routing/params.go` provides:
 

@@ -1,6 +1,5 @@
-// WebSocket client for real-time state synchronization
-
 import { Rune, batch } from './state.ts';
+import { decode, encode } from '@msgpack/msgpack';
 
 // Connection states
 export type ConnectionState = 'connecting' | 'connected' | 'disconnecting' | 'disconnected';
@@ -12,7 +11,7 @@ export interface StateMessage {
 	type: string | 'init' | 'update' | 'sync' | 'error' | 'ping' | 'pong' | 'action' | 'patch' | 'compressed';
 	componentId?: string;
 	action?: string;
-	data?: Record<string, unknown>;
+	data?: any;
 	payload?: Record<string, unknown>;
 	state?: Record<string, unknown>; // Server global state from SendState()
 	diff?: Record<string, unknown>;
@@ -49,8 +48,8 @@ function validateMessage(raw: unknown): StateMessage | null {
 	if (msg.value !== undefined) validated.value = msg.value;
 	if (typeof msg.success === 'boolean') validated.success = msg.success;
 
-	if (msg.data && typeof msg.data === 'object' && !Array.isArray(msg.data)) {
-		validated.data = msg.data as Record<string, unknown>;
+	if (msg.data !== undefined) {
+		validated.data = msg.data;
 	}
 	if (msg.payload && typeof msg.payload === 'object' && !Array.isArray(msg.payload)) {
 		validated.payload = msg.payload as Record<string, unknown>;
@@ -94,6 +93,7 @@ export interface WebSocketConfig {
 	onError?: (error: Event) => void;
 	onConnectionFailed?: (error: Error) => void;
 	onMessage?: (message: StateMessage) => void;
+	serializationFormat?: 'json' | 'msgpack';
 }
 
 // Helper functions for session persistence
@@ -149,6 +149,7 @@ export class WSClient {
 			onError: () => { },
 			onConnectionFailed: () => { },
 			onMessage: () => { },
+			serializationFormat: 'json',
 			...config
 		};
 		this.connectionState = new Rune<ConnectionState>('disconnected');
@@ -196,6 +197,9 @@ export class WSClient {
 			// Instead, send it as the first message after connection opens
 			try {
 				this.ws = new WebSocket(this.config.url);
+				if (this.config.serializationFormat === 'msgpack') {
+					this.ws.binaryType = 'arraybuffer';
+				}
 			} catch (error) {
 				this.connectionState.set('disconnected');
 				reject(error);
@@ -299,7 +303,11 @@ export class WSClient {
 
 	send(message: StateMessage): void {
 		if (this.ws?.readyState === WebSocket.OPEN) {
-			this.ws.send(JSON.stringify(message));
+			if (this.config.serializationFormat === 'msgpack') {
+				this.ws.send(encode(message));
+			} else {
+				this.ws.send(JSON.stringify(message));
+			}
 		} else {
 			this.messageQueue.push(message);
 		}
@@ -328,17 +336,41 @@ export class WSClient {
 		});
 	}
 
-	private handleMessage(data: string): void {
+	private async handleMessage(data: any): Promise<void> {
 		try {
-			const raw = JSON.parse(data);
+			let raw: any;
+			if (this.config.serializationFormat === 'msgpack' && (data instanceof ArrayBuffer || data instanceof Uint8Array)) {
+				const buffer = data instanceof ArrayBuffer ? data : data.buffer;
+				raw = decode(new Uint8Array(buffer));
+			} else if (data instanceof Blob) {
+				const buffer = await data.arrayBuffer();
+				return this.handleMessage(buffer);
+			} else {
+				raw = typeof data === 'string' ? JSON.parse(data) : data;
+			}
 
 			// SECURITY: Validate message structure before processing
 			const message = validateMessage(raw);
 			if (!message) {
-				// We use console.debug to avoid spamming the console when developers 
-				// broadcast custom non-JSON messages via app.Broadcast()
 				console.debug('[GoSPA] Received invalid WebSocket message, ignoring:', raw);
 				return;
+			}
+
+			// Handle compressed messages
+			if (message.type === 'compressed' && typeof message.data === 'string') {
+				try {
+					const compressedData = Uint8Array.from(atob(message.data), c => c.charCodeAt(0));
+					const ds = new DecompressionStream('gzip');
+					const writer = ds.writable.getWriter();
+					writer.write(compressedData);
+					writer.close();
+					const response = new Response(ds.readable);
+					const decompressed = await response.arrayBuffer();
+					return this.handleMessage(decompressed);
+				} catch (err) {
+					console.error('[GoSPA] Failed to decompress message:', err);
+					return;
+				}
 			}
 
 			// Handle pong
@@ -360,7 +392,6 @@ export class WSClient {
 					clearTimeout(pending.timeout);
 					this.pendingRequests.delete(id);
 					if (message.type === 'error') {
-						// SECURITY: Sanitize error message to prevent XSS via malicious server
 						const sanitizedError = message.error
 							? message.error.replace(/[<>\"']/g, '')
 							: 'Unknown error';
@@ -368,13 +399,12 @@ export class WSClient {
 					} else {
 						pending.resolve(message.data);
 					}
-					// Do not return here, allow the payload to be processed as normal state update by onMessage hook below
 				}
 			}
 
 			this.config.onMessage(message);
 		} catch (error) {
-			console.error('Failed to parse WebSocket message:', error);
+			console.error('[GoSPA] Failed to handle WebSocket message:', error);
 		}
 	}
 

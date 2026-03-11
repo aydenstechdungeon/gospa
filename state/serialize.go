@@ -4,11 +4,12 @@ package state
 
 import (
 	"bytes"
-	"encoding/json"
 	"fmt"
 	"reflect"
 	"sync"
 	"time"
+
+	json "github.com/goccy/go-json"
 )
 
 // Serializable represents a value that can be serialized to JSON

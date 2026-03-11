@@ -279,6 +279,11 @@ func init() {
 			return v
 		}
 		return 0
+	}(), func() string {
+		if v, ok := props["serializationFormat"].(string); ok {
+			return v
+		}
+		return ""
 	}())
 	})
 }

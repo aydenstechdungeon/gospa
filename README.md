@@ -10,15 +10,18 @@ A Go framework for building reactive SPAs with server-side rendering. Brings Sve
 ## Features
 
 - **Reactive Primitives** — `Rune[T]`, `Derived[T]`, `Effect` - Svelte-like reactivity in Go
+- **High-Performance Serialization** — Integrated `goccy/go-json` (2-3x faster) and optional binary **MessagePack** support
 - **File-Based Routing** — SvelteKit-style routing for `.templ` files
-- **WebSocket Sync** — Real-time client-server state synchronization
+- **WebSocket Sync** — Real-time client-server state synchronization with **GZIP compression** and **delta-only patching**
 - **Session Management** — Secure session persistence with `SessionStore` and `ClientStateStore`
 - **Type Safety** — Compile-time template validation with Templ
 - **Lightweight Runtime** — ~15KB default runtime (trusts server), ~35KB secure runtime with DOMPurify for user-generated content.
 - **Remote Actions** — Type-safe server functions callable directly from the client.
-- **Error Handling** — Global error boundaries, panic recovery, and error overlay in dev mode.
-- **Security** — Built-in CSRF protection, customizable CORS origins, and strict XSS prevention.
+- **Middleware & Error Boundaries** — File-based `_middleware.go` and `_error.templ` for segment-scoped logic and error handling.
 - **Rendering Modes** — Mix SSR, SSG, ISR, and PPR per-page rendering strategies.
+- **Rate Limiting** — Configurable connection and per-route rate limiters.
+- **Structured Logging** — Integrated `slog` for modern structured JSON/Text logging.
+- **Security** — Built-in CSRF protection, customizable CORS origins, and strict XSS prevention with optional `DisableSanitization` for trusted content.
 
 ## Installation
 
@@ -52,9 +55,11 @@ import (
 
 func main() {
     app := gospa.New(gospa.Config{
-        RoutesDir: "./routes",
-        DevMode:   true,
-        AppName:   "myapp",
+        RoutesDir:           "./routes",
+        DevMode:             true,
+        AppName:             "myapp",
+        SerializationFormat: "msgpack", // use binary serialization for speed
+        CompressState:       true,      // enable GZIP for state updates
     })
 
     if err := app.Run(":3000"); err != nil {
@@ -155,23 +160,36 @@ defer cleanup()
 ```
 routes/
 ├ root_layout.templ    → Base HTML shell
+├ _middleware.go       → Global middleware
+├ _error.templ         → Global error boundary
+├ _loading.templ       → Global loading shell (for PPR)
 ├ page.templ           → /
 ├ about/
 │   └ page.templ       → /about
 ├ (auth)/              → Grouped routes
 │   ├ layout.templ
+│   ├ _middleware.go   → Middleware only for (auth) routes
 │   ├ login/
 │   │   └ page.templ   → /login
 │   └ register/
 │       └ page.templ   → /register
 ├ blog/
 │   ├── layout.templ   → Layout for /blog/*
+│   ├── _error.templ   → Error boundary for /blog/*
 │   └ [id]/
 │       └ page.templ   → /blog/:id
 └ posts/
     └ [...rest]/
         └ page.templ   → /posts/* (catch-all)
 ```
+
+#### Special Routing Files
+
+- `page.templ` — Renders the page component for a route directory.
+- `layout.templ` — Wraps nested child pages.
+- `_middleware.go` — Segment-scoped middleware intercepting requests before they hit pages.
+- `_error.templ` — Nearest error boundary. If a page panics or errors during SSR, it falls back to this.
+- `_loading.templ` — Automatically compiled into the PPR static shell for pages without custom dynamic shells.
 
 #### Embedded Routes (Production)
 
@@ -267,7 +285,9 @@ import (
 )
 
 // Register on server
-routing.RegisterRemoteAction("saveData", func(ctx context.Context, input interface{}) (interface{}, error) {
+routing.RegisterRemoteAction("saveData", func(ctx context.Context, rc routing.RemoteContext, input interface{}) (interface{}, error) {
+    // rc.IP, rc.Headers, rc.UserAgent gives robust contextual connection information
+
     // Type assert input to access data
     data, ok := input.(map[string]interface{})
     if !ok {
@@ -301,9 +321,6 @@ if (result.ok) {
 } else {
     console.error('Error:', result.error, 'Code:', result.code);
     // Handle specific error codes programmatically
-    if (result.code === 'ACTION_NOT_FOUND') {
-        console.error('Action does not exist');
-    }
 }
 ```
 
@@ -573,6 +590,7 @@ See [`docs/04-api-reference/04-plugins.md`](docs/04-api-reference/04-plugins.md)
 |---------|-------|------|--------|-----------|
 | Language | Go | HTML | JS | JS/TS |
 | Runtime Size | ~15KB (default) | ~14KB | ~15KB | Varies |
+| Serialization | **Go-JSON / MsgPack** | Text/HTML | JSON | JSON |
 | SSR | ✅ | ✅ | ❌ | ✅ |
 | SSG | ✅ | ❌ | ❌ | ✅ |
 | ISR | ✅ | ❌ | ❌ | ✅ |

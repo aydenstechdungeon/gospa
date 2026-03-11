@@ -2,7 +2,6 @@
 package fiber
 
 import (
-	"encoding/json"
 	"fmt"
 	"os"
 	"path/filepath"
@@ -10,8 +9,10 @@ import (
 	"sync"
 	"time"
 
-	fiberpkg "github.com/gofiber/fiber/v2"
-	websocket "github.com/gofiber/websocket/v2"
+	json "github.com/goccy/go-json"
+
+	websocket "github.com/gofiber/contrib/v3/websocket"
+	fiberpkg "github.com/gofiber/fiber/v3"
 )
 
 // HMRConfig configures the HMR system.
@@ -433,14 +434,14 @@ func (mgr *HMRManager) HMREndpoint() fiberpkg.Handler {
 
 // HMRMiddleware returns middleware that adds HMR script to HTML responses.
 func (mgr *HMRManager) HMRMiddleware() fiberpkg.Handler {
-	return func(c *fiberpkg.Ctx) error {
+	return func(c fiberpkg.Ctx) error {
 		// Only process HTML responses
-		if !strings.Contains(string(c.Response().Header.Peek("Content-Type")), "text/html") {
+		if !strings.Contains(c.GetRespHeader("Content-Type"), "text/html") {
 			return c.Next()
 		}
 
 		// Add HMR script before </body>
-		body := string(c.Body())
+		body := string(c.Response().Body())
 		hmrScript := mgr.generateHMRScript()
 		body = strings.Replace(body, "</body>", hmrScript+"</body>", 1)
 

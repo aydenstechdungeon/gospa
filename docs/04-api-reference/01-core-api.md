@@ -40,6 +40,7 @@ group := app.Group("/api") // Creates route group
 hub := app.GetHub()
 router := app.GetRouter()
 fiberApp := app.GetFiber()
+logger := app.Logger() // Returns the configured slog.Logger
 
 // Broadcast to all WebSocket clients
 app.Broadcast([]byte("message"))
@@ -578,6 +579,15 @@ rootLayoutFunc := routing.GetRootLayout()
 routing.RegisterRemoteAction(name string, fn RemoteActionFunc)
 fn, ok := routing.GetRemoteAction(name string)
 
+// type RemoteActionFunc func(ctx context.Context, rc RemoteContext, input interface{}) (interface{}, error)
+// type RemoteContext struct {
+//     IP        string
+//     UserAgent string
+//     Headers   map[string]string
+//     SessionID string
+//     RequestID string
+// }
+
 // PPR slot registration
 routing.RegisterSlot(pagePath string, slotName string, fn SlotFunc)
 slotFn := routing.GetSlot(pagePath string, slotName string)
@@ -602,6 +612,14 @@ type RouteOptions struct {
     // PPR only: names of dynamic slots excluded from the cached static shell.
     // Each name must match a SlotFunc registered via RegisterSlot for this path.
     DynamicSlots []string
+
+    // RateLimit defines the per-route rate limit configuration (overrides global).
+    RateLimit *RateLimitOptions
+}
+
+type RateLimitOptions struct {
+    Max        int
+    Expiration time.Duration
 }
 
 const (

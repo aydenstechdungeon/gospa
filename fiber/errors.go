@@ -4,11 +4,11 @@ import (
 	"encoding/json"
 	"fmt"
 	"html"
-	"log"
+	"log/slog"
 	"runtime/debug"
 
 	"github.com/aydenstechdungeon/gospa/state"
-	fiberpkg "github.com/gofiber/fiber/v2"
+	fiberpkg "github.com/gofiber/fiber/v3"
 )
 
 // ErrorCode represents an error code.
@@ -99,9 +99,9 @@ type ErrorHandlerConfig struct {
 	// StateKey is the context key for state
 	StateKey string
 	// CustomErrorPages maps error codes to custom handlers
-	CustomErrorPages map[ErrorCode]func(*fiberpkg.Ctx, *AppError) error
+	CustomErrorPages map[ErrorCode]func(fiberpkg.Ctx, *AppError) error
 	// OnError is called when an error occurs
-	OnError func(*fiberpkg.Ctx, *AppError)
+	OnError func(fiberpkg.Ctx, *AppError)
 	// RecoverState attempts to recover state on error
 	RecoverState bool
 }
@@ -112,13 +112,13 @@ func DefaultErrorHandlerConfig() ErrorHandlerConfig {
 		DevMode:          false,
 		StateKey:         "gospa.state",
 		RecoverState:     true,
-		CustomErrorPages: make(map[ErrorCode]func(*fiberpkg.Ctx, *AppError) error),
+		CustomErrorPages: make(map[ErrorCode]func(fiberpkg.Ctx, *AppError) error),
 	}
 }
 
 // ErrorHandler creates a Fiber error handler.
 func ErrorHandler(config ErrorHandlerConfig) fiberpkg.ErrorHandler {
-	return func(c *fiberpkg.Ctx, err error) error {
+	return func(c fiberpkg.Ctx, err error) error {
 		// Convert to AppError
 		var appErr *AppError
 		switch e := err.(type) {
@@ -127,7 +127,7 @@ func ErrorHandler(config ErrorHandlerConfig) fiberpkg.ErrorHandler {
 		case *fiberpkg.Error:
 			appErr = NewAppError(ErrorCodeInternal, e.Message, e.Code)
 		default:
-			log.Printf("GoSPA error handler caught internal error: %v", err)
+			slog.Default().Error("gospa internal error", "err", err)
 			message := "Internal server error"
 			if config.DevMode {
 				message = err.Error()
@@ -159,8 +159,8 @@ func ErrorHandler(config ErrorHandlerConfig) fiberpkg.ErrorHandler {
 		}
 
 		// Determine response type
-		accept := string(c.Request().Header.Peek("Accept"))
-		if accept != "" && len(accept) >= 4 && accept[:4] == "appl" && len(accept) >= 16 && accept[:16] == "application/json" {
+		accept := c.Get("Accept")
+		if len(accept) >= 16 && accept[:16] == "application/json" {
 			// JSON response
 			return c.Status(appErr.StatusCode).JSON(fiberpkg.Map{
 				"error":   appErr.Code,
@@ -189,7 +189,7 @@ func escapeJS(s string) string {
 }
 
 // renderErrorPage renders an error page.
-func renderErrorPage(c *fiberpkg.Ctx, appErr *AppError, stateData map[string]interface{}, devMode bool) error {
+func renderErrorPage(c fiberpkg.Ctx, appErr *AppError, stateData map[string]interface{}, devMode bool) error {
 	c.Set("Content-Type", "text/html; charset=utf-8")
 
 	// Escape all user-controlled values to prevent XSS
@@ -277,7 +277,7 @@ func renderErrorPage(c *fiberpkg.Ctx, appErr *AppError, stateData map[string]int
 
 // NotFoundHandler creates a 404 handler.
 func NotFoundHandler() fiberpkg.Handler {
-	return func(c *fiberpkg.Ctx) error {
+	return func(c fiberpkg.Ctx) error {
 		return NewAppError(ErrorCodeNotFound, "Page not found: "+c.Path(), fiberpkg.StatusNotFound).
 			WithRecover(true)
 	}
@@ -304,7 +304,7 @@ func ValidationErrors(errors map[string]string) *AppError {
 
 // PanicHandler creates a panic recovery handler.
 func PanicHandler(config ErrorHandlerConfig) fiberpkg.Handler {
-	return func(c *fiberpkg.Ctx) error {
+	return func(c fiberpkg.Ctx) error {
 		defer func() {
 			if r := recover(); r != nil {
 				var err error
