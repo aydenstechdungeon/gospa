@@ -51,10 +51,10 @@ func main() {
 				Enabled: boolPtr(true),
 			},
 			SpeculativePrefetching: &gospa.NavigationSpeculativePrefetchingConfig{
-				Enabled:        boolPtr(false),
+				Enabled:        boolPtr(true),
 				TTL:            intPtr(45000),
-				HoverDelay:     intPtr(80),
-				ViewportMargin: intPtr(220),
+				HoverDelay:     intPtr(100),
+				ViewportMargin: intPtr(150),
 			},
 			ServiceWorkerNavigationCaching: &gospa.NavigationServiceWorkerCachingConfig{
 				Enabled:   boolPtr(true),
