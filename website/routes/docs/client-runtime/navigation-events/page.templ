@@ -12,7 +12,7 @@ templ Page() {
 		<section class="space-y-6">
 			<h2 class="text-2xl font-bold" id="navigation">Navigation API</h2>
 			<p class="text-[var(--text-secondary)]">Programmatic navigation for SPA behavior.</p>
-			@components.CodeBlock(`import { navigate, back, forward, go } from '@gospa/runtime';
+			@components.CodeBlock(`import { navigate, back, forward, go } from '@gospa/client';
 
 // Basic navigation
 await navigate('/about');
@@ -33,7 +33,7 @@ go(3);               // Go forward 3 pages`, "typescript", "navigation.ts")
 		<section class="space-y-6">
 			<h2 class="text-2xl font-bold" id="prefetch">Prefetching</h2>
 			<p class="text-[var(--text-secondary)]">Preload pages for instant navigation.</p>
-			@components.CodeBlock(`import { prefetch, prefetchLinks } from '@gospa/runtime';
+			@components.CodeBlock(`import { prefetch, prefetchLinks } from '@gospa/client';
 
 // Prefetch a specific page
 prefetch('/blog/hello-world');
@@ -48,7 +48,7 @@ prefetchLinks('a[data-prefetch]');`, "typescript", "prefetch.ts")
 		<section class="space-y-6">
 			<h2 class="text-2xl font-bold" id="navigation-state">Navigation State</h2>
 			<p class="text-[var(--text-secondary)]">Track and manage navigation state reactively.</p>
-			@components.CodeBlock(`import { createNavigationState, rune } from '@gospa/runtime';
+			@components.CodeBlock(`import { createNavigationState, rune } from '@gospa/client';
 
 const nav = createNavigationState();
 
@@ -67,7 +67,7 @@ const state = nav.getState();`, "typescript", "nav-state.ts")
 		<section class="space-y-6">
 			<h2 class="text-2xl font-bold" id="lifecycle">Lifecycle Callbacks</h2>
 			<p class="text-[var(--text-secondary)]">Register callbacks that run before or after navigation.</p>
-			@components.CodeBlock(`import { onBeforeNavigate, onAfterNavigate } from '@gospa/runtime';
+			@components.CodeBlock(`import { onBeforeNavigate, onAfterNavigate } from '@gospa/client';
 
 // Before navigation (can cancel)
 const unsubBefore = onBeforeNavigate((path) => {
@@ -129,7 +129,7 @@ unsubAfter();`, "typescript", "lifecycle.ts")
 		<section class="space-y-6">
 			<h2 class="text-2xl font-bold" id="events">Event Handling</h2>
 			<p class="text-[var(--text-secondary)]">Advanced event handling with modifiers and delegation.</p>
-			@components.CodeBlock(`import { on, off, delegate, debounce, throttle } from '@gospa/runtime';
+			@components.CodeBlock(`import { on, off, delegate, debounce, throttle } from '@gospa/client';
 
 // Event with modifiers
 on(form, 'submit:prevent', (e) => {
@@ -164,7 +164,7 @@ window.addEventListener('scroll', throttledScroll);`, "typescript", "events.ts")
 		<section class="space-y-6">
 			<h2 class="text-2xl font-bold" id="event-modifiers">Event Modifiers</h2>
 			<p class="text-[var(--text-secondary)]">Chain modifiers for complex event handling.</p>
-			@components.CodeBlock(`import { on } from '@gospa/runtime';
+			@components.CodeBlock(`import { on } from '@gospa/client';
 
 // Multiple modifiers
 on(link, 'click:prevent:stop', (e) => {
@@ -181,7 +181,7 @@ on(modal, 'click:once:prevent', (e) => {
 		<section class="space-y-6">
 			<h2 class="text-2xl font-bold" id="keys">Keyboard Events</h2>
 			<p class="text-[var(--text-secondary)]">Keyboard shortcuts and key combinations.</p>
-			@components.CodeBlock(`import { onKey, keys } from '@gospa/runtime';
+			@components.CodeBlock(`import { onKey, keys } from '@gospa/client';
 
 // Single key
 onKey(document, 'Escape', () => {
@@ -207,7 +207,7 @@ onKey(document, ['ArrowUp', 'ArrowDown'], (e) => {
 		<section class="space-y-6">
 			<h2 class="text-2xl font-bold" id="init">Manual Initialization</h2>
 			<p class="text-[var(--text-secondary)]">Set up navigation manually for custom scenarios.</p>
-			@components.CodeBlock(`import { initNavigation, destroyNavigation } from '@gospa/runtime';
+			@components.CodeBlock(`import { initNavigation, destroyNavigation } from '@gospa/client';
 
 // Initialize with options
 const nav = initNavigation({

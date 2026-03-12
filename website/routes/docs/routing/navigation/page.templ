@@ -17,12 +17,12 @@ templ Page() {
 
 		<section class="space-y-6">
 			<h2 class="text-2xl font-bold">Navigation Functions</h2>
-			@components.CodeBlock("import { \n\tnavigate, \n\tprefetch, \n\tback, \n\tforward,\n\treplace\n} from '@gospa/runtime';\n\n// Navigate to a new page\nnavigate('/about');\nnavigate('/blog/my-post', { replace: true });\n\n// Prefetch a route\nprefetch('/dashboard');\n\n// History navigation\nback();\nforward();\n\n// Replace without history\nreplace('/login');", "typescript", "navigation.ts")
+			@components.CodeBlock("import { \n\tnavigate, \n\tprefetch, \n\tback, \n\tforward,\n\treplace\n} from '@gospa/client';\n\n// Navigate to a new page\nnavigate('/about');\nnavigate('/blog/my-post', { replace: true });\n\n// Prefetch a route\nprefetch('/dashboard');\n\n// History navigation\nback();\nforward();\n\n// Replace without history\nreplace('/login');", "typescript", "navigation.ts")
 		</section>
 
 		<section class="space-y-6">
 			<h2 class="text-2xl font-bold">Navigation Events</h2>
-			@components.CodeBlock("import { \n\tonNavigate, \n\tonNavigated, \n\tonNavigateError \n} from '@gospa/runtime';\n\n// Before navigation\nconst unsub = onNavigate((to, from) => {\n\tconsole.log('Navigating from', from, 'to', to);\n});\n\n// After navigation\nonNavigated((to, from) => {\n\tconsole.log('Navigated to', to);\n});\n\n// Navigation error\nonNavigateError((error, to) => {\n\tconsole.error('Navigation failed:', error);\n});\n\n// Cleanup\nunsub();", "typescript", "nav_events.ts")
+			@components.CodeBlock("import { \n\tonNavigate, \n\tonNavigated, \n\tonNavigateError \n} from '@gospa/client';\n\n// Before navigation\nconst unsub = onNavigate((to, from) => {\n\tconsole.log('Navigating from', from, 'to', to);\n});\n\n// After navigation\nonNavigated((to, from) => {\n\tconsole.log('Navigated to', to);\n});\n\n// Navigation error\nonNavigateError((error, to) => {\n\tconsole.error('Navigation failed:', error);\n});\n\n// Cleanup\nunsub();", "typescript", "nav_events.ts")
 		</section>
 
 		<section class="space-y-6">
@@ -79,7 +79,7 @@ templ Page() {
 
 		<section class="space-y-6">
 			<h2 class="text-2xl font-bold">Route Params</h2>
-			@components.CodeBlock("import { useParams, useSearchParams } from '@gospa/runtime';\n\n// Route params\nconst params = useParams();\nconsole.log(params.slug);\n\n// Query params\nconst searchParams = useSearchParams();\nconsole.log(searchParams.page);\n\n// With defaults\nconst page = searchParams.get('page', '1');\n\n// Update query params\nsearchParams.set('page', '2');", "typescript", "params_ts.ts")
+			@components.CodeBlock("import { useParams, useSearchParams } from '@gospa/client';\n\n// Route params\nconst params = useParams();\nconsole.log(params.slug);\n\n// Query params\nconst searchParams = useSearchParams();\nconsole.log(searchParams.page);\n\n// With defaults\nconst page = searchParams.get('page', '1');\n\n// Update query params\nsearchParams.set('page', '2');", "typescript", "params_ts.ts")
 		</section>
 
 		<section class="space-y-6">

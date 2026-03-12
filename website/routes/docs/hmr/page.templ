@@ -42,7 +42,7 @@ app.Get("/__hmr", hmr.HMREndpoint())`, "go", "main.go")
 			<div>
 				<h2 class="text-2xl font-bold mb-4 border-b border-[var(--border)] pb-2 italic mono">Client-Side (TypeScript)</h2>
 				<p class="text-[var(--text-secondary)] mb-4">The HMRClient manages the WebSocket connection and applies updates.</p>
-				@components.CodeBlock(`import { initHMR } from '@gospa/runtime';
+				@components.CodeBlock(`import { initHMR } from '@gospa/client';
 
 const hmr = initHMR({
     wsUrl: ` + "`" + `ws://${window.location.host}/__hmr` + "`" + `,
@@ -57,7 +57,7 @@ hmr.onUpdate((msg) => {
 			<div>
 				<h2 class="text-2xl font-bold mb-4 border-b border-[var(--border)] pb-2 italic mono">Module Registration</h2>
 				<p class="text-[var(--text-secondary)] mb-4">For a module to be hot-swappable, it must be registered:</p>
-				@components.CodeBlock(`import { registerHMRModule, acceptHMR } from '@gospa/runtime';
+				@components.CodeBlock(`import { registerHMRModule, acceptHMR } from '@gospa/client';
 
 registerHMRModule('my-module', exports);
 acceptHMR('my-module');`, "typescript", "module.ts")
@@ -80,7 +80,7 @@ window.__gospaSetState = (id, state) => {
 			<div>
 				<h2 class="text-2xl font-bold mb-4 border-b border-[var(--border)] pb-2 italic mono">CSS Hot Reloading</h2>
 				<p class="text-[var(--text-secondary)] mb-4">When a .css file is modified, the CSSHMR system identifies the corresponding link tag and forces a reload by appending a timestamp, avoiding a full page refresh.</p>
-				@components.CodeBlock(`import { CSSHMR } from '@gospa/runtime';
+				@components.CodeBlock(`import { CSSHMR } from '@gospa/client';
 
 // Automatically handled by HMRClient for registered styles
 CSSHMR.updateStyle('/static/css/main.css');`, "typescript", "styles.ts")

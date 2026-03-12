@@ -16,7 +16,7 @@ templ Page() {
 			<p class="text-[var(--text-secondary)]">
 				Create a rune that automatically syncs with the server via WebSocket.
 			</p>
-			@components.CodeBlock(`import { syncedRune, wsClient } from '@gospa/runtime';
+			@components.CodeBlock(`import { syncedRune, wsClient } from '@gospa/client';
 
 // Connect to WebSocket
 const ws = wsClient({
@@ -50,7 +50,7 @@ serverCount.set(10);  // Sends update to server
 
 		<section class="space-y-6">
 			<h2 class="text-2xl font-bold" id="websocket-config">WebSocket Configuration</h2>
-			@components.CodeBlock(`import { WSClient } from '@gospa/runtime';
+			@components.CodeBlock(`import { WSClient } from '@gospa/client';
 
 const client = new WSClient({
   url: 'ws://localhost:3000/ws',

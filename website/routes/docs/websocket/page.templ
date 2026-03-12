@@ -64,7 +64,7 @@ hub.SendTo("client-123", []byte("direct_message"))`, "go", "main.go")
 			<div>
 				<h3 class="text-xl font-bold mb-4 mono italic">syncedRune(key, initialValue, client)</h3>
 				<p class="text-[var(--text-secondary)] mb-4">Creates a reactive state variable that is automatically synchronized with the server.</p>
-				@components.CodeBlock(`import { syncedRune, getWSClient } from '@gospa/runtime';
+				@components.CodeBlock(`import { syncedRune, getWSClient } from '@gospa/client';
 
 const ws = getWSClient();
 const count = syncedRune('count', 0, ws);

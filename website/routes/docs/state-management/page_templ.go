@@ -41,7 +41,7 @@ states.Set("count", 0)
 app.BroadcastState("count", 42)  // Broadcast to all clients
 
 // Client (TypeScript)
-import { syncedRune } from '@gospa/runtime';
+import { syncedRune } from '@gospa/client';
 const count = syncedRune({ key: 'count', initial: 0 });
 count.subscribe(val => console.log('Count:', val));`, "typescript", "example.ts").Render(ctx, templ_7745c5c3_Buffer)
 		if templ_7745c5c3_Err != nil {

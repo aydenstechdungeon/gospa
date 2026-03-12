@@ -31,15 +31,25 @@ func Page() templ.Component {
 			templ_7745c5c3_Var1 = templ.NopComponent
 		}
 		ctx = templ.ClearChildren(ctx)
-		templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 1, "<div class=\"space-y-12\"><header><h1 class=\"text-4xl font-bold tracking-tight mb-4\">Runtime Overview</h1><p class=\"text-xl text-[var(--text-secondary)]\">Complete reference for initializing and configuring the GoSPA client-side runtime.</p></header><section class=\"space-y-6\"><h2 class=\"text-2xl font-bold\">Installation</h2><p class=\"text-[var(--text-secondary)]\">The runtime is automatically injected into your pages by the GoSPA server. No manual installation required.</p>")
+		templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 1, "<div class=\"space-y-12\"><header><h1 class=\"text-4xl font-bold tracking-tight mb-4\">Runtime Overview</h1><p class=\"text-xl text-[var(--text-secondary)]\">Complete reference for initializing and configuring the GoSPA client-side runtime.</p></header><section class=\"space-y-6\"><h2 class=\"text-2xl font-bold\">Installation</h2><p class=\"text-[var(--text-secondary)]\">The runtime is automatically injected into your pages by the GoSPA server. No manual installation required for the default runtime. For ES modules, install the client package:</p>")
 		if templ_7745c5c3_Err != nil {
 			return templ_7745c5c3_Err
 		}
-		templ_7745c5c3_Err = components.CodeBlock(`// Full runtime with DOMPurify (~17KB)
-import { Rune, Effect, navigate } from '@gospa/runtime';
+		templ_7745c5c3_Err = components.DualCodeBlock(
+			`<!-- Plain JavaScript - global GoSPA object (no build step needed) -->
+<script src="/_gospa/runtime.js"></script>
 
-// Lightweight runtime without sanitizer (~11KB)
-import { Rune, Effect, navigate } from '@gospa/runtime-simple';`, "typescript", "imports.ts").Render(ctx, templ_7745c5c3_Buffer)
+<!-- Then use in your scripts -->
+<script>
+  const count = new GoSPA.Rune(0);
+  console.log(count.get());
+</script>`,
+			`# TypeScript / ES Modules
+npm install @gospa/client
+
+# Import from the client package
+import { Rune, Effect, navigate } from '@gospa/client';`,
+			"setup").Render(ctx, templ_7745c5c3_Buffer)
 		if templ_7745c5c3_Err != nil {
 			return templ_7745c5c3_Err
 		}
@@ -47,7 +57,28 @@ import { Rune, Effect, navigate } from '@gospa/runtime-simple';`, "typescript", 
 		if templ_7745c5c3_Err != nil {
 			return templ_7745c5c3_Err
 		}
-		templ_7745c5c3_Err = components.CodeBlock(`import { Rune, rune } from '@gospa/runtime';
+		templ_7745c5c3_Err = components.DualCodeBlock(
+			`// Plain JavaScript — uses global GoSPA object
+const count = new GoSPA.Rune(0);
+const name = GoSPA.rune('initial'); // factory function
+
+// Read
+console.log(count.get());  // 0
+console.log(count.peek()); // 0 (without tracking)
+
+// Write
+count.set(2);
+count.update(n => n + 1);
+
+// Subscribe
+const unsubscribe = count.subscribe((value, oldValue) => {
+  console.log('Changed:', oldValue, '->', value);
+});
+
+// Cleanup
+unsubscribe();`,
+			`// TypeScript — ES module imports
+import { Rune, rune } from '@gospa/client';
 
 // Create
 const count = new Rune(0);
@@ -69,7 +100,8 @@ const unsubscribe = count.subscribe((value, oldValue) => {
 });
 
 // Cleanup
-unsubscribe();`, "typescript", "rune.ts").Render(ctx, templ_7745c5c3_Buffer)
+unsubscribe();`,
+			"rune.ts").Render(ctx, templ_7745c5c3_Buffer)
 		if templ_7745c5c3_Err != nil {
 			return templ_7745c5c3_Err
 		}
@@ -77,7 +109,17 @@ unsubscribe();`, "typescript", "rune.ts").Render(ctx, templ_7745c5c3_Buffer)
 		if templ_7745c5c3_Err != nil {
 			return templ_7745c5c3_Err
 		}
-		templ_7745c5c3_Err = components.CodeBlock(`import { Derived, derived } from '@gospa/runtime';
+		templ_7745c5c3_Err = components.DualCodeBlock(
+			`// Plain JavaScript
+const count = new GoSPA.Rune(5);
+const doubled = new GoSPA.Derived(() => count.get() * 2);
+
+console.log(doubled.get()); // 10
+
+count.set(10);
+console.log(doubled.get()); // 20 — automatically updated`,
+			`// TypeScript
+import { Rune, Derived, derived } from '@gospa/client';
 
 const count = new Rune(5);
 const doubled = new Derived(() => count.get() * 2);
@@ -90,7 +132,8 @@ console.log(doubled.value); // 10
 doubled.subscribe(v => console.log('Doubled:', v));
 
 // Cleanup
-doubled.dispose();`, "typescript", "derived.ts").Render(ctx, templ_7745c5c3_Buffer)
+doubled.dispose();`,
+			"derived.ts").Render(ctx, templ_7745c5c3_Buffer)
 		if templ_7745c5c3_Err != nil {
 			return templ_7745c5c3_Err
 		}
@@ -98,7 +141,26 @@ doubled.dispose();`, "typescript", "derived.ts").Render(ctx, templ_7745c5c3_Buff
 		if templ_7745c5c3_Err != nil {
 			return templ_7745c5c3_Err
 		}
-		templ_7745c5c3_Err = components.CodeBlock(`import { Effect, effect } from '@gospa/runtime';
+		templ_7745c5c3_Err = components.DualCodeBlock(
+			`// Plain JavaScript
+const count = new GoSPA.Rune(0);
+
+// Create effect
+const myEffect = new GoSPA.Effect(() => {
+  console.log('Count changed:', count.get());
+  
+  // Optional cleanup function
+  return () => {
+    console.log('Cleanup before next run');
+  };
+});
+
+// Control
+myEffect.pause();   // Stop reacting
+myEffect.resume();  // Resume reacting
+myEffect.dispose(); // Permanently cleanup`,
+			`// TypeScript
+import { Effect, effect } from '@gospa/client';
 
 const count = new Rune(0);
 
@@ -115,7 +177,8 @@ const myEffect = new Effect(() => {
 // Control
 myEffect.pause();   // Stop reacting
 myEffect.resume();  // Resume reacting
-myEffect.dispose(); // Permanently cleanup`, "typescript", "effect.ts").Render(ctx, templ_7745c5c3_Buffer)
+myEffect.dispose(); // Permanently cleanup`,
+			"effect.ts").Render(ctx, templ_7745c5c3_Buffer)
 		if templ_7745c5c3_Err != nil {
 			return templ_7745c5c3_Err
 		}
@@ -123,7 +186,7 @@ myEffect.dispose(); // Permanently cleanup`, "typescript", "effect.ts").Render(c
 		if templ_7745c5c3_Err != nil {
 			return templ_7745c5c3_Err
 		}
-		templ_7745c5c3_Err = components.CodeBlock(`import { StateMap } from '@gospa/runtime';
+		templ_7745c5c3_Err = components.CodeBlock(`import { StateMap } from '@gospa/client';
 
 const states = new StateMap();
 
@@ -155,7 +218,7 @@ states.clear();`, "typescript", "statemap.ts").Render(ctx, templ_7745c5c3_Buffer
 		if templ_7745c5c3_Err != nil {
 			return templ_7745c5c3_Err
 		}
-		templ_7745c5c3_Err = components.CodeBlock(`import { Resource, resourceReactive } from '@gospa/runtime';
+		templ_7745c5c3_Err = components.CodeBlock(`import { Resource, resourceReactive } from '@gospa/client';
 
 const userResource = new Resource(async () => {
   const res = await fetch('/api/user');
@@ -180,7 +243,7 @@ userResource.reset();`, "typescript", "resource.ts").Render(ctx, templ_7745c5c3_
 		if templ_7745c5c3_Err != nil {
 			return templ_7745c5c3_Err
 		}
-		templ_7745c5c3_Err = components.CodeBlock(`import { batch, untrack, watch, inspect } from '@gospa/runtime';
+		templ_7745c5c3_Err = components.CodeBlock(`import { batch, untrack, watch, inspect } from '@gospa/client';
 
 // Batch multiple updates
 batch(() => {
@@ -210,7 +273,7 @@ inspect(count).with((type, value) => {
 		if templ_7745c5c3_Err != nil {
 			return templ_7745c5c3_Err
 		}
-		templ_7745c5c3_Err = components.CodeBlock(`import { init } from '@gospa/runtime';
+		templ_7745c5c3_Err = components.CodeBlock(`import { init } from '@gospa/client';
 
 init({
   wsUrl: 'ws://localhost:3000/ws',

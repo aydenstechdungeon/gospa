@@ -38,7 +38,7 @@ const unsub = count.subscribe((newVal, oldVal) => {
   console.log('Changed:', oldVal, '->', newVal);
 });`,
 				`// TypeScript
-import { Rune, derived, effect } from '@gospa/runtime';
+import { Rune, derived, effect } from '@gospa/client';
 
 // Create reactive state
 const count = new Rune(0);
@@ -85,7 +85,7 @@ console.log(sum.get());     // 30
 // Derived is lazy - only computes when read
 // and re-computes when dependencies change`,
 				`// TypeScript
-import { Derived, derived } from '@gospa/runtime';
+import { Derived, derived } from '@gospa/client';
 
 const count = new Rune(5);
 
@@ -135,7 +135,7 @@ const dispose = new GoSPA.Effect(() => {
   document.title = 'Count: ' + count.get();
 });`,
 				`// TypeScript
-import { Effect, effect } from '@gospa/runtime';
+import { Effect, effect } from '@gospa/client';
 
 const count = new Rune(0);
 

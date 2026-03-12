@@ -57,7 +57,7 @@ templ Page() {
   cubicInOut, 
   elasticOut, 
   bounceOut 
-} from '@gospa/runtime';
+} from '@gospa/client';
 
 // Use in transitions
 fly(element, { 
@@ -132,7 +132,7 @@ fly(element, {
 			<p class="text-[var(--text-secondary)]">Control transitions programmatically with JavaScript.</p>
 			
 			<h3 class="text-lg font-bold mt-6" id="transition-in-out">transitionIn / transitionOut</h3>
-			@components.CodeBlock(`import { transitionIn, transitionOut, fade, fly } from '@gospa/runtime';
+			@components.CodeBlock(`import { transitionIn, transitionOut, fade, fly } from '@gospa/client';
 
 // Enter transition
 transitionIn(element, fade, { duration: 300 });
@@ -144,7 +144,7 @@ transitionOut(element, fly, { x: -100, duration: 300 }, () => {
 			
 			<h3 class="text-lg font-bold mt-6" id="setup-transitions">setupTransitions</h3>
 			<p class="text-[var(--text-secondary)]">Auto-setup transitions from DOM attributes.</p>
-			@components.CodeBlock(`import { setupTransitions } from '@gospa/runtime';
+			@components.CodeBlock(`import { setupTransitions } from '@gospa/client';
 
 // Setup on document.body
 setupTransitions();

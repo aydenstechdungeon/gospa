@@ -48,7 +48,7 @@ func Page() templ.Component {
 		if templ_7745c5c3_Err != nil {
 			return templ_7745c5c3_Err
 		}
-		templ_7745c5c3_Err = components.CodeBlock(`import { getPriorityScheduler } from '@gospa/runtime';
+		templ_7745c5c3_Err = components.CodeBlock(`import { getPriorityScheduler } from '@gospa/client';
 
 const scheduler = getPriorityScheduler();
 scheduler.forceHydrate('gospa-island-123');
@@ -73,7 +73,7 @@ app.Get("/dashboard", func(c *fiber.Ctx) error {
 		if templ_7745c5c3_Err != nil {
 			return templ_7745c5c3_Err
 		}
-		templ_7745c5c3_Err = components.CodeBlock(`import { initStreaming } from '@gospa/runtime';
+		templ_7745c5c3_Err = components.CodeBlock(`import { initStreaming } from '@gospa/client';
 
 const streamer = initStreaming({
   enableLogging: true,

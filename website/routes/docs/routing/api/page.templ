@@ -30,7 +30,7 @@ templ Page() {
 			</p>
 			@components.CodeBlock("// routes/actions.go\npackage routes\n\nimport (\n\t\"context\"\n\t\"errors\"\n\t\"github.com/aydenstechdungeon/gospa/routing\"\n)\n\n// Define remote action\nfunc init() {\n\trouting.RegisterRemoteAction(\"updateUser\", func(ctx context.Context, rc routing.RemoteContext, input interface{}) (interface{}, error) {\n\t\tdata, ok := input.(map[string]interface{})\n\t\tif !ok {\n\t\t\treturn nil, errors.New(\"invalid input\")\n\t\t}\n\t\tname, _ := data[\"name\"].(string)\n\t\tif name == \"\" {\n\t\t\treturn nil, errors.New(\"name required\")\n\t\t}\n\t\treturn User{Name: name}, nil\n\t})\n}", "go", "remote.go")
 			<h3 class="text-xl font-semibold mt-6">Client Usage</h3>
-			@components.CodeBlock("import { remote } from '@gospa/runtime';\n\n// Call remote action\nconst result = await remote('updateUser', {\n\tid: 1,\n\tname: 'New Name'\n});\n\nif (result.ok) {\n\tconsole.log('Updated:', result.data);\n} else {\n\tconsole.error('Error:', result.error);\n}", "typescript", "remote_client.ts")
+			@components.CodeBlock("import { remote } from '@gospa/client';\n\n// Call remote action\nconst result = await remote('updateUser', {\n\tid: 1,\n\tname: 'New Name'\n});\n\nif (result.ok) {\n\tconsole.log('Updated:', result.data);\n} else {\n\tconsole.error('Error:', result.error);\n}", "typescript", "remote_client.ts")
 		</section>
 
 		@prevNext("/docs/routing/dynamic", "/docs/routing/navigation")

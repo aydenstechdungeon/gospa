@@ -13,7 +13,7 @@ templ Page() {
 			<h2 class="text-2xl font-bold" id="wsclient">WSClient</h2>
 			<p class="text-[var(--text-secondary)]">WebSocket client for real-time state synchronization with auto-reconnect and heartbeat support.</p>
 			
-			@components.CodeBlock(`import { WSClient, initWebSocket, getWebSocketClient } from '@gospa/runtime';
+			@components.CodeBlock(`import { WSClient, initWebSocket, getWebSocketClient } from '@gospa/client';
 
 // Initialize
 const ws = initWebSocket({
@@ -133,7 +133,7 @@ const client = getWebSocketClient();`, "typescript", "wsclient.ts")
 			<h2 class="text-2xl font-bold" id="synced-rune">syncedRune</h2>
 			<p class="text-[var(--text-secondary)]">Create a rune that automatically syncs with the server.</p>
 			
-			@components.CodeBlock(`import { syncedRune } from '@gospa/runtime';
+			@components.CodeBlock(`import { syncedRune } from '@gospa/client';
 
 const count = syncedRune(0, {
   componentId: 'counter',
@@ -152,7 +152,7 @@ count.set(5);
 			<h2 class="text-2xl font-bold" id="sync-batch">syncBatch</h2>
 			<p class="text-[var(--text-secondary)]">Batch sync multiple runes together for efficient updates.</p>
 			
-			@components.CodeBlock(`import { syncBatch, Rune } from '@gospa/runtime';
+			@components.CodeBlock(`import { syncBatch, Rune } from '@gospa/client';
 
 const states = {
   name: new Rune(''),
@@ -167,7 +167,7 @@ syncBatch('user-form', states);`, "typescript", "sync-batch.ts")
 			<h2 class="text-2xl font-bold" id="apply-state-update">applyStateUpdate</h2>
 			<p class="text-[var(--text-secondary)]">Apply server state updates to multiple runes at once.</p>
 			
-			@components.CodeBlock(`import { applyStateUpdate, Rune } from '@gospa/runtime';
+			@components.CodeBlock(`import { applyStateUpdate, Rune } from '@gospa/client';
 
 const states = {
   count: new Rune(0),

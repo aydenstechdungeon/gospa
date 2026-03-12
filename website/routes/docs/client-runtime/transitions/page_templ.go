@@ -89,7 +89,7 @@ func Page() templ.Component {
   cubicInOut, 
   elasticOut, 
   bounceOut 
-} from '@gospa/runtime';
+} from '@gospa/client';
 
 // Use in transitions
 fly(element, { 
@@ -142,7 +142,7 @@ fly(element, {
 		if templ_7745c5c3_Err != nil {
 			return templ_7745c5c3_Err
 		}
-		templ_7745c5c3_Err = components.CodeBlock(`import { transitionIn, transitionOut, fade, fly } from '@gospa/runtime';
+		templ_7745c5c3_Err = components.CodeBlock(`import { transitionIn, transitionOut, fade, fly } from '@gospa/client';
 
 // Enter transition
 transitionIn(element, fade, { duration: 300 });
@@ -158,7 +158,7 @@ transitionOut(element, fly, { x: -100, duration: 300 }, () => {
 		if templ_7745c5c3_Err != nil {
 			return templ_7745c5c3_Err
 		}
-		templ_7745c5c3_Err = components.CodeBlock(`import { setupTransitions } from '@gospa/runtime';
+		templ_7745c5c3_Err = components.CodeBlock(`import { setupTransitions } from '@gospa/client';
 
 // Setup on document.body
 setupTransitions();

@@ -35,7 +35,7 @@ func Page() templ.Component {
 		if templ_7745c5c3_Err != nil {
 			return templ_7745c5c3_Err
 		}
-		templ_7745c5c3_Err = components.CodeBlock(`import { navigate, back, forward, go } from '@gospa/runtime';
+		templ_7745c5c3_Err = components.CodeBlock(`import { navigate, back, forward, go } from '@gospa/client';
 
 // Basic navigation
 await navigate('/about');
@@ -58,7 +58,7 @@ go(3);               // Go forward 3 pages`, "typescript", "navigation.ts").Rend
 		if templ_7745c5c3_Err != nil {
 			return templ_7745c5c3_Err
 		}
-		templ_7745c5c3_Err = components.CodeBlock(`import { prefetch, prefetchLinks } from '@gospa/runtime';
+		templ_7745c5c3_Err = components.CodeBlock(`import { prefetch, prefetchLinks } from '@gospa/client';
 
 // Prefetch a specific page
 prefetch('/blog/hello-world');
@@ -75,7 +75,7 @@ prefetchLinks('a[data-prefetch]');`, "typescript", "prefetch.ts").Render(ctx, te
 		if templ_7745c5c3_Err != nil {
 			return templ_7745c5c3_Err
 		}
-		templ_7745c5c3_Err = components.CodeBlock(`import { createNavigationState, rune } from '@gospa/runtime';
+		templ_7745c5c3_Err = components.CodeBlock(`import { createNavigationState, rune } from '@gospa/client';
 
 const nav = createNavigationState();
 
@@ -96,7 +96,7 @@ const state = nav.getState();`, "typescript", "nav-state.ts").Render(ctx, templ_
 		if templ_7745c5c3_Err != nil {
 			return templ_7745c5c3_Err
 		}
-		templ_7745c5c3_Err = components.CodeBlock(`import { onBeforeNavigate, onAfterNavigate } from '@gospa/runtime';
+		templ_7745c5c3_Err = components.CodeBlock(`import { onBeforeNavigate, onAfterNavigate } from '@gospa/client';
 
 // Before navigation (can cancel)
 const unsubBefore = onBeforeNavigate((path) => {
@@ -212,7 +212,7 @@ unsubAfter();`, "typescript", "lifecycle.ts").Render(ctx, templ_7745c5c3_Buffer)
 		if templ_7745c5c3_Err != nil {
 			return templ_7745c5c3_Err
 		}
-		templ_7745c5c3_Err = components.CodeBlock(`import { on, off, delegate, debounce, throttle } from '@gospa/runtime';
+		templ_7745c5c3_Err = components.CodeBlock(`import { on, off, delegate, debounce, throttle } from '@gospa/client';
 
 // Event with modifiers
 on(form, 'submit:prevent', (e) => {
@@ -249,7 +249,7 @@ window.addEventListener('scroll', throttledScroll);`, "typescript", "events.ts")
 		if templ_7745c5c3_Err != nil {
 			return templ_7745c5c3_Err
 		}
-		templ_7745c5c3_Err = components.CodeBlock(`import { on } from '@gospa/runtime';
+		templ_7745c5c3_Err = components.CodeBlock(`import { on } from '@gospa/client';
 
 // Multiple modifiers
 on(link, 'click:prevent:stop', (e) => {
@@ -268,7 +268,7 @@ on(modal, 'click:once:prevent', (e) => {
 		if templ_7745c5c3_Err != nil {
 			return templ_7745c5c3_Err
 		}
-		templ_7745c5c3_Err = components.CodeBlock(`import { onKey, keys } from '@gospa/runtime';
+		templ_7745c5c3_Err = components.CodeBlock(`import { onKey, keys } from '@gospa/client';
 
 // Single key
 onKey(document, 'Escape', () => {
@@ -296,7 +296,7 @@ onKey(document, ['ArrowUp', 'ArrowDown'], (e) => {
 		if templ_7745c5c3_Err != nil {
 			return templ_7745c5c3_Err
 		}
-		templ_7745c5c3_Err = components.CodeBlock(`import { initNavigation, destroyNavigation } from '@gospa/runtime';
+		templ_7745c5c3_Err = components.CodeBlock(`import { initNavigation, destroyNavigation } from '@gospa/client';
 
 // Initialize with options
 const nav = initNavigation({

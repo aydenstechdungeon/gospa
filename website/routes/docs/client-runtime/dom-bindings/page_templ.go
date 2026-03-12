@@ -48,7 +48,7 @@ GoSPA.bindElement(element, colorRune, { type: 'style', attribute: 'color' });
 // Two-way binding
 GoSPA.bindTwoWay(inputElement, textRune);`,
 			`// TypeScript — ES module imports
-import { bindElement, bindTwoWay } from '@gospa/runtime';
+import { bindElement, bindTwoWay } from '@gospa/client';
 
 // One-way bindings
 bindElement(element, textRune);
@@ -97,7 +97,7 @@ GoSPA.bindElement(linkEl, href, {
   attribute: 'href'
 });`,
 			`// TypeScript
-import { bindElement, rune } from '@gospa/runtime';
+import { bindElement, rune } from '@gospa/client';
 
 const count = rune(0);
 
@@ -143,7 +143,7 @@ GoSPA.bindTwoWay(input, name);
 // Now name.get() reflects input value
 // And input.value updates when name.set() is called`,
 			`// TypeScript
-import { bindTwoWay, rune } from '@gospa/runtime';
+import { bindTwoWay, rune } from '@gospa/client';
 
 const name = rune('');
 
@@ -173,7 +173,7 @@ GoSPA.renderIf(adminPanel, isLoggedIn);
 const loginForm = document.getElementById('login-form');
 GoSPA.renderIf(loginForm, isLoggedIn, { inverse: true });`,
 			`// TypeScript
-import { renderIf, rune } from '@gospa/runtime';
+import { renderIf, rune } from '@gospa/client';
 
 const isLoggedIn = rune(false);
 
@@ -211,7 +211,7 @@ GoSPA.renderList(
   }
 );`,
 			`// TypeScript
-import { renderList, rune } from '@gospa/runtime';
+import { renderList, rune } from '@gospa/client';
 
 interface Todo {
   id: number;
@@ -252,7 +252,7 @@ GoSPA.setSanitizer((html) => {
 // Get current sanitizer
 const sanitize = GoSPA.getSanitizer();`,
 			`// TypeScript
-import { setSanitizer, getSanitizer } from '@gospa/runtime';
+import { setSanitizer, getSanitizer } from '@gospa/client';
 
 // Set custom sanitizer
 setSanitizer((html: string) => {
@@ -278,7 +278,7 @@ const bindingId = GoSPA.registerBinding(element, rune, config);
 // Unregister when cleaning up
 GoSPA.unregisterBinding(bindingId);`,
 			`// TypeScript
-import { registerBinding, unregisterBinding } from '@gospa/runtime';
+import { registerBinding, unregisterBinding } from '@gospa/client';
 
 // Register a custom binding
 const bindingId = registerBinding(element, rune, config);

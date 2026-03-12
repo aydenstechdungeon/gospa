@@ -124,7 +124,7 @@ const result = await createUser({ username: 'ayden', email: 'ayden@example.com' 
 		if templ_7745c5c3_Err != nil {
 			return templ_7745c5c3_Err
 		}
-		templ_7745c5c3_Err = components.CodeBlock(`import { remote, remoteAction } from '@gospa/runtime';
+		templ_7745c5c3_Err = components.CodeBlock(`import { remote, remoteAction } from '@gospa/client';
 
 async function handleSignup() {
     const result = await remote('createUser', {

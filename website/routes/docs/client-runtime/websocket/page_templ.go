@@ -35,7 +35,7 @@ func Page() templ.Component {
 		if templ_7745c5c3_Err != nil {
 			return templ_7745c5c3_Err
 		}
-		templ_7745c5c3_Err = components.CodeBlock(`import { WSClient, initWebSocket, getWebSocketClient } from '@gospa/runtime';
+		templ_7745c5c3_Err = components.CodeBlock(`import { WSClient, initWebSocket, getWebSocketClient } from '@gospa/client';
 
 // Initialize
 const ws = initWebSocket({
@@ -84,7 +84,7 @@ const client = getWebSocketClient();`, "typescript", "wsclient.ts").Render(ctx, 
 		if templ_7745c5c3_Err != nil {
 			return templ_7745c5c3_Err
 		}
-		templ_7745c5c3_Err = components.CodeBlock(`import { syncedRune } from '@gospa/runtime';
+		templ_7745c5c3_Err = components.CodeBlock(`import { syncedRune } from '@gospa/client';
 
 const count = syncedRune(0, {
   componentId: 'counter',
@@ -104,7 +104,7 @@ count.set(5);
 		if templ_7745c5c3_Err != nil {
 			return templ_7745c5c3_Err
 		}
-		templ_7745c5c3_Err = components.CodeBlock(`import { syncBatch, Rune } from '@gospa/runtime';
+		templ_7745c5c3_Err = components.CodeBlock(`import { syncBatch, Rune } from '@gospa/client';
 
 const states = {
   name: new Rune(''),
@@ -120,7 +120,7 @@ syncBatch('user-form', states);`, "typescript", "sync-batch.ts").Render(ctx, tem
 		if templ_7745c5c3_Err != nil {
 			return templ_7745c5c3_Err
 		}
-		templ_7745c5c3_Err = components.CodeBlock(`import { applyStateUpdate, Rune } from '@gospa/runtime';
+		templ_7745c5c3_Err = components.CodeBlock(`import { applyStateUpdate, Rune } from '@gospa/client';
 
 const states = {
   count: new Rune(0),

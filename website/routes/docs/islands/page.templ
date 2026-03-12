@@ -65,7 +65,7 @@ templ Page() {
 						</tbody>
 					</table>
 				</div>
-				@components.CodeBlock(`import { getPriorityScheduler } from '@gospa/runtime';
+				@components.CodeBlock(`import { getPriorityScheduler } from '@gospa/client';
 
 const scheduler = getPriorityScheduler();
 scheduler.forceHydrate('gospa-island-123');
@@ -95,7 +95,7 @@ app.Get("/dashboard", func(c *fiber.Ctx) error {
 			<div>
 				<h2 class="text-2xl font-bold mb-4 border-b border-[var(--border)] pb-2 italic mono">Client-Side Streaming</h2>
 				<p class="text-[var(--text-secondary)] mb-4">The StreamingManager handles incoming chunks automatically:</p>
-				@components.CodeBlock(`import { initStreaming } from '@gospa/runtime';
+				@components.CodeBlock(`import { initStreaming } from '@gospa/client';
 
 const streamer = initStreaming({
   enableLogging: true,

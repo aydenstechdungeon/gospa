@@ -54,7 +54,7 @@ app.Get("/__hmr", hmr.HMREndpoint())`, "go", "main.go").Render(ctx, templ_7745c5
 		if templ_7745c5c3_Err != nil {
 			return templ_7745c5c3_Err
 		}
-		templ_7745c5c3_Err = components.CodeBlock(`import { initHMR } from '@gospa/runtime';
+		templ_7745c5c3_Err = components.CodeBlock(`import { initHMR } from '@gospa/client';
 
 const hmr = initHMR({
     wsUrl: `+"`"+`ws://${window.location.host}/__hmr`+"`"+`,
@@ -71,7 +71,7 @@ hmr.onUpdate((msg) => {
 		if templ_7745c5c3_Err != nil {
 			return templ_7745c5c3_Err
 		}
-		templ_7745c5c3_Err = components.CodeBlock(`import { registerHMRModule, acceptHMR } from '@gospa/runtime';
+		templ_7745c5c3_Err = components.CodeBlock(`import { registerHMRModule, acceptHMR } from '@gospa/client';
 
 registerHMRModule('my-module', exports);
 acceptHMR('my-module');`, "typescript", "module.ts").Render(ctx, templ_7745c5c3_Buffer)
@@ -96,7 +96,7 @@ window.__gospaSetState = (id, state) => {
 		if templ_7745c5c3_Err != nil {
 			return templ_7745c5c3_Err
 		}
-		templ_7745c5c3_Err = components.CodeBlock(`import { CSSHMR } from '@gospa/runtime';
+		templ_7745c5c3_Err = components.CodeBlock(`import { CSSHMR } from '@gospa/client';
 
 // Automatically handled by HMRClient for registered styles
 CSSHMR.updateStyle('/static/css/main.css');`, "typescript", "styles.ts").Render(ctx, templ_7745c5c3_Buffer)

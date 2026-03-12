@@ -13,7 +13,42 @@ templ Page() {
 
 		<section class="space-y-6">
 			<h2 class="text-2xl font-bold" id="form-state">Form State</h2>
-			@components.CodeBlock(`import { Rune, derived } from '@gospa/runtime';
+			@components.DualCodeBlock(
+				`// Plain JavaScript
+const form = GoSPA.createRune({
+  email: '',
+  password: '',
+  remember: false
+});
+
+// Validation
+const errors = GoSPA.derived(() => {
+  const errs = {};
+  const f = form.get();
+  
+  if (!f.email.includes('@')) {
+    errs.email = 'Invalid email';
+  }
+  if (f.password.length < 8) {
+    errs.password = 'Password too short';
+  }
+  
+  return errs;
+});
+
+// Submit handler
+async function submit() {
+  if (Object.keys(errors.get()).length > 0) return;
+  
+  const response = await fetch('/api/login', {
+    method: 'POST',
+    body: JSON.stringify(form.get())
+  });
+  
+  // Handle response
+}`,
+				`// TypeScript
+import { Rune, derived } from '@gospa/client';
 
 // Form state
 const form = new Rune({
@@ -47,12 +82,35 @@ async function submit() {
   });
   
   // Handle response
-}`, "typescript", "form.ts")
+}`,
+				"form.ts")
 		</section>
 
 		<section class="space-y-6">
 			<h2 class="text-2xl font-bold" id="async-state">Async State</h2>
-			@components.CodeBlock(`import { resourceReactive, Rune } from '@gospa/runtime';
+			@components.DualCodeBlock(
+				`// Plain JavaScript
+const userId = GoSPA.createRune(1);
+
+// Resource - async data with status
+const userResource = GoSPA.resourceReactive(
+  [userId],
+  async () => {
+    const res = await fetch('/api/user/' + userId.get());
+    return res.json();
+  }
+);
+
+// Status tracking
+console.log(userResource.status);     // 'idle' | 'pending' | 'success' | 'error'
+console.log(userResource.isPending);  // boolean
+console.log(userResource.data);       // T | undefined
+console.log(userResource.error);      // Error | undefined
+
+// Refetch
+await userResource.refetch();`,
+				`// TypeScript
+import { resourceReactive, Rune } from '@gospa/client';
 
 const userId = new Rune(1);
 
@@ -72,13 +130,35 @@ console.log(userResource.data);       // T | undefined
 console.log(userResource.error);      // Error | undefined
 
 // Refetch
-await userResource.refetch();`, "typescript", "async.ts")
+await userResource.refetch();`,
+				"async.ts")
 		</section>
 
 		<section class="space-y-6">
 			<h2 class="text-2xl font-bold" id="global-state">Global State</h2>
-			@components.CodeBlock(`// store.svelte.ts
-import { Rune, derived } from '@gospa/runtime';
+			@components.DualCodeBlock(
+				`// Plain JavaScript
+const user = GoSPA.createRune(null);
+const theme = GoSPA.createRune('light');
+
+// Derived from global
+const isAuthenticated = GoSPA.derived(() => user.get() !== null);
+const userName = GoSPA.derived(() => user.get()?.name ?? 'Guest');
+
+// Actions
+function login(userData) {
+  user.set(userData);
+}
+
+function logout() {
+  user.set(null);
+}
+
+function toggleTheme() {
+  theme.update(t => t === 'light' ? 'dark' : 'light');
+}`,
+				`// TypeScript
+import { Rune, derived } from '@gospa/client';
 
 // Global store
 export const user = new Rune<User | null>(null);
@@ -99,7 +179,8 @@ export function logout() {
 
 export function toggleTheme() {
   theme.update(t => t === 'light' ? 'dark' : 'light');
-}`, "typescript", "global.ts")
+}`,
+				"store.ts")
 		</section>
 
 		<section class="space-y-6">
@@ -124,7 +205,35 @@ export function toggleTheme() {
 				</div>
 			</div>
 
-			@components.CodeBlock(`import { batch, untrack, watch, inspect } from '@gospa/runtime';
+			@components.DualCodeBlock(
+				`// Plain JavaScript
+const a = GoSPA.createRune(1);
+const b = GoSPA.createRune(2);
+
+// Batch - single notification
+GoSPA.batch(() => {
+  a.set(10);
+  b.set(20);
+});
+
+// Untrack - don't track dependency
+GoSPA.effect(() => {
+  console.log('A:', a.get());
+  GoSPA.untrack(() => {
+    console.log('B (untracked):', b.get());
+  });
+  // Only re-runs when a changes, not b
+});
+
+// Watch multiple sources
+const unsub = GoSPA.watch([a, b], (values, oldValues) => {
+  console.log('Changed:', { from: oldValues, to: values });
+});
+
+// Debug (dev only)
+GoSPA.inspect(a);`,
+				`// TypeScript
+import { batch, untrack, watch, inspect, effect, Rune } from '@gospa/client';
 
 const a = new Rune(1);
 const b = new Rune(2);
@@ -155,7 +264,8 @@ inspect(a).with((type, value) => {
   if (type === 'update') {
     console.log('Updated to:', value);
   }
-});`, "typescript", "utilities.ts")
+});`,
+				"utilities.ts")
 		</section>
 
 		<div class="bg-gradient-to-r from-[var(--bg-secondary)] to-[var(--bg-tertiary)] p-8 rounded-3xl border border-[var(--border)] shadow-inner">
