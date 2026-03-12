@@ -10,7 +10,6 @@ import (
 	"strconv"
 	"strings"
 	"sync"
-	"time"
 )
 
 // batchContextKey is used to store batch state in context
@@ -174,30 +173,6 @@ func flushBatch(bs *batchState) {
 
 	for _, n := range dirtyList {
 		n.notifySubscribers()
-	}
-}
-
-// FIX: flushBatchWithTimeout flushes the batch with a timeout to prevent silent data loss.
-// If the flush takes longer than the timeout, it logs a warning and attempts to flush
-// whatever is still pending.
-func flushBatchWithTimeout(bs *batchState, timeout time.Duration) {
-	// Create a channel to signal completion
-	done := make(chan struct{})
-
-	go func() {
-		flushBatch(bs)
-		close(done)
-	}()
-
-	// Wait for completion or timeout
-	select {
-	case <-done:
-		// Completed successfully
-		return
-	case <-time.After(timeout):
-		// Timeout - log warning and try to flush what's left
-		// Note: We can't guarantee safety here since the flush might be in a bad state
-		// This is a best-effort recovery
 	}
 }
 
