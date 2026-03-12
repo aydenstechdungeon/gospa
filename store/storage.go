@@ -21,6 +21,7 @@ type MemoryStorage struct {
 	mu    sync.RWMutex
 	store map[string]memoryEntry
 	stop  chan struct{}
+	once  sync.Once
 }
 
 // memoryEntry stores a value and its expiration time.
@@ -102,7 +103,8 @@ func (s *MemoryStorage) pruneLoop() {
 
 // Close explicitly stops the background pruning loop to prevent goroutine leaks.
 func (s *MemoryStorage) Close() error {
-	// Send close signal
-	close(s.stop)
+	s.once.Do(func() {
+		close(s.stop)
+	})
 	return nil
 }

@@ -63,10 +63,20 @@ func (p *PubSub) Publish(channel string, message []byte) error {
 
 // Subscribe subscribes to a Redis channel and invokes the handler for each message.
 func (p *PubSub) Subscribe(channel string, handler func(message []byte)) error {
-	pubsub := p.client.Subscribe(p.ctx, channel)
+	return p.SubscribeWithContext(p.ctx, channel, handler)
+}
+
+// SubscribeWithContext subscribes to a Redis channel and automatically unsubscribes
+// when the provided context is canceled.
+func (p *PubSub) SubscribeWithContext(ctx context.Context, channel string, handler func(message []byte)) error {
+	if ctx == nil {
+		ctx = p.ctx
+	}
+
+	pubsub := p.client.Subscribe(ctx, channel)
 
 	// Wait for confirmation that subscription is created
-	_, err := pubsub.Receive(p.ctx)
+	_, err := pubsub.Receive(ctx)
 	if err != nil {
 		return err
 	}
@@ -74,8 +84,16 @@ func (p *PubSub) Subscribe(channel string, handler func(message []byte)) error {
 	go func() {
 		defer func() { _ = pubsub.Close() }()
 		ch := pubsub.Channel()
-		for msg := range ch {
-			handler([]byte(msg.Payload))
+		for {
+			select {
+			case <-ctx.Done():
+				return
+			case msg, ok := <-ch:
+				if !ok {
+					return
+				}
+				handler([]byte(msg.Payload))
+			}
 		}
 	}()
 

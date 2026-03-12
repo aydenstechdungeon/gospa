@@ -189,6 +189,10 @@ type Config struct {
 	RemotePrefix       string // Prefix for remote action endpoints (default "/_gospa/remote")
 	// RemoteActionMiddleware allows injecting authorization/tenant checks before remote action handlers.
 	RemoteActionMiddleware fiberpkg.Handler
+	// AllowUnauthenticatedRemoteActions disables the production safety guard that blocks
+	// remote actions when no RemoteActionMiddleware is configured.
+	// Default false (secure-by-default).
+	AllowUnauthenticatedRemoteActions bool
 
 	// Security Options
 	AllowedOrigins []string // Allowed CORS origins
@@ -228,6 +232,7 @@ func DefaultConfig() Config {
 		RemotePrefix:        "/_gospa/remote",
 		MaxRequestBodySize:  4 * 1024 * 1024, // Default 4MB
 		SerializationFormat: SerializationJSON,
+		EnableCSRF:          true,
 	}
 }
 
@@ -574,6 +579,14 @@ func (a *App) setupRoutes() {
 
 	// Remote Actions endpoint
 	remoteHandlers := []fiberpkg.Handler{fiber.RemoteActionRateLimitMiddleware()}
+	if !a.Config.DevMode && a.Config.RemoteActionMiddleware == nil && !a.Config.AllowUnauthenticatedRemoteActions {
+		remoteHandlers = append(remoteHandlers, func(c fiberpkg.Ctx) error {
+			return c.Status(fiberpkg.StatusUnauthorized).JSON(fiberpkg.Map{
+				"error": "Remote actions require RemoteActionMiddleware in production",
+				"code":  "REMOTE_AUTH_REQUIRED",
+			})
+		})
+	}
 	if a.Config.RemoteActionMiddleware != nil {
 		remoteHandlers = append(remoteHandlers, a.Config.RemoteActionMiddleware)
 	}
@@ -625,9 +638,19 @@ func (a *App) setupRoutes() {
 			}
 		}
 
-		headers := make(map[string]string)
-		for key, value := range c.Request().Header.All() {
-			headers[string(key)] = string(value)
+		requestHeaders := c.Request().Header
+		headers := make(map[string]string, 4)
+		if requestID := string(requestHeaders.Peek("X-Request-Id")); requestID != "" {
+			headers["X-Request-Id"] = requestID
+		}
+		if traceParent := string(requestHeaders.Peek("Traceparent")); traceParent != "" {
+			headers["Traceparent"] = traceParent
+		}
+		if traceState := string(requestHeaders.Peek("Tracestate")); traceState != "" {
+			headers["Tracestate"] = traceState
+		}
+		if b3 := string(requestHeaders.Peek("B3")); b3 != "" {
+			headers["B3"] = b3
 		}
 
 		rc := routing.RemoteContext{
