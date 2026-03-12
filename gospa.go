@@ -254,7 +254,9 @@ func (a *App) getRuntimePath() string {
 // getWSUrl returns the WebSocket URL for the current request.
 func (a *App) getWSUrl(c fiberpkg.Ctx) string {
 	protocol := "ws://"
-	if c.Protocol() == "https" {
+	// Check Protocol() which respects Fiber's ProxyHeader config,
+	// and fallback to checking X-Forwarded-Proto explicitly for common proxy setups.
+	if c.Protocol() == "https" || strings.ToLower(c.Get("X-Forwarded-Proto")) == "https" {
 		protocol = "wss://"
 	}
 	return protocol + string(c.Request().Host()) + a.Config.WebSocketPath
@@ -1097,11 +1099,7 @@ func (a *App) renderRoute(c fiberpkg.Ctx, route *routing.Route) error {
 	}
 
 	// No root layout registered — minimal fallback HTML wrapper.
-	protocol := "ws://"
-	if c.Protocol() == "https" {
-		protocol = "wss://"
-	}
-	wsURL := protocol + string(c.Request().Host()) + a.Config.WebSocketPath
+	wsURL := a.getWSUrl(c)
 	runtimePath := a.getRuntimePath()
 	appName := a.Config.AppName
 	devMode := a.Config.DevMode
