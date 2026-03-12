@@ -336,7 +336,7 @@ app := gospa.New(gospa.Config{
 ```
 
 > **Security By Default:** 
-> When you set `EnableCSRF: true`, GoSPA automatically wires both the token issuer 
+> CSRF protection is enabled by default (`EnableCSRF: true`), and GoSPA automatically wires both the token issuer 
 > and validator middlewares for you. The built-in client remote helper sends the `X-CSRF-Token` header automatically for same-origin requests.
 
 ### Rendering Strategies

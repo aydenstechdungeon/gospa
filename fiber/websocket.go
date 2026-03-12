@@ -40,6 +40,7 @@ type ConnectionRateLimiter struct {
 	refillRate      float64       // Tokens per second (default: 0.2 = 1 per 5 sec)
 	cleanupInterval time.Duration // How often to clean stale entries (in-memory only, default: 1 min)
 	stop            chan struct{}
+	stopOnce        sync.Once
 }
 
 type rateBucket struct {
@@ -108,15 +109,19 @@ func NewConnectionRateLimiter(storage store.Storage) *ConnectionRateLimiter {
 // Allow checks if a connection from the given IP is allowed.
 // Returns true if the connection should be accepted.
 func (rl *ConnectionRateLimiter) Allow(ip string) bool {
-	rl.mu.Lock()
-	defer rl.mu.Unlock()
-
 	now := time.Now()
+
+	rl.mu.RLock()
+	storage := rl.storage
+	maxTokens := rl.maxTokens
+	refillRate := rl.refillRate
+	rl.mu.RUnlock()
+
 	var bucket *rateBucket
 
-	if rl.storage != nil {
+	if storage != nil {
 		key := "rate:" + ip
-		data, err := rl.storage.Get(key)
+		data, err := storage.Get(key)
 		if err == nil {
 			var b rateBucket
 			if json.Unmarshal(data, &b) == nil {
@@ -127,19 +132,19 @@ func (rl *ConnectionRateLimiter) Allow(ip string) bool {
 		if bucket == nil {
 			// First connection from this IP
 			bucket = &rateBucket{
-				Tokens:     rl.maxTokens - 1, // Consume 1 token
+				Tokens:     maxTokens - 1, // Consume 1 token
 				LastRefill: now,
 			}
 			newBytes, _ := json.Marshal(bucket)
-			_ = rl.storage.Set(key, newBytes, 10*time.Minute)
+			_ = storage.Set(key, newBytes, 10*time.Minute)
 			return true
 		}
 
 		// Refill tokens based on elapsed time
 		elapsed := now.Sub(bucket.LastRefill).Seconds()
-		bucket.Tokens += elapsed * rl.refillRate
-		if bucket.Tokens > rl.maxTokens {
-			bucket.Tokens = rl.maxTokens
+		bucket.Tokens += elapsed * refillRate
+		if bucket.Tokens > maxTokens {
+			bucket.Tokens = maxTokens
 		}
 		bucket.LastRefill = now
 
@@ -152,10 +157,16 @@ func (rl *ConnectionRateLimiter) Allow(ip string) bool {
 
 		// Save back to storage
 		newBytes, _ := json.Marshal(bucket)
-		_ = rl.storage.Set(key, newBytes, 10*time.Minute)
+		_ = storage.Set(key, newBytes, 10*time.Minute)
 
 		return allowed
 	}
+
+	rl.mu.Lock()
+	defer rl.mu.Unlock()
+
+	maxTokens = rl.maxTokens
+	refillRate = rl.refillRate
 
 	// In-memory fallback
 	bucket, exists := rl.buckets[ip]
@@ -163,7 +174,7 @@ func (rl *ConnectionRateLimiter) Allow(ip string) bool {
 	if !exists {
 		// First connection from this IP
 		rl.buckets[ip] = &rateBucket{
-			Tokens:     rl.maxTokens - 1, // Consume 1 token
+			Tokens:     maxTokens - 1, // Consume 1 token
 			LastRefill: now,
 		}
 		return true
@@ -171,9 +182,9 @@ func (rl *ConnectionRateLimiter) Allow(ip string) bool {
 
 	// Refill tokens based on elapsed time
 	elapsed := now.Sub(bucket.LastRefill).Seconds()
-	bucket.Tokens += elapsed * rl.refillRate
-	if bucket.Tokens > rl.maxTokens {
-		bucket.Tokens = rl.maxTokens
+	bucket.Tokens += elapsed * refillRate
+	if bucket.Tokens > maxTokens {
+		bucket.Tokens = maxTokens
 	}
 	bucket.LastRefill = now
 
@@ -219,7 +230,9 @@ func (rl *ConnectionRateLimiter) cleanupLoop() {
 
 // Close explicitly stops the rate limiter's cleanup goroutine.
 func (rl *ConnectionRateLimiter) Close() {
-	close(rl.stop)
+	rl.stopOnce.Do(func() {
+		close(rl.stop)
+	})
 }
 
 // sessionEntry holds a session token and its expiry.

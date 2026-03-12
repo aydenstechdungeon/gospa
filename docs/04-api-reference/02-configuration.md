@@ -97,13 +97,14 @@ app := gospa.New(gospa.Config{
 | `MaxRequestBodySize` | `int` | `4194304` (4MB) | Max size for remote action request bodies |
 | `RemotePrefix` | `string` | `"/_gospa/remote"` | Prefix for remote action endpoints |
 | `RemoteActionMiddleware` | `fiber.Handler` | `nil` | Optional middleware to enforce global auth/policy checks before remote actions |
+| `AllowUnauthenticatedRemoteActions` | `bool` | `false` | If `true`, disables the production guard that blocks remote actions when no `RemoteActionMiddleware` is configured |
 
 ### Security Options
 
 | Option | Type | Default | Description |
 |--------|------|---------|-------------|
 | `AllowedOrigins` | `[]string` | `[]` | Allowed CORS origins |
-| `EnableCSRF` | `bool` | `false` | Enable automatic CSRF protection (wired by gospa.New) |
+| `EnableCSRF` | `bool` | `true` | Enable automatic CSRF protection (wired by gospa.New) |
 | `NavigationOptions` | `NavigationOptions` | Default | Advanced client-side navigation tuning |
 
 ---
@@ -386,6 +387,8 @@ RemotePrefix: "/api/remote",  // Remote actions at /api/remote/:name
 
 Optional middleware executed for all remote action requests before the action handler. Use this for global authorization, tenant checks, and request policy enforcement.
 
+In production (`DevMode: false`), GoSPA now blocks remote action calls if this middleware is not configured (secure-by-default). Set `AllowUnauthenticatedRemoteActions: true` only for explicitly public APIs.
+
 ```go
 RemoteActionMiddleware: func(c *fiber.Ctx) error {
     // Example: enforce authenticated user context
@@ -394,6 +397,14 @@ RemoteActionMiddleware: func(c *fiber.Ctx) error {
     }
     return c.Next()
 },
+```
+
+### AllowUnauthenticatedRemoteActions
+
+By default, remote actions require `RemoteActionMiddleware` in production. This flag opts out of that guard.
+
+```go
+AllowUnauthenticatedRemoteActions: true, // Only for intentionally public remote actions
 ```
 
 ### AllowedOrigins
@@ -409,7 +420,7 @@ AllowedOrigins: []string{
 
 ### EnableCSRF
 
-Enable automatic CSRF protection (wired by gospa.New). Adds CSRF token to forms and validates on POST requests.
+Enable automatic CSRF protection (wired by gospa.New). This is enabled by default and validates mutating requests (`POST/PUT/PATCH/DELETE`).
 
 ```go
 EnableCSRF: true,

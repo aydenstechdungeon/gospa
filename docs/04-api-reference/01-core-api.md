@@ -110,6 +110,7 @@ type Config struct {
 	MaxRequestBodySize      int            // Maximum allowed size for remote action request bodies
 	RemotePrefix            string         // Prefix for remote action endpoints
 	RemoteActionMiddleware  fiber.Handler  // Optional middleware run before remote actions
+	AllowUnauthenticatedRemoteActions bool // Opt-out of production remote-action auth guard
 
 	// Security Options
 	AllowedOrigins []string // Allowed CORS origins
@@ -137,7 +138,8 @@ type Config struct {
 - `WSMaxReconnect`: Maximum reconnect attempts passed to the client. Default: 10.
 - `WSHeartbeat`: Heartbeat ping interval passed to the client. Default: 30s.
 - `RemoteActionMiddleware`: Apply global auth/tenant/policy checks for every remote action request before the action handler runs.
-- `EnableCSRF`: Enables automatic CSRF setup in `gospa.New(...)`. Add CSRF middleware manually only when building a custom Fiber stack outside default app setup.
+- `AllowUnauthenticatedRemoteActions`: Defaults to `false`. If set to `true`, disables the production guard that blocks unauthenticated remote actions without middleware.
+- `EnableCSRF`: Defaults to `true` and enables automatic CSRF setup in `gospa.New(...)`. Add CSRF middleware manually only when building a custom Fiber stack outside default app setup.
 - `SSGCacheMaxEntries`: Caps the SSG page cache with FIFO eviction. Default 500.
 - `Prefork`, `Storage`, `PubSub`: Used for horizontal scaling. See `store/redis` for the Redis implementation.
 

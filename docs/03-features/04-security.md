@@ -157,7 +157,9 @@ When using DOMPurify (via `runtime-secure`), GoSPA prevents DOM Clobbering attac
 
 ## CSRF Protection Setup
 
-When `EnableCSRF` is enabled in your `gospa.Config`, GoSPA installs both CSRF middlewares automatically.
+GoSPA enables CSRF protection by default (`EnableCSRF: true`) and installs both CSRF middlewares automatically.
+
+If you intentionally need to disable CSRF for a trusted internal environment, set `EnableCSRF: false` explicitly.
 
 If you need to wire them manually in a custom Fiber stack, GoSPA uses a **two-middleware pattern** for CSRF protection:
 
