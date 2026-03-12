@@ -15,7 +15,7 @@ templ Page() {
 		<div class="p-6 bg-[var(--accent-primary)]/10 border border-[var(--accent-primary)]/30 rounded-xl">
 			<h3 class="text-lg font-semibold text-[var(--accent-primary)] mt-0 mb-2">Setup Options</h3>
 			<ul class="mt-0 mb-0 text-[var(--text-secondary)] space-y-2">
-				<li><strong>TypeScript (ES Modules):</strong> Import from @gospa/runtime package</li>
+				<li><strong>TypeScript (ES Modules):</strong> Import from @gospa/client package</li>
 				<li><strong>Plain JavaScript:</strong> Use the global GoSPA object — no build step required</li>
 			</ul>
 		</div>
@@ -59,7 +59,7 @@ const unsubscribe = count.subscribe((value, oldValue) => {
 // Later: stop listening
 unsubscribe()`, 
 				`// TypeScript — ES module imports
-import { Rune, rune } from '@gospa/runtime';
+import { Rune, rune } from '@gospa/client';
 
 // Create
 const count = new Rune(0);
@@ -105,7 +105,7 @@ console.log(fullName.get()) // "John Doe"
 firstName.set('Jane')
 console.log(fullName.get()) // "Jane Doe" — automatically updated`,
 				`// TypeScript
-import { Rune, Derived, derived } from '@gospa/runtime';
+import { Rune, Derived, derived } from '@gospa/client';
 
 const count = new Rune(5);
 
@@ -146,7 +146,7 @@ const cleanup = new GoSPA.Effect(() => {
 // Stop the effect
 cleanup()`,
 				`// TypeScript
-import { Rune, Effect, effect } from '@gospa/runtime';
+import { Rune, Effect, effect } from '@gospa/client';
 
 const count = new Rune(0);
 
@@ -197,7 +197,7 @@ state.clear()
 // Serialize
 const json = state.toJSON() // { count: 0, name: 'Anonymous' }`,
 				`// TypeScript
-import { StateMap, Rune } from '@gospa/runtime';
+import { StateMap, Rune } from '@gospa/client';
 
 const state = new StateMap();
 
@@ -239,7 +239,7 @@ GoSPA.batch(() => {
     // Subscribers notified once after batch completes
 })`,
 				`// TypeScript
-import { Rune, batch, untrack, watch } from '@gospa/runtime';
+import { Rune, batch, untrack, watch } from '@gospa/client';
 
 const count = new Rune(0);
 const name = new Rune('');
@@ -325,7 +325,7 @@ document.getElementById('decrement').addEventListener('click', () => {
 </div>
 
 <script type="module">
-import { Rune, Derived, Effect } from '@gospa/runtime';
+import { Rune, Derived, Effect } from '@gospa/client';
 
 // State
 const count = new Rune(0);

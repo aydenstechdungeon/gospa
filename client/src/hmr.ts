@@ -107,6 +107,9 @@ export class HMRClient {
 			this.ws.close();
 			this.ws = null;
 		}
+		// Clean up state registry to prevent memory leaks
+		this.stateRegistry.clear();
+		this.moduleRegistry = {};
 	}
 
 	/**

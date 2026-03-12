@@ -524,4 +524,31 @@ if (typeof document !== 'undefined') {
 	}
 }
 
+// FIX: Register navigation callbacks to clean up stale state on page navigation
+// This prevents memory leaks and stale subscriptions when navigating between pages
+function registerNavigationCleanup(): void {
+	// Check if navigation module is available
+	if (typeof window === 'undefined') return;
+
+	// Try to get navigation module
+	import('./navigation.ts').then(nav => {
+		// Clean up component state before navigation
+		nav.onBeforeNavigate(() => {
+			// Dispose all component subscriptions to prevent stale state
+			for (const [id] of components) {
+				destroyComponent(id);
+			}
+			// Clear global state as well
+			globalState.clear();
+		});
+	}).catch(() => {
+		// Navigation module not available, skip
+	});
+}
+
+// Register navigation cleanup when runtime is initialized
+export function initNavigationCleanup(): void {
+	registerNavigationCleanup();
+}
+
 

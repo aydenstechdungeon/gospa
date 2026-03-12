@@ -27,7 +27,7 @@ The default runtime trusts server-rendered HTML (Templ auto-escapes all content)
 - When you have a proper CSP configured
 
 ```typescript
-import { init, Rune, navigate } from 'gospa';
+import { init, Rune, navigate } from '@gospa/client';
 
 init();
 ```
@@ -55,7 +55,7 @@ The secure runtime includes DOMPurify for HTML sanitization. Use this when displ
 - Any app displaying untrusted HTML
 
 ```typescript
-import { init, sanitize } from 'gospa/runtime-secure';
+import { init, sanitize } from '@gospa/client/runtime-secure';
 
 init();
 
@@ -153,7 +153,7 @@ Ultra-lightweight runtime for state-only applications.
 Even with the default runtime, you can add DOMPurify manually for specific components:
 
 ```typescript
-import { init, setSanitizer } from 'gospa';
+import { init, setSanitizer } from '@gospa/client';
 import DOMPurify from 'dompurify';
 
 init();
@@ -165,7 +165,7 @@ setSanitizer((html) => DOMPurify.sanitize(html));
 Or use the secure runtime import:
 
 ```typescript
-import { sanitize } from 'gospa/runtime-secure';
+import { sanitize } from '@gospa/client/runtime-secure';
 
 // Use only where needed
 const clean = await sanitize(dirtyHtml);
@@ -230,7 +230,7 @@ import {
     fly,
     slide,
     scale,
-} from 'gospa'; // or 'gospa/runtime-secure'
+} from '@gospa/client'; // or '@gospa/client/runtime-secure'
 ```
 
 ---
@@ -250,11 +250,11 @@ app := gospa.New(gospa.Config{
 ### After (v2.x):
 ```typescript
 // Client - no changes needed for most apps
-import { init } from 'gospa';  // Default runtime (trusts server)
+import { init } from '@gospa/client';  // Default runtime (trusts server)
 init();
 
 // Only change if you have user-generated content:
-import { init } from 'gospa/runtime-secure';
+import { init } from '@gospa/client/runtime-secure';
 init();
 ```
 

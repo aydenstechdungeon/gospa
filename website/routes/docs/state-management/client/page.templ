@@ -16,7 +16,29 @@ templ Page() {
 			<p class="text-[var(--text-secondary)]">
 				The primary reactive primitive for client-side state.
 			</p>
-			@components.CodeBlock(`import { Rune, derived, effect } from '@gospa/runtime';
+			@components.DualCodeBlock(
+				`// Plain JavaScript — uses global GoSPA object
+const count = new GoSPA.Rune(0);
+const user = new GoSPA.Rune({ name: 'Alice', age: 30 });
+
+// Read
+console.log(count.get()); // 0
+console.log(user.get());  // { name: 'Alice', age: 30 }
+
+// Write
+count.set(1);
+user.set({ name: 'Bob', age: 25 });
+
+// Update with function
+count.update(n => n + 1);
+user.update(u => ({ ...u, age: u.age + 1 }));
+
+// Subscribe to changes
+const unsub = count.subscribe((newVal, oldVal) => {
+  console.log('Changed:', oldVal, '->', newVal);
+});`,
+				`// TypeScript
+import { Rune, derived, effect } from '@gospa/runtime';
 
 // Create reactive state
 const count = new Rune(0);
@@ -37,12 +59,33 @@ user.update(u => ({ ...u, age: u.age + 1 }));
 // Subscribe to changes
 const unsub = count.subscribe((newVal, oldVal) => {
   console.log('Changed:', oldVal, '->', newVal);
-});`, "typescript", "rune.ts")
+});`,
+				"rune.ts")
 		</section>
 
 		<section class="space-y-6">
 			<h2 class="text-2xl font-bold" id="derived">Derived State</h2>
-			@components.CodeBlock(`import { Derived, derived } from '@gospa/runtime';
+			@components.DualCodeBlock(
+				`// Plain JavaScript
+const count = new GoSPA.Rune(5);
+
+// Derived automatically recalculates
+const doubled = new GoSPA.Derived(() => count.get() * 2);
+const summary = new GoSPA.Derived(() => 'Count: ' + count.get());
+
+// Derived from multiple sources
+const a = new GoSPA.Rune(10);
+const b = new GoSPA.Rune(20);
+const sum = new GoSPA.Derived(() => a.get() + b.get());
+
+// Read
+console.log(doubled.get()); // 10
+console.log(sum.get());     // 30
+
+// Derived is lazy - only computes when read
+// and re-computes when dependencies change`,
+				`// TypeScript
+import { Derived, derived } from '@gospa/runtime';
 
 const count = new Rune(5);
 
@@ -60,12 +103,39 @@ console.log(doubled.value); // 10
 console.log(sum.value);     // 30
 
 // Derived is lazy - only computes when read
-// and re-computes when dependencies change`, "typescript", "derived.ts")
+// and re-computes when dependencies change`,
+				"derived.ts")
 		</section>
 
 		<section class="space-y-6">
 			<h2 class="text-2xl font-bold" id="effects">Effects</h2>
-			@components.CodeBlock(`import { Effect, effect } from '@gospa/runtime';
+			@components.DualCodeBlock(
+				`// Plain JavaScript
+const count = new GoSPA.Rune(0);
+
+// Create effect
+const myEffect = new GoSPA.Effect(() => {
+  console.log('Count is:', count.get());
+  
+  // Optional cleanup function
+  return () => {
+    console.log('Cleanup before next run');
+  };
+});
+
+// Effect runs immediately and re-runs when dependencies change
+
+// Control
+myEffect.pause();   // Stop reacting
+myEffect.resume();  // Resume
+myEffect.dispose(); // Permanent cleanup
+
+// Shorthand
+const dispose = new GoSPA.Effect(() => {
+  document.title = 'Count: ' + count.get();
+});`,
+				`// TypeScript
+import { Effect, effect } from '@gospa/runtime';
 
 const count = new Rune(0);
 
@@ -89,7 +159,8 @@ myEffect.dispose(); // Permanent cleanup
 // Shorthand
 const dispose = effect(() => {
   document.title = 'Count: ' + count.get();
-});`, "typescript", "effect.ts")
+});`,
+				"effect.ts")
 		</section>
 
 		<div class="flex justify-between pt-6 border-t border-[var(--border)]">

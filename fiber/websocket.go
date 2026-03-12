@@ -1110,45 +1110,48 @@ func WebSocketHandler(config WebSocketConfig) fiberpkg.Handler {
 		// Update client with session ID
 		client.SessionID = sessionID
 
+		// Set up state change handler BEFORE sending initial state
+		// This ensures we don't miss the first state change for new sessions
+		var saveMutex sync.Mutex
+		var saveTimer *time.Timer
+		client.State.OnChange = func(key string, value any) {
+			// Save state to persistent store safely, debounced
+			saveMutex.Lock()
+			if saveTimer != nil {
+				saveTimer.Stop()
+			}
+			saveTimer = time.AfterFunc(100*time.Millisecond, func() {
+				globalClientStateStore.Save(sessionID, client.State)
+			})
+			saveMutex.Unlock()
+
+			// Parse componentId and local key for Svelte updates
+			componentID := ""
+			localKey := key
+			if dotIdx := strings.Index(key, "."); dotIdx > 0 {
+				componentID = key[:dotIdx]
+				localKey = key[dotIdx+1:]
+			}
+
+			// Broadcast state change to all clients sharing this session ID via pubsub
+			syncMsg := map[string]interface{}{
+				"type":        "sync",
+				"componentId": componentID,
+				"key":         localKey,
+				"value":       value,
+				"_sessionID":  sessionID,
+			}
+			data, err := json.Marshal(syncMsg)
+			if err == nil {
+				_ = config.Hub.pubsub.Publish("gospa:broadcast", data)
+			}
+		}
+
 		// Restore previous state if available, passing pointer
 		if restoredState != nil {
 			client.State = restoredState
 		} else {
-			// Setup differential sync for the first time for this state
-			var saveMutex sync.Mutex
-			var saveTimer *time.Timer
-			client.State.OnChange = func(key string, value any) {
-				// Save state to persistent store safely, debounced
-				saveMutex.Lock()
-				if saveTimer != nil {
-					saveTimer.Stop()
-				}
-				saveTimer = time.AfterFunc(100*time.Millisecond, func() {
-					globalClientStateStore.Save(sessionID, client.State)
-				})
-				saveMutex.Unlock()
-
-				// Parse componentId and local key for Svelte updates
-				componentID := ""
-				localKey := key
-				if dotIdx := strings.Index(key, "."); dotIdx > 0 {
-					componentID = key[:dotIdx]
-					localKey = key[dotIdx+1:]
-				}
-
-				// Broadcast state change to all clients sharing this session ID via pubsub
-				syncMsg := map[string]interface{}{
-					"type":        "sync",
-					"componentId": componentID,
-					"key":         localKey,
-					"value":       value,
-					"_sessionID":  sessionID,
-				}
-				data, err := json.Marshal(syncMsg)
-				if err == nil {
-					_ = config.Hub.pubsub.Publish("gospa:broadcast", data)
-				}
-			}
+			// Save initial state for new sessions
 			globalClientStateStore.Save(sessionID, client.State)
 		}
 

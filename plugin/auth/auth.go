@@ -349,14 +349,42 @@ func (p *AuthPlugin) getProvider(name string) (*OAuthProvider, error) {
 }
 
 // DefaultConfig returns the default auth configuration.
-// JWTSecret is generated randomly if not set - this is safer than a hardcoded default.
+// JWTSecret MUST be set via JWT_SECRET environment variable in production.
+// The application will panic if JWT_SECRET is not set in production.
 func DefaultConfig() *Config {
-	// Generate a random JWT secret for development
-	// IMPORTANT: In production, always set JWT_SECRET explicitly via config or environment variable
-	randomSecret, _ := generateRandomSecret(32)
+	// Check for JWT_SECRET environment variable
+	jwtSecret := os.Getenv("JWT_SECRET")
+
+	// In production (when not running in dev mode), require JWT_SECRET
+	isProduction := os.Getenv("GIN_MODE") == "release" || os.Getenv("ENV") == "production"
+
+	if jwtSecret == "" && isProduction {
+		panic("JWT_SECRET environment variable is not set. " +
+			"Generate a secure secret with: openssl rand -hex 32 " +
+			"and set it in your environment before starting the application in production.")
+	}
+
+	// Use provided secret or generate one for development only
+	if jwtSecret == "" {
+		// Generate a random JWT secret for development only
+		// IMPORTANT: This should NEVER be used in production
+		randomSecret, _ := generateRandomSecret(32)
+		return &Config{
+			JWTSecret:       randomSecret,
+			JWTExpiry:       24,
+			Issuer:          "gospa-app",
+			OAuthProviders:  []string{},
+			OTPEnabled:      true,
+			OTPIssuer:       "GoSPA",
+			OTPDigits:       6,
+			OTPPeriod:       30,
+			BackupCodeCount: 10,
+			OutputDir:       "generated/auth",
+		}
+	}
 
 	return &Config{
-		JWTSecret:       randomSecret,
+		JWTSecret:       jwtSecret,
 		JWTExpiry:       24,
 		Issuer:          "gospa-app",
 		OAuthProviders:  []string{},

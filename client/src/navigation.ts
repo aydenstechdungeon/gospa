@@ -317,9 +317,37 @@ async function getPageData(path: string): Promise<PageData | null> {
 
 // Content is trusted - Templ auto-escapes on the server
 // For user-generated content, use 'gospa/runtime-secure' which includes DOMPurify
+// For data-bind="html:*" bindings, we add sanitization as a safety layer
 async function prepareContent(html: string): Promise<string> {
 	// Return HTML as-is - server is trusted, CSP provides XSS protection
 	return html;
+}
+
+// FIX: Sanitize HTML for data-bind="html:*" bindings to prevent XSS
+// Uses DOMPurify if available (runtime-secure), otherwise falls back to textContent
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
+let DOMPurify: ((dirty: string) => string) | null = null;
+async function sanitizeHTML(html: string): Promise<string> {
+	// Try to use DOMPurify if loaded (from runtime-secure)
+	if (DOMPurify != null) {
+		return DOMPurify(html);
+	}
+
+	// Check if DOMPurify is available globally
+	// eslint-disable-next-line @typescript-eslint/no-explicit-any
+	const globalPurify = (window as any).DOMPurify as ((dirty: string) => string) | null;
+	if (globalPurify != null) {
+		DOMPurify = globalPurify;
+		return globalPurify(html);
+	}
+
+	// Fallback: Only allow text content, strip all HTML tags
+	// This is a safety measure - if you need full HTML, use runtime-secure
+	const parser = new DOMParser();
+	const doc = parser.parseFromString(html, 'text/html');
+	const textContent = doc.body.textContent || '';
+	console.warn('[GoSPA] HTML binding sanitized to textContent. Use runtime-secure for HTML.');
+	return textContent;
 }
 
 function patchAttributes(current: Element, incoming: Element): void {
@@ -677,7 +705,8 @@ async function initDeferredBindings(): Promise<void> {
 					element.textContent = value;
 					break;
 				case 'html':
-					element.innerHTML = value;
+					// FIX: Sanitize HTML content to prevent XSS
+					element.innerHTML = await sanitizeHTML(value as string);
 					break;
 				case 'value':
 					(element as HTMLInputElement).value = value;
@@ -727,8 +756,15 @@ async function performDOMUpdateWithTransitions(data: PageData, options: Navigate
 		return;
 	}
 
-	const transition = (document as any).startViewTransition(update);
-	await transition.finished;
+	// FIX: Wrap View Transition API in try/catch to handle browser compatibility issues
+	try {
+		const transition = (document as any).startViewTransition(update);
+		await transition.finished;
+	} catch (transitionError) {
+		// Fallback to classic DOM update if View Transitions fail
+		console.warn('[GoSPA] View Transition failed, falling back to classic update:', transitionError);
+		await update();
+	}
 }
 
 // Navigate to a new path
@@ -972,6 +1008,27 @@ export function destroyNavigation(): void {
 
 // Prefetch a page for faster navigation
 export async function prefetch(path: string): Promise<void> {
+	// SECURITY: Validate that the path is internal before prefetching
+	// This prevents SSRF-style attacks where an attacker could trigger
+	// prefetch requests to internal services or external sites
+	try {
+		const url = new URL(path, window.location.origin);
+		// Only allow same-origin prefetches
+		if (url.origin !== window.location.origin) {
+			console.debug('[GoSPA] Prefetch skipped: cross-origin URL:', path);
+			return;
+		}
+		// Block potentially dangerous paths
+		const normalizedPath = url.pathname;
+		if (normalizedPath.startsWith('//') || normalizedPath.startsWith('/..') || normalizedPath.includes('/../')) {
+			console.debug('[GoSPA] Prefetch skipped: unsafe path:', path);
+			return;
+		}
+	} catch {
+		console.debug('[GoSPA] Prefetch skipped: invalid URL:', path);
+		return;
+	}
+
 	const existing = prefetchCache.get(path);
 	if (existing && existing.expiresAt > Date.now()) return;
 	if (existing) prefetchCache.delete(path);

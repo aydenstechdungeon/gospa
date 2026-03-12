@@ -9,6 +9,10 @@ Complete reference for the GoSPA client-side TypeScript runtime. The runtime pro
   - [Installation](#installation)
     - [Manual Import (for advanced usage)](#manual-import-for-advanced-usage)
   - [Runtime Variants](#runtime-variants)
+    - [Default Runtime (`gospa`)](#default-runtime-gospa)
+    - [Secure Runtime (`gospa/runtime-secure`)](#secure-runtime-gosparuntime-secure)
+    - [When to use each:](#when-to-use-each)
+    - [Security Model](#security-model)
   - [Reactive Primitives](#reactive-primitives)
     - [Rune](#rune)
       - [Constructor](#constructor)
@@ -68,6 +72,7 @@ Complete reference for the GoSPA client-side TypeScript runtime. The runtime pro
     - [prefetch](#prefetch)
     - [createNavigationState](#createnavigationstate)
     - [Navigation Callbacks](#navigation-callbacks)
+      - [Global DOM Event](#global-dom-event)
   - [Event Handling](#event-handling)
     - [on](#on)
       - [Available Modifiers](#available-modifiers)
@@ -90,6 +95,7 @@ Complete reference for the GoSPA client-side TypeScript runtime. The runtime pro
       - [HTML Attributes](#html-attributes)
   - [Core Runtime](#core-runtime)
     - [init](#init)
+      - [RuntimeConfig Options](#runtimeconfig-options)
     - [createComponent](#createcomponent)
     - [destroyComponent](#destroycomponent)
     - [getComponent](#getcomponent)
@@ -113,16 +119,16 @@ The runtime is automatically injected into your pages by the GoSPA server. No ma
 
 ```typescript
 // Default runtime - trusts server-rendered HTML
-import { Rune, Effect, navigate } from 'gospa';
+import { Rune, Effect, navigate } from '@gospa/client';
 
 // Secure runtime - includes DOMPurify for user-generated content
-import { Rune, Effect, navigate, sanitize } from 'gospa/runtime-secure';
+import { Rune, Effect, navigate, sanitize } from '@gospa/client/runtime-secure';
 
 // Core runtime - reactive primitives only
-import { Rune, Effect } from 'gospa/core';
+import { Rune, Effect } from '@gospa/client/core';
 
 // Micro runtime - state-only, no DOM
-import { Rune, Derived } from 'gospa/micro';
+import { Rune, Derived } from '@gospa/client/micro';
 ```
 
 ---
@@ -140,7 +146,7 @@ import { Rune, Derived } from 'gospa/micro';
 Trusts server-rendered HTML (Templ auto-escapes). Use for most applications.
 
 ```typescript
-import { init } from 'gospa';
+import { init } from '@gospa/client';
 init();
 ```
 
@@ -148,7 +154,7 @@ init();
 Includes DOMPurify for sanitizing user-generated content.
 
 ```typescript
-import { init, sanitize } from 'gospa/runtime-secure';
+import { init, sanitize } from '@gospa/client/runtime-secure';
 init();
 
 // Sanitize untrusted HTML
@@ -997,7 +1003,7 @@ document.body.appendChild(div);
 Configure a custom HTML sanitizer for the runtime. The default runtime (`gospa`) does not include a sanitizer - it trusts server-rendered HTML.
 
 ```typescript
-import { setSanitizer } from 'gospa';
+import { setSanitizer } from '@gospa/client';
 import DOMPurify from 'dompurify';
 
 // Set custom sanitizer (use only with user-generated content)
@@ -1017,7 +1023,7 @@ import {
   sanitizeSync,       // Sync sanitization (requires preloading)
   isSanitizerReady,   // Check if DOMPurify is loaded
   preloadSanitizer,   // Preload DOMPurify during idle time
-} from 'gospa/runtime-secure';
+} from '@gospa/client/runtime-secure';
 
 // Preload for faster first use
 preloadSanitizer();
@@ -1830,3 +1836,8 @@ import type {
   ComponentInstance
 } from '@gospa/runtime';
 ```
+  ComponentDefinition,
+  ComponentInstance
+} from '@gospa/runtime';
+```
+

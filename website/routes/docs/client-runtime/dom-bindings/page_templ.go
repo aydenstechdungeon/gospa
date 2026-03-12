@@ -35,7 +35,20 @@ func Page() templ.Component {
 		if templ_7745c5c3_Err != nil {
 			return templ_7745c5c3_Err
 		}
-		templ_7745c5c3_Err = components.CodeBlock(`import { bindElement, bindTwoWay } from '@gospa/runtime';
+		templ_7745c5c3_Err = components.DualCodeBlock(
+			`// Plain JavaScript — uses global GoSPA object
+const element = document.getElementById('count');
+const textRune = new GoSPA.Rune('Hello');
+
+// One-way bindings
+GoSPA.bindElement(element, textRune);
+GoSPA.bindElement(element, htmlRune, { type: 'html' });
+GoSPA.bindElement(element, colorRune, { type: 'style', attribute: 'color' });
+
+// Two-way binding
+GoSPA.bindTwoWay(inputElement, textRune);`,
+			`// TypeScript — ES module imports
+import { bindElement, bindTwoWay } from '@gospa/runtime';
 
 // One-way bindings
 bindElement(element, textRune);
@@ -43,7 +56,8 @@ bindElement(element, htmlRune, { type: 'html' });
 bindElement(element, colorRune, { type: 'style', attribute: 'color' });
 
 // Two-way binding
-bindTwoWay(inputElement, textRune);`, "typescript", "bindings.ts").Render(ctx, templ_7745c5c3_Buffer)
+bindTwoWay(inputElement, textRune);`,
+			"bindings.ts").Render(ctx, templ_7745c5c3_Buffer)
 		if templ_7745c5c3_Err != nil {
 			return templ_7745c5c3_Err
 		}
@@ -51,7 +65,39 @@ bindTwoWay(inputElement, textRune);`, "typescript", "bindings.ts").Render(ctx, t
 		if templ_7745c5c3_Err != nil {
 			return templ_7745c5c3_Err
 		}
-		templ_7745c5c3_Err = components.CodeBlock(`import { bindElement, rune } from '@gospa/runtime';
+		templ_7745c5c3_Err = components.DualCodeBlock(
+			`// Plain JavaScript
+const count = new GoSPA.Rune(0);
+const countEl = document.getElementById('count');
+
+// Basic text binding
+GoSPA.bindElement(countEl, count);
+
+// Style binding
+const color = new GoSPA.Rune('red');
+const boxEl = document.getElementById('box');
+GoSPA.bindElement(boxEl, color, {
+  type: 'style',
+  attribute: 'backgroundColor'
+});
+
+// Class binding
+const isActive = new GoSPA.Rune(true);
+const itemEl = document.getElementById('item');
+GoSPA.bindElement(itemEl, isActive, {
+  type: 'class',
+  className: 'active'
+});
+
+// Attribute binding
+const href = new GoSPA.Rune('/home');
+const linkEl = document.getElementById('link');
+GoSPA.bindElement(linkEl, href, {
+  type: 'attr',
+  attribute: 'href'
+});`,
+			`// TypeScript
+import { bindElement, rune } from '@gospa/runtime';
 
 const count = rune(0);
 
@@ -77,7 +123,8 @@ const href = rune('/home');
 bindElement(document.getElementById('link'), href, {
   type: 'attr',
   attribute: 'href'
-});`, "typescript", "bindelement.ts").Render(ctx, templ_7745c5c3_Buffer)
+});`,
+			"bindelement.ts").Render(ctx, templ_7745c5c3_Buffer)
 		if templ_7745c5c3_Err != nil {
 			return templ_7745c5c3_Err
 		}
@@ -85,7 +132,18 @@ bindElement(document.getElementById('link'), href, {
 		if templ_7745c5c3_Err != nil {
 			return templ_7745c5c3_Err
 		}
-		templ_7745c5c3_Err = components.CodeBlock(`import { bindTwoWay, rune } from '@gospa/runtime';
+		templ_7745c5c3_Err = components.DualCodeBlock(
+			`// Plain JavaScript
+const name = new GoSPA.Rune('');
+
+// Two-way binding with input
+const input = document.querySelector('input[name="name"]');
+GoSPA.bindTwoWay(input, name);
+
+// Now name.get() reflects input value
+// And input.value updates when name.set() is called`,
+			`// TypeScript
+import { bindTwoWay, rune } from '@gospa/runtime';
 
 const name = rune('');
 
@@ -94,7 +152,8 @@ const input = document.querySelector('input[name="name"]');
 bindTwoWay(input, name);
 
 // Now name.get() reflects input value
-// And input.value updates when name.set() is called`, "typescript", "bindtwoway.ts").Render(ctx, templ_7745c5c3_Buffer)
+// And input.value updates when name.set() is called`,
+			"bindtwoway.ts").Render(ctx, templ_7745c5c3_Buffer)
 		if templ_7745c5c3_Err != nil {
 			return templ_7745c5c3_Err
 		}
@@ -102,7 +161,19 @@ bindTwoWay(input, name);
 		if templ_7745c5c3_Err != nil {
 			return templ_7745c5c3_Err
 		}
-		templ_7745c5c3_Err = components.CodeBlock(`import { renderIf, rune } from '@gospa/runtime';
+		templ_7745c5c3_Err = components.DualCodeBlock(
+			`// Plain JavaScript
+const isLoggedIn = new GoSPA.Rune(false);
+
+// Show element only when condition is true
+const adminPanel = document.getElementById('admin-panel');
+GoSPA.renderIf(adminPanel, isLoggedIn);
+
+// With inverse condition
+const loginForm = document.getElementById('login-form');
+GoSPA.renderIf(loginForm, isLoggedIn, { inverse: true });`,
+			`// TypeScript
+import { renderIf, rune } from '@gospa/runtime';
 
 const isLoggedIn = rune(false);
 
@@ -110,7 +181,8 @@ const isLoggedIn = rune(false);
 renderIf(document.getElementById('admin-panel'), isLoggedIn);
 
 // With inverse condition
-renderIf(document.getElementById('login-form'), isLoggedIn, { inverse: true });`, "typescript", "conditional.ts").Render(ctx, templ_7745c5c3_Buffer)
+renderIf(document.getElementById('login-form'), isLoggedIn, { inverse: true });`,
+			"conditional.ts").Render(ctx, templ_7745c5c3_Buffer)
 		if templ_7745c5c3_Err != nil {
 			return templ_7745c5c3_Err
 		}
@@ -118,7 +190,28 @@ renderIf(document.getElementById('login-form'), isLoggedIn, { inverse: true });`
 		if templ_7745c5c3_Err != nil {
 			return templ_7745c5c3_Err
 		}
-		templ_7745c5c3_Err = components.CodeBlock(`import { renderList, rune } from '@gospa/runtime';
+		templ_7745c5c3_Err = components.DualCodeBlock(
+			`// Plain JavaScript
+const todos = new GoSPA.Rune([
+  { id: 1, text: 'Learn GoSPA' },
+  { id: 2, text: 'Build an app' }
+]);
+
+// Render list with key-based reconciliation
+GoSPA.renderList(
+  document.getElementById('todo-list'),
+  todos,
+  {
+    key: (todo) => todo.id,
+    render: (todo, index) => {
+      const li = document.createElement('li');
+      li.textContent = todo.text;
+      return li;
+    }
+  }
+);`,
+			`// TypeScript
+import { renderList, rune } from '@gospa/runtime';
 
 interface Todo {
   id: number;
@@ -139,7 +232,8 @@ renderList(
       return li;
     }
   }
-);`, "typescript", "list.ts").Render(ctx, templ_7745c5c3_Buffer)
+);`,
+			"list.ts").Render(ctx, templ_7745c5c3_Buffer)
 		if templ_7745c5c3_Err != nil {
 			return templ_7745c5c3_Err
 		}
@@ -147,7 +241,18 @@ renderList(
 		if templ_7745c5c3_Err != nil {
 			return templ_7745c5c3_Err
 		}
-		templ_7745c5c3_Err = components.CodeBlock(`import { setSanitizer, getSanitizer } from '@gospa/runtime';
+		templ_7745c5c3_Err = components.DualCodeBlock(
+			`// Plain JavaScript
+// Set custom sanitizer
+GoSPA.setSanitizer((html) => {
+  // Your sanitization logic
+  return sanitizedHtml;
+});
+
+// Get current sanitizer
+const sanitize = GoSPA.getSanitizer();`,
+			`// TypeScript
+import { setSanitizer, getSanitizer } from '@gospa/runtime';
 
 // Set custom sanitizer
 setSanitizer((html: string) => {
@@ -156,7 +261,8 @@ setSanitizer((html: string) => {
 });
 
 // Get current sanitizer
-const sanitize = getSanitizer();`, "typescript", "sanitization.ts").Render(ctx, templ_7745c5c3_Buffer)
+const sanitize = getSanitizer();`,
+			"sanitization.ts").Render(ctx, templ_7745c5c3_Buffer)
 		if templ_7745c5c3_Err != nil {
 			return templ_7745c5c3_Err
 		}
@@ -164,13 +270,22 @@ const sanitize = getSanitizer();`, "typescript", "sanitization.ts").Render(ctx, 
 		if templ_7745c5c3_Err != nil {
 			return templ_7745c5c3_Err
 		}
-		templ_7745c5c3_Err = components.CodeBlock(`import { registerBinding, unregisterBinding } from '@gospa/runtime';
+		templ_7745c5c3_Err = components.DualCodeBlock(
+			`// Plain JavaScript
+// Register a custom binding
+const bindingId = GoSPA.registerBinding(element, rune, config);
+
+// Unregister when cleaning up
+GoSPA.unregisterBinding(bindingId);`,
+			`// TypeScript
+import { registerBinding, unregisterBinding } from '@gospa/runtime';
 
 // Register a custom binding
 const bindingId = registerBinding(element, rune, config);
 
 // Unregister when cleaning up
-unregisterBinding(bindingId);`, "typescript", "registry.ts").Render(ctx, templ_7745c5c3_Buffer)
+unregisterBinding(bindingId);`,
+			"registry.ts").Render(ctx, templ_7745c5c3_Buffer)
 		if templ_7745c5c3_Err != nil {
 			return templ_7745c5c3_Err
 		}

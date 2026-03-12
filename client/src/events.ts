@@ -135,41 +135,64 @@ export function offAll(target: EventTarget): void {
 	listenerRegistry.delete(target);
 }
 
-// Debounce event handler
+// Debounce event handler - returns handler and cleanup function
 export function debounce<E extends Event>(
 	handler: EventHandler<E>,
 	wait: number
-): EventHandler<E> {
+): { handler: EventHandler<E>; cancel: () => void } {
 	let timeoutId: ReturnType<typeof setTimeout> | null = null;
 	
-	return (event: E) => {
+	const cancel = () => {
 		if (timeoutId) {
 			clearTimeout(timeoutId);
+			timeoutId = null;
 		}
+	};
+	
+	const debouncedHandler = (event: E) => {
+		cancel();
 		
 		timeoutId = setTimeout(() => {
 			handler(event);
 			timeoutId = null;
 		}, wait);
 	};
+	
+	return { handler: debouncedHandler, cancel };
 }
 
-// Throttle event handler
+// Throttle event handler - returns handler and cleanup function
 export function throttle<E extends Event>(
 	handler: EventHandler<E>,
 	limit: number
-): EventHandler<E> {
+): { handler: EventHandler<E>; cancel: () => void } {
 	let inThrottle = false;
+	let lastEvent: E | null = null;
 	
-	return (event: E) => {
+	const cancel = () => {
+		inThrottle = false;
+		lastEvent = null;
+	};
+	
+	const throttledHandler = (event: E) => {
 		if (!inThrottle) {
 			handler(event);
 			inThrottle = true;
 			setTimeout(() => {
 				inThrottle = false;
+				// Process last event if there was one
+				if (lastEvent) {
+					handler(lastEvent);
+					lastEvent = null;
+				}
 			}, limit);
+		} else {
+			// Store the latest event to process after throttle period
+			lastEvent = event;
 		}
 	};
+	
+	return { handler: throttledHandler, cancel };
 }
 
 // Bind event to rune update
