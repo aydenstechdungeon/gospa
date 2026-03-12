@@ -101,9 +101,7 @@ body {
 
 /* Grid background */
 .grid-bg {
-	background-image:
-		linear-gradient(to right, var(--border) 1px, transparent 1px),
-		linear-gradient(to bottom, var(--border) 1px, transparent 1px);
-	background-size: 40px 40px;
+	background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='40' height='40' viewBox='0 0 40 40'%3E%3Cpath d='M40 40V.5H0' fill='none' stroke='%2327272a' stroke-opacity='0.4'/%3E%3C/svg%3E");
 	mask-image: radial-gradient(ellipse 60% 50% at 50% 0%, #000 70%, transparent 100%);
+	will-change: opacity;
 }

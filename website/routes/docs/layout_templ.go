@@ -29,7 +29,7 @@ func DocsLayout(children templ.Component, path string) templ.Component {
 			templ_7745c5c3_Var1 = templ.NopComponent
 		}
 		ctx = templ.ClearChildren(ctx)
-		templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 1, "<!-- Main Content Column - Sidebar and ToC are now in RootLayout --><div class=\"pt-12 pb-24 min-w-0 animate-in fade-in duration-700\"><div class=\"prose max-w-4xl mx-auto w-full\">")
+		templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 1, "<!-- Main Content Column - Sidebar and ToC are now in RootLayout --><div class=\"pt-12 pb-24 min-w-0\"><div class=\"prose max-w-4xl mx-auto w-full\">")
 		if templ_7745c5c3_Err != nil {
 			return templ_7745c5c3_Err
 		}

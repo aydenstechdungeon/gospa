@@ -15,6 +15,7 @@ import (
 	"github.com/aydenstechdungeon/gospa"
 	"github.com/aydenstechdungeon/gospa/routing"
 	"github.com/gofiber/fiber/v3"
+	"github.com/gofiber/fiber/v3/middleware/compress"
 )
 
 // Cached file hashes for ETags - computed once at startup for static files
@@ -50,7 +51,7 @@ func main() {
 				Enabled: boolPtr(true),
 			},
 			SpeculativePrefetching: &gospa.NavigationSpeculativePrefetchingConfig{
-				Enabled:        boolPtr(true),
+				Enabled:        boolPtr(false),
 				TTL:            intPtr(45000),
 				HoverDelay:     intPtr(80),
 				ViewportMargin: intPtr(220),
@@ -62,6 +63,11 @@ func main() {
 			},
 		},
 	})
+
+	// Enable Brotli/Gzip compression for all responses
+	app.Use(compress.New(compress.Config{
+		Level: compress.LevelBestSpeed,
+	}))
 
 	// Legacy redirects after documentation restructuring
 	app.Get("/docs/getstarted", func(c fiber.Ctx) error {
@@ -85,10 +91,8 @@ func main() {
 		return c.SendFile("./static/gospa-navigation-sw.js")
 	})
 
-	// Add cache headers middleware for static assets and pages
-	if !devMode {
-		app.Use(cacheMiddleware)
-	}
+	// Add middleware for performance (Link headers, compression, caching)
+	app.Use(cacheMiddleware)
 
 	port := os.Getenv("PORT")
 	if port == "" {
@@ -110,9 +114,20 @@ func intPtr(v int) *int {
 	return &v
 }
 
-// cacheMiddleware adds Cache-Control headers for static assets and pages
+// cacheMiddleware adds Link headers for preloading and Cache-Control headers in production
 func cacheMiddleware(c fiber.Ctx) error {
 	path := c.Path()
+	devMode := getEnvBool("GOSPA_DEV", false)
+
+	// Send Link headers for critical assets on every HTML page request (Early Discovery)
+	if isHTMLPage(path) {
+		c.Set("Link", "</static/fonts/InterVariable.woff2>; rel=preload; as=font; type=font/woff2; crossorigin; fetchpriority=high, </static/gospa1-64.webp>; rel=preload; as=image; fetchpriority=high")
+	}
+
+	// Skip caching logic in development mode
+	if devMode && !strings.Contains(path, "/static/") {
+		return c.Next()
+	}
 
 	// Apply cache headers for static assets
 	isStatic := strings.HasPrefix(path, "/static/")
