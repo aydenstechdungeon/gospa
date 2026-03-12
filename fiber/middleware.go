@@ -202,12 +202,9 @@ type PreloadConfig struct {
 // DefaultPreloadConfig returns the default preload configuration.
 func DefaultPreloadConfig() PreloadConfig {
 	return PreloadConfig{
-		RuntimeScript:    "/_gospa/runtime.js",
-		NavigationScript: "/_gospa/navigation.js",
-		WebSocketScript:  "/_gospa/websocket.js",
-		CoreScript:       "/_gospa/runtime-core.js",
-		MicroScript:      "/_gospa/runtime-micro.js",
-		Enabled:          true,
+		RuntimeScript: "/_gospa/runtime.js",
+		CoreScript:    "/_gospa/runtime-core.js",
+		Enabled:       true,
 	}
 }
 
@@ -229,17 +226,42 @@ func PreloadHeadersMiddleware(config PreloadConfig) gofiber.Handler {
 		}
 
 		var links []string
+		// Preload explicit core files only if they are set and not empty
 		if config.CoreScript != "" {
-			links = append(links, fmt.Sprintf("<%s>; rel=preload; as=script", config.CoreScript))
+			links = append(links, fmt.Sprintf("<%s>; rel=modulepreload", config.CoreScript))
 		}
 		if config.RuntimeScript != "" {
-			links = append(links, fmt.Sprintf("<%s>; rel=preload; as=script", config.RuntimeScript))
+			links = append(links, fmt.Sprintf("<%s>; rel=modulepreload", config.RuntimeScript))
 		}
 		if config.NavigationScript != "" {
 			links = append(links, fmt.Sprintf("<%s>; rel=modulepreload", config.NavigationScript))
 		}
+		if config.WebSocketScript != "" {
+			links = append(links, fmt.Sprintf("<%s>; rel=modulepreload", config.WebSocketScript))
+		}
+
+		// Automatically discover and preload GoSPA internal runtime chunks if they aren't already included
+		// This uses the versioned filenames (including hashes) discovered from the embedded FS.
+		for _, chunk := range embed.RuntimeChunks() {
+			chunkPath := fmt.Sprintf("/_gospa/%s", chunk)
+			// Skip if we already added it explicitly (prevents duplicates)
+			alreadyAdded := false
+			for _, link := range links {
+				if strings.Contains(link, chunkPath) {
+					alreadyAdded = true
+					break
+				}
+			}
+			if !alreadyAdded {
+				links = append(links, fmt.Sprintf("<%s>; rel=modulepreload", chunkPath))
+			}
+		}
 
 		if len(links) > 0 {
+			// Limit the number of links to prevent oversized headers (capped at 10 for safety)
+			if len(links) > 10 {
+				links = links[:10]
+			}
 			c.Set("Link", strings.Join(links, ", "))
 		}
 

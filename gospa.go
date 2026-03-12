@@ -498,6 +498,12 @@ func (a *App) setupMiddleware() {
 		a.Fiber.Use(fiber.SPANavigationMiddleware())
 	}
 
+	// Preload critical assets before reaching the SPA middleware to ensure headers are set on HTML
+	preloadConfig := fiber.DefaultPreloadConfig()
+	// Sync with dynamic runtime path
+	preloadConfig.RuntimeScript = a.getRuntimePath()
+	a.Fiber.Use(fiber.PreloadHeadersMiddleware(preloadConfig))
+
 	// SPA middleware
 	spaConfig := fiber.DefaultConfig()
 	spaConfig.DevMode = a.Config.DevMode

@@ -64,35 +64,36 @@ func main() {
 		},
 	})
 
+	// Add middleware for performance (Link headers, compression, caching)
+	// IMPORTANT: This must come BEFORE routes to catch static assets
+	app.Fiber.Use(cacheMiddleware)
+
 	// Enable Brotli/Gzip compression for all responses
-	app.Use(compress.New(compress.Config{
+	app.Fiber.Use(compress.New(compress.Config{
 		Level: compress.LevelBestSpeed,
 	}))
 
 	// Legacy redirects after documentation restructuring
-	app.Get("/docs/getstarted", func(c fiber.Ctx) error {
+	app.Fiber.Get("/docs/getstarted", func(c fiber.Ctx) error {
 		return c.Redirect().Status(301).To("/docs/getstarted/installation")
 	})
-	app.Get("/docs/client-runtime", func(c fiber.Ctx) error {
+	app.Fiber.Get("/docs/client-runtime", func(c fiber.Ctx) error {
 		return c.Redirect().Status(301).To("/docs/client-runtime/overview")
 	})
 
 	// LLM support routes
-	app.Get("/llms.txt", func(c fiber.Ctx) error {
+	app.Fiber.Get("/llms.txt", func(c fiber.Ctx) error {
 		return c.SendFile("./static/llms.txt")
 	})
-	app.Get("/llms-full.md", func(c fiber.Ctx) error {
+	app.Fiber.Get("/llms-full.md", func(c fiber.Ctx) error {
 		return c.SendFile("./static/llms-full.md")
 	})
 
 	// Service Worker route
-	app.Get("/gospa-navigation-sw.js", func(c fiber.Ctx) error {
+	app.Fiber.Get("/gospa-navigation-sw.js", func(c fiber.Ctx) error {
 		c.Set("Content-Type", "application/javascript")
 		return c.SendFile("./static/gospa-navigation-sw.js")
 	})
-
-	// Add middleware for performance (Link headers, compression, caching)
-	app.Use(cacheMiddleware)
 
 	port := os.Getenv("PORT")
 	if port == "" {
@@ -121,7 +122,13 @@ func cacheMiddleware(c fiber.Ctx) error {
 
 	// Send Link headers for critical assets on every HTML page request (Early Discovery)
 	if isHTMLPage(path) {
-		c.Set("Link", "</static/fonts/InterVariable.woff2>; rel=preload; as=font; type=font/woff2; crossorigin; fetchpriority=high, </static/gospa1-64.webp>; rel=preload; as=image; fetchpriority=high")
+		// Preload fonts and images
+		links := []string{
+			"</static/fonts/InterVariable.woff2>; rel=preload; as=font; type=font/woff2; crossorigin; fetchpriority=high",
+			"</static/gospa1-64.webp>; rel=preload; as=image; fetchpriority=high",
+		}
+
+		c.Set("Link", strings.Join(links, ", "))
 	}
 
 	// Skip caching logic in development mode

@@ -6,6 +6,7 @@ import (
 	"embed"
 	"fmt"
 	"io/fs"
+	"strings"
 )
 
 //go:embed *.js
@@ -34,4 +35,16 @@ func RuntimeHash(simple bool) (string, error) {
 func RuntimeFS() fs.FS {
 	sub, _ := fs.Sub(runtimeFS, ".")
 	return sub
+}
+
+// RuntimeChunks returns a list of all JavaScript files in the runtime filesystem.
+func RuntimeChunks() []string {
+	var chunks []string
+	entries, _ := runtimeFS.ReadDir(".")
+	for _, entry := range entries {
+		if !entry.IsDir() && strings.HasSuffix(entry.Name(), ".js") {
+			chunks = append(chunks, entry.Name())
+		}
+	}
+	return chunks
 }

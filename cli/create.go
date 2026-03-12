@@ -126,6 +126,7 @@ import (
 
 	"github.com/aydenstechdungeon/gospa"
 	"github.com/aydenstechdungeon/gospa/routing"
+	"github.com/gofiber/fiber/v3/middleware/compress"
 )
 
 func main() {
@@ -139,6 +140,15 @@ func main() {
 		DevMode:   true,
 		AppName:   "%s",
 	})
+
+	// Add compression for better performance
+	app.Fiber.Use(compress.New(compress.Config{
+		Level: compress.LevelBestSpeed,
+	}))
+
+	// Note: Cache headers and Link preloads are handled automatically 
+	// by gospa.New() for framework-internal resources.
+	// Add your own custom cache middleware here if needed for /static.
 
 	if err := app.Run(":3000"); err != nil {
 		log.Fatal(err)
@@ -228,7 +238,12 @@ templ Layout(title string) {
 		<meta charset="UTF-8"/>
 		<meta name="viewport" content="width=device-width, initial-scale=1.0"/>
 		<meta name="description" content="A GoSPA application"/>
+		<meta name="theme-color" content="#667eea"/>
 		<title>{ title }</title>
+		
+		<!-- Preconnect to improve performance on navigation -->
+		<link rel="preconnect" href="/"/>
+
 		<link rel="stylesheet" href="/static/css/style.css"/>
 		@gospatempl.RuntimeScript("/_gospa/runtime.js")
 	</head>
