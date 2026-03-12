@@ -638,18 +638,18 @@ func (a *App) setupRoutes() {
 			}
 		}
 
-		requestHeaders := c.Request().Header
+		// Extract tracing headers directly without copying the lock value
 		headers := make(map[string]string, 4)
-		if requestID := string(requestHeaders.Peek("X-Request-Id")); requestID != "" {
+		if requestID := string(c.Request().Header.Peek("X-Request-Id")); requestID != "" {
 			headers["X-Request-Id"] = requestID
 		}
-		if traceParent := string(requestHeaders.Peek("Traceparent")); traceParent != "" {
+		if traceParent := string(c.Request().Header.Peek("Traceparent")); traceParent != "" {
 			headers["Traceparent"] = traceParent
 		}
-		if traceState := string(requestHeaders.Peek("Tracestate")); traceState != "" {
+		if traceState := string(c.Request().Header.Peek("Tracestate")); traceState != "" {
 			headers["Tracestate"] = traceState
 		}
-		if b3 := string(requestHeaders.Peek("B3")); b3 != "" {
+		if b3 := string(c.Request().Header.Peek("B3")); b3 != "" {
 			headers["B3"] = b3
 		}
 
