@@ -1605,6 +1605,9 @@
   .opacity-50 {
     opacity: 50%;
   }
+  .opacity-60 {
+    opacity: 60%;
+  }
   .opacity-70 {
     opacity: 70%;
   }
@@ -2275,7 +2278,7 @@ body {
   background: var(--text-muted);
 }
 .grid-bg {
-  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='40' height='40' viewBox='0 0 40 40'%3E%3Cpath d='M40 40V.5H0' fill='none' stroke='%2327272a' stroke-opacity='0.4'/%3E%3C/svg%3E");
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='40' height='40' viewBox='0 0 40 40'%3E%3Cpath d='M40 40V.5H0' fill='none' stroke='%2327272a' stroke-opacity='1'/%3E%3C/svg%3E");
   -webkit-mask-image: radial-gradient(ellipse 60% 50% at 50% 0%, #000 70%, transparent 100%);
           mask-image: radial-gradient(ellipse 60% 50% at 50% 0%, #000 70%, transparent 100%);
   will-change: opacity;
