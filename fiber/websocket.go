@@ -15,9 +15,9 @@ import (
 
 	"github.com/aydenstechdungeon/gospa/state"
 	"github.com/aydenstechdungeon/gospa/store"
+	json "github.com/goccy/go-json"
 	websocket "github.com/gofiber/contrib/v3/websocket"
 	fiberpkg "github.com/gofiber/fiber/v3"
-	json "github.com/goccy/go-json"
 	"github.com/vmihailenco/msgpack/v5"
 )
 

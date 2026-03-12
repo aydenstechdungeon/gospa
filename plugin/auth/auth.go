@@ -19,8 +19,8 @@ import (
 	"strings"
 	"time"
 
-	json "github.com/goccy/go-json"
 	"github.com/aydenstechdungeon/gospa/plugin"
+	json "github.com/goccy/go-json"
 	"github.com/gofiber/fiber/v3"
 	"github.com/golang-jwt/jwt/v5"
 	"golang.org/x/oauth2"

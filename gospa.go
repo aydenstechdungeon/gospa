@@ -216,17 +216,17 @@ type Config struct {
 // DefaultConfig returns the default configuration.
 func DefaultConfig() Config {
 	return Config{
-		RoutesDir:          "./routes",
-		DevMode:            false,
-		RuntimeScript:      "/_gospa/runtime.js",
-		StaticDir:          "./static",
-		StaticPrefix:       "/static",
-		AppName:            "GoSPA App",
-		DefaultState:       make(map[string]interface{}),
-		EnableWebSocket:    true,
-		WebSocketPath:      "/_gospa/ws",
-		RemotePrefix:       "/_gospa/remote",
-		MaxRequestBodySize: 4 * 1024 * 1024, // Default 4MB
+		RoutesDir:           "./routes",
+		DevMode:             false,
+		RuntimeScript:       "/_gospa/runtime.js",
+		StaticDir:           "./static",
+		StaticPrefix:        "/static",
+		AppName:             "GoSPA App",
+		DefaultState:        make(map[string]interface{}),
+		EnableWebSocket:     true,
+		WebSocketPath:       "/_gospa/ws",
+		RemotePrefix:        "/_gospa/remote",
+		MaxRequestBodySize:  4 * 1024 * 1024, // Default 4MB
 		SerializationFormat: SerializationJSON,
 	}
 }
@@ -1212,16 +1212,16 @@ func (a *App) buildRootLayoutProps(c fiberpkg.Ctx, params map[string]string) map
 		wsHB = 30000
 	}
 	props := map[string]interface{}{
-		"appName":          a.Config.AppName,
-		"runtimePath":      a.getRuntimePath(),
-		"path":             c.Path(),
-		"debug":            a.Config.DevMode,
-		"wsUrl":            a.getWSUrl(c),
-		"hydrationMode":    a.Config.HydrationMode,
-		"hydrationTimeout": a.Config.HydrationTimeout,
-		"wsReconnectDelay": wsRD,
-		"wsMaxReconnect":   wsMR,
-		"wsHeartbeat":      wsHB,
+		"appName":             a.Config.AppName,
+		"runtimePath":         a.getRuntimePath(),
+		"path":                c.Path(),
+		"debug":               a.Config.DevMode,
+		"wsUrl":               a.getWSUrl(c),
+		"hydrationMode":       a.Config.HydrationMode,
+		"hydrationTimeout":    a.Config.HydrationTimeout,
+		"wsReconnectDelay":    wsRD,
+		"wsMaxReconnect":      wsMR,
+		"wsHeartbeat":         wsHB,
 		"serializationFormat": a.Config.SerializationFormat,
 
 		"navigationOptions":   a.Config.NavigationOptions,
@@ -1272,16 +1272,16 @@ func (a *App) buildPageHTML(ctx context.Context, route *routing.Route, params ma
 		wsHB = 30000
 	}
 	rootProps := map[string]interface{}{
-		"appName":          a.Config.AppName,
-		"runtimePath":      a.getRuntimePath(),
-		"path":             path,
-		"debug":            false,
-		"wsUrl":            a.Config.WebSocketPath,
-		"hydrationMode":    a.Config.HydrationMode,
-		"hydrationTimeout": a.Config.HydrationTimeout,
-		"wsReconnectDelay": wsRD,
-		"wsMaxReconnect":   wsMR,
-		"wsHeartbeat":      wsHB,
+		"appName":             a.Config.AppName,
+		"runtimePath":         a.getRuntimePath(),
+		"path":                path,
+		"debug":               false,
+		"wsUrl":               a.Config.WebSocketPath,
+		"hydrationMode":       a.Config.HydrationMode,
+		"hydrationTimeout":    a.Config.HydrationTimeout,
+		"wsReconnectDelay":    wsRD,
+		"wsMaxReconnect":      wsMR,
+		"wsHeartbeat":         wsHB,
 		"serializationFormat": string(a.Config.SerializationFormat),
 	}
 	for k, v := range params {
