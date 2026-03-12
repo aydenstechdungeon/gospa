@@ -5,7 +5,7 @@ go 1.26.0
 replace github.com/aydenstechdungeon/gospa => ../../
 
 require (
-	github.com/aydenstechdungeon/gospa v0.1.23
+	github.com/aydenstechdungeon/gospa v0.1.24
 	github.com/gofiber/fiber/v3 v3.1.0
 	github.com/redis/go-redis/v9 v9.18.0
 )
@@ -16,6 +16,7 @@ require (
 	github.com/cespare/xxhash/v2 v2.3.0 // indirect
 	github.com/dgryski/go-rendezvous v0.0.0-20200823014737-9f7001d12a5f // indirect
 	github.com/fasthttp/websocket v1.5.12 // indirect
+	github.com/goccy/go-json v0.10.5 // indirect
 	github.com/gofiber/contrib/v3/websocket v1.1.0 // indirect
 	github.com/gofiber/schema v1.7.0 // indirect
 	github.com/gofiber/utils/v2 v2.0.2 // indirect
@@ -28,6 +29,8 @@ require (
 	github.com/tinylib/msgp v1.6.3 // indirect
 	github.com/valyala/bytebufferpool v1.0.0 // indirect
 	github.com/valyala/fasthttp v1.69.0 // indirect
+	github.com/vmihailenco/msgpack/v5 v5.4.1 // indirect
+	github.com/vmihailenco/tagparser/v2 v2.0.0 // indirect
 	go.uber.org/atomic v1.11.0 // indirect
 	golang.org/x/crypto v0.48.0 // indirect
 	golang.org/x/net v0.51.0 // indirect
