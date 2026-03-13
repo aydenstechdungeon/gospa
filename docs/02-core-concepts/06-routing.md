@@ -578,3 +578,33 @@ app := gospa.New(gospa.Config{
 - **View Transitions API**: uses native transitions where supported, with graceful fallback.
 
 > `ptr` above is a helper for pointer literals (e.g. `func ptr[T any](v T) *T { return &v }`).
+
+---
+
+## Persistent Elements
+
+Sometimes you want specific DOM elements to persist across SPA navigations without being cleared or patched by the server's response. This is useful for:
+
+- Elements managed entirely by client-side scripts (e.g., dynamic Table of Contents, sidebars with scroll state)
+- Video players that should continue playing
+- Third-party widgets (e.g., chat bots, maps)
+
+### `data-gospa-permanent`
+
+Add the `data-gospa-permanent` attribute to any element to tell the GoSPA router to skip patching it during navigation.
+
+```html
+<nav id="toc">
+    <ul data-gospa-permanent>
+        <!-- This content is managed by client-side JS and won't be cleared on navigation -->
+    </ul>
+</nav>
+```
+
+When the router navigates to a new page, it will:
+1. Identify the element in the existing DOM.
+2. See the `data-gospa-permanent` attribute.
+3. Skip the patching process for this element and its children.
+
+> [!TIP]
+> Use this for elements that you populate via `document.addEventListener('gospa:navigated', ...)` to prevent them from flickering or disappearing briefly during route changes.

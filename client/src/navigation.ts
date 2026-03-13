@@ -397,6 +397,12 @@ function patchNode(currentNode: Node, incomingNode: Node): void {
 		return;
 	}
 
+	// Skip patching if the element is marked as permanent.
+	// This allows client-side scripts to manage the element's content without server interference.
+	if (currentNode.hasAttribute('data-gospa-permanent')) {
+		return;
+	}
+
 	patchAttributes(currentNode, incomingNode);
 
 	const currentChildren = Array.from(currentNode.childNodes);

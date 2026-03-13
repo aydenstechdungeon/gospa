@@ -10,7 +10,7 @@ A Go framework for building reactive SPAs with server-side rendering. Brings Sve
 ## Features
 
 - **Reactive Primitives** — `Rune[T]`, `Derived[T]`, `Effect` - Svelte-like reactivity in Go
-- **High-Performance Serialization** — Integrated `goccy/go-json` (2-3x faster) and optional binary **MessagePack** support
+- **High-Performance Serialization** — Integrated `goccy/go-json` (2-3x faster) and optional binary **MessagePack** (optimized bandwidth and sometimes faster than json) support
 - **File-Based Routing** — SvelteKit-style routing for `.templ` files
 - **WebSocket Sync** — Real-time client-server state synchronization with **GZIP compression** and **delta-only patching**
 - **Session Management** — Secure session persistence with `SessionStore` and `ClientStateStore`

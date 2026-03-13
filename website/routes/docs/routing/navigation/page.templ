@@ -83,6 +83,25 @@ templ Page() {
 		</section>
 
 		<section class="space-y-6">
+			<h2 class="text-2xl font-bold">Persistent Elements</h2>
+			<p class="text-[var(--text-secondary)]">Elements marked with `data-gospa-permanent` persist across navigations without being cleared or patched by the server. This is useful for content managed entirely on the client, like the Table of Contents.</p>
+			@components.CodeBlock("<nav id=\"toc\">\n\t<ul data-gospa-permanent>\n\t\t<!-- Managed by client-side JS -->\n\t</ul>\n</nav>", "html", "permanent.html")
+			<div class="p-4 rounded-xl border border-[var(--accent-primary)]/20 bg-[var(--accent-primary)]/5">
+				<div class="flex items-start gap-4">
+					<div class="p-2 rounded-lg bg-[var(--accent-primary)]/20 text-[var(--accent-primary)]">
+						<svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"></circle><path d="M12 16v-4"></path><path d="M12 8h.01"></path></svg>
+					</div>
+					<div>
+						<p class="text-sm font-medium text-[var(--accent-primary)] mb-1">Tip: Flickering Prevention</p>
+						<p class="text-xs text-[var(--text-secondary)] leading-relaxed">
+							Combined with the <code>gospa:navigated</code> event, persistent elements allow you to update client-only UI without it resetting to an empty state during the DOM patching phase.
+						</p>
+					</div>
+				</div>
+			</div>
+		</section>
+
+		<section class="space-y-6">
 			<h2 class="text-2xl font-bold">Code Splitting</h2>
 			<p class="text-[var(--text-secondary)]">
 				Routes are automatically code-split. The client downloads only what's needed.
