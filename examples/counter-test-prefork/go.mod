@@ -4,7 +4,7 @@ go 1.26.0
 
 require (
 	github.com/a-h/templ v0.3.1001
-	github.com/aydenstechdungeon/gospa v0.1.26
+	github.com/aydenstechdungeon/gospa v0.1.27
 	github.com/redis/go-redis/v9 v9.18.0
 )
 
