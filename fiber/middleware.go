@@ -240,10 +240,33 @@ func PreloadHeadersMiddleware(config PreloadConfig) gofiber.Handler {
 			links = append(links, fmt.Sprintf("<%s>; rel=modulepreload", config.WebSocketScript))
 		}
 
-		// Automatically discover and preload GoSPA internal runtime chunks if they aren't already included
-		// This uses the versioned filenames (including hashes) discovered from the embedded FS.
+		// Automatically discover and preload GoSPA internal runtime chunks if they aren't already included.
+		// We filter these to avoid preloading large optional assets like DOMPurify or unused
+		// runtime variants (e.g. not preloading runtime-simple if using the full runtime).
 		for _, chunk := range embed.RuntimeChunks() {
 			chunkPath := fmt.Sprintf("/_gospa/%s", chunk)
+
+			// Skip purification chunks by default - they are large and usually lazy-loaded
+			// by runtime-secure only when actually needed (often during idle time).
+			if strings.HasPrefix(chunk, "purify") {
+				continue
+			}
+
+			// Skip other runtime entry points that aren't the one currently configured.
+			// This prevents preloading runtime-simple when using the full runtime, etc.
+			// We keep runtime-core and shared helper chunks (sm, qx).
+			if (strings.HasPrefix(chunk, "runtime-") || chunk == "runtime.js") &&
+				chunk != "runtime-core.js" &&
+				!strings.HasPrefix(chunk, "runtime-sm") &&
+				!strings.HasPrefix(chunk, "runtime-qx") {
+
+				base := strings.TrimSuffix(chunk, ".js")
+				if !strings.Contains(config.RuntimeScript, "/"+base+".") &&
+					!strings.HasSuffix(config.RuntimeScript, "/"+chunk) {
+					continue
+				}
+			}
+
 			// Skip if we already added it explicitly (prevents duplicates)
 			alreadyAdded := false
 			for _, link := range links {
@@ -258,9 +281,9 @@ func PreloadHeadersMiddleware(config PreloadConfig) gofiber.Handler {
 		}
 
 		if len(links) > 0 {
-			// Limit the number of links to prevent oversized headers (capped at 10 for safety)
-			if len(links) > 10 {
-				links = links[:10]
+			// Limit the number of links to prevent oversized headers (capped at 12 for safety)
+			if len(links) > 12 {
+				links = links[:12]
 			}
 			c.Set("Link", strings.Join(links, ", "))
 		}
