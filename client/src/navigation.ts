@@ -323,8 +323,9 @@ async function prepareContent(html: string): Promise<string> {
 	return html;
 }
 
-// FIX: Sanitize HTML for data-bind="html:*" bindings to prevent XSS
-// Uses DOMPurify if available (runtime-secure), otherwise falls back to textContent
+// Sanitize HTML for data-bind="html:*" bindings
+// By default, this trusts the server (Templ auto-escapes).
+// For user-generated content, use 'gospa/runtime-secure' which enables DOMPurify.
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
 let DOMPurify: ((dirty: string) => string) | null = null;
 async function sanitizeHTML(html: string): Promise<string> {
@@ -341,13 +342,9 @@ async function sanitizeHTML(html: string): Promise<string> {
 		return globalPurify(html);
 	}
 
-	// Fallback: Only allow text content, strip all HTML tags
-	// This is a safety measure - if you need full HTML, use runtime-secure
-	const parser = new DOMParser();
-	const doc = parser.parseFromString(html, 'text/html');
-	const textContent = doc.body.textContent || '';
-	console.warn('[GoSPA] HTML binding sanitized to textContent. Use runtime-secure for HTML.');
-	return textContent;
+	// Default: Trust the server (Templ auto-escapes)
+	// For UGC, you should be using runtime-secure which sets the sanitizer
+	return html;
 }
 
 function patchAttributes(current: Element, incoming: Element): void {

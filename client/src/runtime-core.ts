@@ -80,11 +80,7 @@ export function init(options: RuntimeConfig = {}): void {
 	config = options;
 	isInitialized = true;
 
-	// Set global flag for sanitization preference
-	if (config.disableSanitization) {
-		(window as any).__GOSPA_DISABLE_SANITIZATION__ = true;
-		if (config.debug) console.log('[GoSPA] Sanitization disabled - trusting server-rendered HTML');
-	}
+
 
 	// Initialize WebSocket if URL provided (lazy load)
 	if (config.wsUrl) {
