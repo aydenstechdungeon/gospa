@@ -9,12 +9,12 @@ GoSPA brings Svelte-like reactive primitives (`Runes`, `Effects`, `Derived`) to 
 
 ## Highlights
 
-- **Native Reactivity** — `Rune`, `Derived`, `Effect` primitives that work exactly like Svelte 5.
-- **WebSocket Sync** — Transparent client-server state synchronization with GZIP delta patching.
-- **File-Based Routing** — SvelteKit-style directory structure for `.templ` files.
-- **Hybrid Rendering** — Mix SSR, SSG, ISR, and PPR on a per-page basis.
-- **Type-Safe RPC** — Call server functions directly from the client without boilerplate endpoints.
-- **High Performance** — Integrated `go-json` and optional MessagePack for minimal overhead.
+- **Native Reactivity** - `Rune`, `Derived`, `Effect` primitives that work exactly like Svelte 5.
+- **WebSocket Sync** - Transparent client-server state synchronization with GZIP delta patching.
+- **File-Based Routing** - SvelteKit-style directory structure for `.templ` files.
+- **Hybrid Rendering** - Mix SSR, SSG, ISR, and PPR on a per-page basis.
+- **Type-Safe RPC** - Call server functions directly from the client without boilerplate endpoints.
+- **High Performance** - Integrated `go-json` and optional MessagePack for minimal overhead.
 
 ## Quick Start
 
@@ -46,14 +46,14 @@ templ Page() {
 
 ## Comparison
 
-| Feature | GoSPA | HTMX | SvelteKit |
-| :-- | :--: | :--: | :--: |
-| **Language** | Go | HTML | JS/TS |
-| **Runtime** | ~15KB | ~14KB | Varies |
-| **Reactivity** | ✅ | ❌ | ✅ |
-| **WS Sync** | ✅ | ❌ | ✅ |
-| **File Routing** | ✅ | ❌ | ✅ |
-| **Type Safety** | ✅ | ❌ | ✅ |
+| Feature | GoSPA | HTMX | Alpine | SvelteKit |
+| :-- | :--: | :--: | :--: | :--: |
+| **Language** | Go | HTML | JS | JS/TS |
+| **Runtime** | ~15KB | ~14KB | ~15KB | Varies |
+| **Reactivity** | ✅ | ❌ | ✅ | ✅ |
+| **WS Sync** | ✅ | ❌ | ❌ | ✅ |
+| **File Routing** | ✅ | ❌ | ❌ | ✅ |
+| **Type Safety** | ✅ | ❌ | ❌ | ✅ |
 
 ## Documentation
 
