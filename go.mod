@@ -18,9 +18,13 @@ require github.com/gofiber/contrib/v3/websocket v1.1.0
 require (
 	github.com/goccy/go-json v0.10.5
 	github.com/vmihailenco/msgpack/v5 v5.4.1
+	gopkg.in/yaml.v3 v3.0.1
 )
 
-require github.com/vmihailenco/tagparser/v2 v2.0.0 // indirect
+require (
+	github.com/kr/text v0.2.0 // indirect
+	github.com/vmihailenco/tagparser/v2 v2.0.0 // indirect
+)
 
 require (
 	github.com/cespare/xxhash/v2 v2.3.0 // indirect

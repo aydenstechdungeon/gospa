@@ -71,6 +71,7 @@ Complete reference for the GoSPA client-side TypeScript runtime. The runtime pro
     - [back/forward/go](#backforwardgo)
     - [prefetch](#prefetch)
     - [createNavigationState](#createnavigationstate)
+    - [setNavigationOptions](#setnavigationoptions)
     - [Navigation Callbacks](#navigation-callbacks)
       - [Global DOM Event](#global-dom-event)
   - [Event Handling](#event-handling)
@@ -1148,6 +1149,41 @@ console.log(nav.isNavigating); // Is currently navigating
 
 await nav.navigate('/new');
 nav.back();
+```
+
+---
+
+### setNavigationOptions
+
+Configure client-side navigation behavior, including the built-in progress bar.
+
+```typescript
+import { setNavigationOptions } from '@gospa/runtime';
+
+setNavigationOptions({
+  progressBar: {
+    enabled: true,
+    color: '#22d3ee',
+    height: '3px'
+  },
+  speculativePrefetching: {
+    enabled: true,
+    hoverDelay: 80
+  },
+  viewTransitions: {
+    enabled: true
+  }
+});
+```
+
+#### ProgressBar Configuration
+
+| Property | Type | Default | Description |
+|----------|------|---------|-------------|
+| `enabled` | `boolean` | `true` | Show/hide the progress bar during navigation |
+| `color` | `string` | `"#3b82f6"` | CSS color for the progress bar |
+| `height` | `string` | `"2px"` | CSS height for the progress bar |
+```
 nav.forward();
 nav.go(-1);
 nav.prefetch('/prefetch-me');

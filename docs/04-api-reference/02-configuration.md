@@ -440,6 +440,11 @@ NavigationOptions: gospa.NavigationOptions{
         Enabled: ptr(true),
         MaxSize: ptr(500),
     },
+    ProgressBar: &gospa.NavigationProgressBarConfig{
+        Enabled: ptr(true),
+        Color:   ptr("#22d3ee"),
+        Height:  ptr("3px"),
+    },
 }
 ```
 
@@ -450,6 +455,15 @@ Available sub-configs:
 - `LazyRuntimeInitialization`: Defers boot logic until first interaction.
 - `ServiceWorkerNavigationCaching`: Offloads page caching to a Service Worker.
 - `ViewTransitions`: Enables the View Transitions API for smooth page fades.
+- `ProgressBar`: Configures the navigation progress bar (color, height, etc).
+
+### ProgressBar Options
+
+| Option | Type | Default | Description |
+|--------|------|---------|-------------|
+| `Enabled` | `bool` | `true` | Show/hide the progress bar during navigation |
+| `Color` | `string` | `"#3b82f6"` | CSS color for the progress bar |
+| `Height` | `string` | `"2px"` | CSS height for the progress bar |
 
 ---
 

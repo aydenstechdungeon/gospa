@@ -42,7 +42,7 @@
 }
 
 /* Custom CSS variables for GoSPA website - matches var(--name) usage in HTML */
-:root {
+@theme {
 	/* Background colors */
 	--bg-primary: #0a0a0f;
 	--bg-secondary: #12121a;

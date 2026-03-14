@@ -8,10 +8,10 @@ import (
 	"os"
 	"os/exec"
 	"path/filepath"
-	"strings"
 	"sync"
 
 	"github.com/aydenstechdungeon/gospa/plugin"
+	"gopkg.in/yaml.v3"
 )
 
 // PostCSSPlugin provides PostCSS processing with Tailwind CSS v4 support.
@@ -147,33 +147,54 @@ func NewWithConfig(cfg *Config) *PostCSSPlugin {
 func loadConfigFromYaml(cfg *Config) {
 	data, err := os.ReadFile("gospa.yaml")
 	if err != nil {
+		// Try root directory if not found in current (helpful for some build setups)
+		data, err = os.ReadFile("../../gospa.yaml")
+		if err != nil {
+			return
+		}
+	}
+
+	// Wrapper to match the gospa.yaml structure
+	var wrapper struct {
+		Plugins struct {
+			PostCSS Config `yaml:"postcss"`
+		} `yaml:"plugins"`
+	}
+
+	if err := yaml.Unmarshal(data, &wrapper); err != nil {
 		return
 	}
-	content := string(data)
-	if strings.Contains(content, "name: website") && strings.Contains(content, "name: docs") {
-		cfg.Bundles = []BundleEntry{
-			{
-				Name:   "website",
-				Input:  "styles/website.css",
-				Output: "static/css/website.css",
-				CriticalCSS: &CriticalCSSConfig{
-					Enabled:           true,
-					CriticalOutput:    "static/css/website.critical.css",
-					NonCriticalOutput: "static/css/website.non-critical.css",
-					InlineMaxSize:     14336,
-				},
-			},
-			{
-				Name:   "docs",
-				Input:  "styles/docs.css",
-				Output: "static/css/docs.css",
-				CriticalCSS: &CriticalCSSConfig{
-					Enabled:           true,
-					CriticalOutput:    "static/css/docs.critical.css",
-					NonCriticalOutput: "static/css/docs.non-critical.css",
-					InlineMaxSize:     14336,
-				},
-			},
+
+	pcfg := wrapper.Plugins.PostCSS
+
+	// Merge values if they are set in YAML
+	if pcfg.Input != "" {
+		cfg.Input = pcfg.Input
+	}
+	if pcfg.Output != "" {
+		cfg.Output = pcfg.Output
+	}
+	cfg.Watch = pcfg.Watch
+	cfg.Minify = pcfg.Minify
+	cfg.SourceMap = pcfg.SourceMap
+
+	// Merge critical CSS config
+	if pcfg.CriticalCSS.Enabled {
+		cfg.CriticalCSS = pcfg.CriticalCSS
+		if cfg.CriticalCSS.InlineMaxSize == 0 {
+			cfg.CriticalCSS.InlineMaxSize = 32768 // Increase default to 32KB
+		}
+	}
+
+	// Merge bundles
+	if len(pcfg.Bundles) > 0 {
+		cfg.Bundles = pcfg.Bundles
+		for i := range cfg.Bundles {
+			if cfg.Bundles[i].CriticalCSS != nil && cfg.Bundles[i].CriticalCSS.Enabled {
+				if cfg.Bundles[i].CriticalCSS.InlineMaxSize == 0 {
+					cfg.Bundles[i].CriticalCSS.InlineMaxSize = 32768
+				}
+			}
 		}
 	}
 }

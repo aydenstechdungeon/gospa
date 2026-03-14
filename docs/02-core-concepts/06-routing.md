@@ -562,6 +562,11 @@ app := gospa.New(gospa.Config{
             Enabled: ptr(true),
             FallbackToClassic: ptr(true),
         },
+        ProgressBar: &gospa.NavigationProgressBarConfig{
+            Enabled: ptr(true),
+            Color:   ptr("#22d3ee"),
+            Height:  ptr("3px"),
+        },
     },
 })
 ```
@@ -576,6 +581,7 @@ app := gospa.New(gospa.Config{
 - **Lazy runtime initialization**: initializes critical event wiring first, defers bindings.
 - **Service worker navigation caching**: enables offline-friendly HTML fallback cache.
 - **View Transitions API**: uses native transitions where supported, with graceful fallback.
+- **Progress Bar**: shows a visual indicator at the top of the page during navigation.
 
 > `ptr` above is a helper for pointer literals (e.g. `func ptr[T any](v T) *T { return &v }`).
 

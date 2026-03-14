@@ -3,10 +3,8 @@
 @layer theme, base, components, utilities;
 @layer theme {
   :root, :host {
-    --font-sans: ui-sans-serif, system-ui, sans-serif, "Apple Color Emoji",
-      "Segoe UI Emoji", "Segoe UI Symbol", "Noto Color Emoji";
-    --font-mono: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono",
-      "Courier New", monospace;
+    --font-sans: 'Inter', system-ui, -apple-system, sans-serif;
+    --font-mono: 'JetBrains Mono', monospace;
     --color-red-200: oklch(88.5% 0.062 18.334);
     --color-red-400: oklch(70.4% 0.191 22.216);
     --color-red-500: oklch(63.7% 0.237 25.331);
@@ -86,6 +84,16 @@
     --default-transition-timing-function: cubic-bezier(0.4, 0, 0.2, 1);
     --default-font-family: var(--font-sans);
     --default-mono-font-family: var(--font-mono);
+    --bg-primary: #0a0a0f;
+    --bg-secondary: #12121a;
+    --bg-tertiary: #1a1a24;
+    --text-primary: #e4e4e7;
+    --text-secondary: #a1a1aa;
+    --text-muted: #71717a;
+    --accent-primary: #22d3ee;
+    --accent-secondary: #a78bfa;
+    --accent-success: #22c55e;
+    --border: #27272a;
   }
 }
 @layer base {
@@ -858,7 +866,7 @@
     border-color: var(--accent-primary);
   }
   .border-\[var\(--accent-primary\)\]\/10 {
-    border-color: var(--accent-primary);
+    border-color: color-mix(in srgb, #22d3ee 10%, transparent);
   }
   @supports (color: color-mix(in lab, red, red)) {
     .border-\[var\(--accent-primary\)\]\/10 {
@@ -866,7 +874,7 @@
     }
   }
   .border-\[var\(--accent-primary\)\]\/20 {
-    border-color: var(--accent-primary);
+    border-color: color-mix(in srgb, #22d3ee 20%, transparent);
   }
   @supports (color: color-mix(in lab, red, red)) {
     .border-\[var\(--accent-primary\)\]\/20 {
@@ -874,7 +882,7 @@
     }
   }
   .border-\[var\(--accent-primary\)\]\/30 {
-    border-color: var(--accent-primary);
+    border-color: color-mix(in srgb, #22d3ee 30%, transparent);
   }
   @supports (color: color-mix(in lab, red, red)) {
     .border-\[var\(--accent-primary\)\]\/30 {
@@ -882,7 +890,7 @@
     }
   }
   .border-\[var\(--accent-success\)\]\/20 {
-    border-color: var(--accent-success);
+    border-color: color-mix(in srgb, #22c55e 20%, transparent);
   }
   @supports (color: color-mix(in lab, red, red)) {
     .border-\[var\(--accent-success\)\]\/20 {
@@ -972,7 +980,7 @@
     background-color: var(--accent-primary);
   }
   .bg-\[var\(--accent-primary\)\]\/5 {
-    background-color: var(--accent-primary);
+    background-color: color-mix(in srgb, #22d3ee 5%, transparent);
   }
   @supports (color: color-mix(in lab, red, red)) {
     .bg-\[var\(--accent-primary\)\]\/5 {
@@ -980,7 +988,7 @@
     }
   }
   .bg-\[var\(--accent-primary\)\]\/10 {
-    background-color: var(--accent-primary);
+    background-color: color-mix(in srgb, #22d3ee 10%, transparent);
   }
   @supports (color: color-mix(in lab, red, red)) {
     .bg-\[var\(--accent-primary\)\]\/10 {
@@ -988,7 +996,7 @@
     }
   }
   .bg-\[var\(--accent-primary\)\]\/20 {
-    background-color: var(--accent-primary);
+    background-color: color-mix(in srgb, #22d3ee 20%, transparent);
   }
   @supports (color: color-mix(in lab, red, red)) {
     .bg-\[var\(--accent-primary\)\]\/20 {
@@ -999,7 +1007,7 @@
     background-color: var(--accent-secondary);
   }
   .bg-\[var\(--accent-secondary\)\]\/10 {
-    background-color: var(--accent-secondary);
+    background-color: color-mix(in srgb, #a78bfa 10%, transparent);
   }
   @supports (color: color-mix(in lab, red, red)) {
     .bg-\[var\(--accent-secondary\)\]\/10 {
@@ -1007,7 +1015,7 @@
     }
   }
   .bg-\[var\(--accent-success\)\]\/10 {
-    background-color: var(--accent-success);
+    background-color: color-mix(in srgb, #22c55e 10%, transparent);
   }
   @supports (color: color-mix(in lab, red, red)) {
     .bg-\[var\(--accent-success\)\]\/10 {
@@ -1018,7 +1026,7 @@
     background-color: var(--bg-primary);
   }
   .bg-\[var\(--bg-primary\)\]\/80 {
-    background-color: var(--bg-primary);
+    background-color: color-mix(in srgb, #0a0a0f 80%, transparent);
   }
   @supports (color: color-mix(in lab, red, red)) {
     .bg-\[var\(--bg-primary\)\]\/80 {
@@ -1194,7 +1202,7 @@
     --tw-gradient-stops: var(--tw-gradient-via-stops, var(--tw-gradient-position), var(--tw-gradient-from) var(--tw-gradient-from-position), var(--tw-gradient-to) var(--tw-gradient-to-position));
   }
   .from-\[var\(--accent-primary\)\]\/40 {
-    --tw-gradient-from: var(--accent-primary);
+    --tw-gradient-from: color-mix(in srgb, #22d3ee 40%, transparent);
   }
   @supports (color: color-mix(in lab, red, red)) {
     .from-\[var\(--accent-primary\)\]\/40 {
@@ -1226,7 +1234,7 @@
     --tw-gradient-stops: var(--tw-gradient-via-stops);
   }
   .via-\[var\(--accent-primary\)\]\/20 {
-    --tw-gradient-via: var(--accent-primary);
+    --tw-gradient-via: color-mix(in srgb, #22d3ee 20%, transparent);
   }
   @supports (color: color-mix(in lab, red, red)) {
     .via-\[var\(--accent-primary\)\]\/20 {
@@ -1238,7 +1246,7 @@
     --tw-gradient-stops: var(--tw-gradient-via-stops);
   }
   .via-\[var\(--accent-primary\)\]\/50 {
-    --tw-gradient-via: var(--accent-primary);
+    --tw-gradient-via: color-mix(in srgb, #22d3ee 50%, transparent);
   }
   @supports (color: color-mix(in lab, red, red)) {
     .via-\[var\(--accent-primary\)\]\/50 {
@@ -1772,7 +1780,7 @@
   }
   @media (hover: hover) {
     .group-hover\:border-\[var\(--accent-primary\)\]\/30:is(:where(.group):hover *) {
-      border-color: var(--accent-primary);
+      border-color: color-mix(in srgb, #22d3ee 30%, transparent);
     }
     @supports (color: color-mix(in lab, red, red)) {
       .group-hover\:border-\[var\(--accent-primary\)\]\/30:is(:where(.group):hover *) {
@@ -1782,7 +1790,7 @@
   }
   @media (hover: hover) {
     .group-hover\:border-\[var\(--accent-primary\)\]\/60:is(:where(.group):hover *) {
-      border-color: var(--accent-primary);
+      border-color: color-mix(in srgb, #22d3ee 60%, transparent);
     }
     @supports (color: color-mix(in lab, red, red)) {
       .group-hover\:border-\[var\(--accent-primary\)\]\/60:is(:where(.group):hover *) {
@@ -1817,7 +1825,7 @@
   }
   @media (hover: hover) {
     .group-hover\:bg-\[var\(--accent-primary\)\]\/10:is(:where(.group):hover *) {
-      background-color: var(--accent-primary);
+      background-color: color-mix(in srgb, #22d3ee 10%, transparent);
     }
     @supports (color: color-mix(in lab, red, red)) {
       .group-hover\:bg-\[var\(--accent-primary\)\]\/10:is(:where(.group):hover *) {
@@ -1827,7 +1835,7 @@
   }
   @media (hover: hover) {
     .group-hover\:bg-\[var\(--accent-primary\)\]\/20:is(:where(.group):hover *) {
-      background-color: var(--accent-primary);
+      background-color: color-mix(in srgb, #22d3ee 20%, transparent);
     }
     @supports (color: color-mix(in lab, red, red)) {
       .group-hover\:bg-\[var\(--accent-primary\)\]\/20:is(:where(.group):hover *) {
@@ -1972,7 +1980,7 @@
   }
   @media (hover: hover) {
     .hover\:border-\[var\(--accent-primary\)\]\/30:hover {
-      border-color: var(--accent-primary);
+      border-color: color-mix(in srgb, #22d3ee 30%, transparent);
     }
     @supports (color: color-mix(in lab, red, red)) {
       .hover\:border-\[var\(--accent-primary\)\]\/30:hover {
@@ -1982,7 +1990,7 @@
   }
   @media (hover: hover) {
     .hover\:border-\[var\(--accent-primary\)\]\/50:hover {
-      border-color: var(--accent-primary);
+      border-color: color-mix(in srgb, #22d3ee 50%, transparent);
     }
     @supports (color: color-mix(in lab, red, red)) {
       .hover\:border-\[var\(--accent-primary\)\]\/50:hover {
@@ -2002,7 +2010,7 @@
   }
   @media (hover: hover) {
     .hover\:bg-\[var\(--accent-primary\)\]\/90:hover {
-      background-color: var(--accent-primary);
+      background-color: color-mix(in srgb, #22d3ee 90%, transparent);
     }
     @supports (color: color-mix(in lab, red, red)) {
       .hover\:bg-\[var\(--accent-primary\)\]\/90:hover {
@@ -2237,21 +2245,6 @@
   font-weight: 700;
   font-display: swap;
   src: url('/static/fonts/JetBrainsMono-Bold.woff2') format('woff2');
-}
-:root {
-  --bg-primary: #0a0a0f;
-  --bg-secondary: #12121a;
-  --bg-tertiary: #1a1a24;
-  --text-primary: #e4e4e7;
-  --text-secondary: #a1a1aa;
-  --text-muted: #71717a;
-  --accent-primary: #22d3ee;
-  --accent-secondary: #a78bfa;
-  --accent-success: #22c55e;
-  --accent-warning: #f59e0b;
-  --border: #27272a;
-  --font-sans: 'Inter', system-ui, -apple-system, sans-serif;
-  --font-mono: 'JetBrains Mono', monospace;
 }
 body {
   font-family: var(--font-sans);
