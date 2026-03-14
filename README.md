@@ -5,9 +5,7 @@
   <img src="https://github.com/user-attachments/assets/338c5be2-9ce1-4f7a-a389-bfe176c6a9d6" width="128" height="128" alt="GoSPA Logo 2">
 </div>
 
-**Reactive SPAs in Go.** Svelte performance on the server. Fiber speed in the back. Templ type-safety everywhere.
-
-GoSPA brings modern reactive primitives (`Runes`, `Effects`, `Derived`) to the Go ecosystem. It’s a file-based router, a state synchronizer, and a UI framework rolled into one high-performance package.
+GoSPA brings Svelte-like reactive primitives (`Runes`, `Effects`, `Derived`) to the Go ecosystem. It is a high-performance framework for building reactive SPAs with Templ, Fiber, file-based routing, and real-time state synchronization.
 
 ## Highlights
 
