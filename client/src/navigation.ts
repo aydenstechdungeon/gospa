@@ -6,6 +6,7 @@ const state = {
 	currentPath: window.location.pathname,
 	isNavigating: false,
 	pendingNavigation: null as Promise<boolean> | null,
+	abortController: null as AbortController | null,
 };
 
 // Navigation options
@@ -49,6 +50,12 @@ export interface ViewTransitionsConfig {
 	fallbackToClassic?: boolean;
 }
 
+export interface ProgressBarConfig {
+	enabled?: boolean;
+	color?: string;
+	height?: string;
+}
+
 export interface NavigationOptions {
 	speculativePrefetching?: SpeculativePrefetchingConfig;
 	urlParsingCache?: URLParsingCacheConfig;
@@ -56,6 +63,7 @@ export interface NavigationOptions {
 	lazyRuntimeInitialization?: LazyRuntimeInitializationConfig;
 	serviceWorkerNavigationCaching?: ServiceWorkerNavigationCachingConfig;
 	viewTransitions?: ViewTransitionsConfig;
+	progressBar?: ProgressBarConfig;
 }
 
 // Navigation event handlers
@@ -78,9 +86,9 @@ export function onAfterNavigate(cb: NavigationCallback): () => void {
 
 const DEFAULT_NAVIGATION_OPTIONS: Required<NavigationOptions> = {
 	speculativePrefetching: {
-		enabled: false,
+		enabled: true,
 		ttl: 30_000,
-		hoverDelay: 60,
+		hoverDelay: 50,
 		viewportMargin: 150,
 	},
 	urlParsingCache: {
@@ -104,6 +112,11 @@ const DEFAULT_NAVIGATION_OPTIONS: Required<NavigationOptions> = {
 	viewTransitions: {
 		enabled: true,
 		fallbackToClassic: true,
+	},
+	progressBar: {
+		enabled: true,
+		color: '#3b82f6',
+		height: '2px',
 	},
 };
 
@@ -137,8 +150,70 @@ export function setNavigationOptions(config: NavigationOptions): void {
 		lazyRuntimeInitialization: { ...navigationOptionsConfig.lazyRuntimeInitialization, ...(config.lazyRuntimeInitialization ?? {}) },
 		serviceWorkerNavigationCaching: { ...navigationOptionsConfig.serviceWorkerNavigationCaching, ...(config.serviceWorkerNavigationCaching ?? {}) },
 		viewTransitions: { ...navigationOptionsConfig.viewTransitions, ...(config.viewTransitions ?? {}) },
+		progressBar: { ...navigationOptionsConfig.progressBar, ...(config.progressBar ?? {}) },
 	};
 }
+
+
+class ProgressBar {
+	private el: HTMLDivElement | null = null;
+	private interval: number | null = null;
+	private progress = 0;
+
+	start() {
+		if (!navigationOptionsConfig.progressBar.enabled) return;
+		this.reset();
+		this.el = document.createElement('div');
+		const cfg = navigationOptionsConfig.progressBar;
+		Object.assign(this.el.style, {
+			position: 'fixed',
+			top: '0',
+			left: '0',
+			height: cfg.height ?? '2px',
+			backgroundColor: cfg.color ?? '#3b82f6',
+			zIndex: '9999',
+			transition: 'width 0.3s ease-out, opacity 0.3s ease-in-out',
+			width: '0%',
+			opacity: '1',
+			boxShadow: `0 0 10px ${cfg.color ?? '#3b82f6'}`,
+		});
+		document.body.appendChild(this.el);
+
+		this.progress = 0;
+		this.interval = window.setInterval(() => {
+			if (this.progress < 90) {
+				this.progress += (90 - this.progress) * 0.1;
+				if (this.el) this.el.style.width = `${this.progress}%`;
+			}
+		}, 100);
+	}
+
+	finish() {
+		if (!this.el) return;
+		clearInterval(this.interval!);
+		this.el.style.width = '100%';
+		setTimeout(() => {
+			if (this.el) {
+				this.el.style.opacity = '0';
+				setTimeout(() => this.reset(), 300);
+			}
+		}, 100);
+	}
+
+	private reset() {
+		if (this.el) {
+			this.el.remove();
+			this.el = null;
+		}
+		if (this.interval) {
+			clearInterval(this.interval);
+			this.interval = null;
+		}
+	}
+}
+
+const progressBar = new ProgressBar();
+const scrollPositions = new Map<string, number>();
 
 
 
@@ -244,9 +319,10 @@ interface PrefetchEntry {
 const prefetchCache = new Map<string, PrefetchEntry>();
 
 // Fetch page content from server
-async function fetchPageFromServer(path: string): Promise<PageData | null> {
+async function fetchPageFromServer(path: string, signal?: AbortSignal): Promise<PageData | null> {
 	try {
 		const response = await fetch(path, {
+			signal,
 			headers: {
 				'X-Requested-With': 'GoSPA-Navigate',
 				'Accept': 'text/html',
@@ -305,14 +381,14 @@ async function fetchPageFromServer(path: string): Promise<PageData | null> {
 }
 
 // Get page data (from cache or server)
-async function getPageData(path: string): Promise<PageData | null> {
+async function getPageData(path: string, signal?: AbortSignal): Promise<PageData | null> {
 	const cached = prefetchCache.get(path);
 	if (cached && cached.expiresAt > Date.now()) {
 		prefetchCache.delete(path);
 		return cached.data;
 	}
 	if (cached) prefetchCache.delete(path);
-	return fetchPageFromServer(path);
+	return fetchPageFromServer(path, signal);
 }
 
 // Content is trusted - Templ auto-escapes on the server
@@ -477,6 +553,31 @@ async function updateDOM(data: PageData, pageContent: string): Promise<void> {
 
 	// Re-initialize runtime for new content
 	await initNewContent();
+
+	// Update active links
+	updateActiveLinks();
+
+	// Focus management for accessibility
+	const focusTarget = document.querySelector('h1, [data-gospa-page-content], main') as HTMLElement;
+	if (focusTarget) {
+		focusTarget.tabIndex = -1;
+		focusTarget.focus({ preventScroll: true });
+	}
+}
+
+
+function updateActiveLinks() {
+	const currentPath = window.location.pathname;
+	document.querySelectorAll('a[href]').forEach(link => {
+		const href = link.getAttribute('href');
+		if (href && (href === currentPath || (href !== '/' && currentPath.startsWith(href)))) {
+			link.classList.add('gospa-active');
+			link.setAttribute('aria-current', 'page');
+		} else {
+			link.classList.remove('gospa-active');
+			link.removeAttribute('aria-current');
+		}
+	});
 }
 
 
@@ -790,10 +891,21 @@ export async function navigate(path: string, options: NavigateOptions = {}): Pro
 		state.isNavigating = true;
 		beforeNavCallbacks.forEach(cb => cb(path));
 
+		// Cancel previous fetch if any
+		if (state.abortController) {
+			state.abortController.abort();
+		}
+		state.abortController = new AbortController();
+
 		try {
-			const data = await getPageData(path);
+			// Save current scroll position before leaving
+			scrollPositions.set(state.currentPath, window.scrollY);
+
+			progressBar.start();
+			const data = await getPageData(path, state.abortController.signal);
 
 			if (!data) {
+				progressBar.finish();
 				window.location.href = path;
 				return false;
 			}
@@ -807,11 +919,16 @@ export async function navigate(path: string, options: NavigateOptions = {}): Pro
 			state.currentPath = path;
 			await performDOMUpdateWithTransitions(data, options);
 
+			progressBar.finish();
 			afterNavCallbacks.forEach(cb => cb(path));
 			document.dispatchEvent(new CustomEvent('gospa:navigated', { detail: { path } }));
 
 			return true;
 		} catch (error) {
+			progressBar.finish();
+			if ((error as Error).name === 'AbortError') {
+				return false;
+			}
 			// BUG FIX: Ensure navigation state is cleared on error
 			// Otherwise isNavigating flag gets stuck, blocking future navigations
 			console.error('[GoSPA] Navigation error:', error);
@@ -865,14 +982,22 @@ function handlePopState(event: PopStateEvent): void {
 	beforeNavCallbacks.forEach(cb => cb(path));
 
 	// Fetch and update
+	progressBar.start();
 	getPageData(path).then(data => {
 		if (data) {
 			state.currentPath = path;
 			performDOMUpdateWithTransitions(data, { scrollToTop: false }).then(() => {
+				progressBar.finish();
+				// Restore scroll position for historical paths
+				const savedPos = scrollPositions.get(path);
+				if (savedPos !== undefined) {
+					window.scrollTo(0, savedPos);
+				}
 				afterNavCallbacks.forEach(cb => cb(path));
 				document.dispatchEvent(new CustomEvent('gospa:navigated', { detail: { path } }));
 			});
 		} else {
+			progressBar.finish();
 			// Fallback to reload
 			window.location.reload();
 		}
@@ -999,6 +1124,9 @@ export function initNavigation(): void {
 
 	// Mark as SPA-enabled
 	document.documentElement.setAttribute('data-gospa-spa', 'true');
+
+	// Initial active link update
+	updateActiveLinks();
 }
 
 // Cleanup navigation
