@@ -119,36 +119,19 @@ func createMainGo(config *ProjectConfig) error {
 	content := fmt.Sprintf(`package main
 
 import (
-	"context"
 	"log"
 
 	_ "%s/routes" // Import routes to trigger init()
 
 	"github.com/aydenstechdungeon/gospa"
-	"github.com/aydenstechdungeon/gospa/routing"
-	"github.com/gofiber/fiber/v3/middleware/compress"
 )
 
 func main() {
-	// Register a simple remote action for testing
-	routing.RegisterRemoteAction("Hello", func(ctx context.Context, input interface{}) (interface{}, error) {
-		return "Hello from GoSPA! 👋", nil
-	})
-
 	app := gospa.New(gospa.Config{
 		RoutesDir: "./routes",
 		DevMode:   true,
 		AppName:   "%s",
 	})
-
-	// Add compression for better performance
-	app.Fiber.Use(compress.New(compress.Config{
-		Level: compress.LevelBestSpeed,
-	}))
-
-	// Note: Cache headers and Link preloads are handled automatically 
-	// by gospa.New() for framework-internal resources.
-	// Add your own custom cache middleware here if needed for /static.
 
 	if err := app.Run(":3000"); err != nil {
 		log.Fatal(err)
@@ -180,9 +163,6 @@ templ Page() {
 				<a href="https://gospa.dev/docs" class="btn btn-primary" target="_blank" rel="noopener">
 					Read Documentation →
 				</a>
-				<button class="btn btn-secondary" onclick="testRemote()">
-					Test Remote Action
-				</button>
 			</div>
 			<div class="features">
 				<div class="feature">
@@ -200,25 +180,6 @@ templ Page() {
 			</div>
 		</div>
 	</div>
-	<script>
-		function testRemote() {
-			if (typeof GoSPA !== 'undefined' && GoSPA.remote) {
-				GoSPA.remote('Hello')
-					.then(function(result) {
-						if (result.ok) {
-							alert('Server says: ' + result.data);
-						} else {
-							alert('Error: ' + result.error);
-						}
-					})
-					.catch(function(err) {
-						alert('Request failed: ' + (err.message || 'Unknown error'));
-					});
-			} else {
-				alert('GoSPA runtime not loaded yet. Please wait a moment and try again.');
-			}
-		}
-	</script>
 }
 `
 
@@ -228,8 +189,6 @@ templ Page() {
 
 func createLayout(config *ProjectConfig) error {
 	content := `package routes
-
-import gospatempl "github.com/aydenstechdungeon/gospa/templ"
 
 templ Layout(title string) {
 	<!DOCTYPE html>
@@ -245,7 +204,6 @@ templ Layout(title string) {
 		<link rel="preconnect" href="/"/>
 
 		<link rel="stylesheet" href="/static/css/style.css"/>
-		@gospatempl.RuntimeScript("/_gospa/runtime.js")
 	</head>
 	<body>
 		<main>
