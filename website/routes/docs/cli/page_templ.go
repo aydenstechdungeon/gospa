@@ -41,7 +41,7 @@ gospa create myapp --module github.com/user/myapp --docker`, "bash", "terminal")
 		if templ_7745c5c3_Err != nil {
 			return templ_7745c5c3_Err
 		}
-		templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 2, "<div class=\"mt-4 rounded-xl border border-[var(--border)] overflow-hidden\"><table class=\"w-full text-left text-sm\"><thead class=\"bg-[var(--bg-secondary)] text-[var(--text-muted)] uppercase tracking-wider\"><tr><th class=\"px-4 py-3 font-bold\">Flag</th><th class=\"px-4 py-3 font-bold\">Short</th><th class=\"px-4 py-3 font-bold\">Default</th><th class=\"px-4 py-3 font-bold\">Description</th></tr></thead> <tbody class=\"divide-y divide-[var(--border)]\"><tr><td class=\"px-4 py-3 mono text-[var(--accent-primary)]\">--module</td><td class=\"px-4 py-3 mono text-[var(--accent-primary)]\">-m</td><td class=\"px-4 py-3 text-[var(--text-muted)]\">&lt;name&gt;</td><td class=\"px-4 py-3 text-[var(--text-secondary)]\">Go module name for the project</td></tr><tr><td class=\"px-4 py-3 mono text-[var(--accent-primary)]\">--output</td><td class=\"px-4 py-3 mono text-[var(--accent-primary)]\">-o</td><td class=\"px-4 py-3 text-[var(--text-muted)]\">&lt;name&gt;</td><td class=\"px-4 py-3 text-[var(--text-secondary)]\">Output directory for the project</td></tr><tr><td class=\"px-4 py-3 mono text-[var(--accent-primary)]\">--no-git</td><td class=\"px-4 py-3 mono text-[var(--accent-primary)]\"></td><td class=\"px-4 py-3 text-[var(--text-muted)]\">false</td><td class=\"px-4 py-3 text-[var(--text-secondary)]\">Skip .gitignore creation</td></tr><tr><td class=\"px-4 py-3 mono text-[var(--accent-primary)]\">--docker</td><td class=\"px-4 py-3 mono text-[var(--accent-primary)]\"></td><td class=\"px-4 py-3 text-[var(--text-muted)]\">false</td><td class=\"px-4 py-3 text-[var(--text-secondary)]\">Add a default Dockerfile</td></tr></tbody></table></div></div><div><h2 class=\"text-2xl font-bold mb-4 border-b border-[var(--border)] pb-2 italic mono\">gospa build</h2><p class=\"text-[var(--text-secondary)] mb-4\">Builds the application for production deployment.</p>")
+		templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 2, "<div class=\"mt-4 rounded-xl border border-[var(--border)] overflow-hidden\"><table class=\"w-full text-left text-sm\"><thead class=\"bg-[var(--bg-secondary)] text-[var(--text-muted)] uppercase tracking-wider\"><tr><th class=\"px-4 py-3 font-bold\">Flag</th><th class=\"px-4 py-3 font-bold\">Short</th><th class=\"px-4 py-3 font-bold\">Default</th><th class=\"px-4 py-3 font-bold\">Description</th></tr></thead> <tbody class=\"divide-y divide-[var(--border)]\"><tr><td class=\"px-4 py-3 mono text-[var(--accent-primary)]\">--module</td><td class=\"px-4 py-3 mono text-[var(--accent-primary)]\">-m</td><td class=\"px-4 py-3 text-[var(--text-muted)]\">myapp</td><td class=\"px-4 py-3 text-[var(--text-secondary)]\">Go module name for the project</td></tr><tr><td class=\"px-4 py-3 mono text-[var(--accent-primary)]\">--output</td><td class=\"px-4 py-3 mono text-[var(--accent-primary)]\">-o</td><td class=\"px-4 py-3 text-[var(--text-muted)]\">myapp</td><td class=\"px-4 py-3 text-[var(--text-secondary)]\">Output directory for the project</td></tr><tr><td class=\"px-4 py-3 mono text-[var(--accent-primary)]\">--no-git</td><td class=\"px-4 py-3 mono text-[var(--accent-primary)]\"></td><td class=\"px-4 py-3 text-[var(--text-muted)]\">false</td><td class=\"px-4 py-3 text-[var(--text-secondary)]\">Skip .gitignore creation</td></tr><tr><td class=\"px-4 py-3 mono text-[var(--accent-primary)]\">--docker</td><td class=\"px-4 py-3 mono text-[var(--accent-primary)]\"></td><td class=\"px-4 py-3 text-[var(--text-muted)]\">false</td><td class=\"px-4 py-3 text-[var(--text-secondary)]\">Add a default Dockerfile</td></tr></tbody></table></div></div><div><h2 class=\"text-2xl font-bold mb-4 border-b border-[var(--border)] pb-2 italic mono\">gospa build</h2><p class=\"text-[var(--text-secondary)] mb-4\">Builds the application for production deployment.</p>")
 		if templ_7745c5c3_Err != nil {
 			return templ_7745c5c3_Err
 		}
@@ -70,7 +70,47 @@ gospa generate --input . --output ./gen`, "bash", "terminal").Render(ctx, templ_
 		if templ_7745c5c3_Err != nil {
 			return templ_7745c5c3_Err
 		}
-		templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 5, "<div class=\"mt-4 rounded-xl border border-[var(--border)] overflow-hidden\"><table class=\"w-full text-left text-sm\"><thead class=\"bg-[var(--bg-secondary)] text-[var(--text-muted)] uppercase tracking-wider\"><tr><th class=\"px-4 py-3 font-bold\">Flag</th><th class=\"px-4 py-3 font-bold\">Short</th><th class=\"px-4 py-3 font-bold\">Default</th><th class=\"px-4 py-3 font-bold\">Description</th></tr></thead> <tbody class=\"divide-y divide-[var(--border)]\"><tr><td class=\"px-4 py-3 mono text-[var(--accent-primary)]\">--input</td><td class=\"px-4 py-3 mono text-[var(--accent-primary)]\">-i</td><td class=\"px-4 py-3 text-[var(--text-muted)]\">.</td><td class=\"px-4 py-3 text-[var(--text-secondary)]\">Input directory for exploration</td></tr><tr><td class=\"px-4 py-3 mono text-[var(--accent-primary)]\">--output</td><td class=\"px-4 py-3 mono text-[var(--accent-primary)]\">-o</td><td class=\"px-4 py-3 text-[var(--text-muted)]\">./generated</td><td class=\"px-4 py-3 text-[var(--text-secondary)]\">Output directory for generated files</td></tr></tbody></table></div></div></section><section><h2 class=\"text-2xl font-bold mb-4 border-b border-[var(--border)] pb-2\">Project Structure</h2><p class=\"text-[var(--text-secondary)] mb-4\">A newly created GoSPA project has the following structure:</p>")
+		templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 5, "<div class=\"mt-4 rounded-xl border border-[var(--border)] overflow-hidden\"><table class=\"w-full text-left text-sm\"><thead class=\"bg-[var(--bg-secondary)] text-[var(--text-muted)] uppercase tracking-wider\"><tr><th class=\"px-4 py-3 font-bold\">Flag</th><th class=\"px-4 py-3 font-bold\">Short</th><th class=\"px-4 py-3 font-bold\">Default</th><th class=\"px-4 py-3 font-bold\">Description</th></tr></thead> <tbody class=\"divide-y divide-[var(--border)]\"><tr><td class=\"px-4 py-3 mono text-[var(--accent-primary)]\">--input</td><td class=\"px-4 py-3 mono text-[var(--accent-primary)]\">-i</td><td class=\"px-4 py-3 text-[var(--text-muted)]\">.</td><td class=\"px-4 py-3 text-[var(--text-secondary)]\">Input directory for exploration</td></tr><tr><td class=\"px-4 py-3 mono text-[var(--accent-primary)]\">--output</td><td class=\"px-4 py-3 mono text-[var(--accent-primary)]\">-o</td><td class=\"px-4 py-3 text-[var(--text-muted)]\">./generated</td><td class=\"px-4 py-3 text-[var(--text-secondary)]\">Output directory for generated files</td></tr></tbody></table></div></div><div><h2 class=\"text-2xl font-bold mb-4 border-b border-[var(--border)] pb-2 italic mono\">gospa add</h2><p class=\"text-[var(--text-secondary)] mb-4\">Add plugins and features to your project.</p>")
+		if templ_7745c5c3_Err != nil {
+			return templ_7745c5c3_Err
+		}
+		templ_7745c5c3_Err = components.CodeBlock(`gospa add tailwind
+gospa add postcss
+gospa add image
+gospa add validation
+gospa add seo
+gospa add auth`, "bash", "terminal").Render(ctx, templ_7745c5c3_Buffer)
+		if templ_7745c5c3_Err != nil {
+			return templ_7745c5c3_Err
+		}
+		templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 6, "<div class=\"mt-4 rounded-xl border border-[var(--border)] overflow-hidden\"><table class=\"w-full text-left text-sm\"><thead class=\"bg-[var(--bg-secondary)] text-[var(--text-muted)] uppercase tracking-wider\"><tr><th class=\"px-4 py-3 font-bold\">Feature</th><th class=\"px-4 py-3 font-bold\">Description</th></tr></thead> <tbody class=\"divide-y divide-[var(--border)]\"><tr><td class=\"px-4 py-3 mono text-[var(--accent-primary)]\">tailwind</td><td class=\"px-4 py-3 text-[var(--text-secondary)]\">Add Tailwind CSS support</td></tr><tr><td class=\"px-4 py-3 mono text-[var(--accent-primary)]\">postcss</td><td class=\"px-4 py-3 text-[var(--text-secondary)]\">Add PostCSS with Tailwind extensions</td></tr><tr><td class=\"px-4 py-3 mono text-[var(--accent-primary)]\">image</td><td class=\"px-4 py-3 text-[var(--text-secondary)]\">Add image optimization</td></tr><tr><td class=\"px-4 py-3 mono text-[var(--accent-primary)]\">validation</td><td class=\"px-4 py-3 text-[var(--text-secondary)]\">Add form validation (Valibot + Go validator)</td></tr><tr><td class=\"px-4 py-3 mono text-[var(--accent-primary)]\">seo</td><td class=\"px-4 py-3 text-[var(--text-secondary)]\">Add SEO optimization (sitemap, meta tags)</td></tr><tr><td class=\"px-4 py-3 mono text-[var(--accent-primary)]\">auth</td><td class=\"px-4 py-3 text-[var(--text-secondary)]\">Add authentication (OAuth2, JWT, OTP)</td></tr></tbody></table></div></div><div><h2 class=\"text-2xl font-bold mb-4 border-b border-[var(--border)] pb-2 italic mono\">gospa prune</h2><p class=\"text-[var(--text-secondary)] mb-4\">Remove unused state from state stores to prevent memory leaks.</p>")
+		if templ_7745c5c3_Err != nil {
+			return templ_7745c5c3_Err
+		}
+		templ_7745c5c3_Err = components.CodeBlock(`gospa prune
+gospa prune --dry-run
+gospa prune --older-than 2h
+gospa prune --all`, "bash", "terminal").Render(ctx, templ_7745c5c3_Buffer)
+		if templ_7745c5c3_Err != nil {
+			return templ_7745c5c3_Err
+		}
+		templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 7, "<div class=\"mt-4 rounded-xl border border-[var(--border)] overflow-hidden\"><table class=\"w-full text-left text-sm\"><thead class=\"bg-[var(--bg-secondary)] text-[var(--text-muted)] uppercase tracking-wider\"><tr><th class=\"px-4 py-3 font-bold\">Flag</th><th class=\"px-4 py-3 font-bold\">Short</th><th class=\"px-4 py-3 font-bold\">Default</th><th class=\"px-4 py-3 font-bold\">Description</th></tr></thead> <tbody class=\"divide-y divide-[var(--border)]\"><tr><td class=\"px-4 py-3 mono text-[var(--accent-primary)]\">--dry-run</td><td class=\"px-4 py-3 mono text-[var(--accent-primary)]\">-d</td><td class=\"px-4 py-3 text-[var(--text-muted)]\">false</td><td class=\"px-4 py-3 text-[var(--text-secondary)]\">Show what would be pruned without removing</td></tr><tr><td class=\"px-4 py-3 mono text-[var(--accent-primary)]\">--older-than</td><td class=\"px-4 py-3 mono text-[var(--accent-primary)]\">-o</td><td class=\"px-4 py-3 text-[var(--text-muted)]\">1h</td><td class=\"px-4 py-3 text-[var(--text-secondary)]\">Remove state older than duration</td></tr><tr><td class=\"px-4 py-3 mono text-[var(--accent-primary)]\">--all</td><td class=\"px-4 py-3 mono text-[var(--accent-primary)]\">-a</td><td class=\"px-4 py-3 text-[var(--text-muted)]\">false</td><td class=\"px-4 py-3 text-[var(--text-secondary)]\">Remove all state (use with caution)</td></tr></tbody></table></div></div><div><h2 class=\"text-2xl font-bold mb-4 border-b border-[var(--border)] pb-2 italic mono\">gospa clean</h2><p class=\"text-[var(--text-secondary)] mb-4\">Remove build artifacts and generated files.</p>")
+		if templ_7745c5c3_Err != nil {
+			return templ_7745c5c3_Err
+		}
+		templ_7745c5c3_Err = components.CodeBlock(`gospa clean`, "bash", "terminal").Render(ctx, templ_7745c5c3_Buffer)
+		if templ_7745c5c3_Err != nil {
+			return templ_7745c5c3_Err
+		}
+		templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 8, "</div><div><h2 class=\"text-2xl font-bold mb-4 border-b border-[var(--border)] pb-2 italic mono\">gospa watch</h2><p class=\"text-[var(--text-secondary)] mb-4\">Build and watch for changes.</p>")
+		if templ_7745c5c3_Err != nil {
+			return templ_7745c5c3_Err
+		}
+		templ_7745c5c3_Err = components.CodeBlock(`gospa watch`, "bash", "terminal").Render(ctx, templ_7745c5c3_Buffer)
+		if templ_7745c5c3_Err != nil {
+			return templ_7745c5c3_Err
+		}
+		templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 9, "</div></section><section><h2 class=\"text-2xl font-bold mb-4 border-b border-[var(--border)] pb-2\">Project Structure</h2><p class=\"text-[var(--text-secondary)] mb-4\">A newly created GoSPA project has the following structure:</p>")
 		if templ_7745c5c3_Err != nil {
 			return templ_7745c5c3_Err
 		}
@@ -87,7 +127,7 @@ gospa generate --input . --output ./gen`, "bash", "terminal").Render(ctx, templ_
 		if templ_7745c5c3_Err != nil {
 			return templ_7745c5c3_Err
 		}
-		templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 6, "</section></div>")
+		templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 10, "</section></div>")
 		if templ_7745c5c3_Err != nil {
 			return templ_7745c5c3_Err
 		}
