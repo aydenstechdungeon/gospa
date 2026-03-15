@@ -49,28 +49,30 @@ examples/todo/
 ## Features
 
 ### Core Functionality
-- [ ] Add todos via input + Enter
-- [ ] Toggle individual todo completion
-- [ ] Delete individual todos
-- [ ] Toggle all todos (complete/uncomplete all)
-- [ ] Filter by: All / Active / Completed
-- [ ] Clear all completed todos
-- [ ] Persistent storage via localStorage
+- [x] Add todos via input + Enter
+- [x] Toggle individual todo completion
+- [x] Delete individual todos
+- [x] Toggle all todos (complete/uncomplete all)
+- [x] Filter by: All / Active / Completed
+- [x] Clear all completed todos
+- [x] Persistent storage via localStorage
 
 ### UI Features
-- [ ] Empty state illustration
-- [ ] Strikethrough animation on completion
-- [ ] Slide-out animation on deletion
-- [ ] Filter tabs with active indicator
-- [ ] Items left counter
-- [ ] Checkbox morphing animations
+- [x] Empty state illustration
+- [x] Strikethrough animation on completion
+- [x] Slide-out animation on deletion
+- [x] Filter tabs with active indicator
+- [x] Items left counter
+- [x] Checkbox morphing animations
 
 ### Technical Features
-- [ ] Reactive state with `data-gospa-state`
-- [ ] Derived values using client-side `Derived`
-- [ ] Batch updates for toggle-all
-- [ ] Effect for localStorage persistence
-- [ ] Keyboard shortcuts (Enter to add, Escape to clear)
+- [x] Reactive state with `data-gospa-state`
+- [x] Derived values using client-side `Derived`
+- [x] Batch updates for toggle-all
+- [x] Effect for localStorage persistence
+- [x] Keyboard shortcuts (Enter to add, Escape to clear)
+
+> **Note:** GoSPA uses `data-gospa-state` for initial state and `data-bind` for DOM bindings. Event handlers use standard `onclick` attributes with the `__GOSPA__` global API.
 
 ## Design System
 
@@ -165,53 +167,84 @@ examples/todo/
 ### Adding a Todo
 
 ```javascript
-// Get current state
+// Get the state for this component
 const state = __GOSPA__.getState('todo-app');
 if (!state) return;
 
 // Get input value
-const input = state.get('inputValue');
-if (!input || !input.trim()) return;
+const inputValue = state.get('inputValue');
+if (!inputValue || !inputValue.trim()) return;
 
 // Create new todo
 const newTodo = {
     id: Date.now().toString(36) + Math.random().toString(36).substr(2),
-    text: input.trim(),
+    text: inputValue.trim(),
     completed: false,
     createdAt: Date.now()
 };
 
 // Update todos array
-state.update('todos', todos => [...todos, newTodo]);
+const todos = state.get('todos') || [];
+state.set('todos', [...todos, newTodo]);
 state.set('inputValue', ''); // Clear input
 ```
 
-### Derived Value: Filtered Todos
+### Setting Initial State
 
-```javascript
-const filtered = new GoSPA.Derived(() => {
-    const todos = state.get('todos');
-    const filter = state.get('filter');
-    
-    switch (filter) {
-        case 'active': return todos.filter(t => !t.completed);
-        case 'completed': return todos.filter(t => t.completed);
-        default: return todos;
-    }
-});
+In your Templ template, use `data-gospa-state` to set initial state:
+
+```go
+templ TodoPage() {
+	<div 
+		data-gospa-component="todo-app"
+		data-gospa-state='{"todos":[],"filter":"all","inputValue":""}'
+	>
+		<!-- Component content -->
+	</div>
+}
+```
+
+### DOM Bindings
+
+Use `data-bind` for reactive text and `data-bind:value` for two-way input binding:
+
+```html
+<!-- Display bound value -->
+<span data-bind="count">0</span>
+
+<!-- Two-way input binding -->
+<input data-bind:value="inputValue" />
 ```
 
 ### localStorage Persistence
 
 ```javascript
-new GoSPA.Effect(() => {
-    const todos = state.get('todos');
-    try {
-        localStorage.setItem('gospa-todos', JSON.stringify(todos));
-    } catch (e) {
-        console.warn('Failed to save todos:', e);
+// Create effect for persistence
+const state = __GOSPA__.getState('todo-app');
+if (!state) return;
+
+// Watch for changes and persist
+const originalSet = state.set.bind(state);
+state.set = function(key, value) {
+    originalSet(key, value);
+    if (key === 'todos') {
+        try {
+            localStorage.setItem('gospa-todos', JSON.stringify(value));
+        } catch (e) {
+            console.warn('Failed to save todos:', e);
+        }
     }
-});
+};
+
+// Load saved todos on init
+try {
+    const saved = localStorage.getItem('gospa-todos');
+    if (saved) {
+        state.set('todos', JSON.parse(saved));
+    }
+} catch (e) {
+    console.warn('Failed to load todos:', e);
+}
 ```
 
 ## Testing Checklist

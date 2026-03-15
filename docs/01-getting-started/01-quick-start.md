@@ -124,31 +124,19 @@ Create `routes/counter.templ`:
 ```go
 package routes
 
-import (
-	"github.com/aydenstechdungeon/gospa/templ"
-	"github.com/aydenstechdungeon/gospa/state"
-)
-
 templ CounterPage() {
-	<div data-gospa-component="counter">
+	<div 
+		data-gospa-component="counter"
+		data-gospa-state='{"count":0}'
+	>
 		<h1>Counter</h1>
-		<p data-bind="text:count">0</p>
-		<button data-on="click:increment">+1</button>
+		<p data-bind="count">0</p>
+		<button 
+			onclick="var r=__GOSPA__.getState('counter','count');r&&__GOSPA__.setState('counter','count',r.get()+1)"
+		>
+			+1
+		</button>
 	</div>
-}
-
-templ CounterState() *state.StateMap {
-	sm := state.NewStateMap()
-	sm.AddAny("count", 0)
-	return sm
-}
-
-templ CounterActions() map[string]func() {
-	return map[string]func(){
-		"increment": func() {
-			// Action handled by client runtime
-		},
-	}
 }
 ```
 
@@ -161,47 +149,36 @@ GoSPA includes a TypeScript runtime that provides Svelte-like reactivity:
 ```typescript
 import { Rune, Derived, Effect, StateMap } from '@gospa/runtime'
 
-// Create reactive state
-const count = new Rune(0)
+// Get or create a state instance
+const state = __GOSPA__.getState('counter')
+if (!state) return
 
-// Create derived value
-const doubled = new Derived(() => count.get() * 2)
+// Get current value
+const count = state.get('count')
 
-// React to changes
-const effect = new Effect(() => {
-  console.log('Count changed:', count.get())
-  return () => console.log('Cleanup')
-})
+// Set new value
+state.set('count', count + 1)
 
-// Update state
-count.set(5)
-count.update(v => v + 1)
+// Or use the convenience method directly
+__GOSPA__.setState('counter', 'count', newValue)
 ```
 
 ### DOM Bindings
 
-The runtime automatically handles DOM bindings:
+The runtime automatically handles DOM bindings using `data-bind`:
 
 ```html
 <!-- Bind text content -->
-<p data-bind="text:count">0</p>
+<p data-bind="count">0</p>
 
-<!-- Bind input value -->
-<input data-bind="value:name" />
+<!-- Two-way binding with input -->
+<input data-bind:value="inputValue" />
+```
 
-<!-- Two-way binding -->
-<input data-model="name" />
+Event handlers use standard onclick:
 
-<!-- Event handlers -->
-<button data-on="click:increment">Click</button>
-
-<!-- Conditional rendering -->
-<div data-bind="if:isVisible">Hidden content</div>
-
-<!-- List rendering -->
-<ul data-bind="list:items" data-item-name="todo">
-  <li>{ todo.text }</li>
-</ul>
+```html
+<button onclick="...">Click</button>
 ```
 
 ## Routing
@@ -444,15 +421,18 @@ Choose between full and minimal runtime:
 | `gospa dev` | Start development server |
 | `gospa build` | Build for production |
 | `gospa generate` | Generate routes and types |
-| `gospa check` | Type check project |
+| `gospa add <feature>` | Add plugins (tailwind, postcss, image, validation, seo, auth) |
+| `gospa prune` | Remove unused state |
+| `gospa clean` | Remove build artifacts |
+| `gospa watch` | Build and watch for changes |
 
 ## Next Steps
 
-1. **[Configuration Reference](./CONFIGURATION.md)** - All configuration options
-2. **[Client Runtime API](./CLIENT_RUNTIME.md)** - Complete TypeScript API
-3. **[State Primitives](./STATE_PRIMITIVES.md)** - Go reactive primitives
-4. **[CLI Reference](./CLI.md)** - All CLI commands
-5. **[Runtime Selection](./RUNTIME.md)** - Choose the right runtime
+1. **[Configuration Reference](./04-api-reference/02-configuration.md)** - All configuration options
+2. **[Client Runtime API](./03-features/02-runtime-api.md)** - Complete TypeScript API
+3. **[Core Concepts - State](./02-core-concepts/03-state.md)** - Go reactive primitives
+4. **[CLI Reference](./04-api-reference/03-cli.md)** - All CLI commands
+5. **[Client Runtime](./03-features/01-client-runtime.md)** - Choose the right runtime
 
 ## Common Patterns
 
@@ -463,18 +443,24 @@ Choose between full and minimal runtime:
 package routes
 
 templ CounterPage() {
-	<div data-gospa-component="counter">
+	<div 
+		data-gospa-component="counter"
+		data-gospa-state='{"count":0}'
+	>
 		<h2>Counter</h2>
-		<p>Count: <span data-gospa-bind="count">0</span></p>
-		<button data-gospa-on:click="decrement">-</button>
-		<button data-gospa-on:click="increment">+</button>
+		<p>Count: <span data-bind="count">0</span></p>
+		<button 
+			onclick="var r=__GOSPA__.getState('counter','count');r&&__GOSPA__.setState('counter','count',r.get()-1)"
+		>
+			-
+		</button>
+		<button 
+			onclick="var r=__GOSPA__.getState('counter','count');r&&__GOSPA__.setState('counter','count',r.get()+1)"
+		>
+			+
+		</button>
 	</div>
 }
-```
-
-```typescript
-// Client-side handler
-document.querySelector('[data-gospa-component="counter"]')
 ```
 
 ### Todo List
@@ -484,19 +470,23 @@ document.querySelector('[data-gospa-component="counter"]')
 package routes
 
 templ TodosPage() {
-	<div data-gospa-component="todos">
+	<div 
+		data-gospa-component="todos"
+		data-gospa-state='{"todos":[],"newTodo":""}'
+	>
 		<h2>Todos</h2>
 		<input 
 			type="text" 
-			data-gospa-bind:value="newTodo"
+			data-bind:value="newTodo"
 			placeholder="Add todo..."
 		/>
-		<button data-gospa-on:click="addTodo">Add</button>
-		<ul data-gospa-each="todos">
-			<li>
-				<span data-gospa-bind="text"></span>
-				<button data-gospa-on:click="removeTodo">×</button>
-			</li>
+		<button 
+			onclick="var s=__GOSPA__.getState('todos');if(!s)return;var v=s.get('newTodo');if(!v)return;var t=s.get('todos')||[];s.set('todos',[...t,{id:Date.now(),text:v,completed:false}]);s.set('newTodo','')"
+		>
+			Add
+		</button>
+		<ul data-bind="list:todos">
+			<li>{ todo.text }</li>
 		</ul>
 	</div>
 }
@@ -509,24 +499,32 @@ templ TodosPage() {
 package routes
 
 templ ContactPage() {
-	<form data-gospa-component="contact-form">
+	<form 
+		data-gospa-component="contact-form"
+		data-gospa-state='{"name":"","email":"","message":""}'
+	>
 		<input 
 			type="text" 
 			name="name"
-			data-gospa-bind:value="name"
+			data-bind:value="name"
 			required
 		/>
 		<input 
 			type="email" 
 			name="email"
-			data-gospa-bind:value="email"
+			data-bind:value="email"
 			required
 		/>
 		<textarea 
 			name="message"
-			data-gospa-bind:value="message"
+			data-bind:value="message"
 		></textarea>
-		<button type="submit" data-gospa-on:click="submit">Send</button>
+		<button 
+			type="submit"
+			onclick="console.log('Form submitted')"
+		>
+			Send
+		</button>
 	</form>
 }
 ```

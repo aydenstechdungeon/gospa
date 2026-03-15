@@ -21,7 +21,6 @@ docs/
 - [Tutorial](01-getting-started/02-tutorial.md) - Build a todo app
 
 ### Core Concepts
-- [Architecture](02-core-concepts/01-architecture.md) - How GoSPA works
 - [Rendering](02-core-concepts/02-rendering.md) - SSR, SPA, and islands
 - [State](02-core-concepts/03-state.md) - Reactive state management
 - [Components](02-core-concepts/04-components.md) - Component system
