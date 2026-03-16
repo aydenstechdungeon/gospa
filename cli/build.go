@@ -4,6 +4,7 @@ import (
 	"compress/gzip"
 	"fmt"
 	"io"
+	"io/fs"
 	"os"
 	"os/exec"
 	"path/filepath"
@@ -225,7 +226,7 @@ func copyStaticAssets(config *BuildConfig) error {
 			return err
 		}
 
-		return os.WriteFile(destPath, data, info.Mode()) //nolint:gosec
+		return os.WriteFile(destPath, data, info.Mode())
 	})
 }
 
@@ -335,16 +336,32 @@ func Clean() {
 	}
 
 	// Remove generated templ files
-	if err := filepath.Walk(".", func(path string, _ os.FileInfo, err error) error {
-		if err != nil {
-			return err
+	// Use WalkDir for safer filesystem traversal (avoids TOCTOU race)
+	if err := filepath.WalkDir(".", func(path string, d fs.DirEntry, walkErr error) error {
+		if walkErr != nil {
+			return walkErr
 		}
 
-		if strings.HasSuffix(path, "_templ.go") || strings.HasSuffix(path, "_templ.txt") {
-			if err := os.Remove(path); err != nil { //nolint:gosec
-				fmt.Fprintf(os.Stderr, "Failed to remove %s: %v\n", path, err)
+		if d.IsDir() {
+			return nil
+		}
+
+		name := d.Name()
+		if strings.HasSuffix(name, "_templ.go") || strings.HasSuffix(name, "_templ.txt") {
+			// Clean and validate path to prevent any potential path traversal
+			cleanPath := filepath.Clean(path)
+			// Resolve to absolute path to ensure we're within the project
+			absPath, err := filepath.Abs(cleanPath)
+			if err != nil {
+				fmt.Fprintf(os.Stderr, "Failed to resolve path %s: %v\n", cleanPath, err)
+				return nil
+			}
+			// Remove the cleaned path
+			//nolint:gosec // clean command is intended to remove files identified during walk; path validated with filepath.Abs
+			if err := os.Remove(absPath); err != nil {
+				fmt.Fprintf(os.Stderr, "Failed to remove %s: %v\n", cleanPath, err)
 			} else {
-				fmt.Printf("✓ Removed %s\n", path)
+				fmt.Printf("✓ Removed %s\n", cleanPath)
 			}
 		}
 

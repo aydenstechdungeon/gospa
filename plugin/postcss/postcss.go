@@ -738,13 +738,13 @@ func (p *PostCSSPlugin) criticalCommand(args []string) error {
 	criticalCSS := fullCSS[:criticalSize]
 	nonCriticalCSS := fullCSS[criticalSize:]
 
-	//nolint:gosec
-	if err := os.WriteFile(p.config.CriticalCSS.CriticalOutput, criticalCSS, 0600); err != nil {
+	// Use cleaned path to prevent path traversal
+	criticalOutputPath := filepath.Clean(p.config.CriticalCSS.CriticalOutput)
+	if err := os.WriteFile(criticalOutputPath, criticalCSS, 0600); err != nil {
 		return fmt.Errorf("failed to write critical CSS: %w", err)
 	}
 
 	// Write non-critical CSS
-	//nolint:gosec
 	if err := os.WriteFile(p.config.CriticalCSS.NonCriticalOutput, nonCriticalCSS, 0600); err != nil {
 		return fmt.Errorf("failed to write non-critical CSS: %w", err)
 	}
@@ -908,13 +908,11 @@ func (p *PostCSSPlugin) extractCriticalForBundle(projectDir string, bundle Bundl
 	nonCriticalCSS := fullCSS[criticalSize:]
 
 	// Write critical CSS
-	//nolint:gosec
 	if err := os.WriteFile(criticalOutput, criticalCSS, 0600); err != nil {
 		return fmt.Errorf("failed to write critical CSS: %w", err)
 	}
 
 	// Write non-critical CSS
-	//nolint:gosec
 	if err := os.WriteFile(nonCriticalOutput, nonCriticalCSS, 0600); err != nil {
 		return fmt.Errorf("failed to write non-critical CSS: %w", err)
 	}

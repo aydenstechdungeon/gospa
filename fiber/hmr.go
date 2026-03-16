@@ -9,6 +9,7 @@ import (
 	"sync"
 	"time"
 
+	"github.com/fsnotify/fsnotify"
 	json "github.com/goccy/go-json"
 
 	websocket "github.com/gofiber/contrib/v3/websocket"
@@ -66,7 +67,7 @@ type HMRUpdatePayload struct {
 	StatePreserve bool   `json:"statePreserve"`
 }
 
-// HMRFileWatcher watches files for changes for HMR.
+// HMRFileWatcher watches files for changes for HMR using fsnotify.
 type HMRFileWatcher struct {
 	paths      []string
 	ignore     []string
@@ -138,65 +139,90 @@ func (fw *HMRFileWatcher) Stop() {
 	fw.running = false
 }
 
-// watch implements the file watching loop.
+// watch implements the file watching loop using fsnotify for event-based watching.
 func (fw *HMRFileWatcher) watch() {
-	ticker := time.NewTicker(100 * time.Millisecond)
-	defer ticker.Stop()
+	// Create new fsnotify watcher
+	watcher, err := fsnotify.NewWatcher()
+	if err != nil {
+		fmt.Printf("[HMR] Failed to create watcher: %v\n", err)
+		return
+	}
+	defer func() {
+		if err := watcher.Close(); err != nil {
+			fmt.Printf("[HMR] Failed to close watcher: %v\n", err)
+		}
+	}()
 
-	fileModTimes := make(map[string]time.Time)
+	// Add all watch paths recursively
+	for _, path := range fw.paths {
+		// Walk directory to add all subdirectories
+		_ = filepath.Walk(path, func(walkPath string, info os.FileInfo, err error) error {
+			if err != nil {
+				return nil
+			}
+			if info.IsDir() {
+				// Check if directory should be ignored
+				shouldIgnore := false
+				for _, ignore := range fw.ignore {
+					if matched, err := filepath.Match(ignore, info.Name()); err == nil && matched {
+						shouldIgnore = true
+						break
+					}
+				}
+				if !shouldIgnore {
+					if err := watcher.Add(walkPath); err != nil {
+						fmt.Printf("[HMR] Failed to watch %s: %v\n", walkPath, err)
+					}
+				}
+			}
+			return nil
+		})
+	}
 
+	fmt.Printf("[HMR] Watching %d paths for changes\n", len(fw.paths))
+
+	// Event loop
 	for {
 		select {
 		case <-fw.stopChan:
 			return
-		case <-ticker.C:
-			fw.checkFiles(fileModTimes)
-		}
-	}
-}
-
-// checkFiles checks for file modifications.
-func (fw *HMRFileWatcher) checkFiles(modTimes map[string]time.Time) {
-	for _, watchPath := range fw.paths {
-		_ = filepath.Walk(watchPath, func(path string, info os.FileInfo, err error) error {
-			if err != nil || info.IsDir() {
-				return nil
+		case event, ok := <-watcher.Events:
+			if !ok {
+				return
 			}
 
-			// Check ignore patterns - use path matching instead of partial string match
-			for _, ignore := range fw.ignore {
-				if matched, err := filepath.Match(ignore, filepath.Base(path)); err == nil && matched {
-					return nil
-				}
-				// Also check if the path contains the ignore pattern as a directory component
-				if strings.Contains(filepath.Clean(path), string(filepath.Separator)+ignore+string(filepath.Separator)) {
-					return nil
-				}
-				// Check if the ignore pattern matches at the start of the path
-				if strings.HasPrefix(filepath.Clean(path), ignore+string(filepath.Separator)) {
-					return nil
-				}
-			}
-
-			// Check for relevant file types
-			if !fw.isWatchedFile(path) {
-				return nil
-			}
-
-			currentMod := info.ModTime()
-			if lastMod, exists := modTimes[path]; exists {
-				if currentMod.After(lastMod) {
-					fw.changeChan <- HMRFileChangeEvent{
-						Path:      path,
-						EventType: "modify",
-						Timestamp: time.Now(),
+			// Only handle write, create, and rename events
+			if event.Has(fsnotify.Write) || event.Has(fsnotify.Create) || event.Has(fsnotify.Rename) {
+				// Check if it's a watched file type
+				if fw.isWatchedFile(event.Name) {
+					// Check ignore patterns
+					shouldIgnore := false
+					for _, ignore := range fw.ignore {
+						if matched, err := filepath.Match(ignore, filepath.Base(event.Name)); err == nil && matched {
+							shouldIgnore = true
+							break
+						}
+					}
+					if !shouldIgnore {
+						eventType := "modify"
+						if event.Has(fsnotify.Create) {
+							eventType = "create"
+						}
+						fw.changeChan <- HMRFileChangeEvent{
+							Path:      event.Name,
+							EventType: eventType,
+							Timestamp: time.Now(),
+						}
 					}
 				}
 			}
-			modTimes[path] = currentMod
 
-			return nil
-		})
+		case err, ok := <-watcher.Errors:
+			if !ok {
+				return
+			}
+			fmt.Printf("[HMR] Watch error: %v\n", err)
+		}
 	}
 }
 

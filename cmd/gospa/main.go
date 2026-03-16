@@ -17,8 +17,12 @@ const Version = "0.1.19"
 
 func main() {
 	// Register built-in plugins
-	plugin.Register(tailwind.New())
-	plugin.Register(postcss.New())
+	if err := plugin.Register(tailwind.New()); err != nil {
+		fmt.Fprintf(os.Stderr, "Failed to register tailwind plugin: %v\n", err)
+	}
+	if err := plugin.Register(postcss.New()); err != nil {
+		fmt.Fprintf(os.Stderr, "Failed to register postcss plugin: %v\n", err)
+	}
 
 	printer := cli.NewColorPrinter()
 

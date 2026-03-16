@@ -22,6 +22,7 @@ import (
 	templ "github.com/a-h/templ"
 	"github.com/aydenstechdungeon/gospa/embed"
 	"github.com/aydenstechdungeon/gospa/fiber"
+	"github.com/aydenstechdungeon/gospa/plugin"
 	"github.com/aydenstechdungeon/gospa/routing"
 	"github.com/aydenstechdungeon/gospa/state"
 	"github.com/aydenstechdungeon/gospa/store"
@@ -313,6 +314,10 @@ type App struct {
 	Hub *fiber.WSHub
 	// StateMap is the global state map.
 	StateMap *state.StateMap
+	// pluginMiddleware stores middleware from runtime plugins.
+	pluginMiddleware []fiberpkg.Handler
+	// pluginTemplateFuncs stores template functions from plugins.
+	pluginTemplateFuncs map[string]any
 	// ssgCache stores pre-rendered SSG and ISR pages.
 	ssgCache map[string]ssgEntry
 	// ssgCacheKeys tracks insertion order for FIFO eviction.
@@ -447,15 +452,16 @@ func New(config Config) *App {
 	}
 
 	app := &App{
-		Config:        config,
-		Router:        router,
-		Fiber:         fiberApp,
-		Hub:           hub,
-		StateMap:      stateMap,
-		ssgCache:      make(map[string]ssgEntry),
-		ssgCacheKeys:  make([]string, 0),
-		pprShellCache: make(map[string]pprEntry),
-		pprShellKeys:  make([]string, 0),
+		Config:              config,
+		Router:              router,
+		Fiber:               fiberApp,
+		Hub:                 hub,
+		StateMap:            stateMap,
+		pluginTemplateFuncs: make(map[string]any),
+		ssgCache:            make(map[string]ssgEntry),
+		ssgCacheKeys:        make([]string, 0),
+		pprShellCache:       make(map[string]pprEntry),
+		pprShellKeys:        make([]string, 0),
 	}
 
 	// Setup middleware
@@ -465,6 +471,73 @@ func New(config Config) *App {
 	app.setupRoutes()
 
 	return app
+}
+
+// UsePlugin registers a plugin with the application.
+func (a *App) UsePlugin(p plugin.Plugin) error {
+	if err := plugin.Register(p); err != nil {
+		return err
+	}
+
+	// If plugin implements RuntimePlugin, extract middleware and template funcs
+	if rp, ok := p.(plugin.RuntimePlugin); ok {
+		// Get configuration
+		_ = rp.Config()
+
+		// Get middleware
+		if mws := rp.Middlewares(); len(mws) > 0 {
+			for _, mw := range mws {
+				// Convert to Fiber handler if needed
+				if handler, ok := any(mw).(func(fiberpkg.Ctx) error); ok {
+					a.pluginMiddleware = append(a.pluginMiddleware, handler)
+				} else if handler, ok := mw.(fiberpkg.Handler); ok {
+					a.pluginMiddleware = append(a.pluginMiddleware, handler)
+				}
+			}
+		}
+
+		// Get template functions
+		if funcs := rp.TemplateFuncs(); funcs != nil {
+			for k, v := range funcs {
+				a.pluginTemplateFuncs[k] = v
+			}
+		}
+	}
+
+	return nil
+}
+
+// UsePlugins registers multiple plugins with the application.
+func (a *App) UsePlugins(plugins ...plugin.Plugin) error {
+	for _, p := range plugins {
+		if err := a.UsePlugin(p); err != nil {
+			return err
+		}
+	}
+	return nil
+}
+
+// GetPlugin returns a registered plugin by name.
+func (a *App) GetPlugin(name string) (plugin.Plugin, bool) {
+	p := plugin.GetPlugin(name)
+	return p, p != nil
+}
+
+// ListPlugins returns all registered plugins.
+func (a *App) ListPlugins() []plugin.Info {
+	return plugin.GetAllPluginInfo()
+}
+
+// GetTemplateFuncs returns all plugin template functions.
+func (a *App) GetTemplateFuncs() map[string]any {
+	return a.pluginTemplateFuncs
+}
+
+// applyPluginMiddleware applies middleware from runtime plugins.
+func (a *App) applyPluginMiddleware() {
+	for _, mw := range a.pluginMiddleware {
+		a.Fiber.Use(mw)
+	}
 }
 
 // setupMiddleware configures the middleware stack.
@@ -905,7 +978,9 @@ func (a *App) renderRoute(c fiberpkg.Ctx, route *routing.Route) error {
 				if _, alreadyRunning := a.isrRevalidating.LoadOrStore(cacheKey, true); !alreadyRunning {
 					// Capture values for goroutine closure.
 					routeSnap := route
-					//nolint:gosec // Background revalidation intentionally detaches from request context
+					// Derived background context should retain trace IDs but outlive the original request.
+					parentCtx := context.WithoutCancel(c.Context())
+					//nolint:gosec // ISR revalidation must outlive the request context
 					go func() {
 						defer a.isrRevalidating.Delete(cacheKey)
 						// Limit concurrent revalidations with semaphore
@@ -916,8 +991,13 @@ func (a *App) renderRoute(c fiberpkg.Ctx, route *routing.Route) error {
 							// Too many concurrent revalidations, skip this one
 							return
 						}
-						// Use context.Background() because the request context will be cancelled after the response is sent
-						freshHTML, err := a.buildPageHTML(context.Background(), routeSnap, nil)
+						// Use a derived background context with timeout for ISR revalidation.
+						// The request context is cancelled after response is sent, so we use
+						// WithoutCancel to ensure the revalidation finishes while still
+						// carrying request-scoped metadata like trace IDs.
+						bgCtx, cancel := context.WithTimeout(parentCtx, 60*time.Second)
+						defer cancel()
+						freshHTML, err := a.buildPageHTML(bgCtx, routeSnap, nil)
 						if err != nil {
 							a.Logger().Error("ISR background render error", "path", cacheKey, "err", err)
 							return
@@ -1451,6 +1531,17 @@ func jsEscape(s string) string {
 
 // Run starts the application on the given address.
 func (a *App) Run(addr string) error {
+	// Trigger BeforeServe hook
+	if err := plugin.TriggerHook(plugin.BeforeServe, map[string]interface{}{
+		"fiber":  a.Fiber,
+		"config": a.Config,
+	}); err != nil {
+		a.Logger().Error("plugin BeforeServe hook failed", "err", err)
+	}
+
+	// Apply plugin middleware
+	a.applyPluginMiddleware()
+
 	// Scan routes if not already done
 	if len(a.Router.GetRoutes()) == 0 {
 		if err := a.Scan(); err != nil {
@@ -1465,11 +1556,56 @@ func (a *App) Run(addr string) error {
 
 	// Start server
 	a.Logger().Info("starting GoSPA", "version", Version, "addr", addr)
-	return a.Fiber.Listen(addr)
+
+	// Start server in goroutine to allow AfterServe to be called
+	serverErr := make(chan error, 1)
+	go func() {
+		serverErr <- a.Fiber.Listen(addr)
+	}()
+
+	// Wait briefly for server to start
+	time.Sleep(100 * time.Millisecond)
+
+	select {
+	case err := <-serverErr:
+		if err != nil {
+			// Trigger OnError hook
+			if err := plugin.TriggerHook(plugin.OnError, map[string]interface{}{
+				"error": err.Error(),
+			}); err != nil {
+				a.Logger().Error("plugin OnError hook failed", "err", err)
+			}
+			return err
+		}
+	default:
+		// Server started successfully
+	}
+
+	// Trigger AfterServe hook
+	if err := plugin.TriggerHook(plugin.AfterServe, map[string]interface{}{
+		"fiber":  a.Fiber,
+		"config": a.Config,
+	}); err != nil {
+		a.Logger().Error("plugin AfterServe hook failed", "err", err)
+	}
+
+	// Block until server error
+	return <-serverErr
 }
 
 // RunTLS starts the application with TLS on the given address.
 func (a *App) RunTLS(addr, certFile, keyFile string) error {
+	// Trigger BeforeServe hook
+	if err := plugin.TriggerHook(plugin.BeforeServe, map[string]interface{}{
+		"fiber":  a.Fiber,
+		"config": a.Config,
+	}); err != nil {
+		a.Logger().Error("plugin BeforeServe hook failed", "err", err)
+	}
+
+	// Apply plugin middleware
+	a.applyPluginMiddleware()
+
 	// Scan routes if not already done
 	if len(a.Router.GetRoutes()) == 0 {
 		if err := a.Scan(); err != nil {
@@ -1492,13 +1628,26 @@ func (a *App) RunTLS(addr, certFile, keyFile string) error {
 
 // Shutdown gracefully shuts down the application.
 func (a *App) Shutdown() error {
+	// Trigger BeforePrune hook (cleanup before shutdown)
+	if err := plugin.TriggerHook(plugin.BeforePrune, nil); err != nil {
+		a.Logger().Error("plugin BeforePrune hook failed", "err", err)
+	}
+
 	if a.Hub != nil {
 		a.Hub.Close()
 	}
 	if closer, ok := a.Config.Storage.(interface{ Close() error }); ok {
 		_ = closer.Close()
 	}
-	return a.Fiber.Shutdown()
+
+	err := a.Fiber.Shutdown()
+
+	// Trigger AfterPrune hook (cleanup after shutdown)
+	if err := plugin.TriggerHook(plugin.AfterPrune, nil); err != nil {
+		a.Logger().Error("plugin AfterPrune hook failed", "err", err)
+	}
+
+	return err
 }
 
 // Use adds a middleware to the application.

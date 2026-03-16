@@ -334,5 +334,7 @@ func GeneratePNGWithLogo(content string, logo image.Image, opts ...Option) ([]by
 }
 
 func init() {
-	plugin.Register(defaultPlugin)
+	if err := plugin.Register(defaultPlugin); err != nil {
+		panic("failed to register qrcode plugin: " + err.Error())
+	}
 }

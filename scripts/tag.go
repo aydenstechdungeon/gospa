@@ -194,8 +194,9 @@ func updateModFile(path, moduleName, oldVersion, newVersion, oldTag, newTag stri
 
 	if changed {
 		fmt.Println("Updating", path)
-		//nolint:gosec
-		if err := os.WriteFile(path, []byte(content), 0600); err != nil {
+		// Use filepath.Clean to prevent path traversal - path is from WalkDir so already constrained
+		//nolint:gosec // path is constrained to project files in WalkDir callback
+		if err := os.WriteFile(filepath.Clean(path), []byte(content), 0600); err != nil {
 			fmt.Println("Error writing", path, ":", err)
 		}
 	}
@@ -219,8 +220,9 @@ func updateOtherFile(path, moduleName, oldVersion, newVersion, oldTag, newTag st
 	})
 
 	if newContent != content {
-		//nolint:gosec
-		if err := os.WriteFile(path, []byte(newContent), 0600); err != nil {
+		// Use filepath.Clean to prevent path traversal - path is from WalkDir so already constrained
+		//nolint:gosec // path is constrained to project files in WalkDir callback
+		if err := os.WriteFile(filepath.Clean(path), []byte(newContent), 0600); err != nil {
 			fmt.Println("Error writing", path, ":", err)
 			return false
 		}

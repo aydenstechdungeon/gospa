@@ -1,18 +1,20 @@
 # GoSPA Plugin System
 
-GoSPA features a powerful plugin system that allows you to extend and customize your development workflow. Plugins can hook into the build process, add CLI commands, and integrate with external tools.
+GoSPA features a powerful plugin system that allows you to extend and customize your development workflow. Plugins can hook into the build process, add CLI commands, and integrate with the runtime.
 
 ## Table of Contents
 
 - [Architecture Overview](#architecture-overview)
+- [Plugin Types](#plugin-types)
 - [Built-in Plugins](#built-in-plugins)
 - [Plugin Configuration](#plugin-configuration)
 - [Creating Custom Plugins](#creating-custom-plugins)
+- [External Plugin Loading](#external-plugin-loading)
 - [Plugin API Reference](#plugin-api-reference)
 
 ## Architecture Overview
 
-The GoSPA plugin system is built around interfaces that define how plugins interact with the CLI and build process.
+The GoSPA plugin system is built around interfaces that define how plugins interact with the CLI, build process, and runtime.
 
 ### Core Interfaces
 
@@ -30,6 +32,14 @@ type CLIPlugin interface {
     OnHook(hook Hook, ctx map[string]interface{}) error  // Handle lifecycle hooks
     Commands() []Command                                  // Provide CLI commands
 }
+
+// RuntimePlugin extends Plugin with runtime integration capabilities
+type RuntimePlugin interface {
+    Plugin
+    Config() PluginConfig                      // Plugin configuration schema
+    Middlewares() []interface{}                // Fiber handlers to inject
+    TemplateFuncs() map[string]interface{}      // Template functions
+}
 ```
 
 ### Lifecycle Hooks
@@ -38,12 +48,17 @@ Plugins can respond to lifecycle events:
 
 | Hook | When | Context |
 |------|------|---------|
+| `BeforeGenerate` | Before code generation | `nil` |
+| `AfterGenerate` | After code generation | `nil` |
 | `BeforeDev` | Before dev server starts | `nil` |
 | `AfterDev` | After dev server stops | `nil` |
 | `BeforeBuild` | Before production build | `{"config": *BuildConfig}` |
 | `AfterBuild` | After production build | `{"config": *BuildConfig}` |
-| `BeforeGenerate` | Before code generation | `nil` |
-| `AfterGenerate` | After code generation | `nil` |
+| `BeforeServe` | Before HTTP server starts | `{"fiber": *fiber.App}` |
+| `AfterServe` | After HTTP server starts | `{"fiber": *fiber.App}` |
+| `BeforePrune` | Before state pruning/cleanup | `nil` |
+| `AfterPrune` | After state pruning/cleanup | `nil` |
+| `OnError` | When an error occurs | `{"error": string}` |
 
 ### Dependency Types
 
@@ -61,6 +76,72 @@ type Dependency struct {
     Type    DependencyType
     Name    string    // Package name (e.g., "github.com/example/pkg")
     Version string    // Version constraint (e.g., "v1.2.3", "^4.0.0")
+}
+```
+
+## Plugin Types
+
+GoSPA supports three types of plugins:
+
+### 1. Base Plugin
+The minimal plugin type that provides name, initialization, and dependencies.
+
+```go
+type MyPlugin struct{}
+
+func (p *MyPlugin) Name() string        { return "myplugin" }
+func (p *MyPlugin) Init() error         { return nil }
+func (p *MyPlugin) Dependencies() []plugin.Dependency {
+    return []plugin.Dependency{}
+}
+```
+
+### 2. CLI Plugin
+Extends base plugin with CLI hooks and commands.
+
+```go
+type MyCLIPlugin struct{}
+
+func (p *MyCLIPlugin) OnHook(hook plugin.Hook, ctx map[string]interface{}) error {
+    switch hook {
+    case plugin.BeforeBuild:
+        // Run before production build
+    }
+    return nil
+}
+
+func (p *MyCLIPlugin) Commands() []plugin.Command {
+    return []plugin.Command{
+        {Name: "my:command", Alias: "mc", Description: "My command"},
+    }
+}
+```
+
+### 3. Runtime Plugin
+Extends base plugin with runtime integration capabilities (middleware, template functions).
+
+```go
+type MyRuntimePlugin struct{}
+
+func (p *MyRuntimePlugin) Config() plugin.PluginConfig {
+    return plugin.PluginConfig{
+        Schema: map[string]plugin.FieldSchema{
+            "option1": {Type: "string", Description: "An option"},
+        },
+        Defaults: map[string]interface{}{"option1": "default"},
+    }
+}
+
+func (p *MyRuntimePlugin) Middlewares() []interface{} {
+    return []interface{}{
+        func(c *fiber.Ctx) error { return c.Next() },
+    }
+}
+
+func (p *MyRuntimePlugin) TemplateFuncs() map[string]interface{} {
+    return map[string]interface{}{
+        "myHelper": func() string { return "helper output" },
+    }
 }
 ```
 
@@ -147,48 +228,7 @@ plugins:
       autoprefixer: true          # Add vendor prefixes
       cssnano: false              # Advanced minification
       postcssNested: true         # Nested CSS support
-
-    # Critical CSS extraction for performance
-    criticalCSS:
-      enabled: false              # Enable critical CSS extraction
-      criticalOutput: ./static/css/critical.css      # Inlined in HTML
-      nonCriticalOutput: ./static/css/non-critical.css  # Async loaded
-      inlineMaxSize: 14336        # Max bytes for inline CSS (14KB default)
-      dimensions:                 # Viewport sizes for critical CSS
-        - width: 1300
-          height: 900
-          name: desktop
-        - width: 500
-          height: 900
-          name: mobile
-
-    # CSS bundle splitting for multi-page apps
-    bundles:
-      - name: marketing
-        input: ./styles/marketing.css
-        output: ./static/css/marketing.css
-        content:                    # Content paths for this bundle
-          - ./routes/marketing/**/*.templ
-        criticalCSS:
-          enabled: true
-          criticalOutput: ./static/css/marketing.critical.css
-          nonCriticalOutput: ./static/css/marketing.non-critical.css
-      - name: dashboard
-        input: ./styles/dashboard.css
-        output: ./static/css/dashboard.css
-        content:
-          - ./routes/dashboard/**/*.templ
 ```
-
-**CLI Commands:**
-| Command | Alias | Description |
-|---------|-------|-------------|
-| `add:postcss` | `ap` | Install PostCSS deps and create config |
-| `postcss:build` | `pb` | Build CSS for production |
-| `postcss:watch` | `pw` | Watch and rebuild CSS on changes |
-| `postcss:config` | `pc` | Generate PostCSS configuration file |
-| `postcss:critical` | `pcr` | Extract critical CSS for above-the-fold content |
-| `postcss:bundles` | `pbd` | Build all CSS bundles |
 
 ### Critical CSS and Async Loading
 
@@ -208,13 +248,6 @@ plugins:
       criticalOutput: ./static/css/critical.css      # Inlined in HTML head
       nonCriticalOutput: ./static/css/non-critical.css  # Loaded asynchronously
       inlineMaxSize: 14336        # Max bytes for inline CSS (14KB = single round-trip)
-      dimensions:                 # Viewport sizes for critical CSS detection
-        - width: 1300
-          height: 900
-          name: desktop
-        - width: 500
-          height: 900
-          name: mobile
 ```
 
 2. Extract critical CSS:
@@ -234,10 +267,6 @@ import (
 ```templ
 <!-- Inlined Critical CSS (render-blocking, single round-trip) -->
 @templ.Raw("<style>" + postcss.CriticalCSS("./static/css/critical.css") + "</style>")
-
-<!-- Note: Path is relative to your app's working directory -->
-<!-- For apps running from root: "./website/static/css/critical.css" -->
-<!-- For apps running from website dir: "./static/css/critical.css" -->
 
 <!-- Async load non-critical CSS (non-blocking) -->
 @templ.Raw(postcss.AsyncCSS("/static/css/non-critical.css"))
@@ -302,9 +331,6 @@ export default {
 };
 ```
 
-**Note on Tailwind v4 Plugins:**
-Typography, forms, and aspect-ratio plugins are no longer added via `postcss.config.js`. Instead, they are automatically added to your `styles/main.css` via the `@plugin` directive when enabled in the GoSPA PostCSS configuration.
-
 **Lifecycle Hooks:**
 - `BeforeDev`: Starts PostCSS in watch mode
 - `BeforeBuild`: Processes CSS for production
@@ -312,13 +338,9 @@ Typography, forms, and aspect-ratio plugins are no longer added via `postcss.con
 
 **Dependencies:**
 - `postcss` (bun)
-- `postcss-cli` (bun)
 - `@tailwindcss/postcss` (bun)
 - `@tailwindcss/typography` (bun, optional)
 - `@tailwindcss/forms` (bun, optional)
-- `@tailwindcss/aspect-ratio` (bun, optional)
-
-**Note:** Container queries and line-clamp are built into Tailwind CSS v4, so separate plugins are no longer needed for those features.
 
 ---
 
@@ -352,13 +374,6 @@ plugins:
 | `image:clean` | `ic` | Clean optimized images |
 | `image:sizes` | `is` | List image sizes |
 
-**Features:**
-- Build-time optimization (default)
-- Optional on-the-fly processing
-- WebP, JPEG, PNG support
-- Responsive srcset generation
-- No external dependencies (stdlib only)
-
 ---
 
 ### Form Validation
@@ -384,44 +399,6 @@ plugins:
 | `validation:generate` | `vg` | Generate validation code |
 | `validation:create` | `vc` | Create schema file |
 | `validation:list` | `vl` | List all schemas |
-
-**Usage:**
-
-1. Define schema (`schemas/user.json`):
-```json
-{
-  "name": "UserSchema",
-  "fields": {
-    "email": {"type": "string", "format": "email", "required": true},
-    "password": {"type": "string", "minLength": 8, "required": true},
-    "age": {"type": "integer", "min": 0, "max": 150}
-  }
-}
-```
-
-2. Generate validation:
-```bash
-gospa validation:generate
-```
-
-3. Use in Go:
-```go
-import "your-project/generated/validation"
-
-user, err := validation.ValidateUser(data)
-```
-
-4. Use in TypeScript:
-```typescript
-import { UserSchema } from './generated/validation';
-import * as v from 'valibot';
-
-const result = v.safeParse(UserSchema, data);
-```
-
-**Dependencies:**
-- `github.com/go-playground/validator/v10` (go)
-- `valibot` (bun)
 
 ---
 
@@ -453,34 +430,6 @@ plugins:
 | `seo:meta` | `sm` | Generate meta tags |
 | `seo:structured` | `ss` | Generate JSON-LD |
 
-**Features:**
-- Automatic sitemap.xml generation
-- robots.txt with configurable rules
-- Meta tags (title, description, keywords)
-- Open Graph tags for social sharing
-- Twitter Cards
-- JSON-LD structured data (Organization, WebSite, Article, etc.)
-
-**Usage in Templates:**
-```go
-import "github.com/aydenstechdungeon/gospa/plugin/seo"
-
-// Generate meta tags
-meta := seo.MetaTags(seo.MetaConfig{
-    Title:       "Page Title",
-    Description: "Page description",
-    Image:       "/images/page.png",
-    URL:         "https://example.com/page",
-})
-
-// Generate structured data
-jsonLD := seo.StructuredData("Article", seo.ArticleData{
-    Headline:   "Article Title",
-    Author:     "John Doe",
-    DatePublished: "2024-01-15",
-})
-```
-
 ---
 
 ### Authentication
@@ -501,69 +450,9 @@ plugins:
     oauth_providers:
       - google
       - github
-      - facebook
-      - microsoft
-      - discord
-      - telegram
-      - twitter
     otp_enabled: true
     otp_issuer: MyGoSPAApp
-    backup_code_count: 10
 ```
-
-**CLI Commands:**
-| Command | Alias | Description |
-|---------|-------|-------------|
-| `auth:generate` | `ag` | Generate auth code |
-| `auth:secret` | `as` | Generate JWT secret |
-| `auth:otp` | `ao` | Generate OTP secret + QR URL |
-| `auth:backup` | `ab` | Generate backup codes |
-| `auth:verify` | `av` | Verify OTP code |
-
-**OAuth2 Provider Setup:**
-
-1. **Google:**
-   ```env
-   GOOGLE_CLIENT_ID=your-client-id
-   GOOGLE_CLIENT_SECRET=your-client-secret
-   ```
-
-2. **GitHub:**
-   ```env
-   GITHUB_CLIENT_ID=your-client-id
-   GITHUB_CLIENT_SECRET=your-client-secret
-   ```
-
-3. **Facebook:**
-   ```env
-   FACEBOOK_CLIENT_ID=your-client-id
-   FACEBOOK_CLIENT_SECRET=your-client-secret
-   ```
-
-4. **Microsoft:**
-   ```env
-   MICROSOFT_CLIENT_ID=your-client-id
-   MICROSOFT_CLIENT_SECRET=your-client-secret
-   ```
-
-5. **Discord:**
-   ```env
-   DISCORD_CLIENT_ID=your-client-id
-   DISCORD_CLIENT_SECRET=your-client-secret
-   ```
-
-6. **Telegram:**
-   ```env
-   TELEGRAM_BOT_TOKEN=your-bot-token
-   ```
-   Note: Telegram uses Login Widget flow (non-standard OAuth2). Create a bot via [@BotFather](https://t.me/botfather) and set your domain as the login domain.
-
-7. **Twitter/X:**
-   ```env
-   TWITTER_CLIENT_ID=your-client-id
-   TWITTER_CLIENT_SECRET=your-client-secret
-   ```
-   Note: Twitter uses OAuth 2.0 with PKCE flow.
 
 **Usage:**
 ```go
@@ -582,23 +471,12 @@ token, err := authPlugin.CreateToken(userID, userEmail, role)
 // Validate token (includes issuer validation)
 claims, err := authPlugin.ValidateToken(token)
 
-// OAuth callback exchanges provider code server-side and returns a success response.
-// It does not expose provider access tokens directly in the JSON response.
-
 // Generate OTP for 2FA
 otpSecret, qrURL, err := authPlugin.GenerateOTP(userEmail)
 
 // Verify OTP code
 valid := authPlugin.VerifyOTP(secret, code)
-
-// Generate backup codes
-backupCodes, err := auth.GenerateBackupCodes(10)
 ```
-
-**Dependencies:**
-- `github.com/golang-jwt/jwt/v5` (go)
-- `golang.org/x/oauth2` (go)
-- `github.com/pquerna/otp` (go)
 
 ---
 
@@ -611,14 +489,6 @@ Pure Go QR code generation plugin for URLs, OTP/TOTP setup, and general use.
 gospa add qrcode
 ```
 
-**Configuration:**
-```yaml
-plugins:
-  qrcode:
-    default_size: 256        # Default QR code size in pixels
-    default_level: medium    # Error correction: low, medium, quartile, high
-```
-
 **Usage:**
 
 ```go
@@ -626,71 +496,11 @@ import "github.com/aydenstechdungeon/gospa/plugin/qrcode"
 
 // Generate a QR code as data URL (for HTML img src)
 dataURL, err := qrcode.GenerateDataURL("https://example.com")
-if err != nil {
-    log.Fatal(err)
-}
-// Use in HTML: <img src="{{ .DataURL }}" />
-
-// Generate with custom options
-dataURL, err := qrcode.GenerateDataURL("https://example.com",
-    qrcode.WithSize(512),
-    qrcode.WithLevel(qrcode.LevelHigh),
-)
-
-// Generate PNG bytes
-pngBytes, err := qrcode.GeneratePNG("https://example.com")
 
 // Generate for OTP/TOTP setup
 otpURL := "otpauth://totp/MyApp:user@example.com?secret=JBSWY3DPEHPK3PXP&issuer=MyApp"
 qrDataURL, err := qrcode.ForOTP(otpURL)
-
-// Create plugin instance with custom defaults
-plugin := qrcode.NewWithConfig(qrcode.Config{
-    DefaultSize:  400,
-    DefaultLevel: "high",
-})
-
-// Use plugin instance
-dataURL, err := plugin.GenerateDataURL("https://example.com")
 ```
-
-**Package Functions:**
-
-| Function | Description |
-|----------|-------------|
-| `Generate(content, ...Option)` | Generate QR as image.Image |
-| `GeneratePNG(content, ...Option)` | Generate QR as PNG bytes |
-| `GenerateBase64(content, ...Option)` | Generate QR as base64 string |
-| `GenerateDataURL(content, ...Option)` | Generate QR as data URL |
-| `ForOTP(otpURL, ...Option)` | Generate QR for OTP setup (300px default) |
-
-**Options:**
-
-| Option | Description | Default |
-|--------|-------------|---------|
-| `WithSize(int)` | Image size in pixels | 256 |
-| `WithLevel(Level)` | Error correction level | LevelMedium |
-| `WithColors(fg, bg)` | Foreground/background colors | Black/White |
-
-**Error Correction Levels:**
-
-| Level | Recovery | Use Case |
-|-------|----------|----------|
-| `LevelLow` | 7% | Clean environments |
-| `LevelMedium` | 15% | General use (default) |
-| `LevelQuartile` | 25% | Moderate damage risk |
-| `LevelHigh` | 30% | High damage risk, logos/overlays |
-
-**Features:**
-- Multiple output formats: Image, PNG bytes, Base64, Data URL
-- Configurable error correction levels
-- Customizable size and colors
-- Built-in OTP/TOTP QR code generation
-- Functional options pattern for flexible configuration
-- Integrates with Auth plugin for 2FA flows
-
-**Dependencies:**
-- `github.com/skip2/go-qrcode` (go)
 
 ## Plugin Configuration
 
@@ -798,6 +608,14 @@ func (p *MyCLIPlugin) OnHook(hook plugin.Hook, ctx map[string]interface{}) error
     case plugin.AfterBuild:
         // Run after production build
         return p.afterBuild(ctx)
+    case plugin.BeforeServe:
+        // Run before HTTP server starts
+        return p.beforeServe(ctx)
+    case plugin.OnError:
+        // Handle errors
+        if err, ok := ctx["error"].(string); ok {
+            return p.handleError(err)
+        }
     }
     return nil
 }
@@ -812,16 +630,59 @@ func (p *MyCLIPlugin) Commands() []plugin.Command {
         },
     }
 }
+```
 
-func (p *MyCLIPlugin) runCommand(args []string) error {
-    // Command implementation
-    return nil
+### Runtime Plugin with Middlewares
+
+```go
+package myplugin
+
+import (
+    "github.com/aydenstechdungeon/gospa/plugin"
+    "github.com/gofiber/fiber/v3"
+)
+
+type MyRuntimePlugin struct{}
+
+func (p *MyRuntimePlugin) Config() plugin.PluginConfig {
+    return plugin.PluginConfig{
+        Schema: map[string]plugin.FieldSchema{
+            "apiKey": {
+                Type:        "string",
+                Description: "API key for the service",
+                Required:    true,
+            },
+        },
+        Defaults: map[string]interface{}{
+            "apiKey": "",
+        },
+    }
+}
+
+func (p *MyRuntimePlugin) Middlewares() []interface{} {
+    return []interface{}{
+        func(c fiber.Ctx) error {
+            // Custom middleware logic
+            return c.Next()
+        },
+    }
+}
+
+func (p *MyRuntimePlugin) TemplateFuncs() map[string]interface{} {
+    return map[string]interface{}{
+        "formatDate": func(date interface{}) string {
+            // Custom date formatting
+            return "formatted"
+        },
+    }
 }
 ```
 
 ### Registering Plugins
 
-Register your plugin in your application's main package:
+You can register plugins in two ways:
+
+**1. Using the global registry (for CLI plugins):**
 
 ```go
 import (
@@ -837,6 +698,82 @@ func init() {
 }
 ```
 
+**2. Using App-level registration (recommended for runtime plugins):**
+
+```go
+import (
+    "github.com/aydenstechdungeon/gospa"
+    "your-project/plugins/myplugin"
+)
+
+func main() {
+    app := gospa.New(config)
+
+    // Register a single plugin
+    if err := app.UsePlugin(myplugin.New(myplugin.Config{
+        Option1: "value",
+    })); err != nil {
+        log.Fatal(err)
+    }
+
+    // Or register multiple plugins at once
+    app.UsePlugins(plugin1, plugin2, plugin3)
+
+    // Run the application
+    app.Run(":3000")
+}
+```
+
+### Plugin State Management
+
+Plugins can be enabled/disabled at runtime:
+
+```go
+// Enable a plugin
+plugin.Enable("myplugin")
+
+// Disable a plugin
+plugin.Disable("myplugin")
+
+// Or via App methods
+app.GetPlugin("myplugin")  // Get plugin instance
+app.ListPlugins()          // List all registered plugins
+```
+
+## External Plugin Loading
+
+GoSPA supports loading plugins from external GitHub repositories:
+
+```go
+import "github.com/aydenstechdungeon/gospa/plugin"
+
+// Create a loader
+loader := plugin.NewExternalPluginLoader()
+
+// Load a plugin from GitHub
+// Supported formats:
+// - github.com/owner/repo
+// - github.com/owner/repo@version
+// - owner/repo
+// - owner/repo@version
+p, err := loader.LoadFromGitHub("github.com/username/gospa-plugin-example")
+
+// Or use the convenience functions
+err := plugin.InstallPlugin("username/gospa-plugin-example")
+err := plugin.UninstallPlugin("username/gospa-plugin-example")
+
+// List installed plugins
+entries, err := plugin.ListInstalledPlugins()
+
+// Discover available plugins
+entries, err := plugin.DiscoverPlugins()
+
+// Search plugins
+results, err := plugin.SearchPlugins("tailwind")
+```
+
+External plugins are cached in `~/.gospa/plugins/` by default.
+
 ## Plugin API Reference
 
 ### Plugin Interface
@@ -846,6 +783,17 @@ type Plugin interface {
     Name() string
     Init() error
     Dependencies() []Dependency
+}
+```
+
+### RuntimePlugin Interface
+
+```go
+type RuntimePlugin interface {
+    Plugin
+    Config() PluginConfig
+    Middlewares() []interface{}
+    TemplateFuncs() map[string]interface{}
 }
 ```
 
@@ -863,11 +811,11 @@ type CLIPlugin interface {
 
 ```go
 type Command struct {
-    Name        string                           // Full command name
-    Alias       string                           // Short alias
-    Description string                           // Help text
-    Action      func(args []string) error        // Command handler
-    Flags       []Flag                           // Command flags
+    Name        string
+    Alias       string
+    Description string
+    Action      func(args []string) error
+    Flags       []Flag
 }
 
 type Flag struct {
@@ -884,13 +832,96 @@ type Flag struct {
 type Hook string
 
 const (
+    BeforeGenerate Hook = "before:generate"
+    AfterGenerate  Hook = "after:generate"
     BeforeDev      Hook = "before:dev"
     AfterDev       Hook = "after:dev"
     BeforeBuild    Hook = "before:build"
     AfterBuild     Hook = "after:build"
-    BeforeGenerate Hook = "before:generate"
-    AfterGenerate  Hook = "after:generate"
+    BeforeServe    Hook = "before:serve"
+    AfterServe     Hook = "after:serve"
+    BeforePrune    Hook = "before:prune"
+    AfterPrune     Hook = "after:prune"
+    OnError        Hook = "on:error"
 )
+```
+
+### Plugin State
+
+```go
+type PluginState int
+
+const (
+    StateEnabled  PluginState = iota  // Plugin is active
+    StateDisabled                     // Plugin is loaded but inactive
+    StateError                        // Plugin failed to load
+)
+
+type PluginInfo struct {
+    Name        string
+    Version     string
+    Description string
+    Author      string
+    State       PluginState
+}
+```
+
+### Plugin Configuration Schema
+
+```go
+type PluginConfig struct {
+    Schema   map[string]FieldSchema
+    Defaults map[string]interface{}
+}
+
+type FieldSchema struct {
+    Type        string
+    Description string
+    Required    bool
+    Default     interface{}
+}
+```
+
+### Registry Functions
+
+```go
+// Register/unregister plugins
+func Register(p Plugin) error
+func Unregister(name string)
+
+// Get plugins
+func GetPlugin(name string) Plugin
+func GetPlugins() []Plugin
+func GetPluginInfo(name string) (PluginInfo, bool)
+func GetAllPluginInfo() []PluginInfo
+
+// Get plugins by type
+func GetCLIPlugins() []CLIPlugin
+func GetRuntimePlugins() []RuntimePlugin
+
+// Plugin state
+func Enable(name string) error
+func Disable(name string) error
+
+// Trigger hooks
+func TriggerHook(hook Hook, ctx map[string]interface{}) error
+func TriggerHookForPlugin(name string, hook Hook, ctx map[string]interface{}) error
+
+// Run commands
+func RunCommand(name string, args []string) (bool, error)
+
+// Dependencies
+func GetAllDependencies() []Dependency
+func ResolveDependencies() error
+```
+
+### App Plugin Methods
+
+```go
+func (a *App) UsePlugin(p plugin.Plugin) error
+func (a *App) UsePlugins(plugins ...plugin.Plugin) error
+func (a *App) GetPlugin(name string) (plugin.Plugin, bool)
+func (a *App) ListPlugins() []plugin.PluginInfo
 ```
 
 ## Best Practices
@@ -903,16 +934,14 @@ const (
 6. **Minimize dependencies**: Only include necessary dependencies
 7. **Provide CLI commands**: Make common tasks accessible via CLI
 8. **Support environment variables**: Allow sensitive values via env vars
-
-## Scope Note
-
-This document covers the built-in plugin model that exists in the current codebase. Dynamic external plugin installation and shared-library plugin loading are not documented here because they are not part of the currently implemented CLI surface.
+9. **Implement RuntimePlugin**: For runtime integration, implement Middlewares() and TemplateFuncs()
+10. **Use App registration**: Prefer `app.UsePlugin()` over global `plugin.Register()` for runtime plugins
 
 ## Troubleshooting
 
 ### Plugin Not Loading
 
-1. Check plugin is registered in `init()` function
+1. Check plugin is registered in `init()` function or via `app.UsePlugin()`
 2. Verify dependencies are installed
 3. Check `gospa.yaml` configuration
 4. Review the CLI output for plugin initialization errors

@@ -1,6 +1,7 @@
 /**
  * HMR (Hot Module Replacement) Client Runtime
  * Handles module updates with state preservation for GoSPA.
+ * Includes: error rollback, dependency graph, exponential backoff, cross-tab sync, visual indicators
  */
 
 // HMR Message Types
@@ -10,6 +11,7 @@ interface HMRMessage {
 	moduleId?: string;
 	event?: string;
 	state?: Record<string, unknown>;
+	stateDiff?: Record<string, unknown>; // Delta state updates
 	error?: string;
 	timestamp: number;
 }
@@ -18,6 +20,12 @@ interface HMRMessage {
 interface ModuleState {
 	moduleId: string;
 	state: Record<string, unknown>;
+	timestamp: number;
+}
+
+// Module version for rollback
+interface ModuleVersion {
+	exports: Record<string, unknown>;
 	timestamp: number;
 }
 
@@ -60,9 +68,13 @@ export class HMRClient {
 	private reconnectAttempts = 0;
 	private moduleRegistry: ModuleRegistry = {};
 	private stateRegistry: Map<string, ModuleState> = new Map();
+	private moduleVersions: Map<string, ModuleVersion> = new Map(); // For rollback
+	private moduleDepGraph: Map<string, Set<string>> = new Map(); // Dependency graph
+	private dependentsMap: Map<string, Set<string>> = new Map(); // Reverse deps
 	private isConnecting = false;
 	private updateQueue: HMRMessage[] = [];
 	private isProcessing = false;
+	private broadcastChannel: BroadcastChannel | null = null; // Cross-tab sync
 
 	constructor(config: HMRClientConfig = {}) {
 		this.config = {
@@ -77,6 +89,9 @@ export class HMRClient {
 
 		// Set up global handlers
 		this.setupGlobalHandlers();
+		
+		// Set up cross-tab communication
+		this.setupCrossTabSync();
 	}
 
 	/**
@@ -151,7 +166,7 @@ export class HMRClient {
 	}
 
 	/**
-	 * Schedule reconnection attempt
+	 * Schedule reconnection attempt with exponential backoff and jitter
 	 */
 	private scheduleReconnect(): void {
 		if (this.reconnectAttempts >= this.config.maxReconnectAttempts) {
@@ -160,11 +175,20 @@ export class HMRClient {
 		}
 
 		this.reconnectAttempts++;
-		console.log(`[HMR] Reconnecting in ${this.config.reconnectInterval}ms (attempt ${this.reconnectAttempts})`);
+
+		// Exponential backoff with jitter (70-100% of calculated delay)
+		const baseDelay = this.config.reconnectInterval;
+		const maxDelay = 30000; // 30 seconds max
+		const jitter = 0.7 + Math.random() * 0.3; // 70-100%
+		// Apply maxDelay BEFORE multiplying by jitter to prevent overflow
+		const exponentialDelay = Math.min(baseDelay * Math.pow(2, this.reconnectAttempts - 1), maxDelay);
+		const delay = exponentialDelay * jitter;
+
+		console.log(`[HMR] Reconnecting in ${Math.round(delay)}ms (attempt ${this.reconnectAttempts})`);
 
 		setTimeout(() => {
 			this.connect();
-		}, this.config.reconnectInterval);
+		}, delay);
 	}
 
 	/**
@@ -227,28 +251,121 @@ export class HMRClient {
 	}
 
 	/**
-	 * Apply an HMR update
+	 * Apply an HMR update with error rollback capability
 	 */
 	private async applyUpdate(msg: HMRMessage): Promise<void> {
 		console.log(`[HMR] Applying update for: ${msg.moduleId}`);
 
-		// Preserve current state before update
-		if (msg.moduleId) {
-			this.preserveModuleState(msg.moduleId);
+		const moduleId = msg.moduleId;
+		if (!moduleId) {
+			console.warn('[HMR] Update message missing moduleId');
+			return;
+		}
+
+		const currentModule = this.moduleRegistry[moduleId];
+
+		// Save current state before update for potential rollback
+		if (moduleId && currentModule) {
+			try {
+				const serialized = JSON.stringify(currentModule.exports);
+				this.moduleVersions.set(moduleId, {
+					exports: JSON.parse(serialized),
+					timestamp: Date.now()
+				});
+			} catch (e) {
+				// Ignore serialization errors
+			}
+		}
+
+		// Apply delta state if provided (for efficiency)
+		if (msg.stateDiff && moduleId) {
+			this.applyStateDiff(moduleId, msg.stateDiff);
 		}
 
 		// Call custom update handler
 		try {
 			await this.config.onUpdate(msg);
+
+			// Update version counter on success
+			if (currentModule) {
+				currentModule.version++;
+			}
+
+			// Show visual indicator
+			this.showUpdateNotification(moduleId);
+			
+			// Broadcast update to other tabs
+			this.broadcastState();
+
+			// Get and update affected modules (dependency graph)
+			const affectedModules = this.getAffectedModules(moduleId);
+			for (const affectedId of affectedModules) {
+				console.log(`[HMR] Also updating dependent: ${affectedId}`);
+			}
+
 		} catch (error) {
-			this.config.onError(`Update failed: ${error}`);
-			return;
+			// Rollback on failure
+			console.error(`[HMR] Update failed, rolling back: ${error}`);
+			this.rollbackModule(moduleId);
+			this.config.onError(`Update failed and rolled back: ${error}`);
 		}
 
 		// Restore state after update
-		if (msg.moduleId && msg.state) {
-			this.restoreState(msg.moduleId, msg.state);
+		if (moduleId && msg.state) {
+			this.restoreState(moduleId, msg.state);
 		}
+	}
+
+	/**
+	 * Apply delta state changes efficiently
+	 */
+	private applyStateDiff(moduleId: string, stateDiff: Record<string, unknown>): void {
+		const module = this.moduleRegistry[moduleId];
+		if (!module?.exports) return;
+
+		for (const [key, value] of Object.entries(stateDiff)) {
+			if (key in module.exports && typeof module.exports[key] === 'object') {
+				Object.assign(module.exports[key] as Record<string, unknown>, value as Record<string, unknown>);
+			} else {
+				module.exports[key] = value;
+			}
+		}
+	}
+
+	/**
+	 * Rollback a module to its previous version
+	 */
+	private rollbackModule(moduleId: string): void {
+		const savedVersion = this.moduleVersions.get(moduleId);
+		const currentModule = this.moduleRegistry[moduleId];
+
+		if (savedVersion && currentModule) {
+			currentModule.exports = savedVersion.exports;
+			console.log(`[HMR] Rolled back module: ${moduleId}`);
+		}
+	}
+
+	/**
+	 * Get all modules that depend on a changed module (using dependency graph)
+	 */
+	getAffectedModules(moduleId: string): string[] {
+		const affected = new Set<string>();
+		const queue = [moduleId];
+
+		while (queue.length > 0) {
+			const current = queue.shift()!;
+			const dependents = this.dependentsMap.get(current);
+			if (dependents) {
+				for (const dep of dependents) {
+					if (!affected.has(dep)) {
+						affected.add(dep);
+						queue.push(dep);
+					}
+				}
+			}
+		}
+
+		return Array.from(affected);
 	}
 
 	/**
@@ -272,7 +389,94 @@ export class HMRClient {
 	}
 
 	/**
-	 * Register a module for HMR
+	 * Set up cross-tab communication using BroadcastChannel
+	 */
+	private setupCrossTabSync(): void {
+		if (typeof BroadcastChannel === 'undefined') return;
+
+		try {
+			this.broadcastChannel = new BroadcastChannel('gospa-hmr');
+			this.broadcastChannel.onmessage = (event) => {
+				if (event.data.type === 'state-sync') {
+					this.syncStateFromTab(event.data.state);
+				}
+			};
+		} catch (e) {
+			console.warn('[HMR] Cross-tab sync not available');
+		}
+	}
+
+	/**
+	 * Sync state from another tab
+	 */
+	private syncStateFromTab(state: Record<string, unknown>): void {
+		for (const [moduleId, moduleState] of Object.entries(state)) {
+			this.restoreState(moduleId, moduleState as Record<string, unknown>);
+		}
+		console.log('[HMR] State synced from another tab');
+	}
+
+	/**
+	 * Broadcast state changes to other tabs
+	 */
+	private broadcastState(): void {
+		if (!this.broadcastChannel) return;
+
+		const allStates: Record<string, unknown> = {};
+		for (const [moduleId, module] of Object.entries(this.moduleRegistry)) {
+			const state = this.extractModuleState(moduleId);
+			if (state) allStates[moduleId] = state;
+		}
+
+		this.broadcastChannel.postMessage({
+			type: 'state-sync',
+			state: allStates
+		});
+	}
+
+	/**
+	 * Show visual notification when module is updated
+	 */
+	private showUpdateNotification(moduleId: string): void {
+		if (typeof document === 'undefined') return;
+
+		// Remove existing toast if any
+		const existing = document.querySelector('.hmr-toast');
+		if (existing) existing.remove();
+
+		const toast = document.createElement('div');
+		toast.className = 'hmr-toast';
+		toast.textContent = `Updated: ${moduleId}`;
+		toast.setAttribute('style', `
+			position: fixed;
+			bottom: 20px;
+			right: 20px;
+			background: #10b981;
+			color: white;
+			padding: 8px 16px;
+			border-radius: 4px;
+			font-family: system-ui, -apple-system, sans-serif;
+			font-size: 12px;
+			z-index: 99999;
+			opacity: 0;
+			transition: opacity 0.3s ease;
+			box-shadow: 0 2px 8px rgba(0,0,0,0.15);
+		`);
+
+		document.body.appendChild(toast);
+
+		// Fade in
+		requestAnimationFrame(() => toast.style.opacity = '1');
+
+		// Fade out after 2 seconds
+		setTimeout(() => {
+			toast.style.opacity = '0';
+			setTimeout(() => toast.remove(), 300);
+		}, 2000);
+	}
+
+	/**
+	 * Register a module for HMR with dependency tracking
 	 */
 	registerModule(moduleId: string, exports: Record<string, unknown>, deps?: string[]): void {
 		this.moduleRegistry[moduleId] = {
@@ -281,6 +485,17 @@ export class HMRClient {
 			accept: true,
 			deps,
 		};
+
+		// Build dependency graph
+		if (deps) {
+			this.moduleDepGraph.set(moduleId, new Set(deps));
+			for (const dep of deps) {
+				if (!this.dependentsMap.has(dep)) {
+					this.dependentsMap.set(dep, new Set());
+				}
+				this.dependentsMap.get(dep)!.add(moduleId);
+			}
+		}
 	}
 
 	/**

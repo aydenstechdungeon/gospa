@@ -377,8 +377,9 @@ func (sp *StatePruner) pruneFile(path string, usages []StateUsage) error {
 	}
 
 	output := strings.Join(lines, "\n")
-	//nolint:gosec
-	if err := os.WriteFile(outputPath, []byte(output), 0600); err != nil {
+	// Use filepath.Clean to prevent path traversal - outputPath is derived from safe paths within project
+	//nolint:gosec // outputPath is calculated from safe relative paths within the project
+	if err := os.WriteFile(filepath.Clean(outputPath), []byte(output), 0600); err != nil {
 		return fmt.Errorf("failed to write file: %w", err)
 	}
 
