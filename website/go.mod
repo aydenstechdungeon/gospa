@@ -14,6 +14,7 @@ replace github.com/aydenstechdungeon/gospa => ../
 require (
 	github.com/andybalholm/brotli v1.2.0 // indirect
 	github.com/fasthttp/websocket v1.5.12 // indirect
+	github.com/fsnotify/fsnotify v1.9.0 // indirect
 	github.com/gofiber/contrib/v3/websocket v1.1.0 // indirect
 	github.com/gofiber/schema v1.7.0 // indirect
 	github.com/gofiber/utils/v2 v2.0.2 // indirect

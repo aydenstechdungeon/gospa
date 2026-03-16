@@ -31,7 +31,7 @@ func Page() templ.Component {
 			templ_7745c5c3_Var1 = templ.NopComponent
 		}
 		ctx = templ.ClearChildren(ctx)
-		templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 1, "<div class=\"space-y-12\"><header><h1 class=\"text-4xl font-bold tracking-tight mb-4 text-transparent bg-clip-text bg-gradient-to-r from-[var(--accent-primary)] to-[var(--accent-secondary)]\">Plugin System</h1><p class=\"text-xl text-[var(--text-secondary)] leading-relaxed\">Extend GoSPA with powerful plugins for CSS processing, image optimization, form validation, SEO, and authentication.</p></header><section class=\"space-y-6\"><h2 class=\"text-2xl font-bold border-b border-[var(--border)] pb-2\">Overview</h2><p class=\"text-[var(--text-secondary)]\">GoSPA's plugin system allows you to extend the framework with additional functionality. Plugins can hook into the build process, add CLI commands, and provide runtime features.</p></section><section class=\"space-y-6\"><h2 class=\"text-2xl font-bold border-b border-[var(--border)] pb-2\">Built-in Plugins</h2><div class=\"grid gap-4 md:grid-cols-2\">")
+		templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 1, "<div class=\"space-y-12\"><header><h1 class=\"text-4xl font-bold tracking-tight mb-4 text-transparent bg-clip-text bg-gradient-to-r from-[var(--accent-primary)] to-[var(--accent-secondary)]\">Plugin System</h1><p class=\"text-xl text-[var(--text-secondary)] leading-relaxed\">Extend GoSPA with powerful plugins for CSS processing, image optimization, form validation, SEO, authentication, and runtime integration.</p></header><section class=\"space-y-6\"><h2 class=\"text-2xl font-bold border-b border-[var(--border)] pb-2\">Overview</h2><p class=\"text-[var(--text-secondary)]\">GoSPA's plugin system allows you to extend the framework with additional functionality. Plugins can hook into the build process, add CLI commands, and provide runtime features like middleware and template functions.</p></section><section class=\"space-y-6\"><h2 class=\"text-2xl font-bold border-b border-[var(--border)] pb-2\">Plugin Types</h2><div class=\"space-y-4\"><div class=\"p-4 rounded-2xl border border-[var(--border)] bg-[var(--bg-secondary)]\"><h3 class=\"text-lg font-bold mb-2 text-[var(--accent-primary)]\">Base Plugin</h3><p class=\"text-sm text-[var(--text-secondary)]\">Minimal plugin with name, initialization, and dependencies.</p></div><div class=\"p-4 rounded-2xl border border-[var(--border)] bg-[var(--bg-secondary)]\"><h3 class=\"text-lg font-bold mb-2 text-[var(--accent-primary)]\">CLI Plugin</h3><p class=\"text-sm text-[var(--text-secondary)]\">Extends base plugin with lifecycle hooks and custom CLI commands.</p></div><div class=\"p-4 rounded-2xl border border-[var(--border)] bg-[var(--bg-secondary)]\"><h3 class=\"text-lg font-bold mb-2 text-[var(--accent-primary)]\">Runtime Plugin</h3><p class=\"text-sm text-[var(--text-secondary)]\">Extends base plugin with middleware injection, template functions, and runtime configuration.</p></div></div></section><section class=\"space-y-6\"><h2 class=\"text-2xl font-bold border-b border-[var(--border)] pb-2\">Built-in Plugins</h2><div class=\"grid gap-4 md:grid-cols-2\">")
 		if templ_7745c5c3_Err != nil {
 			return templ_7745c5c3_Err
 		}
@@ -70,7 +70,8 @@ func Page() templ.Component {
 		templ_7745c5c3_Err = components.CodeBlock(`plugins:
   tailwind:
     enabled: true
-    config: tailwind.config.js
+    input: ./styles/main.css
+    output: ./static/css/main.css
   postcss:
     enabled: true
     plugins:
@@ -88,12 +89,218 @@ func Page() templ.Component {
     siteUrl: https://example.com
   auth:
     enabled: true
-    jwtSecret: "\${JWT_SECRET}"
+    jwtSecret: "${JWT_SECRET}"
     providers: [google, github]`, "yaml", "gospa.yaml").Render(ctx, templ_7745c5c3_Buffer)
 		if templ_7745c5c3_Err != nil {
 			return templ_7745c5c3_Err
 		}
-		templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 3, "</section><section class=\"space-y-6\"><h2 class=\"text-2xl font-bold border-b border-[var(--border)] pb-2\">Plugin Hooks</h2><p class=\"text-[var(--text-secondary)] mb-4\">Plugins can hook into various stages of the build and development lifecycle:</p><div class=\"rounded-3xl border border-[var(--border)] overflow-hidden\"><table class=\"w-full text-left text-sm\"><thead class=\"bg-[var(--bg-secondary)] text-[var(--text-muted)] uppercase tracking-wider\"><tr><th class=\"px-6 py-4 font-bold\">Hook</th><th class=\"px-6 py-4 font-bold\">Description</th></tr></thead> <tbody class=\"divide-y divide-[var(--border)]\"><tr><td class=\"px-6 py-4 mono text-[var(--accent-primary)] font-bold\">BeforeGenerate</td><td class=\"px-6 py-4 text-[var(--text-secondary)]\">Runs before route generation</td></tr><tr><td class=\"px-6 py-4 mono text-[var(--accent-primary)] font-bold\">AfterGenerate</td><td class=\"px-6 py-4 text-[var(--text-secondary)]\">Runs after route generation</td></tr><tr><td class=\"px-6 py-4 mono text-[var(--accent-primary)] font-bold\">BeforeDev</td><td class=\"px-6 py-4 text-[var(--text-secondary)]\">Runs before dev server starts</td></tr><tr><td class=\"px-6 py-4 mono text-[var(--accent-primary)] font-bold\">AfterDev</td><td class=\"px-6 py-4 text-[var(--text-secondary)]\">Runs after dev server starts</td></tr><tr><td class=\"px-6 py-4 mono text-[var(--accent-primary)] font-bold\">BeforeBuild</td><td class=\"px-6 py-4 text-[var(--text-secondary)]\">Runs before production build</td></tr><tr><td class=\"px-6 py-4 mono text-[var(--accent-primary)] font-bold\">AfterBuild</td><td class=\"px-6 py-4 text-[var(--text-secondary)]\">Runs after production build</td></tr></tbody></table></div></section><section class=\"space-y-6\"><h2 class=\"text-2xl font-bold border-b border-[var(--border)] pb-2\">CLI Commands</h2><p class=\"text-[var(--text-secondary)] mb-4\">Each plugin provides CLI commands for common tasks:</p>")
+		templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 3, "</section><section class=\"space-y-6\"><h2 class=\"text-2xl font-bold border-b border-[var(--border)] pb-2\">Plugin Hooks</h2><p class=\"text-[var(--text-secondary)] mb-4\">Plugins can hook into various stages of the build, development, and runtime lifecycle:</p><div class=\"rounded-3xl border border-[var(--border)] overflow-hidden\"><table class=\"w-full text-left text-sm\"><thead class=\"bg-[var(--bg-secondary)] text-[var(--text-muted)] uppercase tracking-wider\"><tr><th class=\"px-6 py-4 font-bold\">Hook</th><th class=\"px-6 py-4 font-bold\">Description</th></tr></thead> <tbody class=\"divide-y divide-[var(--border)]\"><tr><td class=\"px-6 py-4 mono text-[var(--accent-primary)] font-bold\">BeforeGenerate</td><td class=\"px-6 py-4 text-[var(--text-secondary)]\">Runs before route generation</td></tr><tr><td class=\"px-6 py-4 mono text-[var(--accent-primary)] font-bold\">AfterGenerate</td><td class=\"px-6 py-4 text-[var(--text-secondary)]\">Runs after route generation</td></tr><tr><td class=\"px-6 py-4 mono text-[var(--accent-primary)] font-bold\">BeforeDev</td><td class=\"px-6 py-4 text-[var(--text-secondary)]\">Runs before dev server starts</td></tr><tr><td class=\"px-6 py-4 mono text-[var(--accent-primary)] font-bold\">AfterDev</td><td class=\"px-6 py-4 text-[var(--text-secondary)]\">Runs after dev server stops</td></tr><tr><td class=\"px-6 py-4 mono text-[var(--accent-primary)] font-bold\">BeforeBuild</td><td class=\"px-6 py-4 text-[var(--text-secondary)]\">Runs before production build</td></tr><tr><td class=\"px-6 py-4 mono text-[var(--accent-primary)] font-bold\">AfterBuild</td><td class=\"px-6 py-4 text-[var(--text-secondary)]\">Runs after production build</td></tr><tr><td class=\"px-6 py-4 mono text-[var(--accent-primary)] font-bold\">BeforeServe</td><td class=\"px-6 py-4 text-[var(--text-secondary)]\">Runs before HTTP server starts</td></tr><tr><td class=\"px-6 py-4 mono text-[var(--accent-primary)] font-bold\">AfterServe</td><td class=\"px-6 py-4 text-[var(--text-secondary)]\">Runs after HTTP server starts</td></tr><tr><td class=\"px-6 py-4 mono text-[var(--accent-primary)] font-bold\">BeforePrune</td><td class=\"px-6 py-4 text-[var(--text-secondary)]\">Runs before state pruning/cleanup</td></tr><tr><td class=\"px-6 py-4 mono text-[var(--accent-primary)] font-bold\">AfterPrune</td><td class=\"px-6 py-4 text-[var(--text-secondary)]\">Runs after state pruning/cleanup</td></tr><tr><td class=\"px-6 py-4 mono text-[var(--accent-primary)] font-bold\">OnError</td><td class=\"px-6 py-4 text-[var(--text-secondary)]\">Runs when an error occurs</td></tr></tbody></table></div></section><section class=\"space-y-6\"><h2 class=\"text-2xl font-bold border-b border-[var(--border)] pb-2\">App Integration</h2><p class=\"text-[var(--text-secondary)] mb-4\">Register plugins with your GoSPA application using the <code class=\"mono text-[var(--accent-primary)]\">UsePlugin</code> method:</p>")
+		if templ_7745c5c3_Err != nil {
+			return templ_7745c5c3_Err
+		}
+		templ_7745c5c3_Err = components.CodeBlock(`package main
+
+import (
+    "github.com/aydenstechdungeon/gospa"
+    "github.com/aydenstechdungeon/gospa/plugin"
+    "your-project/plugins/myplugin"
+)
+
+func main() {
+    app := gospa.New(config)
+
+    // Register a single plugin
+    app.UsePlugin(myplugin.New(myplugin.Config{
+        Option1: "value",
+    }))
+
+    // Or register multiple plugins at once
+    app.UsePlugins(plugin1, plugin2, plugin3)
+
+    // Get a registered plugin
+    if p, ok := app.GetPlugin("myplugin"); ok {
+        // Use plugin
+    }
+
+    // List all registered plugins
+    for _, info := range app.ListPlugins() {
+        println(info.Name, info.Version, info.State)
+    }
+
+    app.Run(":3000")
+}`, "go", "main.go").Render(ctx, templ_7745c5c3_Buffer)
+		if templ_7745c5c3_Err != nil {
+			return templ_7745c5c3_Err
+		}
+		templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 4, "</section><section class=\"space-y-6\"><h2 class=\"text-2xl font-bold border-b border-[var(--border)] pb-2\">Creating Custom Plugins</h2><p class=\"text-[var(--text-secondary)] mb-4\">Create your own plugins by implementing the Plugin interface:</p>")
+		if templ_7745c5c3_Err != nil {
+			return templ_7745c5c3_Err
+		}
+		templ_7745c5c3_Err = components.CodeBlock(`package myplugin
+
+import (
+    "github.com/aydenstechdungeon/gospa/plugin"
+    "github.com/gofiber/fiber/v3"
+)
+
+type MyPlugin struct {
+    config Config
+}
+
+type Config struct {
+    Option1 string `+"`yaml:\"option1\"`"+`
+    Option2 bool   `+"`yaml:\"option2\"`"+`
+}
+
+func New(config Config) *MyPlugin {
+    return &MyPlugin{config: config}
+}
+
+func (p *MyPlugin) Name() string {
+    return "my-plugin"
+}
+
+func (p *MyPlugin) Init() error {
+    return nil
+}
+
+func (p *MyPlugin) Dependencies() []plugin.Dependency {
+    return []plugin.Dependency{
+        {Type: plugin.DepGo, Name: "github.com/example/pkg", Version: "v1.0.0"},
+        {Type: plugin.DepBun, Name: "some-npm-package", Version: "^2.0.0"},
+    }
+}`, "go", "myplugin.go").Render(ctx, templ_7745c5c3_Buffer)
+		if templ_7745c5c3_Err != nil {
+			return templ_7745c5c3_Err
+		}
+		templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 5, "<h3 class=\"text-xl font-bold mt-6 mb-4\">CLI Plugin with Hooks</h3>")
+		if templ_7745c5c3_Err != nil {
+			return templ_7745c5c3_Err
+		}
+		templ_7745c5c3_Err = components.CodeBlock(`// CLIPlugin extends Plugin with lifecycle hooks and commands
+func (p *MyPlugin) OnHook(hook plugin.Hook, ctx map[string]interface{}) error {
+    switch hook {
+    case plugin.BeforeBuild:
+        // Pre-build logic
+    case plugin.AfterBuild:
+        // Post-build logic
+    case plugin.BeforeServe:
+        // Before HTTP server starts
+        if fiberApp, ok := ctx["fiber"].(*fiber.App); ok {
+            // Configure fiber app
+        }
+    case plugin.OnError:
+        if errMsg, ok := ctx["error"].(string); ok {
+            // Handle error
+        }
+    }
+    return nil
+}
+
+func (p *MyPlugin) Commands() []plugin.Command {
+    return []plugin.Command{
+        {
+            Name:        "myplugin:run",
+            Alias:       "mr",
+            Description: "Run my plugin",
+            Action:      p.runAction,
+        },
+    }
+}`, "go", "myplugin_hooks.go").Render(ctx, templ_7745c5c3_Buffer)
+		if templ_7745c5c3_Err != nil {
+			return templ_7745c5c3_Err
+		}
+		templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 6, "<h3 class=\"text-xl font-bold mt-6 mb-4\">Runtime Plugin with Middlewares</h3>")
+		if templ_7745c5c3_Err != nil {
+			return templ_7745c5c3_Err
+		}
+		templ_7745c5c3_Err = components.CodeBlock(`// RuntimePlugin extends Plugin with runtime integration
+func (p *MyPlugin) Config() plugin.PluginConfig {
+    return plugin.PluginConfig{
+        Schema: map[string]plugin.FieldSchema{
+            "apiKey": {
+                Type:        "string",
+                Description: "API key for the service",
+                Required:    true,
+            },
+        },
+        Defaults: map[string]interface{}{
+            "apiKey": "",
+        },
+    }
+}
+
+func (p *MyPlugin) Middlewares() []interface{} {
+    return []interface{}{
+        func(c fiber.Ctx) error {
+            // Custom middleware logic
+            return c.Next()
+        },
+    }
+}
+
+func (p *MyPlugin) TemplateFuncs() map[string]interface{} {
+    return map[string]interface{}{
+        "formatDate": func(date interface{}) string {
+            // Custom date formatting
+            return "formatted"
+        },
+    }
+}`, "go", "myplugin_runtime.go").Render(ctx, templ_7745c5c3_Buffer)
+		if templ_7745c5c3_Err != nil {
+			return templ_7745c5c3_Err
+		}
+		templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 7, "</section><section class=\"space-y-6\"><h2 class=\"text-2xl font-bold border-b border-[var(--border)] pb-2\">Plugin State Management</h2><p class=\"text-[var(--text-secondary)] mb-4\">Plugins can be enabled/disabled at runtime:</p>")
+		if templ_7745c5c3_Err != nil {
+			return templ_7745c5c3_Err
+		}
+		templ_7745c5c3_Err = components.CodeBlock(`// Enable a plugin
+plugin.Enable("myplugin")
+
+// Disable a plugin
+plugin.Disable("myplugin")
+
+// Check plugin state
+info, ok := plugin.GetPluginInfo("myplugin")
+if ok && info.State == plugin.StateEnabled {
+    // Plugin is active
+}`, "go", "plugin_state.go").Render(ctx, templ_7745c5c3_Buffer)
+		if templ_7745c5c3_Err != nil {
+			return templ_7745c5c3_Err
+		}
+		templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 8, "</section><section class=\"space-y-6\"><h2 class=\"text-2xl font-bold border-b border-[var(--border)] pb-2\">External Plugins</h2><p class=\"text-[var(--text-secondary)] mb-4\">Load plugins from external GitHub repositories:</p>")
+		if templ_7745c5c3_Err != nil {
+			return templ_7745c5c3_Err
+		}
+		templ_7745c5c3_Err = components.CodeBlock(`import "github.com/aydenstechdungeon/gospa/plugin"
+
+// Create a loader
+loader := plugin.NewExternalPluginLoader()
+
+// Load a plugin from GitHub
+// Supported formats:
+// - github.com/owner/repo
+// - github.com/owner/repo@version
+// - owner/repo
+// - owner/repo@version
+p, err := loader.LoadFromGitHub("github.com/username/gospa-plugin-example")
+
+// Or use convenience functions
+err := plugin.InstallPlugin("username/gospa-plugin-example")
+err := plugin.UninstallPlugin("username/gospa-plugin-example")
+
+// List installed plugins
+entries, err := plugin.ListInstalledPlugins()
+
+// Discover available plugins
+entries, err := plugin.DiscoverPlugins()
+
+// Search plugins
+results, err := plugin.SearchPlugins("tailwind")`, "go", "external_plugins.go").Render(ctx, templ_7745c5c3_Buffer)
+		if templ_7745c5c3_Err != nil {
+			return templ_7745c5c3_Err
+		}
+		templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 9, "<p class=\"text-[var(--text-secondary)] mt-4\">External plugins are cached in <code class=\"mono text-[var(--accent-primary)]\">~/.gospa/plugins/</code>.</p></section><section class=\"space-y-6\"><h2 class=\"text-2xl font-bold border-b border-[var(--border)] pb-2\">CLI Commands</h2><p class=\"text-[var(--text-secondary)] mb-4\">Each plugin provides CLI commands for common tasks:</p>")
 		if templ_7745c5c3_Err != nil {
 			return templ_7745c5c3_Err
 		}
@@ -130,55 +337,7 @@ gospa auth:verify         # Verify OTP code (alias: av)
 		if templ_7745c5c3_Err != nil {
 			return templ_7745c5c3_Err
 		}
-		templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 4, "</section><section class=\"space-y-6\"><h2 class=\"text-2xl font-bold border-b border-[var(--border)] pb-2\">Creating Custom Plugins</h2><p class=\"text-[var(--text-secondary)] mb-4\">Create your own plugins by implementing the Plugin interface:</p>")
-		if templ_7745c5c3_Err != nil {
-			return templ_7745c5c3_Err
-		}
-		templ_7745c5c3_Err = components.CodeBlock(`package myplugin
-
-import "github.com/aydenstechdungeon/gospa/plugin"
-
-type MyPlugin struct{}
-
-func (p *MyPlugin) Name() string {
-    return "my-plugin"
-}
-
-func (p *MyPlugin) Init() error {
-    return nil
-}
-
-func (p *MyPlugin) Dependencies() []plugin.Dependency {
-    return []plugin.Dependency{
-        {Type: plugin.DepGo, Name: "github.com/example/pkg", Version: "v1.0.0"},
-        {Type: plugin.DepBun, Name: "some-npm-package", Version: "^2.0.0"},
-    }
-}
-
-func (p *MyPlugin) OnHook(hook plugin.Hook, ctx map[string]interface{}) error {
-    switch hook {
-    case plugin.BeforeBuild:
-        // Pre-build logic
-    case plugin.AfterBuild:
-        // Post-build logic
-    }
-    return nil
-}
-
-func (p *MyPlugin) Commands() []plugin.Command {
-    return []plugin.Command{
-        {
-            Name:    "myplugin:run",
-            Aliases: []string{"mp"},
-            Desc:    "Run my plugin",
-            Action:  p.runAction,
-        },
-    }
-}`, "go", "myplugin.go").Render(ctx, templ_7745c5c3_Buffer)
-		if templ_7745c5c3_Err != nil {
-			return templ_7745c5c3_Err
-		}
-		templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 5, "</section><section class=\"space-y-6\"><h2 class=\"text-2xl font-bold border-b border-[var(--border)] pb-2\">External Plugins</h2><p class=\"text-[var(--text-secondary)]\">External plugins are cached in <code class=\"mono text-[var(--accent-primary)]\">~/.gospa/plugins/</code> and can be installed from Git repositories or local paths.</p></section></div>")
+		templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 10, "</section></div>")
 		if templ_7745c5c3_Err != nil {
 			return templ_7745c5c3_Err
 		}
@@ -207,46 +366,46 @@ func pluginCard(title string, href string, description string) templ.Component {
 			templ_7745c5c3_Var2 = templ.NopComponent
 		}
 		ctx = templ.ClearChildren(ctx)
-		templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 6, "<a href=\"")
+		templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 11, "<a href=\"")
 		if templ_7745c5c3_Err != nil {
 			return templ_7745c5c3_Err
 		}
 		var templ_7745c5c3_Var3 templ.SafeURL
 		templ_7745c5c3_Var3, templ_7745c5c3_Err = templ.JoinURLErrs(templ.SafeURL(href))
 		if templ_7745c5c3_Err != nil {
-			return templ.Error{Err: templ_7745c5c3_Err, FileName: `routes/docs/plugins/page.templ`, Line: 202, Col: 30}
+			return templ.Error{Err: templ_7745c5c3_Err, FileName: `routes/docs/plugins/page.templ`, Line: 386, Col: 30}
 		}
 		_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ.EscapeString(templ_7745c5c3_Var3))
 		if templ_7745c5c3_Err != nil {
 			return templ_7745c5c3_Err
 		}
-		templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 7, "\" class=\"block p-6 rounded-2xl border border-[var(--border)] bg-[var(--bg-secondary)] hover:border-[var(--accent-primary)] transition-all group\"><h3 class=\"text-lg font-bold mb-2 group-hover:text-[var(--accent-primary)] transition-colors\">")
+		templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 12, "\" class=\"block p-6 rounded-2xl border border-[var(--border)] bg-[var(--bg-secondary)] hover:border-[var(--accent-primary)] transition-all group\"><h3 class=\"text-lg font-bold mb-2 group-hover:text-[var(--accent-primary)] transition-colors\">")
 		if templ_7745c5c3_Err != nil {
 			return templ_7745c5c3_Err
 		}
 		var templ_7745c5c3_Var4 string
 		templ_7745c5c3_Var4, templ_7745c5c3_Err = templ.JoinStringErrs(title)
 		if templ_7745c5c3_Err != nil {
-			return templ.Error{Err: templ_7745c5c3_Err, FileName: `routes/docs/plugins/page.templ`, Line: 203, Col: 103}
+			return templ.Error{Err: templ_7745c5c3_Err, FileName: `routes/docs/plugins/page.templ`, Line: 387, Col: 103}
 		}
 		_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ.EscapeString(templ_7745c5c3_Var4))
 		if templ_7745c5c3_Err != nil {
 			return templ_7745c5c3_Err
 		}
-		templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 8, "</h3><p class=\"text-sm text-[var(--text-muted)]\">")
+		templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 13, "</h3><p class=\"text-sm text-[var(--text-muted)]\">")
 		if templ_7745c5c3_Err != nil {
 			return templ_7745c5c3_Err
 		}
 		var templ_7745c5c3_Var5 string
 		templ_7745c5c3_Var5, templ_7745c5c3_Err = templ.JoinStringErrs(description)
 		if templ_7745c5c3_Err != nil {
-			return templ.Error{Err: templ_7745c5c3_Err, FileName: `routes/docs/plugins/page.templ`, Line: 204, Col: 59}
+			return templ.Error{Err: templ_7745c5c3_Err, FileName: `routes/docs/plugins/page.templ`, Line: 388, Col: 59}
 		}
 		_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ.EscapeString(templ_7745c5c3_Var5))
 		if templ_7745c5c3_Err != nil {
 			return templ_7745c5c3_Err
 		}
-		templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 9, "</p></a>")
+		templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 14, "</p></a>")
 		if templ_7745c5c3_Err != nil {
 			return templ_7745c5c3_Err
 		}
