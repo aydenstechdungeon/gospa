@@ -485,7 +485,7 @@ plugins:
   image:
     input: ./images
     output: ./static/images
-    formats: [webp, jpeg]
+    formats: [webp, avif, jpeg, png]
     widths: [320, 640, 1280, 1920]
   auth:
     jwt_secret: ${JWT_SECRET}
@@ -9250,7 +9250,7 @@ The CLI supports a plugin system with hooks for extending functionality.
 |--------|-------------|--------------|
 | **Tailwind** | Tailwind CSS v4 support | `tailwindcss` (bun) |
 | **PostCSS** | PostCSS with Tailwind extensions | `postcss`, `@tailwindcss/postcss` (bun) |
-| **Image** | Image optimization (WebP, JPEG, PNG) | None (stdlib) |
+| **Image** | Image optimization (WebP, AVIF, JPEG, PNG) | `golang.org/x/image` (go), `libwebp` + `libheif` (system, cgo) |
 | **Validation** | Form validation (Valibot + Go validator) | `github.com/go-playground/validator/v10` (go), `valibot` (bun) |
 | **SEO** | SEO optimization (sitemap, meta, JSON-LD) | None (stdlib) |
 | **Auth** | Authentication (OAuth2, JWT, OTP) | `github.com/golang-jwt/jwt/v5`, `golang.org/x/oauth2`, `github.com/pquerna/otp` (go) |
@@ -9269,7 +9269,7 @@ plugins:
   image:
     input: ./static/images
     output: ./static/images/optimized
-    formats: [webp, jpeg]
+    formats: [webp, avif, jpeg, png]
     widths: [320, 640, 1280]
   
   seo:
@@ -9713,11 +9713,15 @@ plugins:
     output: ./static/images/optimized
     formats:
       - webp
+      - avif
       - jpeg
+      - png
     widths: [320, 640, 1280, 1920]
     quality: 85
     on_the_fly: false  # Enable runtime optimization
 ```
+
+**Requirements:** `cgo` enabled with system libraries `libwebp` and `libheif` installed.
 
 **CLI Commands:**
 | Command | Alias | Description |
@@ -9729,9 +9733,9 @@ plugins:
 **Features:**
 - Build-time optimization (default)
 - Optional on-the-fly processing
-- WebP, JPEG, PNG support
+- WebP, AVIF, JPEG, and PNG support (Go-native)
 - Responsive srcset generation
-- No external dependencies (stdlib only)
+- No Bun/npm dependencies (Go-native codecs via cgo)
 
 ---
 
@@ -10082,7 +10086,7 @@ plugins:
   image:
     input: ./static/images
     output: ./static/images/optimized
-    formats: [webp, jpeg]
+    formats: [webp, avif, jpeg, png]
     widths: [320, 640, 1280]
   
   seo:

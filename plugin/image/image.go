@@ -14,6 +14,7 @@ import (
 
 	"github.com/aydenstechdungeon/gospa/plugin"
 	"golang.org/x/image/draw"
+	_ "golang.org/x/image/webp"
 )
 
 // ImagePlugin provides image optimization capabilities.
@@ -58,7 +59,7 @@ type FormatConfig struct {
 	// WebP enables WebP conversion.
 	WebP bool `yaml:"webp" json:"webP"`
 
-	// AVIF enables AVIF conversion (requires external tool).
+	// AVIF enables AVIF conversion.
 	AVIF bool `yaml:"avif" json:"avif"`
 
 	// JPEG enables JPEG optimization.
@@ -93,8 +94,8 @@ func DefaultConfig() *Config {
 		PreserveOriginals: true,
 		LazyLoadThreshold: 10240, // 10KB
 		Formats: FormatConfig{
-			WebP: false, // Disabled by default - requires external library for encoding
-			AVIF: false, // Requires external tool
+			WebP: false,
+			AVIF: false,
 			JPEG: true,
 			PNG:  true,
 		},
@@ -142,25 +143,9 @@ func (p *ImagePlugin) Init() error {
 
 // Dependencies returns required dependencies.
 func (p *ImagePlugin) Dependencies() []plugin.Dependency {
-	deps := []plugin.Dependency{
+	return []plugin.Dependency{
 		{Type: plugin.DepGo, Name: "golang.org/x/image", Version: "latest"},
 	}
-
-	// If AVIF is enabled, we need the external tool
-	if p.config.Formats.AVIF {
-		deps = append(deps, plugin.Dependency{
-			Type: plugin.DepBun, Name: "sharp", Version: "latest",
-		})
-	}
-
-	// If on-the-fly optimization is enabled, we need server-side packages
-	if p.config.OnTheFly {
-		deps = append(deps, plugin.Dependency{
-			Type: plugin.DepGo, Name: "github.com/disintegration/imaging", Version: "latest",
-		})
-	}
-
-	return deps
 }
 
 // OnHook handles lifecycle hooks.
@@ -309,10 +294,7 @@ func (p *ImagePlugin) optimizeImage(srcPath, outPath string) error {
 		resized := p.resizeImage(img, size.Width, size.Height)
 		sizeOutPath := p.addSizeSuffix(outPath, size.Name)
 
-		// Save in each enabled format
-		// Note: WebP encoding is not supported by Go's standard library.
-		// For WebP support, use an external tool like sharp (npm) or cwebp.
-		// The WebP config option is reserved for future implementation.
+		// Save in each enabled format.
 
 		if p.config.Formats.JPEG && ext != ".png" {
 			if err := p.saveJPEG(resized, sizeOutPath+".jpg", size.Quality); err != nil {
@@ -322,6 +304,18 @@ func (p *ImagePlugin) optimizeImage(srcPath, outPath string) error {
 
 		if p.config.Formats.PNG && ext == ".png" {
 			if err := p.savePNG(resized, sizeOutPath+".png"); err != nil {
+				return err
+			}
+		}
+
+		if p.config.Formats.WebP {
+			if err := p.saveWebP(resized, sizeOutPath+".webp", size.Quality); err != nil {
+				return err
+			}
+		}
+
+		if p.config.Formats.AVIF {
+			if err := p.saveAVIF(resized, sizeOutPath+".avif", size.Quality); err != nil {
 				return err
 			}
 		}
@@ -412,7 +406,7 @@ func (p *ImagePlugin) cleanCache(projectDir string) error {
 // isImageFile checks if a file extension is an image.
 func isImageFile(ext string) bool {
 	switch ext {
-	case ".jpg", ".jpeg", ".png", ".gif", ".webp", ".bmp", ".tiff", ".svg":
+	case ".jpg", ".jpeg", ".png", ".gif", ".webp", ".avif", ".bmp", ".tiff", ".svg":
 		return true
 	default:
 		return false
