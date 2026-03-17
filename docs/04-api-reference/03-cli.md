@@ -552,7 +552,7 @@ The CLI supports a plugin system with hooks for extending functionality.
 |--------|-------------|--------------|
 | **Tailwind** | Tailwind CSS v4 support | `tailwindcss` (bun) |
 | **PostCSS** | PostCSS with Tailwind extensions | `postcss`, `@tailwindcss/postcss` (bun) |
-| **Image** | Image optimization (WebP, JPEG, PNG) | None (stdlib) |
+| **Image** | Image optimization (WebP, AVIF, JPEG, PNG) | `golang.org/x/image` (go), `libwebp` + `libheif` (system, cgo) |
 | **Validation** | Form validation (Valibot + Go validator) | `github.com/go-playground/validator/v10` (go), `valibot` (bun) |
 | **SEO** | SEO optimization (sitemap, meta, JSON-LD) | None (stdlib) |
 | **Auth** | Authentication (OAuth2, JWT, OTP) | `github.com/golang-jwt/jwt/v5`, `golang.org/x/oauth2`, `github.com/pquerna/otp` (go) |
@@ -571,7 +571,7 @@ plugins:
   image:
     input: ./static/images
     output: ./static/images/optimized
-    formats: [webp, jpeg]
+    formats: [webp, avif, jpeg, png]
     widths: [320, 640, 1280]
   
   seo:
