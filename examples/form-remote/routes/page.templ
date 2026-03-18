@@ -1,0 +1,223 @@
+package routes
+
+templ Page() {
+	<div 
+		class="min-h-screen bg-zinc-950 text-zinc-100 p-8"
+		data-gospa-component="guestbook"
+		data-gospa-state='{"messages":[],"page":1,"totalPages":1,"connected":false}'
+	>
+		<div class="max-w-2xl mx-auto">
+			<header class="mb-12">
+				<h1 class="text-4xl font-bold tracking-tight mb-2">Guestbook</h1>
+				<p class="text-zinc-400">Sign in with a message. Updates appear in real-time.</p>
+				<div class="mt-4 flex items-center gap-2">
+					<span id="connection-status" class="inline-flex items-center gap-2 text-sm">
+						<span class="w-2 h-2 rounded-full bg-zinc-600 transition-colors"></span>
+						<span class="text-zinc-500">Connecting...</span>
+					</span>
+				</div>
+			</header>
+
+			<!-- Submission Form -->
+			<form 
+				id="message-form"
+				class="bg-zinc-900 border border-zinc-800 rounded-lg p-6 mb-8"
+				onsubmit="event.preventDefault(); handleSubmit(event)"
+			>
+				<div class="space-y-4">
+					<div>
+						<label for="name" class="block text-sm font-medium text-zinc-300 mb-1">Name</label>
+						<input 
+							type="text" 
+							id="name" 
+							name="name" 
+							required
+							class="w-full bg-zinc-950 border border-zinc-700 rounded-md px-4 py-2 text-zinc-100 placeholder-zinc-500 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+							placeholder="Your name"
+						/>
+					</div>
+					<div>
+						<label for="content" class="block text-sm font-medium text-zinc-300 mb-1">Message</label>
+						<textarea 
+							id="content" 
+							name="content" 
+							required
+							rows="3"
+							class="w-full bg-zinc-950 border border-zinc-700 rounded-md px-4 py-2 text-zinc-100 placeholder-zinc-500 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent resize-none"
+							placeholder="Your message"
+						></textarea>
+					</div>
+					<button 
+						type="submit"
+						class="w-full bg-blue-600 hover:bg-blue-500 text-white font-medium py-2 px-4 rounded-md transition-colors focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2 focus:ring-offset-zinc-900"
+					>
+						Sign Guestbook
+					</button>
+				</div>
+			</form>
+
+			<!-- Messages List -->
+			<div id="messages-container" class="space-y-4 mb-8">
+				<!-- Messages will be rendered here -->
+			</div>
+
+			<!-- Pagination -->
+			<div id="pagination" class="flex items-center justify-center gap-2">
+				<!-- Pagination will be rendered here -->
+			</div>
+		</div>
+	</div>
+	<script>
+		let currentPage = 1;
+		let totalPages = 1;
+		let messages = [];
+
+		// Initialize on page load
+		document.addEventListener('DOMContentLoaded', async () => {
+			await loadMessages(1);
+			setupWebSocket();
+		});
+
+		// Handle form submission via remote action
+		async function handleSubmit(event) {
+			const form = event.target;
+			const formData = new FormData(form);
+			
+			const input = {
+				name: formData.get('name'),
+				content: formData.get('content')
+			};
+
+			try {
+				const result = await GoSPA.remote('submitMessage', input);
+				if (result.ok) {
+					form.reset();
+					// Reload messages to show the new one
+					await loadMessages(currentPage);
+				} else {
+					alert('Failed to submit message: ' + (result.error || 'Unknown error'));
+				}
+			} catch (err) {
+				console.error('Error submitting message:', err);
+				alert('Error submitting message');
+			}
+		}
+
+		// Load messages from server
+		async function loadMessages(page) {
+			try {
+				const result = await GoSPA.remote('getMessages', { page: page });
+				if (result.ok) {
+					messages = result.data.messages;
+					currentPage = result.data.page;
+					totalPages = result.data.totalPages;
+					renderMessages();
+					renderPagination();
+				}
+			} catch (err) {
+				console.error('Error loading messages:', err);
+			}
+		}
+
+		// Render messages to the DOM
+		function renderMessages() {
+			const container = document.getElementById('messages-container');
+			
+			if (messages.length === 0) {
+				container.innerHTML = '<p class="text-zinc-500 text-center py-8">No messages yet. Be the first to sign!</p>';
+				return;
+			}
+
+			container.innerHTML = messages.map(msg => {
+				const date = new Date(msg.timestamp);
+				const formatted = date.toLocaleDateString() + ' ' + date.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+				return `
+					<div class="bg-zinc-900 border border-zinc-800 rounded-lg p-4">
+						<div class="flex items-center justify-between mb-2">
+							<span class="font-medium text-zinc-100">${escapeHtml(msg.name)}</span>
+							<span class="text-sm text-zinc-500">${formatted}</span>
+						</div>
+						<p class="text-zinc-300 whitespace-pre-wrap">${escapeHtml(msg.content)}</p>
+					</div>
+				`;
+			}).join('');
+		}
+
+		// Render pagination controls
+		function renderPagination() {
+			const container = document.getElementById('pagination');
+			
+			if (totalPages <= 1) {
+				container.innerHTML = '';
+				return;
+			}
+
+			let html = '';
+			
+			// Previous button
+			if (currentPage > 1) {
+				html += `<button onclick="loadMessages(currentPage - 1)" class="px-3 py-1 rounded bg-zinc-800 text-zinc-300 hover:bg-zinc-700 transition-colors">Previous</button>`;
+			}
+			
+			// Page indicator
+			html += `<span class="px-3 py-1 text-zinc-400">Page ${currentPage} of ${totalPages}</span>`;
+			
+			// Next button
+			if (currentPage < totalPages) {
+				html += `<button onclick="loadMessages(currentPage + 1)" class="px-3 py-1 rounded bg-zinc-800 text-zinc-300 hover:bg-zinc-700 transition-colors">Next</button>`;
+			}
+
+			container.innerHTML = html;
+		}
+
+		// Set up WebSocket for real-time updates
+		function setupWebSocket() {
+			const statusEl = document.getElementById('connection-status');
+			const dot = statusEl.querySelector('span:first-child');
+			const text = statusEl.querySelector('span:last-child');
+			
+			// Use GoSPA's WebSocket if available
+			if (typeof initWebSocket === 'function') {
+				const protocol = window.location.protocol === 'https:' ? 'wss:' : 'ws:';
+				const wsUrl = `${protocol}//${window.location.host}/_gospa/ws`;
+				
+				const ws = initWebSocket({
+					url: wsUrl,
+					reconnect: true,
+					onConnect: () => {
+						dot.classList.remove('bg-zinc-600');
+						dot.classList.add('bg-green-500');
+						text.textContent = 'Connected';
+					},
+					onDisconnect: () => {
+						dot.classList.remove('bg-green-500');
+						dot.classList.add('bg-zinc-600');
+						text.textContent = 'Disconnected';
+					},
+					onMessage: (data) => {
+						if (data.type === 'new_message') {
+							// Reload messages when a new one arrives
+							loadMessages(currentPage);
+						}
+					}
+				});
+				
+				ws.connect();
+			} else {
+				// Fallback: just show connected after a delay
+				setTimeout(() => {
+					dot.classList.remove('bg-zinc-600');
+					dot.classList.add('bg-zinc-500');
+					text.textContent = 'WebSocket not available';
+				}, 2000);
+			}
+		}
+
+		// Helper to escape HTML
+		function escapeHtml(text) {
+			const div = document.createElement('div');
+			div.textContent = text;
+			return div.innerHTML;
+		}
+	</script>
+}
