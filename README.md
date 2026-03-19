@@ -57,7 +57,7 @@ templ Page() {
 
 ## Documentation
 
-Full guides and API reference are available at [gospa.onrender.com](https://gospa.onrender.com/docs), [aydenstechdungeon.github.io/gospa](https://aydenstechdungeon.github.io/gospa) or in the `/docs` directory.
+Full guides and API reference are available at [gospa.onrender.com](https://gospa.onrender.com/docs) or in the `/docs` directory.
 
 ---
 
