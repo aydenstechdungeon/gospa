@@ -62,19 +62,21 @@ RUN if [ -d "website" ]; then \
     fi
 
 # 6. Normalize artifacts into /build/out for the runtime stage
-RUN mkdir -p /build/out && \
+# Optional dirs (static, components, generated) are copied only when present.
+# All destination dirs are pre-created so COPY --from=builder in the runtime stage never fails.
+RUN mkdir -p /build/out/static /build/out/routes /build/out/components /build/out/generated && \
     if [ -d "website/dist" ]; then \
-    cp website/dist/server /build/out/website && \
-    cp -r website/dist/static /build/out/static && \
-    cp -r website/routes /build/out/routes && \
-    cp -r website/components /build/out/components && \
-    cp -r website/generated /build/out/generated; \
+      cp website/dist/server /build/out/website && \
+      { [ -d website/dist/static ]    && cp -r website/dist/static/.    /build/out/static/    || true; } && \
+      { [ -d website/routes ]         && cp -r website/routes           /build/out/routes     || true; } && \
+      { [ -d website/components ]     && cp -r website/components       /build/out/components || true; } && \
+      { [ -d website/generated ]      && cp -r website/generated        /build/out/generated  || true; }; \
     else \
-    cp dist/server /build/out/website && \
-    cp -r dist/static /build/out/static && \
-    cp -r routes /build/out/routes && \
-    cp -r components /build/out/components && \
-    cp -r generated /build/out/generated; \
+      cp dist/server /build/out/website && \
+      { [ -d dist/static ]    && cp -r dist/static/.    /build/out/static/    || true; } && \
+      { [ -d routes ]         && cp -r routes           /build/out/routes     || true; } && \
+      { [ -d components ]     && cp -r components       /build/out/components || true; } && \
+      { [ -d generated ]      && cp -r generated        /build/out/generated  || true; }; \
     fi
 
 # Runtime stage
