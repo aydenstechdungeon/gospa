@@ -39,7 +39,7 @@ func Page() templ.Component {
   auth:
     enabled: true
     jwt_secret: "your-secret-key-min-32-chars"
-    jwt_expiry: "24h"
+    jwt_expiry: 24
     session_cookie: "session"
     oauth:
       google:
@@ -193,7 +193,7 @@ function onTelegramAuth(user) {
 
 import (
     "github.com/aydenstechdungeon/gospa/plugin/auth"
-    "github.com/gofiber/fiber/v2"
+    "github.com/gofiber/fiber/v3"
 )
 
 func main() {
@@ -202,7 +202,7 @@ func main() {
     // Initialize auth plugin
     authPlugin := auth.New(auth.Config{
         JWTSecret:  "your-secret-key",
-        JWTExpiry:  24 * time.Hour,
+        JWTExpiry:  24,
     })
     
     // OAuth routes

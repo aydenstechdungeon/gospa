@@ -38,19 +38,20 @@ func Generate(config *GenerateConfig) {
 
 	if err := routing_generator.Generate(routesDir); err != nil {
 		fmt.Fprintf(os.Stderr, "Error generating Go routes: %v\n", err)
-		os.Exit(1)
+		// Non-fatal when called from a hot-reload goroutine; just return.
+		return
 	}
 
 	// Generate TypeScript types from Go state structs
 	if err := generateTypesWithConfig(config); err != nil {
 		fmt.Fprintf(os.Stderr, "Error generating types: %v\n", err)
-		os.Exit(1)
+		return
 	}
 
 	// Generate route definitions for TypeScript
 	if err := generateRoutesWithConfig(config); err != nil {
 		fmt.Fprintf(os.Stderr, "Error generating routes: %v\n", err)
-		os.Exit(1)
+		return
 	}
 
 	// Trigger AfterGenerate hook
@@ -409,7 +410,11 @@ func writeTypeScriptFile(outputDir string, types map[string]TypeScriptType) erro
 	// Write type exports
 	sb.WriteString("export type AppState = {\n")
 	for name := range types {
-		fmt.Fprintf(&sb, "  %s: %s;\n", strings.ToLower(name[:1])+name[1:], name)
+		if name == "" {
+			continue
+		}
+		camelName := strings.ToLower(name[:1]) + name[1:]
+		fmt.Fprintf(&sb, "  %s: %s;\n", camelName, name)
 	}
 	sb.WriteString("};\n")
 

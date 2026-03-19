@@ -29,9 +29,8 @@ func main() {
 		port := fs.Int("port", 3000, "Port to advertise in dev output")
 		host := fs.String("host", "localhost", "Host to advertise in dev output")
 		routesDir := fs.String("routes-dir", "./routes", "Routes directory")
-		componentsDir := fs.String("components-dir", "./components", "Components directory")
 		_ = fs.Parse(os.Args[2:])
-		cli.Dev(&cli.DevConfig{Port: *port, Host: *host, RoutesDir: *routesDir, ComponentsDir: *componentsDir})
+		cli.Dev(&cli.DevConfig{Port: *port, Host: *host, RoutesDir: *routesDir})
 	case "build":
 		fs := flag.NewFlagSet("build", flag.ExitOnError)
 		out := fs.String("o", "dist", "Output directory")
@@ -51,10 +50,9 @@ func main() {
 	case "generate":
 		fs := flag.NewFlagSet("generate", flag.ExitOnError)
 		out := fs.String("o", "./generated", "Output directory")
-		routesDir := fs.String("routes-dir", "./routes", "Routes directory")
-		stateDir := fs.String("state-dir", ".", "State scan directory")
+		inputDir := fs.String("input-dir", ".", "Input directory to scan for routes and state")
 		_ = fs.Parse(os.Args[2:])
-		cli.Generate(&cli.GenerateConfig{OutputDir: *out, RoutesDir: *routesDir, StateDir: *stateDir})
+		cli.Generate(&cli.GenerateConfig{OutputDir: *out, InputDir: *inputDir})
 	case "clean":
 		cli.Clean()
 	default:

@@ -4,6 +4,8 @@ import (
 	"fmt"
 	"os"
 	"strings"
+
+	"github.com/aydenstechdungeon/gospa"
 )
 
 // ANSI color codes
@@ -178,6 +180,6 @@ func PrintBanner() {
      /_/             	
 `
 	fmt.Println(printer.colorize(cyan, banner))
-	fmt.Printf("%s %s\n", printer.Dim("A modern SPA framework for Go"), printer.Dim("v0.1.14"))
+	fmt.Printf("%s %s\n", printer.Dim("A modern SPA framework for Go"), printer.Dim("v"+gospa.Version))
 	fmt.Println()
 }

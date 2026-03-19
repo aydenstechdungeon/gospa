@@ -40,10 +40,9 @@ func Dev(config *DevConfig) {
 	// Use defaults if config is nil
 	if config == nil {
 		config = &DevConfig{
-			Port:          3000,
-			Host:          "localhost",
-			RoutesDir:     "./routes",
-			ComponentsDir: "./components",
+			Port:      3000,
+			Host:      "localhost",
+			RoutesDir: "./routes",
 		}
 	}
 
@@ -57,13 +56,10 @@ func Dev(config *DevConfig) {
 
 // DevConfig holds configuration for the development server.
 type DevConfig struct {
-	Port          int
-	Host          string
-	RoutesDir     string
-	ComponentsDir string
-	WatchPaths    []string
-	IgnorePaths   []string
-	Debounce      time.Duration
+	Port       int
+	Host       string
+	RoutesDir  string
+	WatchPaths []string // extra directories to watch in addition to RoutesDir
 }
 
 // DevWithConfig starts the development server with custom configuration.
@@ -80,8 +76,22 @@ func startDevWithConfig(config *DevConfig) error {
 	sigChan := make(chan os.Signal, 1)
 	signal.Notify(sigChan, os.Interrupt, syscall.SIGTERM)
 
+	// Build the list of directories to watch; only include dirs that exist
+	// so that components/, lib/, and static/ remain optional.
+	candidateDirs := []string{config.RoutesDir, "./components", "./lib", "./state"}
+	candidateDirs = append(candidateDirs, config.WatchPaths...)
+	watchDirs := make([]string, 0, len(candidateDirs))
+	for _, d := range candidateDirs {
+		if d == "" {
+			continue
+		}
+		if _, err := os.Stat(d); err == nil {
+			watchDirs = append(watchDirs, d)
+		}
+	}
+
 	// Start file watcher
-	watcher := NewDevWatcher(config.RoutesDir, config.ComponentsDir)
+	watcher := NewDevWatcher(watchDirs...)
 	if err := watcher.Start(); err != nil {
 		return fmt.Errorf("failed to start watcher: %w", err)
 	}
@@ -372,68 +382,10 @@ func runGenerate() {
 }
 
 func isGoSPAProject() bool {
-	// Check for go.mod
-	if _, err := os.Stat("go.mod"); os.IsNotExist(err) {
-		return false
-	}
-
-	// Check for routes directory
-	if _, err := os.Stat("routes"); os.IsNotExist(err) {
-		return false
-	}
-
-	return true
-}
-
-// HotReload represents a hot reload event.
-type HotReload struct {
-	Type    string `json:"type"`
-	File    string `json:"file"`
-	Message string `json:"message"`
-}
-
-// DevServer represents the development server.
-type DevServer struct {
-	config   *DevConfig
-	watcher  *DevWatcher
-	server   *exec.Cmd
-	reloadCh chan HotReload
-}
-
-// NewDevServer creates a new development server.
-func NewDevServer(config *DevConfig) *DevServer {
-	return &DevServer{
-		config:   config,
-		reloadCh: make(chan HotReload, 100),
-	}
-}
-
-// Start starts the development server.
-func (s *DevServer) Start() error {
-	// Start watcher
-	s.watcher = NewDevWatcher(s.config.RoutesDir, s.config.ComponentsDir)
-	if err := s.watcher.Start(); err != nil {
-		return err
-	}
-
-	// Start server
-	s.server = startServerProcess(context.Background(), s.config)
-
-	// Handle reloads
-	go s.handleReloads()
-
-	return nil
-}
-
-// Stop stops the development server.
-func (s *DevServer) Stop() {
-	if s.watcher != nil {
-		s.watcher.Stop()
-	}
-
-	if s.server != nil && s.server.Process != nil {
-		terminateProcess(s.server)
-	}
+	// A GoSPA project only requires a go.mod. The routes, components, lib,
+	// and static directories are all optional.
+	_, err := os.Stat("go.mod")
+	return err == nil
 }
 
 func terminateProcess(cmd *exec.Cmd) {
@@ -449,31 +401,4 @@ func terminateProcess(cmd *exec.Cmd) {
 		_ = cmd.Process.Kill()
 		<-done
 	}
-}
-
-func (s *DevServer) handleReloads() {
-	for event := range s.watcher.Events {
-		reload := HotReload{
-			File: event.File,
-		}
-
-		switch event.Op {
-		case FileOpCreate:
-			reload.Type = "create"
-			reload.Message = "File created"
-		case FileOpModify:
-			reload.Type = "modify"
-			reload.Message = "File modified"
-		case FileOpDelete:
-			reload.Type = "delete"
-			reload.Message = "File deleted"
-		}
-
-		s.reloadCh <- reload
-	}
-}
-
-// Broadcast sends a reload event to all connected clients.
-func (s *DevServer) Broadcast(reload HotReload) {
-	s.reloadCh <- reload
 }

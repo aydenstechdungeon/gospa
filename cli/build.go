@@ -7,9 +7,11 @@ import (
 	"io/fs"
 	"os"
 	"os/exec"
+	"os/signal"
 	"path/filepath"
 	"runtime"
 	"strings"
+	"syscall"
 
 	"github.com/aydenstechdungeon/gospa/plugin"
 )
@@ -136,6 +138,19 @@ func buildClientRuntime(config *BuildConfig) error {
 		return nil
 	}
 
+	// Locate the entry point — prefer src/runtime.ts, fall back to src/index.ts
+	entryPoint := ""
+	for _, candidate := range []string{"src/runtime.ts", "src/index.ts", "src/main.ts"} {
+		if _, err := os.Stat(filepath.Join(clientDir, candidate)); err == nil {
+			entryPoint = candidate
+			break
+		}
+	}
+	if entryPoint == "" {
+		fmt.Println("Warning: no client entry point found (src/runtime.ts, src/index.ts, src/main.ts), skipping client build")
+		return nil
+	}
+
 	// Build the client runtime
 	outputPath := filepath.Join(config.OutputDir, "static", "js", "runtime.js")
 	if err := os.MkdirAll(filepath.Dir(outputPath), 0750); err != nil {
@@ -144,7 +159,7 @@ func buildClientRuntime(config *BuildConfig) error {
 
 	// Run bun build
 	//nolint:gosec // bunPath is safe executable from LookPath
-	cmd := exec.Command(bunPath, "build", "src/runtime.ts", "--outfile", outputPath, "--minify")
+	cmd := exec.Command(bunPath, "build", entryPoint, "--outfile", outputPath, "--minify")
 	cmd.Dir = clientDir
 	cmd.Stdout = os.Stdout
 	cmd.Stderr = os.Stderr
@@ -380,8 +395,17 @@ func Watch() {
 	// Initial build
 	Build(nil)
 
-	// Start watcher
-	watcher := NewDevWatcher("./routes", "./components", "./lib", "./static")
+	// Only watch directories that actually exist; components/, lib/, and
+	// static/ are all optional in a GoSPA project.
+	candidateDirs := []string{"./routes", "./components", "./lib", "./static"}
+	watchDirs := make([]string, 0, len(candidateDirs))
+	for _, d := range candidateDirs {
+		if _, err := os.Stat(d); err == nil {
+			watchDirs = append(watchDirs, d)
+		}
+	}
+
+	watcher := NewDevWatcher(watchDirs...)
 	if err := watcher.Start(); err != nil {
 		fmt.Fprintf(os.Stderr, "Error starting watcher: %v\n", err)
 		return
@@ -390,9 +414,15 @@ func Watch() {
 
 	fmt.Println("Watching for changes... Press Ctrl+C to stop")
 
-	// Handle file changes
+	// Handle OS signals for graceful shutdown
+	sigChan := make(chan os.Signal, 1)
+	signal.Notify(sigChan, os.Interrupt, syscall.SIGTERM)
+
 	for {
 		select {
+		case <-sigChan:
+			fmt.Println("\nStopping watcher...")
+			return
 		case event := <-watcher.Events:
 			fmt.Printf("\nFile changed: %s\n", event.File)
 			Build(nil)

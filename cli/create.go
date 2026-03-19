@@ -50,10 +50,11 @@ func createProject(config *ProjectConfig) error {
 		return fmt.Errorf("failed to create project directory: %w", err)
 	}
 
-	// Create subdirectories
+	// Create subdirectories — only routes/ is required. static/ and its
+	// subdirectories are created so the default CSS works, but users may
+	// delete them once they replace the starter template.
 	dirs := []string{
 		"routes",
-		"components",
 		"static",
 		"static/css",
 	}
@@ -103,7 +104,7 @@ func createProject(config *ProjectConfig) error {
 func createGoMod(config *ProjectConfig) error {
 	content := fmt.Sprintf(`module %s
 
-go 1.26.0
+go 1.23
 
 require (
 	github.com/a-h/templ v0.3.1001
