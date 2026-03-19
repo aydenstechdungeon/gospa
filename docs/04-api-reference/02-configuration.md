@@ -105,6 +105,7 @@ app := gospa.New(gospa.Config{
 |--------|------|---------|-------------|
 | `AllowedOrigins` | `[]string` | `[]` | Allowed CORS origins |
 | `EnableCSRF` | `bool` | `true` | Enable automatic CSRF protection (wired by gospa.New) |
+| `ContentSecurityPolicy` | `string` | secure default | Optional CSP header; empty uses GoSPA's default policy |
 | `NavigationOptions` | `NavigationOptions` | Default | Advanced client-side navigation tuning |
 
 ---

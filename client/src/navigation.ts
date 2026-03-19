@@ -385,6 +385,7 @@ async function getPageData(path: string, signal?: AbortSignal): Promise<PageData
 	const cached = prefetchCache.get(path);
 	if (cached && cached.expiresAt > Date.now()) {
 		prefetchCache.delete(path);
+		prefetchCache.set(path, cached);
 		return cached.data;
 	}
 	if (cached) prefetchCache.delete(path);

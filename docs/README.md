@@ -11,7 +11,9 @@ docs/
 ├── 03-features/            # Feature guides
 ├── 04-api-reference/       # API documentation
 ├── 05-advanced/            # Advanced topics
-└── 06-migration/           # Version migration guides
+├── 06-migration/           # Version migration guides
+├── 07-troubleshooting/     # Common production and developer issues
+└── 08-audits/              # Security and performance audit history
 ```
 
 ## Quick Navigation
@@ -46,6 +48,14 @@ docs/
 
 ### Migration
 - [v1 to v2](06-migration/01-v1-to-v2.md) - Migrating from v1.x to v2.0
+
+### Troubleshooting
+- [Remote Actions](07-troubleshooting/02-remote-actions.md)
+- [WebSocket Connections](07-troubleshooting/03-websocket-connections.md)
+- [Build & Deployment](07-troubleshooting/07-build-deployment.md)
+
+### Audits
+- [2026-03-12 Security & Performance Audit](08-audits/2026-03-12-security-performance-audit.md)
 
 ## Website Integration
 

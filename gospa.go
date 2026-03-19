@@ -196,8 +196,9 @@ type Config struct {
 	AllowUnauthenticatedRemoteActions bool
 
 	// Security Options
-	AllowedOrigins []string // Allowed CORS origins
-	EnableCSRF     bool     // Enable automatic CSRF protection (requires CSRFSetTokenMiddleware + CSRFTokenMiddleware)
+	AllowedOrigins        []string // Allowed CORS origins
+	EnableCSRF            bool     // Enable automatic CSRF protection (requires CSRFSetTokenMiddleware + CSRFTokenMiddleware)
+	ContentSecurityPolicy string   // Optional CSP header. Empty uses the secure default policy.
 	// SSGCacheMaxEntries caps the SSG/ISR/PPR page cache size. Oldest entries are evicted when full.
 	// Default: 500. Set to -1 to disable eviction (unbounded, not recommended in production).
 	SSGCacheMaxEntries int
@@ -221,19 +222,20 @@ type Config struct {
 // DefaultConfig returns the default configuration.
 func DefaultConfig() Config {
 	return Config{
-		RoutesDir:           "./routes",
-		DevMode:             false,
-		RuntimeScript:       "/_gospa/runtime.js",
-		StaticDir:           "./static",
-		StaticPrefix:        "/static",
-		AppName:             "GoSPA App",
-		DefaultState:        make(map[string]interface{}),
-		EnableWebSocket:     true,
-		WebSocketPath:       "/_gospa/ws",
-		RemotePrefix:        "/_gospa/remote",
-		MaxRequestBodySize:  4 * 1024 * 1024, // Default 4MB
-		SerializationFormat: SerializationJSON,
-		EnableCSRF:          true,
+		RoutesDir:             "./routes",
+		DevMode:               false,
+		RuntimeScript:         "/_gospa/runtime.js",
+		StaticDir:             "./static",
+		StaticPrefix:          "/static",
+		AppName:               "GoSPA App",
+		DefaultState:          make(map[string]interface{}),
+		EnableWebSocket:       true,
+		WebSocketPath:         "/_gospa/ws",
+		RemotePrefix:          "/_gospa/remote",
+		MaxRequestBodySize:    4 * 1024 * 1024, // Default 4MB
+		SerializationFormat:   SerializationJSON,
+		EnableCSRF:            true,
+		ContentSecurityPolicy: "default-src 'self'; base-uri 'self'; frame-ancestors 'none'; object-src 'none'; script-src 'self' 'unsafe-inline'; style-src 'self' 'unsafe-inline'; img-src 'self' data: blob: https:; font-src 'self' data:; connect-src 'self' ws: wss:; form-action 'self'",
 	}
 }
 
@@ -438,11 +440,11 @@ func New(config Config) *App {
 	}
 	fiberApp := fiberpkg.New(fiberConfig)
 
-	// Create WebSocket hub (always enabled by default - WebSocket is a core feature)
-	// Note: Go can't distinguish between "unset" and "explicitly false" for bools,
-	// so we always create the hub. Users who don't want WebSocket can simply not use it.
-	hub := fiber.NewWSHub(config.PubSub)
-	go hub.Run()
+	var hub *fiber.WSHub
+	if config.EnableWebSocket {
+		hub = fiber.NewWSHub(config.PubSub)
+		go hub.Run()
+	}
 
 	// Create state map
 	stateMap := state.NewStateMap()
@@ -558,7 +560,7 @@ func (a *App) setupMiddleware() {
 	}))
 
 	// Security headers
-	a.Fiber.Use(fiber.SecurityHeadersMiddleware())
+	a.Fiber.Use(fiber.SecurityHeadersMiddleware(a.Config.ContentSecurityPolicy))
 
 	if len(a.Config.AllowedOrigins) > 0 {
 		a.Fiber.Use(fiber.CORSMiddleware(a.Config.AllowedOrigins))

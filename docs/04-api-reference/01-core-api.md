@@ -115,6 +115,7 @@ type Config struct {
 	// Security Options
 	AllowedOrigins []string // Allowed CORS origins
 	EnableCSRF     bool     // Enable CSRF (requires CSRFSetTokenMiddleware + CSRFTokenMiddleware)
+	ContentSecurityPolicy string // Optional CSP header. Empty uses the secure default
 
 	// Cache Options
 	SSGCacheMaxEntries int // Max SSG cache entries (default 500; -1 = unbounded)
@@ -659,7 +660,7 @@ isSPA := fiber.IsSPANavigation(c *fiber.Ctx) bool
 app.Use(fiber.CORSMiddleware(allowedOrigins []string))
 
 // Security headers
-app.Use(fiber.SecurityHeadersMiddleware())
+app.Use(fiber.SecurityHeadersMiddleware(app.Config.ContentSecurityPolicy))
 
 // CSRF protection — use BOTH middlewares:
 // 1. CSRFSetTokenMiddleware issues the cookie on GET responses
@@ -769,7 +770,10 @@ fiber.RegisterActionHandler("increment", func(client *fiber.WSClient, payload js
 ```go
 // Session store - maps tokens to client IDs
 sessionStore := fiber.NewSessionStore()
-token := sessionStore.CreateSession(clientID string)
+token, err := sessionStore.CreateSession(clientID)
+if err != nil {
+    // handle persistence failure
+}
 clientID, ok := sessionStore.ValidateSession(token string)
 sessionStore.RemoveSession(token string)
 sessionStore.RemoveClientSessions(clientID string)

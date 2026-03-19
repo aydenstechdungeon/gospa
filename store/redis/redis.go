@@ -3,6 +3,7 @@ package redis
 
 import (
 	"context"
+	"strconv"
 	"time"
 
 	"github.com/aydenstechdungeon/gospa/store"
@@ -98,4 +99,50 @@ func (p *PubSub) SubscribeWithContext(ctx context.Context, channel string, handl
 	}()
 
 	return nil
+}
+
+var consumeRateLimitTokenScript = goredis.NewScript(`
+local key = KEYS[1]
+local now = tonumber(ARGV[1])
+local max_tokens = tonumber(ARGV[2])
+local refill_rate = tonumber(ARGV[3])
+local ttl_ms = tonumber(ARGV[4])
+
+local data = redis.call("HMGET", key, "tokens", "last_refill")
+local tokens = tonumber(data[1])
+local last_refill = tonumber(data[2])
+
+if not tokens or not last_refill then
+  tokens = max_tokens
+  last_refill = now
+end
+
+local elapsed = math.max(0, (now - last_refill) / 1000.0)
+tokens = math.min(max_tokens, tokens + (elapsed * refill_rate))
+local allowed = 0
+if tokens >= 1.0 then
+  tokens = tokens - 1.0
+  allowed = 1
+end
+
+redis.call("HSET", key, "tokens", tokens, "last_refill", now)
+redis.call("PEXPIRE", key, ttl_ms)
+return allowed
+`)
+
+// ConsumeRateLimitToken atomically consumes a token for distributed rate limiting.
+func (s *Store) ConsumeRateLimitToken(key string, now time.Time, maxTokens float64, refillRate float64, ttl time.Duration) (bool, error) {
+	result, err := consumeRateLimitTokenScript.Run(
+		s.ctx,
+		s.client,
+		[]string{key},
+		strconv.FormatInt(now.UnixMilli(), 10),
+		strconv.FormatFloat(maxTokens, 'f', -1, 64),
+		strconv.FormatFloat(refillRate, 'f', -1, 64),
+		strconv.FormatInt(ttl.Milliseconds(), 10),
+	).Int()
+	if err != nil {
+		return false, err
+	}
+	return result == 1, nil
 }
