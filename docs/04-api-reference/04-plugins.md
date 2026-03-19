@@ -361,11 +361,15 @@ plugins:
     output: ./static/images/optimized
     formats:
       - webp
+      - avif
       - jpeg
+      - png
     widths: [320, 640, 1280, 1920]
     quality: 85
     on_the_fly: false  # Enable runtime optimization
 ```
+
+**Requirements:** `cgo` enabled with system libraries `libwebp` and `libheif` installed.
 
 **CLI Commands:**
 | Command | Alias | Description |
@@ -521,7 +525,7 @@ plugins:
   image:
     input: ./static/images
     output: ./static/images/optimized
-    formats: [webp, jpeg]
+    formats: [webp, avif, jpeg, png]
     widths: [320, 640, 1280]
   
   seo:

@@ -10,10 +10,10 @@
 ### Getting Started
 
 [01-quick-start](docs/01-getting-started/01-quick-start.md)
-  - Size: 11357 bytes
+  - Size: 11488 bytes
 
 [02-tutorial](docs/01-getting-started/02-tutorial.md)
-  - Size: 7398 bytes
+  - Size: 8241 bytes
 
 
 ### Core Concepts
@@ -31,22 +31,22 @@
   - Size: 7147 bytes
 
 [06-routing](docs/02-core-concepts/06-routing.md)
-  - Size: 14399 bytes
+  - Size: 18357 bytes
 
 
 ### Features
 
 [01-client-runtime](docs/03-features/01-client-runtime.md)
-  - Size: 6602 bytes
+  - Size: 6666 bytes
 
 [02-runtime-api](docs/03-features/02-runtime-api.md)
-  - Size: 40221 bytes
+  - Size: 41498 bytes
 
 [03-realtime](docs/03-features/03-realtime.md)
-  - Size: 5658 bytes
+  - Size: 7029 bytes
 
 [04-security](docs/03-features/04-security.md)
-  - Size: 8506 bytes
+  - Size: 8628 bytes
 
 [05-dev-tools](docs/03-features/05-dev-tools.md)
   - Size: 4925 bytes
@@ -58,22 +58,22 @@
 ### API Reference
 
 [01-core-api](docs/04-api-reference/01-core-api.md)
-  - Size: 33717 bytes
+  - Size: 34794 bytes
 
 [02-configuration](docs/04-api-reference/02-configuration.md)
-  - Size: 14828 bytes
+  - Size: 18744 bytes
 
 [03-cli](docs/04-api-reference/03-cli.md)
-  - Size: 16286 bytes
+  - Size: 16352 bytes
 
 [04-plugins](docs/04-api-reference/04-plugins.md)
-  - Size: 25038 bytes
+  - Size: 24496 bytes
 
 
 ### Advanced
 
 [01-error-handling](docs/05-advanced/01-error-handling.md)
-  - Size: 10238 bytes
+  - Size: 11500 bytes
 
 [02-state-pruning](docs/05-advanced/02-state-pruning.md)
   - Size: 2901 bytes
@@ -82,7 +82,7 @@
 ### Migration
 
 [01-v1-to-v2](docs/06-migration/01-v1-to-v2.md)
-  - Size: 4773 bytes
+  - Size: 4829 bytes
 
 
 ### Troubleshooting
@@ -91,7 +91,7 @@
   - Size: 4933 bytes
 
 [02-remote-actions](docs/07-troubleshooting/02-remote-actions.md)
-  - Size: 8357 bytes
+  - Size: 9253 bytes
 
 [03-websocket-connections](docs/07-troubleshooting/03-websocket-connections.md)
   - Size: 8654 bytes
@@ -106,15 +106,18 @@
   - Size: 10488 bytes
 
 [07-build-deployment](docs/07-troubleshooting/07-build-deployment.md)
-  - Size: 9949 bytes
+  - Size: 10467 bytes
 
 
 ### Other
 
+[2026-03-12-security-performance-audit](docs/08-audits/2026-03-12-security-performance-audit.md)
+  - Size: 6595 bytes
+
 [README](docs/README.md)
-  - Size: 2422 bytes
+  - Size: 2829 bytes
 
 
 ## File Summary
 
-Total documentation files: 28
+Total documentation files: 29

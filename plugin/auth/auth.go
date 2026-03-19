@@ -188,7 +188,10 @@ func (p *AuthPlugin) CreateToken(userID, email, role string) (string, error) {
 
 // ValidateToken validates a JWT token and returns the claims.
 func (p *AuthPlugin) ValidateToken(tokenString string) (*Claims, error) {
-	token, err := jwt.ParseWithClaims(tokenString, &Claims{}, func(_ *jwt.Token) (interface{}, error) {
+	token, err := jwt.ParseWithClaims(tokenString, &Claims{}, func(parsed *jwt.Token) (interface{}, error) {
+		if parsed.Method != jwt.SigningMethodHS256 {
+			return nil, fmt.Errorf("unexpected signing method: %v", parsed.Header["alg"])
+		}
 		return []byte(p.config.JWTSecret), nil
 	})
 	if err != nil {
@@ -210,6 +213,9 @@ func (p *AuthPlugin) RequireAuth() fiber.Handler {
 		authHeader := c.Get("Authorization")
 		if authHeader == "" {
 			return c.Status(fiber.StatusUnauthorized).JSON(fiber.Map{"error": "missing authorization header"})
+		}
+		if !strings.HasPrefix(authHeader, "Bearer ") {
+			return c.Status(fiber.StatusUnauthorized).JSON(fiber.Map{"error": "invalid authorization scheme"})
 		}
 
 		tokenString := strings.TrimPrefix(authHeader, "Bearer ")

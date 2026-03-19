@@ -318,11 +318,15 @@ func PreloadHeadersMiddlewareMinimal(config PreloadConfig) gofiber.Handler {
 }
 
 // SecurityHeadersMiddleware adds security headers.
-func SecurityHeadersMiddleware() gofiber.Handler {
+func SecurityHeadersMiddleware(policy string) gofiber.Handler {
+	if strings.TrimSpace(policy) == "" {
+		policy = "default-src 'self'; base-uri 'self'; frame-ancestors 'none'; object-src 'none'; script-src 'self' 'unsafe-inline'; style-src 'self' 'unsafe-inline'; img-src 'self' data: blob: https:; font-src 'self' data:; connect-src 'self' ws: wss:; form-action 'self'"
+	}
 	return func(c gofiber.Ctx) error {
 		if c.Protocol() == "https" || c.Get("X-Forwarded-Proto") == "https" {
 			c.Set("Strict-Transport-Security", "max-age=31536000; includeSubDomains; preload")
 		}
+		c.Set("Content-Security-Policy", policy)
 		c.Set("X-Content-Type-Options", "nosniff")
 		c.Set("X-Frame-Options", "DENY")
 		c.Set("X-XSS-Protection", "0")

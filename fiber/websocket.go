@@ -71,6 +71,12 @@ func (rl *ConnectionRateLimiter) SetLimits(maxTokens float64, refillRate float64
 	rl.refillRate = refillRate
 }
 
+// AtomicRateLimiterStorage allows storage backends to implement atomic distributed
+// rate limiting semantics for shared deployments.
+type AtomicRateLimiterStorage interface {
+	ConsumeRateLimitToken(key string, now time.Time, maxTokens float64, refillRate float64, ttl time.Duration) (bool, error)
+}
+
 // Global connection rate limiter (singleton)
 var globalConnRateLimiter = NewConnectionRateLimiter(store.NewMemoryStorage())
 
@@ -121,6 +127,13 @@ func (rl *ConnectionRateLimiter) Allow(ip string) bool {
 
 	if storage != nil {
 		key := "rate:" + ip
+		if atomicStorage, ok := storage.(AtomicRateLimiterStorage); ok {
+			allowed, err := atomicStorage.ConsumeRateLimitToken(key, now, maxTokens, refillRate, 10*time.Minute)
+			if err == nil {
+				return allowed
+			}
+		}
+
 		data, err := storage.Get(key)
 		if err == nil {
 			var b rateBucket
@@ -130,9 +143,8 @@ func (rl *ConnectionRateLimiter) Allow(ip string) bool {
 		}
 
 		if bucket == nil {
-			// First connection from this IP
 			bucket = &rateBucket{
-				Tokens:     maxTokens - 1, // Consume 1 token
+				Tokens:     maxTokens - 1,
 				LastRefill: now,
 			}
 			newBytes, _ := json.Marshal(bucket)
@@ -140,7 +152,6 @@ func (rl *ConnectionRateLimiter) Allow(ip string) bool {
 			return true
 		}
 
-		// Refill tokens based on elapsed time
 		elapsed := now.Sub(bucket.LastRefill).Seconds()
 		bucket.Tokens += elapsed * refillRate
 		if bucket.Tokens > maxTokens {
@@ -148,14 +159,12 @@ func (rl *ConnectionRateLimiter) Allow(ip string) bool {
 		}
 		bucket.LastRefill = now
 
-		// Check if we can consume a token
 		allowed := false
 		if bucket.Tokens >= 1.0 {
 			bucket.Tokens -= 1.0
 			allowed = true
 		}
 
-		// Save back to storage
 		newBytes, _ := json.Marshal(bucket)
 		_ = storage.Set(key, newBytes, 10*time.Minute)
 
@@ -257,21 +266,24 @@ func NewSessionStore(storage store.Storage) *SessionStore {
 }
 
 // CreateSession creates a new session token for a client ID.
-// Returns the session token, or empty string if random generation fails.
-func (s *SessionStore) CreateSession(clientID string) string {
+// Returns the session token and an error if token generation or persistence fails.
+func (s *SessionStore) CreateSession(clientID string) (string, error) {
 	token := generateSecureToken()
 	if token == "" {
-		return ""
+		return "", fmt.Errorf("failed to generate secure session token")
 	}
 	entry := sessionEntry{
 		ClientID:  clientID,
 		ExpiresAt: time.Now().Add(SessionTTL),
 	}
 	bytes, err := json.Marshal(entry)
-	if err == nil {
-		_ = s.storage.Set(token, bytes, SessionTTL)
+	if err != nil {
+		return "", err
 	}
-	return token
+	if err := s.storage.Set(token, bytes, SessionTTL); err != nil {
+		return "", err
+	}
+	return token, nil
 }
 
 // ValidateSession returns the client ID for a valid, non-expired session token.
@@ -1099,12 +1111,14 @@ func WebSocketHandler(config WebSocketConfig) fiberpkg.Handler {
 		// If no valid session, generate new session ID
 		if sessionID == "" {
 			sessionID = config.GenerateID()
-			sessionToken = globalSessionStore.CreateSession(sessionID)
-			if sessionToken == "" {
+			token, err := globalSessionStore.CreateSession(sessionID)
+			if err != nil {
+				slog.Default().Error("failed to create websocket session", "session_id", sessionID, "err", err)
 				client.SendError("Failed to create session")
 				_ = c.Close()
 				return
 			}
+			sessionToken = token
 		}
 
 		// Update client with session ID
