@@ -1,49 +1,30 @@
-# Build artifacts
+# Website-Specific Docker Exclusions
+
+# Build Artifacts
+node_modules/
+dist/
+generated/
+tmp_build/
 website
 website.bin
-*.exe
-*.exe~
-*.dll
-*.so
-*.dylib
 
-# Test files
-*_test.go
-tests/
-
-# Development files
+# Local Development
+.env
+.env.local
+.DS_Store
 *.log
-.vscode/
-.idea/
+*.test
+*_test.go
+
+# Large Source Assets (Handled by gospa build)
+*.psd
+*.jpeg
+*.png
+*.ico
+*.svg
+*.webp
+!static/**
 
 # Git
 .git/
 .gitignore
-
-# Node/Bun/GoSPA Build Artifacts
-node_modules/
-dist/
-generated/
-tmp_build
-bun.lock
-
-# Binary output
-gospa
-examples/*/counter
-examples/*/gospa_bin
-
-# PSD and design files
-*.psd
-# *.jpeg
-# *.png
-# *.ico
-# *.svg
-# *.webp
-
-# Documentation
-# docs/ - We need our markdown documentation!
-# *.md
-!README.md
-
-# Lint logs
-lint.log

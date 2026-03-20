@@ -1,108 +1,94 @@
-# Build stage
-# Usage: docker build -t gospa-website -f website/Dockerfile .
-# RENDER NOTE: While this Dockerfile is now "context-agnostic", for best performance,
-# set "Docker Build Context" to "." in Render settings.
-FROM golang:1.26-alpine AS builder
+# syntax=docker/dockerfile:1.7-labs
+# ==============================================================================
+# GOSPA Website Production Dockerfile
+# Redesigned for maximum build speed, layer caching, and minimal runtime footprint.
+#
+# Context: Repository Root (REQUIRED)
+# Command: docker build -t gospa-website -f website/Dockerfile .
+# ==============================================================================
 
-# 1. Install system dependencies
-# Bun on Alpine requires libstdc++ and gcompat for glibc compatibility
+# Common base for builder stages
+FROM golang:1.26-alpine AS builder-base
 RUN apk add --no-cache \
-    git \
-    ca-certificates \
-    tzdata \
-    curl \
-    bash \
-    unzip \
-    libstdc++ \
-    gcompat \
-    build-base
+    curl bash unzip libstdc++ gcompat build-base git nodejs npm
 
-# 2. Install Bun
-RUN curl -fsSL https://bun.sh/install | bash
+# Install Bun directly into the builder base
+RUN curl -fsSL https://bun.sh/install | bash -s -- bun-v1.2.4
 ENV PATH="/root/.bun/bin:${PATH}"
 
+# ------------------------------------------------------------------------------
+# Stage 1: CLI Builder
+# Compiles the gospa binary independently to avoid rebuilding it unnecessarily.
+# ------------------------------------------------------------------------------
+FROM builder-base AS cli-builder
+WORKDIR /build
+COPY go.mod go.sum ./
+RUN go mod download
+COPY . .
+RUN go build -v -o /usr/local/bin/gospa ./cmd/gospa
+
+# ------------------------------------------------------------------------------
+# Stage 2: Website Assets & Server Build
+# ------------------------------------------------------------------------------
+FROM builder-base AS website-builder
 WORKDIR /build
 
-# 3. Copy source and clean previous build artifacts to ensure fresh build
+# 1. External dependencies caching
+# Order matters: Go modules first as they change less often than Bun modules.
+COPY go.mod go.sum ./
+COPY website/go.mod website/go.sum ./website/
+RUN go mod download
+
+# 2. Bun dependencies caching
+COPY website/package.json website/bun.lock ./website/
+RUN cd website && bun install --frozen-lockfile
+
+# 3. Pull in the GoSPA CLI from the previous stage
+COPY --from=cli-builder /usr/local/bin/gospa /usr/local/bin/gospa
+
+# 4. Copy entire repository source
+# This is required because 'website/' depends on the parent framework via 'replace'
 COPY . .
-RUN rm -rf dist generated node_modules && \
-    if [ -d "website" ]; then rm -rf website/dist website/generated website/node_modules; fi
 
-# 4. Handle GoSPA CLI
-# Detect context: if we have the full repo, build locally. Otherwise, install from remote.
-# IMPORTANT: For best results on Render, set 'Docker Build Context' to '.' in Settings.
-RUN if [ -f "cmd/gospa/main.go" ]; then \
-    echo "Found local GoSPA source. Building CLI..." && \
-    go mod download && \
-    go build -v -o /usr/local/bin/gospa ./cmd/gospa; \
-elif [ -f "go.mod" ] && grep -q "module github.com/aydenstechdungeon/gospa/website" go.mod; then \
-    echo "Context appears to be 'website/' subdirectory. Installing GoSPA CLI from remote..." && \
-    echo "Note: To build from local source, set Docker Build Context to '.' in Render settings." && \
-    GOPROXY=direct go install github.com/aydenstechdungeon/gospa/cmd/gospa@main && \
-    cp /go/bin/gospa /usr/local/bin/gospa; \
-else \
-    echo "Unknown context. Attempting remote install..." && \
-    GOPROXY=direct go install github.com/aydenstechdungeon/gospa/cmd/gospa@latest && \
-    cp /go/bin/gospa /usr/local/bin/gospa; \
-fi
+# 5. Build the website for production
+# This generates 'dist/server' and builds Tailwind v4 / client JS assets
+WORKDIR /build/website
+RUN gospa build -o dist
 
-# 5. Build the website
-# Detect if we are in the repository root or the website subdirectory
-RUN if [ -d "website" ]; then \
-    echo "Context: Repository Root. Building website subdirectory..." && \
-    cd website && \
-    go mod edit -replace github.com/aydenstechdungeon/gospa=../ && \
-    bun install && \
-    /usr/local/bin/gospa build -o dist; \
-    else \
-    echo "Context: Website Directory. Building current directory..." && \
-    go mod edit -dropreplace github.com/aydenstechdungeon/gospa && \
-    bun install && \
-    /usr/local/bin/gospa build -o dist; \
-    fi
+# 6. Normalize artifact structure for runtime
+RUN mkdir -p /out/static /out/routes /out/components /out/generated && \
+    cp dist/server /out/gospa-server && \
+    [ -d dist/static ] && cp -r dist/static/. /out/static/ || true && \
+    cp -r routes/. /out/routes/ || true && \
+    cp -r components/. /out/components/ || true && \
+    cp -r generated/. /out/generated/ || true
 
-# 6. Normalize artifacts into /build/out for the runtime stage
-# Optional dirs (static, components, generated) are copied only when present.
-# All destination dirs are pre-created so COPY --from=builder in the runtime stage never fails.
-RUN mkdir -p /build/out/static /build/out/routes /build/out/components /build/out/generated && \
-    if [ -d "website/dist" ]; then \
-      cp website/dist/server /build/out/website && \
-      { [ -d website/dist/static ]    && cp -r website/dist/static/.    /build/out/static/    || true; } && \
-      { [ -d website/routes ]         && cp -r website/routes/.         /build/out/routes/    || true; } && \
-      { [ -d website/components ]     && cp -r website/components/.     /build/out/components/|| true; } && \
-      { [ -d website/generated ]      && cp -r website/generated/.      /build/out/generated/ || true; }; \
-    else \
-      cp dist/server /build/out/website && \
-      { [ -d dist/static ]    && cp -r dist/static/.    /build/out/static/    || true; } && \
-      { [ -d routes ]         && cp -r routes/.         /build/out/routes/    || true; } && \
-      { [ -d components ]     && cp -r components/.     /build/out/components/|| true; } && \
-      { [ -d generated ]      && cp -r generated/.      /build/out/generated/ || true; }; \
-    fi
+# ------------------------------------------------------------------------------
+# Stage 3: Runtime
+# Minimal Alpine image for the smallest attack surface and fastest deployments.
+# ------------------------------------------------------------------------------
+FROM alpine:3.21 AS runtime
 
-# Runtime stage
-FROM alpine:3.19
-RUN apk add --no-cache ca-certificates tzdata
-RUN adduser -D -g '' appuser
+# Install essentials and setup a non-root environment
+RUN apk add --no-cache ca-certificates tzdata wget && \
+    adduser -D -g '' appuser
 
 WORKDIR /app
 
-# Copy the normalized artifacts
-COPY --from=builder /build/out/website ./website
-COPY --from=builder /build/out/static ./static
-COPY --from=builder /build/out/routes ./routes
-COPY --from=builder /build/out/components ./components
-COPY --from=builder /build/out/generated ./generated
+# Copy artifacts with correct ownership
+COPY --from=website-builder --chown=appuser:appuser /out/ /app/
 
-RUN chmod +x ./website && chown -R appuser:appuser /app
-
+# Runtime Configuration
 USER appuser
-
 EXPOSE 8080
-ENV PORT=8080
-ENV GOSPA_DEV=false
-ENV GOSPA_ENV=production
+ENV PORT=8080 \
+    GOSPA_DEV=false \
+    GOSPA_ENV=production \
+    TZ=UTC
 
-HEALTHCHECK --interval=30s --timeout=3s --start-period=5s --retries=3 \
-    CMD wget --no-verbose --tries=1 --spider http://localhost:8080/ || exit 1
+# Proactive Healthcheck using standard wget
+HEALTHCHECK --interval=30s --timeout=5s --start-period=5s --retries=3 \
+    CMD wget --no-verbose --tries=1 --spider http://localhost:${PORT}/ || exit 1
 
-CMD ["./website"]
+# Start the optimized Go server
+ENTRYPOINT ["./gospa-server"]

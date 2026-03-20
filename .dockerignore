@@ -1,0 +1,44 @@
+# --- GoSPA Global Docker Ignore ---
+
+# Git & Tooling
+.git/
+.github/
+.vscode/
+.idea/
+.golangci.yml
+CHANGELOG.md
+CONTRIBUTING.md
+LICENSE
+plans/
+
+# Large Binaries & Assets
+*.psd
+*.jpeg
+*.png
+*.ico
+*.svg
+*.webp
+!website/static/**
+
+# Build Artifacts
+**/node_modules
+**/dist
+**/generated
+**/bin
+**/gospa
+**/website.bin
+**/tmp_build
+website/website
+
+# Go Cache & Logs
+lint.log
+lint.txt
+go.work.bak
+*.test
+*_test.go
+
+# Project Specific
+docs/
+examples/
+scripts/
+tests/

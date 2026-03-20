@@ -1,0 +1,27 @@
+# Render Blueprint for GoSPA Documentation Website
+services:
+  - type: web
+    name: gospa-docs
+    runtime: docker
+    dockerContext: .
+    dockerfilePath: website/Dockerfile
+    envVars:
+      - key: PORT
+        value: 8080
+      - key: GOSPA_DEV
+        value: "false"
+      - key: GOSPA_ENV
+        value: production
+      - key: TZ
+        value: UTC
+    healthCheckPath: /
+    # High-performance build requires at least 512MB RAM
+    plan: free
+    autoDeploy: true
+
+# Note for Render Dashboard Users:
+# - Connect your GitHub Repo: aydenstechdungeon/gospa
+# - Service Type: Web Service
+# - Runtime: Docker
+# - Docker Build Context: . (Repo Root)
+# - Dockerfile Path: website/Dockerfile
