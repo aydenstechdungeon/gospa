@@ -21,14 +21,15 @@ plans/
 !website/static/**
 
 # Build Artifacts
-**/node_modules
-**/dist
-**/generated
-**/bin
-**/gospa
-**/website.bin
-**/tmp_build
-website/website
+**/node_modules/
+**/dist/
+**/generated/
+**/tmp_build/
+
+# Specific Root Binaries (Must use '/' prefix to avoid ignoring 'cmd/gospa')
+/gospa
+/website/website
+/website/website.bin
 
 # Go Cache & Logs
 lint.log
@@ -37,8 +38,9 @@ go.work.bak
 *.test
 *_test.go
 
-# Project Specific
-docs/
+# Project Specific (Optional)
+# Don't ignore things needed for the website build
 examples/
 scripts/
 tests/
+# docs/ - Documentation website often needs this!
