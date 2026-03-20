@@ -940,7 +940,7 @@ func deepEqual(a, b interface{}) bool {
 		return true
 	}
 
-	// Reflection-based comparison for slices of other types
+	// Reflection-based comparison for slices, arrays, maps, and structs
 	av := reflect.ValueOf(a)
 	bv := reflect.ValueOf(b)
 
@@ -967,9 +967,45 @@ func deepEqual(a, b interface{}) bool {
 			}
 		}
 		return true
+	case reflect.Struct:
+		// Compare struct fields recursively
+		if av.NumField() != bv.NumField() {
+			return false
+		}
+		for i := 0; i < av.NumField(); i++ {
+			fieldA := av.Field(i)
+			fieldB := bv.Field(i)
+			// Skip unexported fields (they can't be compared reliably)
+			if !fieldA.CanInterface() || !fieldB.CanInterface() {
+				continue
+			}
+			if !deepEqual(fieldA.Interface(), fieldB.Interface()) {
+				return false
+			}
+		}
+		return true
+	case reflect.Ptr:
+		// Handle pointer comparison
+		if av.IsNil() && bv.IsNil() {
+			return true
+		}
+		if av.IsNil() || bv.IsNil() {
+			return false
+		}
+		return deepEqual(av.Elem().Interface(), bv.Elem().Interface())
+	case reflect.Interface:
+		// Handle interface comparison
+		if av.IsNil() && bv.IsNil() {
+			return true
+		}
+		if av.IsNil() || bv.IsNil() {
+			return false
+		}
+		return deepEqual(av.Elem().Interface(), bv.Elem().Interface())
 	}
 
 	// Final fallback: JSON comparison for complex nested structures
+	// This should rarely be reached now that we handle structs, pointers, and interfaces
 	aJSON, err1 := json.Marshal(a)
 	bJSON, err2 := json.Marshal(b)
 	if err1 != nil || err2 != nil {
@@ -1053,10 +1089,8 @@ func WebSocketHandler(config WebSocketConfig) fiberpkg.Handler {
 		var sessionToken string
 		var restoredState *state.StateMap
 
-		// SECURITY: Session token can come from:
-		// 1. First message after connection (preferred - no URL leakage)
-		// 2. URL query param (fallback for legacy clients - less secure)
-		// We'll wait for the first message to check for session token
+		// Session token is received via the first WebSocket message (preferred method).
+		// This avoids URL-based token leakage in logs/referer headers.
 
 		// Generate unique connection ID so tabs don't kick each other off
 		connID := "conn_" + generateSecureToken()[:8]

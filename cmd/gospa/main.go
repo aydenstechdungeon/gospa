@@ -1,3 +1,4 @@
+// Package main provides the GoSPA CLI entry point.
 package main
 
 import (

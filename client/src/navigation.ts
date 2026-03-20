@@ -142,6 +142,16 @@ let clickDelegateContainer: Element | Document = document;
 
 export function setNavigationOptions(config: NavigationOptions): void {
 
+	// Clear URL parsing cache if being disabled
+	if (config.urlParsingCache?.enabled === false && navigationOptionsConfig.urlParsingCache.enabled) {
+		parsedURLCache.clear();
+	}
+
+	// Clear prefetch cache if speculative prefetching is being disabled
+	if (config.speculativePrefetching?.enabled === false && navigationOptionsConfig.speculativePrefetching.enabled) {
+		prefetchCache.clear();
+	}
+
 	navigationOptionsConfig = {
 		...navigationOptionsConfig,
 		speculativePrefetching: { ...navigationOptionsConfig.speculativePrefetching, ...(config.speculativePrefetching ?? {}) },

@@ -152,7 +152,7 @@ func CSRFSetTokenMiddleware() gofiber.Handler {
 			HTTPOnly: false, // Must be readable by JS to set the X-CSRF-Token header
 			SameSite: "Strict",
 			Secure:   c.Protocol() == "https",
-			Path:     "/",
+			Path:     "/_gospa/", // Restrict to GoSPA endpoints only
 		})
 
 		return c.Next()

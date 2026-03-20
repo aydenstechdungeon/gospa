@@ -104,13 +104,13 @@ func (p *ImagePlugin) saveWebP(img image.Image, path string, quality int) error 
 	}
 
 	var out *C.uint8_t
-	size := C.gospa_webp_encode_rgba(
+	size := C.gospa_webp_encode_rgba( //nolint:gocritic // false positive: &out is passing pointer to C function, not a comparison
 		(*C.uint8_t)(unsafe.Pointer(&rgba.Pix[0])),
 		C.int(rgba.Bounds().Dx()),
 		C.int(rgba.Bounds().Dy()),
 		C.int(rgba.Stride),
 		C.float(float32(quality)),
-		&out,
+		&out, //nolint:gocritic // passing pointer to C function output parameter
 	)
 	if size == 0 || out == nil {
 		return fmt.Errorf("failed to encode webp")

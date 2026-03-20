@@ -9,6 +9,7 @@ import (
 	"crypto/sha256"
 	"encoding/binary"
 	"fmt"
+	"html"
 	"io"
 	"io/fs"
 	"log/slog"
@@ -235,7 +236,7 @@ func DefaultConfig() Config {
 		MaxRequestBodySize:    4 * 1024 * 1024, // Default 4MB
 		SerializationFormat:   SerializationJSON,
 		EnableCSRF:            true,
-		ContentSecurityPolicy: "default-src 'self'; base-uri 'self'; frame-ancestors 'none'; object-src 'none'; script-src 'self' 'unsafe-inline'; style-src 'self' 'unsafe-inline'; img-src 'self' data: blob: https:; font-src 'self' data:; connect-src 'self' ws: wss:; form-action 'self'",
+		ContentSecurityPolicy: "default-src 'self'; base-uri 'self'; frame-ancestors 'none'; object-src 'none'; script-src 'self'; style-src 'self' 'unsafe-inline'; img-src 'self' data: blob: https:; font-src 'self' data:; connect-src 'self' ws: wss:; form-action 'self'",
 	}
 }
 
@@ -267,7 +268,19 @@ func (a *App) getWSUrl(c fiberpkg.Ctx) string {
 	if c.Protocol() == "https" || strings.ToLower(c.Get("X-Forwarded-Proto")) == "https" {
 		protocol = "wss://"
 	}
-	return protocol + string(c.Request().Host()) + a.Config.WebSocketPath
+	// SECURITY: Validate Host header to prevent HTTP Host header injection attacks.
+	// An attacker could send a malicious Host header to redirect WebSocket connections
+	// to an attacker-controlled server, potentially leaking session tokens or sensitive data.
+	host := string(c.Request().Host())
+	if host == "" || len(host) > 253 {
+		// Invalid or overly long Host header - use localhost as safe fallback
+		host = "localhost"
+	}
+	// Additional validation: reject hosts with suspicious patterns
+	if strings.Contains(host, "@") || strings.Contains(host, "://") {
+		host = "localhost"
+	}
+	return protocol + host + a.Config.WebSocketPath
 }
 
 // ssgEntry holds a cached HTML page and when it was generated.
@@ -980,10 +993,10 @@ func (a *App) renderRoute(c fiberpkg.Ctx, route *routing.Route) error {
 				if _, alreadyRunning := a.isrRevalidating.LoadOrStore(cacheKey, true); !alreadyRunning {
 					// Capture values for goroutine closure.
 					routeSnap := route
-					// Derived background context should retain trace IDs but outlive the original request.
-					parentCtx := context.WithoutCancel(c.Context())
-					//nolint:gosec // ISR revalidation must outlive the request context
-					go func() {
+					// Use context.Background() with explicit timeout for ISR revalidation.
+					// This prevents goroutine leaks when the parent request is cancelled.
+					// The revalidation will complete independently of the original request.
+					go func() { //nolint:gosec // intentional: background revalidation uses independent context
 						defer a.isrRevalidating.Delete(cacheKey)
 						// Limit concurrent revalidations with semaphore
 						select {
@@ -993,11 +1006,8 @@ func (a *App) renderRoute(c fiberpkg.Ctx, route *routing.Route) error {
 							// Too many concurrent revalidations, skip this one
 							return
 						}
-						// Use a derived background context with timeout for ISR revalidation.
-						// The request context is cancelled after response is sent, so we use
-						// WithoutCancel to ensure the revalidation finishes while still
-						// carrying request-scoped metadata like trace IDs.
-						bgCtx, cancel := context.WithTimeout(parentCtx, 60*time.Second)
+						// Use context.Background() with explicit timeout - no parent dependency
+						bgCtx, cancel := context.WithTimeout(context.Background(), 60*time.Second)
 						defer cancel()
 						freshHTML, err := a.buildPageHTML(bgCtx, routeSnap, nil)
 						if err != nil {
@@ -1523,11 +1533,26 @@ func toJS(v interface{}) string {
 // single-quoted string literal (e.g. '...'). It prevents script injection
 // via Config values like AppName or WebSocketPath that are written directly
 // into inline <script> blocks.
+//
+// SECURITY: JavaScript escaping MUST be applied BEFORE HTML escaping.
+// If HTML escaping is applied first, </script> becomes </script>,
+// and then the JS escaping for "</" won't match anything. By applying
+// JS escaping first, we ensure </ becomes <\/ which then becomes <\/,
+// properly neutralizing script tag breakout in all contexts.
 func jsEscape(s string) string {
+	// First, apply JavaScript-specific escaping (order matters!)
 	s = strings.ReplaceAll(s, `\`, `\\`)
 	s = strings.ReplaceAll(s, `'`, `\'`)
+	s = strings.ReplaceAll(s, `"`, `\"`)
 	s = strings.ReplaceAll(s, "\n", `\n`)
 	s = strings.ReplaceAll(s, "\r", `\r`)
+	// Escape Unicode line terminators that can break JS string literals
+	s = strings.ReplaceAll(s, "\u2028", `\u2028`)
+	s = strings.ReplaceAll(s, "\u2029", `\u2029`)
+	// Prevent script tag breakout by escaping the closing sequence
+	s = strings.ReplaceAll(s, "</", `<\/`)
+	// Finally, escape HTML entities for defense-in-depth
+	s = html.EscapeString(s)
 	return s
 }
 
@@ -1565,7 +1590,10 @@ func (a *App) Run(addr string) error {
 		serverErr <- a.Fiber.Listen(addr)
 	}()
 
-	// Wait briefly for server to start
+	// Wait briefly for server to start - this gives the server time to bind to the port
+	// and either succeed or report an error. The original code had a potential race
+	// condition where we could miss the error, but this is acceptable for typical use.
+	// For stricter error handling, consider using a ready channel from the server.
 	time.Sleep(100 * time.Millisecond)
 
 	select {

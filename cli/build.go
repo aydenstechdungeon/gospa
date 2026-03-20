@@ -230,7 +230,12 @@ func copyStaticAssets(config *BuildConfig) error {
 
 		// Create destination path
 		destPath := filepath.Join(destDir, relPath)
-		if err := os.MkdirAll(filepath.Dir(destPath), 0750); err != nil {
+		// Validate path is within expected directory to prevent traversal
+		cleanDestPath := filepath.Clean(destPath)
+		if !strings.HasPrefix(cleanDestPath, filepath.Clean(destDir)) {
+			return fmt.Errorf("invalid destination path: %s", destPath)
+		}
+		if err := os.MkdirAll(filepath.Dir(cleanDestPath), 0750); err != nil {
 			return err
 		}
 
@@ -241,7 +246,8 @@ func copyStaticAssets(config *BuildConfig) error {
 			return err
 		}
 
-		return os.WriteFile(destPath, data, info.Mode())
+		//nolint:gosec // path validated above with strings.HasPrefix check
+		return os.WriteFile(cleanDestPath, data, info.Mode())
 	})
 }
 

@@ -14,6 +14,7 @@ import (
 
 	"github.com/aydenstechdungeon/gospa/plugin"
 	"golang.org/x/image/draw"
+	// Register WebP decoder for image.Decode()
 	_ "golang.org/x/image/webp"
 )
 

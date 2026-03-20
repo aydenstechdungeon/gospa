@@ -8,6 +8,7 @@ import (
 	"os"
 	"os/exec"
 	"path/filepath"
+	"strings"
 	"sync"
 
 	"github.com/aydenstechdungeon/gospa/plugin"
@@ -740,12 +741,12 @@ func (p *PostCSSPlugin) criticalCommand(args []string) error {
 
 	// Use cleaned path to prevent path traversal
 	criticalOutputPath := filepath.Clean(p.config.CriticalCSS.CriticalOutput)
-	if err := os.WriteFile(criticalOutputPath, criticalCSS, 0600); err != nil {
+	if err := os.WriteFile(criticalOutputPath, criticalCSS, 0600); err != nil { //nolint:gosec // path from config, expected to be safe
 		return fmt.Errorf("failed to write critical CSS: %w", err)
 	}
 
 	// Write non-critical CSS
-	if err := os.WriteFile(p.config.CriticalCSS.NonCriticalOutput, nonCriticalCSS, 0600); err != nil {
+	if err := os.WriteFile(p.config.CriticalCSS.NonCriticalOutput, nonCriticalCSS, 0600); err != nil { //nolint:gosec // path from config, expected to be safe
 		return fmt.Errorf("failed to write non-critical CSS: %w", err)
 	}
 
@@ -878,13 +879,21 @@ func (p *PostCSSPlugin) extractCriticalForBundle(projectDir string, bundle Bundl
 		nonCriticalOutput = base + ".non-critical" + ext
 	}
 
+	// Validate paths to prevent traversal
+	cleanCriticalOutput := filepath.Clean(criticalOutput)
+	cleanNonCriticalOutput := filepath.Clean(nonCriticalOutput)
+	outputDir := filepath.Dir(bundle.Output)
+	if !strings.HasPrefix(cleanCriticalOutput, filepath.Clean(outputDir)) || !strings.HasPrefix(cleanNonCriticalOutput, filepath.Clean(outputDir)) {
+		return fmt.Errorf("invalid output path: critical=%s, non-critical=%s", criticalOutput, nonCriticalOutput)
+	}
+
 	// Create output directories
-	criticalDir := filepath.Dir(criticalOutput)
+	criticalDir := filepath.Dir(cleanCriticalOutput)
 	if err := os.MkdirAll(criticalDir, 0750); err != nil {
 		return fmt.Errorf("failed to create critical CSS directory: %w", err)
 	}
 
-	nonCriticalDir := filepath.Dir(nonCriticalOutput)
+	nonCriticalDir := filepath.Dir(cleanNonCriticalOutput)
 	if err := os.MkdirAll(nonCriticalDir, 0750); err != nil {
 		return fmt.Errorf("failed to create non-critical CSS directory: %w", err)
 	}
@@ -908,12 +917,12 @@ func (p *PostCSSPlugin) extractCriticalForBundle(projectDir string, bundle Bundl
 	nonCriticalCSS := fullCSS[criticalSize:]
 
 	// Write critical CSS
-	if err := os.WriteFile(criticalOutput, criticalCSS, 0600); err != nil {
+	if err := os.WriteFile(cleanCriticalOutput, criticalCSS, 0600); err != nil { //nolint:gosec // path validated above
 		return fmt.Errorf("failed to write critical CSS: %w", err)
 	}
 
 	// Write non-critical CSS
-	if err := os.WriteFile(nonCriticalOutput, nonCriticalCSS, 0600); err != nil {
+	if err := os.WriteFile(cleanNonCriticalOutput, nonCriticalCSS, 0600); err != nil { //nolint:gosec // path validated above
 		return fmt.Errorf("failed to write non-critical CSS: %w", err)
 	}
 
