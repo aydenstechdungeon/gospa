@@ -56,12 +56,18 @@ WORKDIR /build/website
 RUN gospa build -o dist
 
 # 6. Normalize artifact structure for runtime
+# We copy source assets first, then overlay build artifacts (dist/) to ensure 
+# nothing is missed (e.g. fonts/images that gospa build might have skipped).
 RUN mkdir -p /out/static /out/routes /out/components /out/generated && \
     cp dist/server /out/gospa-server && \
-    [ -d dist/static ] && cp -r dist/static/. /out/static/ || true && \
+    # 6a. Copy source static files (original assets)
+    cp -r static/. /out/static/ && \
+    # 6b. Overlay built static files (overwriting with minified/processed versions)
+    if [ -d dist/static ]; then cp -r dist/static/. /out/static/; fi && \
+    # 6c. Copy routes and other runtime-required directories
     cp -r routes/. /out/routes/ || true && \
-    cp -r components/. /out/components/ || true && \
-    cp -r generated/. /out/generated/ || true
+    { [ -d components ] && cp -r components/. /out/components/ || true; } && \
+    { [ -d generated ]  && cp -r generated/.  /out/generated/ || true; }
 
 # ------------------------------------------------------------------------------
 # Stage 3: Runtime
