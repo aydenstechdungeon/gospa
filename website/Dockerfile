@@ -68,15 +68,15 @@ RUN mkdir -p /build/out/static /build/out/routes /build/out/components /build/ou
     if [ -d "website/dist" ]; then \
       cp website/dist/server /build/out/website && \
       { [ -d website/dist/static ]    && cp -r website/dist/static/.    /build/out/static/    || true; } && \
-      { [ -d website/routes ]         && cp -r website/routes           /build/out/routes     || true; } && \
-      { [ -d website/components ]     && cp -r website/components       /build/out/components || true; } && \
-      { [ -d website/generated ]      && cp -r website/generated        /build/out/generated  || true; }; \
+      { [ -d website/routes ]         && cp -r website/routes/.         /build/out/routes/    || true; } && \
+      { [ -d website/components ]     && cp -r website/components/.     /build/out/components/|| true; } && \
+      { [ -d website/generated ]      && cp -r website/generated/.      /build/out/generated/ || true; }; \
     else \
       cp dist/server /build/out/website && \
       { [ -d dist/static ]    && cp -r dist/static/.    /build/out/static/    || true; } && \
-      { [ -d routes ]         && cp -r routes           /build/out/routes     || true; } && \
-      { [ -d components ]     && cp -r components       /build/out/components || true; } && \
-      { [ -d generated ]      && cp -r generated        /build/out/generated  || true; }; \
+      { [ -d routes ]         && cp -r routes/.         /build/out/routes/    || true; } && \
+      { [ -d components ]     && cp -r components/.     /build/out/components/|| true; } && \
+      { [ -d generated ]      && cp -r generated/.      /build/out/generated/ || true; }; \
     fi
 
 # Runtime stage

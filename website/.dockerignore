@@ -34,15 +34,15 @@ examples/*/gospa_bin
 
 # PSD and design files
 *.psd
-*.jpeg
-*.png
-*.ico
-*.svg
-*.webp
+# *.jpeg
+# *.png
+# *.ico
+# *.svg
+# *.webp
 
 # Documentation
-docs/
-*.md
+# docs/ - We need our markdown documentation!
+# *.md
 !README.md
 
 # Lint logs
