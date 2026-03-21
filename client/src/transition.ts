@@ -2,83 +2,101 @@
 // Provides Svelte-like enter/leave animations
 
 export interface TransitionConfig {
-    delay?: number;
-    duration?: number;
-    easing?: string;
-    css?: (t: number, u: number) => string;
-    tick?: (t: number, u: number) => void;
+  delay?: number;
+  duration?: number;
+  easing?: string;
+  css?: (t: number, u: number) => string;
+  tick?: (t: number, u: number) => void;
 }
 
 export type TransitionFn = (node: Element, params: any) => TransitionConfig;
 
 export const linear = (t: number) => t;
 export const cubicOut = (t: number) => {
-    const f = t - 1.0;
-    return f * f * f + 1.0;
+  const f = t - 1.0;
+  return f * f * f + 1.0;
 };
 export const cubicInOut = (t: number) => {
-    return t < 0.5 ? 4.0 * t * t * t : 0.5 * Math.pow(2.0 * t - 2.0, 3.0) + 1.0;
+  return t < 0.5 ? 4.0 * t * t * t : 0.5 * Math.pow(2.0 * t - 2.0, 3.0) + 1.0;
 };
 export const elasticOut = (t: number) => {
-    return Math.sin(-13.0 * (t + 1.0) * Math.PI / 2) * Math.pow(2.0, -10.0 * t) + 1.0;
+  return (
+    Math.sin((-13.0 * (t + 1.0) * Math.PI) / 2) * Math.pow(2.0, -10.0 * t) + 1.0
+  );
 };
 export const bounceOut = (t: number) => {
-    const n1 = 7.5625;
-    const d1 = 2.75;
-    if (t < 1 / d1) {
-        return n1 * t * t;
-    } else if (t < 2 / d1) {
-        return n1 * (t -= 1.5 / d1) * t + 0.75;
-    } else if (t < 2.5 / d1) {
-        return n1 * (t -= 2.25 / d1) * t + 0.9375;
-    } else {
-        return n1 * (t -= 2.625 / d1) * t + 0.984375;
-    }
+  const n1 = 7.5625;
+  const d1 = 2.75;
+  if (t < 1 / d1) {
+    return n1 * t * t;
+  } else if (t < 2 / d1) {
+    return n1 * (t -= 1.5 / d1) * t + 0.75;
+  } else if (t < 2.5 / d1) {
+    return n1 * (t -= 2.25 / d1) * t + 0.9375;
+  } else {
+    return n1 * (t -= 2.625 / d1) * t + 0.984375;
+  }
 };
 
 // Built-in transitions
-export function fade(node: Element, { delay = 0, duration = 400, easing = linear } = {}): TransitionConfig {
-    const o = +getComputedStyle(node).opacity;
-    return {
-        delay,
-        duration,
-        easing: 'linear', // we map the easing function mechanically in JS or via CSS
-        css: (t) => `opacity: ${t * o}`
-    };
+export function fade(
+  node: Element,
+  { delay = 0, duration = 400, easing = linear } = {},
+): TransitionConfig {
+  const o = +getComputedStyle(node).opacity;
+  return {
+    delay,
+    duration,
+    easing: "linear", // we map the easing function mechanically in JS or via CSS
+    css: (t) => `opacity: ${t * o}`,
+  };
 }
 
-export function fly(node: Element, { delay = 0, duration = 400, easing = cubicOut, x = 0, y = 0, opacity = 0 } = {}): TransitionConfig {
-    const style = getComputedStyle(node);
-    const targetOpacity = +style.opacity;
-    const transform = style.transform === 'none' ? '' : style.transform;
+export function fly(
+  node: Element,
+  {
+    delay = 0,
+    duration = 400,
+    easing = cubicOut,
+    x = 0,
+    y = 0,
+    opacity = 0,
+  } = {},
+): TransitionConfig {
+  const style = getComputedStyle(node);
+  const targetOpacity = +style.opacity;
+  const transform = style.transform === "none" ? "" : style.transform;
 
-    return {
-        delay,
-        duration,
-        easing: 'ease-out',
-        css: (t, u) => `
+  return {
+    delay,
+    duration,
+    easing: "ease-out",
+    css: (t, u) => `
 			transform: ${transform} translate(${(1 - t) * x}px, ${(1 - t) * y}px);
 			opacity: ${targetOpacity - (targetOpacity - opacity) * u}
-		`
-    };
+		`,
+  };
 }
 
-export function slide(node: Element, { delay = 0, duration = 400, easing = cubicOut } = {}): TransitionConfig {
-    const style = getComputedStyle(node);
-    const opacity = +style.opacity;
-    const height = parseFloat(style.height);
-    const paddingTop = parseFloat(style.paddingTop);
-    const paddingBottom = parseFloat(style.paddingBottom);
-    const marginTop = parseFloat(style.marginTop);
-    const marginBottom = parseFloat(style.marginBottom);
-    const borderTopWidth = parseFloat(style.borderTopWidth);
-    const borderBottomWidth = parseFloat(style.borderBottomWidth);
+export function slide(
+  node: Element,
+  { delay = 0, duration = 400, easing = cubicOut } = {},
+): TransitionConfig {
+  const style = getComputedStyle(node);
+  const opacity = +style.opacity;
+  const height = parseFloat(style.height);
+  const paddingTop = parseFloat(style.paddingTop);
+  const paddingBottom = parseFloat(style.paddingBottom);
+  const marginTop = parseFloat(style.marginTop);
+  const marginBottom = parseFloat(style.marginBottom);
+  const borderTopWidth = parseFloat(style.borderTopWidth);
+  const borderBottomWidth = parseFloat(style.borderBottomWidth);
 
-    return {
-        delay,
-        duration,
-        easing: 'ease-out',
-        css: (t) => `
+  return {
+    delay,
+    duration,
+    easing: "ease-out",
+    css: (t) => `
 			overflow: hidden;
 			opacity: ${Math.min(t * 20, 1) * opacity};
 			height: ${t * height}px;
@@ -88,203 +106,237 @@ export function slide(node: Element, { delay = 0, duration = 400, easing = cubic
 			margin-bottom: ${t * marginBottom}px;
 			border-top-width: ${t * borderTopWidth}px;
 			border-bottom-width: ${t * borderBottomWidth}px;
-		`
-    };
+		`,
+  };
 }
 
-export function scale(node: Element, { delay = 0, duration = 400, easing = cubicOut, start = 0, opacity = 0 } = {}): TransitionConfig {
-    const style = getComputedStyle(node);
-    const targetOpacity = +style.opacity;
-    const transform = style.transform === 'none' ? '' : style.transform;
-    const sd = 1 - start;
+export function scale(
+  node: Element,
+  { delay = 0, duration = 400, easing = cubicOut, start = 0, opacity = 0 } = {},
+): TransitionConfig {
+  const style = getComputedStyle(node);
+  const targetOpacity = +style.opacity;
+  const transform = style.transform === "none" ? "" : style.transform;
+  const sd = 1 - start;
 
-    return {
-        delay,
-        duration,
-        easing: 'ease-out',
-        css: (t, u) => `
-            transform: ${transform} scale(${1 - (sd * u)});
+  return {
+    delay,
+    duration,
+    easing: "ease-out",
+    css: (t, u) => `
+            transform: ${transform} scale(${1 - sd * u});
             opacity: ${targetOpacity - (targetOpacity - opacity) * u}
-        `
-    };
+        `,
+  };
 }
 
-export function blur(node: Element, { delay = 0, duration = 400, easing = cubicInOut, amount = 5, opacity = 0 } = {}): TransitionConfig {
-    const style = getComputedStyle(node);
-    const targetOpacity = +style.opacity;
+export function blur(
+  node: Element,
+  {
+    delay = 0,
+    duration = 400,
+    easing = cubicInOut,
+    amount = 5,
+    opacity = 0,
+  } = {},
+): TransitionConfig {
+  const style = getComputedStyle(node);
+  const targetOpacity = +style.opacity;
 
-    return {
-        delay,
-        duration,
-        easing: 'ease-in-out',
-        css: (t, u) => `
+  return {
+    delay,
+    duration,
+    easing: "ease-in-out",
+    css: (t, u) => `
             opacity: ${targetOpacity - (targetOpacity - opacity) * u};
             filter: blur(${u * amount}px);
-        `
-    };
+        `,
+  };
 }
 
-export function crossfade(node: Element, { delay = 0, duration = 400, easing = linear } = {}): TransitionConfig {
-    return {
-        delay,
-        duration,
-        easing: 'linear',
-        css: (t, u) => `
+export function crossfade(
+  node: Element,
+  { delay = 0, duration = 400, easing = linear } = {},
+): TransitionConfig {
+  return {
+    delay,
+    duration,
+    easing: "linear",
+    css: (t, u) => `
             opacity: ${t};
             position: absolute;
-        `
-    };
+        `,
+  };
 }
 
 const activeTransitions = new Set<Element>();
 
 // Apply an enter transition
 export function transitionIn(node: HTMLElement, fn: TransitionFn, params: any) {
-    if (activeTransitions.has(node)) return;
-    activeTransitions.add(node);
+  if (activeTransitions.has(node)) return;
+  activeTransitions.add(node);
 
-    const config = fn(node, params);
-    const duration = config.duration ?? 400;
-    const delay = config.delay || 0;
-    const css = config.css || (() => '');
+  const config = fn(node, params);
+  const duration = config.duration ?? 400;
+  const delay = config.delay || 0;
+  const css = config.css || (() => "");
 
-    if (duration === 0 && delay === 0) {
-        activeTransitions.delete(node);
-        return;
-    }
+  if (duration === 0 && delay === 0) {
+    activeTransitions.delete(node);
+    return;
+  }
 
-    const originalStyle = node.getAttribute('style') || '';
+  const originalStyle = node.getAttribute("style") || "";
 
-    // Pre-calculate frames (simple CSS keyframes approach)
-    const name = `gospa-transition-${Math.random().toString(36).substring(2, 9)}`;
-    const keyframes = `
+  // Pre-calculate frames (simple CSS keyframes approach)
+  const name = `gospa-transition-${Math.random().toString(36).substring(2, 9)}`;
+  const keyframes = `
 		@keyframes ${name} {
 			0% { ${css(0, 1)} }
 			100% { ${css(1, 0)} }
 		}
 	`;
 
-    const styleSheet = document.createElement('style');
-    styleSheet.textContent = keyframes;
-    document.head.appendChild(styleSheet);
+  const styleSheet = document.createElement("style");
+  styleSheet.textContent = keyframes;
+  document.head.appendChild(styleSheet);
 
-    node.style.animation = `${name} ${duration}ms ${config.easing || 'linear'} ${delay}ms both`;
+  node.style.animation = `${name} ${duration}ms ${config.easing || "linear"} ${delay}ms both`;
 
-    setTimeout(() => {
-        node.setAttribute('style', originalStyle);
-        node.style.animation = '';
-        styleSheet.remove();
-        activeTransitions.delete(node);
-    }, duration + delay);
+  setTimeout(() => {
+    node.setAttribute("style", originalStyle);
+    node.style.animation = "";
+    styleSheet.remove();
+    activeTransitions.delete(node);
+  }, duration + delay);
 }
 
 // Apply a leave transition
-export function transitionOut(node: HTMLElement, fn: TransitionFn, params: any, onComplete: () => void) {
-    if (activeTransitions.has(node)) return;
-    activeTransitions.add(node);
+export function transitionOut(
+  node: HTMLElement,
+  fn: TransitionFn,
+  params: any,
+  onComplete: () => void,
+) {
+  if (activeTransitions.has(node)) return;
+  activeTransitions.add(node);
 
-    const config = fn(node, params);
-    const duration = config.duration ?? 400;
-    const delay = config.delay || 0;
-    const css = config.css || (() => '');
+  const config = fn(node, params);
+  const duration = config.duration ?? 400;
+  const delay = config.delay || 0;
+  const css = config.css || (() => "");
 
-    if (duration === 0 && delay === 0) {
-        activeTransitions.delete(node);
-        onComplete();
-        return;
-    }
+  if (duration === 0 && delay === 0) {
+    activeTransitions.delete(node);
+    onComplete();
+    return;
+  }
 
-    const name = `gospa-transition-${Math.random().toString(36).substring(2, 9)}`;
-    const keyframes = `
+  const name = `gospa-transition-${Math.random().toString(36).substring(2, 9)}`;
+  const keyframes = `
 		@keyframes ${name} {
 			0% { ${css(1, 0)} }
 			100% { ${css(0, 1)} }
 		}
 	`;
 
-    const styleSheet = document.createElement('style');
-    styleSheet.textContent = keyframes;
-    document.head.appendChild(styleSheet);
+  const styleSheet = document.createElement("style");
+  styleSheet.textContent = keyframes;
+  document.head.appendChild(styleSheet);
 
-    node.style.animation = `${name} ${duration}ms ${config.easing || 'linear'} ${delay}ms both`;
+  node.style.animation = `${name} ${duration}ms ${config.easing || "linear"} ${delay}ms both`;
 
-    setTimeout(() => {
-        styleSheet.remove();
-        activeTransitions.delete(node);
-        onComplete();
-    }, duration + delay);
+  setTimeout(() => {
+    styleSheet.remove();
+    activeTransitions.delete(node);
+    onComplete();
+  }, duration + delay);
 }
 
 // Setup automated transitions using attributes like data-transition="fade"
 export function setupTransitions(root: Element = document.body) {
-    const observer = new MutationObserver((mutations) => {
-        mutations.forEach(mutation => {
-            if (mutation.type === 'childList') {
-                // Handle added nodes
-                mutation.addedNodes.forEach(node => {
-                    if (node.nodeType === Node.ELEMENT_NODE) {
-                        const el = node as HTMLElement;
-                        if (el.closest('[data-gospa-static]')) return;
-                        const transitionType = el.getAttribute('data-transition-in') || el.getAttribute('data-transition');
-                        if (transitionType) {
-                            const fn = getTransitionFn(transitionType);
-                            if (fn) transitionIn(el, fn, getTransitionParams(el));
-                        }
-                    }
-                });
-
-                // Handle removed nodes (requires some DOM trickery to delay true removal)
-                mutation.removedNodes.forEach(node => {
-                    if (node.nodeType === Node.ELEMENT_NODE) {
-                        const el = node as HTMLElement;
-                        if (el.closest('[data-gospa-static]')) return;
-
-                        const transitionType = el.getAttribute('data-transition-out') || el.getAttribute('data-transition');
-                        if (transitionType) {
-                            const fn = getTransitionFn(transitionType);
-                            if (fn && !activeTransitions.has(el)) {
-                                // We have to temporarily put it back in the DOM to animate it out
-                                const clone = el.cloneNode(true) as HTMLElement;
-
-                                // Clean up clone to prevent rogue bindings
-                                clone.querySelectorAll('[data-bind]').forEach(n => n.removeAttribute('data-bind'));
-                                clone.removeAttribute('data-bind');
-
-                                if (mutation.previousSibling && mutation.previousSibling.parentNode) {
-                                    mutation.previousSibling.parentNode.insertBefore(clone, mutation.previousSibling.nextSibling);
-                                } else if (mutation.target) {
-                                    mutation.target.appendChild(clone);
-                                }
-
-                                transitionOut(clone, fn, getTransitionParams(el), () => clone.remove());
-                            }
-                        }
-                    }
-                });
+  const observer = new MutationObserver((mutations) => {
+    mutations.forEach((mutation) => {
+      if (mutation.type === "childList") {
+        // Handle added nodes
+        mutation.addedNodes.forEach((node) => {
+          if (node.nodeType === Node.ELEMENT_NODE) {
+            const el = node as HTMLElement;
+            if (el.closest("[data-gospa-static]")) return;
+            const transitionType =
+              el.getAttribute("data-transition-in") ||
+              el.getAttribute("data-transition");
+            if (transitionType) {
+              const fn = getTransitionFn(transitionType);
+              if (fn) transitionIn(el, fn, getTransitionParams(el));
             }
+          }
         });
-    });
 
-    observer.observe(root, { childList: true, subtree: true });
+        // Handle removed nodes (requires some DOM trickery to delay true removal)
+        mutation.removedNodes.forEach((node) => {
+          if (node.nodeType === Node.ELEMENT_NODE) {
+            const el = node as HTMLElement;
+            if (el.closest("[data-gospa-static]")) return;
+
+            const transitionType =
+              el.getAttribute("data-transition-out") ||
+              el.getAttribute("data-transition");
+            if (transitionType) {
+              const fn = getTransitionFn(transitionType);
+              if (fn && !activeTransitions.has(el)) {
+                // We have to temporarily put it back in the DOM to animate it out
+                const clone = el.cloneNode(true) as HTMLElement;
+
+                // Clean up clone to prevent rogue bindings
+                clone
+                  .querySelectorAll("[data-bind]")
+                  .forEach((n) => n.removeAttribute("data-bind"));
+                clone.removeAttribute("data-bind");
+
+                if (
+                  mutation.previousSibling &&
+                  mutation.previousSibling.parentNode
+                ) {
+                  mutation.previousSibling.parentNode.insertBefore(
+                    clone,
+                    mutation.previousSibling.nextSibling,
+                  );
+                } else if (mutation.target) {
+                  mutation.target.appendChild(clone);
+                }
+
+                transitionOut(clone, fn, getTransitionParams(el), () =>
+                  clone.remove(),
+                );
+              }
+            }
+          }
+        });
+      }
+    });
+  });
+
+  observer.observe(root, { childList: true, subtree: true });
 }
 
 function getTransitionFn(name: string): TransitionFn | null {
-    if (name.startsWith('fade')) return fade;
-    if (name.startsWith('fly')) return fly;
-    if (name.startsWith('slide')) return slide;
-    if (name.startsWith('scale')) return scale;
-    if (name.startsWith('blur')) return blur;
-    if (name.startsWith('crossfade')) return crossfade;
-    return null;
+  if (name.startsWith("fade")) return fade;
+  if (name.startsWith("fly")) return fly;
+  if (name.startsWith("slide")) return slide;
+  if (name.startsWith("scale")) return scale;
+  if (name.startsWith("blur")) return blur;
+  if (name.startsWith("crossfade")) return crossfade;
+  return null;
 }
 
 function getTransitionParams(node: Element): any {
-    const paramStr = node.getAttribute('data-transition-params');
-    if (!paramStr) return {};
-    try {
-        return JSON.parse(paramStr);
-    } catch (e) {
-        console.warn('Invalid transition parameters:', paramStr);
-        return {};
-    }
+  const paramStr = node.getAttribute("data-transition-params");
+  if (!paramStr) return {};
+  try {
+    return JSON.parse(paramStr);
+  } catch (e) {
+    console.warn("Invalid transition parameters:", paramStr);
+    return {};
+  }
 }

@@ -8,51 +8,130 @@
 
 // Core exports (re-exported from runtime-core for convenience)
 import {
-	init, createComponent, destroyComponent, getComponent, getState, setState, callAction, bind, autoInit,
-	getWebSocket, getNavigation, getTransitions,
-	remote, remoteAction, configureRemote, getRemotePrefix
-} from './runtime-core.ts';
+  init,
+  createComponent,
+  destroyComponent,
+  getComponent,
+  getState,
+  setState,
+  callAction,
+  bind,
+  autoInit,
+  getWebSocket,
+  getNavigation,
+  getTransitions,
+  remote,
+  remoteAction,
+  configureRemote,
+  getRemotePrefix,
+} from "./runtime-core.ts";
 
 export {
-	init, createComponent, destroyComponent, getComponent, getState, setState, callAction, bind, autoInit,
-	getWebSocket, getNavigation, getTransitions,
-	remote, remoteAction, configureRemote, getRemotePrefix
+  init,
+  createComponent,
+  destroyComponent,
+  getComponent,
+  getState,
+  setState,
+  callAction,
+  bind,
+  autoInit,
+  getWebSocket,
+  getNavigation,
+  getTransitions,
+  remote,
+  remoteAction,
+  configureRemote,
+  getRemotePrefix,
 };
 
 export {
-	Rune, Derived, Effect, StateMap, batch, effect, watch,
-	bindElement, bindTwoWay, renderIf, renderList
-} from './runtime-core.ts';
-
+  Rune,
+  Derived,
+  Effect,
+  StateMap,
+  batch,
+  effect,
+  watch,
+  bindElement,
+  bindTwoWay,
+  renderIf,
+  renderList,
+} from "./runtime-core.ts";
 
 // Export types
-export type { ComponentDefinition, ComponentInstance, RuntimeConfig } from './runtime-core.ts';
-export type { Unsubscribe } from './state.ts';
-export type { RemoteOptions, RemoteResult } from './remote.ts';
+export type {
+  ComponentDefinition,
+  ComponentInstance,
+  RuntimeConfig,
+} from "./runtime-core.ts";
+export type { Unsubscribe } from "./state.ts";
+export type { RemoteOptions, RemoteResult } from "./remote.ts";
 
 // Direct imports for full-featured runtime (backward compatibility)
-import { Rune, Derived, Effect, StateMap, batch, effect, watch, type Unsubscribe } from './state.ts';
-import { bindElement, bindTwoWay, renderIf, renderList, registerBinding, unregisterBinding } from './dom.ts';
-import { on, offAll, debounce, throttle, delegate, onKey, keys, transformers } from './events.ts';
-import { WSClient, initWebSocket, getWebSocketClient, sendAction, syncedRune, applyStateUpdate, type StateMessage } from './websocket.ts';
 import {
-	navigate,
-	back,
-	forward,
-	go,
-	prefetch,
-	getCurrentPath,
-	isNavigating,
-	onBeforeNavigate,
-	onAfterNavigate,
-	initNavigation,
-	destroyNavigation,
-	createNavigationState,
-	setNavigationOptions,
-	type NavigateOptions,
-	type NavigationOptions
-} from './navigation.ts';
-import { setupTransitions, fade, fly, slide, scale, blur, crossfade } from './transition.ts';
+  Rune,
+  Derived,
+  Effect,
+  StateMap,
+  batch,
+  effect,
+  watch,
+  type Unsubscribe,
+} from "./state.ts";
+import {
+  bindElement,
+  bindTwoWay,
+  renderIf,
+  renderList,
+  registerBinding,
+  unregisterBinding,
+} from "./dom.ts";
+import {
+  on,
+  offAll,
+  debounce,
+  throttle,
+  delegate,
+  onKey,
+  keys,
+  transformers,
+} from "./events.ts";
+import {
+  WSClient,
+  initWebSocket,
+  getWebSocketClient,
+  sendAction,
+  syncedRune,
+  applyStateUpdate,
+  type StateMessage,
+} from "./websocket.ts";
+import {
+  navigate,
+  back,
+  forward,
+  go,
+  prefetch,
+  getCurrentPath,
+  isNavigating,
+  onBeforeNavigate,
+  onAfterNavigate,
+  initNavigation,
+  destroyNavigation,
+  createNavigationState,
+  setNavigationOptions,
+  type NavigateOptions,
+  type NavigationOptions,
+} from "./navigation.ts";
+import {
+  setupTransitions,
+  fade,
+  fly,
+  slide,
+  scale,
+  blur,
+  crossfade,
+} from "./transition.ts";
 
 // Re-export DOM bindings
 export { registerBinding, unregisterBinding };
@@ -62,37 +141,37 @@ export { on, offAll, debounce, throttle, delegate, onKey, keys, transformers };
 
 // Re-export WebSocket, Navigation, and Transition APIs for backward compatibility
 export {
-	// WebSocket
-	WSClient,
-	initWebSocket,
-	getWebSocketClient,
-	sendAction,
-	syncedRune,
-	applyStateUpdate,
+  // WebSocket
+  WSClient,
+  initWebSocket,
+  getWebSocketClient,
+  sendAction,
+  syncedRune,
+  applyStateUpdate,
 
-	// Transitions
-	fade,
-	fly,
-	slide,
-	scale,
-	blur,
-	crossfade,
-	setupTransitions,
+  // Transitions
+  fade,
+  fly,
+  slide,
+  scale,
+  blur,
+  crossfade,
+  setupTransitions,
 
-	// Navigation
-	navigate,
-	back,
-	forward,
-	go,
-	prefetch,
-	getCurrentPath,
-	isNavigating,
-	onBeforeNavigate,
-	onAfterNavigate,
-	initNavigation,
-	destroyNavigation,
-	createNavigationState,
-	setNavigationOptions
+  // Navigation
+  navigate,
+  back,
+  forward,
+  go,
+  prefetch,
+  getCurrentPath,
+  isNavigating,
+  onBeforeNavigate,
+  onAfterNavigate,
+  initNavigation,
+  destroyNavigation,
+  createNavigationState,
+  setNavigationOptions,
 };
 
 // Export types
@@ -102,71 +181,68 @@ export type { NavigateOptions, NavigationOptions, StateMessage };
 
 // Signal-based reactivity (proxy-based auto-tracking)
 export {
-	reactive,
-	derived,
-	effect as signalEffect,
-	watchProp,
-	toRaw,
-	isReactive,
-	reactiveArray
-} from './signals.ts';
+  reactive,
+  derived,
+  effect as signalEffect,
+  watchProp,
+  toRaw,
+  isReactive,
+  reactiveArray,
+} from "./signals.ts";
 
 // RAF-batched DOM updates
-export {
-	cancelPendingDOMUpdates,
-	flushDOMUpdatesNow
-} from './dom.ts';
+export { cancelPendingDOMUpdates, flushDOMUpdatesNow } from "./dom.ts";
 
 // Error boundaries
 export {
-	withErrorBoundary,
-	createErrorFallback,
-	getErrorBoundaryState,
-	clearAllErrorBoundaries,
-	isInErrorState,
-	onComponentError
-} from './error-boundary.ts';
+  withErrorBoundary,
+  createErrorFallback,
+  getErrorBoundaryState,
+  clearAllErrorBoundaries,
+  isInErrorState,
+  onComponentError,
+} from "./error-boundary.ts";
 
 // DevTools integration
 export {
-	createDevToolsPanel,
-	updateDevToolsPanel,
-	toggleDevTools
-} from './debug.ts';
+  createDevToolsPanel,
+  updateDevToolsPanel,
+  toggleDevTools,
+} from "./debug.ts";
 
 // WebSocket tab sharing (BroadcastChannel)
 export {
-	WSTabSync,
-	createTabSync,
-	getTabSync,
-	destroyTabSync
-} from './ws-tab-sync.ts';
+  WSTabSync,
+  createTabSync,
+  getTabSync,
+  destroyTabSync,
+} from "./ws-tab-sync.ts";
 
 // IndexedDB persistence
 export {
-	IndexedDBPersistence,
-	createIndexedDBPersistence,
-	getIndexedDBPersistence,
-	destroyIndexedDBPersistence
-} from './indexeddb.ts';
+  IndexedDBPersistence,
+  createIndexedDBPersistence,
+  getIndexedDBPersistence,
+  destroyIndexedDBPersistence,
+} from "./indexeddb.ts";
 
 // Accessibility enhancements
 export {
-	ScreenReaderAnnouncer,
-	createAnnouncer,
-	getAnnouncer,
-	destroyAnnouncer,
-	announce,
-	aria,
-	focus
-} from './a11y.ts';
+  ScreenReaderAnnouncer,
+  createAnnouncer,
+  getAnnouncer,
+  destroyAnnouncer,
+  announce,
+  aria,
+  focus,
+} from "./a11y.ts";
 
 // Performance monitoring
 export {
-	PerformanceMonitor,
-	createPerformanceMonitor,
-	getPerformanceMonitor,
-	destroyPerformanceMonitor,
-	measure,
-	measureAsync
-} from './performance.ts';
+  PerformanceMonitor,
+  createPerformanceMonitor,
+  getPerformanceMonitor,
+  destroyPerformanceMonitor,
+  measure,
+  measureAsync,
+} from "./performance.ts";

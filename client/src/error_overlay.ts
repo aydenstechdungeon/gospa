@@ -5,185 +5,189 @@
 
 // Error information received from server or captured locally
 interface ErrorData {
-	message: string;
-	type: string;
-	stack?: StackFrame[];
-	file?: string;
-	line?: number;
-	column?: number;
-	codeSnippet?: string;
-	timestamp: number;
-	request?: {
-		method: string;
-		url: string;
-		headers?: Record<string, string>;
-		query?: Record<string, string>;
-	};
-	cause?: ErrorData;
+  message: string;
+  type: string;
+  stack?: StackFrame[];
+  file?: string;
+  line?: number;
+  column?: number;
+  codeSnippet?: string;
+  timestamp: number;
+  request?: {
+    method: string;
+    url: string;
+    headers?: Record<string, string>;
+    query?: Record<string, string>;
+  };
+  cause?: ErrorData;
 }
 
 interface StackFrame {
-	file: string;
-	line: number;
-	function: string;
-	source?: string;
+  file: string;
+  line: number;
+  function: string;
+  source?: string;
 }
 
 interface ErrorOverlayOptions {
-	theme?: 'dark' | 'light';
-	editor?: 'code' | 'idea' | 'sublime';
-	showStack?: boolean;
-	showRequest?: boolean;
-	showCode?: boolean;
+  theme?: "dark" | "light";
+  editor?: "code" | "idea" | "sublime";
+  showStack?: boolean;
+  showRequest?: boolean;
+  showCode?: boolean;
 }
 
 const defaultOptions: ErrorOverlayOptions = {
-	theme: 'dark',
-	editor: 'code',
-	showStack: true,
-	showRequest: true,
-	showCode: true,
+  theme: "dark",
+  editor: "code",
+  showStack: true,
+  showRequest: true,
+  showCode: true,
 };
 
 /**
  * ErrorOverlay manages the display of errors in development mode.
  */
 export class ErrorOverlay {
-	private container: HTMLElement | null = null;
-	private options: ErrorOverlayOptions;
-	private currentError: ErrorData | null = null;
+  private container: HTMLElement | null = null;
+  private options: ErrorOverlayOptions;
+  private currentError: ErrorData | null = null;
 
-	constructor(options: ErrorOverlayOptions = {}) {
-		this.options = { ...defaultOptions, ...options };
-		this.setupGlobalHandlers();
-	}
+  constructor(options: ErrorOverlayOptions = {}) {
+    this.options = { ...defaultOptions, ...options };
+    this.setupGlobalHandlers();
+  }
 
-	/**
-	 * Set up global error handlers to catch unhandled errors.
-	 */
-	private setupGlobalHandlers(): void {
-		if (typeof window === 'undefined') return;
+  /**
+   * Set up global error handlers to catch unhandled errors.
+   */
+  private setupGlobalHandlers(): void {
+    if (typeof window === "undefined") return;
 
-		// Handle uncaught errors
-		window.addEventListener('error', (event) => {
-			this.showError({
-				message: event.message,
-				type: 'Error',
-				file: event.filename,
-				line: event.lineno,
-				column: event.colno,
-				timestamp: Date.now(),
-			});
-			event.preventDefault();
-		});
+    // Handle uncaught errors
+    window.addEventListener("error", (event) => {
+      this.showError({
+        message: event.message,
+        type: "Error",
+        file: event.filename,
+        line: event.lineno,
+        column: event.colno,
+        timestamp: Date.now(),
+      });
+      event.preventDefault();
+    });
 
-		// Handle unhandled promise rejections
-		window.addEventListener('unhandledrejection', (event) => {
-			const error = event.reason;
-			this.showError({
-				message: error?.message || String(error),
-				type: error?.constructor?.name || 'UnhandledRejection',
-				stack: this.parseStack(error?.stack),
-				timestamp: Date.now(),
-			});
-			event.preventDefault();
-		});
-	}
+    // Handle unhandled promise rejections
+    window.addEventListener("unhandledrejection", (event) => {
+      const error = event.reason;
+      this.showError({
+        message: error?.message || String(error),
+        type: error?.constructor?.name || "UnhandledRejection",
+        stack: this.parseStack(error?.stack),
+        timestamp: Date.now(),
+      });
+      event.preventDefault();
+    });
+  }
 
-	/**
-	 * Display an error in the overlay.
-	 */
-	showError(error: ErrorData): void {
-		this.currentError = error;
-		
-		if (!this.container) {
-			this.createContainer();
-		}
+  /**
+   * Display an error in the overlay.
+   */
+  showError(error: ErrorData): void {
+    this.currentError = error;
 
-		this.render();
-		this.show();
-	}
+    if (!this.container) {
+      this.createContainer();
+    }
 
-	/**
-	 * Hide and clear the error overlay.
-	 */
-	hide(): void {
-		if (this.container) {
-			this.container.remove();
-			this.container = null;
-		}
-		this.currentError = null;
-	}
+    this.render();
+    this.show();
+  }
 
-	/**
-	 * Create the overlay container element.
-	 */
-	private createContainer(): void {
-		this.container = document.createElement('div');
-		this.container.id = 'gospa-error-overlay';
-		this.container.setAttribute('role', 'dialog');
-		this.container.setAttribute('aria-modal', 'true');
-		this.container.setAttribute('aria-labelledby', 'gospa-error-title');
-		document.body.appendChild(this.container);
-	}
+  /**
+   * Hide and clear the error overlay.
+   */
+  hide(): void {
+    if (this.container) {
+      this.container.remove();
+      this.container = null;
+    }
+    this.currentError = null;
+  }
 
-	/**
-	 * Show the overlay.
-	 */
-	private show(): void {
-		if (this.container) {
-			this.container.style.display = 'block';
-		}
-	}
+  /**
+   * Create the overlay container element.
+   */
+  private createContainer(): void {
+    this.container = document.createElement("div");
+    this.container.id = "gospa-error-overlay";
+    this.container.setAttribute("role", "dialog");
+    this.container.setAttribute("aria-modal", "true");
+    this.container.setAttribute("aria-labelledby", "gospa-error-title");
+    document.body.appendChild(this.container);
+  }
 
-	/**
-	 * Parse a stack trace string into structured frames.
-	 */
-	private parseStack(stack?: string): StackFrame[] {
-		if (!stack) return [];
+  /**
+   * Show the overlay.
+   */
+  private show(): void {
+    if (this.container) {
+      this.container.style.display = "block";
+    }
+  }
 
-		const frames: StackFrame[] = [];
-		const lines = stack.split('\n');
+  /**
+   * Parse a stack trace string into structured frames.
+   */
+  private parseStack(stack?: string): StackFrame[] {
+    if (!stack) return [];
 
-		for (const line of lines) {
-			// Match patterns like "    at functionName (file:line:col)" or "    at file:line:col"
-			const match = line.match(/^\s*at\s+(?:(.+?)\s+\()?(.+):(\d+):(\d+)\)?$/);
-			if (match) {
-				frames.push({
-					function: match[1] || '<anonymous>',
-					file: match[2],
-					line: parseInt(match[3], 10),
-				});
-			}
-		}
+    const frames: StackFrame[] = [];
+    const lines = stack.split("\n");
 
-		return frames;
-	}
+    for (const line of lines) {
+      // Match patterns like "    at functionName (file:line:col)" or "    at file:line:col"
+      const match = line.match(/^\s*at\s+(?:(.+?)\s+\()?(.+):(\d+):(\d+)\)?$/);
+      if (match) {
+        frames.push({
+          function: match[1] || "<anonymous>",
+          file: match[2],
+          line: parseInt(match[3], 10),
+        });
+      }
+    }
 
-	/**
-	 * Render the error overlay content.
-	 */
-	private render(): void {
-		if (!this.container || !this.currentError) return;
+    return frames;
+  }
 
-		const error = this.currentError;
-		const theme = this.options.theme || 'dark';
+  /**
+   * Render the error overlay content.
+   */
+  private render(): void {
+    if (!this.container || !this.currentError) return;
 
-		this.container.innerHTML = `
+    const error = this.currentError;
+    const theme = this.options.theme || "dark";
+
+    this.container.innerHTML = `
 			<style>${this.getStyles(theme)}</style>
 			<div class="gospa-overlay-backdrop" onclick="this.parentElement.remove()"></div>
 			<div class="gospa-overlay-container">
 				<div class="gospa-overlay-header">
 					<div class="gospa-error-type">${this.escapeHtml(error.type)}</div>
 					<h1 id="gospa-error-title" class="gospa-error-message">${this.escapeHtml(error.message)}</h1>
-					${error.file ? `
+					${
+            error.file
+              ? `
 						<div class="gospa-error-location">
 							<span>📍</span>
 							<a href="${this.buildEditorURL(error.file, error.line || 1)}" title="Open in editor">
-								${this.escapeHtml(error.file)}${error.line ? `:${error.line}` : ''}
+								${this.escapeHtml(error.file)}${error.line ? `:${error.line}` : ""}
 							</a>
 						</div>
-					` : ''}
+					`
+              : ""
+          }
 					<div class="gospa-overlay-actions">
 						<button class="gospa-btn gospa-btn-primary" onclick="navigator.clipboard.writeText(document.querySelector('.gospa-error-message').textContent)">
 							📋 Copy Error
@@ -197,20 +201,20 @@ export class ErrorOverlay {
 					</div>
 				</div>
 
-				${error.request && this.options.showRequest ? this.renderRequest(error.request) : ''}
+				${error.request && this.options.showRequest ? this.renderRequest(error.request) : ""}
 
-				${error.stack && this.options.showStack ? this.renderStack(error.stack) : ''}
+				${error.stack && this.options.showStack ? this.renderStack(error.stack) : ""}
 
-				${error.cause ? this.renderCause(error.cause) : ''}
+				${error.cause ? this.renderCause(error.cause) : ""}
 			</div>
 		`;
-	}
+  }
 
-	/**
-	 * Render request information section.
-	 */
-	private renderRequest(request: NonNullable<ErrorData['request']>): string {
-		return `
+  /**
+   * Render request information section.
+   */
+  private renderRequest(request: NonNullable<ErrorData["request"]>): string {
+    return `
 			<div class="gospa-section">
 				<div class="gospa-section-header">
 					<span>🌐</span> Request
@@ -225,24 +229,32 @@ export class ErrorOverlay {
 							<div class="gospa-request-key">URL</div>
 							<div class="gospa-request-value">${this.escapeHtml(request.url)}</div>
 						</div>
-						${request.query ? Object.entries(request.query).map(([key, value]) => `
+						${
+              request.query
+                ? Object.entries(request.query)
+                    .map(
+                      ([key, value]) => `
 							<div class="gospa-request-row">
 								<div class="gospa-request-key">Query[${this.escapeHtml(key)}]</div>
 								<div class="gospa-request-value">${this.escapeHtml(value)}</div>
 							</div>
-						`).join('') : ''}
+						`,
+                    )
+                    .join("")
+                : ""
+            }
 					</div>
 				</div>
 			</div>
 		`;
-	}
+  }
 
-	/**
-	 * Render stack trace section.
-	 */
-	private renderStack(stack: StackFrame[]): string {
-		if (!stack.length) {
-			return `
+  /**
+   * Render stack trace section.
+   */
+  private renderStack(stack: StackFrame[]): string {
+    if (!stack.length) {
+      return `
 				<div class="gospa-section">
 					<div class="gospa-section-header">
 						<span>📚</span> Stack Trace
@@ -252,9 +264,12 @@ export class ErrorOverlay {
 					</div>
 				</div>
 			`;
-		}
+    }
 
-		const frames = stack.slice(0, 15).map((frame, index) => `
+    const frames = stack
+      .slice(0, 15)
+      .map(
+        (frame, index) => `
 			<div class="gospa-stack-frame" data-index="${index}">
 				<div class="gospa-stack-frame-header">
 					<div class="gospa-stack-function">${this.escapeHtml(frame.function)}</div>
@@ -265,9 +280,11 @@ export class ErrorOverlay {
 					</a>
 				</div>
 			</div>
-		`).join('');
+		`,
+      )
+      .join("");
 
-		return `
+    return `
 			<div class="gospa-section">
 				<div class="gospa-section-header">
 					<span>📚</span> Stack Trace
@@ -277,98 +294,101 @@ export class ErrorOverlay {
 				</div>
 			</div>
 		`;
-	}
+  }
 
-	/**
-	 * Render error cause chain.
-	 */
-	private renderCause(cause: ErrorData): string {
-		const causes: string[] = [];
-		let current: ErrorData | undefined = cause;
+  /**
+   * Render error cause chain.
+   */
+  private renderCause(cause: ErrorData): string {
+    const causes: string[] = [];
+    let current: ErrorData | undefined = cause;
 
-		while (current) {
-			causes.push(`
+    while (current) {
+      causes.push(`
 				<div class="gospa-cause-item">
 					<div class="gospa-cause-type">${this.escapeHtml(current.type)}</div>
 					<div class="gospa-cause-message">${this.escapeHtml(current.message)}</div>
 				</div>
 			`);
-			current = current.cause;
-		}
+      current = current.cause;
+    }
 
-		return `
+    return `
 			<div class="gospa-section">
 				<div class="gospa-section-header">
 					<span>🔗</span> Caused By
 				</div>
 				<div class="gospa-section-content">
 					<div class="gospa-cause-chain">
-						${causes.join('')}
+						${causes.join("")}
 					</div>
 				</div>
 			</div>
 		`;
-	}
+  }
 
-	/**
-	 * Build a URL to open a file in an editor.
-	 */
-	private buildEditorURL(file: string, line: number): string {
-		const editor = this.options.editor || 'code';
+  /**
+   * Build a URL to open a file in an editor.
+   */
+  private buildEditorURL(file: string, line: number): string {
+    const editor = this.options.editor || "code";
 
-		switch (editor) {
-			case 'code':
-				return `vscode://file/${file}:${line}`;
-			case 'idea':
-				return `idea://open?file=${file}&line=${line}`;
-			case 'sublime':
-				return `subl://open?url=file://${file}&line=${line}`;
-			default:
-				return `vscode://file/${file}:${line}`;
-		}
-	}
+    switch (editor) {
+      case "code":
+        return `vscode://file/${file}:${line}`;
+      case "idea":
+        return `idea://open?file=${file}&line=${line}`;
+      case "sublime":
+        return `subl://open?url=file://${file}&line=${line}`;
+      default:
+        return `vscode://file/${file}:${line}`;
+    }
+  }
 
-	/**
-	 * Escape HTML special characters.
-	 */
-	private escapeHtml(str: string): string {
-		return str
-			.replace(/&/g, '\x26amp;')
-			.replace(/</g, '\x26lt;')
-			.replace(/>/g, '\x26gt;')
-			.replace(/"/g, '\x26quot;')
-			.replace(/'/g, '\x26#39;');
-	}
+  /**
+   * Escape HTML special characters.
+   */
+  private escapeHtml(str: string): string {
+    return str
+      .replace(/&/g, "\x26amp;")
+      .replace(/</g, "\x26lt;")
+      .replace(/>/g, "\x26gt;")
+      .replace(/"/g, "\x26quot;")
+      .replace(/'/g, "\x26#39;");
+  }
 
-	/**
-	 * Get CSS styles for the overlay.
-	 */
-	private getStyles(theme: string): string {
-		const colors = theme === 'light' ? {
-			bgPrimary: '#ffffff',
-			bgSecondary: '#f5f5f5',
-			bgTertiary: '#ebebeb',
-			textPrimary: '#1a1a1a',
-			textSecondary: '#666666',
-			textMuted: '#999999',
-			border: '#e0e0e0',
-			codeBg: '#f8f8f8',
-			accent: '#dc3545',
-			accentHover: '#c82333',
-		} : {
-			bgPrimary: '#1a1a1a',
-			bgSecondary: '#242424',
-			bgTertiary: '#2a2a2a',
-			textPrimary: '#ffffff',
-			textSecondary: '#a0a0a0',
-			textMuted: '#666666',
-			border: '#333333',
-			codeBg: '#1e1e1e',
-			accent: '#ff4444',
-			accentHover: '#ff6666',
-		};
+  /**
+   * Get CSS styles for the overlay.
+   */
+  private getStyles(theme: string): string {
+    const colors =
+      theme === "light"
+        ? {
+            bgPrimary: "#ffffff",
+            bgSecondary: "#f5f5f5",
+            bgTertiary: "#ebebeb",
+            textPrimary: "#1a1a1a",
+            textSecondary: "#666666",
+            textMuted: "#999999",
+            border: "#e0e0e0",
+            codeBg: "#f8f8f8",
+            accent: "#dc3545",
+            accentHover: "#c82333",
+          }
+        : {
+            bgPrimary: "#1a1a1a",
+            bgSecondary: "#242424",
+            bgTertiary: "#2a2a2a",
+            textPrimary: "#ffffff",
+            textSecondary: "#a0a0a0",
+            textMuted: "#666666",
+            border: "#333333",
+            codeBg: "#1e1e1e",
+            accent: "#ff4444",
+            accentHover: "#ff6666",
+          };
 
-		return `
+    return `
 			#gospa-error-overlay {
 				position: fixed;
 				top: 0;
@@ -560,7 +580,7 @@ export class ErrorOverlay {
 				font-style: italic;
 			}
 		`;
-	}
+  }
 }
 
 // Singleton instance
@@ -570,30 +590,30 @@ let overlayInstance: ErrorOverlay | null = null;
  * Initialize the error overlay.
  */
 export function initErrorOverlay(options?: ErrorOverlayOptions): ErrorOverlay {
-	if (!overlayInstance) {
-		overlayInstance = new ErrorOverlay(options);
-	}
-	return overlayInstance;
+  if (!overlayInstance) {
+    overlayInstance = new ErrorOverlay(options);
+  }
+  return overlayInstance;
 }
 
 /**
  * Show an error in the overlay.
  */
 export function showError(error: ErrorData): void {
-	if (!overlayInstance) {
-		initErrorOverlay();
-	}
-	overlayInstance?.showError(error);
+  if (!overlayInstance) {
+    initErrorOverlay();
+  }
+  overlayInstance?.showError(error);
 }
 
 /**
  * Hide the error overlay.
  */
 export function hideErrorOverlay(): void {
-	overlayInstance?.hide();
+  overlayInstance?.hide();
 }
 
 // Auto-initialize in development
-if (typeof window !== 'undefined' && import.meta.env?.DEV) {
-	initErrorOverlay();
+if (typeof window !== "undefined" && import.meta.env?.DEV) {
+  initErrorOverlay();
 }

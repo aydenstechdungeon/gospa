@@ -8,21 +8,28 @@
 //   import { init } from 'gospa/runtime-secure';
 //   init();
 
-import { domPurifySanitizer, preloadSanitizer } from './sanitize.ts';
-import { setSanitizer } from './dom.ts';
+import { domPurifySanitizer, preloadSanitizer } from "./sanitize.ts";
+import { setSanitizer } from "./dom.ts";
 
 // Configure DOMPurify sanitizer for this runtime
 setSanitizer(domPurifySanitizer);
 
 // Preload DOMPurify immediately to ensure it's ready for first HTML binding
-if (typeof window !== 'undefined') {
-	const schedulePreload = window.requestIdleCallback || ((cb: () => void) => setTimeout(cb, 1));
-	schedulePreload(() => preloadSanitizer());
+if (typeof window !== "undefined") {
+  const schedulePreload =
+    window.requestIdleCallback || ((cb: () => void) => setTimeout(cb, 1));
+  schedulePreload(() => preloadSanitizer());
 }
 
 // Re-export everything from the standard runtime
-export * from './runtime.ts';
+export * from "./runtime.ts";
 
 // Also export sanitization utilities for manual use
-export { domPurifySanitizer, sanitize, sanitizeSync, isSanitizerReady, preloadSanitizer } from './sanitize.ts';
-export { setSanitizer } from './dom.ts';
+export {
+  domPurifySanitizer,
+  sanitize,
+  sanitizeSync,
+  isSanitizerReady,
+  preloadSanitizer,
+} from "./sanitize.ts";
+export { setSanitizer } from "./dom.ts";

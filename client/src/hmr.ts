@@ -6,27 +6,27 @@
 
 // HMR Message Types
 interface HMRMessage {
-	type: 'update' | 'reload' | 'error' | 'state-preserve' | 'connected';
-	path?: string;
-	moduleId?: string;
-	event?: string;
-	state?: Record<string, unknown>;
-	stateDiff?: Record<string, unknown>; // Delta state updates
-	error?: string;
-	timestamp: number;
+  type: "update" | "reload" | "error" | "state-preserve" | "connected";
+  path?: string;
+  moduleId?: string;
+  event?: string;
+  state?: Record<string, unknown>;
+  stateDiff?: Record<string, unknown>; // Delta state updates
+  error?: string;
+  timestamp: number;
 }
 
 // Module state registry
 interface ModuleState {
-	moduleId: string;
-	state: Record<string, unknown>;
-	timestamp: number;
+  moduleId: string;
+  state: Record<string, unknown>;
+  timestamp: number;
 }
 
 // Module version for rollback
 interface ModuleVersion {
-	exports: Record<string, unknown>;
-	timestamp: number;
+  exports: Record<string, unknown>;
+  timestamp: number;
 }
 
 // HMR update handler type
@@ -40,414 +40,426 @@ type StatePreservationFn = () => Record<string, unknown>;
 
 // HMR Client Configuration
 interface HMRClientConfig {
-	wsUrl?: string;
-	reconnectInterval?: number;
-	maxReconnectAttempts?: number;
-	onUpdate?: HMRUpdateHandler;
-	onError?: HMRErrorHandler;
-	onConnect?: () => void;
-	onDisconnect?: () => void;
+  wsUrl?: string;
+  reconnectInterval?: number;
+  maxReconnectAttempts?: number;
+  onUpdate?: HMRUpdateHandler;
+  onError?: HMRErrorHandler;
+  onConnect?: () => void;
+  onDisconnect?: () => void;
 }
 
 // Module registry for HMR
 interface ModuleRegistry {
-	[moduleId: string]: {
-		version: number;
-		exports: Record<string, unknown>;
-		accept?: boolean;
-		deps?: string[];
-	};
+  [moduleId: string]: {
+    version: number;
+    exports: Record<string, unknown>;
+    accept?: boolean;
+    deps?: string[];
+  };
 }
 
 /**
  * HMRClient manages WebSocket connection and module updates
  */
 export class HMRClient {
-	private ws: WebSocket | null = null;
-	private config: Required<HMRClientConfig>;
-	private reconnectAttempts = 0;
-	private moduleRegistry: ModuleRegistry = {};
-	private stateRegistry: Map<string, ModuleState> = new Map();
-	private moduleVersions: Map<string, ModuleVersion> = new Map(); // For rollback
-	private moduleDepGraph: Map<string, Set<string>> = new Map(); // Dependency graph
-	private dependentsMap: Map<string, Set<string>> = new Map(); // Reverse deps
-	private isConnecting = false;
-	private updateQueue: HMRMessage[] = [];
-	private isProcessing = false;
-	private broadcastChannel: BroadcastChannel | null = null; // Cross-tab sync
+  private ws: WebSocket | null = null;
+  private config: Required<HMRClientConfig>;
+  private reconnectAttempts = 0;
+  private moduleRegistry: ModuleRegistry = {};
+  private stateRegistry: Map<string, ModuleState> = new Map();
+  private moduleVersions: Map<string, ModuleVersion> = new Map(); // For rollback
+  private moduleDepGraph: Map<string, Set<string>> = new Map(); // Dependency graph
+  private dependentsMap: Map<string, Set<string>> = new Map(); // Reverse deps
+  private isConnecting = false;
+  private updateQueue: HMRMessage[] = [];
+  private isProcessing = false;
+  private broadcastChannel: BroadcastChannel | null = null; // Cross-tab sync
 
-	constructor(config: HMRClientConfig = {}) {
-		this.config = {
-			wsUrl: config.wsUrl || `ws://${window.location.host}/__hmr`,
-			reconnectInterval: config.reconnectInterval || 1000,
-			maxReconnectAttempts: config.maxReconnectAttempts || 10,
-			onUpdate: config.onUpdate || (() => {}),
-			onError: config.onError || ((err) => console.error('[HMR]', err)),
-			onConnect: config.onConnect || (() => {}),
-			onDisconnect: config.onDisconnect || (() => {}),
-		};
+  constructor(config: HMRClientConfig = {}) {
+    this.config = {
+      wsUrl: config.wsUrl || `ws://${window.location.host}/__hmr`,
+      reconnectInterval: config.reconnectInterval || 1000,
+      maxReconnectAttempts: config.maxReconnectAttempts || 10,
+      onUpdate: config.onUpdate || (() => {}),
+      onError: config.onError || ((err) => console.error("[HMR]", err)),
+      onConnect: config.onConnect || (() => {}),
+      onDisconnect: config.onDisconnect || (() => {}),
+    };
 
-		// Set up global handlers
-		this.setupGlobalHandlers();
-		
-		// Set up cross-tab communication
-		this.setupCrossTabSync();
-	}
+    // Set up global handlers
+    this.setupGlobalHandlers();
 
-	/**
-	 * Connect to HMR server
-	 */
-	connect(): void {
-		if (this.ws?.readyState === WebSocket.OPEN || this.isConnecting) {
-			return;
-		}
+    // Set up cross-tab communication
+    this.setupCrossTabSync();
+  }
 
-		this.isConnecting = true;
+  /**
+   * Connect to HMR server
+   */
+  connect(): void {
+    if (this.ws?.readyState === WebSocket.OPEN || this.isConnecting) {
+      return;
+    }
 
-		try {
-			this.ws = new WebSocket(this.config.wsUrl);
-			this.setupWebSocketHandlers();
-		} catch (error) {
-			this.isConnecting = false;
-			this.config.onError(`Failed to connect: ${error}`);
-			this.scheduleReconnect();
-		}
-	}
+    this.isConnecting = true;
 
-	/**
-	 * Disconnect from HMR server
-	 */
-	disconnect(): void {
-		if (this.ws) {
-			this.ws.close();
-			this.ws = null;
-		}
-		// Clean up state registry to prevent memory leaks
-		this.stateRegistry.clear();
-		this.moduleRegistry = {};
-	}
+    try {
+      this.ws = new WebSocket(this.config.wsUrl);
+      this.setupWebSocketHandlers();
+    } catch (error) {
+      this.isConnecting = false;
+      this.config.onError(`Failed to connect: ${error}`);
+      this.scheduleReconnect();
+    }
+  }
 
-	/**
-	 * Set up WebSocket event handlers
-	 */
-	private setupWebSocketHandlers(): void {
-		if (!this.ws) return;
+  /**
+   * Disconnect from HMR server
+   */
+  disconnect(): void {
+    if (this.ws) {
+      this.ws.close();
+      this.ws = null;
+    }
+    // Clean up state registry to prevent memory leaks
+    this.stateRegistry.clear();
+    this.moduleRegistry = {};
+  }
 
-		this.ws.onopen = () => {
-			this.isConnecting = false;
-			this.reconnectAttempts = 0;
-			console.log('[HMR] Connected');
-			this.config.onConnect();
+  /**
+   * Set up WebSocket event handlers
+   */
+  private setupWebSocketHandlers(): void {
+    if (!this.ws) return;
 
-			// Process queued updates
-			this.processUpdateQueue();
-		};
+    this.ws.onopen = () => {
+      this.isConnecting = false;
+      this.reconnectAttempts = 0;
+      console.log("[HMR] Connected");
+      this.config.onConnect();
 
-		this.ws.onmessage = (event) => {
-			try {
-				const msg: HMRMessage = JSON.parse(event.data);
-				this.handleMessage(msg);
-			} catch (error) {
-				this.config.onError(`Invalid message: ${error}`);
-			}
-		};
+      // Process queued updates
+      this.processUpdateQueue();
+    };
 
-		this.ws.onclose = () => {
-			this.isConnecting = false;
-			console.log('[HMR] Disconnected');
-			this.config.onDisconnect();
-			this.scheduleReconnect();
-		};
+    this.ws.onmessage = (event) => {
+      try {
+        const msg: HMRMessage = JSON.parse(event.data);
+        this.handleMessage(msg);
+      } catch (error) {
+        this.config.onError(`Invalid message: ${error}`);
+      }
+    };
 
-		this.ws.onerror = (error) => {
-			this.isConnecting = false;
-			this.config.onError('WebSocket error');
-		};
-	}
+    this.ws.onclose = () => {
+      this.isConnecting = false;
+      console.log("[HMR] Disconnected");
+      this.config.onDisconnect();
+      this.scheduleReconnect();
+    };
 
-	/**
-	 * Schedule reconnection attempt with exponential backoff and jitter
-	 */
-	private scheduleReconnect(): void {
-		if (this.reconnectAttempts >= this.config.maxReconnectAttempts) {
-			this.config.onError('Max reconnection attempts reached');
-			return;
-		}
+    this.ws.onerror = (error) => {
+      this.isConnecting = false;
+      this.config.onError("WebSocket error");
+    };
+  }
 
-		this.reconnectAttempts++;
+  /**
+   * Schedule reconnection attempt with exponential backoff and jitter
+   */
+  private scheduleReconnect(): void {
+    if (this.reconnectAttempts >= this.config.maxReconnectAttempts) {
+      this.config.onError("Max reconnection attempts reached");
+      return;
+    }
 
-		// Exponential backoff with jitter (70-100% of calculated delay)
-		const baseDelay = this.config.reconnectInterval;
-		const maxDelay = 30000; // 30 seconds max
-		const jitter = 0.7 + Math.random() * 0.3; // 70-100%
-		// Apply maxDelay BEFORE multiplying by jitter to prevent overflow
-		const exponentialDelay = Math.min(baseDelay * Math.pow(2, this.reconnectAttempts - 1), maxDelay);
-		const delay = exponentialDelay * jitter;
+    this.reconnectAttempts++;
 
-		console.log(`[HMR] Reconnecting in ${Math.round(delay)}ms (attempt ${this.reconnectAttempts})`);
+    // Exponential backoff with jitter (70-100% of calculated delay)
+    const baseDelay = this.config.reconnectInterval;
+    const maxDelay = 30000; // 30 seconds max
+    const jitter = 0.7 + Math.random() * 0.3; // 70-100%
+    // Apply maxDelay BEFORE multiplying by jitter to prevent overflow
+    const exponentialDelay = Math.min(
+      baseDelay * Math.pow(2, this.reconnectAttempts - 1),
+      maxDelay,
+    );
+    const delay = exponentialDelay * jitter;
 
-		setTimeout(() => {
-			this.connect();
-		}, delay);
-	}
+    console.log(
+      `[HMR] Reconnecting in ${Math.round(delay)}ms (attempt ${this.reconnectAttempts})`,
+    );
 
-	/**
-	 * Handle incoming HMR message
-	 */
-	private handleMessage(msg: HMRMessage): void {
-		switch (msg.type) {
-			case 'connected':
-				console.log('[HMR] Server connected');
-				break;
+    setTimeout(() => {
+      this.connect();
+    }, delay);
+  }
 
-			case 'update':
-				this.queueUpdate(msg);
-				break;
+  /**
+   * Handle incoming HMR message
+   */
+  private handleMessage(msg: HMRMessage): void {
+    switch (msg.type) {
+      case "connected":
+        console.log("[HMR] Server connected");
+        break;
 
-			case 'reload':
-				console.log('[HMR] Full reload required');
-				this.preserveAllStates();
-				window.location.reload();
-				break;
+      case "update":
+        this.queueUpdate(msg);
+        break;
 
-			case 'error':
-				this.config.onError(msg.error || 'Unknown error');
-				break;
+      case "reload":
+        console.log("[HMR] Full reload required");
+        this.preserveAllStates();
+        window.location.reload();
+        break;
 
-			case 'state-preserve':
-				if (msg.moduleId && msg.state) {
-					this.restoreState(msg.moduleId, msg.state);
-				}
-				break;
-		}
-	}
+      case "error":
+        this.config.onError(msg.error || "Unknown error");
+        break;
 
-	/**
-	 * Queue update for processing
-	 */
-	private queueUpdate(msg: HMRMessage): void {
-		this.updateQueue.push(msg);
-		this.processUpdateQueue();
-	}
+      case "state-preserve":
+        if (msg.moduleId && msg.state) {
+          this.restoreState(msg.moduleId, msg.state);
+        }
+        break;
+    }
+  }
 
-	/**
-	 * Process queued updates
-	 */
-	private async processUpdateQueue(): Promise<void> {
-		if (this.isProcessing || this.updateQueue.length === 0) {
-			return;
-		}
+  /**
+   * Queue update for processing
+   */
+  private queueUpdate(msg: HMRMessage): void {
+    this.updateQueue.push(msg);
+    this.processUpdateQueue();
+  }
 
-		this.isProcessing = true;
+  /**
+   * Process queued updates
+   */
+  private async processUpdateQueue(): Promise<void> {
+    if (this.isProcessing || this.updateQueue.length === 0) {
+      return;
+    }
 
-		while (this.updateQueue.length > 0) {
-			const msg = this.updateQueue.shift();
-			if (msg) {
-				await this.applyUpdate(msg);
-			}
-		}
+    this.isProcessing = true;
 
-		this.isProcessing = false;
-	}
+    while (this.updateQueue.length > 0) {
+      const msg = this.updateQueue.shift();
+      if (msg) {
+        await this.applyUpdate(msg);
+      }
+    }
 
-	/**
-	 * Apply an HMR update with error rollback capability
-	 */
-	private async applyUpdate(msg: HMRMessage): Promise<void> {
-		console.log(`[HMR] Applying update for: ${msg.moduleId}`);
+    this.isProcessing = false;
+  }
 
-		const moduleId = msg.moduleId;
-		if (!moduleId) {
-			console.warn('[HMR] Update message missing moduleId');
-			return;
-		}
+  /**
+   * Apply an HMR update with error rollback capability
+   */
+  private async applyUpdate(msg: HMRMessage): Promise<void> {
+    console.log(`[HMR] Applying update for: ${msg.moduleId}`);
 
-		const currentModule = this.moduleRegistry[moduleId];
+    const moduleId = msg.moduleId;
+    if (!moduleId) {
+      console.warn("[HMR] Update message missing moduleId");
+      return;
+    }
 
-		// Save current state before update for potential rollback
-		if (moduleId && currentModule) {
-			try {
-				const serialized = JSON.stringify(currentModule.exports);
-				this.moduleVersions.set(moduleId, {
-					exports: JSON.parse(serialized),
-					timestamp: Date.now()
-				});
-			} catch (e) {
-				// Ignore serialization errors
-			}
-		}
+    const currentModule = this.moduleRegistry[moduleId];
 
-		// Apply delta state if provided (for efficiency)
-		if (msg.stateDiff && moduleId) {
-			this.applyStateDiff(moduleId, msg.stateDiff);
-		}
+    // Save current state before update for potential rollback
+    if (moduleId && currentModule) {
+      try {
+        const serialized = JSON.stringify(currentModule.exports);
+        this.moduleVersions.set(moduleId, {
+          exports: JSON.parse(serialized),
+          timestamp: Date.now(),
+        });
+      } catch (e) {
+        // Ignore serialization errors
+      }
+    }
 
-		// Call custom update handler
-		try {
-			await this.config.onUpdate(msg);
+    // Apply delta state if provided (for efficiency)
+    if (msg.stateDiff && moduleId) {
+      this.applyStateDiff(moduleId, msg.stateDiff);
+    }
 
-			// Update version counter on success
-			if (currentModule) {
-				currentModule.version++;
-			}
+    // Call custom update handler
+    try {
+      await this.config.onUpdate(msg);
 
-			// Show visual indicator
-			this.showUpdateNotification(moduleId);
-			
-			// Broadcast update to other tabs
-			this.broadcastState();
+      // Update version counter on success
+      if (currentModule) {
+        currentModule.version++;
+      }
 
-			// Get and update affected modules (dependency graph)
-			const affectedModules = this.getAffectedModules(moduleId);
-			for (const affectedId of affectedModules) {
-				console.log(`[HMR] Also updating dependent: ${affectedId}`);
-			}
+      // Show visual indicator
+      this.showUpdateNotification(moduleId);
 
-		} catch (error) {
-			// Rollback on failure
-			console.error(`[HMR] Update failed, rolling back: ${error}`);
-			this.rollbackModule(moduleId);
-			this.config.onError(`Update failed and rolled back: ${error}`);
-		}
+      // Broadcast update to other tabs
+      this.broadcastState();
 
-		// Restore state after update
-		if (moduleId && msg.state) {
-			this.restoreState(moduleId, msg.state);
-		}
-	}
+      // Get and update affected modules (dependency graph)
+      const affectedModules = this.getAffectedModules(moduleId);
+      for (const affectedId of affectedModules) {
+        console.log(`[HMR] Also updating dependent: ${affectedId}`);
+      }
+    } catch (error) {
+      // Rollback on failure
+      console.error(`[HMR] Update failed, rolling back: ${error}`);
+      this.rollbackModule(moduleId);
+      this.config.onError(`Update failed and rolled back: ${error}`);
+    }
 
-	/**
-	 * Apply delta state changes efficiently
-	 */
-	private applyStateDiff(moduleId: string, stateDiff: Record<string, unknown>): void {
-		const module = this.moduleRegistry[moduleId];
-		if (!module?.exports) return;
+    // Restore state after update
+    if (moduleId && msg.state) {
+      this.restoreState(moduleId, msg.state);
+    }
+  }
 
-		for (const [key, value] of Object.entries(stateDiff)) {
-			if (key in module.exports && typeof module.exports[key] === 'object') {
-				Object.assign(module.exports[key] as Record<string, unknown>, value as Record<string, unknown>);
-			} else {
-				module.exports[key] = value;
-			}
-		}
-	}
+  /**
+   * Apply delta state changes efficiently
+   */
+  private applyStateDiff(
+    moduleId: string,
+    stateDiff: Record<string, unknown>,
+  ): void {
+    const module = this.moduleRegistry[moduleId];
+    if (!module?.exports) return;
 
-	/**
-	 * Rollback a module to its previous version
-	 */
-	private rollbackModule(moduleId: string): void {
-		const savedVersion = this.moduleVersions.get(moduleId);
-		const currentModule = this.moduleRegistry[moduleId];
+    for (const [key, value] of Object.entries(stateDiff)) {
+      if (key in module.exports && typeof module.exports[key] === "object") {
+        Object.assign(
+          module.exports[key] as Record<string, unknown>,
+          value as Record<string, unknown>,
+        );
+      } else {
+        module.exports[key] = value;
+      }
+    }
+  }
 
-		if (savedVersion && currentModule) {
-			currentModule.exports = savedVersion.exports;
-			console.log(`[HMR] Rolled back module: ${moduleId}`);
-		}
-	}
+  /**
+   * Rollback a module to its previous version
+   */
+  private rollbackModule(moduleId: string): void {
+    const savedVersion = this.moduleVersions.get(moduleId);
+    const currentModule = this.moduleRegistry[moduleId];
 
-	/**
-	 * Get all modules that depend on a changed module (using dependency graph)
-	 */
-	getAffectedModules(moduleId: string): string[] {
-		const affected = new Set<string>();
-		const queue = [moduleId];
+    if (savedVersion && currentModule) {
+      currentModule.exports = savedVersion.exports;
+      console.log(`[HMR] Rolled back module: ${moduleId}`);
+    }
+  }
 
-		while (queue.length > 0) {
-			const current = queue.shift()!;
-			const dependents = this.dependentsMap.get(current);
-			if (dependents) {
-				for (const dep of dependents) {
-					if (!affected.has(dep)) {
-						affected.add(dep);
-						queue.push(dep);
-					}
-				}
-			}
-		}
+  /**
+   * Get all modules that depend on a changed module (using dependency graph)
+   */
+  getAffectedModules(moduleId: string): string[] {
+    const affected = new Set<string>();
+    const queue = [moduleId];
 
-		return Array.from(affected);
-	}
+    while (queue.length > 0) {
+      const current = queue.shift()!;
+      const dependents = this.dependentsMap.get(current);
+      if (dependents) {
+        for (const dep of dependents) {
+          if (!affected.has(dep)) {
+            affected.add(dep);
+            queue.push(dep);
+          }
+        }
+      }
+    }
 
-	/**
-	 * Set up global handlers for state preservation
-	 */
-	private setupGlobalHandlers(): void {
-		// Expose HMR API globally
-		(window as unknown as { __gospaHMR: HMRClient }).__gospaHMR = this;
+    return Array.from(affected);
+  }
 
-		// State preservation before unload
-		window.addEventListener('beforeunload', () => {
-			this.preserveAllStates();
-		});
+  /**
+   * Set up global handlers for state preservation
+   */
+  private setupGlobalHandlers(): void {
+    // Expose HMR API globally
+    (window as unknown as { __gospaHMR: HMRClient }).__gospaHMR = this;
 
-		// Handle visibility change for mobile
-		document.addEventListener('visibilitychange', () => {
-			if (document.visibilityState === 'hidden') {
-				this.preserveAllStates();
-			}
-		});
-	}
+    // State preservation before unload
+    window.addEventListener("beforeunload", () => {
+      this.preserveAllStates();
+    });
 
-	/**
-	 * Set up cross-tab communication using BroadcastChannel
-	 */
-	private setupCrossTabSync(): void {
-		if (typeof BroadcastChannel === 'undefined') return;
+    // Handle visibility change for mobile
+    document.addEventListener("visibilitychange", () => {
+      if (document.visibilityState === "hidden") {
+        this.preserveAllStates();
+      }
+    });
+  }
 
-		try {
-			this.broadcastChannel = new BroadcastChannel('gospa-hmr');
-			this.broadcastChannel.onmessage = (event) => {
-				if (event.data.type === 'state-sync') {
-					this.syncStateFromTab(event.data.state);
-				}
-			};
-		} catch (e) {
-			console.warn('[HMR] Cross-tab sync not available');
-		}
-	}
+  /**
+   * Set up cross-tab communication using BroadcastChannel
+   */
+  private setupCrossTabSync(): void {
+    if (typeof BroadcastChannel === "undefined") return;
 
-	/**
-	 * Sync state from another tab
-	 */
-	private syncStateFromTab(state: Record<string, unknown>): void {
-		for (const [moduleId, moduleState] of Object.entries(state)) {
-			this.restoreState(moduleId, moduleState as Record<string, unknown>);
-		}
-		console.log('[HMR] State synced from another tab');
-	}
+    try {
+      this.broadcastChannel = new BroadcastChannel("gospa-hmr");
+      this.broadcastChannel.onmessage = (event) => {
+        if (event.data.type === "state-sync") {
+          this.syncStateFromTab(event.data.state);
+        }
+      };
+    } catch (e) {
+      console.warn("[HMR] Cross-tab sync not available");
+    }
+  }
 
-	/**
-	 * Broadcast state changes to other tabs
-	 */
-	private broadcastState(): void {
-		if (!this.broadcastChannel) return;
+  /**
+   * Sync state from another tab
+   */
+  private syncStateFromTab(state: Record<string, unknown>): void {
+    for (const [moduleId, moduleState] of Object.entries(state)) {
+      this.restoreState(moduleId, moduleState as Record<string, unknown>);
+    }
+    console.log("[HMR] State synced from another tab");
+  }
 
-		const allStates: Record<string, unknown> = {};
-		for (const [moduleId, module] of Object.entries(this.moduleRegistry)) {
-			const state = this.extractModuleState(moduleId);
-			if (state) allStates[moduleId] = state;
-		}
+  /**
+   * Broadcast state changes to other tabs
+   */
+  private broadcastState(): void {
+    if (!this.broadcastChannel) return;
 
-		this.broadcastChannel.postMessage({
-			type: 'state-sync',
-			state: allStates
-		});
-	}
+    const allStates: Record<string, unknown> = {};
+    for (const [moduleId, module] of Object.entries(this.moduleRegistry)) {
+      const state = this.extractModuleState(moduleId);
+      if (state) allStates[moduleId] = state;
+    }
 
-	/**
-	 * Show visual notification when module is updated
-	 */
-	private showUpdateNotification(moduleId: string): void {
-		if (typeof document === 'undefined') return;
+    this.broadcastChannel.postMessage({
+      type: "state-sync",
+      state: allStates,
+    });
+  }
 
-		// Remove existing toast if any
-		const existing = document.querySelector('.hmr-toast');
-		if (existing) existing.remove();
+  /**
+   * Show visual notification when module is updated
+   */
+  private showUpdateNotification(moduleId: string): void {
+    if (typeof document === "undefined") return;
 
-		const toast = document.createElement('div');
-		toast.className = 'hmr-toast';
-		toast.textContent = `Updated: ${moduleId}`;
-		toast.setAttribute('style', `
+    // Remove existing toast if any
+    const existing = document.querySelector(".hmr-toast");
+    if (existing) existing.remove();
+
+    const toast = document.createElement("div");
+    toast.className = "hmr-toast";
+    toast.textContent = `Updated: ${moduleId}`;
+    toast.setAttribute(
+      "style",
+      `
 			position: fixed;
 			bottom: 20px;
 			right: 20px;
@@ -461,257 +473,285 @@ export class HMRClient {
 			opacity: 0;
 			transition: opacity 0.3s ease;
 			box-shadow: 0 2px 8px rgba(0,0,0,0.15);
-		`);
+		`,
+    );
 
-		document.body.appendChild(toast);
+    document.body.appendChild(toast);
 
-		// Fade in
-		requestAnimationFrame(() => toast.style.opacity = '1');
+    // Fade in
+    requestAnimationFrame(() => (toast.style.opacity = "1"));
 
-		// Fade out after 2 seconds
-		setTimeout(() => {
-			toast.style.opacity = '0';
-			setTimeout(() => toast.remove(), 300);
-		}, 2000);
-	}
+    // Fade out after 2 seconds
+    setTimeout(() => {
+      toast.style.opacity = "0";
+      setTimeout(() => toast.remove(), 300);
+    }, 2000);
+  }
 
-	/**
-	 * Register a module for HMR with dependency tracking
-	 */
-	registerModule(moduleId: string, exports: Record<string, unknown>, deps?: string[]): void {
-		this.moduleRegistry[moduleId] = {
-			version: 0,
-			exports,
-			accept: true,
-			deps,
-		};
+  /**
+   * Register a module for HMR with dependency tracking
+   */
+  registerModule(
+    moduleId: string,
+    exports: Record<string, unknown>,
+    deps?: string[],
+  ): void {
+    this.moduleRegistry[moduleId] = {
+      version: 0,
+      exports,
+      accept: true,
+      deps,
+    };
 
-		// Build dependency graph
-		if (deps) {
-			this.moduleDepGraph.set(moduleId, new Set(deps));
-			for (const dep of deps) {
-				if (!this.dependentsMap.has(dep)) {
-					this.dependentsMap.set(dep, new Set());
-				}
-				this.dependentsMap.get(dep)!.add(moduleId);
-			}
-		}
-	}
+    // Build dependency graph
+    if (deps) {
+      this.moduleDepGraph.set(moduleId, new Set(deps));
+      for (const dep of deps) {
+        if (!this.dependentsMap.has(dep)) {
+          this.dependentsMap.set(dep, new Set());
+        }
+        this.dependentsMap.get(dep)!.add(moduleId);
+      }
+    }
+  }
 
-	/**
-	 * Accept updates for a module
-	 */
-	accept(moduleId: string): void {
-		if (this.moduleRegistry[moduleId]) {
-			this.moduleRegistry[moduleId].accept = true;
-		}
-	}
+  /**
+   * Accept updates for a module
+   */
+  accept(moduleId: string): void {
+    if (this.moduleRegistry[moduleId]) {
+      this.moduleRegistry[moduleId].accept = true;
+    }
+  }
 
-	/**
-	 * Preserve state for a specific module
-	 */
-	preserveModuleState(moduleId: string): void {
-		const state = this.extractModuleState(moduleId);
-		if (state && Object.keys(state).length > 0) {
-			this.stateRegistry.set(moduleId, {
-				moduleId,
-				state,
-				timestamp: Date.now(),
-			});
+  /**
+   * Preserve state for a specific module
+   */
+  preserveModuleState(moduleId: string): void {
+    const state = this.extractModuleState(moduleId);
+    if (state && Object.keys(state).length > 0) {
+      this.stateRegistry.set(moduleId, {
+        moduleId,
+        state,
+        timestamp: Date.now(),
+      });
 
-			// Send to server
-			this.sendState(moduleId, state);
-		}
-	}
+      // Send to server
+      this.sendState(moduleId, state);
+    }
+  }
 
-	/**
-	 * Extract state from a module
-	 */
-	private extractModuleState(moduleId: string): Record<string, unknown> | null {
-		// Try to get state from registered state getter
-		const stateGetter = (window as unknown as { __gospaGetState?: (id: string) => Record<string, unknown> | null }).__gospaGetState;
-		if (stateGetter) {
-			return stateGetter(moduleId);
-		}
+  /**
+   * Extract state from a module
+   */
+  private extractModuleState(moduleId: string): Record<string, unknown> | null {
+    // Try to get state from registered state getter
+    const stateGetter = (
+      window as unknown as {
+        __gospaGetState?: (id: string) => Record<string, unknown> | null;
+      }
+    ).__gospaGetState;
+    if (stateGetter) {
+      return stateGetter(moduleId);
+    }
 
-		// Fallback: try to extract from module exports
-		const module = this.moduleRegistry[moduleId];
-		if (module?.exports) {
-			const state: Record<string, unknown> = {};
-			for (const [key, value] of Object.entries(module.exports)) {
-				// Only preserve serializable state
-				if (this.isSerializable(value)) {
-					state[key] = value;
-				}
-			}
-			return state;
-		}
+    // Fallback: try to extract from module exports
+    const module = this.moduleRegistry[moduleId];
+    if (module?.exports) {
+      const state: Record<string, unknown> = {};
+      for (const [key, value] of Object.entries(module.exports)) {
+        // Only preserve serializable state
+        if (this.isSerializable(value)) {
+          state[key] = value;
+        }
+      }
+      return state;
+    }
 
-		return null;
-	}
+    return null;
+  }
 
-	/**
-	 * Check if a value is serializable
-	 */
-	private isSerializable(value: unknown): boolean {
-		if (value === null || value === undefined) return true;
-		if (typeof value === 'string' || typeof value === 'number' || typeof value === 'boolean') return true;
-		if (value instanceof Date) return true;
-		if (Array.isArray(value)) return value.every((v) => this.isSerializable(v));
-		if (typeof value === 'object') {
-			return Object.values(value as Record<string, unknown>).every((v) => this.isSerializable(v));
-		}
-		return false;
-	}
+  /**
+   * Check if a value is serializable
+   */
+  private isSerializable(value: unknown): boolean {
+    if (value === null || value === undefined) return true;
+    if (
+      typeof value === "string" ||
+      typeof value === "number" ||
+      typeof value === "boolean"
+    )
+      return true;
+    if (value instanceof Date) return true;
+    if (Array.isArray(value)) return value.every((v) => this.isSerializable(v));
+    if (typeof value === "object") {
+      return Object.values(value as Record<string, unknown>).every((v) =>
+        this.isSerializable(v),
+      );
+    }
+    return false;
+  }
 
-	/**
-	 * Preserve all module states
-	 */
-	preserveAllStates(): void {
-		for (const moduleId of Object.keys(this.moduleRegistry)) {
-			this.preserveModuleState(moduleId);
-		}
-	}
+  /**
+   * Preserve all module states
+   */
+  preserveAllStates(): void {
+    for (const moduleId of Object.keys(this.moduleRegistry)) {
+      this.preserveModuleState(moduleId);
+    }
+  }
 
-	/**
-	 * Restore state for a module
-	 */
-	restoreState(moduleId: string, state: Record<string, unknown>): void {
-		const module = this.moduleRegistry[moduleId];
-		if (module?.exports) {
-			for (const [key, value] of Object.entries(state)) {
-				if (key in module.exports && typeof module.exports[key] === 'object') {
-					Object.assign(module.exports[key] as Record<string, unknown>, value);
-				} else {
-					module.exports[key] = value;
-				}
-			}
-		}
+  /**
+   * Restore state for a module
+   */
+  restoreState(moduleId: string, state: Record<string, unknown>): void {
+    const module = this.moduleRegistry[moduleId];
+    if (module?.exports) {
+      for (const [key, value] of Object.entries(state)) {
+        if (key in module.exports && typeof module.exports[key] === "object") {
+          Object.assign(module.exports[key] as Record<string, unknown>, value);
+        } else {
+          module.exports[key] = value;
+        }
+      }
+    }
 
-		// Notify state restoration
-		const stateSetter = (window as unknown as { __gospaSetState?: (id: string, state: Record<string, unknown>) => void }).__gospaSetState;
-		if (stateSetter) {
-			stateSetter(moduleId, state);
-		}
-	}
+    // Notify state restoration
+    const stateSetter = (
+      window as unknown as {
+        __gospaSetState?: (id: string, state: Record<string, unknown>) => void;
+      }
+    ).__gospaSetState;
+    if (stateSetter) {
+      stateSetter(moduleId, state);
+    }
+  }
 
-	/**
-	 * Send state to server
-	 */
-	private sendState(moduleId: string, state: Record<string, unknown>): void {
-		if (this.ws?.readyState === WebSocket.OPEN) {
-			this.ws.send(JSON.stringify({
-				type: 'state-preserve',
-				moduleId,
-				state,
-			}));
-		}
-	}
+  /**
+   * Send state to server
+   */
+  private sendState(moduleId: string, state: Record<string, unknown>): void {
+    if (this.ws?.readyState === WebSocket.OPEN) {
+      this.ws.send(
+        JSON.stringify({
+          type: "state-preserve",
+          moduleId,
+          state,
+        }),
+      );
+    }
+  }
 
-	/**
-	 * Request state from server
-	 */
-	requestState(moduleId: string): void {
-		if (this.ws?.readyState === WebSocket.OPEN) {
-			this.ws.send(JSON.stringify({
-				type: 'state-request',
-				moduleId,
-			}));
-		}
-	}
+  /**
+   * Request state from server
+   */
+  requestState(moduleId: string): void {
+    if (this.ws?.readyState === WebSocket.OPEN) {
+      this.ws.send(
+        JSON.stringify({
+          type: "state-request",
+          moduleId,
+        }),
+      );
+    }
+  }
 
-	/**
-	 * Report error to server
-	 */
-	reportError(error: string): void {
-		if (this.ws?.readyState === WebSocket.OPEN) {
-			this.ws.send(JSON.stringify({
-				type: 'error',
-				error,
-			}));
-		}
-	}
+  /**
+   * Report error to server
+   */
+  reportError(error: string): void {
+    if (this.ws?.readyState === WebSocket.OPEN) {
+      this.ws.send(
+        JSON.stringify({
+          type: "error",
+          error,
+        }),
+      );
+    }
+  }
 
-	/**
-	 * Get current state for a module
-	 */
-	getState(moduleId: string): Record<string, unknown> | undefined {
-		return this.stateRegistry.get(moduleId)?.state;
-	}
+  /**
+   * Get current state for a module
+   */
+  getState(moduleId: string): Record<string, unknown> | undefined {
+    return this.stateRegistry.get(moduleId)?.state;
+  }
 
-	/**
-	 * Check if connected
-	 */
-	isConnected(): boolean {
-		return this.ws?.readyState === WebSocket.OPEN;
-	}
+  /**
+   * Check if connected
+   */
+  isConnected(): boolean {
+    return this.ws?.readyState === WebSocket.OPEN;
+  }
 }
 
 // CSS HMR handling
 export class CSSHMR {
-	private static styleSheets: Map<string, HTMLLinkElement> = new Map();
+  private static styleSheets: Map<string, HTMLLinkElement> = new Map();
 
-	/**
-	 * Register a stylesheet for HMR
-	 */
-	static registerStyle(href: string, element: HTMLLinkElement): void {
-		this.styleSheets.set(href, element);
-	}
+  /**
+   * Register a stylesheet for HMR
+   */
+  static registerStyle(href: string, element: HTMLLinkElement): void {
+    this.styleSheets.set(href, element);
+  }
 
-	/**
-	 * Update a stylesheet
-	 */
-	static updateStyle(href: string): void {
-		const link = this.styleSheets.get(href);
-		if (link) {
-			// Add timestamp to force reload
-			const url = new URL(link.href);
-			url.searchParams.set('t', Date.now().toString());
-			link.href = url.toString();
-		}
-	}
+  /**
+   * Update a stylesheet
+   */
+  static updateStyle(href: string): void {
+    const link = this.styleSheets.get(href);
+    if (link) {
+      // Add timestamp to force reload
+      const url = new URL(link.href);
+      url.searchParams.set("t", Date.now().toString());
+      link.href = url.toString();
+    }
+  }
 
-	/**
-	 * Remove a stylesheet
-	 */
-	static removeStyle(href: string): void {
-		const link = this.styleSheets.get(href);
-		if (link) {
-			link.remove();
-			this.styleSheets.delete(href);
-		}
-	}
+  /**
+   * Remove a stylesheet
+   */
+  static removeStyle(href: string): void {
+    const link = this.styleSheets.get(href);
+    if (link) {
+      link.remove();
+      this.styleSheets.delete(href);
+    }
+  }
 }
 
 // Template HMR handling
 export class TemplateHMR {
-	private static templates: Map<string, string> = new Map();
+  private static templates: Map<string, string> = new Map();
 
-	/**
-	 * Register a template
-	 */
-	static registerTemplate(id: string, content: string): void {
-		this.templates.set(id, content);
-	}
+  /**
+   * Register a template
+   */
+  static registerTemplate(id: string, content: string): void {
+    this.templates.set(id, content);
+  }
 
-	/**
-	 * Update a template
-	 */
-	static updateTemplate(id: string, content: string): void {
-		this.templates.set(id, content);
+  /**
+   * Update a template
+   */
+  static updateTemplate(id: string, content: string): void {
+    this.templates.set(id, content);
 
-		// Dispatch custom event for template update
-		window.dispatchEvent(new CustomEvent('gospa:template-update', {
-			detail: { id, content },
-		}));
-	}
+    // Dispatch custom event for template update
+    window.dispatchEvent(
+      new CustomEvent("gospa:template-update", {
+        detail: { id, content },
+      }),
+    );
+  }
 
-	/**
-	 * Get a template
-	 */
-	static getTemplate(id: string): string | undefined {
-		return this.templates.get(id);
-	}
+  /**
+   * Get a template
+   */
+  static getTemplate(id: string): string | undefined {
+    return this.templates.get(id);
+  }
 }
 
 // Create global HMR client instance
@@ -721,42 +761,46 @@ let globalHMRClient: HMRClient | null = null;
  * Initialize HMR client
  */
 export function initHMR(config?: HMRClientConfig): HMRClient {
-	if (!globalHMRClient) {
-		globalHMRClient = new HMRClient(config);
-		globalHMRClient.connect();
-	}
-	return globalHMRClient;
+  if (!globalHMRClient) {
+    globalHMRClient = new HMRClient(config);
+    globalHMRClient.connect();
+  }
+  return globalHMRClient;
 }
 
 /**
  * Get global HMR client
  */
 export function getHMR(): HMRClient | null {
-	return globalHMRClient;
+  return globalHMRClient;
 }
 
 /**
  * Register module for HMR
  */
-export function registerHMRModule(moduleId: string, exports: Record<string, unknown>, deps?: string[]): void {
-	globalHMRClient?.registerModule(moduleId, exports, deps);
+export function registerHMRModule(
+  moduleId: string,
+  exports: Record<string, unknown>,
+  deps?: string[],
+): void {
+  globalHMRClient?.registerModule(moduleId, exports, deps);
 }
 
 /**
  * Accept HMR updates
  */
 export function acceptHMR(moduleId: string): void {
-	globalHMRClient?.accept(moduleId);
+  globalHMRClient?.accept(moduleId);
 }
 
 // Auto-initialize if in browser
-if (typeof window !== 'undefined') {
-	// Wait for DOM ready
-	if (document.readyState === 'loading') {
-		document.addEventListener('DOMContentLoaded', () => initHMR());
-	} else {
-		initHMR();
-	}
+if (typeof window !== "undefined") {
+  // Wait for DOM ready
+  if (document.readyState === "loading") {
+    document.addEventListener("DOMContentLoaded", () => initHMR());
+  } else {
+    initHMR();
+  }
 }
 
 export default HMRClient;

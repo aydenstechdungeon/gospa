@@ -1,9 +1,9 @@
 // Debug utilities - tree-shaken in production builds
 // This module is lazy-loaded only when debug features are used
 
-import { Effect } from './state.ts';
+import { Effect } from "./state.ts";
 
-export type InspectType = 'init' | 'update';
+export type InspectType = "init" | "update";
 
 // === DevTools Inspector Panel ===
 let devToolsPanel: HTMLElement | null = null;
@@ -15,13 +15,13 @@ let devToolsInitialized = false;
  * Only available in development mode.
  */
 export function createDevToolsPanel(): void {
-	if (!isDev() || devToolsInitialized) return;
-	devToolsInitialized = true;
+  if (!isDev() || devToolsInitialized) return;
+  devToolsInitialized = true;
 
-	// Create panel container
-	devToolsPanel = document.createElement('div');
-	devToolsPanel.id = 'gospa-devtools';
-	devToolsPanel.innerHTML = `
+  // Create panel container
+  devToolsPanel = document.createElement("div");
+  devToolsPanel.id = "gospa-devtools";
+  devToolsPanel.innerHTML = `
 		<style>
 			#gospa-devtools {
 				position: fixed;
@@ -151,159 +151,172 @@ export function createDevToolsPanel(): void {
 		</div>
 	`;
 
-	document.body.appendChild(devToolsPanel);
+  document.body.appendChild(devToolsPanel);
 
-	// Setup close button
-	const closeBtn = devToolsPanel.querySelector('#gospa-devtools-close');
-	closeBtn?.addEventListener('click', () => {
-		devToolsPanel?.remove();
-		devToolsPanel = null;
-		devToolsInitialized = false;
-	});
+  // Setup close button
+  const closeBtn = devToolsPanel.querySelector("#gospa-devtools-close");
+  closeBtn?.addEventListener("click", () => {
+    devToolsPanel?.remove();
+    devToolsPanel = null;
+    devToolsInitialized = false;
+  });
 
-	// Setup tab switching
-	const tabs = devToolsPanel.querySelectorAll('#gospa-devtools-tabs button');
-	tabs.forEach(tab => {
-		tab.addEventListener('click', () => {
-			tabs.forEach(t => t.classList.remove('active'));
-			tab.classList.add('active');
+  // Setup tab switching
+  const tabs = devToolsPanel.querySelectorAll("#gospa-devtools-tabs button");
+  tabs.forEach((tab) => {
+    tab.addEventListener("click", () => {
+      tabs.forEach((t) => t.classList.remove("active"));
+      tab.classList.add("active");
 
-			const tabName = tab.getAttribute('data-tab');
-			const contents = devToolsPanel?.querySelectorAll('.gospa-devtools-tab-content');
-			contents?.forEach(content => {
-				(content as HTMLElement).style.display = content.id === `gospa-devtools-${tabName}` ? 'block' : 'none';
-			});
-		});
-	});
+      const tabName = tab.getAttribute("data-tab");
+      const contents = devToolsPanel?.querySelectorAll(
+        ".gospa-devtools-tab-content",
+      );
+      contents?.forEach((content) => {
+        (content as HTMLElement).style.display =
+          content.id === `gospa-devtools-${tabName}` ? "block" : "none";
+      });
+    });
+  });
 
-	// Make panel draggable
-	const header = devToolsPanel.querySelector('#gospa-devtools-header');
-	let isDragging = false;
-	let dragOffsetX = 0;
-	let dragOffsetY = 0;
+  // Make panel draggable
+  const header = devToolsPanel.querySelector("#gospa-devtools-header");
+  let isDragging = false;
+  let dragOffsetX = 0;
+  let dragOffsetY = 0;
 
-	header?.addEventListener('mousedown', (e: Event) => {
-		const mouseEvent = e as MouseEvent;
-		isDragging = true;
-		dragOffsetX = mouseEvent.clientX - (devToolsPanel?.offsetLeft || 0);
-		dragOffsetY = mouseEvent.clientY - (devToolsPanel?.offsetTop || 0);
-	});
+  header?.addEventListener("mousedown", (e: Event) => {
+    const mouseEvent = e as MouseEvent;
+    isDragging = true;
+    dragOffsetX = mouseEvent.clientX - (devToolsPanel?.offsetLeft || 0);
+    dragOffsetY = mouseEvent.clientY - (devToolsPanel?.offsetTop || 0);
+  });
 
-	document.addEventListener('mousemove', (e: Event) => {
-		if (isDragging && devToolsPanel) {
-			const mouseEvent = e as MouseEvent;
-			devToolsPanel.style.left = `${mouseEvent.clientX - dragOffsetX}px`;
-			devToolsPanel.style.top = `${mouseEvent.clientY - dragOffsetY}px`;
-			devToolsPanel.style.right = 'auto';
-			devToolsPanel.style.bottom = 'auto';
-		}
-	});
+  document.addEventListener("mousemove", (e: Event) => {
+    if (isDragging && devToolsPanel) {
+      const mouseEvent = e as MouseEvent;
+      devToolsPanel.style.left = `${mouseEvent.clientX - dragOffsetX}px`;
+      devToolsPanel.style.top = `${mouseEvent.clientY - dragOffsetY}px`;
+      devToolsPanel.style.right = "auto";
+      devToolsPanel.style.bottom = "auto";
+    }
+  });
 
-	document.addEventListener('mouseup', () => {
-		isDragging = false;
-	});
+  document.addEventListener("mouseup", () => {
+    isDragging = false;
+  });
 
-	console.log('%c[GoSPA DevTools] Panel initialized', 'color: #e94560');
+  console.log("%c[GoSPA DevTools] Panel initialized", "color: #e94560");
 }
 
 /**
  * Update DevTools panel with current state
  */
 export function updateDevToolsPanel(): void {
-	if (!devToolsPanel || !isDev()) return;
+  if (!devToolsPanel || !isDev()) return;
 
-	// Update components tab
-	const componentsContent = devToolsPanel.querySelector('#gospa-devtools-components');
-	if (componentsContent) {
-		const components = (window as any).__GOSPA__?.components;
-		if (components) {
-			let html = '<div class="gospa-devtools-section">';
-			html += '<div class="gospa-devtools-section-title">Components</div>';
-			for (const [id, component] of components) {
-				const stateKeys = component.states ? Array.from(component.states.keys()) : [];
-				html += `<div class="gospa-devtools-item">
+  // Update components tab
+  const componentsContent = devToolsPanel.querySelector(
+    "#gospa-devtools-components",
+  );
+  if (componentsContent) {
+    const components = (window as any).__GOSPA__?.components;
+    if (components) {
+      let html = '<div class="gospa-devtools-section">';
+      html += '<div class="gospa-devtools-section-title">Components</div>';
+      for (const [id, component] of components) {
+        const stateKeys = component.states
+          ? Array.from(component.states.keys())
+          : [];
+        html += `<div class="gospa-devtools-item">
 					<span class="gospa-devtools-key">${id}</span>
 					<span class="gospa-devtools-value">(${stateKeys.length} states)</span>
 				</div>`;
-			}
-			html += '</div>';
-			componentsContent.innerHTML = html;
-		}
-	}
+      }
+      html += "</div>";
+      componentsContent.innerHTML = html;
+    }
+  }
 
-	// Update state tab
-	const stateContent = devToolsPanel.querySelector('#gospa-devtools-state');
-	if (stateContent) {
-		const globalState = (window as any).__GOSPA__?.globalState;
-		if (globalState) {
-			let html = '<div class="gospa-devtools-section">';
-			html += '<div class="gospa-devtools-section-title">Global State</div>';
-			const stateObj = globalState.toJSON ? globalState.toJSON() : {};
-			for (const [key, value] of Object.entries(stateObj)) {
-				const valueStr = typeof value === 'object' ? JSON.stringify(value) : String(value);
-				html += `<div class="gospa-devtools-item">
+  // Update state tab
+  const stateContent = devToolsPanel.querySelector("#gospa-devtools-state");
+  if (stateContent) {
+    const globalState = (window as any).__GOSPA__?.globalState;
+    if (globalState) {
+      let html = '<div class="gospa-devtools-section">';
+      html += '<div class="gospa-devtools-section-title">Global State</div>';
+      const stateObj = globalState.toJSON ? globalState.toJSON() : {};
+      for (const [key, value] of Object.entries(stateObj)) {
+        const valueStr =
+          typeof value === "object" ? JSON.stringify(value) : String(value);
+        html += `<div class="gospa-devtools-item">
 					<span class="gospa-devtools-key">${key}:</span>
 					<span class="gospa-devtools-value">${valueStr}</span>
 				</div>`;
-			}
-			html += '</div>';
-			stateContent.innerHTML = html;
-		}
-	}
+      }
+      html += "</div>";
+      stateContent.innerHTML = html;
+    }
+  }
 
-	// Update performance tab
-	const perfContent = devToolsPanel.querySelector('#gospa-devtools-performance');
-	if (perfContent) {
-		let html = '<div class="gospa-devtools-section">';
-		html += '<div class="gospa-devtools-section-title">Performance Metrics</div>';
+  // Update performance tab
+  const perfContent = devToolsPanel.querySelector(
+    "#gospa-devtools-performance",
+  );
+  if (perfContent) {
+    let html = '<div class="gospa-devtools-section">';
+    html +=
+      '<div class="gospa-devtools-section-title">Performance Metrics</div>';
 
-		// Memory usage
-		if ('memory' in performance && (performance as any).memory) {
-			const memory = (performance as any).memory;
-			const usedMB = (memory.usedJSHeapSize / 1024 / 1024).toFixed(2);
-			const totalMB = (memory.totalJSHeapSize / 1024 / 1024).toFixed(2);
-			html += `<div class="gospa-devtools-metric">
+    // Memory usage
+    if ("memory" in performance && (performance as any).memory) {
+      const memory = (performance as any).memory;
+      const usedMB = (memory.usedJSHeapSize / 1024 / 1024).toFixed(2);
+      const totalMB = (memory.totalJSHeapSize / 1024 / 1024).toFixed(2);
+      html += `<div class="gospa-devtools-metric">
 				<span class="gospa-devtools-metric-label">Heap Used</span>
 				<span class="gospa-devtools-metric-value">${usedMB}MB / ${totalMB}MB</span>
 			</div>`;
-		}
+    }
 
-		// Timing
-		const timing = performance.getEntriesByType('measure');
-		if (timing.length > 0) {
-			const lastTiming = timing[timing.length - 1];
-			html += `<div class="gospa-devtools-metric">
+    // Timing
+    const timing = performance.getEntriesByType("measure");
+    if (timing.length > 0) {
+      const lastTiming = timing[timing.length - 1];
+      html += `<div class="gospa-devtools-metric">
 				<span class="gospa-devtools-metric-label">Last Measure</span>
 				<span class="gospa-devtools-metric-value">${lastTiming.name}: ${lastTiming.duration.toFixed(2)}ms</span>
 			</div>`;
-		}
+    }
 
-		html += '</div>';
-		perfContent.innerHTML = html;
-	}
+    html += "</div>";
+    perfContent.innerHTML = html;
+  }
 }
 
 /**
  * Toggle DevTools panel visibility
  */
 export function toggleDevTools(): void {
-	if (!isDev()) return;
+  if (!isDev()) return;
 
-	if (devToolsPanel) {
-		devToolsPanel.remove();
-		devToolsPanel = null;
-		devToolsInitialized = false;
-	} else {
-		createDevToolsPanel();
-	}
+  if (devToolsPanel) {
+    devToolsPanel.remove();
+    devToolsPanel = null;
+    devToolsInitialized = false;
+  } else {
+    createDevToolsPanel();
+  }
 }
 
 /**
  * Check if running in development mode
  */
 export function isDev(): boolean {
-	return typeof window !== 'undefined' &&
-		(window as unknown as { __GOSPA_DEV__?: boolean }).__GOSPA_DEV__ !== false;
+  return (
+    typeof window !== "undefined" &&
+    (window as unknown as { __GOSPA_DEV__?: boolean }).__GOSPA_DEV__ !== false
+  );
 }
 
 /**
@@ -311,112 +324,127 @@ export function isDev(): boolean {
  * In production, this becomes a no-op.
  */
 export function inspect<T>(...values: (() => T)[] | T[]): {
-	with: (callback: (type: InspectType, value: T[]) => void) => void
+  with: (callback: (type: InspectType, value: T[]) => void) => void;
 } {
-	if (!isDev()) {
-		return { with: () => { } };
-	}
+  if (!isDev()) {
+    return { with: () => {} };
+  }
 
-	let firstRun = true;
-	const callbacks: Array<(type: InspectType, value: T[]) => void> = [];
+  let firstRun = true;
+  const callbacks: Array<(type: InspectType, value: T[]) => void> = [];
 
-	// Log initial values
-	const getValues = (): T[] => values.map(v => typeof v === 'function' ? (v as () => T)() : v);
+  // Log initial values
+  const getValues = (): T[] =>
+    values.map((v) => (typeof v === "function" ? (v as () => T)() : v));
 
-	const logValues = (type: InspectType) => {
-		const currentValues = getValues();
-		console.log(`%c[${type}]`, 'color: #888', ...currentValues);
-		callbacks.forEach(cb => cb(type, currentValues));
-	};
+  const logValues = (type: InspectType) => {
+    const currentValues = getValues();
+    console.log(`%c[${type}]`, "color: #888", ...currentValues);
+    callbacks.forEach((cb) => cb(type, currentValues));
+  };
 
-	// Set up effect to track changes
-	new Effect(() => {
-		// Read all values to track them
-		getValues();
+  // Set up effect to track changes
+  new Effect(() => {
+    // Read all values to track them
+    getValues();
 
-		if (firstRun) {
-			firstRun = false;
-			logValues('init');
-		} else {
-			logValues('update');
-		}
-	});
+    if (firstRun) {
+      firstRun = false;
+      logValues("init");
+    } else {
+      logValues("update");
+    }
+  });
 
-	return {
-		with: (callback: (type: InspectType, value: T[]) => void) => {
-			callbacks.push(callback);
-		}
-	};
+  return {
+    with: (callback: (type: InspectType, value: T[]) => void) => {
+      callbacks.push(callback);
+    },
+  };
 }
 
 /**
  * $inspect.trace - Log which dependencies triggered an effect.
  */
 inspect.trace = (label?: string) => {
-	if (!isDev()) return;
+  if (!isDev()) return;
 
-	console.log(`%c[trace]${label ? ` ${label}` : ''}`, 'color: #666; font-style: italic');
+  console.log(
+    `%c[trace]${label ? ` ${label}` : ""}`,
+    "color: #666; font-style: italic",
+  );
 };
 
 /**
  * Performance timing helper for development
  */
 export function timing(name: string) {
-	if (!isDev()) {
-		return { end: () => { } };
-	}
+  if (!isDev()) {
+    return { end: () => {} };
+  }
 
-	const start = performance.now();
-	return {
-		end: () => {
-			const duration = performance.now() - start;
-			console.log(`%c[timing] ${name}: ${duration.toFixed(2)}ms`, 'color: #0a0');
-		}
-	};
+  const start = performance.now();
+  return {
+    end: () => {
+      const duration = performance.now() - start;
+      console.log(
+        `%c[timing] ${name}: ${duration.toFixed(2)}ms`,
+        "color: #0a0",
+      );
+    },
+  };
 }
 
 /**
  * Memory usage helper for development
  */
 export function memoryUsage(label: string) {
-	if (!isDev()) return;
+  if (!isDev()) return;
 
-	if ('memory' in performance && (performance as unknown as { memory?: { usedJSHeapSize: number } }).memory) {
-		const memory = (performance as unknown as { memory: { usedJSHeapSize: number } }).memory;
-		const mb = (memory.usedJSHeapSize / 1024 / 1024).toFixed(2);
-		console.log(`%c[memory] ${label}: ${mb}MB`, 'color: #a0a');
-	}
+  if (
+    "memory" in performance &&
+    (performance as unknown as { memory?: { usedJSHeapSize: number } }).memory
+  ) {
+    const memory = (
+      performance as unknown as { memory: { usedJSHeapSize: number } }
+    ).memory;
+    const mb = (memory.usedJSHeapSize / 1024 / 1024).toFixed(2);
+    console.log(`%c[memory] ${label}: ${mb}MB`, "color: #a0a");
+  }
 }
 
 /**
  * Debug logger that only logs in development
  */
 export function debugLog(...args: unknown[]): void {
-	if (!isDev()) return;
-	console.log('%c[debug]', 'color: #888', ...args);
+  if (!isDev()) return;
+  console.log("%c[debug]", "color: #888", ...args);
 }
 
 /**
  * Create a debug inspector for reactive state
  */
-export function createInspector<T>(name: string, state: { get: () => T; subscribe: (fn: (v: T) => void) => () => void }) {
-	if (!isDev()) {
-		return { log: () => { }, dispose: () => { } };
-	}
+export function createInspector<T>(
+  name: string,
+  state: { get: () => T; subscribe: (fn: (v: T) => void) => () => void },
+) {
+  if (!isDev()) {
+    return { log: () => {}, dispose: () => {} };
+  }
 
-	console.log(`%c[inspector] ${name} created`, 'color: #08f');
+  console.log(`%c[inspector] ${name} created`, "color: #08f");
 
-	const unsub = state.subscribe((value) => {
-		console.log(`%c[${name}]`, 'color: #08f', value);
-	});
+  const unsub = state.subscribe((value) => {
+    console.log(`%c[${name}]`, "color: #08f", value);
+  });
 
-	return {
-		log: () => {
-			console.log(`%c[${name}]`, 'color: #08f', state.get());
-		},
-		dispose: () => {
-			unsub();
-			console.log(`%c[inspector] ${name} disposed`, 'color: #888');
-		}
-	};
+  return {
+    log: () => {
+      console.log(`%c[${name}]`, "color: #08f", state.get());
+    },
+    dispose: () => {
+      unsub();
+      console.log(`%c[inspector] ${name} disposed`, "color: #888");
+    },
+  };
 }
