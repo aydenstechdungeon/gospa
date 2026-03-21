@@ -11,8 +11,20 @@ templ Page() {
 
 		<section>
 			<h2 id="create-project" class="text-2xl font-bold mb-4">1. Create a Project</h2>
-			<p class="text-[var(--text-secondary)] mb-4">Use the CLI to scaffold a new project:</p>
-			@components.CodeBlock("gospa create my-app\ncd my-app\ngo mod tidy", "bash", "Terminal")
+			<p class="text-[var(--text-secondary)] mb-4">Use the CLI to scaffold a new project, install dependencies, and verify the workspace before you start coding:</p>
+			@components.CodeBlock("gospa create my-app\ncd my-app\ngo mod tidy\ngospa doctor", "bash", "Terminal")
+		</section>
+
+		<section class="rounded-[2rem] border border-[var(--border)] bg-[var(--bg-secondary)] p-6 md:p-8">
+			<div class="flex flex-wrap items-center gap-3 mb-4">
+				<div class="px-3 py-1 rounded-full text-xs font-bold uppercase tracking-[0.28em] bg-[var(--accent-primary)]/10 text-[var(--accent-primary)]">Recommended Baseline</div>
+				<div class="text-sm text-[var(--text-secondary)]">Use the presets to keep dev and production stories aligned.</div>
+			</div>
+			@components.CodeBlock(`config := gospa.DefaultConfig()
+config.AppName = "my-app"
+
+// for production:
+// config := gospa.ProductionConfig()`, "go", "main.go")
 		</section>
 
 		<section>

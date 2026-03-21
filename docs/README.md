@@ -8,7 +8,7 @@ This directory contains the complete documentation for GoSPA. The documentation 
 docs/
 ├── 01-getting-started/     # Installation and first steps
 ├── 02-core-concepts/       # Essential concepts
-├── 03-features/            # Feature guides
+├── 03-features/            # Runtime, security, deployment, and production guides
 ├── 04-api-reference/       # API documentation
 ├── 05-advanced/            # Advanced topics
 ├── 06-migration/           # Version migration guides
@@ -35,6 +35,7 @@ docs/
 - [Realtime](03-features/03-realtime.md) - SSE and WebSocket
 - [Security](03-features/04-security.md) - Security model and CSP
 - [Dev Tools](03-features/05-dev-tools.md) - HMR and debugging
+- [Production Checklist](03-features/07-production-checklist.md) - Recommended production baseline
 
 ### API Reference
 - [Core API](04-api-reference/01-core-api.md) - Go API documentation

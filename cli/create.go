@@ -128,11 +128,12 @@ import (
 )
 
 func main() {
-	app := gospa.New(gospa.Config{
-		RoutesDir: "./routes",
-		DevMode:   true,
-		AppName:   "%s",
-	})
+	config := gospa.DefaultConfig()
+	config.RoutesDir = "./routes"
+	config.DevMode = true
+	config.AppName = "%s"
+
+	app := gospa.New(config)
 
 	if err := app.Run(":3000"); err != nil {
 		log.Fatal(err)
@@ -161,7 +162,7 @@ templ Page() {
 				A modern reactive framework for building single-page applications with Go.
 			</p>
 			<div class="actions">
-				<a href="https://gospa.dev/docs" class="btn btn-primary" target="_blank" rel="noopener">
+				<a href="https://gospa.onrender.com/docs" class="btn btn-primary" target="_blank" rel="noopener">
 					Read Documentation →
 				</a>
 			</div>

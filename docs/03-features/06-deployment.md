@@ -13,6 +13,8 @@ To prepare a production build, run:
 gospa build
 ```
 
+For the recommended baseline, start from `gospa.DefaultConfig()`, set `DevMode = false`, make `AllowedOrigins` explicit, and keep CSRF protection enabled.
+
 This compiles `templ` outputs, executes client build tasks, outputs it inside your binary (if opted using `go:embed`), and constructs a standalone Go binary usually ending up at `bin/app`.
 
 ## 2. Environment Considerations
@@ -51,3 +53,16 @@ CMD ["./main"]
 When hooking GoSPA behind Nginx, standard cloud balancing setups (AWS/GCP), or an edge CDN (Cloudflare), remember to proxy WebSocket upgrades continuously.
 
 Additionally, handle rate limits. GoSPA will natively enforce per-IP WebSocket and action limits, but large ingress networks spoof IPs unless you actively forward using `X-Forwarded-For`.
+
+
+## 5. Pre-Release Validation
+
+Before tagging a release, run:
+
+```bash
+bun check
+go test ./...
+./scripts/validate-examples.sh
+```
+
+This catches runtime drift, stale examples, and Go/Bun integration issues before deployment.

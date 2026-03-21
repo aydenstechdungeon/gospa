@@ -20,6 +20,25 @@ templ Page() {
 			</div>
 		</div>
 
+
+		<div class="rounded-[2rem] border border-[var(--border)] bg-[var(--bg-secondary)]/80 p-6 md:p-8 my-10">
+			<div class="flex flex-wrap items-center gap-3 mb-4">
+				<div class="px-3 py-1 rounded-full text-xs font-bold uppercase tracking-[0.28em] bg-[var(--accent-secondary)]/10 text-[var(--accent-secondary)]">Current Recommended Path</div>
+				<div class="text-sm text-[var(--text-secondary)]">Scaffold, verify, then ship from a preset instead of rebuilding config by hand.</div>
+			</div>
+			<div class="grid gap-6 lg:grid-cols-[1.2fr_0.8fr] items-start">
+				@components.CodeBlock(`gospa create myapp
+cd myapp
+go mod tidy
+gospa doctor
+gospa dev`, "bash", "Terminal")
+				<div class="space-y-3 text-sm text-[var(--text-secondary)]">
+					<p><strong class="text-[var(--text-primary)]">Development</strong>: start from <code class="bg-[var(--surface)] px-1.5 py-0.5 rounded">gospa.DefaultConfig()</code>.</p>
+					<p><strong class="text-[var(--text-primary)]">Production</strong>: start from <code class="bg-[var(--surface)] px-1.5 py-0.5 rounded">gospa.ProductionConfig()</code>.</p>
+					<p><a href="/docs/cli" class="text-[var(--accent-primary)] hover:underline">See CLI reference</a> · <a href="/docs/getstarted/quickstart" class="text-[var(--accent-primary)] hover:underline">Quick start</a></p>
+				</div>
+			</div>
+		</div>
 		<h2 id="why-gospa?" class="text-2xl font-bold mt-12 mb-4 border-b border-[var(--border)] pb-2">Why GoSPA?</h2>
 		<p class="text-[var(--text-secondary)]">
 			Building SPAs in Go has traditionally been a choice between high-performance APIs with complex JS frontends, or simple SSR with limited interactivity. GoSPA bridges this gap by providing:

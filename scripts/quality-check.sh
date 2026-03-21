@@ -13,6 +13,7 @@ RUN_BUILD=1
 RUN_TEST=1
 RUN_RACE=0
 RUN_BUN_CHECK=1
+RUN_EXAMPLES=1
 GO_TEST_PKGS="./..."
 GO_BUILD_PKGS="./..."
 GOFMT_TARGETS="."
@@ -33,6 +34,7 @@ Options:
   --skip-build              Skip go build
   --skip-test               Skip go test
   --skip-bun-check          Skip bun check (runs root package script)
+  --skip-examples           Skip example build validation
   --go-test-pkgs <pkgs>     Package pattern for go test (default: ./...)
   --go-build-pkgs <pkgs>    Package pattern for go build (default: ./...)
   --gofmt-targets <paths>   Space-delimited targets for gofmt check (default: .)
@@ -52,6 +54,7 @@ while [[ $# -gt 0 ]]; do
     --skip-build) RUN_BUILD=0 ;;
     --skip-test) RUN_TEST=0 ;;
     --skip-bun-check) RUN_BUN_CHECK=0 ;;
+    --skip-examples) RUN_EXAMPLES=0 ;;
     --go-test-pkgs) shift; GO_TEST_PKGS="${1:-}" ;;
     --go-build-pkgs) shift; GO_BUILD_PKGS="${1:-}" ;;
     --gofmt-targets) shift; GOFMT_TARGETS="${1:-}" ;;
@@ -74,7 +77,7 @@ fi
 
 if [[ $RUN_FMT -eq 1 ]]; then
   echo "==> gofmt check"
-  mapfile -t gofiles < <(find $GOFMT_TARGETS -type f -name '*.go' -not -path '*/vendor/*')
+  mapfile -t gofiles < <(rg --files $GOFMT_TARGETS -g '*.go' -g '!**/vendor/**')
   if [[ ${#gofiles[@]} -gt 0 ]]; then
     unformatted="$(gofmt -l "${gofiles[@]}")"
     if [[ -n "$unformatted" ]]; then
@@ -107,6 +110,10 @@ fi
 
 if [[ $RUN_TEST -eq 1 ]]; then
   run_step "go test" go test $GO_TEST_PKGS
+fi
+
+if [[ $RUN_EXAMPLES -eq 1 ]]; then
+  run_step "validate examples" ./scripts/validate-examples.sh
 fi
 
 if [[ $RUN_RACE -eq 1 ]]; then

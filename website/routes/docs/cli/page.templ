@@ -7,320 +7,96 @@ templ Page() {
 		<header>
 			<h1 class="text-4xl font-bold tracking-tight mb-4 text-transparent bg-clip-text bg-gradient-to-r from-[var(--accent-primary)] to-[var(--accent-secondary)]">CLI Reference</h1>
 			<p class="text-xl text-[var(--text-secondary)] leading-relaxed">
-				Complete reference for the GoSPA command-line interface tools.
+				The current GoSPA CLI centers on six supported workflows: scaffold, inspect, develop, build, generate, and clean.
 			</p>
 		</header>
+
+		<section class="grid gap-6 lg:grid-cols-[1.3fr_0.7fr] items-start">
+			<div class="rounded-[2rem] border border-[var(--border)] bg-[var(--bg-secondary)] p-6 md:p-8 shadow-[0_20px_60px_rgba(0,0,0,0.12)]">
+				<div class="flex items-center gap-3 mb-5">
+					<div class="px-3 py-1 rounded-full text-xs font-bold uppercase tracking-[0.28em] bg-[var(--accent-primary)]/10 text-[var(--accent-primary)]">Recommended Flow</div>
+				</div>
+				@components.CodeBlock(`gospa create myapp
+cd myapp
+go mod tidy
+gospa doctor
+gospa dev`, "bash", "terminal")
+			</div>
+			<div class="space-y-4">
+				<div class="rounded-2xl border border-[var(--border)] bg-[var(--bg-secondary)] p-5">
+					<h2 class="font-bold mb-2">What `doctor` gives you</h2>
+					<p class="text-sm text-[var(--text-secondary)] leading-relaxed">Before you start the server, validate Go/Bun availability, project layout, and runtime entrypoints from the same CLI users already installed.</p>
+				</div>
+				<div class="rounded-2xl border border-[var(--border)] bg-[var(--bg-secondary)] p-5">
+					<h2 class="font-bold mb-2">What `build` now reports</h2>
+					<p class="text-sm text-[var(--text-secondary)] leading-relaxed">Production builds now surface the Bun executable, runtime artifact path, Go binary path and size, plus copied/compressed asset counts.</p>
+				</div>
+			</div>
+		</section>
 
 		<section class="space-y-8">
 			<div>
 				<h2 class="text-2xl font-bold mb-4 border-b border-[var(--border)] pb-2 italic mono">gospa create</h2>
-				<p class="text-[var(--text-secondary)] mb-4">Creates a new GoSPA project with the specified name.</p>
-				@components.CodeBlock(`gospa create myapp
-gospa create myapp --output ./projects/myapp
-gospa create myapp --module github.com/user/myapp --docker`, "bash", "terminal")
-				<div class="mt-4 rounded-xl border border-[var(--border)] overflow-hidden">
-					<table class="w-full text-left text-sm">
-						<thead class="bg-[var(--bg-secondary)] text-[var(--text-muted)] uppercase tracking-wider">
-							<tr>
-								<th class="px-4 py-3 font-bold">Flag</th>
-								<th class="px-4 py-3 font-bold">Short</th>
-								<th class="px-4 py-3 font-bold">Default</th>
-								<th class="px-4 py-3 font-bold">Description</th>
-							</tr>
-						</thead>
-						<tbody class="divide-y divide-[var(--border)]">
-							<tr>
-								<td class="px-4 py-3 mono text-[var(--accent-primary)]">--module</td>
-								<td class="px-4 py-3 mono text-[var(--accent-primary)]">-m</td>
-								<td class="px-4 py-3 text-[var(--text-muted)]">myapp</td>
-								<td class="px-4 py-3 text-[var(--text-secondary)]">Go module name for the project</td>
-							</tr>
-							<tr>
-								<td class="px-4 py-3 mono text-[var(--accent-primary)]">--output</td>
-								<td class="px-4 py-3 mono text-[var(--accent-primary)]">-o</td>
-								<td class="px-4 py-3 text-[var(--text-muted)]">myapp</td>
-								<td class="px-4 py-3 text-[var(--text-secondary)]">Output directory for the project</td>
-							</tr>
-							<tr>
-								<td class="px-4 py-3 mono text-[var(--accent-primary)]">--no-git</td>
-								<td class="px-4 py-3 mono text-[var(--accent-primary)]"></td>
-								<td class="px-4 py-3 text-[var(--text-muted)]">false</td>
-								<td class="px-4 py-3 text-[var(--text-secondary)]">Skip .gitignore creation</td>
-							</tr>
-							<tr>
-								<td class="px-4 py-3 mono text-[var(--accent-primary)]">--docker</td>
-								<td class="px-4 py-3 mono text-[var(--accent-primary)]"></td>
-								<td class="px-4 py-3 text-[var(--text-muted)]">false</td>
-								<td class="px-4 py-3 text-[var(--text-secondary)]">Add a default Dockerfile</td>
-							</tr>
-						</tbody>
-					</table>
-				</div>
+				<p class="text-[var(--text-secondary)] mb-4">Create a new GoSPA project scaffold.</p>
+				@components.CodeBlock(`gospa create myapp`, "bash", "terminal")
 			</div>
 
 			<div>
-				<h2 class="text-2xl font-bold mb-4 border-b border-[var(--border)] pb-2 italic mono">gospa build</h2>
-				<p class="text-[var(--text-secondary)] mb-4">Builds the application for production deployment.</p>
-				@components.CodeBlock(`gospa build
-gospa build --output ./dist --platform linux --arch amd64
-gospa build --all`, "bash", "terminal")
-				<div class="mt-4 rounded-xl border border-[var(--border)] overflow-hidden">
-					<table class="w-full text-left text-sm">
-						<thead class="bg-[var(--bg-secondary)] text-[var(--text-muted)] uppercase tracking-wider">
-							<tr>
-								<th class="px-4 py-3 font-bold">Flag</th>
-								<th class="px-4 py-3 font-bold">Short</th>
-								<th class="px-4 py-3 font-bold">Default</th>
-								<th class="px-4 py-3 font-bold">Description</th>
-							</tr>
-						</thead>
-						<tbody class="divide-y divide-[var(--border)]">
-							<tr>
-								<td class="px-4 py-3 mono text-[var(--accent-primary)]">--output</td>
-								<td class="px-4 py-3 mono text-[var(--accent-primary)]">-o</td>
-								<td class="px-4 py-3 text-[var(--text-muted)]">dist</td>
-								<td class="px-4 py-3 text-[var(--text-secondary)]">Output directory for built files</td>
-							</tr>
-							<tr>
-								<td class="px-4 py-3 mono text-[var(--accent-primary)]">--platform</td>
-								<td class="px-4 py-3 mono text-[var(--accent-primary)]">-p</td>
-								<td class="px-4 py-3 text-[var(--text-muted)]">runtime.GOOS</td>
-								<td class="px-4 py-3 text-[var(--text-secondary)]">Target platform (OS)</td>
-							</tr>
-							<tr>
-								<td class="px-4 py-3 mono text-[var(--accent-primary)]">--arch</td>
-								<td class="px-4 py-3 mono text-[var(--accent-primary)]">-a</td>
-								<td class="px-4 py-3 text-[var(--text-muted)]">runtime.GOARCH</td>
-								<td class="px-4 py-3 text-[var(--text-secondary)]">Target architecture</td>
-							</tr>
-							<tr>
-								<td class="px-4 py-3 mono text-[var(--accent-primary)]">--env</td>
-								<td class="px-4 py-3 mono text-[var(--accent-primary)]">-e</td>
-								<td class="px-4 py-3 text-[var(--text-muted)]">production</td>
-								<td class="px-4 py-3 text-[var(--text-secondary)]">Build environment</td>
-							</tr>
-							<tr>
-								<td class="px-4 py-3 mono text-[var(--accent-primary)]">--no-minify</td>
-								<td class="px-4 py-3 mono text-[var(--accent-primary)]"></td>
-								<td class="px-4 py-3 text-[var(--text-muted)]">false</td>
-								<td class="px-4 py-3 text-[var(--text-secondary)]">Disable JavaScript minification</td>
-							</tr>
-							<tr>
-								<td class="px-4 py-3 mono text-[var(--accent-primary)]">--no-compress</td>
-								<td class="px-4 py-3 mono text-[var(--accent-primary)]"></td>
-								<td class="px-4 py-3 text-[var(--text-muted)]">false</td>
-								<td class="px-4 py-3 text-[var(--text-secondary)]">Disable asset compression</td>
-							</tr>
-							<tr>
-								<td class="px-4 py-3 mono text-[var(--accent-primary)]">--no-static</td>
-								<td class="px-4 py-3 mono text-[var(--accent-primary)]"></td>
-								<td class="px-4 py-3 text-[var(--text-muted)]">false</td>
-								<td class="px-4 py-3 text-[var(--text-secondary)]">Skip copying static assets</td>
-							</tr>
-							<tr>
-								<td class="px-4 py-3 mono text-[var(--accent-primary)]">--all</td>
-								<td class="px-4 py-3 mono text-[var(--accent-primary)]"></td>
-								<td class="px-4 py-3 text-[var(--text-muted)]">false</td>
-								<td class="px-4 py-3 text-[var(--text-secondary)]">Build for all platforms</td>
-							</tr>
-						</tbody>
-					</table>
-				</div>
+				<h2 class="text-2xl font-bold mb-4 border-b border-[var(--border)] pb-2 italic mono">gospa doctor</h2>
+				<p class="text-[var(--text-secondary)] mb-4">Check local tooling and project layout before you start development or cut a release.</p>
+				@components.CodeBlock(`gospa doctor
+gospa doctor --routes-dir ./routes`, "bash", "terminal")
+				<ul class="list-disc pl-6 mt-4 space-y-2 text-[var(--text-secondary)]">
+					<li>Confirms Go is available.</li>
+					<li>Checks for Bun and Bun package manifests.</li>
+					<li>Validates optional app layout like `main.go`, routes, and client runtime entrypoints.</li>
+				</ul>
 			</div>
 
 			<div>
 				<h2 class="text-2xl font-bold mb-4 border-b border-[var(--border)] pb-2 italic mono">gospa dev</h2>
-				<p class="text-[var(--text-secondary)] mb-4">Starts the development server with hot reload.</p>
+				<p class="text-[var(--text-secondary)] mb-4">Start the local development workflow with file watching and server restarts.</p>
 				@components.CodeBlock(`gospa dev
 gospa dev --port 8080 --host 0.0.0.0
-gospa dev --routes ./src/routes`, "bash", "terminal")
-				<div class="mt-4 rounded-xl border border-[var(--border)] overflow-hidden">
-					<table class="w-full text-left text-sm">
-						<thead class="bg-[var(--bg-secondary)] text-[var(--text-muted)] uppercase tracking-wider">
-							<tr>
-								<th class="px-4 py-3 font-bold">Flag</th>
-								<th class="px-4 py-3 font-bold">Short</th>
-								<th class="px-4 py-3 font-bold">Default</th>
-								<th class="px-4 py-3 font-bold">Description</th>
-							</tr>
-						</thead>
-						<tbody class="divide-y divide-[var(--border)]">
-							<tr>
-								<td class="px-4 py-3 mono text-[var(--accent-primary)]">--port</td>
-								<td class="px-4 py-3 mono text-[var(--accent-primary)]">-p</td>
-								<td class="px-4 py-3 text-[var(--text-muted)]">3000</td>
-								<td class="px-4 py-3 text-[var(--text-secondary)]">Server port</td>
-							</tr>
-							<tr>
-								<td class="px-4 py-3 mono text-[var(--accent-primary)]">--host</td>
-								<td class="px-4 py-3 mono text-[var(--accent-primary)]">-H</td>
-								<td class="px-4 py-3 text-[var(--text-muted)]">localhost</td>
-								<td class="px-4 py-3 text-[var(--text-secondary)]">Server host</td>
-							</tr>
-							<tr>
-								<td class="px-4 py-3 mono text-[var(--accent-primary)]">--routes</td>
-								<td class="px-4 py-3 mono text-[var(--accent-primary)]">-r</td>
-								<td class="px-4 py-3 text-[var(--text-muted)]">./routes</td>
-								<td class="px-4 py-3 text-[var(--text-secondary)]">Routes directory</td>
-							</tr>
-							<tr>
-								<td class="px-4 py-3 mono text-[var(--accent-primary)]">--components</td>
-								<td class="px-4 py-3 mono text-[var(--accent-primary)]">-c</td>
-								<td class="px-4 py-3 text-[var(--text-muted)]">./components</td>
-								<td class="px-4 py-3 text-[var(--text-secondary)]">Components directory</td>
-							</tr>
-						</tbody>
-					</table>
+gospa dev --routes-dir ./routes`, "bash", "terminal")
+			</div>
+
+			<div>
+				<h2 class="text-2xl font-bold mb-4 border-b border-[var(--border)] pb-2 italic mono">gospa build</h2>
+				<p class="text-[var(--text-secondary)] mb-4">Create a production build with Go plus Bun-based client runtime steps where applicable.</p>
+				@components.CodeBlock(`gospa build
+gospa build -o ./dist --platform linux --arch amd64
+gospa build --minify=false --compress=false`, "bash", "terminal")
+				<div class="mt-4 rounded-2xl border border-[var(--border)] bg-[var(--bg-secondary)] p-5">
+					<h3 class="font-bold mb-3">Current supported flags</h3>
+					<ul class="space-y-2 text-sm text-[var(--text-secondary)]">
+						<li><code class="mono text-[var(--accent-primary)]">-o</code> — output directory</li>
+						<li><code class="mono text-[var(--accent-primary)]">--platform</code> — target GOOS</li>
+						<li><code class="mono text-[var(--accent-primary)]">--arch</code> — target GOARCH</li>
+						<li><code class="mono text-[var(--accent-primary)]">--minify</code> — enable or disable Bun minification</li>
+						<li><code class="mono text-[var(--accent-primary)]">--compress</code> — enable or disable gzip precompression</li>
+					</ul>
 				</div>
 			</div>
 
 			<div>
 				<h2 class="text-2xl font-bold mb-4 border-b border-[var(--border)] pb-2 italic mono">gospa generate</h2>
-				<p class="text-[var(--text-secondary)] mb-4">Generates TypeScript types and route definitions.</p>
+				<p class="text-[var(--text-secondary)] mb-4">Generate Go routes plus TypeScript types and route metadata.</p>
 				@components.CodeBlock(`gospa generate
-gospa generate --input . --output ./gen`, "bash", "terminal")
-				<div class="mt-4 rounded-xl border border-[var(--border)] overflow-hidden">
-					<table class="w-full text-left text-sm">
-						<thead class="bg-[var(--bg-secondary)] text-[var(--text-muted)] uppercase tracking-wider">
-							<tr>
-								<th class="px-4 py-3 font-bold">Flag</th>
-								<th class="px-4 py-3 font-bold">Short</th>
-								<th class="px-4 py-3 font-bold">Default</th>
-								<th class="px-4 py-3 font-bold">Description</th>
-							</tr>
-						</thead>
-						<tbody class="divide-y divide-[var(--border)]">
-							<tr>
-								<td class="px-4 py-3 mono text-[var(--accent-primary)]">--input</td>
-								<td class="px-4 py-3 mono text-[var(--accent-primary)]">-i</td>
-								<td class="px-4 py-3 text-[var(--text-muted)]">.</td>
-								<td class="px-4 py-3 text-[var(--text-secondary)]">Input directory for exploration</td>
-							</tr>
-							<tr>
-								<td class="px-4 py-3 mono text-[var(--accent-primary)]">--output</td>
-								<td class="px-4 py-3 mono text-[var(--accent-primary)]">-o</td>
-								<td class="px-4 py-3 text-[var(--text-muted)]">./generated</td>
-								<td class="px-4 py-3 text-[var(--text-secondary)]">Output directory for generated files</td>
-							</tr>
-						</tbody>
-					</table>
-				</div>
-			</div>
-
-			<div>
-				<h2 class="text-2xl font-bold mb-4 border-b border-[var(--border)] pb-2 italic mono">gospa add</h2>
-				<p class="text-[var(--text-secondary)] mb-4">Add plugins and features to your project.</p>
-				@components.CodeBlock(`gospa add tailwind
-gospa add postcss
-gospa add image
-gospa add validation
-gospa add seo
-gospa add auth`, "bash", "terminal")
-				<div class="mt-4 rounded-xl border border-[var(--border)] overflow-hidden">
-					<table class="w-full text-left text-sm">
-						<thead class="bg-[var(--bg-secondary)] text-[var(--text-muted)] uppercase tracking-wider">
-							<tr>
-								<th class="px-4 py-3 font-bold">Feature</th>
-								<th class="px-4 py-3 font-bold">Description</th>
-							</tr>
-						</thead>
-						<tbody class="divide-y divide-[var(--border)]">
-							<tr>
-								<td class="px-4 py-3 mono text-[var(--accent-primary)]">tailwind</td>
-								<td class="px-4 py-3 text-[var(--text-secondary)]">Add Tailwind CSS support</td>
-							</tr>
-							<tr>
-								<td class="px-4 py-3 mono text-[var(--accent-primary)]">postcss</td>
-								<td class="px-4 py-3 text-[var(--text-secondary)]">Add PostCSS with Tailwind extensions</td>
-							</tr>
-							<tr>
-								<td class="px-4 py-3 mono text-[var(--accent-primary)]">image</td>
-								<td class="px-4 py-3 text-[var(--text-secondary)]">Add image optimization</td>
-							</tr>
-							<tr>
-								<td class="px-4 py-3 mono text-[var(--accent-primary)]">validation</td>
-								<td class="px-4 py-3 text-[var(--text-secondary)]">Add form validation (Valibot + Go validator)</td>
-							</tr>
-							<tr>
-								<td class="px-4 py-3 mono text-[var(--accent-primary)]">seo</td>
-								<td class="px-4 py-3 text-[var(--text-secondary)]">Add SEO optimization (sitemap, meta tags)</td>
-							</tr>
-							<tr>
-								<td class="px-4 py-3 mono text-[var(--accent-primary)]">auth</td>
-								<td class="px-4 py-3 text-[var(--text-secondary)]">Add authentication (OAuth2, JWT, OTP)</td>
-							</tr>
-						</tbody>
-					</table>
-				</div>
-			</div>
-
-			<div>
-				<h2 class="text-2xl font-bold mb-4 border-b border-[var(--border)] pb-2 italic mono">gospa prune</h2>
-				<p class="text-[var(--text-secondary)] mb-4">Remove unused state from state stores to prevent memory leaks.</p>
-				@components.CodeBlock(`gospa prune
-gospa prune --dry-run
-gospa prune --older-than 2h
-gospa prune --all`, "bash", "terminal")
-				<div class="mt-4 rounded-xl border border-[var(--border)] overflow-hidden">
-					<table class="w-full text-left text-sm">
-						<thead class="bg-[var(--bg-secondary)] text-[var(--text-muted)] uppercase tracking-wider">
-							<tr>
-								<th class="px-4 py-3 font-bold">Flag</th>
-								<th class="px-4 py-3 font-bold">Short</th>
-								<th class="px-4 py-3 font-bold">Default</th>
-								<th class="px-4 py-3 font-bold">Description</th>
-							</tr>
-						</thead>
-						<tbody class="divide-y divide-[var(--border)]">
-							<tr>
-								<td class="px-4 py-3 mono text-[var(--accent-primary)]">--dry-run</td>
-								<td class="px-4 py-3 mono text-[var(--accent-primary)]">-d</td>
-								<td class="px-4 py-3 text-[var(--text-muted)]">false</td>
-								<td class="px-4 py-3 text-[var(--text-secondary)]">Show what would be pruned without removing</td>
-							</tr>
-							<tr>
-								<td class="px-4 py-3 mono text-[var(--accent-primary)]">--older-than</td>
-								<td class="px-4 py-3 mono text-[var(--accent-primary)]">-o</td>
-								<td class="px-4 py-3 text-[var(--text-muted)]">1h</td>
-								<td class="px-4 py-3 text-[var(--text-secondary)]">Remove state older than duration</td>
-							</tr>
-							<tr>
-								<td class="px-4 py-3 mono text-[var(--accent-primary)]">--all</td>
-								<td class="px-4 py-3 mono text-[var(--accent-primary)]">-a</td>
-								<td class="px-4 py-3 text-[var(--text-muted)]">false</td>
-								<td class="px-4 py-3 text-[var(--text-secondary)]">Remove all state (use with caution)</td>
-							</tr>
-						</tbody>
-					</table>
-				</div>
+gospa generate -o ./generated --input-dir .`, "bash", "terminal")
 			</div>
 
 			<div>
 				<h2 class="text-2xl font-bold mb-4 border-b border-[var(--border)] pb-2 italic mono">gospa clean</h2>
-				<p class="text-[var(--text-secondary)] mb-4">Remove build artifacts and generated files.</p>
+				<p class="text-[var(--text-secondary)] mb-4">Remove generated and build artifacts such as `dist`, `node_modules`, and templ-generated files.</p>
 				@components.CodeBlock(`gospa clean`, "bash", "terminal")
 			</div>
 
 			<div>
-				<h2 class="text-2xl font-bold mb-4 border-b border-[var(--border)] pb-2 italic mono">gospa watch</h2>
-				<p class="text-[var(--text-secondary)] mb-4">Build and watch for changes.</p>
-				@components.CodeBlock(`gospa watch`, "bash", "terminal")
+				<h2 class="text-2xl font-bold mb-4 border-b border-[var(--border)] pb-2 italic mono">gospa version</h2>
+				<p class="text-[var(--text-secondary)] mb-4">Print the installed GoSPA version.</p>
+				@components.CodeBlock(`gospa version`, "bash", "terminal")
 			</div>
-		</section>
-
-		<section>
-			<h2 class="text-2xl font-bold mb-4 border-b border-[var(--border)] pb-2">Project Structure</h2>
-			<p class="text-[var(--text-secondary)] mb-4">A newly created GoSPA project has the following structure:</p>
-			@components.CodeBlock(`myapp/
-├── main.go           # Application entry point
-├── go.mod            # Go module definition
-├── routes/           # Route handlers (Templ)
-│   ├── layout.templ  # Root layout
-│   └── page.templ    # Home page
-├── generated/        # Auto-generated TypeScript
-│   ├── routes.ts     # Route definitions
-│   └── types.ts      # TypeScript types
-└── static/           # Static assets`, "plaintext", "structure")
 		</section>
 	</div>
 }

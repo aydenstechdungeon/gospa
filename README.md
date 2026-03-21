@@ -28,8 +28,11 @@ go install github.com/aydenstechdungeon/gospa/cmd/gospa@latest
 gospa create myapp
 cd myapp
 go mod tidy
+gospa doctor
 gospa dev
 ```
+
+> For local client/runtime tooling, use Bun. The GoSPA client package and repo JS/TS workflows are Bun-first.
 
 ### 3. A Simple Page
 ```templ
@@ -55,9 +58,21 @@ templ Page() {
 | **File Routing** | ✅ | ❌ | ❌ | ✅ |
 | **Type Safety** | ✅ | ❌ | ❌ | ✅ |
 
+## Recommended Production Baseline
+
+Start from `gospa.ProductionConfig()` and tighten only what your app needs:
+
+```go
+config := gospa.ProductionConfig()
+config.AllowedOrigins = []string{"https://example.com"}
+config.AppName = "myapp"
+```
+
+For prefork deployments, add external `Storage` and `PubSub` backends so state and realtime traffic stay consistent across workers.
+
 ## Documentation
 
-Full guides and API reference are available at [gospa.onrender.com](https://gospa.onrender.com/docs) or in the `/docs` directory.
+Full guides and API reference are available at [gospa.onrender.com](https://gospa.onrender.com/docs), including the [production hardening checklist](docs/03-features/07-production-checklist.md), or in the `/docs` directory.
 
 ---
 

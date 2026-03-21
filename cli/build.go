@@ -27,9 +27,21 @@ type BuildConfig struct {
 	Env          string
 }
 
+// BuildSummary captures the important outputs from a production build.
+type BuildSummary struct {
+	BunPath            string
+	ClientRuntimeBuilt bool
+	ClientRuntimePath  string
+	GoBinaryPath       string
+	StaticFilesCopied  int
+	CompressedFiles    int
+}
+
 // Build builds the application for production.
 func Build(config *BuildConfig) {
-	fmt.Println("Building for production...")
+	printer := NewColorPrinter()
+	printer.Title("GoSPA Build")
+	printer.Subtitle("Creating a production build with Go + Bun tooling")
 
 	// Check if we're in a GoSPA project
 	if !isGoSPAProject() {
@@ -56,7 +68,8 @@ func Build(config *BuildConfig) {
 		os.Exit(1)
 	}
 
-	if err := BuildWithConfig(config); err != nil {
+	summary, err := BuildWithConfig(config)
+	if err != nil {
 		fmt.Fprintf(os.Stderr, "Build failed: %v\n", err)
 		os.Exit(1)
 	}
@@ -64,20 +77,23 @@ func Build(config *BuildConfig) {
 	// Trigger AfterBuild hook
 	_ = plugin.TriggerHook(plugin.AfterBuild, map[string]interface{}{"config": config})
 
-	fmt.Println("✓ Build complete!")
+	printBuildSummary(printer, summary)
+	printer.Success("Build complete!")
 }
 
 // BuildWithConfig builds the application with custom configuration.
-func BuildWithConfig(config *BuildConfig) error {
+func BuildWithConfig(config *BuildConfig) (*BuildSummary, error) {
+	summary := &BuildSummary{}
+
 	// Create output directory
 	if err := os.MkdirAll(config.OutputDir, 0750); err != nil {
-		return fmt.Errorf("failed to create output directory: %w", err)
+		return nil, fmt.Errorf("failed to create output directory: %w", err)
 	}
 
 	// Step 1: Generate templ files
 	fmt.Println("Generating templ files...")
 	if err := regenerateTempl(); err != nil {
-		return fmt.Errorf("failed to generate templ files: %w", err)
+		return nil, fmt.Errorf("failed to generate templ files: %w", err)
 	}
 
 	// Step 2: Generate TypeScript types
@@ -86,8 +102,8 @@ func BuildWithConfig(config *BuildConfig) error {
 
 	// Step 3: Build client runtime
 	fmt.Println("Building client runtime...")
-	if err := buildClientRuntime(config); err != nil {
-		return fmt.Errorf("failed to build client runtime: %w", err)
+	if err := buildClientRuntime(config, summary); err != nil {
+		return nil, fmt.Errorf("failed to build client runtime: %w", err)
 	}
 
 	// Step 3.5: Ensure dependencies are tidied after generation
@@ -96,35 +112,41 @@ func BuildWithConfig(config *BuildConfig) error {
 	tidyCmd.Stdout = os.Stdout
 	tidyCmd.Stderr = os.Stderr
 	if err := tidyCmd.Run(); err != nil {
-		return fmt.Errorf("failed to tidy module dependencies: %w", err)
+		return nil, fmt.Errorf("failed to tidy module dependencies: %w", err)
 	}
 
 	// Step 4: Build Go binary
 	fmt.Println("Building Go binary...")
-	if err := buildGoBinary(config); err != nil {
-		return fmt.Errorf("failed to build Go binary: %w", err)
+	binaryPath, err := buildGoBinary(config)
+	if err != nil {
+		return nil, fmt.Errorf("failed to build Go binary: %w", err)
 	}
+	summary.GoBinaryPath = binaryPath
 
 	// Step 5: Copy static assets
 	if config.StaticAssets {
 		fmt.Println("Copying static assets...")
-		if err := copyStaticAssets(config); err != nil {
-			return fmt.Errorf("failed to copy static assets: %w", err)
+		count, err := copyStaticAssets(config)
+		if err != nil {
+			return nil, fmt.Errorf("failed to copy static assets: %w", err)
 		}
+		summary.StaticFilesCopied = count
 	}
 
 	// Step 6: Pre-compress static assets if requested
 	if config.Compress {
 		fmt.Println("Pre-compressing static assets...")
-		if err := compressStaticAssets(config); err != nil {
-			return fmt.Errorf("failed to compress static assets: %w", err)
+		count, err := compressStaticAssets(config)
+		if err != nil {
+			return nil, fmt.Errorf("failed to compress static assets: %w", err)
 		}
+		summary.CompressedFiles = count
 	}
 
-	return nil
+	return summary, nil
 }
 
-func buildClientRuntime(config *BuildConfig) error {
+func buildClientRuntime(config *BuildConfig, summary *BuildSummary) error {
 	clientDir := "client"
 	if _, err := os.Stat(clientDir); os.IsNotExist(err) {
 		// No client directory, skip
@@ -137,6 +159,7 @@ func buildClientRuntime(config *BuildConfig) error {
 		fmt.Println("Warning: bun not found, skipping client build")
 		return nil
 	}
+	summary.BunPath = bunPath
 
 	// Locate the entry point — prefer src/runtime.ts, fall back to src/index.ts
 	entryPoint := ""
@@ -159,16 +182,26 @@ func buildClientRuntime(config *BuildConfig) error {
 
 	// Run bun build
 	//nolint:gosec // bunPath is safe executable from LookPath
-	cmd := exec.Command(bunPath, "build", entryPoint, "--outfile", outputPath, "--minify")
+	args := []string{"build", entryPoint, "--outfile", outputPath}
+	if config.Minify {
+		args = append(args, "--minify")
+	}
+	cmd := exec.Command(bunPath, args...)
 	cmd.Dir = clientDir
 	cmd.Stdout = os.Stdout
 	cmd.Stderr = os.Stderr
 	cmd.Env = append(os.Environ(), "NODE_ENV="+config.Env)
 
-	return cmd.Run()
+	if err := cmd.Run(); err != nil {
+		return err
+	}
+
+	summary.ClientRuntimeBuilt = true
+	summary.ClientRuntimePath = outputPath
+	return nil
 }
 
-func buildGoBinary(config *BuildConfig) error {
+func buildGoBinary(config *BuildConfig) (string, error) {
 	// Determine output filename
 	outputName := "server"
 	if config.Platform == "windows" {
@@ -198,21 +231,26 @@ func buildGoBinary(config *BuildConfig) error {
 	env = append(env, "GOSPA_ENV="+config.Env)
 	cmd.Env = env
 
-	return cmd.Run()
+	if err := cmd.Run(); err != nil {
+		return "", err
+	}
+
+	return outputPath, nil
 }
 
-func copyStaticAssets(config *BuildConfig) error {
+func copyStaticAssets(config *BuildConfig) (int, error) {
 	staticDir := "static"
 	if _, err := os.Stat(staticDir); os.IsNotExist(err) {
-		return nil
+		return 0, nil
 	}
 
 	destDir := filepath.Join(config.OutputDir, "static")
 	if err := os.MkdirAll(destDir, 0750); err != nil {
-		return err
+		return 0, err
 	}
 
-	return filepath.Walk(staticDir, func(path string, info os.FileInfo, err error) error {
+	copied := 0
+	err := filepath.Walk(staticDir, func(path string, info os.FileInfo, err error) error {
 		if err != nil {
 			return err
 		}
@@ -247,17 +285,23 @@ func copyStaticAssets(config *BuildConfig) error {
 		}
 
 		//nolint:gosec // path validated above with strings.HasPrefix check
-		return os.WriteFile(cleanDestPath, data, info.Mode())
+		if err := os.WriteFile(cleanDestPath, data, info.Mode()); err != nil {
+			return err
+		}
+		copied++
+		return nil
 	})
+	return copied, err
 }
 
-func compressStaticAssets(config *BuildConfig) error {
+func compressStaticAssets(config *BuildConfig) (int, error) {
 	destDir := filepath.Join(config.OutputDir, "static")
 	if _, err := os.Stat(destDir); os.IsNotExist(err) {
-		return nil
+		return 0, nil
 	}
 
-	return filepath.Walk(destDir, func(path string, info os.FileInfo, err error) error {
+	compressed := 0
+	err := filepath.Walk(destDir, func(path string, info os.FileInfo, err error) error {
 		if err != nil {
 			return err
 		}
@@ -277,8 +321,13 @@ func compressStaticAssets(config *BuildConfig) error {
 			return nil
 		}
 
-		return compressFileGzip(path)
+		if err := compressFileGzip(path); err != nil {
+			return err
+		}
+		compressed++
+		return nil
 	})
+	return compressed, err
 }
 
 func compressFileGzip(path string) error {
@@ -333,12 +382,62 @@ func BuildAll() {
 		}
 
 		fmt.Printf("\nBuilding for %s/%s...\n", p.platform, p.arch)
-		if err := BuildWithConfig(config); err != nil {
+		if _, err := BuildWithConfig(config); err != nil {
 			fmt.Fprintf(os.Stderr, "Failed to build for %s/%s: %v\n", p.platform, p.arch, err)
 		} else {
 			fmt.Printf("✓ Built for %s/%s\n", p.platform, p.arch)
 		}
 	}
+}
+
+func printBuildSummary(printer *ColorPrinter, summary *BuildSummary) {
+	if summary == nil {
+		return
+	}
+
+	printer.Info("Bun executable: %s", displayOrFallback(summary.BunPath, "not used"))
+	if summary.ClientRuntimeBuilt {
+		printer.Info("Client runtime: %s (%s)", summary.ClientRuntimePath, formatFileSize(summary.ClientRuntimePath))
+	} else {
+		printer.Warning("Client runtime: skipped")
+	}
+
+	if summary.GoBinaryPath != "" {
+		printer.Info("Go binary: %s (%s)", summary.GoBinaryPath, formatFileSize(summary.GoBinaryPath))
+	}
+	printer.Info("Static files copied: %d", summary.StaticFilesCopied)
+	printer.Info("Static files compressed: %d", summary.CompressedFiles)
+}
+
+func displayOrFallback(value, fallback string) string {
+	if value == "" {
+		return fallback
+	}
+	return value
+}
+
+func formatFileSize(path string) string {
+	info, err := os.Stat(path)
+	if err != nil {
+		return "size unavailable"
+	}
+
+	size := float64(info.Size())
+	units := []string{"B", "KB", "MB", "GB"}
+	unit := units[0]
+	for i := 0; i < len(units) && size >= 1024; i++ {
+		unit = units[i]
+		if size < 1024 || i == len(units)-1 {
+			break
+		}
+		size /= 1024
+		unit = units[i+1]
+	}
+
+	if unit == "B" {
+		return fmt.Sprintf("%d %s", info.Size(), unit)
+	}
+	return fmt.Sprintf("%.1f %s", size, unit)
 }
 
 // Clean removes build artifacts.
