@@ -92,12 +92,15 @@ func (l *ExternalPluginLoader) LoadFromGitHub(ref string) (Plugin, error) {
 	}
 
 	// Ensure cache directory exists
+	if err := validatePluginVersion(version); err != nil {
+		return nil, fmt.Errorf("failed to validate version: %w", err)
+	}
 	if err := os.MkdirAll(l.cacheDir, 0750); err != nil {
 		return nil, fmt.Errorf("failed to create plugin cache directory: %w", err)
 	}
 
 	// Check if already cached
-	pluginPath := filepath.Join(l.cacheDir, owner, repo)
+	pluginPath := filepath.Join(l.cacheDir, owner, repo, version)
 	pluginDataPath := filepath.Join(pluginPath, "plugin.json")
 
 	if _, err := os.Stat(pluginDataPath); err == nil {
@@ -122,9 +125,17 @@ func validatePluginName(name string) error {
 	return nil
 }
 
+func validatePluginVersion(version string) error {
+	validVersion := regexp.MustCompile(`^[a-zA-Z0-9._/-]+$`)
+	if version == "" || !validVersion.MatchString(version) || strings.Contains(version, "..") {
+		return fmt.Errorf("invalid version %q", version)
+	}
+	return nil
+}
+
 // download clones or downloads a plugin from GitHub.
 func (l *ExternalPluginLoader) download(owner, repo, version string) error {
-	pluginPath := filepath.Join(l.cacheDir, owner, repo)
+	pluginPath := filepath.Join(l.cacheDir, owner, repo, version)
 
 	// Create plugin directory
 	if err := os.MkdirAll(pluginPath, 0750); err != nil {
@@ -133,10 +144,13 @@ func (l *ExternalPluginLoader) download(owner, repo, version string) error {
 
 	// Check if git is available
 	if _, err := exec.LookPath("git"); err == nil {
-		// Use git clone - owner/repo are validated via validatePluginName() above
 		gitURL := fmt.Sprintf("https://github.com/%s/%s.git", owner, repo)
-		//nolint:gosec // gitURL and pluginPath are validated via validatePluginName()
-		cmd := exec.Command("git", "clone", "--depth", "1", gitURL, pluginPath)
+		cloneArgs := []string{"clone", "--depth", "1"}
+		if version != "latest" {
+			cloneArgs = append(cloneArgs, "--branch", version)
+		}
+		cloneArgs = append(cloneArgs, gitURL, pluginPath)
+		cmd := exec.Command("git", cloneArgs...)
 		cmd.Stdout = os.Stdout
 		cmd.Stderr = os.Stderr
 		if err := cmd.Run(); err != nil {
@@ -147,11 +161,17 @@ func (l *ExternalPluginLoader) download(owner, repo, version string) error {
 		return fmt.Errorf("git is not installed and archive extraction is not supported. Please install git to download plugins")
 	}
 
-	// Create plugin metadata
+	resolvedRefCmd := exec.Command("git", "-C", pluginPath, "rev-parse", "HEAD")
+	resolvedRefOut, err := resolvedRefCmd.Output()
+	if err != nil {
+		return fmt.Errorf("failed to resolve plugin commit: %w", err)
+	}
+
 	metadata := Metadata{
-		Name:    repo,
-		Version: version,
-		Source:  fmt.Sprintf("github.com/%s/%s", owner, repo),
+		Name:        repo,
+		Version:     version,
+		Source:      fmt.Sprintf("github.com/%s/%s", owner, repo),
+		ResolvedRef: strings.TrimSpace(string(resolvedRefOut)),
 	}
 
 	metadataBytes, err := json.MarshalIndent(metadata, "", "  ")
@@ -230,6 +250,7 @@ type Metadata struct {
 	Description string `json:"description,omitempty"`
 	Author      string `json:"author,omitempty"`
 	Source      string `json:"source"`
+	ResolvedRef string `json:"resolvedRef,omitempty"`
 }
 
 // RegistryEntry represents a plugin in the registry.

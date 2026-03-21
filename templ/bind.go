@@ -282,16 +282,30 @@ func (cs *ComponentState) RenderBindings() templ.Attributes {
 	return attrs
 }
 
-// SafeHTML marks a string as safe HTML.
+// SafeHTML marks a string as trusted HTML. WARNING: never pass user-controlled content here.
 //
 //nolint:gosec // intentional for templ rendering
 func SafeHTML(s string) template.HTML {
 	return template.HTML(s)
 }
 
-// SafeAttr marks a string as a safe attribute value.
+// SafeAttr marks a string as a trusted attribute value. WARNING: never pass user-controlled content here.
 //
 //nolint:gosec // intentional for templ rendering
 func SafeAttr(s string) template.HTMLAttr {
 	return template.HTMLAttr(s)
+}
+
+// UnsafeHTML is an explicit alias for SafeHTML for code that prefers a clearer trust boundary.
+//
+//nolint:gosec // intentional for templ rendering
+func UnsafeHTML(s string) template.HTML {
+	return SafeHTML(s)
+}
+
+// UnsafeAttr is an explicit alias for SafeAttr for code that prefers a clearer trust boundary.
+//
+//nolint:gosec // intentional for templ rendering
+func UnsafeAttr(s string) template.HTMLAttr {
+	return SafeAttr(s)
 }

@@ -176,11 +176,48 @@ func (sr *StreamRenderer) StreamComponent(
 // writePreamble writes the streaming initialization script.
 func (sr *StreamRenderer) writePreamble(sw *StreamWriter) error {
 	preamble := `<script>
+window.__GOSPA_SANITIZE_STREAM_HTML__ = window.__GOSPA_SANITIZE_STREAM_HTML__ || function(html) {
+	if (window.GoSPA && typeof window.GoSPA.sanitizeHtml === 'function') {
+		return window.GoSPA.sanitizeHtml(html);
+	}
+	var template = document.createElement('template');
+	template.innerHTML = String(html || '');
+	var forbiddenTags = ['script', 'iframe', 'object', 'embed', 'link', 'style', 'meta'];
+	for (var i = 0; i < forbiddenTags.length; i++) {
+		var nodes = template.content.querySelectorAll(forbiddenTags[i]);
+		for (var j = 0; j < nodes.length; j++) {
+			nodes[j].remove();
+		}
+	}
+	var all = template.content.querySelectorAll('*');
+	for (var k = 0; k < all.length; k++) {
+		var attrs = Array.from(all[k].attributes);
+		for (var m = 0; m < attrs.length; m++) {
+			var name = attrs[m].name.toLowerCase();
+			var value = attrs[m].value;
+			if (name.startsWith('on')) {
+				all[k].removeAttribute(attrs[m].name);
+				continue;
+			}
+			if ((name === 'href' || name === 'src' || name === 'xlink:href') && /^\s*javascript:/i.test(value)) {
+				all[k].removeAttribute(attrs[m].name);
+			}
+		}
+	}
+	return template.innerHTML;
+};
 window.__GOSPA_STREAM__ = window.__GOSPA_STREAM__ || function(chunk) {
 	switch(chunk.type) {
 		case 'html':
 			var el = document.getElementById(chunk.id);
-			if (el) el.innerHTML = chunk.content;
+			if (el) {
+				Promise.resolve(window.__GOSPA_SANITIZE_STREAM_HTML__(chunk.content)).then(function(safeHtml) {
+					el.innerHTML = safeHtml;
+				}).catch(function(error) {
+					console.error('GoSPA Stream Sanitization Error:', error);
+					el.textContent = String(chunk.content || '');
+				});
+			}
 			break;
 		case 'island':
 			window.__GOSPA_ISLANDS__ = window.__GOSPA_ISLANDS__ || [];

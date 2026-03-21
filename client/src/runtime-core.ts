@@ -2,7 +2,7 @@
 // Only includes essential state, DOM bindings, and events
 
 import { Rune, Derived, Effect, StateMap, batch, effect, watch, type Unsubscribe } from './state.ts';
-import { bindElement, bindTwoWay, renderIf, renderList, registerBinding, unregisterBinding } from './dom.ts';
+import { bindElement, bindTwoWay, renderIf, renderList, registerBinding, unregisterBinding, sanitizeHtml } from './dom.ts';
 import { on, offAll, debounce, throttle, delegate, onKey, keys, transformers } from './events.ts';
 import type { StateMessage } from './websocket.ts';
 import { remote, remoteAction, configureRemote, getRemotePrefix, type RemoteOptions, type RemoteResult } from './remote.ts';
@@ -140,7 +140,8 @@ export function init(options: RuntimeConfig = {}): void {
 		get on() { return on; },
 		get offAll() { return offAll; },
 		get debounce() { return debounce; },
-		get throttle() { return throttle; }
+		get throttle() { return throttle; },
+		get sanitizeHtml() { return sanitizeHtml; }
 	};
 
 	// Expose to window as the primary public API
