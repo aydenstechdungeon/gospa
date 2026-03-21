@@ -16,6 +16,12 @@ import (
 	"github.com/aydenstechdungeon/gospa/routing"
 	"github.com/gofiber/fiber/v3"
 	"github.com/gofiber/fiber/v3/middleware/compress"
+
+	// Register built-in plugins for runtime features (if any)
+	_ "github.com/aydenstechdungeon/gospa/plugin/image"
+	_ "github.com/aydenstechdungeon/gospa/plugin/postcss"
+	_ "github.com/aydenstechdungeon/gospa/plugin/qrcode"
+	_ "github.com/aydenstechdungeon/gospa/plugin/tailwind"
 )
 
 // Cached file hashes for ETags - computed once at startup for static files

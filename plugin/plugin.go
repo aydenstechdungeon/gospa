@@ -177,7 +177,7 @@ func Register(p Plugin) error {
 
 	name := p.Name()
 	if _, exists := registry[name]; exists {
-		return fmt.Errorf("plugin %q is already registered", name)
+		return nil
 	}
 
 	registry[name] = &registryEntry{

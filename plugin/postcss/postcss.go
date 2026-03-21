@@ -986,3 +986,9 @@ func CriticalCSSWithFallback(path, fallback string) string {
 
 // Ensure PostCSSPlugin implements CLIPlugin interface.
 var _ plugin.CLIPlugin = (*PostCSSPlugin)(nil)
+
+func init() {
+	if err := plugin.Register(New()); err != nil {
+		panic("failed to register postcss plugin: " + err.Error())
+	}
+}

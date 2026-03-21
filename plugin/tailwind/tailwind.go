@@ -341,3 +341,9 @@ func formatContentArray(paths []string) string {
 
 // Ensure TailwindPlugin implements CLIPlugin interface.
 var _ plugin.CLIPlugin = (*TailwindPlugin)(nil)
+
+func init() {
+	if err := plugin.Register(New()); err != nil {
+		panic("failed to register tailwind plugin: " + err.Error())
+	}
+}

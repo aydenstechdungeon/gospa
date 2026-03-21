@@ -8,6 +8,12 @@ import (
 
 	"github.com/aydenstechdungeon/gospa"
 	"github.com/aydenstechdungeon/gospa/cli"
+
+	// Register built-in plugins
+	_ "github.com/aydenstechdungeon/gospa/plugin/image"
+	_ "github.com/aydenstechdungeon/gospa/plugin/postcss"
+	_ "github.com/aydenstechdungeon/gospa/plugin/qrcode"
+	_ "github.com/aydenstechdungeon/gospa/plugin/tailwind"
 )
 
 func main() {

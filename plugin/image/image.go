@@ -14,6 +14,7 @@ import (
 
 	"github.com/aydenstechdungeon/gospa/plugin"
 	"golang.org/x/image/draw"
+
 	// Register WebP decoder for image.Decode()
 	_ "golang.org/x/image/webp"
 )
@@ -224,6 +225,11 @@ func (p *ImagePlugin) optimizeAllImages(projectDir string) error {
 	// Ensure output directory exists
 	if err := os.MkdirAll(outDir, 0750); err != nil {
 		return fmt.Errorf("failed to create output directory: %w", err)
+	}
+
+	// Skip if source directory doesn't exist
+	if _, err := os.Stat(srcDir); os.IsNotExist(err) {
+		return nil
 	}
 
 	// Walk source directory
@@ -441,3 +447,9 @@ func (p *ImagePlugin) GetConfig() *Config {
 
 // Ensure ImagePlugin implements CLIPlugin interface.
 var _ plugin.CLIPlugin = (*ImagePlugin)(nil)
+
+func init() {
+	if err := plugin.Register(New(nil)); err != nil {
+		panic("failed to register image plugin: " + err.Error())
+	}
+}
