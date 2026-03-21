@@ -37,7 +37,7 @@ WORKDIR /build
 # Order matters: Go modules first as they change less often than Bun modules.
 COPY go.mod go.sum ./
 COPY website/go.mod website/go.sum ./website/
-RUN go mod download
+RUN go mod download && cd website && go mod download
 
 # 2. Bun dependencies caching
 COPY website/package.json website/bun.lock ./website/
