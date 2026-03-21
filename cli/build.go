@@ -181,11 +181,11 @@ func buildClientRuntime(config *BuildConfig, summary *BuildSummary) error {
 	}
 
 	// Run bun build
-	//nolint:gosec // bunPath is safe executable from LookPath
 	args := []string{"build", entryPoint, "--outfile", outputPath}
 	if config.Minify {
 		args = append(args, "--minify")
 	}
+	//nolint:gosec // bunPath is safe executable from LookPath
 	cmd := exec.Command(bunPath, args...)
 	cmd.Dir = clientDir
 	cmd.Stdout = os.Stdout
@@ -425,11 +425,7 @@ func formatFileSize(path string) string {
 	size := float64(info.Size())
 	units := []string{"B", "KB", "MB", "GB"}
 	unit := units[0]
-	for i := 0; i < len(units) && size >= 1024; i++ {
-		unit = units[i]
-		if size < 1024 || i == len(units)-1 {
-			break
-		}
+	for i := 0; i < len(units)-1 && size >= 1024; i++ {
 		size /= 1024
 		unit = units[i+1]
 	}

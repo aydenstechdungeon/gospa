@@ -297,15 +297,11 @@ func SafeAttr(s string) template.HTMLAttr {
 }
 
 // UnsafeHTML is an explicit alias for SafeHTML for code that prefers a clearer trust boundary.
-//
-//nolint:gosec // intentional for templ rendering
 func UnsafeHTML(s string) template.HTML {
 	return SafeHTML(s)
 }
 
 // UnsafeAttr is an explicit alias for SafeAttr for code that prefers a clearer trust boundary.
-//
-//nolint:gosec // intentional for templ rendering
 func UnsafeAttr(s string) template.HTMLAttr {
 	return SafeAttr(s)
 }

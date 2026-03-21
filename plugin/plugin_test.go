@@ -4,8 +4,8 @@ import "testing"
 
 type testPlugin struct{ name string }
 
-func (p testPlugin) Name() string { return p.name }
-func (p testPlugin) Init() error { return nil }
+func (p testPlugin) Name() string               { return p.name }
+func (p testPlugin) Init() error                { return nil }
 func (p testPlugin) Dependencies() []Dependency { return nil }
 
 func TestRegisterRejectsDuplicatePluginNames(t *testing.T) {
