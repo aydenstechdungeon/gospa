@@ -5,6 +5,69 @@ import { Rune, Derived, batch } from './state.ts';
 // or manually configure with setSanitizer() and a sanitizer like DOMPurify
 export let sanitizeHtml: (html: string) => string | Promise<string> = (html) => html;
 
+// === RAF-batched DOM Updates ===
+// Prevents layout thrashing by batching DOM writes to requestAnimationFrame
+let pendingDOMUpdates: (() => void)[] = [];
+let rafScheduled = false;
+let rafId: number | null = null;
+
+/**
+ * Schedule a DOM update to be batched in the next animation frame.
+ * This prevents layout thrashing when multiple updates happen synchronously.
+ */
+function scheduleDOMUpdate(update: () => void): void {
+	pendingDOMUpdates.push(update);
+	if (!rafScheduled) {
+		rafScheduled = true;
+		rafId = requestAnimationFrame(flushDOMUpdates);
+	}
+}
+
+/**
+ * Flush all pending DOM updates in a single animation frame.
+ */
+function flushDOMUpdates(): void {
+	const updates = pendingDOMUpdates;
+	pendingDOMUpdates = [];
+	rafScheduled = false;
+	rafId = null;
+
+	// Execute all updates in sequence
+	for (const update of updates) {
+		try {
+			update();
+		} catch (error) {
+			console.error('[GoSPA] DOM update failed:', error);
+		}
+	}
+}
+
+/**
+ * Cancel any pending RAF-batched DOM updates.
+ */
+export function cancelPendingDOMUpdates(): void {
+	if (rafId !== null) {
+		cancelAnimationFrame(rafId);
+		rafId = null;
+	}
+	pendingDOMUpdates = [];
+	rafScheduled = false;
+}
+
+/**
+ * Force immediate flush of all pending DOM updates.
+ * Use sparingly - prefer letting the RAF batching handle timing.
+ */
+export function flushDOMUpdatesNow(): void {
+	if (rafScheduled) {
+		if (rafId !== null) {
+			cancelAnimationFrame(rafId);
+			rafId = null;
+		}
+		flushDOMUpdates();
+	}
+}
+
 export function setSanitizer(fn: (html: string) => string | Promise<string>) {
 	sanitizeHtml = fn;
 }
@@ -74,105 +137,121 @@ async function updateElement(binding: Binding, value: unknown): Promise<void> {
 	const version = (elementVersions.get(element) || 0) + 1;
 	elementVersions.set(element, version);
 
-	switch (type) {
-		case 'text':
-			if (element instanceof HTMLElement || element instanceof SVGElement) {
-				element.textContent = String(transformedValue ?? '');
-			}
-			break;
-
-		case 'html':
-			if (element instanceof HTMLElement) {
-				// SECURITY: Sanitize HTML before setting innerHTML to prevent XSS
-				const sanitized = await sanitizeHtml(String(transformedValue ?? ''));
-
-				// Only update if no newer update has started
-				if (elementVersions.get(element) === version) {
-					element.innerHTML = sanitized;
+	// RAF-batch DOM updates to prevent layout thrashing
+	scheduleDOMUpdate(() => {
+		switch (type) {
+			case 'text':
+				if (element instanceof HTMLElement || element instanceof SVGElement) {
+					element.textContent = String(transformedValue ?? '');
 				}
-			}
-			break;
+				break;
 
-		case 'value':
-			if (element instanceof HTMLInputElement ||
-				element instanceof HTMLTextAreaElement ||
-				element instanceof HTMLSelectElement) {
-				if (element.value !== String(transformedValue ?? '')) {
-					element.value = String(transformedValue ?? '');
-				}
-			}
-			break;
-
-		case 'checked':
-			if (element instanceof HTMLInputElement) {
-				element.checked = Boolean(transformedValue);
-			}
-			break;
-
-		case 'class':
-			if (element instanceof Element) {
-				if (attribute) {
-					// Toggle specific class
-					if (transformedValue) {
-						element.classList.add(attribute);
+			case 'html':
+				if (element instanceof HTMLElement) {
+					// SECURITY: Sanitize HTML before setting innerHTML to prevent XSS
+					const htmlValue = String(transformedValue ?? '');
+					const sanitized = sanitizeHtml(htmlValue);
+					
+					// Handle both sync and async sanitizers
+					if (sanitized instanceof Promise) {
+						sanitized.then(result => {
+							// Only update if no newer update has started
+							if (elementVersions.get(element) === version) {
+								element.innerHTML = result;
+							}
+						}).catch((error: unknown) => {
+							console.error('[GoSPA] HTML sanitization failed:', error);
+						});
 					} else {
-						element.classList.remove(attribute);
-					}
-				} else if (typeof transformedValue === 'string') {
-					// Set class string
-					element.className = transformedValue;
-				} else if (Array.isArray(transformedValue)) {
-					// Set class array
-					element.className = transformedValue.join(' ');
-				} else if (typeof transformedValue === 'object' && transformedValue !== null) {
-					// Toggle classes by object
-					Object.entries(transformedValue as Record<string, boolean>).forEach(([cls, enabled]) => {
-						if (enabled) {
-							element.classList.add(cls);
-						} else {
-							element.classList.remove(cls);
+						// Only update if no newer update has started
+						if (elementVersions.get(element) === version) {
+							element.innerHTML = sanitized;
 						}
-					});
+					}
 				}
-			}
-			break;
+				break;
 
-		case 'style':
-			if (element instanceof HTMLElement || element instanceof SVGElement) {
+			case 'value':
+				if (element instanceof HTMLInputElement ||
+					element instanceof HTMLTextAreaElement ||
+					element instanceof HTMLSelectElement) {
+					if (element.value !== String(transformedValue ?? '')) {
+						element.value = String(transformedValue ?? '');
+					}
+				}
+				break;
+
+			case 'checked':
+				if (element instanceof HTMLInputElement) {
+					element.checked = Boolean(transformedValue);
+				}
+				break;
+
+			case 'class':
+				if (element instanceof Element) {
+					if (attribute) {
+						// Toggle specific class
+						if (transformedValue) {
+							element.classList.add(attribute);
+						} else {
+							element.classList.remove(attribute);
+						}
+					} else if (typeof transformedValue === 'string') {
+						// Set class string
+						element.className = transformedValue;
+					} else if (Array.isArray(transformedValue)) {
+						// Set class array
+						element.className = transformedValue.join(' ');
+					} else if (typeof transformedValue === 'object' && transformedValue !== null) {
+						// Toggle classes by object
+						Object.entries(transformedValue as Record<string, boolean>).forEach(([cls, enabled]) => {
+							if (enabled) {
+								element.classList.add(cls);
+							} else {
+								element.classList.remove(cls);
+							}
+						});
+					}
+				}
+				break;
+
+			case 'style':
+				if (element instanceof HTMLElement || element instanceof SVGElement) {
+					if (attribute) {
+						// Set specific style property
+						(element.style as unknown as Record<string, string>)[attribute] =
+							String(transformedValue ?? '');
+					} else if (typeof transformedValue === 'string') {
+						// Set style string
+						element.setAttribute('style', transformedValue);
+					} else if (typeof transformedValue === 'object' && transformedValue !== null) {
+						// Set styles by object
+						Object.entries(transformedValue as Record<string, string>).forEach(([prop, val]) => {
+							(element.style as unknown as Record<string, string>)[prop] = val;
+						});
+					}
+				}
+				break;
+
+			case 'attr':
 				if (attribute) {
-					// Set specific style property
-					(element.style as unknown as Record<string, string>)[attribute] =
-						String(transformedValue ?? '');
-				} else if (typeof transformedValue === 'string') {
-					// Set style string
-					element.setAttribute('style', transformedValue);
-				} else if (typeof transformedValue === 'object' && transformedValue !== null) {
-					// Set styles by object
-					Object.entries(transformedValue as Record<string, string>).forEach(([prop, val]) => {
-						(element.style as unknown as Record<string, string>)[prop] = val;
-					});
+					if (transformedValue === null || transformedValue === undefined || transformedValue === false) {
+						element.removeAttribute(attribute);
+					} else if (transformedValue === true) {
+						element.setAttribute(attribute, '');
+					} else {
+						element.setAttribute(attribute, String(transformedValue));
+					}
 				}
-			}
-			break;
+				break;
 
-		case 'attr':
-			if (attribute) {
-				if (transformedValue === null || transformedValue === undefined || transformedValue === false) {
-					element.removeAttribute(attribute);
-				} else if (transformedValue === true) {
-					element.setAttribute(attribute, '');
-				} else {
-					element.setAttribute(attribute, String(transformedValue));
+			case 'prop':
+				if (attribute && element instanceof HTMLElement) {
+					(element as unknown as Record<string, unknown>)[attribute] = transformedValue;
 				}
-			}
-			break;
-
-		case 'prop':
-			if (attribute && element instanceof HTMLElement) {
-				(element as unknown as Record<string, unknown>)[attribute] = transformedValue;
-			}
-			break;
-	}
+				break;
+		}
+	});
 }
 
 // Bind a rune to an element

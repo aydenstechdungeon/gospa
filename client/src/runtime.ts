@@ -97,3 +97,76 @@ export {
 
 // Export types
 export type { NavigateOptions, NavigationOptions, StateMessage };
+
+// === New Runtime Enhancements ===
+
+// Signal-based reactivity (proxy-based auto-tracking)
+export {
+	reactive,
+	derived,
+	effect as signalEffect,
+	watchProp,
+	toRaw,
+	isReactive,
+	reactiveArray
+} from './signals.ts';
+
+// RAF-batched DOM updates
+export {
+	cancelPendingDOMUpdates,
+	flushDOMUpdatesNow
+} from './dom.ts';
+
+// Error boundaries
+export {
+	withErrorBoundary,
+	createErrorFallback,
+	getErrorBoundaryState,
+	clearAllErrorBoundaries,
+	isInErrorState,
+	onComponentError
+} from './error-boundary.ts';
+
+// DevTools integration
+export {
+	createDevToolsPanel,
+	updateDevToolsPanel,
+	toggleDevTools
+} from './debug.ts';
+
+// WebSocket tab sharing (BroadcastChannel)
+export {
+	WSTabSync,
+	createTabSync,
+	getTabSync,
+	destroyTabSync
+} from './ws-tab-sync.ts';
+
+// IndexedDB persistence
+export {
+	IndexedDBPersistence,
+	createIndexedDBPersistence,
+	getIndexedDBPersistence,
+	destroyIndexedDBPersistence
+} from './indexeddb.ts';
+
+// Accessibility enhancements
+export {
+	ScreenReaderAnnouncer,
+	createAnnouncer,
+	getAnnouncer,
+	destroyAnnouncer,
+	announce,
+	aria,
+	focus
+} from './a11y.ts';
+
+// Performance monitoring
+export {
+	PerformanceMonitor,
+	createPerformanceMonitor,
+	getPerformanceMonitor,
+	destroyPerformanceMonitor,
+	measure,
+	measureAsync
+} from './performance.ts';
