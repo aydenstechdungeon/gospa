@@ -13,6 +13,8 @@ import (
 	"io"
 	"io/fs"
 	"log/slog"
+	"net"
+	"net/url"
 	"os"
 	"strings"
 	"sync"
@@ -200,6 +202,7 @@ type Config struct {
 	AllowedOrigins        []string // Allowed CORS origins
 	EnableCSRF            bool     // Enable automatic CSRF protection (requires CSRFSetTokenMiddleware + CSRFTokenMiddleware)
 	ContentSecurityPolicy string   // Optional CSP header. Empty uses the secure default policy.
+	PublicOrigin          string   // Explicit external origin used for generated WebSocket URLs. Empty derives from the request.
 	// SSGCacheMaxEntries caps the SSG/ISR/PPR page cache size. Oldest entries are evicted when full.
 	// Default: 500. Set to -1 to disable eviction (unbounded, not recommended in production).
 	SSGCacheMaxEntries int
@@ -262,25 +265,48 @@ func (a *App) getRuntimePath() string {
 
 // getWSUrl returns the WebSocket URL for the current request.
 func (a *App) getWSUrl(c fiberpkg.Ctx) string {
+	if publicOrigin := strings.TrimSpace(a.Config.PublicOrigin); publicOrigin != "" {
+		if parsed, err := url.Parse(publicOrigin); err == nil && parsed.Host != "" {
+			scheme := "ws"
+			if strings.EqualFold(parsed.Scheme, "https") {
+				scheme = "wss"
+			}
+			return scheme + "://" + parsed.Host + a.Config.WebSocketPath
+		}
+	}
+
 	protocol := "ws://"
-	// Check Protocol() which respects Fiber's ProxyHeader config,
-	// and fallback to checking X-Forwarded-Proto explicitly for common proxy setups.
 	if c.Protocol() == "https" || strings.ToLower(c.Get("X-Forwarded-Proto")) == "https" {
 		protocol = "wss://"
 	}
-	// SECURITY: Validate Host header to prevent HTTP Host header injection attacks.
-	// An attacker could send a malicious Host header to redirect WebSocket connections
-	// to an attacker-controlled server, potentially leaking session tokens or sensitive data.
-	host := string(c.Request().Host())
-	if host == "" || len(host) > 253 {
-		// Invalid or overly long Host header - use localhost as safe fallback
-		host = "localhost"
+
+	host := strings.TrimSpace(string(c.Request().Host()))
+	if validatedHost, ok := validatePublicHost(host); ok {
+		return protocol + validatedHost + a.Config.WebSocketPath
 	}
-	// Additional validation: reject hosts with suspicious patterns
-	if strings.Contains(host, "@") || strings.Contains(host, "://") {
-		host = "localhost"
+
+	return protocol + "localhost" + a.Config.WebSocketPath
+}
+
+func validatePublicHost(host string) (string, bool) {
+	if host == "" || len(host) > 253 || strings.Contains(host, "@") || strings.Contains(host, "://") {
+		return "", false
 	}
-	return protocol + host + a.Config.WebSocketPath
+
+	candidate := host
+	if !strings.Contains(candidate, ":") || strings.Count(candidate, ":") > 1 {
+		candidate = net.JoinHostPort(host, "80")
+	}
+
+	parsedHost, _, err := net.SplitHostPort(candidate)
+	if err != nil {
+		return "", false
+	}
+	if parsedHost == "" {
+		return "", false
+	}
+
+	return host, true
 }
 
 // ssgEntry holds a cached HTML page and when it was generated.
@@ -354,6 +380,9 @@ type App struct {
 // New creates a new GoSPA application.
 func New(config Config) *App {
 	// Apply defaults
+	if !config.EnableWebSocket && config.WebSocketPath == "" {
+		config.EnableWebSocket = true
+	}
 	if config.RoutesDir == "" {
 		config.RoutesDir = "./routes"
 	}

@@ -56,6 +56,7 @@ docs/
 
 ### Audits
 - [2026-03-12 Security & Performance Audit](08-audits/2026-03-12-security-performance-audit.md)
+- [2026-03-21 Security, Performance & Docs Audit](08-audits/2026-03-21-security-performance-docs-audit.md)
 
 ## Website Integration
 

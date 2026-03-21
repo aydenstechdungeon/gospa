@@ -94,6 +94,7 @@ export class SSEClient {
 	 * Connect to the SSE endpoint
 	 */
 	connect(): void {
+		this.validateConfiguration();
 		if (this.eventSource) {
 			this.log('Already connected or connecting');
 			return;
@@ -198,6 +199,15 @@ export class SSEClient {
 		return this.lastEventId;
 	}
 
+	private validateConfiguration(): void {
+		for (const key of Object.keys(this.config.headers)) {
+			const normalized = key.toLowerCase();
+			if (normalized === 'authorization' || normalized === 'x-api-key') {
+				throw new Error('SSE authentication headers are not supported because EventSource would expose them in the URL. Use same-origin cookies or a short-lived ticket instead.');
+			}
+		}
+	}
+
 	/**
 	 * Create the EventSource connection
 	 */
@@ -208,14 +218,6 @@ export class SSEClient {
 			if (this.lastEventId) {
 				url.searchParams.set('lastEventId', this.lastEventId);
 			}
-
-			// EventSource doesn't support custom headers, so we use query params
-			// for authentication if needed
-			Object.entries(this.config.headers).forEach(([key, value]) => {
-				if (key.toLowerCase() === 'authorization' || key.toLowerCase() === 'x-api-key') {
-					url.searchParams.set(key, value);
-				}
-			});
 
 			this.eventSource = new EventSource(url.toString());
 

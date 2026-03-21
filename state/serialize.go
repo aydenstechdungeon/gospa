@@ -6,6 +6,7 @@ import (
 	"bytes"
 	"fmt"
 	"reflect"
+	"runtime"
 	"sync"
 	"time"
 
@@ -17,6 +18,50 @@ type Serializable interface {
 	Serialize() ([]byte, error)
 }
 
+type stateNotification struct {
+	handler func(string, any)
+	key     string
+	value   any
+}
+
+var (
+	stateNotificationQueue chan stateNotification
+	stateDispatchOnce      sync.Once
+)
+
+func startStateNotificationDispatcher() {
+	stateDispatchOnce.Do(func() {
+		workerCount := runtime.GOMAXPROCS(0)
+		if workerCount < 2 {
+			workerCount = 2
+		}
+		stateNotificationQueue = make(chan stateNotification, 1024)
+		for range workerCount {
+			go func() {
+				for notification := range stateNotificationQueue {
+					safelyRunStateNotification(notification)
+				}
+			}()
+		}
+	})
+}
+
+func safelyRunStateNotification(notification stateNotification) {
+	defer func() {
+		_ = recover()
+	}()
+	notification.handler(notification.key, notification.value)
+}
+
+func enqueueStateNotification(notification stateNotification) {
+	startStateNotificationDispatcher()
+	select {
+	case stateNotificationQueue <- notification:
+	default:
+		safelyRunStateNotification(notification)
+	}
+}
+
 // StateMap is a collection of generic observables for component state
 //
 //nolint:revive // changing name would break API
@@ -26,11 +71,10 @@ type StateMap struct {
 	unsubscribes map[string]Unsubscribe
 	// OnChange is invoked when any state variable changes.
 	// DEADLOCK WARNING: OnChange must NOT call back into StateMap.Add, StateMap.Remove,
-	// or any method that acquires sm.mu. It is invoked inside a goroutine spawned by
-	// SubscribeAny, which runs after the mutex is released — but if your handler triggers
-	// a synchronous chain that calls back into Add/Remove on the SAME StateMap, you will
-	// deadlock. Safe operations inside OnChange: read sm.Get(), send on channels, call
-	// external callbacks. Unsafe: sm.Add(), sm.Remove(), sm.AddAny().
+	// or any method that acquires sm.mu. Notifications are dispatched outside the StateMap
+	// lock via a bounded worker queue, so slow handlers can apply backpressure but will not
+	// create an unbounded goroutine per state update. Safe operations inside OnChange: read
+	// sm.Get(), send on channels, call external callbacks. Unsafe: sm.Add(), sm.Remove(), sm.AddAny().
 	OnChange func(key string, value any)
 }
 
@@ -78,16 +122,11 @@ func (sm *StateMap) Add(name string, obs Observable) *StateMap {
 		handler := sm.OnChange
 		sm.mu.RUnlock()
 		if handler != nil {
-			// PERFORMANCE: Use goroutine to prevent blocking state updates
-			// The handler (e.g., WebSocket broadcast) may perform I/O operations
-			// that shouldn't delay the state notification chain
-			go func(h func(string, any), key string, value any) {
-				defer func() {
-					// Recover from panics in handler to prevent crashing the application
-					_ = recover()
-				}()
-				h(key, value)
-			}(handler, name, v)
+			enqueueStateNotification(stateNotification{
+				handler: handler,
+				key:     name,
+				value:   v,
+			})
 		}
 	})
 

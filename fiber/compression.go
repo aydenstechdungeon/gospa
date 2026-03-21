@@ -149,7 +149,7 @@ func BrotliGzipMiddleware(config CompressionConfig) gofiber.Handler {
 		}
 
 		// Skip if already encoded
-		if c.Get("Content-Encoding") != "" {
+		if string(c.Response().Header.Peek("Content-Encoding")) != "" {
 			return nil
 		}
 
