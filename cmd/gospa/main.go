@@ -60,6 +60,11 @@ func main() {
 		inputDir := fs.String("input-dir", ".", "Input directory to scan for routes and state")
 		_ = fs.Parse(os.Args[2:])
 		cli.Generate(&cli.GenerateConfig{OutputDir: *out, InputDir: *inputDir})
+	case "doctor":
+		fs := flag.NewFlagSet("doctor", flag.ExitOnError)
+		routesDir := fs.String("routes-dir", "./routes", "Routes directory to validate")
+		_ = fs.Parse(os.Args[2:])
+		cli.Doctor(&cli.DoctorConfig{RoutesDir: *routesDir})
 	case "clean":
 		cli.Clean()
 	default:
@@ -80,6 +85,7 @@ Commands:
   dev             Start the development server
   build           Build for production
   generate        Generate routes and client artifacts
+  doctor          Validate local project/tooling setup
   clean           Remove generated/build artifacts
   version         Print the CLI/framework version`)
 }

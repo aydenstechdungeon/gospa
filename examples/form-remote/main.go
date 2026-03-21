@@ -9,12 +9,13 @@ import (
 )
 
 func main() {
-	app := gospa.New(gospa.Config{
-		RoutesDir: "./routes",
-		DevMode:   true,
-		AppName:   "guestbook",
-		WebSocket: true, // Enable WebSocket for real-time updates
-	})
+	config := gospa.DefaultConfig()
+	config.RoutesDir = "./routes"
+	config.DevMode = true
+	config.AppName = "guestbook"
+	config.EnableWebSocket = true
+
+	app := gospa.New(config)
 
 	if err := app.Run(":3000"); err != nil {
 		log.Fatal(err)

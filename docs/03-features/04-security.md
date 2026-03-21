@@ -212,6 +212,7 @@ fetch('/api/action', {
 
 For production environments:
 
+- Start from `gospa.DefaultConfig()` and harden from there.
 - Set `DevMode: false`. Development mode leaks stack traces.
 - Configure `AllowedOrigins` for CORS. Avoid wildcard `*` domains.
 - Never place session identifiers in URL query parameters.

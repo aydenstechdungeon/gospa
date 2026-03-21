@@ -243,6 +243,33 @@ func DefaultConfig() Config {
 	}
 }
 
+// ProductionConfig returns an opinionated production-ready baseline.
+// It keeps the standard GoSPA runtime behavior while enabling practical
+// defaults for hardened deployments.
+func ProductionConfig() Config {
+	config := DefaultConfig()
+	config.DevMode = false
+	config.CacheTemplates = true
+	config.WSReconnectDelay = time.Second
+	config.WSMaxReconnect = 10
+	config.WSHeartbeat = 30 * time.Second
+	config.SSGCacheMaxEntries = 500
+	return config
+}
+
+// MinimalConfig returns a smaller baseline intended for simple apps or demos
+// that do not need realtime synchronization or advanced transport features.
+func MinimalConfig() Config {
+	config := DefaultConfig()
+	config.EnableWebSocket = false
+	config.CompressState = false
+	config.StateDiffing = false
+	config.WSReconnectDelay = 0
+	config.WSMaxReconnect = 0
+	config.WSHeartbeat = 0
+	return config
+}
+
 // getRuntimePath returns the versioned path for the runtime script.
 func (a *App) getRuntimePath() string {
 	if a.Config.RuntimeScript != "/_gospa/runtime.js" && a.Config.RuntimeScript != "" {

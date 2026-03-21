@@ -14,8 +14,10 @@ GoSPA is a Go-based SPA framework that brings Svelte-like reactive primitives to
 ## Prerequisites
 
 - Go 1.21 or later
-- Node.js 18+ (for client-side tooling)
+- Bun 1.0+ (for client-side runtime tooling)
 - Basic understanding of Go and TypeScript
+
+Use `gospa.DefaultConfig()` as your starting point in development, `gospa.ProductionConfig()` for hardened deployments, and `gospa.MinimalConfig()` when you want the smallest baseline.
 
 ## Installation
 
@@ -31,6 +33,7 @@ go install github.com/aydenstechdungeon/gospa/cmd/gospa@latest
 gospa create myapp
 cd myapp
 go mod tidy
+gospa doctor
 ```
 
 ### Project Structure
@@ -38,17 +41,14 @@ go mod tidy
 ```
 myapp/
 ├── main.go                 # Application entry point
-├── gospa.yaml              # Application configuration
 ├── go.mod                  # Go dependencies
 ├── routes/                 # Route definitions
-│   ├── root_layout.templ   # Root HTML shell (optional)
-│   ├── layout.templ        # Root-level layout (optional)
-│   ├── page.templ          # Home page
-│   └── generated_routes.go # Auto-generated routing
-├── components/             # Reusable .templ components (optional)
-├── lib/                    # Shared Go code (optional)
+│   ├── layout.templ        # Root-level layout scaffold
+│   └── page.templ          # Home page scaffold
 ├── static/                 # Static assets
-└── .gospa/                 # Framework cache
+│   └── css/
+│       └── style.css       # Starter styles
+└── .gitignore              # Common local build artifacts
 ```
 
 #### Layout Files
@@ -88,9 +88,9 @@ gospa dev
 ```
 
 This starts:
-- Go server with hot reload
-- TypeScript generation on file changes
-- WebSocket server for state sync
+- the Go development server with reload support
+- route/template generation as files change
+- the GoSPA runtime with WebSocket state sync enabled by default
 
 ### Build for Production
 
@@ -98,7 +98,7 @@ This starts:
 gospa build
 ```
 
-Creates optimized production build.
+Creates an optimized production build using the Go toolchain plus Bun-based client runtime steps when the project includes a client package.
 
 ## Your First Page
 
