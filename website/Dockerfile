@@ -25,7 +25,7 @@ WORKDIR /build
 COPY go.mod go.sum ./
 RUN go mod download
 COPY . .
-RUN go build -v -o /usr/local/bin/gospa ./cmd/gospa
+RUN CGO_ENABLED=0 go build -v -o /usr/local/bin/gospa ./cmd/gospa
 
 # ------------------------------------------------------------------------------
 # Stage 2: Website Assets & Server Build
