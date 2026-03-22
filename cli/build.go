@@ -11,6 +11,7 @@ import (
 	"path/filepath"
 	"runtime"
 	"strings"
+	"sync"
 	"syscall"
 
 	"github.com/aydenstechdungeon/gospa/plugin"
@@ -270,7 +271,9 @@ func copyStaticAssets(config *BuildConfig) (int, error) {
 		destPath := filepath.Join(destDir, relPath)
 		// Validate path is within expected directory to prevent traversal
 		cleanDestPath := filepath.Clean(destPath)
-		if !strings.HasPrefix(cleanDestPath, filepath.Clean(destDir)) {
+		cleanDestDir := filepath.Clean(destDir)
+		rel, err := filepath.Rel(cleanDestDir, cleanDestPath)
+		if err != nil || strings.HasPrefix(rel, "..") || filepath.IsAbs(rel) {
 			return fmt.Errorf("invalid destination path: %s", destPath)
 		}
 		if err := os.MkdirAll(filepath.Dir(cleanDestPath), 0750); err != nil {
@@ -300,7 +303,7 @@ func compressStaticAssets(config *BuildConfig) (int, error) {
 		return 0, nil
 	}
 
-	compressed := 0
+	var files []string
 	err := filepath.Walk(destDir, func(path string, info os.FileInfo, err error) error {
 		if err != nil {
 			return err
@@ -321,13 +324,40 @@ func compressStaticAssets(config *BuildConfig) (int, error) {
 			return nil
 		}
 
-		if err := compressFileGzip(path); err != nil {
-			return err
-		}
-		compressed++
+		files = append(files, path)
 		return nil
 	})
-	return compressed, err
+	if err != nil {
+		return 0, err
+	}
+
+	var compressed struct {
+		sync.Mutex
+		count int
+	}
+	var firstErr error
+	var errOnce sync.Once
+	var wg sync.WaitGroup
+	sem := make(chan struct{}, 10) // Concurrency limit of 10
+
+	for _, file := range files {
+		wg.Add(1)
+		sem <- struct{}{}
+		go func(path string) {
+			defer wg.Done()
+			defer func() { <-sem }()
+			if err := compressFileGzip(path); err != nil {
+				errOnce.Do(func() { firstErr = err })
+				return
+			}
+			compressed.Lock()
+			compressed.count++
+			compressed.Unlock()
+		}(file)
+	}
+	wg.Wait()
+
+	return compressed.count, firstErr
 }
 
 func compressFileGzip(path string) error {

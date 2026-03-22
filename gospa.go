@@ -404,9 +404,15 @@ type App struct {
 	pprShellBuilding sync.Map
 }
 
-// New creates a new GoSPA application.
+var defaultApp *App
+
+// New creates a new GoSPA application with the given configuration.
+// It initializes the router, fiber app, and plugins.
 func New(config Config) *App {
-	// Apply defaults
+	// Set defaults
+	if config.AppName == "" {
+		config.AppName = "GoSPA Application"
+	}
 	if !config.EnableWebSocket && config.WebSocketPath == "" {
 		config.EnableWebSocket = true
 	}
@@ -1830,4 +1836,18 @@ func (a *App) Broadcast(message []byte) {
 // BroadcastState broadcasts a state update to all connected WebSocket clients.
 func (a *App) BroadcastState(key string, value interface{}) error {
 	return fiber.BroadcastState(a.Hub, key, value)
+}
+
+// Broadcast sends a JSON-marshaled message to all connected WebSocket clients
+// using the global implicit application instance.
+func Broadcast(message interface{}) error {
+	if defaultApp == nil || defaultApp.Hub == nil {
+		return fmt.Errorf("gospa app not initialized or websocket not enabled")
+	}
+	b, err := json.Marshal(message)
+	if err != nil {
+		return err
+	}
+	defaultApp.Hub.Broadcast <- b
+	return nil
 }

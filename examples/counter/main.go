@@ -3,7 +3,7 @@ package main
 import (
 	"log"
 
-	_ "counter/routes" // Import routes to trigger init()
+	_ "github.com/aydenstechdungeon/gospa/examples/counter/routes" // Import routes to trigger init()
 
 	"github.com/aydenstechdungeon/gospa"
 )

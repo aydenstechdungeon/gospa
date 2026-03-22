@@ -1004,15 +1004,8 @@ func deepEqual(a, b interface{}) bool {
 		return deepEqual(av.Elem().Interface(), bv.Elem().Interface())
 	}
 
-	// Final fallback: JSON comparison for complex nested structures
-	// This should rarely be reached now that we handle structs, pointers, and interfaces
-	aJSON, err1 := json.Marshal(a)
-	bJSON, err2 := json.Marshal(b)
-	if err1 != nil || err2 != nil {
-		// String comparison as last resort
-		return fmt.Sprintf("%v", a) == fmt.Sprintf("%v", b)
-	}
-	return bytes.Equal(aJSON, bJSON)
+	// Final fallback: use pure reflection to handle complex nested structures without JSON allocations
+	return reflect.DeepEqual(a, b)
 }
 
 // Close closes the client connection.

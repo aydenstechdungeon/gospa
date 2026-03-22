@@ -4,7 +4,6 @@ package state
 
 import (
 	"bytes"
-	"fmt"
 	"reflect"
 	"runtime"
 	"sync"
@@ -257,8 +256,8 @@ func deepEqualValues(a, b interface{}) bool {
 		return a == b
 	}
 
-	// Type check - different types can't be equal
-	typeA, typeB := fmt.Sprintf("%T", a), fmt.Sprintf("%T", b)
+	// Use pure reflect DeepEqual for everything except simple primitives to avoid cycle crashes and JSON marshal allocations
+	typeA, typeB := reflect.TypeOf(a), reflect.TypeOf(b)
 	if typeA != typeB {
 		return false
 	}
@@ -323,24 +322,12 @@ func deepEqualValues(a, b interface{}) bool {
 		}
 		return true
 	case reflect.Map:
-		// Maps are not directly comparable - use JSON marshaling fallback
-		// This handles types like map[string]int, map[string]float64, etc.
-		aJSON, err1 := json.Marshal(a)
-		bJSON, err2 := json.Marshal(b)
-		if err1 != nil || err2 != nil {
-			return fmt.Sprintf("%v", a) == fmt.Sprintf("%v", b)
-		}
-		return bytes.Equal(aJSON, bJSON)
+		// Maps are not directly comparable via ==, use pure reflect DeepEqual
+		return reflect.DeepEqual(a, b)
 	}
 
-	// Final fallback: JSON comparison for other complex nested structures
-	aJSON, err1 := json.Marshal(a)
-	bJSON, err2 := json.Marshal(b)
-	if err1 != nil || err2 != nil {
-		// Fallback to string comparison
-		return fmt.Sprintf("%v", a) == fmt.Sprintf("%v", b)
-	}
-	return bytes.Equal(aJSON, bJSON)
+	// Final fallback: reflect.DeepEqual to handle complex nested structures natively without allocations
+	return reflect.DeepEqual(a, b)
 }
 
 // ForEach iterates over all observables in the state map

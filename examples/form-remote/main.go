@@ -3,7 +3,7 @@ package main
 import (
 	"log"
 
-	_ "form-remote/routes" // Import routes to trigger init()
+	_ "github.com/aydenstechdungeon/gospa/examples/form-remote/routes" // Import routes to trigger init()
 
 	"github.com/aydenstechdungeon/gospa"
 )

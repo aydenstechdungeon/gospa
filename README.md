@@ -18,6 +18,11 @@ GoSPA (Go Spa and Go S-P-A are the only valid pronunciations)  brings Svelte-lik
 
 ## Quick Start
 
+### 0. Prerequisites
+- **Go 1.21+**
+- **Bun**: Required for the SPA build process (CSS extraction, Vite optimization, JS bundling).
+- **`JWT_SECRET`**: Ensure this environment variable is set for production authentication contexts.
+
 ### 1. Install CLI
 ```bash
 go install github.com/aydenstechdungeon/gospa/cmd/gospa@latest

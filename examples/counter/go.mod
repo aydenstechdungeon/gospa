@@ -1,4 +1,4 @@
-module counter
+module github.com/aydenstechdungeon/gospa/examples/counter
 
 go 1.26.0
 

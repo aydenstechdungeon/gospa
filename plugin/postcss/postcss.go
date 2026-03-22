@@ -730,14 +730,36 @@ func (p *PostCSSPlugin) criticalCommand(args []string) error {
 		criticalSize = len(fullCSS) / 2
 	}
 
-	// Find the last closing brace before or at the cutoff point to ensure
-	// we don't split in the middle of a CSS rule
-	for criticalSize > 0 && criticalSize < len(fullCSS) && fullCSS[criticalSize-1] != '}' {
-		criticalSize--
+	// Safely split at brace depth 0 to avoid breaking media queries
+	splitPoint := -1
+	braceDepth := 0
+	inComment := false
+	for i := 0; i < len(fullCSS); i++ {
+		if i > 0 && fullCSS[i-1] == '/' && fullCSS[i] == '*' {
+			inComment = true
+		}
+		if i > 0 && fullCSS[i-1] == '*' && fullCSS[i] == '/' {
+			inComment = false
+		}
+		if !inComment {
+			if fullCSS[i] == '{' {
+				braceDepth++
+			} else if fullCSS[i] == '}' {
+				braceDepth--
+				if braceDepth == 0 && i >= criticalSize {
+					splitPoint = i + 1
+					break
+				}
+			}
+		}
 	}
 
-	criticalCSS := fullCSS[:criticalSize]
-	nonCriticalCSS := fullCSS[criticalSize:]
+	if splitPoint == -1 || splitPoint > len(fullCSS) {
+		splitPoint = len(fullCSS)
+	}
+
+	criticalCSS := fullCSS[:splitPoint]
+	nonCriticalCSS := fullCSS[splitPoint:]
 
 	// Use cleaned path to prevent path traversal
 	criticalOutputPath := filepath.Clean(p.config.CriticalCSS.CriticalOutput)

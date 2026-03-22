@@ -10,6 +10,13 @@ import (
 	"strings"
 )
 
+var (
+	rePkgName         = regexp.MustCompile(`[^a-zA-Z0-9]+`)
+	reDynamicParam    = regexp.MustCompile(`:([a-zA-Z]+)`)
+	reTemplFunc       = regexp.MustCompile(`func\s+([A-Z][a-zA-Z0-9]*)\s*\(([^)]*)\)\s*(?:\([^)]*templ\.Component[^)]*\)|templ\.Component)`)
+	reTemplFuncSimple = regexp.MustCompile(`func\s+([A-Z][a-zA-Z0-9]*)\s*\(([^)]*)\)\s*templ\.Component`)
+)
+
 // RouteInfo holds information about a discovered route.
 type RouteInfo struct {
 	FilePath     string      // Relative path to .templ file
@@ -150,7 +157,7 @@ func parseRoute(relPath, routesDir string) RouteInfo {
 		// Use the full path as package name (e.g., "blog" or "blogid")
 		// This ensures unique package names for nested routes
 		rawPkgName := strings.Join(pkgParts, "")
-		route.PackageName = regexp.MustCompile(`[^a-zA-Z0-9]+`).ReplaceAllString(rawPkgName, "")
+		route.PackageName = rePkgName.ReplaceAllString(rawPkgName, "")
 
 		// The import path is the relative directory path
 		route.ImportPath = dir
@@ -172,8 +179,7 @@ func parseRoute(relPath, routesDir string) RouteInfo {
 	route.URLPath = urlPath
 
 	// Extract all dynamic route params from URL path
-	re := regexp.MustCompile(`:([a-zA-Z]+)`)
-	matches := re.FindAllStringSubmatch(urlPath, -1)
+	matches := reDynamicParam.FindAllStringSubmatch(urlPath, -1)
 	for _, match := range matches {
 		if len(match) > 1 {
 			route.RouteParams = append(route.RouteParams, match[1])
@@ -201,12 +207,10 @@ func parseTemplGoFile(path string) (string, []FuncParam) {
 	// or: func FunctionName(...) (templ.Component, error) {
 
 	// First try to find function with templ.Component return type
-	re := regexp.MustCompile(`func\s+([A-Z][a-zA-Z0-9]*)\s*\(([^)]*)\)\s*(?:\([^)]*templ\.Component[^)]*\)|templ\.Component)`)
-	matches := re.FindStringSubmatch(contentStr)
+	matches := reTemplFunc.FindStringSubmatch(contentStr)
 	if len(matches) < 2 {
 		// Try simpler pattern for functions returning templ.Component directly
-		re = regexp.MustCompile(`func\s+([A-Z][a-zA-Z0-9]*)\s*\(([^)]*)\)\s*templ\.Component`)
-		matches = re.FindStringSubmatch(contentStr)
+		matches = reTemplFuncSimple.FindStringSubmatch(contentStr)
 	}
 
 	if len(matches) >= 2 {
@@ -346,7 +350,7 @@ func toPascalCase(s string) string {
 	}
 
 	// Split by non-alphanumeric
-	parts := regexp.MustCompile(`[^a-zA-Z0-9]+`).Split(s, -1)
+	parts := rePkgName.Split(s, -1)
 	var result strings.Builder
 	for _, part := range parts {
 		if part == "" {
