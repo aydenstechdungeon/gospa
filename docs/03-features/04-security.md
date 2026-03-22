@@ -269,8 +269,7 @@ Critical and High severity vulnerabilities are patched immediately with out-of-b
 
 If you discover a security vulnerability, please report it privately:
 
-- Email: security@gospa.dev
-- GitHub Security Advisories
+- Issues
 
 You'll receive an acknowledgment within 48 hours with an estimated resolution timeline.
 
