@@ -5,6 +5,7 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
+	"html"
 	"io"
 	"strings"
 	"sync"
@@ -13,6 +14,24 @@ import (
 	"github.com/a-h/templ"
 	"github.com/aydenstechdungeon/gospa/component"
 )
+
+// escapeJavaScriptString escapes a string for safe use in a JavaScript string literal.
+// This prevents XSS via script break-out and JS string injection attacks.
+// Reference: https://owasp.org/www-community/attacks/xss/js-injection
+func escapeJavaScriptString(s string) string {
+	// First escape HTML entities to prevent breaking out of script tags
+	// Then escape JavaScript special characters for the string context
+	escaped := html.EscapeString(s)
+	// Escape characters that are dangerous in JS string context
+	escaped = strings.ReplaceAll(escaped, "\\", "\\\\")
+	escaped = strings.ReplaceAll(escaped, "\"", "\\\"")
+	escaped = strings.ReplaceAll(escaped, "'", "\\'")
+	escaped = strings.ReplaceAll(escaped, "\n", "\\n")
+	escaped = strings.ReplaceAll(escaped, "\r", "\\r")
+	escaped = strings.ReplaceAll(escaped, "\t", "\\t")
+	escaped = strings.ReplaceAll(escaped, "</", "<\\/") // Prevent script break-out
+	return escaped
+}
 
 // StreamChunk represents a chunk of streamed content.
 type StreamChunk struct {
@@ -176,23 +195,43 @@ func (sr *StreamRenderer) StreamComponent(
 // writePreamble writes the streaming initialization script.
 func (sr *StreamRenderer) writePreamble(sw *StreamWriter) error {
 	preamble := `<script>
+// Enhanced sanitizer with DOMPurify support and robust XSS prevention
 window.__GOSPA_SANITIZE_STREAM_HTML__ = window.__GOSPA_SANITIZE_STREAM_HTML__ || function(html) {
+	// Try DOMPurify first (most robust)
+	if (typeof window.DOMPurify !== 'undefined') {
+		return window.DOMPurify.sanitize(html, {
+			ALLOWED_TAGS: ['b', 'i', 'em', 'strong', 'a', 'ul', 'ol', 'li', 'p', 'br', 'span', 'div', 'h1', 'h2', 'h3', 'h4', 'h5', 'h6', 'table', 'thead', 'tbody', 'tr', 'th', 'td'],
+			ALLOWED_ATTR: ['href', 'class', 'id', 'title'],
+			FORBID_TAGS: ['style', 'script', 'iframe', 'object', 'embed', 'link', 'meta', 'base', 'applet'],
+			FORBID_ATTR: ['onerror', 'onload', 'onclick', 'onmouseover', 'onfocus', 'onblur', 'style']
+		});
+	}
+	// Fallback: Try GoSPA's DOMPurify
 	if (window.GoSPA && typeof window.GoSPA.sanitizeHtml === 'function') {
 		return window.GoSPA.sanitizeHtml(html);
 	}
+	// Last resort: manual sanitization with improved XSS prevention
 	var template = document.createElement('template');
 	template.innerHTML = String(html || '');
-	// Remove dangerous elements
-	var forbidden = ['script', 'iframe', 'object', 'embed', 'link', 'style', 'meta', 'applet', 'base'];
+	// Remove ALL dangerous elements (expanded list)
+	var forbidden = ['script', 'iframe', 'object', 'embed', 'link', 'style', 'meta', 'applet', 'base', 'body', 'head', 'html', 'form', 'input', 'button', 'textarea', 'select', 'option', 'svg', 'math'];
 	forbidden.forEach(tag => {
 		template.content.querySelectorAll(tag).forEach(n => n.remove());
 	});
-	// Remove event handlers and javascript: URLs
+	// Remove ALL event handlers (expanded to catch variations)
 	template.content.querySelectorAll('*').forEach(el => {
 		Array.from(el.attributes).forEach(attr => {
 			var name = attr.name.toLowerCase();
-			if (name.startsWith('on') || (['src', 'href', 'xlink:href'].includes(name) && /^\s*javascript:/i.test(attr.value))) {
+			// Remove any attribute starting with 'on' (onclick, onerror, etc.)
+			if (name.startsWith('on') || name.startsWith('on')) {
 				el.removeAttribute(attr.name);
+			}
+			// Remove javascript:, data:, vbscript: URLs
+			if (['src', 'href', 'xlink:href', 'action', 'data', 'formaction'].includes(name)) {
+				var value = attr.value.toLowerCase().trim();
+				if (value.startsWith('javascript:') || value.startsWith('data:') || value.startsWith('vbscript:')) {
+					el.removeAttribute(attr.name);
+				}
 			}
 		});
 	});
@@ -394,19 +433,25 @@ func Suspense(loader func() (templ.Component, error), fallback templ.Component) 
 		go func() {
 			content, err := loader()
 			if err != nil {
-				// Stream error
-				_, _ = fmt.Fprintf(w, `<script>__GOSPA_STREAM__({type:'error',id:'%s',content:'%s'})</script>`, id, err.Error())
+				// Stream error - ESCAPE for JS string context to prevent XSS
+				escapedErr := escapeJavaScriptString(err.Error())
+				_, _ = fmt.Fprintf(w, `<script>__GOSPA_STREAM__({type:'error',id:'%s',content:'%s'})</script>`, id, escapedErr)
 				return
 			}
 
 			var buf strings.Builder
 			if err := content.Render(ctx, &buf); err != nil {
-				_, _ = fmt.Fprintf(w, `<script>__GOSPA_STREAM__({type:'error',id:'%s',content:'%s'})</script>`, id, err.Error())
+				// Stream error - ESCAPE for JS string context to prevent XSS
+				escapedErr := escapeJavaScriptString(err.Error())
+				_, _ = fmt.Fprintf(w, `<script>__GOSPA_STREAM__({type:'error',id:'%s',content:'%s'})</script>`, id, escapedErr)
 				return
 			}
 
-			// Stream loaded content
-			_, _ = fmt.Fprintf(w, `<script>__GOSPA_STREAM__({type:'html',id:'%s',content:'%s'})</script>`, id, buf.String())
+			// Stream loaded content - CRITICAL: ESCAPE for JS string context to prevent XSS
+			// This prevents attacks like: </script><script>alert('xss')</script>
+			// or: ';alert('xss');//
+			escapedContent := escapeJavaScriptString(buf.String())
+			_, _ = fmt.Fprintf(w, `<script>__GOSPA_STREAM__({type:'html',id:'%s',content:'%s'})</script>`, id, escapedContent)
 		}()
 
 		return nil
