@@ -153,7 +153,7 @@ func StateTree(stateFile string, usedPaths []string, jsonOut bool) {
 	// Load state from file or stdin
 	var stateData map[string]any
 	if stateFile != "" {
-		//nolint:gosec
+		// #nosec //nolint:gosec
 		data, err := os.ReadFile(stateFile)
 		if err != nil {
 			fmt.Fprintf(os.Stderr, "Error: failed to read state file: %v\n", err)

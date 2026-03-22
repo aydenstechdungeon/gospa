@@ -283,7 +283,7 @@ func (p *TailwindPlugin) watchWithContext() {
 		args = append(args, "--content", path)
 	}
 
-	cmd := exec.CommandContext(ctx, "bun", append([]string{"x"}, args...)...) //nolint:gosec
+	cmd := exec.CommandContext(ctx, "bun", append([]string{"x"}, args...)...) // #nosec //nolint:gosec
 	cmd.Stdout = os.Stdout
 	cmd.Stderr = os.Stderr
 
@@ -317,7 +317,7 @@ func (p *TailwindPlugin) compile() error {
 		args = append(args, "--minify")
 	}
 
-	cmd := exec.Command("bun", append([]string{"x"}, args...)...) //nolint:gosec
+	cmd := exec.Command("bun", append([]string{"x"}, args...)...) // #nosec //nolint:gosec
 	cmd.Stdout = os.Stdout
 	cmd.Stderr = os.Stderr
 

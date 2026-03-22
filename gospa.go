@@ -308,14 +308,14 @@ func (a *App) getWSUrl(c fiberpkg.Ctx) string {
 	}
 
 	host := strings.TrimSpace(string(c.Request().Host()))
-	if validatedHost, ok := validatePublicHost(host); ok {
+	if validatedHost, ok := a.validatePublicHost(host); ok {
 		return protocol + validatedHost + a.Config.WebSocketPath
 	}
 
 	return protocol + "localhost" + a.Config.WebSocketPath
 }
 
-func validatePublicHost(host string) (string, bool) {
+func (a *App) validatePublicHost(host string) (string, bool) {
 	if host == "" || len(host) > 253 || strings.Contains(host, "@") || strings.Contains(host, "://") {
 		return "", false
 	}
@@ -331,6 +331,15 @@ func validatePublicHost(host string) (string, bool) {
 	}
 	if parsedHost == "" {
 		return "", false
+	}
+
+	if a.Config.PublicOrigin != "" {
+		if parsedURL, err := url.Parse(a.Config.PublicOrigin); err == nil && parsedURL.Host != "" {
+			expectedHost := parsedURL.Hostname()
+			if !strings.EqualFold(parsedHost, expectedHost) {
+				return "", false
+			}
+		}
 	}
 
 	return host, true
@@ -363,7 +372,7 @@ func decodeSsgEntry(data []byte) (ssgEntry, bool) {
 	createdAtNano := binary.LittleEndian.Uint64(data[0:8])
 	return ssgEntry{
 		html:      data[8:],
-		createdAt: time.Unix(0, int64(createdAtNano)), //nolint:gosec
+		createdAt: time.Unix(0, int64(createdAtNano)), // #nosec //nolint:gosec G115
 	}, true
 }
 
@@ -1058,7 +1067,7 @@ func (a *App) renderRoute(c fiberpkg.Ctx, route *routing.Route) error {
 					// Use context.Background() with explicit timeout for ISR revalidation.
 					// This prevents goroutine leaks when the parent request is cancelled.
 					// The revalidation will complete independently of the original request.
-					go func() { //nolint:gosec // intentional: background revalidation uses independent context
+					go func() { // #nosec //nolint:gosec // intentional: background revalidation uses independent context
 						defer a.isrRevalidating.Delete(cacheKey)
 						// Limit concurrent revalidations with semaphore
 						select {

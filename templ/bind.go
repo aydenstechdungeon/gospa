@@ -284,14 +284,14 @@ func (cs *ComponentState) RenderBindings() templ.Attributes {
 
 // SafeHTML marks a string as trusted HTML. WARNING: never pass user-controlled content here.
 //
-//nolint:gosec // intentional for templ rendering
+// #nosec //nolint:gosec // intentional for templ rendering
 func SafeHTML(s string) template.HTML {
 	return template.HTML(s)
 }
 
 // SafeAttr marks a string as a trusted attribute value. WARNING: never pass user-controlled content here.
 //
-//nolint:gosec // intentional for templ rendering
+// #nosec //nolint:gosec // intentional for templ rendering
 func SafeAttr(s string) template.HTMLAttr {
 	return template.HTMLAttr(s)
 }

@@ -5,7 +5,7 @@ package auth
 import (
 	"crypto/hmac"
 	"crypto/rand"
-	"crypto/sha1" //nolint:gosec
+	"crypto/sha1" // #nosec //nolint:gosec
 	"crypto/sha256"
 	"crypto/subtle"
 	"encoding/base32"
@@ -1188,7 +1188,7 @@ func HashBackupCode(code string) string {
 // getEnabledProviders returns enabled OAuth providers.
 func (p *AuthPlugin) getEnabledProviders() []OAuthProvider {
 	providers := map[string]OAuthProvider{
-		"google": { //nolint:gosec
+		"google": { // #nosec //nolint:gosec
 			Name:         "Google",
 			ClientID:     p.config.GoogleClientID,
 			ClientSecret: p.config.GoogleClientSecret,
@@ -1197,7 +1197,7 @@ func (p *AuthPlugin) getEnabledProviders() []OAuthProvider {
 			UserURL:      "https://www.googleapis.com/oauth2/v2/userinfo",
 			Scopes:       []string{"openid", "email", "profile"},
 		},
-		"facebook": { //nolint:gosec
+		"facebook": { // #nosec //nolint:gosec
 			Name:         "Facebook",
 			ClientID:     p.config.FacebookClientID,
 			ClientSecret: p.config.FacebookClientSecret,
@@ -1206,7 +1206,7 @@ func (p *AuthPlugin) getEnabledProviders() []OAuthProvider {
 			UserURL:      "https://graph.facebook.com/me?fields=id,email,name,picture",
 			Scopes:       []string{"email", "public_profile"},
 		},
-		"github": { //nolint:gosec
+		"github": { // #nosec //nolint:gosec
 			Name:         "GitHub",
 			ClientID:     p.config.GitHubClientID,
 			ClientSecret: p.config.GitHubClientSecret,
@@ -1215,7 +1215,7 @@ func (p *AuthPlugin) getEnabledProviders() []OAuthProvider {
 			UserURL:      "https://api.github.com/user",
 			Scopes:       []string{"user:email"},
 		},
-		//nolint:gosec
+		// #nosec //nolint:gosec
 		"microsoft": {
 			Name:         "Microsoft",
 			ClientID:     p.config.MicrosoftClientID,
@@ -1225,7 +1225,7 @@ func (p *AuthPlugin) getEnabledProviders() []OAuthProvider {
 			UserURL:      "https://graph.microsoft.com/v1.0/me",
 			Scopes:       []string{"openid", "email", "profile"},
 		},
-		//nolint:gosec
+		// #nosec //nolint:gosec
 		"discord": {
 			Name:         "Discord",
 			ClientID:     p.config.DiscordClientID,
@@ -1244,7 +1244,7 @@ func (p *AuthPlugin) getEnabledProviders() []OAuthProvider {
 			UserURL:      "https://api.telegram.org/bot" + p.config.TelegramBotToken + "/getMe",
 			Scopes:       []string{},
 		},
-		//nolint:gosec
+		// #nosec //nolint:gosec
 		"twitter": {
 			Name:         "Twitter",
 			ClientID:     p.config.TwitterClientID,
@@ -1377,7 +1377,7 @@ func (p *AuthPlugin) VerifyOTP(secret, code string) bool {
 
 // generateOTP generates a TOTP code.
 //
-//nolint:gosec // intentional conversion for bit operations
+// #nosec //nolint:gosec // intentional conversion for bit operations
 func (p *AuthPlugin) generateOTP(key []byte, counter int64) string {
 	mac := hmac.New(sha1.New, key)
 	c := uint64(counter)

@@ -58,7 +58,7 @@ func main() {
 
 	// Start the server
 	fmt.Println("🚀 Starting server...")
-	//nolint:gosec
+	// #nosec //nolint:gosec
 	cmd := exec.Command(serverPath)
 	cmd.Dir = serverDir
 
@@ -496,7 +496,7 @@ func runBenchmark(url string, concurrent int, totalRequests int) BenchmarkStats 
 func makeRequest(url string, results chan<- RequestResult) {
 	start := time.Now()
 
-	resp, err := http.Get(url) //nolint:gosec // intentional for benchmarking
+	resp, err := http.Get(url) // #nosec //nolint:gosec // intentional for benchmarking
 	if err != nil {
 		results <- RequestResult{
 			StatusCode: 0,

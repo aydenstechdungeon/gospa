@@ -343,7 +343,7 @@ func (sp *StatePruner) Prune() (*PruningReport, error) {
 // pruneFile removes unused state from a single file.
 func (sp *StatePruner) pruneFile(path string, usages []StateUsage) error {
 	// Read the file
-	//nolint:gosec
+	// #nosec //nolint:gosec
 	content, err := os.ReadFile(path)
 	if err != nil {
 		return fmt.Errorf("failed to read file: %w", err)
@@ -378,7 +378,7 @@ func (sp *StatePruner) pruneFile(path string, usages []StateUsage) error {
 
 	output := strings.Join(lines, "\n")
 	// Use filepath.Clean to prevent path traversal - outputPath is derived from safe paths within project
-	//nolint:gosec // outputPath is calculated from safe relative paths within the project
+	// #nosec //nolint:gosec // outputPath is calculated from safe relative paths within the project
 	if err := os.WriteFile(filepath.Clean(outputPath), []byte(output), 0600); err != nil {
 		return fmt.Errorf("failed to write file: %w", err)
 	}

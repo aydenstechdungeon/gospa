@@ -417,17 +417,7 @@ func getGitUsername() string {
 		}
 	}
 
-	// Try git config user.email as fallback
-	cmd = exec.Command("git", "config", "user.email")
-	if output, err := cmd.Output(); err == nil {
-		email := strings.TrimSpace(string(output))
-		if email != "" {
-			// Extract username from email (part before @)
-			if atIndex := strings.Index(email, "@"); atIndex > 0 {
-				return email[:atIndex]
-			}
-		}
-	}
+	// Fallback to default (we deliberately skip using user.email to avoid generating invalid missing github prefixes like "admin/myapp")
 
 	// Fallback to default
 	return "yourusername"

@@ -186,7 +186,7 @@ func buildClientRuntime(config *BuildConfig, summary *BuildSummary) error {
 	if config.Minify {
 		args = append(args, "--minify")
 	}
-	//nolint:gosec // bunPath is safe executable from LookPath
+	// #nosec //nolint:gosec // bunPath is safe executable from LookPath
 	cmd := exec.Command(bunPath, args...)
 	cmd.Dir = clientDir
 	cmd.Stdout = os.Stdout
@@ -219,7 +219,7 @@ func buildGoBinary(config *BuildConfig) (string, error) {
 		".",
 	}
 
-	//nolint:gosec // args are safe static inputs
+	// #nosec //nolint:gosec // args are safe static inputs
 	cmd := exec.Command("go", args...)
 	cmd.Stdout = os.Stdout
 	cmd.Stderr = os.Stderr
@@ -281,13 +281,13 @@ func copyStaticAssets(config *BuildConfig) (int, error) {
 		}
 
 		// Copy file
-		//nolint:gosec
+		// #nosec //nolint:gosec
 		data, err := os.ReadFile(path)
 		if err != nil {
 			return err
 		}
 
-		//nolint:gosec // path validated above with strings.HasPrefix check
+		// #nosec //nolint:gosec // path validated above with strings.HasPrefix check
 		if err := os.WriteFile(cleanDestPath, data, info.Mode()); err != nil {
 			return err
 		}
@@ -361,14 +361,14 @@ func compressStaticAssets(config *BuildConfig) (int, error) {
 }
 
 func compressFileGzip(path string) error {
-	//nolint:gosec
+	// #nosec //nolint:gosec
 	input, err := os.Open(path)
 	if err != nil {
 		return err
 	}
 	defer func() { _ = input.Close() }()
 
-	//nolint:gosec
+	// #nosec //nolint:gosec
 	output, err := os.Create(path + ".gz")
 	if err != nil {
 		return err
@@ -503,7 +503,7 @@ func Clean() {
 				return nil
 			}
 			// Remove the cleaned path
-			//nolint:gosec // clean command is intended to remove files identified during walk; path validated with filepath.Abs
+			// #nosec //nolint:gosec // clean command is intended to remove files identified during walk; path validated with filepath.Abs
 			if err := os.Remove(absPath); err != nil {
 				fmt.Fprintf(os.Stderr, "Failed to remove %s: %v\n", cleanPath, err)
 			} else {

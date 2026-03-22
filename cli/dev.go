@@ -262,13 +262,19 @@ func (w *DevWatcher) scanDir(dir string) error {
 			return err
 		}
 
-		if !info.IsDir() {
-			// Ignore generated files
-			if strings.HasSuffix(path, "generated_routes.go") || strings.HasPrefix(filepath.Base(path), "_") {
-				return nil
+		if info.IsDir() {
+			name := info.Name()
+			if name == "node_modules" || name == ".git" || name == ".bin" || name == "dist" {
+				return filepath.SkipDir
 			}
-			w.fileTimes[path] = info.ModTime()
+			return nil
 		}
+
+		// Ignore generated files
+		if strings.HasSuffix(path, "generated_routes.go") || strings.HasPrefix(filepath.Base(path), "_") {
+			return nil
+		}
+		w.fileTimes[path] = info.ModTime()
 
 		return nil
 	})
@@ -282,6 +288,10 @@ func (w *DevWatcher) checkDir(dir string) {
 		}
 
 		if info.IsDir() {
+			name := info.Name()
+			if name == "node_modules" || name == ".git" || name == ".bin" || name == "dist" {
+				return filepath.SkipDir
+			}
 			return nil
 		}
 
@@ -317,14 +327,16 @@ func (w *DevWatcher) checkDir(dir string) {
 		fmt.Fprintf(os.Stderr, "Warning: watcher directory walk error: %v\n", err)
 	}
 
-	// Check for deleted files
+	// Check for deleted files - scoped strictly to the current scanned directory tree
 	for path := range w.fileTimes {
-		if _, err := os.Stat(path); os.IsNotExist(err) {
-			delete(w.fileTimes, path)
-			w.Events <- FileEvent{
-				File:    path,
-				Op:      FileOpDelete,
-				ModTime: time.Now(),
+		if strings.HasPrefix(path, dir+string(filepath.Separator)) || path == dir || filepath.Dir(path) == dir {
+			if _, err := os.Stat(path); os.IsNotExist(err) {
+				delete(w.fileTimes, path)
+				w.Events <- FileEvent{
+					File:    path,
+					Op:      FileOpDelete,
+					ModTime: time.Now(),
+				}
 			}
 		}
 	}

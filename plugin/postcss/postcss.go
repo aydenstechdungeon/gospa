@@ -529,7 +529,7 @@ func (p *PostCSSPlugin) watchWithContext(projectDir string) {
 			args = append(args, "--map")
 		}
 
-		cmd := exec.CommandContext(ctx, "bun", append([]string{"x"}, args...)...) //nolint:gosec
+		cmd := exec.CommandContext(ctx, "bun", append([]string{"x"}, args...)...) // #nosec //nolint:gosec
 		cmd.Dir = projectDir
 		cmd.Stdout = os.Stdout
 		cmd.Stderr = os.Stderr
@@ -573,7 +573,7 @@ func (p *PostCSSPlugin) compile(projectDir string) error {
 		args = append(args, "--map")
 	}
 
-	cmd := exec.Command("bun", append([]string{"x"}, args...)...) //nolint:gosec
+	cmd := exec.Command("bun", append([]string{"x"}, args...)...) // #nosec //nolint:gosec
 	cmd.Stdout = os.Stdout
 	cmd.Stderr = os.Stderr
 
@@ -763,12 +763,12 @@ func (p *PostCSSPlugin) criticalCommand(args []string) error {
 
 	// Use cleaned path to prevent path traversal
 	criticalOutputPath := filepath.Clean(p.config.CriticalCSS.CriticalOutput)
-	if err := os.WriteFile(criticalOutputPath, criticalCSS, 0600); err != nil { //nolint:gosec // path from config, expected to be safe
+	if err := os.WriteFile(criticalOutputPath, criticalCSS, 0600); err != nil { // #nosec //nolint:gosec // path from config, expected to be safe
 		return fmt.Errorf("failed to write critical CSS: %w", err)
 	}
 
 	// Write non-critical CSS
-	if err := os.WriteFile(p.config.CriticalCSS.NonCriticalOutput, nonCriticalCSS, 0600); err != nil { //nolint:gosec // path from config, expected to be safe
+	if err := os.WriteFile(p.config.CriticalCSS.NonCriticalOutput, nonCriticalCSS, 0600); err != nil { // #nosec //nolint:gosec // path from config, expected to be safe
 		return fmt.Errorf("failed to write non-critical CSS: %w", err)
 	}
 
@@ -823,7 +823,7 @@ func (p *PostCSSPlugin) bundlesCommand(args []string) error {
 			args = append(args, "--map")
 		}
 
-		cmd := exec.Command("bun", append([]string{"x"}, args...)...) //nolint:gosec
+		cmd := exec.Command("bun", append([]string{"x"}, args...)...) // #nosec //nolint:gosec
 		cmd.Dir = projectDir
 		cmd.Stdout = os.Stdout
 		cmd.Stderr = os.Stderr
@@ -939,12 +939,12 @@ func (p *PostCSSPlugin) extractCriticalForBundle(projectDir string, bundle Bundl
 	nonCriticalCSS := fullCSS[criticalSize:]
 
 	// Write critical CSS
-	if err := os.WriteFile(cleanCriticalOutput, criticalCSS, 0600); err != nil { //nolint:gosec // path validated above
+	if err := os.WriteFile(cleanCriticalOutput, criticalCSS, 0600); err != nil { // #nosec //nolint:gosec // path validated above
 		return fmt.Errorf("failed to write critical CSS: %w", err)
 	}
 
 	// Write non-critical CSS
-	if err := os.WriteFile(cleanNonCriticalOutput, nonCriticalCSS, 0600); err != nil { //nolint:gosec // path validated above
+	if err := os.WriteFile(cleanNonCriticalOutput, nonCriticalCSS, 0600); err != nil { // #nosec //nolint:gosec // path validated above
 		return fmt.Errorf("failed to write non-critical CSS: %w", err)
 	}
 
@@ -958,7 +958,7 @@ func (p *PostCSSPlugin) extractCriticalForBundle(projectDir string, bundle Bundl
 // This can be used in your template files to inline critical CSS.
 func GenerateCriticalCSSHelper(projectDir, criticalCSSPath string) (string, error) {
 	fullPath := filepath.Join(projectDir, criticalCSSPath)
-	//nolint:gosec
+	// #nosec //nolint:gosec
 	css, err := os.ReadFile(fullPath)
 	if err != nil {
 		return "", fmt.Errorf("failed to read critical CSS: %w", err)
@@ -978,7 +978,7 @@ func GenerateAsyncCSSScript(cssPath string) string {
 func CriticalCSS(path string) string {
 	// Try to read from the file system at runtime
 	// This allows the critical CSS to be extracted at build time and read at runtime
-	//nolint:gosec
+	// #nosec //nolint:gosec
 	css, err := os.ReadFile(path)
 	if err != nil {
 		// Return empty string if file doesn't exist (will be handled gracefully)
@@ -998,7 +998,7 @@ func AsyncCSS(path string) string {
 // or returns a fallback message if the file doesn't exist.
 // Useful for development where critical CSS might not be extracted yet.
 func CriticalCSSWithFallback(path, fallback string) string {
-	//nolint:gosec
+	// #nosec //nolint:gosec
 	css, err := os.ReadFile(path)
 	if err != nil {
 		return fallback

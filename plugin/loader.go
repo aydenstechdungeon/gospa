@@ -161,7 +161,7 @@ func (l *ExternalPluginLoader) download(owner, repo, version string) error {
 		return fmt.Errorf("git is not installed and archive extraction is not supported. Please install git to download plugins")
 	}
 
-	//nolint:gosec // pluginPath is validated by validatePluginName and validatePluginVersion
+	// #nosec //nolint:gosec // pluginPath is validated by validatePluginName and validatePluginVersion
 	resolvedRefCmd := exec.Command("git", "-C", pluginPath, "rev-parse", "HEAD")
 	resolvedRefOut, err := resolvedRefCmd.Output()
 	if err != nil {
@@ -311,6 +311,13 @@ func UninstallPlugin(name string) error {
 	// Parse the name to get owner/repo
 	owner, repo, _, err := ParsePluginRef(name)
 	if err != nil {
+		return err
+	}
+
+	if err := validatePluginName(owner); err != nil {
+		return err
+	}
+	if err := validatePluginName(repo); err != nil {
 		return err
 	}
 

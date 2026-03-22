@@ -3,8 +3,14 @@ import { Rune, Derived, batch } from "./state.ts";
 // Configurable sanitizer (defaults to passthrough - trust the server/Templ)
 // Sanitization is opt-in. For user-generated content, import from 'gospa/runtime-secure'
 // or manually configure with setSanitizer() and a sanitizer like DOMPurify
-export let sanitizeHtml: (html: string) => string | Promise<string> = (html) =>
-  html;
+let defaultSanitizerUsed = false;
+export let sanitizeHtml: (html: string) => string | Promise<string> = (html) => {
+  if (!defaultSanitizerUsed) {
+    console.warn("[GoSPA] Security Warning: Using default pass-through HTML sanitizer for data-bind=\"html:*\". For user-generated content, use 'gospa/runtime-secure' to enable DOMPurify.");
+    defaultSanitizerUsed = true;
+  }
+  return html;
+};
 
 // === RAF-batched DOM Updates ===
 // Prevents layout thrashing by batching DOM writes to requestAnimationFrame

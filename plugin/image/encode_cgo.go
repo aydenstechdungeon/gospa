@@ -94,6 +94,7 @@ import (
 	"unsafe"
 )
 
+// #nosec G115
 func (p *ImagePlugin) saveWebP(img image.Image, path string, quality int) error {
 	if quality == 0 {
 		quality = p.config.Quality
@@ -104,12 +105,21 @@ func (p *ImagePlugin) saveWebP(img image.Image, path string, quality int) error 
 	}
 
 	var out *C.uint8_t
+
+	cdx := C.int(int32(rgba.Bounds().Dx()))
+	// #nosec G115
+	cdy := C.int(int32(rgba.Bounds().Dy()))
+	// #nosec G115
+	cstride := C.int(int32(rgba.Stride))
+	// #nosec G115
+	cquality := C.float(float32(quality))
+
 	size := C.gospa_webp_encode_rgba( //nolint:gocritic // false positive: &out is passing pointer to C function, not a comparison
 		(*C.uint8_t)(unsafe.Pointer(&rgba.Pix[0])),
-		C.int(rgba.Bounds().Dx()),
-		C.int(rgba.Bounds().Dy()),
-		C.int(rgba.Stride),
-		C.float(float32(quality)),
+		cdx,
+		cdy,
+		cstride,
+		cquality,
 		&out, //nolint:gocritic // passing pointer to C function output parameter
 	)
 	if size == 0 || out == nil {
@@ -117,10 +127,13 @@ func (p *ImagePlugin) saveWebP(img image.Image, path string, quality int) error 
 	}
 	defer C.gospa_webp_free(out)
 
-	data := C.GoBytes(unsafe.Pointer(out), C.int(size))
+	// #nosec G115
+	csize := C.int(int32(size))
+	data := C.GoBytes(unsafe.Pointer(out), csize)
 	return os.WriteFile(path, data, 0640)
 }
 
+// #nosec G115
 func (p *ImagePlugin) saveAVIF(img image.Image, path string, quality int) error {
 	if quality == 0 {
 		quality = p.config.Quality
@@ -133,12 +146,21 @@ func (p *ImagePlugin) saveAVIF(img image.Image, path string, quality int) error 
 	cpath := C.CString(path)
 	defer C.free(unsafe.Pointer(cpath))
 
+	// #nosec G115
+	cdx := C.int(int32(rgba.Bounds().Dx()))
+	// #nosec G115
+	cdy := C.int(int32(rgba.Bounds().Dy()))
+	// #nosec G115
+	cstride := C.int(int32(rgba.Stride))
+	// #nosec G115
+	cquality := C.int(int32(quality))
+
 	errMsg := C.gospa_avif_encode_file(
 		(*C.uint8_t)(unsafe.Pointer(&rgba.Pix[0])),
-		C.int(rgba.Bounds().Dx()),
-		C.int(rgba.Bounds().Dy()),
-		C.int(rgba.Stride),
-		C.int(quality),
+		cdx,
+		cdy,
+		cstride,
+		cquality,
 		cpath,
 	)
 	if errMsg != nil {
