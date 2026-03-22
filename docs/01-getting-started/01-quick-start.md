@@ -13,9 +13,9 @@ GoSPA is a Go-based SPA framework that brings Svelte-like reactive primitives to
 
 ## Prerequisites
 
-- Go 1.21 or later
-- Bun 1.0+ (for client-side runtime tooling)
-- Basic understanding of Go and TypeScript
+- **Go 1.25+** (matches `go` directive in `go.mod`; use the latest stable toolchain)
+- **Bun** (for client runtime build, CSS, and JS checks in this repo)
+- Basic familiarity with Go and TypeScript
 
 Use `gospa.DefaultConfig()` as your starting point in development, `gospa.ProductionConfig()` for hardened deployments, and `gospa.MinimalConfig()` when you want the smallest baseline.
 

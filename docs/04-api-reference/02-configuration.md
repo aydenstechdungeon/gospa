@@ -1,6 +1,8 @@
 # GoSPA Configuration Reference
 
-Complete reference for all `gospa.Config` options. This is the single source of truth for configuring your GoSPA application.
+Complete reference for all `gospa.Config` options. **Source of truth in code:** `type Config struct` in [`gospa.go`](https://github.com/aydenstechdungeon/gospa/blob/main/gospa.go). This page describes defaults applied in `gospa.New`, presets (`DefaultConfig`, `ProductionConfig`, `MinimalConfig`), and usage patterns.
+
+**Website:** Topic pages at [gospa.onrender.com/docs/configuration](https://gospa.onrender.com/docs/configuration) mirror this content; edit the Markdown in this repo when updating docs.
 
 ## Quick Reference
 
@@ -25,6 +27,7 @@ app := gospa.New(gospa.Config{
 | `StaticDir` | `string` | `"./static"` | Directory for static files |
 | `StaticPrefix` | `string` | `"/static"` | URL prefix for static files |
 | `AppName` | `string` | `"GoSPA App"` | Application name (used in default layout) |
+| `Logger` | `*slog.Logger` | `slog.Default()` | Structured logger for framework and your handlers |
 
 ### State Options
 
@@ -42,10 +45,10 @@ app := gospa.New(gospa.Config{
 | `EnableWebSocket` | `bool` | `true` | Enable real-time state synchronization via WebSocket |
 | `WebSocketPath` | `string` | `"/_gospa/ws"` | Endpoint for WebSocket connections |
 | `WebSocketMiddleware` | `fiber.Handler` | `nil` | Middleware to run before WebSocket upgrade (for auth/sessions) |
-| `WSReconnectDelay` | `time.Duration` | `0` | Initial delay before reconnecting on failure |
-| `WSMaxReconnect` | `int` | `0` | Maximum number of reconnect attempts (0 for unlimited) |
-| `WSHeartbeat` | `time.Duration` | `0` | Interval for heartbeat messages to keep connection alive |
-| `WSMaxMessageSize` | `int` | `65536` | Maximum payload size for WebSocket messages (default 64KB) |
+| `WSReconnectDelay` | `time.Duration` | `0` in `DefaultConfig` | Passed to client; if zero when HTML is rendered, **1s** is injected. `ProductionConfig` sets **1s**. |
+| `WSMaxReconnect` | `int` | `0` in `DefaultConfig` | If ≤0 when HTML is rendered, **10** is injected. `ProductionConfig` sets **10**. |
+| `WSHeartbeat` | `time.Duration` | `0` in `DefaultConfig` | If zero when HTML is rendered, **30s** is injected. `ProductionConfig` sets **30s**. |
+| `WSMaxMessageSize` | `int` | `65536` | Maximum payload size for WebSocket messages (64KB) |
 | `WSConnRateLimit` | `float64` | `1.5` | Refilling rate in connections per second for WebSocket upgrades |
 | `WSConnBurst` | `float64` | `15.0` | Burst capacity for WebSocket connection upgrades |
 
@@ -105,8 +108,14 @@ app := gospa.New(gospa.Config{
 |--------|------|---------|-------------|
 | `AllowedOrigins` | `[]string` | `[]` | Allowed CORS origins |
 | `EnableCSRF` | `bool` | `true` | Enable automatic CSRF protection (wired by gospa.New) |
-| `ContentSecurityPolicy` | `string` | secure default | Optional CSP header; empty uses GoSPA's default policy |
-| `NavigationOptions` | `NavigationOptions` | Default | Advanced client-side navigation tuning |
+| `ContentSecurityPolicy` | `string` | built-in default | Optional CSP header; empty uses `fiber.DefaultContentSecurityPolicy` (`'self'` plus `'unsafe-inline'` for script and style—typical for GoSPA). Set explicitly to tighten. |
+| `PublicOrigin` | `string` | `""` | Public base URL (e.g. `https://app.example.com`) for stable WebSocket URLs behind proxies; empty derives from the request |
+
+### Navigation options (client)
+
+| Option | Type | Default | Description |
+|--------|------|---------|-------------|
+| `NavigationOptions` | `NavigationOptions` | zero | Optional tuning: speculative prefetch, URL parse cache, view transitions, service worker helpers, etc. See `gospa.NavigationOptions` in `gospa.go`. |
 
 ---
 
@@ -285,7 +294,7 @@ Use the lightweight runtime without DOMPurify sanitization. **Faster but less se
 SimpleRuntime: true,  // ~30% smaller runtime, no DOMPurify
 ```
 
-See [Runtime Selection Guide](./RUNTIME.md) for details.
+See [Client runtime](../03-features/01-client-runtime.md) for runtime variants.
 
 ### DisableSanitization
 
@@ -427,6 +436,14 @@ Enable automatic CSRF protection (wired by gospa.New). This is enabled by defaul
 EnableCSRF: true,
 ```
 
+### ContentSecurityPolicy
+
+Optional `Content-Security-Policy` header value. If empty, GoSPA uses **`fiber.DefaultContentSecurityPolicy`**: `default-src 'self'`, `frame-ancestors 'none'`, `object-src 'none'`, and **`'unsafe-inline'`** on `script-src` and `style-src` so inline state/bootstrap scripts work. Override with a stricter policy when your app allows it (see [Security](../03-features/04-security.md)).
+
+### PublicOrigin
+
+When set (e.g. `https://myapp.com`), WebSocket URLs in generated HTML use this origin’s host/scheme instead of inferring from the incoming request—useful behind reverse proxies or CDNs. Empty string keeps request-derived behavior via `getWSUrl`.
+
 ### NavigationOptions
 
 Fine-tune client-side navigation behavior for maximum performance.
@@ -441,30 +458,18 @@ NavigationOptions: gospa.NavigationOptions{
         Enabled: ptr(true),
         MaxSize: ptr(500),
     },
-    ProgressBar: &gospa.NavigationProgressBarConfig{
-        Enabled: ptr(true),
-        Color:   ptr("#22d3ee"),
-        Height:  ptr("3px"),
-    },
 }
 ```
 
-Available sub-configs:
+Available sub-configs (see `NavigationOptions` in `gospa.go`):
 - `SpeculativePrefetching`: Fetches links on hover/viewport entry.
 - `URLParsingCache`: Caches internal URL parsing results.
 - `IdleCallbackBatchUpdates`: Batches state updates during browser idle time.
 - `LazyRuntimeInitialization`: Defers boot logic until first interaction.
 - `ServiceWorkerNavigationCaching`: Offloads page caching to a Service Worker.
 - `ViewTransitions`: Enables the View Transitions API for smooth page fades.
-- `ProgressBar`: Configures the navigation progress bar (color, height, etc).
 
-### ProgressBar Options
-
-| Option | Type | Default | Description |
-|--------|------|---------|-------------|
-| `Enabled` | `bool` | `true` | Show/hide the progress bar during navigation |
-| `Color` | `string` | `"#3b82f6"` | CSS color for the progress bar |
-| `Height` | `string` | `"2px"` | CSS height for the progress bar |
+The TypeScript client also supports a **`progressBar`** option (defaults in `client/src/navigation.ts`). That field is **not** on the Go `NavigationOptions` struct yet; customize via client `setNavigationOptions` if you embed a custom runtime.
 
 ---
 

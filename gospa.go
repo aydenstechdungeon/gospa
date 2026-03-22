@@ -8,6 +8,7 @@ import (
 	"context"
 	"crypto/sha256"
 	"encoding/binary"
+	"errors"
 	"fmt"
 	"io"
 	"io/fs"
@@ -200,7 +201,7 @@ type Config struct {
 	// Security Options
 	AllowedOrigins        []string // Allowed CORS origins
 	EnableCSRF            bool     // Enable automatic CSRF protection (requires CSRFSetTokenMiddleware + CSRFTokenMiddleware)
-	ContentSecurityPolicy string   // Optional CSP header. Empty uses the secure default policy.
+	ContentSecurityPolicy string   // Optional CSP header. Empty uses fiber.DefaultContentSecurityPolicy.
 	PublicOrigin          string   // Explicit external origin used for generated WebSocket URLs. Empty derives from the request.
 	// SSGCacheMaxEntries caps the SSG/ISR/PPR page cache size. Oldest entries are evicted when full.
 	// Default: 500. Set to -1 to disable eviction (unbounded, not recommended in production).
@@ -238,7 +239,7 @@ func DefaultConfig() Config {
 		MaxRequestBodySize:    4 * 1024 * 1024, // Default 4MB
 		SerializationFormat:   SerializationJSON,
 		EnableCSRF:            true,
-		ContentSecurityPolicy: "default-src 'self'; base-uri 'self'; frame-ancestors 'none'; object-src 'none'; script-src 'self'; style-src 'self' 'unsafe-inline'; img-src 'self' data: blob: https:; font-src 'self' data:; connect-src 'self' ws: wss:; form-action 'self'",
+		ContentSecurityPolicy: fiber.DefaultContentSecurityPolicy,
 	}
 }
 
@@ -788,7 +789,15 @@ func (a *App) setupRoutes() {
 					"code":  "REQUEST_TOO_LARGE",
 				})
 			}
-			if err := json.Unmarshal(c.Body(), &input); err != nil {
+			var err error
+			input, err = decodeRemoteActionBody(body)
+			if err != nil {
+				if errors.Is(err, ErrJSONTooDeep) {
+					return c.Status(fiberpkg.StatusBadRequest).JSON(fiberpkg.Map{
+						"error": "JSON nesting too deep",
+						"code":  "JSON_TOO_DEEP",
+					})
+				}
 				return c.Status(fiberpkg.StatusBadRequest).JSON(fiberpkg.Map{
 					"error": "Invalid input JSON",
 					"code":  "INVALID_JSON",

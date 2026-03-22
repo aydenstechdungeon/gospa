@@ -2,11 +2,9 @@
 
 GoSPA provides two primary realtime communication mechanisms: **Server-Sent Events (SSE)** for one-way server-to-client updates, and **WebSockets** for full-duplex state synchronization.
 
----
+Implementation: `github.com/aydenstechdungeon/gospa/fiber` (`sse.go`).
 
 ## Server-Sent Events (SSE)
-
----
 
 ## Server-Side API
 
@@ -14,14 +12,11 @@ GoSPA provides two primary realtime communication mechanisms: **Server-Sent Even
 
 ```go
 type SSEConfig struct {
-    // EventBufferSize is the channel buffer for pending events per client (default: 100)
-    EventBufferSize int
-    // HeartbeatInterval is how often a keepalive comment is sent (default: 30s; 0 = disable)
-    HeartbeatInterval time.Duration
-    // OnConnect is called when a client connects
-    OnConnect func(client *SSEClient)
-    // OnDisconnect is called when a client disconnects
-    OnDisconnect func(client *SSEClient)
+    EventBufferSize   int                      // per-client channel buffer (default 100)
+    HeartbeatInterval time.Duration            // keepalive comments (default 30s; 0 = disable)
+    OnConnect         func(*SSEClient)
+    OnDisconnect      func(*SSEClient)
+    PubSub            store.PubSub             // optional; defaults to in-memory
 }
 ```
 
@@ -29,15 +24,16 @@ type SSEConfig struct {
 
 Creates a new SSE broker. Pass `nil` to use defaults.
 
-### `SetupSSE(app *fiber.App, broker *SSEBroker, prefix string, middleware ...fiber.Handler)`
+### `SetupSSE(app *fiber.App, broker *SSEBroker, basePath string, corsConfig *cors.Config)`
 
-Registers all SSE routes under a path prefix:
+Registers SSE routes under `basePath`. Pass **`nil`** for `corsConfig` if you do not need CORS middleware on the SSE group.
 
-| Route | Handler | Description |
-|-------|---------|-------------|
-| `GET  {prefix}/connect` | `SSEHandler` | Client opens EventSource connection |
-| `POST {prefix}/subscribe` | `SSESubscribeHandler` | Subscribe client to topics |
-| `POST {prefix}/unsubscribe` | `SSEUnsubscribeHandler` | Unsubscribe client from topics |
+| Route | Method | Description |
+|-------|--------|-------------|
+| `{basePath}/connect` | GET | EventSource stream; `clientId` query param selects/stores the client |
+| `{basePath}/subscribe` | POST | JSON body subscribes a client to topics |
+| `{basePath}/unsubscribe` | POST | JSON body unsubscribes |
+| `{basePath}/stats` | GET | JSON `{"clientCount": ...}` |
 
 ```go
 broker := fiber.NewSSEBroker(&fiber.SSEConfig{
@@ -47,39 +43,31 @@ broker := fiber.NewSSEBroker(&fiber.SSEConfig{
     },
 })
 
-fiber.SetupSSE(app.Fiber, broker, "/_sse")
+fiber.SetupSSE(app.Fiber, broker, "/_sse", nil)
 ```
 
 ### `SSEClient`
 
 ```go
 type SSEClient struct {
-    ID       string            // Unique client ID (UUID)
-    Topics   []string          // Currently subscribed topics
-    Metadata map[string]string // Arbitrary metadata (e.g. user ID, set on connect)
+    ID          string
+    Channel     chan SSEEvent
+    ConnectedAt time.Time
+    Metadata    map[string]any
+    Topics      map[string]bool
 }
 ```
 
-### Broker Methods
+### Broker methods
 
 ```go
-// Subscribe clientID to one or more topics
 broker.Subscribe(clientID string, topics ...string)
-
-// Unsubscribe clientID from one or more topics
 broker.Unsubscribe(clientID string, topics ...string)
-
-// Send an event to a single client
-broker.Send(clientID string, event SSEEvent) error
-
-// Broadcast an event to all connected clients
-broker.Broadcast(event SSEEvent)
-
-// Broadcast an event to all clients subscribed to a topic
-broker.BroadcastToTopic(topic string, event SSEEvent)
-
-// Disconnect a client
+broker.Send(clientID string, event SSEEvent) bool   // false if client missing / full
+broker.Broadcast(event SSEEvent) int                // number of clients notified
+broker.BroadcastToTopic(topic string, event SSEEvent) int
 broker.Disconnect(clientID string)
+broker.ClientCount() int
 ```
 
 ### `SSEEvent`
@@ -120,11 +108,7 @@ helper.Progress(clientID, 75, "Uploading...")
 
 > **IMPORTANT:** `SSESubscribeHandler` verifies that the target `clientId` is connected, but does **NOT** verify that the HTTP requester is that client. Any caller who knows another client's ID can subscribe it to arbitrary topics.
 >
-> Always place `SSESubscribeHandler` behind authentication middleware that validates the session identity matches the requested `clientId`:
->
-> ```go
-> fiber.SetupSSE(app.Fiber, broker, "/_sse", myAuthMiddleware)
-> ```
+> Always protect **subscribe/unsubscribe** HTTP handlers with authentication that ties the request to the `clientId` being modified. `SetupSSE` does not add auth for you—use Fiber groups/middleware around routes that need it, or validate inside your app before exposing `POST` subscribe URLs publicly.
 
 ---
 
@@ -187,7 +171,7 @@ func main() {
         },
     })
 
-    fiber.SetupSSE(app.Fiber, broker, "/_sse")
+    fiber.SetupSSE(app.Fiber, broker, "/_sse", nil)
 
     // Push an event from a background task
     go func() {
@@ -200,7 +184,7 @@ func main() {
         }
     }()
 
-    app.Listen(":3000")
+    _ = app.Run(":3000")
 }
 ```
 

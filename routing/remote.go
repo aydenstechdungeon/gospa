@@ -11,7 +11,9 @@ type RemoteContext struct {
 	UserAgent string
 	RequestID string
 	SessionID string
-	Headers   map[string]string
+	// Headers is an allowlist of tracing headers only (e.g. X-Request-Id, Traceparent).
+	// It does not include Authorization, Cookie, or other sensitive request headers.
+	Headers map[string]string
 }
 
 // RemoteActionFunc is a type-safe server function that can be called remotely from the client.

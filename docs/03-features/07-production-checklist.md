@@ -29,7 +29,7 @@ Why this baseline works:
 
 - Serve the app over HTTPS.
 - Ensure websocket connections upgrade over `wss://` in production.
-- Keep a strict `ContentSecurityPolicy` unless you have a documented exception.
+- Tighten `ContentSecurityPolicy` beyond the built-in default when your deployment allows it (the default allows inline script/style for typical GoSPA output; see `fiber.DefaultContentSecurityPolicy`).
 
 ## 4. Scale prefork safely
 
@@ -50,10 +50,11 @@ Recommended repo checks:
 ```bash
 bun check
 go test ./...
+govulncheck ./...
 ./scripts/validate-examples.sh
 ```
 
-If your app includes a client package, also run its Bun test/typecheck pipeline before tagging a release.
+`./scripts/quality-check.sh` runs a fuller suite (fmt, vet, staticcheck, golangci-lint, govulncheck, examples). Go packages under `client/node_modules` are excluded from `go test` / `go build` patterns in that script. If your app includes a client package, also run its Bun test/typecheck pipeline before tagging a release.
 
 ## 6. Release checklist
 

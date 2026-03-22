@@ -33,11 +33,32 @@ templ Page() {
 
 			<div>
 				<h3 class="text-xl font-bold mb-4 mono italic">gospa.DefaultConfig()</h3>
-				<p class="text-[var(--text-secondary)] mb-4">Returns a Config object with default values.</p>
+				<p class="text-[var(--text-secondary)] mb-4">Returns a Config object with default values (CSRF on, default CSP when empty, etc.).</p>
 				@components.CodeBlock(`config := gospa.DefaultConfig()
 config.AppName = "My Custom App"
 app := gospa.New(config)`, "go", "main.go")
 			</div>
+
+			<div>
+				<h3 class="text-xl font-bold mb-4 mono italic">gospa.ProductionConfig()</h3>
+				<p class="text-[var(--text-secondary)] mb-4">Opinionated baseline for production: template caching, WebSocket reconnect defaults, SSG cache cap. Start here and add <code class="mono">AllowedOrigins</code>, <code class="mono">RemoteActionMiddleware</code>, etc.</p>
+				@components.CodeBlock(`config := gospa.ProductionConfig()
+config.AllowedOrigins = []string{"https://example.com"}
+app := gospa.New(config)`, "go", "main.go")
+			</div>
+
+			<div>
+				<h3 class="text-xl font-bold mb-4 mono italic">gospa.MinimalConfig()</h3>
+				<p class="text-[var(--text-secondary)] mb-4">Disables WebSocket and compression-oriented features for simple SSR-style apps.</p>
+				@components.CodeBlock(`app := gospa.New(gospa.MinimalConfig())`, "go", "main.go")
+			</div>
+
+			<p class="text-sm text-[var(--text-muted)]">
+				Every <code class="mono">Config</code> field is documented in 
+				<a href="/docs/configuration" class="text-[var(--accent-primary)] hover:underline">Configuration</a> 
+				and in the 
+				<a href="https://github.com/aydenstechdungeon/gospa/blob/main/docs/04-api-reference/02-configuration.md" class="text-[var(--accent-primary)] hover:underline" rel="noopener noreferrer">repo Markdown</a>.
+			</p>
 		</section>
 
 		<section id="server-lifecycle" class="space-y-8">

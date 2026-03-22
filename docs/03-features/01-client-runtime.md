@@ -2,13 +2,22 @@
 
 GoSPA provides multiple runtime variants to balance security, performance, and bundle size. This guide helps you choose the right one.
 
+## Published npm packages
+
+The **`@gospa/client`** package [exports](https://github.com/aydenstechdungeon/gospa/blob/main/client/package.json) only:
+
+- `@gospa/client` → default runtime (`dist/runtime.js`)
+- `@gospa/client/runtime-secure` → DOMPurify-enabled runtime (`dist/runtime-secure.js`)
+
+Additional bundles (`runtime-core.js`, `runtime-micro.js`, `runtime-simple.js`) are built into `dist/` for **embedding** in the Go binary; they are **not** separate npm import paths unless you vendor the files.
+
 ## Runtime Variants
 
-### Default Runtime (`gospa`) — Recommended
+### Default Runtime (`@gospa/client`) — Recommended
 
-The default runtime trusts server-rendered HTML (Templ auto-escapes all content). No client-side sanitization is included by default.
+The default runtime trusts server-rendered HTML (Templ auto-escapes all content). No DOMPurify bundle is included by default.
 
-**File:** `runtime.js`
+**File (build output):** `runtime.js`
 
 **Features:**
 - Trust-the-server security model
@@ -32,11 +41,11 @@ import { init, Rune, navigate } from '@gospa/client';
 init();
 ```
 
-### Secure Runtime (`gospa/runtime-secure`)
+### Secure Runtime (`@gospa/client/runtime-secure`)
 
 The secure runtime includes DOMPurify for HTML sanitization. Use this when displaying user-generated content.
 
-**File:** `runtime-secure.js`
+**File (build output):** `runtime-secure.js`
 
 **Features:**
 - DOMPurify HTML sanitization
@@ -63,60 +72,31 @@ init();
 const cleanHtml = await sanitize(userComment);
 ```
 
-### Core Runtime (`gospa/core`)
+### Core bundle (`runtime-core.js`, embed / advanced)
 
-Minimal runtime without extra features. Use for custom implementations.
+Built from `client/src/runtime-core.ts`. Reactive primitives and wiring used by the default runtime; **not** a separate npm export.
 
-**File:** `runtime-core.js`
+**Typical use:** embedded scripts, custom bundling, or advanced setups—not the default app path.
 
-**Features:**
-- Reactive primitives only
-- No WebSocket, Navigation, or Transitions
-- No sanitization
+**Features (vs full default):** omits higher-level features bundled in `runtime.ts` (see source tree).
 
-**Size:**
-- Uncompressed: ~12 KB
-- Gzipped: ~5 KB
+### Micro bundle (`runtime-micro.js`, embed)
 
-**When to use:**
-- Custom runtime implementations
-- Library authors
-- When you need only reactive state
+Minimal state-focused bundle for **Web Workers** or experiments. **Not** a published npm entrypoint.
 
-### Micro Runtime (`gospa/micro`)
+### Simple runtime (`runtime-simple.js`, embed)
 
-Ultra-lightweight runtime for state-only applications.
-
-**File:** `runtime-micro.js`
-
-**Features:**
-- Reactive primitives only
-- No DOM operations
-- No sanitization
-
-**Size:**
-- Uncompressed: ~3 KB
-- Gzipped: ~1.5 KB
-
-**When to use:**
-- Web Workers
-- Node.js scripts
-- State-only applications
-
-### Simple Runtime (`gospa/simple`) — Deprecated
-
-⚠️ **DEPRECATED**: This runtime is deprecated and will be removed in v2.0. Use `gospa` (default) instead.
+Lightweight variant used when `SimpleRuntime: true` is configured server-side. Prefer the default runtime unless you explicitly need this embed.
 
 ---
 
 ## Security Model Comparison
 
-| Runtime | Sanitizer | Trust Model | Use Case |
-|---------|-----------|-------------|----------|
-| `gospa` (default) | None | Trust server (Templ) | Most apps with CSP |
-| `gospa/runtime-secure` | DOMPurify | Sanitize UGC | Apps with user-generated HTML |
-| `gospa/core` | None | Custom | Library authors |
-| `gospa/micro` | None | Custom | State-only |
+| Import / bundle | Sanitizer | Trust model | Use case |
+|-----------------|-----------|-------------|----------|
+| `@gospa/client` | None (optional `setSanitizer`) | Trust server (Templ) | Most apps with CSP |
+| `@gospa/client/runtime-secure` | DOMPurify | Sanitize UGC | User-generated HTML |
+| Embedded `runtime-core` / `micro` | Varies | Custom | Workers, embeds |
 
 ## When Do You Need Each Runtime?
 

@@ -37,7 +37,7 @@ func DocsLayout(children templ.Component, path string) templ.Component {
 		if templ_7745c5c3_Err != nil {
 			return templ_7745c5c3_Err
 		}
-		templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 2, "</div><div class=\"mt-16 pt-8 border-t border-[var(--border)] flex justify-between items-center text-sm\"><div class=\"text-[var(--text-muted)]\">Found a mistake? <a href=\"https://github.com/aydenstechdungeon/gospa\" class=\"text-[var(--accent-primary)] hover:underline\">Edit this page on GitHub</a></div><div class=\"text-[var(--text-muted)]\">Last updated: Feb 24, 2026</div></div></div>")
+		templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 2, "</div><div class=\"mt-16 pt-8 border-t border-[var(--border)] flex justify-between items-center text-sm\"><div class=\"text-[var(--text-muted)]\">Found a mistake? <a href=\"https://github.com/aydenstechdungeon/gospa\" class=\"text-[var(--accent-primary)] hover:underline\">Edit this page on GitHub</a></div><div class=\"text-[var(--text-muted)]\">Docs track the main branch; check commit date for freshness</div></div></div>")
 		if templ_7745c5c3_Err != nil {
 			return templ_7745c5c3_Err
 		}

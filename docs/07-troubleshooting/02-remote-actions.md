@@ -71,7 +71,7 @@ Remote actions must be registered before the server starts. Register them in `in
 ```
 
 ### Cause
-The request body isn't valid JSON.
+The request body isn't valid JSON (parse error), or the body failed decoding after the nesting check.
 
 ### Solution
 Ensure you're sending proper JSON:
@@ -88,6 +88,47 @@ fetch('/_gospa/remote/action', {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify({ name: "value" })  // Must stringify!
+})
+```
+
+## "JSON_TOO_DEEP" Error
+
+### Problem
+```json
+{
+    "error": "JSON nesting too deep",
+    "code": "JSON_TOO_DEEP"
+}
+```
+
+### Cause
+The remote action JSON body exceeds the maximum nesting depth (framework limit; currently **64** levels). Deeply nested objects are rejected before your handler runs.
+
+### Solution
+- Flatten payloads or split data across multiple actions.
+- Do not send adversarial or accidentally recursive JSON structures.
+
+## "REMOTE_AUTH_REQUIRED" Error (production)
+
+### Problem
+```json
+{
+    "error": "Remote actions require RemoteActionMiddleware in production",
+    "code": "REMOTE_AUTH_REQUIRED"
+}
+```
+
+### Cause
+With `DevMode: false`, GoSPA blocks remote actions unless you either configure **`RemoteActionMiddleware`** or set **`AllowUnauthenticatedRemoteActions: true`** (intentionally public endpoints only).
+
+### Solution
+```go
+app := gospa.New(gospa.Config{
+    DevMode: false,
+    RemoteActionMiddleware: func(c *fiber.Ctx) error {
+        // your auth / session check
+        return c.Next()
+    },
 })
 ```
 
@@ -156,14 +197,10 @@ Check browser dev tools:
 ## "unauthorized" Error (Global Remote Middleware)
 
 ### Problem
-```json
-{
-    "error": "unauthorized"
-}
-```
+Your **`RemoteActionMiddleware`** returned an unauthorized response (exact JSON depends on your handler).
 
 ### Cause
-A `RemoteActionMiddleware` blocked the request before the action handler ran.
+A `RemoteActionMiddleware` blocked the request before the action handler ran (e.g. missing session).
 
 ### Solution
 Make sure your middleware allows authenticated requests to continue:

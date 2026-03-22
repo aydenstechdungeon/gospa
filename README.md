@@ -19,7 +19,7 @@ GoSPA (Go Spa and Go S-P-A are the only valid pronunciations)  brings Svelte-lik
 ## Quick Start
 
 ### 0. Prerequisites
-- **Go 1.21+**
+- **Go 1.25+** (see `go.mod`; use a current stable toolchain)
 - **Bun**: Required for the SPA build process (CSS extraction, Vite optimization, JS bundling).
 - **`JWT_SECRET`**: Ensure this environment variable is set for production authentication contexts.
 
@@ -75,9 +75,18 @@ config.AppName = "myapp"
 
 For prefork deployments, add external `Storage` and `PubSub` backends so state and realtime traffic stay consistent across workers.
 
+## Security
+
+- **Vulnerability scanning (Go):** run `govulncheck ./...` regularly; the repo’s GitHub Actions workflow runs tests and govulncheck. For a full local gate, use `./scripts/quality-check.sh`.
+- **Auth plugin:** set `JWT_SECRET` in production. Production is inferred from `GOSPA_ENV`, `ENV` / `APP_ENV` / `GO_ENV`, or legacy `GIN_MODE`—see [Security](docs/03-features/04-security.md#auth-plugin-jwt-and-production-detection).
+- **CSP:** the default policy (`fiber.DefaultContentSecurityPolicy`) allows inline scripts and styles for typical GoSPA output. Override `ContentSecurityPolicy` when you need a stricter policy.
+
 ## Documentation
 
-Full guides and API reference are available at [gospa.onrender.com](https://gospa.onrender.com/docs), including the [production hardening checklist](docs/03-features/07-production-checklist.md), or in the `/docs` directory.
+- **Browse:** [gospa.onrender.com/docs](https://gospa.onrender.com/docs) (website)
+- **Authoritative Markdown:** [`docs/README.md`](docs/README.md) (table of contents for the `docs/` tree)
+- **Config & API:** [`docs/04-api-reference/02-configuration.md`](docs/04-api-reference/02-configuration.md), [`docs/04-api-reference/01-core-api.md`](docs/04-api-reference/01-core-api.md)
+- **Production:** [Production checklist](docs/03-features/07-production-checklist.md), [Security](docs/03-features/04-security.md)
 
 ---
 

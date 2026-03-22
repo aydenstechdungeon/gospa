@@ -282,7 +282,8 @@ func (cs *ComponentState) RenderBindings() templ.Attributes {
 	return attrs
 }
 
-// SafeHTML marks a string as trusted HTML. WARNING: never pass user-controlled content here.
+// SafeHTML marks a string as trusted HTML. WARNING: never pass user-controlled or DB-sourced
+// content here; misuse causes XSS. Prefer normal Templ interpolation, which escapes by default.
 //
 // #nosec //nolint:gosec // intentional for templ rendering
 func SafeHTML(s string) template.HTML {

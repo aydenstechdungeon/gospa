@@ -1,70 +1,84 @@
 # GoSPA Documentation
 
-This directory contains the complete documentation for GoSPA. The documentation is organized to guide users from their first steps through advanced topics.
+This directory is the **authoritative** Markdown documentation for GoSPA. The [documentation website](https://gospa.onrender.com/docs) renders curated pages from the same topics; when in doubt, **edit files here** and keep examples aligned with the current `gospa` module API.
+
+## How to use these docs
+
+1. **Start:** [Quick start](01-getting-started/01-quick-start.md) → [Tutorial](01-getting-started/02-tutorial.md)
+2. **Configure:** [Configuration reference](04-api-reference/02-configuration.md) (all `gospa.Config` fields)
+3. **API surface:** [Core API](04-api-reference/01-core-api.md) (packages) + [CLI](04-api-reference/03-cli.md) + [Plugins](04-api-reference/04-plugins.md)
+4. **Ship:** [Production checklist](03-features/07-production-checklist.md), [Deployment](03-features/06-deployment.md), [Security](03-features/04-security.md)
+5. **Debug:** [Troubleshooting](07-troubleshooting/) (runtime, WebSocket, remote actions, build)
 
 ## Structure
 
 ```
 docs/
-├── 01-getting-started/     # Installation and first steps
-├── 02-core-concepts/       # Essential concepts
-├── 03-features/            # Runtime, security, deployment, and production guides
-├── 04-api-reference/       # API documentation
-├── 05-advanced/            # Advanced topics
-├── 06-migration/           # Version migration guides
-├── 07-troubleshooting/     # Common production and developer issues
-└── 08-audits/              # Security and performance audit history
+├── 01-getting-started/     # Install and first app
+├── 02-core-concepts/       # Rendering, state, components, islands, routing
+├── 03-features/            # Client runtime, APIs, realtime, security, deployment
+├── 04-api-reference/       # Core API, configuration, CLI, plugins
+├── 05-advanced/            # Error handling, pruning
+├── 06-migration/           # Version migrations
+├── 07-troubleshooting/     # Operational fixes
+├── 08-audits/              # Audit history (not introductory reading)
+└── llms/                   # LLM-oriented exports (optional)
 ```
 
-## Quick Navigation
+## Quick navigation
 
-### Getting Started
-- [Quick Start](01-getting-started/01-quick-start.md) - Installation and first app
-- [Tutorial](01-getting-started/02-tutorial.md) - Build a todo app
+### Getting started
+- [Quick start](01-getting-started/01-quick-start.md)
+- [Tutorial](01-getting-started/02-tutorial.md)
 
-### Core Concepts
-- [Rendering](02-core-concepts/02-rendering.md) - SSR, SPA, and islands
-- [State](02-core-concepts/03-state.md) - Reactive state management
-- [Components](02-core-concepts/04-components.md) - Component system
-- [Islands](02-core-concepts/05-islands.md) - Partial hydration
-- [Routing](02-core-concepts/06-routing.md) - Route parameters and navigation
+### Core concepts
+- [Rendering](02-core-concepts/02-rendering.md)
+- [State](02-core-concepts/03-state.md)
+- [Components](02-core-concepts/04-components.md)
+- [Islands](02-core-concepts/05-islands.md)
+- [Routing](02-core-concepts/06-routing.md)
 
 ### Features
-- [Client Runtime](03-features/01-client-runtime.md) - Runtime variants and selection
-- [Runtime API](03-features/02-runtime-api.md) - Client-side API reference
-- [Realtime](03-features/03-realtime.md) - SSE and WebSocket
-- [Security](03-features/04-security.md) - Security model and CSP
-- [Dev Tools](03-features/05-dev-tools.md) - HMR and debugging
-- [Production Checklist](03-features/07-production-checklist.md) - Recommended production baseline
+- [Client runtime](03-features/01-client-runtime.md)
+- [Runtime API (TypeScript)](03-features/02-runtime-api.md)
+- [Realtime](03-features/03-realtime.md)
+- [Security](03-features/04-security.md)
+- [Dev tools](03-features/05-dev-tools.md)
+- [Deployment](03-features/06-deployment.md)
+- [Production checklist](03-features/07-production-checklist.md)
 
-### API Reference
-- [Core API](04-api-reference/01-core-api.md) - Go API documentation
-- [Configuration](04-api-reference/02-configuration.md) - Config options
-- [CLI](04-api-reference/03-cli.md) - Command line interface
-- [Plugins](04-api-reference/04-plugins.md) - Plugin system
+### API reference
+- [Core API (Go packages)](04-api-reference/01-core-api.md)
+- [Configuration (`gospa.Config`)](04-api-reference/02-configuration.md)
+- [CLI](04-api-reference/03-cli.md)
+- [Plugins](04-api-reference/04-plugins.md)
 
-### Advanced
-- [Error Handling](05-advanced/01-error-handling.md)
-- [State Pruning](05-advanced/02-state-pruning.md)
-
-### Migration
-- [v1 to v2](06-migration/01-v1-to-v2.md) - Migrating from v1.x to v2.0
+### Advanced & migration
+- [Error handling](05-advanced/01-error-handling.md)
+- [State pruning](05-advanced/02-state-pruning.md)
+- [v1 → v2 migration](06-migration/01-v1-to-v2.md)
 
 ### Troubleshooting
-- [Remote Actions](07-troubleshooting/02-remote-actions.md)
-- [WebSocket Connections](07-troubleshooting/03-websocket-connections.md)
-- [Build & Deployment](07-troubleshooting/07-build-deployment.md)
+- [Runtime initialization](07-troubleshooting/01-runtime-initialization.md)
+- [Remote actions](07-troubleshooting/02-remote-actions.md)
+- [WebSocket](07-troubleshooting/03-websocket-connections.md)
+- [HMR / dev server](07-troubleshooting/04-hmr-dev-server.md)
+- [Island hydration](07-troubleshooting/05-island-hydration.md)
+- [State sync](07-troubleshooting/06-state-synchronization.md)
+- [Build & deployment](07-troubleshooting/07-build-deployment.md)
 
 ### Audits
-- [2026-03-12 Security & Performance Audit](08-audits/2026-03-12-security-performance-audit.md)
-- [2026-03-21 Security, Performance & Docs Audit](08-audits/2026-03-21-security-performance-docs-audit.md)
+- [Security & performance audits](08-audits/)
 
-## Website Integration
+## Website (`/website`)
 
-This documentation structure is designed to be consumed by the GoSPA website. Each folder represents a documentation section, and files are ordered by their numerical prefix.
+The site under `website/` serves a browsable docs UI. Topic pages are hand-authored in `website/routes/docs/**` (Templ). **Keep them consistent** with this folder: when you change defaults (e.g. `gospa.Config`, security behavior), update both Markdown and the relevant Templ page.
 
-To render these docs on the website:
-1. Read `README.md` for structure
-2. Parse each section folder
-3. Render markdown files in numerical order
-4. Use frontmatter (if present) for metadata
+- Full narrative reference: **this `docs/` tree**
+- Guided navigation & SEO: **`website/`** routes
+
+## Contributing to documentation
+
+- Prefer **working code** in fenced blocks (match current import paths and `fiber/v3` APIs).
+- Link to **[Configuration](04-api-reference/02-configuration.md)** for `Config` fields instead of duplicating large structs in multiple files.
+- Run **`./scripts/quality-check.sh`** (or at least `go test ./...` and `bun check` in `client/`) before merging doc-only PRs that claim behavior.

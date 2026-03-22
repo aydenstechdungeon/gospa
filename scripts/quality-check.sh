@@ -64,6 +64,14 @@ while [[ $# -gt 0 ]]; do
   shift
 done
 
+# Exclude nested Go packages under client/node_modules (Bun-installed deps with go.mod).
+if [[ "$GO_TEST_PKGS" == "./..." ]]; then
+  GO_TEST_PKGS="$(go list ./... | grep -v node_modules | tr '\n' ' ')"
+fi
+if [[ "$GO_BUILD_PKGS" == "./..." ]]; then
+  GO_BUILD_PKGS="$(go list ./... | grep -v node_modules | tr '\n' ' ')"
+fi
+
 run_step() {
   local label="$1"
   shift

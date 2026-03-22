@@ -317,10 +317,15 @@ func PreloadHeadersMiddlewareMinimal(config PreloadConfig) gofiber.Handler {
 	}
 }
 
+// DefaultContentSecurityPolicy is the baseline CSP when gospa.Config.ContentSecurityPolicy is empty.
+// It balances safety (default-src 'self', no frames, limited object-src) with typical GoSPA/Templ output:
+// inline scripts (e.g. __GOSPA_STATE__) and inline styles use 'unsafe-inline'. Tighten via Config for high-risk apps.
+const DefaultContentSecurityPolicy = "default-src 'self'; base-uri 'self'; frame-ancestors 'none'; object-src 'none'; script-src 'self' 'unsafe-inline'; style-src 'self' 'unsafe-inline'; img-src 'self' data: blob: https:; font-src 'self' data:; connect-src 'self' ws: wss:; form-action 'self'"
+
 // SecurityHeadersMiddleware adds security headers.
 func SecurityHeadersMiddleware(policy string) gofiber.Handler {
 	if strings.TrimSpace(policy) == "" {
-		policy = "default-src 'self'; base-uri 'self'; frame-ancestors 'none'; object-src 'none'; script-src 'self' 'unsafe-inline'; style-src 'self' 'unsafe-inline'; img-src 'self' data: blob: https:; font-src 'self' data:; connect-src 'self' ws: wss:; form-action 'self'"
+		policy = DefaultContentSecurityPolicy
 	}
 	return func(c gofiber.Ctx) error {
 		if c.Protocol() == "https" || c.Get("X-Forwarded-Proto") == "https" {

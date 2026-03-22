@@ -156,6 +156,23 @@ func setOAuthStateCookie(c fiber.Ctx, provider, state string) {
 	})
 }
 
+// isProductionRuntime reports whether the process environment indicates a production deployment.
+// JWT_SECRET is required when this is true and [DefaultConfig] is used without an explicit [Config].
+// Recognized signals: GOSPA_ENV=production|prod, ENV/APP_ENV/GO_ENV=production (case-insensitive),
+// and GIN_MODE=release (legacy compatibility).
+func isProductionRuntime() bool {
+	switch strings.ToLower(strings.TrimSpace(os.Getenv("GOSPA_ENV"))) {
+	case "production", "prod":
+		return true
+	}
+	for _, key := range []string{"ENV", "APP_ENV", "GO_ENV"} {
+		if strings.EqualFold(strings.TrimSpace(os.Getenv(key)), "production") {
+			return true
+		}
+	}
+	return os.Getenv("GIN_MODE") == "release"
+}
+
 func clearOAuthStateCookie(c fiber.Ctx, provider string) {
 	secure := c.Protocol() == "https" || strings.EqualFold(c.Get("X-Forwarded-Proto"), "https")
 	c.Cookie(&fiber.Cookie{
@@ -361,10 +378,7 @@ func DefaultConfig() *Config {
 	// Check for JWT_SECRET environment variable
 	jwtSecret := os.Getenv("JWT_SECRET")
 
-	// In production (when not running in dev mode), require JWT_SECRET
-	isProduction := os.Getenv("GIN_MODE") == "release" || os.Getenv("ENV") == "production"
-
-	if jwtSecret == "" && isProduction {
+	if jwtSecret == "" && isProductionRuntime() {
 		panic("JWT_SECRET environment variable is not set. " +
 			"Generate a secure secret with: openssl rand -hex 32 " +
 			"and set it in your environment before starting the application in production.")
@@ -374,7 +388,10 @@ func DefaultConfig() *Config {
 	if jwtSecret == "" {
 		// Generate a random JWT secret for development only
 		// IMPORTANT: This should NEVER be used in production
-		randomSecret, _ := generateRandomSecret(32)
+		randomSecret, err := generateRandomSecret(32)
+		if err != nil {
+			panic("failed to generate JWT secret for development: " + err.Error())
+		}
 		return &Config{
 			JWTSecret:       randomSecret,
 			JWTExpiry:       24,

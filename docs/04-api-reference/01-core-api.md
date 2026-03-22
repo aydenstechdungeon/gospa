@@ -57,96 +57,86 @@ app.Static("/static", "./public")
 ```
 
 ### `Config`
-The `Config` struct defines the application's configuration.
+
+The `Config` struct is defined in [`gospa.go`](https://github.com/aydenstechdungeon/gospa/blob/main/gospa.go) as `type Config struct`. **Authoritative defaults, security notes, and examples** are in the **[Configuration reference](02-configuration.md)**.
+
+Presets:
+
+| Function | Purpose |
+|----------|---------|
+| `gospa.DefaultConfig()` | Sensible defaults (`EnableCSRF: true`, empty CSP → `fiber.DefaultContentSecurityPolicy`, etc.). |
+| `gospa.ProductionConfig()` | `DefaultConfig()` plus `CacheTemplates`, explicit WebSocket reconnect/heartbeat defaults, SSG cache cap. |
+| `gospa.MinimalConfig()` | WebSocket disabled; minimal transport for simple SSR apps. |
+
+#### All `Config` fields (index)
+
+| Field | Type |
+|-------|------|
+| `RoutesDir` | `string` |
+| `RoutesFS` | `fs.FS` |
+| `DevMode` | `bool` |
+| `RuntimeScript` | `string` |
+| `StaticDir` | `string` |
+| `StaticPrefix` | `string` |
+| `AppName` | `string` |
+| `DefaultState` | `map[string]interface{}` |
+| `EnableWebSocket` | `bool` |
+| `WebSocketPath` | `string` |
+| `WebSocketMiddleware` | `fiber.Handler` |
+| `Logger` | `*slog.Logger` |
+| `CompressState` | `bool` |
+| `StateDiffing` | `bool` |
+| `CacheTemplates` | `bool` |
+| `SimpleRuntime` | `bool` |
+| `SimpleRuntimeSVGs` | `bool` |
+| `DisableSanitization` | `bool` |
+| `WSReconnectDelay` | `time.Duration` |
+| `WSMaxReconnect` | `int` |
+| `WSHeartbeat` | `time.Duration` |
+| `WSMaxMessageSize` | `int` |
+| `WSConnRateLimit` | `float64` |
+| `WSConnBurst` | `float64` |
+| `HydrationMode` | `string` |
+| `HydrationTimeout` | `int` |
+| `SerializationFormat` | `string` (`json` / `msgpack`) |
+| `StateSerializer` | `StateSerializerFunc` |
+| `StateDeserializer` | `StateDeserializerFunc` |
+| `DisableSPA` | `bool` |
+| `DefaultRenderStrategy` | `routing.RenderStrategy` |
+| `DefaultRevalidateAfter` | `time.Duration` |
+| `MaxRequestBodySize` | `int` |
+| `RemotePrefix` | `string` |
+| `RemoteActionMiddleware` | `fiber.Handler` |
+| `AllowUnauthenticatedRemoteActions` | `bool` |
+| `AllowedOrigins` | `[]string` |
+| `EnableCSRF` | `bool` |
+| `ContentSecurityPolicy` | `string` |
+| `PublicOrigin` | `string` |
+| `SSGCacheMaxEntries` | `int` |
+| `SSGCacheTTL` | `time.Duration` |
+| `Prefork` | `bool` |
+| `Storage` | `store.Storage` |
+| `PubSub` | `store.PubSub` |
+| `NavigationOptions` | `NavigationOptions` |
+
+#### Key options (summary)
+
+- **`RoutesFS`**: Embed routes with `//go:embed`.
+- **`CompressState` / `StateDiffing`**: Bandwidth optimizations for WebSocket state sync.
+- **`SerializationFormat`**: `"json"` (default) or `"msgpack"` for WebSocket payloads.
+- **`SimpleRuntime` / `SimpleRuntimeSVGs` / `DisableSanitization`**: Trade-offs for bundle size and trust model; see [Security](../03-features/04-security.md).
+- **`WSReconnectDelay` / `WSMaxReconnect` / `WSHeartbeat`**: Passed to the client; if unset/zero at runtime, HTML injection applies **1s / 10 / 30s** defaults when embedding config.
+- **`RemoteActionMiddleware`**: Required in production for remote actions unless `AllowUnauthenticatedRemoteActions` is set.
+- **`EnableCSRF`**: Defaults to `true`; wired in `gospa.New`.
+- **`ContentSecurityPolicy`**: Empty uses `fiber.DefaultContentSecurityPolicy` (pragmatic inline script/style for typical GoSPA apps).
+- **`PublicOrigin`**: Stable WebSocket URL behind proxies (see [Configuration](02-configuration.md)).
+- **`Prefork` + `Storage` + `PubSub`**: Required together for correct multi-process behavior.
 
 ```go
-type Config struct {
-	// RoutesDir is the directory containing route files.
-	RoutesDir string
-	// RoutesFS is the filesystem containing route files (optional).
-	RoutesFS fs.FS
-	// DevMode enables development features.
-	DevMode bool
-	// RuntimeScript is the path to the client runtime script.
-	RuntimeScript string
-	// StaticDir is the directory for static files.
-	StaticDir string
-	// StaticPrefix is the URL prefix for static files.
-	StaticPrefix string
-	// AppName is the application name.
-	AppName string
-	// DefaultState is the initial state for new sessions.
-	DefaultState map[string]interface{}
-	// EnableWebSocket enables WebSocket support.
-	EnableWebSocket bool
-	// WebSocketPath is the WebSocket endpoint path.
-	WebSocketPath string
-	// WebSocketMiddleware allows injecting middleware before WebSocket upgrade.
-	WebSocketMiddleware fiberpkg.Handler
-
-	// Performance Options
-	CompressState  bool // Gzip-compress outbound state payloads; client must decompress via DecompressionStream
-	StateDiffing   bool // Only send changed state keys (patch messages) after the initial full snapshot
-	CacheTemplates bool // Cache compiled templates
-	SimpleRuntime  bool // Use lightweight runtime without DOMPurify
-
-	// WebSocket Options
-	WSReconnectDelay time.Duration // Initial reconnect delay (default 1s), passed to client runtime
-	WSMaxReconnect   int           // Max reconnect attempts (default 10), passed to client runtime
-	WSHeartbeat      time.Duration // Heartbeat ping interval (default 30s), passed to client runtime
-
-	// Hydration Options
-	HydrationMode    string // "immediate" | "lazy" | "visible" | "idle" (default: "immediate")
-	HydrationTimeout int    // ms before force hydrate
-
-	// Serialization Options
-	StateSerializer   StateSerializerFunc // Custom serialization for outbound state
-	StateDeserializer StateDeserializerFunc // Custom deserialization for inbound state
-
-	// Routing Options
-	DisableSPA bool // Disable SPA navigation completely
-
-	// Remote Action Options
-	MaxRequestBodySize      int            // Maximum allowed size for remote action request bodies
-	RemotePrefix            string         // Prefix for remote action endpoints
-	RemoteActionMiddleware  fiber.Handler  // Optional middleware run before remote actions
-	AllowUnauthenticatedRemoteActions bool // Opt-out of production remote-action auth guard
-
-	// Security Options
-	AllowedOrigins []string // Allowed CORS origins
-	EnableCSRF     bool     // Enable CSRF (requires CSRFSetTokenMiddleware + CSRFTokenMiddleware)
-	ContentSecurityPolicy string // Optional CSP header. Empty uses the secure default
-
-	// Cache Options
-	SSGCacheMaxEntries int // Max SSG cache entries (default 500; -1 = unbounded)
-
-	// Distributed & Scaling Options
-	Prefork bool          // Enables Fiber Prefork. WARNING: If true, you MUST use external Storage/PubSub to share state.
-	Storage store.Storage // External Key-Value store (e.g., Redis) for Session and ClientState. Default is memory.
-	PubSub  store.PubSub  // External messaging broker (e.g., Redis PubSub) for WebSocket broadcasting. Default is memory.
-}
-```
-
-#### Key Options:
-- `RoutesFS`: Allows embedding routes using `go:embed`.
-- `CompressState`: Enables gzip+base64 compression of outbound WebSocket state payloads. Client decodes with the `DecompressionStream` browser API.
-- `StateDiffing`: Sends only changed state keys as `"patch"` WebSocket messages after the initial full snapshot — reduces bandwidth for large states.
-- `StateSerializer` / `StateDeserializer`: Custom hooks replacing JSON for WebSocket state encoding/decoding.
-- `SimpleRuntime`: Reduces client bundle size by ~6KB by removing DOMPurify. ⚠️ Security Risk: Only enable SimpleRuntime for fully trusted content.
-- `SimpleRuntimeSVGs`: Allows SVG elements in the simple runtime sanitizer. ⚠️ Security Risk: Only enable SimpleRuntimeSVGs for fully trusted content.
-- `HydrationMode`: Controls when components become interactive. Values: `"immediate"` (default), `"lazy"`, `"visible"`, `"idle"`.
-- `WSReconnectDelay`: Initial reconnect delay passed to the client WebSocket runtime. Default: 1s.
-- `WSMaxReconnect`: Maximum reconnect attempts passed to the client. Default: 10.
-- `WSHeartbeat`: Heartbeat ping interval passed to the client. Default: 30s.
-- `RemoteActionMiddleware`: Apply global auth/tenant/policy checks for every remote action request before the action handler runs.
-- `AllowUnauthenticatedRemoteActions`: Defaults to `false`. If set to `true`, disables the production guard that blocks unauthenticated remote actions without middleware.
-- `EnableCSRF`: Defaults to `true` and enables automatic CSRF setup in `gospa.New(...)`. Add CSRF middleware manually only when building a custom Fiber stack outside default app setup.
-- `SSGCacheMaxEntries`: Caps the SSG page cache with FIFO eviction. Default 500.
-- `Prefork`, `Storage`, `PubSub`: Used for horizontal scaling. See `store/redis` for the Redis implementation.
-
-```go
-// Default configuration
 config := gospa.DefaultConfig()
+config.AppName = "My App"
+app := gospa.New(config)
+```
 
 ---
 

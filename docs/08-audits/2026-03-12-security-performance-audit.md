@@ -133,3 +133,13 @@ flowchart TD
 4. **Add cancellable subscription APIs** in Redis pubsub layer.
 5. **Add CI security scanning** (govulncheck + OSV lockfile scan).
 6. **Expand docs** with a production hardening checklist and secure deployment examples.
+
+---
+
+## Follow-up implemented (post-audit)
+
+- **Auth:** `isProductionRuntime()` (`GOSPA_ENV`, `APP_ENV`, `GO_ENV`, `ENV`, legacy `GIN_MODE`); dev JWT secret generation no longer ignores RNG errors; tests added.
+- **Remote actions:** JSON max nesting (64), `encoding/json` + `UseNumber`; `RemoteContext.Headers` documented as tracing allowlist; integration tests (`REMOTE_AUTH_REQUIRED`, `JSON_TOO_DEEP`).
+- **CSP:** default remains `fiber.DefaultContentSecurityPolicy` (pragmatic `'unsafe-inline'` for script/style); docs distinguish default vs stricter example.
+- **CI / tooling:** `.github/workflows/ci.yml` (go test, govulncheck, go build, client `bun check` / `bun test`); `scripts/quality-check.sh` expands `./...` to exclude packages under `node_modules`.
+- **Docs / README:** security section, govulncheck guidance, auth env vars.

@@ -54,6 +54,8 @@ Content-Security-Policy:
   connect-src 'self' wss:;
 ```
 
+The snippet above is a **stricter** optional policy. If you leave `ContentSecurityPolicy` empty, GoSPA applies `fiber.DefaultContentSecurityPolicy`: same baseline (`default-src 'self'`, frame/object restrictions) but **`script-src` and `style-src` include `'unsafe-inline'`** so framework-injected scripts (for example `__GOSPA_STATE__`) and typical inline CSS work. Set `ContentSecurityPolicy` explicitly when you need to lock this down.
+
 ### Layer 3: DOMPurify (User-Generated Content Only)
 
 Use DOMPurify only when displaying **untrusted user-generated content**:
@@ -237,6 +239,27 @@ If you're upgrading from GoSPA v1.x:
    - The default runtime now trusts the server by default
 
 See the [Migration Guide](/docs/migration-v2) for detailed instructions.
+
+## Auth plugin: JWT and production detection
+
+The auth plugin’s `DefaultConfig` requires `JWT_SECRET` when the process environment indicates **production**. Recognized signals include:
+
+- `GOSPA_ENV=production` or `prod`
+- `ENV`, `APP_ENV`, or `GO_ENV` set to `production` (case-insensitive)
+- `GIN_MODE=release` (legacy compatibility)
+
+Generate a secret with `openssl rand -hex 32` (or the `gospa auth:secret` helper) and set `JWT_SECRET` before deployment.
+
+## Dependency and vulnerability scanning
+
+Run [govulncheck](https://go.dev/security/vuln/) on your module in CI and locally:
+
+```bash
+go install golang.org/x/vuln/cmd/govulncheck@latest
+govulncheck ./...
+```
+
+This repository runs Go tests, `govulncheck`, and client `bun check` / `bun test` in GitHub Actions (`.github/workflows/ci.yml`). For npm-style lockfiles, consider [OSV-Scanner](https://google.github.io/osv-scanner/) or your registry’s audit commands.
 
 ## Security Update Policy
 
