@@ -57,8 +57,8 @@ If not using `data-gospa-auto`, manually initialize in a module script:
 
 ```html
 <script type="module">
-    import { init } from '/_gospa/runtime.js';
-    init({
+    import * as GoSPA from '/_gospa/runtime.js';
+    GoSPA.init({
         wsUrl: 'ws://localhost:3000/_gospa/ws',
         debug: false
     });
@@ -152,13 +152,12 @@ Instead of relying on the global, import directly from the runtime:
 
 ```html
 <script type="module">
-    import { remote } from '/_gospa/runtime.js';
+    import * as GoSPA from '/_gospa/runtime.js';
     
     // No need for GoSPA global
-    const result = await remote('myAction', {});
+    const result = await GoSPA.remote('myAction', {});
 </script>
 ```
-
 This approach:
 - Works immediately (no waiting for init)
 - Is tree-shakeable
@@ -197,7 +196,7 @@ goSPA.remote('action', {});
 Gospa.remote('action', {});
 
 // GOOD
-goSPA.remote('action', {});
+GoSPA.remote('action', {});
 ```
 
 ### Mistake 3: Script type="module" without import
@@ -210,8 +209,8 @@ goSPA.remote('action', {});
 
 <!-- GOOD - Either import or use regular script -->
 <script type="module">
-    import { remote } from '/_gospa/runtime.js';
-    remote('action', {});
+    import * as GoSPA from '/_gospa/runtime.js';
+    GoSPA.remote('action', {});
 </script>
 
 <!-- Or -->

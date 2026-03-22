@@ -51,18 +51,12 @@ templ Page() {
 			<h2 class="text-2xl font-bold" id="easing">Easing Functions</h2>
 			<p class="text-[var(--text-secondary)]">Control the timing curve of transitions with easing functions.</p>
 			
-			@components.CodeBlock(`import { 
-  linear, 
-  cubicOut, 
-  cubicInOut, 
-  elasticOut, 
-  bounceOut 
-} from '@gospa/client';
+			@components.CodeBlock(`import * as GoSPA from "/_gospa/runtime.js";
 
 // Use in transitions
-fly(element, { 
+GoSPA.fly(element, { 
   duration: 400, 
-  easing: cubicOut 
+  easing: GoSPA.cubicOut 
 });`, "typescript", "easing.ts")
 			
 			<div class="grid md:grid-cols-3 gap-4 mt-4">
@@ -132,25 +126,25 @@ fly(element, {
 			<p class="text-[var(--text-secondary)]">Control transitions programmatically with JavaScript.</p>
 			
 			<h3 class="text-lg font-bold mt-6" id="transition-in-out">transitionIn / transitionOut</h3>
-			@components.CodeBlock(`import { transitionIn, transitionOut, fade, fly } from '@gospa/client';
+			@components.CodeBlock(`import * as GoSPA from "/_gospa/runtime.js";
 
 // Enter transition
-transitionIn(element, fade, { duration: 300 });
+GoSPA.transitionIn(element, GoSPA.fade, { duration: 300 });
 
 // Exit transition with callback
-transitionOut(element, fly, { x: -100, duration: 300 }, () => {
+GoSPA.transitionOut(element, GoSPA.fly, { x: -100, duration: 300 }, () => {
   element.remove();
 });`, "typescript", "programmatic.ts")
 			
 			<h3 class="text-lg font-bold mt-6" id="setup-transitions">setupTransitions</h3>
 			<p class="text-[var(--text-secondary)]">Auto-setup transitions from DOM attributes.</p>
-			@components.CodeBlock(`import { setupTransitions } from '@gospa/client';
+			@components.CodeBlock(`import * as GoSPA from "/_gospa/runtime.js";
 
 // Setup on document.body
-setupTransitions();
+GoSPA.setupTransitions();
 
 // Setup on specific root
-setupTransitions(document.getElementById('app'));`, "typescript", "setup.ts")
+GoSPA.setupTransitions(document.getElementById('app'));`, "typescript", "setup.ts")
 		</section>
 
 		<section class="space-y-6">

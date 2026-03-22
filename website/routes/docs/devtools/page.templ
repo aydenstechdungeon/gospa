@@ -96,10 +96,10 @@ app.Use(fiber.DebugMiddleware(devTools))
 GOSPA_DEBUG=true gospa dev
 
 // Client-side debug — access live state from the browser console:
-// (available when <html data-gospa-auto> is present)
-__GOSPA__.globalState     // The root StateMap
-__GOSPA__.components      // All active component instances
-__GOSPA__.config          // Active runtime configuration`, "bash", "cli/dev.go")
+// (available when <html data-gospa-auto> or data-gospa-component is present)
+GoSPA.globalState     // The root StateMap
+GoSPA.components      // All active component instances
+GoSPA.config          // Active runtime configuration`, "bash", "cli/dev.go")
 			</div>
 
 			<div>
@@ -117,19 +117,19 @@ __GOSPA__.config          // Active runtime configuration`, "bash", "cli/dev.go"
 
 			<div>
 				<h2 class="text-2xl font-bold mb-4 border-b border-[var(--border)] pb-2 italic mono">Client-Side Debugging</h2>
-				<p class="text-[var(--text-secondary)] mb-4">The runtime exposes internal state via <code class="bg-[var(--surface)] px-1 rounded">window.__GOSPA__</code> when the auto-init attribute is present.</p>
+				<p class="text-[var(--text-secondary)] mb-4">The runtime exposes internal state via <code class="bg-[var(--surface)] px-1 rounded">window.GoSPA</code> when the auto-init attribute is present.</p>
 				@components.CodeBlock(`<!-- Enable in HTML -->
 <html data-gospa-auto>
 
 // From browser console, you can inspect:
-__GOSPA__.components   // All active component instances
-__GOSPA__.globalState  // The root StateMap
-__GOSPA__.config       // Active runtime configuration
+GoSPA.components   // All active component instances
+GoSPA.globalState  // The root StateMap
+GoSPA.config       // Active runtime configuration
 
 // Call functions directly:
-__GOSPA__.getState("myComponent", "count")
-__GOSPA__.setState("myComponent", "count", 42)
-__GOSPA__.callAction("myComponent", "increment")`, "html", "client/src/runtime.ts")
+GoSPA.getState("myComponent", "count")
+GoSPA.setState("myComponent", "count", 42)
+GoSPA.callAction("myComponent", "increment")`, "html", "client/src/runtime.ts")
 			</div>
 
 			<div>

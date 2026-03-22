@@ -15,7 +15,9 @@ templ Page() {
 			<h2 class="text-2xl font-bold" id="form-state">Form State</h2>
 			@components.DualCodeBlock(
 				`// Plain JavaScript
-const form = GoSPA.createRune({
+import * as GoSPA from "/_gospa/runtime.js";
+
+const form = new GoSPA.Rune({
   email: '',
   password: '',
   remember: false
@@ -90,7 +92,9 @@ async function submit() {
 			<h2 class="text-2xl font-bold" id="async-state">Async State</h2>
 			@components.DualCodeBlock(
 				`// Plain JavaScript
-const userId = GoSPA.createRune(1);
+import * as GoSPA from "/_gospa/runtime.js";
+
+const userId = new GoSPA.Rune(1);
 
 // Resource - async data with status
 const userResource = GoSPA.resourceReactive(
@@ -138,8 +142,10 @@ await userResource.refetch();`,
 			<h2 class="text-2xl font-bold" id="global-state">Global State</h2>
 			@components.DualCodeBlock(
 				`// Plain JavaScript
-const user = GoSPA.createRune(null);
-const theme = GoSPA.createRune('light');
+import * as GoSPA from "/_gospa/runtime.js";
+
+const user = new GoSPA.Rune(null);
+const theme = new GoSPA.Rune('light');
 
 // Derived from global
 const isAuthenticated = GoSPA.derived(() => user.get() !== null);
@@ -207,8 +213,10 @@ export function toggleTheme() {
 
 			@components.DualCodeBlock(
 				`// Plain JavaScript
-const a = GoSPA.createRune(1);
-const b = GoSPA.createRune(2);
+import * as GoSPA from "/_gospa/runtime.js";
+
+const a = new GoSPA.Rune(1);
+const b = new GoSPA.Rune(2);
 
 // Batch - single notification
 GoSPA.batch(() => {

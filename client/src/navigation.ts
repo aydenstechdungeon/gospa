@@ -537,7 +537,7 @@ function patchNode(currentNode: Node, incomingNode: Node): void {
     (currentNode.id && currentNode.id !== incomingNode.id) ||
     (incomingNode.id && currentNode.id !== incomingNode.id) ||
     currentNode.getAttribute("data-gospa-page") !==
-      incomingNode.getAttribute("data-gospa-page")
+    incomingNode.getAttribute("data-gospa-page")
   ) {
     currentNode.parentNode?.replaceChild(
       incomingNode.cloneNode(true),
@@ -625,7 +625,8 @@ async function updateDOM(data: PageData, pageContent: string): Promise<void> {
   runOnIdle(() => updateHead(data.head));
 
   // Re-initialize runtime for new content
-  await initNewContent();
+  const targetEl = rootEl || contentEl || mainEl || document.body;
+  await initNewContent(targetEl);
 
   // Update active links
   updateActiveLinks();
@@ -845,9 +846,33 @@ function updateHead(headHtml: string): void {
   });
 }
 
+// Execute scripts in the given container
+function executeScripts(container: Element | Document): void {
+  const scripts = Array.from(container.querySelectorAll("script"));
+  scripts.forEach((oldScript) => {
+    // Skip scripts marked as permanent or already processed
+    if (oldScript.closest("[data-gospa-permanent]")) return;
+
+    const newScript = document.createElement("script");
+    // Copy all attributes
+    Array.from(oldScript.attributes).forEach((attr) => {
+      newScript.setAttribute(attr.name, attr.value);
+    });
+    // Copy script content
+    newScript.textContent = oldScript.textContent;
+
+    // Replace old script with new one to trigger browser execution
+    if (oldScript.parentNode) {
+      oldScript.parentNode.replaceChild(newScript, oldScript);
+    }
+  });
+}
+
 // Initialize new content (re-run runtime setup)
-async function initCriticalContent(): Promise<void> {
-  const eventElements = document.querySelectorAll("[data-on]");
+async function initCriticalContent(
+  container: Element | Document = document,
+): Promise<void> {
+  const eventElements = container.querySelectorAll("[data-on]");
   const gospa = (window as any).__gospa__;
   const ws = gospa?._ws;
 
@@ -873,8 +898,10 @@ async function initCriticalContent(): Promise<void> {
   });
 }
 
-async function initDeferredBindings(): Promise<void> {
-  const boundElements = document.querySelectorAll("[data-bind]");
+async function initDeferredBindings(
+  container: Element | Document = document,
+): Promise<void> {
+  const boundElements = container.querySelectorAll("[data-bind]");
   const gospa = (window as any).__gospa__;
 
   for (const element of boundElements) {
@@ -913,18 +940,21 @@ async function initDeferredBindings(): Promise<void> {
   }
 }
 
-async function initNewContent(): Promise<void> {
-  await initCriticalContent();
+async function initNewContent(container: Element = document.body): Promise<void> {
+  // First, re-execute any scripts found in the new content
+  executeScripts(container);
+
+  await initCriticalContent(container);
   if (
     !navigationOptionsConfig.lazyRuntimeInitialization.enabled ||
     !navigationOptionsConfig.lazyRuntimeInitialization.deferBindings
   ) {
-    await initDeferredBindings();
+    await initDeferredBindings(container);
     return;
   }
 
   runOnIdle(() => {
-    void initDeferredBindings();
+    void initDeferredBindings(container);
   });
 }
 

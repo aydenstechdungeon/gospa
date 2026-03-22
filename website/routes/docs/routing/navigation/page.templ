@@ -83,6 +83,18 @@ templ Page() {
 		</section>
 
 		<section class="space-y-6">
+			<h2 class="text-2xl font-bold">Script Re-execution</h2>
+			<p class="text-[var(--text-secondary)] leading-relaxed">
+				Unlike standard <code>innerHTML</code> updates, GoSPA automatically identifies and re-executes all <code>&lt;script&gt;</code> tags found within the newly loaded page content. This ensures your page-specific logic, such as component initialization or analytics, runs on every navigation.
+			</p>
+			@components.CodeBlock("<script type=\"module\">\n\timport * as GoSPA from \"/_gospa/runtime.js\";\n\n\t// This script will re-run on every navigation to this page\n\tconst count = new GoSPA.Rune(0);\n\tconsole.log(\"Page-specific logic initialized\");\n</script>", "html", "page-script.html")
+			<div class="p-4 rounded-xl border border-[var(--border)] bg-[var(--bg-secondary)] text-sm">
+				<p class="font-semibold mb-2">Preventing Re-execution</p>
+				<p class="text-[var(--text-secondary)]">If you have a script that should only run once (e.g., global configuration), place it in your <code>root_layout.templ</code> or mark the script tag with <code>data-gospa-permanent</code>.</p>
+			</div>
+		</section>
+
+		<section class="space-y-6">
 			<h2 class="text-2xl font-bold">Persistent Elements</h2>
 			<p class="text-[var(--text-secondary)]">Elements marked with `data-gospa-permanent` persist across navigations without being cleared or patched by the server. This is useful for content managed entirely on the client, like the Table of Contents.</p>
 			@components.CodeBlock("<nav id=\"toc\">\n\t<ul data-gospa-permanent>\n\t\t<!-- Managed by client-side JS -->\n\t</ul>\n</nav>", "html", "permanent.html")

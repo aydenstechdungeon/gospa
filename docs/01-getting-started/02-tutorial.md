@@ -143,7 +143,7 @@ examples/todo/
      "inputValue": ""
    }
    ```
-2. Implement state update handlers using `__GOSPA__` global
+2. Implement state update handlers using `GoSPA` global
 3. Add helper functions for todo operations
 
 ### Phase 5: Derived Values
@@ -167,8 +167,10 @@ examples/todo/
 ### Adding a Todo
 
 ```javascript
+import * as GoSPA from "/_gospa/runtime.js";
+
 // Get the state for this component
-const state = __GOSPA__.getState('todo-app');
+const state = GoSPA.getState('todo-app');
 if (!state) return;
 
 // Get input value
@@ -219,8 +221,10 @@ Use `data-bind` for reactive text and `data-bind:value` for two-way input bindin
 ### localStorage Persistence
 
 ```javascript
+import * as GoSPA from "/_gospa/runtime.js";
+
 // Create effect for persistence
-const state = __GOSPA__.getState('todo-app');
+const state = GoSPA.getState('todo-app');
 if (!state) return;
 
 // Watch for changes and persist

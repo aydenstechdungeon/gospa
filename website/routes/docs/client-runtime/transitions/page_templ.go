@@ -83,18 +83,12 @@ func Page() templ.Component {
 		if templ_7745c5c3_Err != nil {
 			return templ_7745c5c3_Err
 		}
-		templ_7745c5c3_Err = components.CodeBlock(`import { 
-  linear, 
-  cubicOut, 
-  cubicInOut, 
-  elasticOut, 
-  bounceOut 
-} from '@gospa/client';
+		templ_7745c5c3_Err = components.CodeBlock(`import * as GoSPA from "/_gospa/runtime.js";
 
 // Use in transitions
-fly(element, { 
+GoSPA.fly(element, { 
   duration: 400, 
-  easing: cubicOut 
+  easing: GoSPA.cubicOut 
 });`, "typescript", "easing.ts").Render(ctx, templ_7745c5c3_Buffer)
 		if templ_7745c5c3_Err != nil {
 			return templ_7745c5c3_Err
@@ -142,13 +136,13 @@ fly(element, {
 		if templ_7745c5c3_Err != nil {
 			return templ_7745c5c3_Err
 		}
-		templ_7745c5c3_Err = components.CodeBlock(`import { transitionIn, transitionOut, fade, fly } from '@gospa/client';
+		templ_7745c5c3_Err = components.CodeBlock(`import * as GoSPA from "/_gospa/runtime.js";
 
 // Enter transition
-transitionIn(element, fade, { duration: 300 });
+GoSPA.transitionIn(element, GoSPA.fade, { duration: 300 });
 
 // Exit transition with callback
-transitionOut(element, fly, { x: -100, duration: 300 }, () => {
+GoSPA.transitionOut(element, GoSPA.fly, { x: -100, duration: 300 }, () => {
   element.remove();
 });`, "typescript", "programmatic.ts").Render(ctx, templ_7745c5c3_Buffer)
 		if templ_7745c5c3_Err != nil {
@@ -158,13 +152,13 @@ transitionOut(element, fly, { x: -100, duration: 300 }, () => {
 		if templ_7745c5c3_Err != nil {
 			return templ_7745c5c3_Err
 		}
-		templ_7745c5c3_Err = components.CodeBlock(`import { setupTransitions } from '@gospa/client';
+		templ_7745c5c3_Err = components.CodeBlock(`import * as GoSPA from "/_gospa/runtime.js";
 
 // Setup on document.body
-setupTransitions();
+GoSPA.setupTransitions();
 
 // Setup on specific root
-setupTransitions(document.getElementById('app'));`, "typescript", "setup.ts").Render(ctx, templ_7745c5c3_Buffer)
+GoSPA.setupTransitions(document.getElementById('app'));`, "typescript", "setup.ts").Render(ctx, templ_7745c5c3_Buffer)
 		if templ_7745c5c3_Err != nil {
 			return templ_7745c5c3_Err
 		}

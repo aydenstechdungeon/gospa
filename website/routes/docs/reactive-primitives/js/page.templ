@@ -16,7 +16,7 @@ templ Page() {
 			<h3 class="text-lg font-semibold text-[var(--accent-primary)] mt-0 mb-2">Setup Options</h3>
 			<ul class="mt-0 mb-0 text-[var(--text-secondary)] space-y-2">
 				<li><strong>TypeScript (ES Modules):</strong> Import from @gospa/client package</li>
-				<li><strong>Plain JavaScript:</strong> Use the global GoSPA object — no build step required</li>
+				<li><strong>Plain JavaScript:</strong> Import the runtime natively as an ES module</li>
 			</ul>
 		</div>
 
@@ -25,11 +25,18 @@ templ Page() {
 			<p class="text-[var(--text-secondary)]">
 				Include the GoSPA runtime in your HTML, or import via ES modules:
 			</p>
-			@components.CodeBlock(`<!-- Full runtime with DOMPurify (recommended) -->
-<script src="/_gospa/runtime.js"></script>
+			@components.CodeBlock(`<!-- Import runtime natively as an ES Module -->
+<script type="module">
+	import * as GoSPA from "/_gospa/runtime.js";
+	
+	// Access primitives
+	const count = new GoSPA.Rune(0);
+</script>
 
 <!-- Or use the simple runtime for smaller bundle (~6KB less) -->
-<script src="/_gospa/runtime.js?simple=1"></script>`, "html", "setup.html")
+<script type="module">
+	import * as GoSPA from "/_gospa/runtime.js?simple=1";
+</script>`, "html", "setup.html")
 		</section>
 
 		<section class="space-y-6">
@@ -39,7 +46,9 @@ templ Page() {
 				all subscribers are automatically notified.
 			</p>
 			@components.DualCodeBlock(
-				`// Plain JavaScript — uses global GoSPA object
+				`// Plain JavaScript — ES module import
+import * as GoSPA from "/_gospa/runtime.js";
+
 const count = new GoSPA.Rune(0)
 
 // Read the value
@@ -92,6 +101,8 @@ unsubscribe();`,
 			</p>
 			@components.DualCodeBlock(
 				`// Plain JavaScript
+import * as GoSPA from "/_gospa/runtime.js";
+
 const firstName = new GoSPA.Rune('John')
 const lastName = new GoSPA.Rune('Doe')
 
@@ -132,6 +143,8 @@ doubled.dispose();`,
 			</p>
 			@components.DualCodeBlock(
 				`// Plain JavaScript
+import * as GoSPA from "/_gospa/runtime.js";
+
 const count = new GoSPA.Rune(0)
 
 const cleanup = new GoSPA.Effect(() => {
@@ -175,6 +188,8 @@ myEffect.dispose(); // Permanent cleanup`,
 			</p>
 			@components.DualCodeBlock(
 				`// Plain JavaScript
+import * as GoSPA from "/_gospa/runtime.js";
+
 const state = new GoSPA.StateMap()
 
 // Set values
@@ -230,6 +245,8 @@ const json = state.toJSON(); // { count: 0, name: 'Anonymous' }`,
 			</p>
 			@components.DualCodeBlock(
 				`// Plain JavaScript
+import * as GoSPA from "/_gospa/runtime.js";
+
 const count = new GoSPA.Rune(0)
 const name = new GoSPA.Rune('')
 
@@ -278,7 +295,9 @@ effect(() => {
     <button id="decrement">-</button>
 </div>
 
-<script>
+<script type="module">
+import * as GoSPA from "/_gospa/runtime.js";
+
 // State
 const count = new GoSPA.Rune(0)
 

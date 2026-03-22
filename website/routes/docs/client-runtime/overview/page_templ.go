@@ -36,11 +36,10 @@ func Page() templ.Component {
 			return templ_7745c5c3_Err
 		}
 		templ_7745c5c3_Err = components.DualCodeBlock(
-			`<!-- Plain JavaScript - global GoSPA object (no build step needed) -->
-<script src="/_gospa/runtime.js"></script>
-
-<!-- Then use in your scripts -->
-<script>
+			`<!-- Plain JavaScript - ES Module Import -->
+<script type="module">
+  import * as GoSPA from "/_gospa/runtime.js";
+  
   const count = new GoSPA.Rune(0);
   console.log(count.get());
 </script>`,
@@ -58,7 +57,9 @@ import { Rune, Effect, navigate } from '@gospa/client';`,
 			return templ_7745c5c3_Err
 		}
 		templ_7745c5c3_Err = components.DualCodeBlock(
-			`// Plain JavaScript — uses global GoSPA object
+			`// Plain JavaScript
+import * as GoSPA from "/_gospa/runtime.js";
+
 const count = new GoSPA.Rune(0);
 const name = GoSPA.rune('initial'); // factory function
 
@@ -111,6 +112,8 @@ unsubscribe();`,
 		}
 		templ_7745c5c3_Err = components.DualCodeBlock(
 			`// Plain JavaScript
+import * as GoSPA from "/_gospa/runtime.js";
+
 const count = new GoSPA.Rune(5);
 const doubled = new GoSPA.Derived(() => count.get() * 2);
 
@@ -143,6 +146,8 @@ doubled.dispose();`,
 		}
 		templ_7745c5c3_Err = components.DualCodeBlock(
 			`// Plain JavaScript
+import * as GoSPA from "/_gospa/runtime.js";
+
 const count = new GoSPA.Rune(0);
 
 // Create effect
@@ -287,11 +292,11 @@ init({
 		if templ_7745c5c3_Err != nil {
 			return templ_7745c5c3_Err
 		}
-		templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 9, "</section><section class=\"space-y-6\"><h2 class=\"text-2xl font-bold\" id=\"global\">Global API</h2><p class=\"text-[var(--text-secondary)]\">The runtime exposes a global <code class=\"text-[var(--accent-primary)]\">__GOSPA__</code> object for debugging.</p>")
+		templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 9, "</section><section class=\"space-y-6\"><h2 class=\"text-2xl font-bold\" id=\"global\">Global API</h2><p class=\"text-[var(--text-secondary)]\">The runtime exposes a global <code class=\"text-[var(--accent-primary)]\">GoSPA</code> object for debugging and manual control.</p>")
 		if templ_7745c5c3_Err != nil {
 			return templ_7745c5c3_Err
 		}
-		templ_7745c5c3_Err = components.CodeBlock(`window.__GOSPA__ = {
+		templ_7745c5c3_Err = components.CodeBlock(`window.GoSPA = {
   config,           // Runtime configuration
   components,       // Component registry Map
   globalState,      // Global StateMap

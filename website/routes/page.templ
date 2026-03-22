@@ -6,6 +6,11 @@ import (
 
 templ Page() {
 	<div class="flex flex-col">
+		<script type="module">
+			import * as GoSPA from "/_gospa/runtime.js";
+			const count = new GoSPA.Rune(0);
+			console.log(count.get());
+		</script>
 		@components.Hero()
 		
 		<div class="max-w-7xl mx-auto px-4 w-full">

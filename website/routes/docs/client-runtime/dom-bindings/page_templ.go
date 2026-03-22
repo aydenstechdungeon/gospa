@@ -36,7 +36,9 @@ func Page() templ.Component {
 			return templ_7745c5c3_Err
 		}
 		templ_7745c5c3_Err = components.DualCodeBlock(
-			`// Plain JavaScript — uses global GoSPA object
+			`// Plain JavaScript — ES module import
+import * as GoSPA from "/_gospa/runtime.js";
+
 const element = document.getElementById('count');
 const textRune = new GoSPA.Rune('Hello');
 
@@ -67,6 +69,8 @@ bindTwoWay(inputElement, textRune);`,
 		}
 		templ_7745c5c3_Err = components.DualCodeBlock(
 			`// Plain JavaScript
+import * as GoSPA from "/_gospa/runtime.js";
+
 const count = new GoSPA.Rune(0);
 const countEl = document.getElementById('count');
 
@@ -134,6 +138,8 @@ bindElement(document.getElementById('link'), href, {
 		}
 		templ_7745c5c3_Err = components.DualCodeBlock(
 			`// Plain JavaScript
+import * as GoSPA from "/_gospa/runtime.js";
+
 const name = new GoSPA.Rune('');
 
 // Two-way binding with input
@@ -163,6 +169,8 @@ bindTwoWay(input, name);
 		}
 		templ_7745c5c3_Err = components.DualCodeBlock(
 			`// Plain JavaScript
+import * as GoSPA from "/_gospa/runtime.js";
+
 const isLoggedIn = new GoSPA.Rune(false);
 
 // Show element only when condition is true
@@ -192,6 +200,8 @@ renderIf(document.getElementById('login-form'), isLoggedIn, { inverse: true });`
 		}
 		templ_7745c5c3_Err = components.DualCodeBlock(
 			`// Plain JavaScript
+import * as GoSPA from "/_gospa/runtime.js";
+
 const todos = new GoSPA.Rune([
   { id: 1, text: 'Learn GoSPA' },
   { id: 2, text: 'Build an app' }
@@ -243,6 +253,8 @@ renderList(
 		}
 		templ_7745c5c3_Err = components.DualCodeBlock(
 			`// Plain JavaScript
+import * as GoSPA from "/_gospa/runtime.js";
+
 // Set custom sanitizer
 GoSPA.setSanitizer((html) => {
   // Your sanitization logic
@@ -272,6 +284,8 @@ const sanitize = getSanitizer();`,
 		}
 		templ_7745c5c3_Err = components.DualCodeBlock(
 			`// Plain JavaScript
+import * as GoSPA from "/_gospa/runtime.js";
+
 // Register a custom binding
 const bindingId = GoSPA.registerBinding(element, rune, config);
 

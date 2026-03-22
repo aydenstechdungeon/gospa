@@ -401,6 +401,9 @@
   .my-8 {
     margin-block: calc(var(--spacing) * 8);
   }
+  .my-10 {
+    margin-block: calc(var(--spacing) * 10);
+  }
   .my-12 {
     margin-block: calc(var(--spacing) * 12);
   }
@@ -454,6 +457,9 @@
   }
   .mb-4 {
     margin-bottom: calc(var(--spacing) * 4);
+  }
+  .mb-5 {
+    margin-bottom: calc(var(--spacing) * 5);
   }
   .mb-6 {
     margin-bottom: calc(var(--spacing) * 6);
@@ -1038,6 +1044,14 @@
   .bg-\[var\(--bg-secondary\)\] {
     background-color: var(--bg-secondary);
   }
+  .bg-\[var\(--bg-secondary\)\]\/80 {
+    background-color: color-mix(in srgb, #12121a 80%, transparent);
+  }
+  @supports (color: color-mix(in lab, red, red)) {
+    .bg-\[var\(--bg-secondary\)\]\/80 {
+      background-color: color-mix(in oklab, var(--bg-secondary) 80%, transparent);
+    }
+  }
   .bg-\[var\(--bg-tertiary\)\] {
     background-color: var(--bg-tertiary);
   }
@@ -1445,20 +1459,4 @@
   .text-5xl {
     font-size: var(--text-5xl);
     line-height: var(--tw-leading, var(--text-5xl--line-height));
-  }
-  .text-base {
-    font-size: var(--text-base);
-    line-height: var(--tw-leading, var(--text-base--line-height));
-  }
-  .text-lg {
-    font-size: var(--text-lg);
-    line-height: var(--tw-leading, var(--text-lg--line-height));
-  }
-  .text-sm {
-    font-size: var(--text-sm);
-    line-height: var(--tw-leading, var(--text-sm--line-height));
-  }
-  .text-xl {
-    font-size: var(--text-xl);
-    line-height: var(--tw-leading, var(--text-xl--line-height));
   }

@@ -120,16 +120,11 @@ The runtime is automatically injected into your pages by the GoSPA server. No ma
 
 ```typescript
 // Default runtime - trusts server-rendered HTML
-import { Rune, Effect, navigate } from '@gospa/client';
+import * as GoSPA from "/_gospa/runtime.js";
 
 // Secure runtime - includes DOMPurify for user-generated content
-import { Rune, Effect, navigate, sanitize } from '@gospa/client/runtime-secure';
-
-// Core runtime - reactive primitives only
-import { Rune, Effect } from '@gospa/client/core';
-
-// Micro runtime - state-only, no DOM
-import { Rune, Derived } from '@gospa/client/micro';
+// Note: Use /_gospa/runtime-secure.js if configured
+import * as GoSPA from "/_gospa/runtime-secure.js";
 ```
 
 ---
@@ -185,11 +180,11 @@ This is similar to SvelteKit and other modern frameworks.
 Core reactive state container. Similar to Svelte's `$state` rune.
 
 ```typescript
-import { Rune, rune } from '@gospa/runtime';
+import * as GoSPA from "/_gospa/runtime.js";
 
 // Create
-const count = new Rune(0);
-const name = rune('initial'); // factory function
+const count = new GoSPA.Rune(0);
+const name = new GoSPA.Rune('initial');
 
 // Read
 console.log(count.value);  // 0
@@ -256,11 +251,11 @@ user.update(u => ({ ...u, name: 'John' }));
 Computed reactive value that recalculates when dependencies change.
 
 ```typescript
-import { Derived, derived } from '@gospa/runtime';
+import * as GoSPA from "/_gospa/runtime.js";
 
-const count = new Rune(5);
-const doubled = new Derived(() => count.get() * 2);
-const summary = derived(() => `Count: ${count.get()}`);
+const count = new GoSPA.Rune(5);
+const doubled = new GoSPA.Derived(() => count.get() * 2);
+const summary = GoSPA.derived(() => `Count: ${count.get()}`);
 
 // Read
 console.log(doubled.value); // 10
@@ -297,9 +292,11 @@ new Derived<T>(compute: () => T)
 #### Example: Multi-dependency
 
 ```typescript
-const a = new Rune(1);
-const b = new Rune(2);
-const sum = derived(() => a.get() + b.get());
+import * as GoSPA from "/_gospa/runtime.js";
+
+const a = new GoSPA.Rune(1);
+const b = new GoSPA.Rune(2);
+const sum = GoSPA.derived(() => a.get() + b.get());
 
 console.log(sum.value); // 3
 a.set(5);
@@ -313,12 +310,12 @@ console.log(sum.value); // 7
 Side effects that re-run when dependencies change.
 
 ```typescript
-import { Effect, effect } from '@gospa/runtime';
+import * as GoSPA from "/_gospa/runtime.js";
 
-const count = new Rune(0);
+const count = new GoSPA.Rune(0);
 
 // Create effect
-const myEffect = new Effect(() => {
+const myEffect = new GoSPA.Effect(() => {
   console.log('Count changed:', count.get());
   
   // Optional cleanup function
@@ -328,7 +325,7 @@ const myEffect = new Effect(() => {
 });
 
 // Or use factory
-const myEffect2 = effect(() => {
+const myEffect2 = GoSPA.effect(() => {
   document.title = `Count: ${count.get()}`;
 });
 
@@ -358,9 +355,9 @@ The function can return a cleanup function that runs before the next effect exec
 #### Example: DOM Effect
 
 ```typescript
-const theme = new Rune<'light' | 'dark'>('light');
+const theme = new GoSPA.Rune('light');
 
-effect(() => {
+GoSPA.effect(() => {
   document.body.className = theme.get();
   
   return () => {
@@ -376,16 +373,16 @@ effect(() => {
 Collection of named runes for managing multiple state values.
 
 ```typescript
-import { StateMap, stateMap } from '@gospa/runtime';
+import * as GoSPA from "/_gospa/runtime.js";
 
-const states = new StateMap();
+const states = new GoSPA.StateMap();
 
 // Set (creates or updates)
 states.set('count', 0);
 states.set('name', 'GoSPA');
 
 // Get
-const countRune = states.get<number>('count');
+const countRune = states.get('count');
 console.log(countRune?.get()); // 0
 
 // Check
@@ -433,16 +430,16 @@ new StateMap()
 Async data fetching with loading/error states.
 
 ```typescript
-import { Resource, resource, resourceReactive } from '@gospa/runtime';
+import * as GoSPA from "/_gospa/runtime.js";
 
 // Create resource
-const userResource = new Resource(async () => {
+const userResource = new GoSPA.Resource(async () => {
   const res = await fetch('/api/user');
   return res.json();
 });
 
 // Or use factory
-const dataResource = resource(async () => fetchData());
+const dataResource = GoSPA.resource(async () => fetchData());
 
 // Check status
 console.log(userResource.status);     // 'idle' | 'pending' | 'success' | 'error'
@@ -489,9 +486,11 @@ new Resource<T, E = Error>(fetcher: () => Promise<T>)
 Auto-refetch when dependencies change:
 
 ```typescript
-const userId = new Rune(1);
+import * as GoSPA from "/_gospa/runtime.js";
 
-const userResource = resourceReactive(
+const userId = new GoSPA.Rune(1);
+
+const userResource = GoSPA.resourceReactive(
   [userId], // Dependencies
   async () => {
     const res = await fetch(`/api/user/${userId.get()}`);
@@ -507,17 +506,17 @@ const userResource = resourceReactive(
 Async computed values with loading/error states.
 
 ```typescript
-import { DerivedAsync, derivedAsync } from '@gospa/runtime';
+import * as GoSPA from "/_gospa/runtime.js";
 
-const userId = new Rune(1);
+const userId = new GoSPA.Rune(1);
 
-const userDetails = new DerivedAsync(async () => {
+const userDetails = new GoSPA.DerivedAsync(async () => {
   const res = await fetch(`/api/user/${userId.get()}`);
   return res.json();
 });
 
 // Or factory
-const userDetails2 = derivedAsync(async () => fetchUser());
+const userDetails2 = GoSPA.derivedAsync(async () => fetchUser());
 
 // Status
 console.log(userDetails.status);     // 'pending' | 'success' | 'error'
@@ -591,12 +590,12 @@ new RuneRaw<T>(initialValue: T)
 Effect that runs BEFORE DOM updates. Useful for reading DOM state.
 
 ```typescript
-import { PreEffect, preEffect } from '@gospa/runtime';
+import * as GoSPA from "/_gospa/runtime.js";
 
-const show = new Rune(true);
+const show = new GoSPA.Rune(true);
 
 // Runs before DOM updates
-new PreEffect(() => {
+new GoSPA.PreEffect(() => {
   const scrollY = window.scrollY; // Read before DOM changes
   console.log('Scroll position:', scrollY);
 });
@@ -615,9 +614,9 @@ new PreEffect(fn: () => void | (() => void))
 Manual effect lifecycle control. Effect doesn't auto-dispose.
 
 ```typescript
-import { EffectRoot, effectRoot } from '@gospa/runtime';
+import * as GoSPA from "/_gospa/runtime.js";
 
-const root = new EffectRoot(() => {
+const root = new GoSPA.EffectRoot(() => {
   console.log('Effect running');
 });
 
@@ -627,7 +626,7 @@ root.restart();  // Restart effect
 root.dispose();  // Permanently cleanup
 
 // Or use factory for cleanup function
-const cleanup = effectRoot(() => {
+const cleanup = GoSPA.effectRoot(() => {
   console.log('Effect running');
 });
 cleanup(); // Dispose
@@ -656,17 +655,17 @@ new EffectRoot(fn: () => void | (() => void))
 Batch multiple updates into a single notification.
 
 ```typescript
-import { batch } from '@gospa/runtime';
+import * as GoSPA from "/_gospa/runtime.js";
 
-const a = new Rune(1);
-const b = new Rune(2);
+const a = new GoSPA.Rune(1);
+const b = new GoSPA.Rune(2);
 
 // Without batch: two separate updates
 a.set(2);
 b.set(3);
 
 // With batch: single update after all changes
-batch(() => {
+GoSPA.batch(() => {
   a.set(10);
   b.set(20);
 });
@@ -823,43 +822,43 @@ effect(() => {
 Bind a rune to an element's content or attribute.
 
 ```typescript
-import { bindElement } from '@gospa/runtime';
+import * as GoSPA from "/_gospa/runtime.js";
 
-const text = new Rune('Hello');
-const count = new Rune(5);
+const text = new GoSPA.Rune('Hello');
+const count = new GoSPA.Rune(5);
 
 // Text content (default)
-bindElement(document.getElementById('output'), text);
+GoSPA.bindElement(document.getElementById('output'), text);
 
 // HTML content
-bindElement(element, htmlRune, { type: 'html' });
+GoSPA.bindElement(element, htmlRune, { type: 'html' });
 
 // Value
-bindElement(input, valueRune, { type: 'value' });
+GoSPA.bindElement(input, valueRune, { type: 'value' });
 
 // Checked
-bindElement(checkbox, checkedRune, { type: 'checked' });
+GoSPA.bindElement(checkbox, checkedRune, { type: 'checked' });
 
 // Class (toggle)
-bindElement(element, activeRune, { type: 'class', attribute: 'active' });
+GoSPA.bindElement(element, activeRune, { type: 'class', attribute: 'active' });
 
 // Class (string/object/array)
-bindElement(element, classRune, { type: 'class' });
+GoSPA.bindElement(element, classRune, { type: 'class' });
 
 // Style property
-bindElement(element, colorRune, { type: 'style', attribute: 'color' });
+GoSPA.bindElement(element, colorRune, { type: 'style', attribute: 'color' });
 
 // Style object
-bindElement(element, stylesRune, { type: 'style' });
+GoSPA.bindElement(element, stylesRune, { type: 'style' });
 
 // Attribute
-bindElement(element, disabledRune, { type: 'attr', attribute: 'disabled' });
+GoSPA.bindElement(element, disabledRune, { type: 'attr', attribute: 'disabled' });
 
 // Property
-bindElement(element, customRune, { type: 'prop', attribute: 'customProp' });
+GoSPA.bindElement(element, customRune, { type: 'prop', attribute: 'customProp' });
 
 // With transform
-bindElement(element, count, { 
+GoSPA.bindElement(element, count, { 
   type: 'text', 
   transform: v => `Count: ${v}` 
 });
@@ -1065,20 +1064,20 @@ const clean = await sanitize(dirtyHtml);
 SPA-style navigation without full page reload.
 
 ```typescript
-import { navigate } from '@gospa/runtime';
+import * as GoSPA from "/_gospa/runtime.js";
 
 // Basic navigation
-await navigate('/about');
+await GoSPA.navigate('/about');
 
 // With options
-await navigate('/dashboard', {
+await GoSPA.navigate('/dashboard', {
   replace: true,       // Use history.replaceState
   scrollToTop: false,  // Don't scroll to top
   preserveState: true  // Keep current state
 });
 
 // Returns true on success, false on failure
-const success = await navigate('/new-page');
+const success = await GoSPA.navigate('/new-page');
 ```
 
 #### Signature
@@ -1100,11 +1099,11 @@ interface NavigationOptions {
 Navigation history methods.
 
 ```typescript
-import { back, forward, go } from '@gospa/runtime';
+import * as GoSPA from "/_gospa/runtime.js";
 
-back();      // Equivalent to history.back()
-forward();   // Equivalent to history.forward()
-go(-2);      // Equivalent to history.go(-2)
+GoSPA.back();      // Equivalent to history.back()
+GoSPA.forward();   // Equivalent to history.forward()
+GoSPA.go(-2);      // Equivalent to history.go(-2)
 ```
 
 History navigation.
@@ -1196,16 +1195,16 @@ nav.prefetch('/prefetch-me');
 Register callbacks for navigation events.
 
 ```typescript
-import { onBeforeNavigate, onAfterNavigate } from '@gospa/runtime';
+import * as GoSPA from "/_gospa/runtime.js";
 
 // Before navigation
-const unsub1 = onBeforeNavigate((path) => {
+const unsub1 = GoSPA.onBeforeNavigate((path) => {
   console.log('Navigating to:', path);
   // Can show loading indicator
 });
 
 // After navigation
-const unsub2 = onAfterNavigate((path) => {
+const unsub2 = GoSPA.onAfterNavigate((path) => {
   console.log('Navigated to:', path);
   // Can hide loading indicator, update analytics
 });
@@ -1825,10 +1824,10 @@ autoInit();
 
 ## Global API
 
-The runtime exposes a global `__GOSPA__` object for debugging:
+The runtime exposes a global `GoSPA` object for debugging and manual control:
 
 ```typescript
-window.__GOSPA__ = {
+window.GoSPA = {
   config,           // Runtime configuration
   components,       // Component registry Map
   globalState,      // Global StateMap

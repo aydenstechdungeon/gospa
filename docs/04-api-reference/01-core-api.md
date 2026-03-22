@@ -1221,6 +1221,8 @@ For elements outside `data-gospa-component` (like layouts, static content), use 
 ```
 
 ```javascript
+import * as GoSPA from "/_gospa/runtime.js";
+
 // In your root layout or main script
 document.addEventListener('click', (e) => {
     const target = e.target.closest('[data-action]');
@@ -1234,7 +1236,8 @@ document.addEventListener('click', (e) => {
             navigator.clipboard.writeText(code.innerText);
             break;
         case 'toggle-menu':
-            document.getElementById('menu').classList.toggle('hidden');
+            const menu = document.getElementById('menu');
+            if (menu) menu.classList.toggle('hidden');
             break;
     }
 });
@@ -1247,6 +1250,8 @@ This pattern survives SPA navigation because the handler is attached at document
 ### Component API
 
 ```javascript
+import * as GoSPA from "/_gospa/runtime.js";
+
 // Initialize component
 GoSPA.init({
     wsUrl: 'ws://localhost:3000/_gospa/ws',
@@ -1350,9 +1355,9 @@ manager.discoverIslands();  // re-scan DOM (use after SPA nav)
 manager.destroy();          // clean up observers
 
 // Browser globals (available when island.ts is loaded)
-window.__GOSPA_ISLAND_MANAGER__.init(config)
-window.__GOSPA_ISLAND_MANAGER__.get()
-window.__GOSPA_ISLAND_MANAGER__.hydrate(name)
+window.GoSPA_ISLAND_MANAGER.init(config)
+window.GoSPA_ISLAND_MANAGER.get()
+window.GoSPA_ISLAND_MANAGER.hydrate(name)
 
 // DOM event — fired on the island element after hydration
 element.addEventListener('gospa:hydrated', (ev) => {

@@ -36,8 +36,12 @@ The default runtime trusts server-rendered HTML (Templ auto-escapes all content)
 - When you have a proper CSP configured
 
 ```typescript
-import { init, Rune, navigate } from '@gospa/client';
+// Browser-style (no bundler)
+import * as GoSPA from "/_gospa/runtime.js";
+GoSPA.init();
 
+// npm style (with bundler)
+import { init, Rune, navigate } from '@gospa/client';
 init();
 ```
 
@@ -64,12 +68,16 @@ The secure runtime includes DOMPurify for HTML sanitization. Use this when displ
 - Any app displaying untrusted HTML
 
 ```typescript
-import { init, sanitize } from '@gospa/client/runtime-secure';
+// Browser-style (no bundler)
+import * as GoSPA from "/_gospa/runtime-secure.js";
+GoSPA.init();
 
+// npm style (with bundler)
+import { init, sanitize } from '@gospa/client/runtime-secure';
 init();
 
 // Sanitize user content
-const cleanHtml = await sanitize(userComment);
+const cleanHtml = await GoSPA.sanitize(userComment);
 ```
 
 ### Core bundle (`runtime-core.js`, embed / advanced)

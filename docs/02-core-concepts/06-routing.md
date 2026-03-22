@@ -614,3 +614,34 @@ When the router navigates to a new page, it will:
 
 > [!TIP]
 > Use this for elements that you populate via `document.addEventListener('gospa:navigated', ...)` to prevent them from flickering or disappearing briefly during route changes.
+
+---
+
+## Script Re-execution
+
+By default, standard browser behavior when updating `innerHTML` is that `<script>` tags are **not** executed. This can be problematic in an SPA when you need page-specific JavaScript logic.
+
+GoSPA solves this by automatically identifying and re-executing all `<script>` tags (including `<script type="module">`) found within the newly updated content during navigation.
+
+### How it Works
+
+When you navigate to a new route:
+1. GoSPA fetches the new page content.
+2. The relevant DOM container is patched.
+3. Every script tag in the new content is extracted and re-inserted as a fresh element, triggering the browser to execute it.
+
+This allows you to include page-specific logic directly in your `.templ` files:
+
+```html
+<script type="module">
+    import * as GoSPA from "/_gospa/runtime.js";
+    const count = new GoSPA.Rune(0);
+    console.log("Page initialized with count:", count.get());
+</script>
+```
+
+### Prevention
+
+If you have a script that should **only run once** (on initial page load) and never again during SPA transitions, you should:
+1. Place it in your `layout.templ` or `root_layout.templ` outside the `[data-gospa-page-content]` or `[data-gospa-root]` area.
+2. Use the `data-gospa-permanent` attribute on the script or its container to skip re-execution.

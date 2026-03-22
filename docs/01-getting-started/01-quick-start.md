@@ -132,7 +132,7 @@ templ CounterPage() {
 		<h1>Counter</h1>
 		<p data-bind="count">0</p>
 		<button 
-			onclick="var r=__GOSPA__.getState('counter','count');r&&__GOSPA__.setState('counter','count',r.get()+1)"
+			onclick="var r=GoSPA.getState('counter','count');r&&GoSPA.setState('counter','count',r.get()+1)"
 		>
 			+1
 		</button>
@@ -147,10 +147,10 @@ templ CounterPage() {
 GoSPA includes a TypeScript runtime that provides Svelte-like reactivity:
 
 ```typescript
-import { Rune, Derived, Effect, StateMap } from '@gospa/runtime'
+import * as GoSPA from "/_gospa/runtime.js";
 
 // Get or create a state instance
-const state = __GOSPA__.getState('counter')
+const state = GoSPA.getState('counter')
 if (!state) return
 
 // Get current value
@@ -160,7 +160,7 @@ const count = state.get('count')
 state.set('count', count + 1)
 
 // Or use the convenience method directly
-__GOSPA__.setState('counter', 'count', newValue)
+GoSPA.setState('counter', 'count', newValue)
 ```
 
 ### DOM Bindings
@@ -279,15 +279,15 @@ templ TodoPage() *state.StateMap {
 The client runtime mirrors server primitives:
 
 ```typescript
-import { Rune, StateMap, batch } from '@gospa/runtime'
+import * as GoSPA from "/_gospa/runtime.js";
 
 // Create state map
-const state = new StateMap()
-state.add('count', new Rune(0))
-state.add('items', new Rune<string[]>([]))
+const state = new GoSPA.StateMap()
+state.add('count', new GoSPA.Rune(0))
+state.add('items', new GoSPA.Rune([]))
 
 // Batch updates
-batch(() => {
+GoSPA.batch(() => {
   state.get('count')?.set(0)
   state.get('items')?.set([])
 })
@@ -298,16 +298,16 @@ batch(() => {
 Enable real-time state sync:
 
 ```typescript
-import { WSClient, syncedRune } from '@gospa/runtime'
+import * as GoSPA from "/_gospa/runtime.js";
 
-const ws = new WSClient({
+const ws = new GoSPA.WSClient({
   url: 'ws://localhost:3000/ws',
   onConnect: () => console.log('Connected'),
   onDisconnect: () => console.log('Disconnected')
 })
 
 // Create synced rune
-const count = syncedRune('count', 0, ws)
+const count = GoSPA.syncedRune('count', 0, ws)
 ```
 
 ## Events
@@ -333,20 +333,20 @@ templ ButtonEvents() map[string]interface{} {
 The runtime handles events automatically:
 
 ```typescript
-import { on, delegate, debounce, throttle } from '@gospa/runtime'
+import * as GoSPA from "/_gospa/runtime.js";
 
 // Direct event
-const unsub = on(button, 'click', (e) => {
+const unsub = GoSPA.on(button, 'click', (e) => {
   console.log('Clicked')
 })
 
 // Delegated events
-delegate(document, 'click', '.btn', (e) => {
+GoSPA.delegate(document, 'click', '.btn', (e) => {
   console.log('Button clicked')
 })
 
 // Debounced handler
-const debouncedClick = debounce((e) => {
+const debouncedClick = GoSPA.debounce((e) => {
   console.log('Debounced')
 }, 300)
 ```
@@ -356,17 +356,17 @@ const debouncedClick = debounce((e) => {
 Add animations with the transition system:
 
 ```typescript
-import { fade, fly, slide, scale, blur } from '@gospa/runtime'
+import * as GoSPA from "/_gospa/runtime.js";
 
 // Apply transition
 const element = document.querySelector('.fade-in')
-fade(element, { duration: 300, delay: 0 })
+GoSPA.fade(element, { duration: 300, delay: 0 })
 
 // Available transitions
-fly(element, { y: 50, duration: 400 })
-slide(element, { direction: 'left', duration: 300 })
-scale(element, { from: 0.5, duration: 200 })
-blur(element, { from: 10, duration: 300 })
+GoSPA.fly(element, { y: 50, duration: 400 })
+GoSPA.slide(element, { direction: 'left', duration: 300 })
+GoSPA.scale(element, { from: 0.5, duration: 200 })
+GoSPA.blur(element, { from: 10, duration: 300 })
 ```
 
 ## Configuration
@@ -450,12 +450,12 @@ templ CounterPage() {
 		<h2>Counter</h2>
 		<p>Count: <span data-bind="count">0</span></p>
 		<button 
-			onclick="var r=__GOSPA__.getState('counter','count');r&&__GOSPA__.setState('counter','count',r.get()-1)"
+			onclick="var r=GoSPA.getState('counter','count');r&&GoSPA.setState('counter','count',r.get()-1)"
 		>
 			-
 		</button>
 		<button 
-			onclick="var r=__GOSPA__.getState('counter','count');r&&__GOSPA__.setState('counter','count',r.get()+1)"
+			onclick="var r=GoSPA.getState('counter','count');r&&GoSPA.setState('counter','count',r.get()+1)"
 		>
 			+
 		</button>
@@ -481,7 +481,7 @@ templ TodosPage() {
 			placeholder="Add todo..."
 		/>
 		<button 
-			onclick="var s=__GOSPA__.getState('todos');if(!s)return;var v=s.get('newTodo');if(!v)return;var t=s.get('todos')||[];s.set('todos',[...t,{id:Date.now(),text:v,completed:false}]);s.set('newTodo','')"
+			onclick="var s=GoSPA.getState('todos');if(!s)return;var v=s.get('newTodo');if(!v)return;var t=s.get('todos')||[];s.set('todos',[...t,{id:Date.now(),text:v,completed:false}]);s.set('newTodo','')"
 		>
 			Add
 		</button>
