@@ -54,14 +54,16 @@ templ Page() {
 
 ## Comparison
 
-| Feature | GoSPA | HTMX | Alpine | SvelteKit |
-| :-- | :--: | :--: | :--: | :--: |
-| **Language** | Go | HTML | JS | JS/TS |
-| **Runtime** | ~15KB | ~14KB | ~15KB | Varies |
-| **Reactivity** | ✅ | ❌ | ✅ | ✅ |
-| **WS Sync** | ✅ | ❌ | ❌ | ✅ |
-| **File Routing** | ✅ | ❌ | ❌ | ✅ |
-| **Type Safety** | ✅ | ❌ | ❌ | ✅ |
+| Feature | GoSPA | HTMX | Alpine | SvelteKit | MoonZoon |
+| :-- | :--: | :--: | :--: | :--: | :--: |
+| **Language** | Go | HTML | JS | JS/TS | Rust |
+| **Runtime** | ~15KB | ~14KB | ~15KB | Varies | ~27KB |
+| **App Speed** | Very High | High | High | Very High | Very High |
+| **DX Speed** | High | Very High | Very High | High | Moderate |
+| **Reactivity** | ✅ | ❌ | ✅ | ✅ | ✅ |
+| **WS Sync** | ✅ | ❌ | ❌ | ✅ | ✅ |
+| **File Routing** | ✅ | ❌ | ❌ | ✅ | ❌ |
+| **Type Safety** | ✅ | ❌ | ❌ | ✅ | ✅ |
 
 ## Recommended Production Baseline
 
