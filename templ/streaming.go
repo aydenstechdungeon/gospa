@@ -182,28 +182,20 @@ window.__GOSPA_SANITIZE_STREAM_HTML__ = window.__GOSPA_SANITIZE_STREAM_HTML__ ||
 	}
 	var template = document.createElement('template');
 	template.innerHTML = String(html || '');
-	var forbiddenTags = ['script', 'iframe', 'object', 'embed', 'link', 'style', 'meta'];
-	for (var i = 0; i < forbiddenTags.length; i++) {
-		var nodes = template.content.querySelectorAll(forbiddenTags[i]);
-		for (var j = 0; j < nodes.length; j++) {
-			nodes[j].remove();
-		}
-	}
-	var all = template.content.querySelectorAll('*');
-	for (var k = 0; k < all.length; k++) {
-		var attrs = Array.from(all[k].attributes);
-		for (var m = 0; m < attrs.length; m++) {
-			var name = attrs[m].name.toLowerCase();
-			var value = attrs[m].value;
-			if (name.startsWith('on')) {
-				all[k].removeAttribute(attrs[m].name);
-				continue;
+	// Remove dangerous elements
+	var forbidden = ['script', 'iframe', 'object', 'embed', 'link', 'style', 'meta', 'applet', 'base'];
+	forbidden.forEach(tag => {
+		template.content.querySelectorAll(tag).forEach(n => n.remove());
+	});
+	// Remove event handlers and javascript: URLs
+	template.content.querySelectorAll('*').forEach(el => {
+		Array.from(el.attributes).forEach(attr => {
+			var name = attr.name.toLowerCase();
+			if (name.startsWith('on') || (['src', 'href', 'xlink:href'].includes(name) && /^\s*javascript:/i.test(attr.value))) {
+				el.removeAttribute(attr.name);
 			}
-			if ((name === 'href' || name === 'src' || name === 'xlink:href') && /^\s*javascript:/i.test(value)) {
-				all[k].removeAttribute(attrs[m].name);
-			}
-		}
-	}
+		});
+	});
 	return template.innerHTML;
 };
 window.__GOSPA_STREAM__ = window.__GOSPA_STREAM__ || function(chunk) {

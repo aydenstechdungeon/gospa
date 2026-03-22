@@ -891,7 +891,7 @@ func deepEqual(a, b interface{}) bool {
 	}
 
 	// Type check - different types can't be equal
-	typeA, typeB := fmt.Sprintf("%T", a), fmt.Sprintf("%T", b)
+	typeA, typeB := reflect.TypeOf(a), reflect.TypeOf(b)
 	if typeA != typeB {
 		return false
 	}

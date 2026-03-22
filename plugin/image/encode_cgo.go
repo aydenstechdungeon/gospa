@@ -103,6 +103,11 @@ func (p *ImagePlugin) saveWebP(img image.Image, path string, quality int) error 
 	if len(rgba.Pix) == 0 {
 		return fmt.Errorf("empty image data")
 	}
+	// Check bounds to prevent C-side overflow
+	minSize := rgba.Bounds().Dy() * rgba.Stride
+	if len(rgba.Pix) < minSize {
+		return fmt.Errorf("invalid image data size")
+	}
 
 	var out *C.uint8_t
 
@@ -141,6 +146,11 @@ func (p *ImagePlugin) saveAVIF(img image.Image, path string, quality int) error 
 	rgba := toRGBA(img)
 	if len(rgba.Pix) == 0 {
 		return fmt.Errorf("empty image data")
+	}
+	// Check bounds to prevent C-side overflow
+	minSize := rgba.Bounds().Dy() * rgba.Stride
+	if len(rgba.Pix) < minSize {
+		return fmt.Errorf("invalid image data size")
 	}
 
 	cpath := C.CString(path)

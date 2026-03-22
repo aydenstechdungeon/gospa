@@ -54,11 +54,7 @@ func safelyRunStateNotification(notification stateNotification) {
 
 func enqueueStateNotification(notification stateNotification) {
 	startStateNotificationDispatcher()
-	select {
-	case stateNotificationQueue <- notification:
-	default:
-		safelyRunStateNotification(notification)
-	}
+	stateNotificationQueue <- notification
 }
 
 // StateMap is a collection of generic observables for component state

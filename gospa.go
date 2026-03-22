@@ -9,7 +9,6 @@ import (
 	"crypto/sha256"
 	"encoding/binary"
 	"fmt"
-	"html"
 	"io"
 	"io/fs"
 	"log/slog"
@@ -1613,17 +1612,12 @@ func toJS(v interface{}) string {
 func jsEscape(s string) string {
 	// First, apply JavaScript-specific escaping (order matters!)
 	s = strings.ReplaceAll(s, `\`, `\\`)
-	s = strings.ReplaceAll(s, `'`, `\'`)
-	s = strings.ReplaceAll(s, `"`, `\"`)
-	s = strings.ReplaceAll(s, "\n", `\n`)
-	s = strings.ReplaceAll(s, "\r", `\r`)
-	// Escape Unicode line terminators that can break JS string literals
-	s = strings.ReplaceAll(s, "\u2028", `\u2028`)
-	s = strings.ReplaceAll(s, "\u2029", `\u2029`)
-	// Prevent script tag breakout by escaping the closing sequence
-	s = strings.ReplaceAll(s, "</", `<\/`)
-	// Finally, escape HTML entities for defense-in-depth
-	s = html.EscapeString(s)
+	// Use Unicode escapes for dangerous characters to be safe in JS and HTML
+	s = strings.ReplaceAll(s, `<`, `\u003c`)
+	s = strings.ReplaceAll(s, `>`, `\u003e`)
+	s = strings.ReplaceAll(s, `&`, `\u0026`)
+	s = strings.ReplaceAll(s, `'`, `\u0027`)
+	s = strings.ReplaceAll(s, `"`, `\u0022`)
 	return s
 }
 

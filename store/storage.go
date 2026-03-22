@@ -87,14 +87,22 @@ func (s *MemoryStorage) pruneLoop() {
 	for {
 		select {
 		case <-ticker.C:
-			s.mu.Lock()
+			s.mu.RLock()
 			now := time.Now()
+			var expired []string
 			for key, entry := range s.store {
 				if !entry.exp.IsZero() && now.After(entry.exp) {
-					delete(s.store, key)
+					expired = append(expired, key)
 				}
 			}
-			s.mu.Unlock()
+			s.mu.RUnlock()
+			if len(expired) > 0 {
+				s.mu.Lock()
+				for _, key := range expired {
+					delete(s.store, key)
+				}
+				s.mu.Unlock()
+			}
 		case <-s.stop:
 			return // Stop processing when closed
 		}
