@@ -326,12 +326,12 @@ func (p *Plugin) generateGoValidation(schema Schema, outputDir string) error {
 		field := schema.Fields[name]
 		goType := p.tsTypeToGo(field.Type)
 		tags := p.generateValidateTags(field)
-		
+
 		jsonTag := name
 		if !field.Required {
 			jsonTag += ",omitempty"
 		}
-		
+
 		fmt.Fprintf(&sb, "  %s %s `json:\"%s\" validate:\"%s\"`\n",
 			p.capitalize(name), goType, jsonTag, tags)
 	}

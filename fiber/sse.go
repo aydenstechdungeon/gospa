@@ -95,12 +95,12 @@ func NewSSEBroker(config *SSEConfig) *SSEBroker {
 	}
 
 	b := &SSEBroker{
-		clients:           make(map[string]*SSEClient),
-		eventBufferSize:   config.EventBufferSize,
-		heartbeatInterval: config.HeartbeatInterval,
-		onConnect:         config.OnConnect,
-		onDisconnect:      config.OnDisconnect,
-		pubsub:            config.PubSub,
+		clients:            make(map[string]*SSEClient),
+		eventBufferSize:    config.EventBufferSize,
+		heartbeatInterval:  config.HeartbeatInterval,
+		onConnect:          config.OnConnect,
+		onDisconnect:       config.OnDisconnect,
+		pubsub:             config.PubSub,
 		authorizeSubscribe: config.AuthorizeSubscribe,
 	}
 

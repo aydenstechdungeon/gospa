@@ -235,8 +235,8 @@ func (p *Plugin) GenerateWithLogo(content string, logo image.Image, opts ...Opti
 
 // overlayLogo overlays a logo on the QR code.
 func overlayLogo(qr image.Image, logo image.Image, size int) (image.Image, error) {
-	if size < 5 || logo == nil { 
-		return qr, nil 
+	if size < 5 || logo == nil {
+		return qr, nil
 	}
 
 	// Create output image

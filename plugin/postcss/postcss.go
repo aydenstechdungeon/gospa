@@ -764,7 +764,7 @@ func (p *PostCSSPlugin) criticalCommand(args []string) error {
 	// Use cleaned path to prevent path traversal
 	criticalOutputPath := filepath.Clean(p.config.CriticalCSS.CriticalOutput)
 	nonCriticalOutputPath := filepath.Clean(p.config.CriticalCSS.NonCriticalOutput)
-	
+
 	// Ensure paths do not escape the project directory
 	if !p.isPathSafe(projectDir, criticalOutputPath) || !p.isPathSafe(projectDir, nonCriticalOutputPath) {
 		return fmt.Errorf("safety violation: critical CSS paths must be within project directory")
