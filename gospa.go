@@ -3,389 +3,26 @@
 package gospa
 
 import (
-	"bufio"
-	"bytes"
-	"context"
-	"crypto/sha256"
-	"encoding/binary"
 	"errors"
 	"fmt"
-	"io"
-	"io/fs"
 	"log/slog"
-	"net"
-	"net/url"
 	"os"
 	"strings"
 	"sync"
-	"time"
 
-	json "github.com/goccy/go-json"
-
-	templ "github.com/a-h/templ"
 	"github.com/aydenstechdungeon/gospa/embed"
 	"github.com/aydenstechdungeon/gospa/fiber"
 	"github.com/aydenstechdungeon/gospa/plugin"
 	"github.com/aydenstechdungeon/gospa/routing"
 	"github.com/aydenstechdungeon/gospa/state"
 	"github.com/aydenstechdungeon/gospa/store"
-	templpkg "github.com/aydenstechdungeon/gospa/templ"
+	json "github.com/goccy/go-json"
 	fiberpkg "github.com/gofiber/fiber/v3"
 	"github.com/gofiber/fiber/v3/middleware/compress"
 	"github.com/gofiber/fiber/v3/middleware/logger"
 	recovermw "github.com/gofiber/fiber/v3/middleware/recover"
 	"github.com/gofiber/fiber/v3/middleware/static"
-	"github.com/valyala/fasthttp"
 )
-
-// StateSerializerFunc defines a function for state serialization
-type StateSerializerFunc func(interface{}) ([]byte, error)
-
-// StateDeserializerFunc defines a function for state deserialization
-type StateDeserializerFunc func([]byte, interface{}) error
-
-// Version is the current version of GoSPA.
-const Version = "0.1.30"
-
-// Serialization formats
-const (
-	SerializationJSON    = "json"
-	SerializationMsgPack = "msgpack"
-)
-
-// NavigationSpeculativePrefetchingConfig configures speculative prefetching
-type NavigationSpeculativePrefetchingConfig struct {
-	Enabled        *bool `json:"enabled,omitempty"`
-	TTL            *int  `json:"ttl,omitempty"`
-	HoverDelay     *int  `json:"hoverDelay,omitempty"`
-	ViewportMargin *int  `json:"viewportMargin,omitempty"`
-}
-
-// NavigationURLParsingCacheConfig configures the URL parsing cache
-type NavigationURLParsingCacheConfig struct {
-	Enabled *bool `json:"enabled,omitempty"`
-	MaxSize *int  `json:"maxSize,omitempty"`
-	TTL     *int  `json:"ttl,omitempty"`
-}
-
-// NavigationIdleCallbackBatchUpdatesConfig configures idle callback batching
-type NavigationIdleCallbackBatchUpdatesConfig struct {
-	Enabled             *bool `json:"enabled,omitempty"`
-	FallbackToMicrotask *bool `json:"fallbackToMicrotask,omitempty"`
-}
-
-// NavigationLazyRuntimeInitializationConfig configures lazy runtime init
-type NavigationLazyRuntimeInitializationConfig struct {
-	Enabled       *bool `json:"enabled,omitempty"`
-	DeferBindings *bool `json:"deferBindings,omitempty"`
-}
-
-// NavigationServiceWorkerCachingConfig configures service worker caching
-type NavigationServiceWorkerCachingConfig struct {
-	Enabled   *bool  `json:"enabled,omitempty"`
-	CacheName string `json:"cacheName,omitempty"`
-	Path      string `json:"path,omitempty"`
-}
-
-// NavigationViewTransitionsConfig configures view transitions
-type NavigationViewTransitionsConfig struct {
-	Enabled           *bool `json:"enabled,omitempty"`
-	FallbackToClassic *bool `json:"fallbackToClassic,omitempty"`
-}
-
-// NavigationProgressBarConfig configures the navigation progress bar
-type NavigationProgressBarConfig struct {
-	Enabled *bool   `json:"enabled,omitempty"`
-	Color   *string `json:"color,omitempty"`
-	Height  *string `json:"height,omitempty"`
-}
-
-// NavigationOptions configures client-side navigation
-type NavigationOptions struct {
-	SpeculativePrefetching         *NavigationSpeculativePrefetchingConfig    `json:"speculativePrefetching,omitempty"`
-	URLParsingCache                *NavigationURLParsingCacheConfig           `json:"urlParsingCache,omitempty"`
-	IdleCallbackBatchUpdates       *NavigationIdleCallbackBatchUpdatesConfig  `json:"idleCallbackBatchUpdates,omitempty"`
-	LazyRuntimeInitialization      *NavigationLazyRuntimeInitializationConfig `json:"lazyRuntimeInitialization,omitempty"`
-	ServiceWorkerNavigationCaching *NavigationServiceWorkerCachingConfig      `json:"serviceWorkerNavigationCaching,omitempty"`
-	ViewTransitions                *NavigationViewTransitionsConfig           `json:"viewTransitions,omitempty"`
-	ProgressBar                    *NavigationProgressBarConfig               `json:"progressBar,omitempty"`
-}
-
-// Config holds the application configuration.
-type Config struct {
-	// RoutesDir is the directory containing route files.
-	RoutesDir string
-	// RoutesFS is the filesystem containing route files (optional). Takes precedence over RoutesDir if provided.
-	RoutesFS fs.FS
-	// DevMode enables development features.
-	DevMode bool
-	// RuntimeScript is the path to the client runtime script.
-	RuntimeScript string
-	// StaticDir is the directory for static files.
-	StaticDir string
-	// StaticPrefix is the URL prefix for static files.
-	StaticPrefix string
-	// AppName is the application name.
-	AppName string
-	// DefaultState is the initial state for new sessions.
-	DefaultState map[string]interface{}
-	// EnableWebSocket enables WebSocket support.
-	EnableWebSocket bool
-	// WebSocketPath is the WebSocket endpoint path.
-	WebSocketPath string
-	// WebSocketMiddleware allows injecting session/auth middleware before WebSocket upgrade.
-	WebSocketMiddleware fiberpkg.Handler
-	// Logger is the structured logger. Defaults to slog.Default().
-	Logger *slog.Logger
-
-	// Performance Options
-	// CompressState enables gzip compression of outbound WebSocket state payloads.
-	// The client receives a { type:"compressed", data: "<base64>", compressed: true }
-	// envelope and must decompress using the DecompressionStream browser API.
-	CompressState bool
-	// StateDiffing enables delta-only "patch" WebSocket messages for state syncs.
-	// Only changed state keys are transmitted after the initial full snapshot.
-	StateDiffing   bool
-	CacheTemplates bool // Cache compiled templates (SSG only)
-	SimpleRuntime  bool // Use lightweight runtime without DOMPurify (~6KB smaller)
-	// SimpleRuntimeSVGs allows SVG elements in the simple runtime sanitizer.
-	// WARNING: Only enable if your content is fully trusted and never user-generated.
-	SimpleRuntimeSVGs bool
-	// DisableSanitization disables client-side HTML sanitization for SPA navigation.
-	// When enabled, GoSPA trusts server-rendered HTML without DOMPurify filtering.
-	// This provides a SvelteKit-like experience but requires careful handling of
-	// user-generated content. Use with caution - only for trusted content.
-	DisableSanitization bool
-
-	// WebSocket Options — these values are passed directly to the client runtime's init() call.
-	// Defaults: WSReconnectDelay=1s, WSMaxReconnect=10, WSHeartbeat=30s.
-	WSReconnectDelay time.Duration // Initial reconnect delay (default 1s)
-	WSMaxReconnect   int           // Max reconnect attempts (default 10)
-	WSHeartbeat      time.Duration // Heartbeat ping interval (default 30s)
-
-	// WSMaxMessageSize limits the maximum payload size for WebSocket messages (default 64KB).
-	WSMaxMessageSize int
-	// WSConnRateLimit sets the refilling rate in connections per second for WebSocket upgrades (default 1.5).
-	WSConnRateLimit float64
-	// WSConnBurst sets the burst capacity for WebSocket connection upgrades (default 15.0).
-	WSConnBurst float64
-
-	// Hydration Options
-	// HydrationMode controls when components become interactive.
-	// Supported values: "immediate" | "lazy" | "visible" | "idle" (default: "immediate").
-	HydrationMode    string
-	HydrationTimeout int // ms before force hydrate (used with "visible" and "idle" modes)
-
-	// Serialization Options
-	// SerializationFormat sets the underlying format for all WebSocket communications.
-	// Supported values: "json" (default, using goccy/go-json) | "msgpack".
-	SerializationFormat string
-	// StateSerializer overrides the default state serialization for outbound WebSocket payloads.
-	// StateDeserializer overrides the default state deserialization for inbound WebSocket payloads.
-	StateSerializer   StateSerializerFunc
-	StateDeserializer StateDeserializerFunc
-
-	// Routing Options
-	DisableSPA bool // Disable SPA navigation completely
-
-	// Rendering Strategy Defaults
-	// DefaultRenderStrategy sets the fallback strategy for pages that do not
-	// explicitly call RegisterPageWithOptions. Defaults to StrategySSR.
-	DefaultRenderStrategy routing.RenderStrategy
-	// DefaultRevalidateAfter is the ISR TTL used when a page uses StrategyISR
-	// but does not set RouteOptions.RevalidateAfter. Zero means revalidate every request.
-	DefaultRevalidateAfter time.Duration
-
-	// Remote Action Options
-	MaxRequestBodySize int    // Maximum allowed size for remote action request bodies
-	RemotePrefix       string // Prefix for remote action endpoints (default "/_gospa/remote")
-	// RemoteActionMiddleware allows injecting authorization/tenant checks before remote action handlers.
-	RemoteActionMiddleware fiberpkg.Handler
-	// AllowUnauthenticatedRemoteActions disables the production safety guard that blocks
-	// remote actions when no RemoteActionMiddleware is configured.
-	// Default false (secure-by-default).
-	AllowUnauthenticatedRemoteActions bool
-
-	// Security Options
-	AllowedOrigins        []string // Allowed CORS origins
-	EnableCSRF            bool     // Enable automatic CSRF protection (requires CSRFSetTokenMiddleware + CSRFTokenMiddleware)
-	ContentSecurityPolicy string   // Optional CSP header. Empty uses fiber.DefaultContentSecurityPolicy.
-	PublicOrigin          string   // Explicit external origin used for generated WebSocket URLs. Empty derives from the request.
-	// SSGCacheMaxEntries caps the SSG/ISR/PPR page cache size. Oldest entries are evicted when full.
-	// Default: 500. Set to -1 to disable eviction (unbounded, not recommended in production).
-	SSGCacheMaxEntries int
-	// SSGCacheTTL sets an expiration time for SSG cache entries. If zero, they never expire.
-	SSGCacheTTL time.Duration
-
-	// Prefork enables Fiber's prefork mode.
-	// WARNING: If enabled without an external Storage/PubSub backend like Redis, in-memory state and WebSockets will be isolated per-process.
-	Prefork bool
-
-	// Storage defines the external storage backend for sessions and state. Defaults to in-memory.
-	Storage store.Storage
-
-	// PubSub defines the messaging backend for multi-process broadcasting. Defaults to in-memory.
-	PubSub store.PubSub
-
-	// NavigationOptions configures optional client-side navigation behavior and performance optimizations.
-	NavigationOptions NavigationOptions
-}
-
-// DefaultConfig returns the default configuration.
-func DefaultConfig() Config {
-	return Config{
-		RoutesDir:             "./routes",
-		DevMode:               false,
-		RuntimeScript:         "/_gospa/runtime.js",
-		StaticDir:             "./static",
-		StaticPrefix:          "/static",
-		AppName:               "GoSPA App",
-		DefaultState:          make(map[string]interface{}),
-		EnableWebSocket:       true,
-		WebSocketPath:         "/_gospa/ws",
-		RemotePrefix:          "/_gospa/remote",
-		MaxRequestBodySize:    4 * 1024 * 1024, // Default 4MB
-		SerializationFormat:   SerializationJSON,
-		EnableCSRF:            true,
-		ContentSecurityPolicy: fiber.DefaultContentSecurityPolicy,
-	}
-}
-
-// ProductionConfig returns an opinionated production-ready baseline.
-// It keeps the standard GoSPA runtime behavior while enabling practical
-// defaults for hardened deployments.
-func ProductionConfig() Config {
-	config := DefaultConfig()
-	config.DevMode = false
-	config.CacheTemplates = true
-	config.WSReconnectDelay = time.Second
-	config.WSMaxReconnect = 10
-	config.WSHeartbeat = 30 * time.Second
-	config.SSGCacheMaxEntries = 500
-	return config
-}
-
-// MinimalConfig returns a smaller baseline intended for simple apps or demos
-// that do not need realtime synchronization or advanced transport features.
-func MinimalConfig() Config {
-	config := DefaultConfig()
-	config.EnableWebSocket = false
-	config.CompressState = false
-	config.StateDiffing = false
-	config.WSReconnectDelay = 0
-	config.WSMaxReconnect = 0
-	config.WSHeartbeat = 0
-	return config
-}
-
-// getRuntimePath returns the versioned path for the runtime script.
-func (a *App) getRuntimePath() string {
-	if a.Config.RuntimeScript != "/_gospa/runtime.js" && a.Config.RuntimeScript != "" {
-		return a.Config.RuntimeScript
-	}
-
-	name := "runtime"
-	if a.Config.SimpleRuntime {
-		name = "runtime-simple"
-	}
-
-	// Try to get hash from content for better cache busting
-	if h, err := embed.RuntimeHash(a.Config.SimpleRuntime); err == nil {
-		return fmt.Sprintf("/_gospa/%s.%s.js", name, h)
-	}
-	// Fallback to version-based hash
-	h := fmt.Sprintf("%x", sha256.Sum256([]byte(Version)))
-	return fmt.Sprintf("/_gospa/%s.%s.js", name, h[:8])
-}
-
-// getWSUrl returns the WebSocket URL for the current request.
-func (a *App) getWSUrl(c fiberpkg.Ctx) string {
-	if publicOrigin := strings.TrimSpace(a.Config.PublicOrigin); publicOrigin != "" {
-		if parsed, err := url.Parse(publicOrigin); err == nil && parsed.Host != "" {
-			scheme := "ws"
-			if strings.EqualFold(parsed.Scheme, "https") {
-				scheme = "wss"
-			}
-			return scheme + "://" + parsed.Host + a.Config.WebSocketPath
-		}
-	}
-
-	protocol := "ws://"
-	if c.Protocol() == "https" || strings.ToLower(c.Get("X-Forwarded-Proto")) == "https" {
-		protocol = "wss://"
-	}
-
-	host := strings.TrimSpace(string(c.Request().Host()))
-	if validatedHost, ok := a.validatePublicHost(host); ok {
-		return protocol + validatedHost + a.Config.WebSocketPath
-	}
-
-	return protocol + "localhost" + a.Config.WebSocketPath
-}
-
-func (a *App) validatePublicHost(host string) (string, bool) {
-	if host == "" || len(host) > 253 || strings.Contains(host, "@") || strings.Contains(host, "://") {
-		return "", false
-	}
-
-	candidate := host
-	if !strings.Contains(candidate, ":") || strings.Count(candidate, ":") > 1 {
-		candidate = net.JoinHostPort(host, "80")
-	}
-
-	parsedHost, _, err := net.SplitHostPort(candidate)
-	if err != nil {
-		return "", false
-	}
-	if parsedHost == "" {
-		return "", false
-	}
-
-	if a.Config.PublicOrigin != "" {
-		if parsedURL, err := url.Parse(a.Config.PublicOrigin); err == nil && parsedURL.Host != "" {
-			expectedHost := parsedURL.Hostname()
-			if !strings.EqualFold(parsedHost, expectedHost) {
-				return "", false
-			}
-		}
-	}
-
-	return host, true
-}
-
-// ssgEntry holds a cached HTML page and when it was generated.
-type ssgEntry struct {
-	html      []byte
-	createdAt time.Time
-}
-
-type pprEntry struct {
-	html      []byte
-	createdAt time.Time
-}
-
-// encodeSsgEntry encodes an SSG entry into bytes for external storage.
-func encodeSsgEntry(entry ssgEntry) []byte {
-	buf := make([]byte, 8+len(entry.html))
-	binary.LittleEndian.PutUint64(buf[0:8], uint64(entry.createdAt.UnixNano()))
-	copy(buf[8:], entry.html)
-	return buf
-}
-
-// decodeSsgEntry decodes bytes into an SSG entry.
-func decodeSsgEntry(data []byte) (ssgEntry, bool) {
-	if len(data) < 8 {
-		return ssgEntry{}, false
-	}
-	createdAtNano := binary.LittleEndian.Uint64(data[0:8])
-	return ssgEntry{
-		html:      data[8:],
-		createdAt: time.Unix(0, int64(createdAtNano)), // #nosec //nolint:gosec G115
-	}, true
-}
-
-// isrSemaphore limits concurrent ISR background revalidations.
-var isrSemaphore = make(chan struct{}, 10)
 
 // App is the main GoSPA application.
 type App struct {
@@ -424,9 +61,7 @@ type App struct {
 var defaultApp *App
 
 // New creates a new GoSPA application with the given configuration.
-// It initializes the router, fiber app, and plugins.
 func New(config Config) *App {
-	// Set defaults
 	if config.AppName == "" {
 		config.AppName = "GoSPA Application"
 	}
@@ -451,7 +86,6 @@ func New(config Config) *App {
 	if config.WebSocketPath == "" {
 		config.WebSocketPath = "/_gospa/ws"
 	}
-
 	if config.RemotePrefix == "" {
 		config.RemotePrefix = "/_gospa/remote"
 	}
@@ -459,31 +93,21 @@ func New(config Config) *App {
 		config.MaxRequestBodySize = 4 * 1024 * 1024
 	}
 
-	// SSGCacheMaxEntries controls SSG/ISR/PPR cache size:
-	//   - 0 or unset: use default of 500 entries (recommended for most apps)
-	//   - -1: unlimited entries (no eviction) - NOT recommended in production
-	//   - 1-10000: use specified value (values >10000 are capped at 10000)
-	// Note: There is no "disable cache" option. To disable, use SSR strategy instead.
 	switch {
 	case config.SSGCacheMaxEntries == 0:
 		config.SSGCacheMaxEntries = 500
 	case config.SSGCacheMaxEntries < 0:
-		// Normalize all negative values to -1 for "unlimited"
 		config.SSGCacheMaxEntries = -1
 	case config.SSGCacheMaxEntries > 10000:
 		config.SSGCacheMaxEntries = 10000
 	}
 
-	// Default hydration mode: "immediate" means components hydrate as soon as the
-	// runtime is ready. Other valid values: "lazy", "visible", "idle".
 	if config.HydrationMode == "" {
 		config.HydrationMode = "immediate"
 	}
-
 	if config.WSMaxMessageSize == 0 {
 		config.WSMaxMessageSize = 64 * 1024
 	}
-
 	if config.WSConnRateLimit == 0 {
 		config.WSConnRateLimit = 1.5
 	}
@@ -493,7 +117,7 @@ func New(config Config) *App {
 	if config.WSConnBurst == 0 {
 		config.WSConnBurst = 15.0
 	}
-	// Configure global rate limiter
+
 	fiber.SetConnectionRateLimiter(config.WSConnBurst, config.WSConnRateLimit)
 
 	if config.Storage == nil {
@@ -509,10 +133,8 @@ func New(config Config) *App {
 		config.PubSub = store.NewMemoryPubSub()
 	}
 
-	// Update global stores (Optional: This is a side effect but keeps existing semantics working)
 	fiber.InitStores(config.Storage)
 
-	// Create router
 	var routerSource interface{}
 	if config.RoutesFS != nil {
 		routerSource = config.RoutesFS
@@ -521,7 +143,6 @@ func New(config Config) *App {
 	}
 	router := routing.NewRouter(routerSource)
 
-	// Create Fiber app
 	fiberConfig := fiberpkg.Config{
 		AppName:      config.AppName,
 		ServerHeader: "GoSPA",
@@ -538,7 +159,6 @@ func New(config Config) *App {
 		go hub.Run()
 	}
 
-	// Create state map
 	stateMap := state.NewStateMap()
 	for k, v := range config.DefaultState {
 		r := state.NewRune(v)
@@ -558,13 +178,174 @@ func New(config Config) *App {
 		pprShellKeys:        make([]string, 0),
 	}
 
-	// Setup middleware
 	app.setupMiddleware()
-
-	// Setup routes
 	app.setupRoutes()
 
+	if defaultApp == nil {
+		defaultApp = app
+	}
+
 	return app
+}
+
+// setupRoutes configures core internal routes.
+func (a *App) setupRoutes() {
+	a.Fiber.Get(a.getRuntimePath(), fiber.RuntimeMiddleware(a.Config.SimpleRuntime))
+
+	a.Fiber.Use("/_gospa/", func(c fiberpkg.Ctx) error {
+		c.Set("Cache-Control", "public, max-age=31536000, immutable")
+		return c.Next()
+	})
+	a.Fiber.Use("/_gospa/", static.New("", static.Config{
+		FS: embed.RuntimeFS(),
+	}))
+
+	if a.Hub != nil {
+		handlers := []fiberpkg.Handler{
+			fiber.WebSocketUpgradeMiddleware(),
+		}
+		if a.Config.WebSocketMiddleware != nil {
+			handlers = append(handlers, a.Config.WebSocketMiddleware)
+		}
+		handlers = append(handlers, fiber.WebSocketHandler(fiber.WebSocketConfig{
+			Hub:                 a.Hub,
+			CompressState:       a.Config.CompressState,
+			StateDiffing:        a.Config.StateDiffing,
+			Serializer:          a.Config.StateSerializer,
+			Deserializer:        a.Config.StateDeserializer,
+			SerializationFormat: a.Config.SerializationFormat,
+			WSMaxMessageSize:    a.Config.WSMaxMessageSize,
+		}))
+		hAny := make([]any, len(handlers))
+		for i, h := range handlers {
+			hAny[i] = h
+		}
+		a.Fiber.Get(a.Config.WebSocketPath, hAny[0], hAny[1:]...)
+	}
+
+	remoteHandlers := []fiberpkg.Handler{fiber.RemoteActionRateLimitMiddleware()}
+	if !a.Config.DevMode && a.Config.RemoteActionMiddleware == nil && !a.Config.AllowUnauthenticatedRemoteActions {
+		remoteHandlers = append(remoteHandlers, func(c fiberpkg.Ctx) error {
+			return c.Status(fiberpkg.StatusUnauthorized).JSON(fiberpkg.Map{
+				"error": "Remote actions require RemoteActionMiddleware in production",
+				"code":  "REMOTE_AUTH_REQUIRED",
+			})
+		})
+	}
+	if a.Config.RemoteActionMiddleware != nil {
+		remoteHandlers = append(remoteHandlers, a.Config.RemoteActionMiddleware)
+	}
+	remoteHandlers = append(remoteHandlers, a.handleRemoteAction)
+	rhAny := make([]any, len(remoteHandlers))
+	for i, h := range remoteHandlers {
+		rhAny[i] = h
+	}
+	a.Fiber.Post(a.Config.RemotePrefix+"/:name", rhAny[0], rhAny[1:]...)
+
+	if _, err := os.Stat(a.Config.StaticDir); err == nil {
+		a.Fiber.Use(a.Config.StaticPrefix, static.New(a.Config.StaticDir))
+		a.Fiber.Get("/favicon.ico", func(c fiberpkg.Ctx) error {
+			favPath := a.Config.StaticDir + "/favicon.ico"
+			if _, err := os.Stat(favPath); err == nil {
+				return c.SendFile(favPath)
+			}
+			return c.SendStatus(fiberpkg.StatusNoContent)
+		})
+	} else {
+		a.Fiber.Get("/favicon.ico", func(c fiberpkg.Ctx) error {
+			return c.SendStatus(fiberpkg.StatusNoContent)
+		})
+	}
+}
+
+func (a *App) handleRemoteAction(c fiberpkg.Ctx) error {
+	name := c.Params("name")
+	if len(name) > 256 {
+		return c.Status(fiberpkg.StatusBadRequest).JSON(fiberpkg.Map{
+			"error": "Action name too long",
+			"code":  "INVALID_ACTION_NAME",
+		})
+	}
+	fn, ok := routing.GetRemoteAction(name)
+	if !ok {
+		return c.Status(fiberpkg.StatusNotFound).JSON(fiberpkg.Map{
+			"error": "Remote action not found",
+			"code":  "ACTION_NOT_FOUND",
+		})
+	}
+
+	var input interface{}
+	if contentLength := c.Request().Header.ContentLength(); contentLength > a.Config.MaxRequestBodySize {
+		return c.Status(fiberpkg.StatusRequestEntityTooLarge).JSON(fiberpkg.Map{
+			"error": "Request body too large",
+			"code":  "REQUEST_TOO_LARGE",
+		})
+	}
+
+	if body := c.Body(); len(body) > 0 {
+		if !strings.Contains(c.Get("Content-Type"), "application/json") {
+			return c.Status(fiberpkg.StatusUnsupportedMediaType).JSON(fiberpkg.Map{
+				"error": "Unsupported Media Type: expected application/json",
+				"code":  "INVALID_CONTENT_TYPE",
+			})
+		}
+		if len(body) > a.Config.MaxRequestBodySize {
+			return c.Status(fiberpkg.StatusRequestEntityTooLarge).JSON(fiberpkg.Map{
+				"error": "Request body too large",
+				"code":  "REQUEST_TOO_LARGE",
+			})
+		}
+		var err error
+		input, err = decodeRemoteActionBody(body)
+		if err != nil {
+			if errors.Is(err, ErrJSONTooDeep) {
+				return c.Status(fiberpkg.StatusBadRequest).JSON(fiberpkg.Map{
+					"error": "JSON nesting too deep",
+					"code":  "JSON_TOO_DEEP",
+				})
+			}
+			return c.Status(fiberpkg.StatusBadRequest).JSON(fiberpkg.Map{
+				"error": "Invalid input JSON",
+				"code":  "INVALID_JSON",
+			})
+		}
+	}
+
+	headers := make(map[string]string, 4)
+	if requestID := string(c.Request().Header.Peek("X-Request-Id")); requestID != "" {
+		headers["X-Request-Id"] = requestID
+	}
+	if traceParent := string(c.Request().Header.Peek("Traceparent")); traceParent != "" {
+		headers["Traceparent"] = traceParent
+	}
+	if traceState := string(c.Request().Header.Peek("Tracestate")); traceState != "" {
+		headers["Tracestate"] = traceState
+	}
+	if b3 := string(c.Request().Header.Peek("B3")); b3 != "" {
+		headers["B3"] = b3
+	}
+
+	rc := routing.RemoteContext{
+		IP:        c.IP(),
+		UserAgent: string(c.Request().Header.UserAgent()),
+		RequestID: c.GetRespHeader("X-Request-Id"),
+		SessionID: c.Get("X-Session-Id"),
+		Headers:   headers,
+	}
+
+	result, err := fn(c.Context(), rc, input)
+	if err != nil {
+		a.Logger().Error("remote action error", "action", name, "err", err)
+		return c.Status(fiberpkg.StatusInternalServerError).JSON(fiberpkg.Map{
+			"error": "Internal server error",
+			"code":  "ACTION_FAILED",
+		})
+	}
+
+	return c.JSON(fiberpkg.Map{
+		"data": result,
+		"code": "SUCCESS",
+	})
 }
 
 // UsePlugin registers a plugin with the application.
@@ -572,16 +353,10 @@ func (a *App) UsePlugin(p plugin.Plugin) error {
 	if err := plugin.Register(p); err != nil {
 		return err
 	}
-
-	// If plugin implements RuntimePlugin, extract middleware and template funcs
 	if rp, ok := p.(plugin.RuntimePlugin); ok {
-		// Get configuration
 		_ = rp.Config()
-
-		// Get middleware
 		if mws := rp.Middlewares(); len(mws) > 0 {
 			for _, mw := range mws {
-				// Convert to Fiber handler if needed
 				if handler, ok := any(mw).(func(fiberpkg.Ctx) error); ok {
 					a.pluginMiddleware = append(a.pluginMiddleware, handler)
 				} else if handler, ok := mw.(fiberpkg.Handler); ok {
@@ -589,15 +364,12 @@ func (a *App) UsePlugin(p plugin.Plugin) error {
 				}
 			}
 		}
-
-		// Get template functions
 		if funcs := rp.TemplateFuncs(); funcs != nil {
 			for k, v := range funcs {
 				a.pluginTemplateFuncs[k] = v
 			}
 		}
 	}
-
 	return nil
 }
 
@@ -611,280 +383,65 @@ func (a *App) UsePlugins(plugins ...plugin.Plugin) error {
 	return nil
 }
 
-// GetPlugin returns a registered plugin by name.
+// GetPlugin retrieves a registered plugin by name.
 func (a *App) GetPlugin(name string) (plugin.Plugin, bool) {
 	p := plugin.GetPlugin(name)
 	return p, p != nil
 }
 
-// ListPlugins returns all registered plugins.
+// ListPlugins returns information about all registered plugins.
 func (a *App) ListPlugins() []plugin.Info {
 	return plugin.GetAllPluginInfo()
 }
 
-// GetTemplateFuncs returns all plugin template functions.
+// GetTemplateFuncs returns template functions registered by plugins.
 func (a *App) GetTemplateFuncs() map[string]any {
 	return a.pluginTemplateFuncs
 }
 
-// applyPluginMiddleware applies middleware from runtime plugins.
 func (a *App) applyPluginMiddleware() {
 	for _, mw := range a.pluginMiddleware {
 		a.Fiber.Use(mw)
 	}
 }
 
-// setupMiddleware configures the middleware stack.
 func (a *App) setupMiddleware() {
-	// Recovery middleware
 	a.Fiber.Use(recovermw.New(recovermw.Config{
 		EnableStackTrace: true,
 	}))
-
-	// Logger middleware
 	if a.Config.DevMode {
 		a.Fiber.Use(logger.New())
 	}
-
-	// Compression
 	a.Fiber.Use(compress.New(compress.Config{
 		Level: compress.LevelBestSpeed,
 	}))
-
-	// Security headers
 	a.Fiber.Use(fiber.SecurityHeadersMiddleware(a.Config.ContentSecurityPolicy))
-
 	if len(a.Config.AllowedOrigins) > 0 {
 		a.Fiber.Use(fiber.CORSMiddleware(a.Config.AllowedOrigins))
 	}
-
 	if a.Config.EnableCSRF {
-		// CSRF token setter must come BEFORE protection middleware
-		// to ensure tokens are set on GET/HEAD requests before POST validation
 		a.Fiber.Use(fiber.CSRFSetTokenMiddleware())
 		a.Fiber.Use(fiber.CSRFTokenMiddleware())
 	}
-
-	// SPA navigation middleware (must come before SPAMiddleware)
 	if !a.Config.DisableSPA {
 		a.Fiber.Use(fiber.SPANavigationMiddleware())
 	}
-
-	// Preload critical assets before reaching the SPA middleware to ensure headers are set on HTML
 	preloadConfig := fiber.DefaultPreloadConfig()
-	// Sync with dynamic runtime path
 	preloadConfig.RuntimeScript = a.getRuntimePath()
 	a.Fiber.Use(fiber.PreloadHeadersMiddleware(preloadConfig))
 
-	// SPA middleware
 	spaConfig := fiber.DefaultConfig()
 	spaConfig.DevMode = a.Config.DevMode
 	spaConfig.RuntimeScript = a.Config.RuntimeScript
 	a.Fiber.Use(fiber.SPAMiddleware(spaConfig))
-
-	// DevMode error overlay
-	if a.Config.DevMode {
-		overlay := fiber.NewErrorOverlay(fiber.DefaultErrorOverlayConfig())
-		a.Fiber.Use(func(c fiberpkg.Ctx) error {
-			err := c.Next()
-			if err == nil {
-				return nil
-			}
-			accept := c.Get("Accept")
-			if strings.Contains(accept, "text/html") {
-				overlayHTML := overlay.RenderOverlay(err, nil)
-				c.Status(fiberpkg.StatusInternalServerError)
-				c.Set("Content-Type", "text/html; charset=utf-8")
-				return c.SendString(overlayHTML)
-			}
-			return err
-		})
-	}
 }
 
-// setupRoutes configures the routes.
-func (a *App) setupRoutes() {
-	// Serve main runtime script with specific middleware to support hashing and 'simple' toggle
-	a.Fiber.Get(a.getRuntimePath(), fiber.RuntimeMiddleware(a.Config.SimpleRuntime))
-
-	// Serve other runtime chunks from the embedded filesystem with long-term caching
-	a.Fiber.Use("/_gospa/", func(c fiberpkg.Ctx) error {
-		c.Set("Cache-Control", "public, max-age=31536000, immutable")
-		return c.Next()
-	})
-	a.Fiber.Use("/_gospa/", static.New("", static.Config{
-		FS: embed.RuntimeFS(),
-	}))
-
-	// WebSocket endpoint (always registered since hub is always created)
-	if a.Hub != nil {
-		handlers := []fiberpkg.Handler{}
-		// SECURITY: Always enforce per-IP rate limiting before the WebSocket upgrade.
-		// This prevents a flood of connections from exhausting the hub's Clients map
-		// before any application-level auth/middleware has a chance to run.
-		handlers = append(handlers, fiber.WebSocketUpgradeMiddleware())
-		if a.Config.WebSocketMiddleware != nil {
-			handlers = append(handlers, a.Config.WebSocketMiddleware)
-		}
-		handlers = append(handlers, fiber.WebSocketHandler(fiber.WebSocketConfig{
-			Hub:                 a.Hub,
-			CompressState:       a.Config.CompressState,
-			StateDiffing:        a.Config.StateDiffing,
-			Serializer:          a.Config.StateSerializer,
-			Deserializer:        a.Config.StateDeserializer,
-			SerializationFormat: a.Config.SerializationFormat,
-			WSMaxMessageSize:    a.Config.WSMaxMessageSize,
-		}))
-		// In Fiber v3 Get/Post/etc. take (path, handler any, ...any), not (path, ...Handler).
-		// Build a []any from our handlers slice and spread.
-		hAny := make([]any, len(handlers))
-		for i, h := range handlers {
-			hAny[i] = h
-		}
-		a.Fiber.Get(a.Config.WebSocketPath, hAny[0], hAny[1:]...)
-	}
-
-	// Remote Actions endpoint
-	remoteHandlers := []fiberpkg.Handler{fiber.RemoteActionRateLimitMiddleware()}
-	if !a.Config.DevMode && a.Config.RemoteActionMiddleware == nil && !a.Config.AllowUnauthenticatedRemoteActions {
-		remoteHandlers = append(remoteHandlers, func(c fiberpkg.Ctx) error {
-			return c.Status(fiberpkg.StatusUnauthorized).JSON(fiberpkg.Map{
-				"error": "Remote actions require RemoteActionMiddleware in production",
-				"code":  "REMOTE_AUTH_REQUIRED",
-			})
-		})
-	}
-	if a.Config.RemoteActionMiddleware != nil {
-		remoteHandlers = append(remoteHandlers, a.Config.RemoteActionMiddleware)
-	}
-	remoteHandlers = append(remoteHandlers, func(c fiberpkg.Ctx) error {
-		name := c.Params("name")
-		if len(name) > 256 {
-			return c.Status(fiberpkg.StatusBadRequest).JSON(fiberpkg.Map{
-				"error": "Action name too long",
-				"code":  "INVALID_ACTION_NAME",
-			})
-		}
-		fn, ok := routing.GetRemoteAction(name)
-		if !ok {
-			return c.Status(fiberpkg.StatusNotFound).JSON(fiberpkg.Map{
-				"error": "Remote action not found",
-				"code":  "ACTION_NOT_FOUND",
-			})
-		}
-
-		var input interface{}
-		// Check request body size before materializing it.
-		// ContentLength might be -1 for chunked transfer, which Fiber will handle via BodyLimit.
-		if contentLength := c.Request().Header.ContentLength(); contentLength > a.Config.MaxRequestBodySize {
-			return c.Status(fiberpkg.StatusRequestEntityTooLarge).JSON(fiberpkg.Map{
-				"error": "Request body too large",
-				"code":  "REQUEST_TOO_LARGE",
-			})
-		}
-
-		// Only parse if body is not empty
-		if body := c.Body(); len(body) > 0 {
-			if !strings.Contains(c.Get("Content-Type"), "application/json") {
-				return c.Status(fiberpkg.StatusUnsupportedMediaType).JSON(fiberpkg.Map{
-					"error": "Unsupported Media Type: expected application/json",
-					"code":  "INVALID_CONTENT_TYPE",
-				})
-			}
-			if len(body) > a.Config.MaxRequestBodySize {
-				return c.Status(fiberpkg.StatusRequestEntityTooLarge).JSON(fiberpkg.Map{
-					"error": "Request body too large",
-					"code":  "REQUEST_TOO_LARGE",
-				})
-			}
-			var err error
-			input, err = decodeRemoteActionBody(body)
-			if err != nil {
-				if errors.Is(err, ErrJSONTooDeep) {
-					return c.Status(fiberpkg.StatusBadRequest).JSON(fiberpkg.Map{
-						"error": "JSON nesting too deep",
-						"code":  "JSON_TOO_DEEP",
-					})
-				}
-				return c.Status(fiberpkg.StatusBadRequest).JSON(fiberpkg.Map{
-					"error": "Invalid input JSON",
-					"code":  "INVALID_JSON",
-				})
-			}
-		}
-
-		// Extract tracing headers directly without copying the lock value
-		headers := make(map[string]string, 4)
-		if requestID := string(c.Request().Header.Peek("X-Request-Id")); requestID != "" {
-			headers["X-Request-Id"] = requestID
-		}
-		if traceParent := string(c.Request().Header.Peek("Traceparent")); traceParent != "" {
-			headers["Traceparent"] = traceParent
-		}
-		if traceState := string(c.Request().Header.Peek("Tracestate")); traceState != "" {
-			headers["Tracestate"] = traceState
-		}
-		if b3 := string(c.Request().Header.Peek("B3")); b3 != "" {
-			headers["B3"] = b3
-		}
-
-		rc := routing.RemoteContext{
-			IP:        c.IP(),
-			UserAgent: string(c.Request().Header.UserAgent()),
-			RequestID: c.GetRespHeader("X-Request-Id"),
-			SessionID: c.Get("X-Session-Id"),
-			Headers:   headers,
-		}
-
-		result, err := fn(c.Context(), rc, input)
-		if err != nil {
-			// Log the actual error internally
-			a.Logger().Error("remote action error", "action", name, "err", err)
-			// SECURITY: Return a generic message to prevent internal detail leakage
-			// (DB strings, file paths, stack info, etc. must not reach the browser)
-			return c.Status(fiberpkg.StatusInternalServerError).JSON(fiberpkg.Map{
-				"error": "Internal server error",
-				"code":  "ACTION_FAILED",
-			})
-		}
-
-		return c.JSON(fiberpkg.Map{
-			"data": result,
-			"code": "SUCCESS",
-		})
-	})
-	// Convert remoteHandlers ([]Handler) to []any for v3 routing
-	rhAny := make([]any, len(remoteHandlers))
-	for i, h := range remoteHandlers {
-		rhAny[i] = h
-	}
-	a.Fiber.Post(a.Config.RemotePrefix+"/:name", rhAny[0], rhAny[1:]...)
-
-	// Static files
-	if _, err := os.Stat(a.Config.StaticDir); err == nil {
-		a.Fiber.Use(a.Config.StaticPrefix, static.New(a.Config.StaticDir))
-		// Serve favicon from static dir if requested at root
-		a.Fiber.Get("/favicon.ico", func(c fiberpkg.Ctx) error {
-			favPath := a.Config.StaticDir + "/favicon.ico"
-			if _, err := os.Stat(favPath); err == nil {
-				return c.SendFile(favPath)
-			}
-			return c.SendStatus(fiberpkg.StatusNoContent)
-		})
-	} else {
-		// Prevent 404 errors for default favicon requests
-		a.Fiber.Get("/favicon.ico", func(c fiberpkg.Ctx) error {
-			return c.SendStatus(fiberpkg.StatusNoContent)
-		})
-	}
-}
-
-// Scan scans the routes directory and builds the route tree.
+// Scan scans the routes directory for page and layout components.
 func (a *App) Scan() error {
 	return a.Router.Scan()
 }
 
-// Logger returns the configured logger.
+// Logger returns the application logger.
 func (a *App) Logger() *slog.Logger {
 	if a.Config.Logger != nil {
 		return a.Config.Logger
@@ -892,19 +449,77 @@ func (a *App) Logger() *slog.Logger {
 	return slog.Default()
 }
 
-// RegisterRoutes registers all scanned routes with Fiber.
+// Run starts the GoSPA application on the specified address.
+func (a *App) Run(addr string) error {
+	if err := plugin.TriggerHook(plugin.BeforeServe, map[string]interface{}{
+		"fiber":  a.Fiber,
+		"config": a.Config,
+	}); err != nil {
+		a.Logger().Error("plugin BeforeServe hook failed", "err", err)
+	}
+	a.applyPluginMiddleware()
+	if len(a.Router.GetRoutes()) == 0 {
+		if err := a.Scan(); err != nil {
+			return err
+		}
+	}
+	if err := a.RegisterRoutes(); err != nil {
+		return err
+	}
+	a.Logger().Info("starting GoSPA", "version", Version, "addr", addr)
+	return a.Fiber.Listen(addr)
+}
+
+// RunTLS starts the GoSPA application on the specified address with TLS.
+func (a *App) RunTLS(addr, certFile, keyFile string) error {
+	if err := plugin.TriggerHook(plugin.BeforeServe, map[string]interface{}{
+		"fiber":  a.Fiber,
+		"config": a.Config,
+	}); err != nil {
+		a.Logger().Error("plugin BeforeServe hook failed", "err", err)
+	}
+	a.applyPluginMiddleware()
+	if len(a.Router.GetRoutes()) == 0 {
+		if err := a.Scan(); err != nil {
+			return err
+		}
+	}
+	if err := a.RegisterRoutes(); err != nil {
+		return err
+	}
+	a.Logger().Info("starting GoSPA (TLS)", "version", Version, "addr", addr)
+	return a.Fiber.Listen(addr, fiberpkg.ListenConfig{
+		CertFile:    certFile,
+		CertKeyFile: keyFile,
+	})
+}
+
+// Shutdown gracefully shuts down the GoSPA application.
+func (a *App) Shutdown() error {
+	if err := plugin.TriggerHook(plugin.BeforePrune, nil); err != nil {
+		a.Logger().Error("plugin BeforePrune hook failed", "err", err)
+	}
+	if a.Hub != nil {
+		a.Hub.Close()
+	}
+	if closer, ok := a.Config.Storage.(interface{ Close() error }); ok {
+		_ = closer.Close()
+	}
+	err := a.Fiber.Shutdown()
+	if err := plugin.TriggerHook(plugin.AfterPrune, nil); err != nil {
+		a.Logger().Error("plugin AfterPrune hook failed", "err", err)
+	}
+	return err
+}
+
+// RegisterRoutes manually triggers route registration.
 func (a *App) RegisterRoutes() error {
 	if err := a.Scan(); err != nil {
 		return err
 	}
-
-	// Register page routes
 	for _, route := range a.Router.GetPages() {
-		// Capture route for closure
 		r := route
 		opts := routing.GetRouteOptions(r.Path)
-
-		// Setup route-specific rate limiter if configured
 		var handlers []any
 		if opts.RateLimit != nil {
 			rl := fiber.NewConnectionRateLimiter(a.Config.Storage)
@@ -917,7 +532,6 @@ func (a *App) RegisterRoutes() error {
 			if msg == "" {
 				msg = "Too many requests"
 			}
-
 			handlers = append(handlers, func(c fiberpkg.Ctx) error {
 				if !rl.Allow(c.IP()) {
 					return c.Status(fiberpkg.StatusTooManyRequests).SendString(msg)
@@ -925,8 +539,6 @@ func (a *App) RegisterRoutes() error {
 				return c.Next()
 			})
 		}
-
-		// Apply middlewares globally registered for this route
 		mws := a.Router.ResolveMiddlewareChain(r)
 		for _, mwRoute := range mws {
 			if fn := routing.GetMiddleware(mwRoute.Path); fn != nil {
@@ -934,860 +546,18 @@ func (a *App) RegisterRoutes() error {
 					handlers = append(handlers, mwHandler)
 				} else if mwHandler, ok := fn.(fiberpkg.Handler); ok {
 					handlers = append(handlers, mwHandler)
-				} else {
-					a.Logger().Error("skipping invalid middleware signature", "path", mwRoute.Path)
 				}
 			}
 		}
-
 		handlers = append(handlers, func(c fiberpkg.Ctx) error {
 			return a.renderRoute(c, r)
 		})
-
 		a.Fiber.Get(r.Path, handlers[0], handlers[1:]...)
 	}
-
 	return nil
 }
 
-// renderError renders the appropriate error boundary for a path.
-func (a *App) renderError(c fiberpkg.Ctx, statusCode int, errToDisplay error) error {
-	path := c.Path()
-	errRoute := a.Router.GetErrorRoute(path)
-	if errRoute == nil {
-		return c.Status(statusCode).SendString(errToDisplay.Error())
-	}
-
-	errCompFn := routing.GetError(errRoute.Path)
-	if errCompFn == nil {
-		// Fallback to basic string if error comp isn't registered
-		return c.Status(statusCode).SendString(errToDisplay.Error())
-	}
-
-	props := map[string]interface{}{
-		"error": errToDisplay.Error(),
-		"code":  statusCode,
-		"path":  path,
-	}
-
-	content := errCompFn(props)
-	params := make(map[string]string)
-
-	// Apply layouts to the error content
-	layouts := a.Router.ResolveLayoutChain(errRoute)
-	content = a.wrapWithLayouts(content, layouts, params, path)
-
-	rootLayoutFunc := routing.GetRootLayout()
-	var wrappedContent templ.Component
-	if rootLayoutFunc != nil {
-		rootProps := a.buildRootLayoutProps(c, params)
-		wrappedContent = rootLayoutFunc(content, rootProps)
-	} else {
-		wrappedContent = content
-	}
-
-	var buf bytes.Buffer
-	if rerr := wrappedContent.Render(c.Context(), &buf); rerr != nil {
-		a.Logger().Error("Error rendering error boundary", "err", rerr)
-		return c.Status(statusCode).SendString("Internal Server Error")
-	}
-
-	c.Set("Content-Type", "text/html")
-	return c.Status(statusCode).Send(buf.Bytes())
-}
-
-// renderRoute renders a route with its layout chain.
-func (a *App) renderRoute(c fiberpkg.Ctx, route *routing.Route) error {
-	cacheKey := c.Path()
-	// SECURITY (P1): Removed query string from cache key to prevent cache-busting DoS attacks.
-	// An attacker spamming /path?random=1..n would fill the FIFO cache with junk keys,
-	// evicting all legitimate cached entries and forcing full SSR.
-	// Since static shells are identical regardless of query parameters, we only cache by path.
-
-	opts := routing.GetRouteOptions(route.Path)
-
-	// Resolve effective strategy (per-page opts override config default).
-	effStrategy := opts.Strategy
-	if effStrategy == "" {
-		effStrategy = a.Config.DefaultRenderStrategy
-	}
-	if effStrategy == "" {
-		effStrategy = routing.StrategySSR
-	}
-
-	// Quick SSG cache check — serve without building layout chain.
-	if a.Config.CacheTemplates && effStrategy == routing.StrategySSG {
-		var entry ssgEntry
-		var hit bool
-		if a.Config.Storage != nil && !a.Config.Prefork {
-			if data, err := a.Config.Storage.Get("gospa:ssg:" + cacheKey); err == nil {
-				entry, hit = decodeSsgEntry(data)
-			}
-		} else {
-			a.ssgCacheMu.RLock()
-			entry, hit = a.ssgCache[cacheKey]
-			a.ssgCacheMu.RUnlock()
-		}
-
-		if hit {
-			// Check TTL on access to avoid leaky goroutines
-			if a.Config.SSGCacheTTL > 0 && time.Since(entry.createdAt) >= a.Config.SSGCacheTTL {
-				hit = false
-			}
-		}
-
-		if hit {
-			c.Set("Content-Type", "text/html")
-			c.Set("Cache-Control", "public, max-age=31536000, immutable")
-			return c.Send(entry.html)
-		}
-	}
-
-	// Quick ISR cache check — serve from cache (possibly stale) without rebuild.
-	if a.Config.CacheTemplates && effStrategy == routing.StrategyISR {
-		ttl := opts.RevalidateAfter
-		if ttl == 0 {
-			ttl = a.Config.DefaultRevalidateAfter
-		}
-		ttlSec := int(ttl.Seconds())
-		if ttlSec <= 0 {
-			ttlSec = 1
-		}
-
-		var entry ssgEntry
-		var hit bool
-		if a.Config.Storage != nil && !a.Config.Prefork {
-			if data, err := a.Config.Storage.Get("gospa:ssg:" + cacheKey); err == nil {
-				entry, hit = decodeSsgEntry(data)
-			}
-		} else {
-			a.ssgCacheMu.RLock()
-			entry, hit = a.ssgCache[cacheKey]
-			a.ssgCacheMu.RUnlock()
-		}
-
-		if hit {
-			// Check global TTL on access
-			if a.Config.SSGCacheTTL > 0 && time.Since(entry.createdAt) >= a.Config.SSGCacheTTL {
-				hit = false
-			}
-		}
-
-		if hit {
-			age := time.Since(entry.createdAt)
-			if ttl > 0 && age >= ttl {
-				// Stale: serve cached, kick off background revalidation.
-				if _, alreadyRunning := a.isrRevalidating.LoadOrStore(cacheKey, true); !alreadyRunning {
-					// Capture values for goroutine closure.
-					routeSnap := route
-					// Use context.Background() with explicit timeout for ISR revalidation.
-					// This prevents goroutine leaks when the parent request is cancelled.
-					// The revalidation will complete independently of the original request.
-					go func() { // #nosec //nolint:gosec // intentional: background revalidation uses independent context
-						defer a.isrRevalidating.Delete(cacheKey)
-						// Limit concurrent revalidations with semaphore
-						select {
-						case isrSemaphore <- struct{}{}:
-							defer func() { <-isrSemaphore }()
-						default:
-							// Too many concurrent revalidations, skip this one
-							return
-						}
-						// Use context.Background() with explicit timeout - no parent dependency
-						bgCtx, cancel := context.WithTimeout(context.Background(), 60*time.Second)
-						defer cancel()
-						freshHTML, err := a.buildPageHTML(bgCtx, routeSnap, nil)
-						if err != nil {
-							a.Logger().Error("ISR background render error", "path", cacheKey, "err", err)
-							return
-						}
-						a.storeSsgEntry(cacheKey, freshHTML)
-					}()
-				}
-			}
-			c.Set("Content-Type", "text/html")
-			c.Set("Cache-Control", fmt.Sprintf("public, s-maxage=%d, stale-while-revalidate=%d", ttlSec, ttlSec))
-			return c.Send(entry.html)
-		}
-	}
-
-	// Quick PPR shell check.
-	if a.Config.CacheTemplates && effStrategy == routing.StrategyPPR {
-		var shell []byte
-		var shellHit bool
-		if a.Config.Storage != nil && !a.Config.Prefork {
-			if data, err := a.Config.Storage.Get("gospa:ppr:" + cacheKey); err == nil {
-				shell = data
-				shellHit = true
-			}
-		} else {
-			a.pprShellMu.RLock()
-			p, hit := a.pprShellCache[cacheKey]
-			if hit {
-				// Check TTL on access
-				if a.Config.SSGCacheTTL <= 0 || time.Since(p.createdAt) < a.Config.SSGCacheTTL {
-					shell = p.html
-					shellHit = true
-				}
-			}
-			a.pprShellMu.RUnlock()
-		}
-
-		if shellHit {
-			result, err := a.applyPPRSlots(route, shell, c.Path(), opts)
-			if err != nil {
-				a.Logger().Error("PPR slot error", "err", err)
-			}
-			c.Set("Content-Type", "text/html")
-			c.Set("Cache-Control", "no-store")
-			return c.Send(result)
-		}
-	}
-
-	// ── Build layout chain & full component tree ─────────────────────────
-	layouts := a.Router.ResolveLayoutChain(route)
-	_, params := a.Router.Match(c.Path())
-	ctx := c.Context()
-
-	content := a.buildPageContent(route, params, c.Path())
-	content = a.wrapWithLayouts(content, layouts, params, c.Path())
-
-	c.Set("Content-Type", "text/html")
-
-	rootLayoutFunc := routing.GetRootLayout()
-	if rootLayoutFunc != nil {
-		rootProps := a.buildRootLayoutProps(c, params)
-		wrappedContent := rootLayoutFunc(content, rootProps)
-
-		// ─── SSG ─────────────────────────────────────────────────────────
-		if a.Config.CacheTemplates && effStrategy == routing.StrategySSG {
-			var buf bytes.Buffer
-			if err := wrappedContent.Render(ctx, &buf); err != nil {
-				a.Logger().Error("SSG render error", "err", err)
-				return a.renderError(c, fiberpkg.StatusInternalServerError, err)
-			}
-			a.storeSsgEntry(cacheKey, buf.Bytes())
-			c.Set("Cache-Control", "public, max-age=31536000, immutable")
-			return c.Send(buf.Bytes())
-		}
-
-		// ─── ISR (cache miss) ─────────────────────────────────────────────
-		if a.Config.CacheTemplates && effStrategy == routing.StrategyISR {
-			ttl := opts.RevalidateAfter
-			if ttl == 0 {
-				ttl = a.Config.DefaultRevalidateAfter
-			}
-			ttlSec := int(ttl.Seconds())
-			if ttlSec <= 0 {
-				ttlSec = 1
-			}
-			var buf bytes.Buffer
-			if err := wrappedContent.Render(ctx, &buf); err != nil {
-				a.Logger().Error("ISR render error", "err", err)
-				return a.renderError(c, fiberpkg.StatusInternalServerError, err)
-			}
-			a.storeSsgEntry(cacheKey, buf.Bytes())
-			c.Set("Cache-Control", fmt.Sprintf("public, s-maxage=%d, stale-while-revalidate=%d", ttlSec, ttlSec))
-			return c.Send(buf.Bytes())
-		}
-
-		// ─── PPR (shell miss) ─────────────────────────────────────────────
-		if a.Config.CacheTemplates && effStrategy == routing.StrategyPPR {
-			// Use sync.Map for deduplication to prevent thundering herd
-			done := make(chan struct{})
-			actual, loaded := a.pprShellBuilding.LoadOrStore(cacheKey, done)
-			if !loaded {
-				defer func() {
-					close(done)
-					a.pprShellBuilding.Delete(cacheKey)
-				}()
-				shellCtx := templpkg.WithPPRShellBuild(context.Background())
-
-				// 3e: If a loading component exists, use it as the PPR shell content
-				shellContent := wrappedContent
-				if loadingFn := routing.GetLoading(route.Path); loadingFn != nil {
-					props := map[string]interface{}{}
-					ld := loadingFn(props)
-					ld = a.wrapWithLayouts(ld, layouts, params, c.Path())
-					rootProps := a.buildRootLayoutProps(c, params)
-					shellContent = rootLayoutFunc(ld, rootProps)
-				}
-
-				var shellBuf bytes.Buffer
-				if err := shellContent.Render(shellCtx, &shellBuf); err != nil {
-					a.Logger().Error("PPR shell render error", "err", err)
-					return a.renderError(c, fiberpkg.StatusInternalServerError, err)
-				}
-				a.storePprShell(cacheKey, shellBuf.Bytes())
-				result, err := a.applyPPRSlots(route, shellBuf.Bytes(), c.Path(), opts)
-				if err != nil {
-					a.Logger().Error("PPR slot error", "err", err)
-					return a.renderError(c, fiberpkg.StatusInternalServerError, err)
-				}
-				c.Set("Cache-Control", "no-store")
-				return c.Send(result)
-			}
-			// Another goroutine is building; wait for it to finish
-			waitChan := actual.(chan struct{})
-			<-waitChan
-
-			var shellHTML []byte
-			var shellOk bool
-			if a.Config.Storage != nil && !a.Config.Prefork {
-				if data, err := a.Config.Storage.Get("gospa:ppr:" + cacheKey); err == nil {
-					shellHTML = data
-					shellOk = true
-				}
-			} else {
-				a.pprShellMu.RLock()
-				p, hit := a.pprShellCache[cacheKey]
-				if hit {
-					if a.Config.SSGCacheTTL <= 0 || time.Since(p.createdAt) < a.Config.SSGCacheTTL {
-						shellHTML = p.html
-						shellOk = true
-					}
-				}
-				a.pprShellMu.RUnlock()
-			}
-			if shellOk {
-				result, err := a.applyPPRSlots(route, shellHTML, c.Path(), opts)
-				if err != nil {
-					a.Logger().Error("PPR slot error", "err", err)
-					return a.renderError(c, fiberpkg.StatusInternalServerError, err)
-				}
-				c.Set("Cache-Control", "no-store")
-				return c.Send(result)
-			}
-			// Shell still not ready, fall back to SSR (render inline)
-			var fallbackBuf bytes.Buffer
-			if err := wrappedContent.Render(c.Context(), &fallbackBuf); err != nil {
-				a.Logger().Error("PPR fallback render error", "err", err)
-				return a.renderError(c, fiberpkg.StatusInternalServerError, err)
-			}
-			c.Set("Cache-Control", "no-store")
-			return c.Send(fallbackBuf.Bytes())
-		}
-
-		// ─── SSR (default) ────────────────────────────────────────────────
-		errRoute := a.Router.GetErrorRoute(c.Path())
-		if errRoute != nil {
-			// If error boundary exists, we must buffer instead of streaming to catch panics/errors
-			var buf bytes.Buffer
-			err := func() (err error) {
-				defer func() {
-					if r := recover(); r != nil {
-						err = fmt.Errorf("panic during render: %v", r)
-					}
-				}()
-				return wrappedContent.Render(ctx, &buf)
-			}()
-
-			if err != nil {
-				a.Logger().Error("SSR render error (buffered)", "err", err)
-				return a.renderError(c, fiberpkg.StatusInternalServerError, err)
-			}
-
-			c.Set("Cache-Control", "no-store")
-			return c.Send(buf.Bytes())
-		}
-
-		c.Set("Cache-Control", "no-store")
-		c.Response().SetBodyStreamWriter(fasthttp.StreamWriter(func(w *bufio.Writer) {
-			defer func() {
-				if r := recover(); r != nil {
-					a.Logger().Error("panic during streaming render", "err", r)
-				}
-			}()
-			if err := wrappedContent.Render(ctx, w); err != nil {
-				a.Logger().Error("streaming render error", "err", err)
-			}
-			_ = w.Flush()
-		}))
-		return nil
-	}
-
-	// No root layout registered — minimal fallback HTML wrapper.
-	wsURL := a.getWSUrl(c)
-	runtimePath := a.getRuntimePath()
-	appName := a.Config.AppName
-	devMode := a.Config.DevMode
-
-	wsReconnectDelay := int(a.Config.WSReconnectDelay.Milliseconds())
-	if wsReconnectDelay <= 0 {
-		wsReconnectDelay = 1000
-	}
-	wsMaxReconnect := a.Config.WSMaxReconnect
-	if wsMaxReconnect <= 0 {
-		wsMaxReconnect = 10
-	}
-	wsHeartbeat := int(a.Config.WSHeartbeat.Milliseconds())
-	if wsHeartbeat <= 0 {
-		wsHeartbeat = 30000
-	}
-
-	c.Set("Cache-Control", "no-store")
-	c.Response().SetBodyStreamWriter(fasthttp.StreamWriter(func(w *bufio.Writer) {
-		_, _ = fmt.Fprint(w, `<!DOCTYPE html><html lang="en" data-gospa-auto><head><meta charset="UTF-8"><meta name="viewport" content="width=device-width, initial-scale=1.0"><title>`)
-		_, _ = fmt.Fprint(w, appName)
-		_, _ = fmt.Fprint(w, `</title></head><body><div id="app" data-gospa-root><main>`)
-		if err := content.Render(ctx, w); err != nil {
-			a.Logger().Error("streaming render error", "err", err)
-		}
-		_, _ = fmt.Fprint(w, `</main></div>`)
-		_, _ = fmt.Fprintf(w, `<script src="%s" type="module"></script>`, runtimePath)
-		_, _ = fmt.Fprintf(w, `<script type="module">
-import * as runtime from '%s';
-window.__GOSPA_CONFIG__ = {
-	navigationOptions: %s,
-};
-runtime.init({
-	wsUrl: '%s',
-	debug: %v,
-	simpleRuntimeSVGs: %v,
-	disableSanitization: %v,
-	wsReconnectDelay: %d,
-	wsMaxReconnect: %d,
-	wsHeartbeat: %d,
-	hydration: {
-		mode: '%s',
-		timeout: %d
-	}
-});
-</script>`, jsEscape(runtimePath), toJS(a.Config.NavigationOptions), jsEscape(wsURL), devMode, a.Config.SimpleRuntimeSVGs, a.Config.DisableSanitization, wsReconnectDelay, wsMaxReconnect, wsHeartbeat, jsEscape(a.Config.HydrationMode), a.Config.HydrationTimeout)
-		_, _ = fmt.Fprint(w, `</body></html>`)
-		_ = w.Flush()
-	}))
-	return nil
-}
-
-// buildPageContent builds the innermost page templ.Component for a route.
-func (a *App) buildPageContent(route *routing.Route, params map[string]string, path string) templ.Component {
-	pageFunc := routing.GetPage(route.Path)
-	if pageFunc != nil {
-		props := map[string]interface{}{"path": path}
-		for k, v := range params {
-			props[k] = v
-		}
-		return pageFunc(props)
-	}
-	return templ.ComponentFunc(func(_ context.Context, w io.Writer) error {
-		_, _ = fmt.Fprintf(w, `<div data-gospa-page="%s">Page: %s</div>`, route.Path, route.Path)
-		return nil
-	})
-}
-
-// wrapWithLayouts wraps a component with every layout in the chain (innermost → outermost).
-func (a *App) wrapWithLayouts(content templ.Component, layouts []*routing.Route, params map[string]string, path string) templ.Component {
-	for i := len(layouts) - 1; i >= 0; i-- {
-		layout := layouts[i]
-		layoutFunc := routing.GetLayout(layout.Path)
-		if layoutFunc != nil {
-			props := map[string]interface{}{"path": path}
-			for k, v := range params {
-				props[k] = v
-			}
-			content = layoutFunc(content, props)
-		} else {
-			children := content
-			lp := layout.Path
-			content = templ.ComponentFunc(func(ctx context.Context, w io.Writer) error {
-				_, _ = fmt.Fprintf(w, `<div data-gospa-layout="%s">`, lp)
-				if err := children.Render(ctx, w); err != nil {
-					return err
-				}
-				_, _ = fmt.Fprint(w, `</div>`)
-				return nil
-			})
-		}
-	}
-	return content
-}
-
-// buildRootLayoutProps assembles the props map expected by the root layout function.
-func (a *App) buildRootLayoutProps(c fiberpkg.Ctx, params map[string]string) map[string]interface{} {
-	wsRD := int(a.Config.WSReconnectDelay.Milliseconds())
-	if wsRD <= 0 {
-		wsRD = 1000
-	}
-	wsMR := a.Config.WSMaxReconnect
-	if wsMR <= 0 {
-		wsMR = 10
-	}
-	wsHB := int(a.Config.WSHeartbeat.Milliseconds())
-	if wsHB <= 0 {
-		wsHB = 30000
-	}
-	props := map[string]interface{}{
-		"appName":             a.Config.AppName,
-		"runtimePath":         a.getRuntimePath(),
-		"path":                c.Path(),
-		"debug":               a.Config.DevMode,
-		"wsUrl":               a.getWSUrl(c),
-		"hydrationMode":       a.Config.HydrationMode,
-		"hydrationTimeout":    a.Config.HydrationTimeout,
-		"wsReconnectDelay":    wsRD,
-		"wsMaxReconnect":      wsMR,
-		"wsHeartbeat":         wsHB,
-		"serializationFormat": a.Config.SerializationFormat,
-
-		"navigationOptions":   a.Config.NavigationOptions,
-		"disableSanitization": a.Config.DisableSanitization,
-	}
-	for k, v := range params {
-		props[k] = v
-	}
-	return props
-}
-
-// buildPageHTML renders a complete page to bytes using a background context.
-// It is called by the ISR background revalidation goroutine.
-// params may be nil for pages without dynamic segments.
-func (a *App) buildPageHTML(ctx context.Context, route *routing.Route, params map[string]string) ([]byte, error) {
-	layouts := a.Router.ResolveLayoutChain(route)
-	if params == nil {
-		params = map[string]string{}
-	}
-
-	// Build a synthetic path (no query string needed for revalidation).
-	path := route.Path
-
-	content := a.buildPageContent(route, params, path)
-	content = a.wrapWithLayouts(content, layouts, params, path)
-
-	rootLayoutFunc := routing.GetRootLayout()
-	if rootLayoutFunc == nil {
-		// No root layout: render just the inner content.
-		var buf bytes.Buffer
-		if err := content.Render(ctx, &buf); err != nil {
-			return nil, err
-		}
-		return buf.Bytes(), nil
-	}
-
-	// Build minimal root props (no live Fiber ctx available in background goroutine).
-	wsRD := int(a.Config.WSReconnectDelay.Milliseconds())
-	if wsRD <= 0 {
-		wsRD = 1000
-	}
-	wsMR := a.Config.WSMaxReconnect
-	if wsMR <= 0 {
-		wsMR = 10
-	}
-	wsHB := int(a.Config.WSHeartbeat.Milliseconds())
-	if wsHB <= 0 {
-		wsHB = 30000
-	}
-	rootProps := map[string]interface{}{
-		"appName":             a.Config.AppName,
-		"runtimePath":         a.getRuntimePath(),
-		"path":                path,
-		"debug":               false,
-		"wsUrl":               a.Config.WebSocketPath,
-		"hydrationMode":       a.Config.HydrationMode,
-		"hydrationTimeout":    a.Config.HydrationTimeout,
-		"wsReconnectDelay":    wsRD,
-		"wsMaxReconnect":      wsMR,
-		"wsHeartbeat":         wsHB,
-		"serializationFormat": string(a.Config.SerializationFormat),
-	}
-	for k, v := range params {
-		rootProps[k] = v
-	}
-
-	wrapped := rootLayoutFunc(content, rootProps)
-	var buf bytes.Buffer
-	if err := wrapped.Render(ctx, &buf); err != nil {
-		return nil, err
-	}
-	return buf.Bytes(), nil
-}
-
-// storeSsgEntry writes html into the shared ssgCache with FIFO eviction.
-func (a *App) storeSsgEntry(key string, html []byte) {
-	if a.Config.Storage != nil && !a.Config.Prefork {
-		entry := ssgEntry{html: html, createdAt: time.Now()}
-		_ = a.Config.Storage.Set("gospa:ssg:"+key, encodeSsgEntry(entry), 0)
-		return
-	}
-
-	a.ssgCacheMu.Lock()
-	defer a.ssgCacheMu.Unlock()
-	maxEntries := a.Config.SSGCacheMaxEntries
-	if maxEntries == 0 {
-		maxEntries = 500
-	}
-	// Only evict if maxEntries > 0 (-1 means unlimited)
-	if maxEntries > 0 && len(a.ssgCache) >= maxEntries && len(a.ssgCacheKeys) > 0 {
-		// Batch evict 10% of entries to avoid O(n) slice shift on every insert (P2 fix)
-		evictCount := maxEntries / 10
-		if evictCount < 1 {
-			evictCount = 1
-		}
-		if evictCount > len(a.ssgCacheKeys) {
-			evictCount = len(a.ssgCacheKeys)
-		}
-		for i := 0; i < evictCount; i++ {
-			oldest := a.ssgCacheKeys[i]
-			delete(a.ssgCache, oldest)
-		}
-		a.ssgCacheKeys = append([]string(nil), a.ssgCacheKeys[evictCount:]...)
-	}
-	if _, exists := a.ssgCache[key]; !exists {
-		a.ssgCacheKeys = append(a.ssgCacheKeys, key)
-	} else {
-		// Move to end of queue for LRU-like behavior (avoids early eviction of active entries)
-		for i, k := range a.ssgCacheKeys {
-			if k == key {
-				a.ssgCacheKeys = append(a.ssgCacheKeys[:i], a.ssgCacheKeys[i+1:]...)
-				a.ssgCacheKeys = append(a.ssgCacheKeys, key)
-				break
-			}
-		}
-	}
-	a.ssgCache[key] = ssgEntry{html: html, createdAt: time.Now()}
-}
-
-// storePprShell writes a PPR static shell into the pprShellCache with FIFO eviction.
-func (a *App) storePprShell(key string, shell []byte) {
-	if a.Config.Storage != nil && !a.Config.Prefork {
-		_ = a.Config.Storage.Set("gospa:ppr:"+key, shell, 0)
-		return
-	}
-
-	a.pprShellMu.Lock()
-	defer a.pprShellMu.Unlock()
-	maxEntries := a.Config.SSGCacheMaxEntries
-	if maxEntries == 0 {
-		maxEntries = 500
-	}
-	// Only evict if maxEntries > 0 (-1 means unlimited)
-	if maxEntries > 0 && len(a.pprShellCache) >= maxEntries && len(a.pprShellKeys) > 0 {
-		// Batch evict 10% of entries to avoid O(n) slice shift on every insert (P2 fix)
-		evictCount := maxEntries / 10
-		if evictCount < 1 {
-			evictCount = 1
-		}
-		if evictCount > len(a.pprShellKeys) {
-			evictCount = len(a.pprShellKeys)
-		}
-		for i := 0; i < evictCount; i++ {
-			oldest := a.pprShellKeys[i]
-			delete(a.pprShellCache, oldest)
-		}
-		a.pprShellKeys = append([]string(nil), a.pprShellKeys[evictCount:]...)
-	}
-	if _, exists := a.pprShellCache[key]; !exists {
-		a.pprShellKeys = append(a.pprShellKeys, key)
-	} else {
-		// Move to end of queue for LRU-like behavior
-		for i, k := range a.pprShellKeys {
-			if k == key {
-				a.pprShellKeys = append(a.pprShellKeys[:i], a.pprShellKeys[i+1:]...)
-				a.pprShellKeys = append(a.pprShellKeys, key)
-				break
-			}
-		}
-	}
-	a.pprShellCache[key] = pprEntry{html: shell, createdAt: time.Now()}
-}
-
-// applyPPRSlots renders each named dynamic slot and splices it into the static
-// shell by replacing <!--gospa-slot:name--> placeholders.
-func (a *App) applyPPRSlots(route *routing.Route, shell []byte, path string, opts routing.RouteOptions) ([]byte, error) {
-	_, params := a.Router.Match(path)
-	if params == nil {
-		params = map[string]string{}
-	}
-
-	result := shell
-	for _, slotName := range opts.DynamicSlots {
-		slotFn := routing.GetSlot(route.Path, slotName)
-		if slotFn == nil {
-			continue
-		}
-		slotProps := map[string]interface{}{"path": path}
-		for k, v := range params {
-			slotProps[k] = v
-		}
-		var slotBuf bytes.Buffer
-		if err := slotFn(slotProps).Render(context.Background(), &slotBuf); err != nil {
-			a.Logger().Error("PPR slot render error", "slot", slotName, "err", err)
-			continue
-		}
-		placeholder := []byte(templpkg.SlotPlaceholder(slotName))
-		open := []byte(fmt.Sprintf(`<div data-gospa-slot="%s">`, slotName))
-		closeTag := []byte(`</div>`)
-		replacement := make([]byte, 0, len(open)+slotBuf.Len()+len(closeTag))
-		replacement = append(replacement, open...)
-		replacement = append(replacement, slotBuf.Bytes()...)
-		replacement = append(replacement, closeTag...)
-		result = bytes.ReplaceAll(result, placeholder, replacement)
-	}
-	return result, nil
-}
-
-func toJS(v interface{}) string {
-	b, err := json.Marshal(v)
-	if err != nil {
-		return "null"
-	}
-	return string(b)
-}
-
-// jsEscape escapes a string for safe interpolation inside a JavaScript
-// single-quoted string literal (e.g. '...'). It prevents script injection
-// via Config values like AppName or WebSocketPath that are written directly
-// into inline <script> blocks.
-//
-// SECURITY: JavaScript escaping MUST be applied BEFORE HTML escaping.
-// If HTML escaping is applied first, </script> becomes </script>,
-// and then the JS escaping for "</" won't match anything. By applying
-// JS escaping first, we ensure </ becomes <\/ which then becomes <\/,
-// properly neutralizing script tag breakout in all contexts.
-func jsEscape(s string) string {
-	// First, apply JavaScript-specific escaping (order matters!)
-	s = strings.ReplaceAll(s, `\`, `\\`)
-	// Use Unicode escapes for dangerous characters to be safe in JS and HTML
-	s = strings.ReplaceAll(s, `<`, `\u003c`)
-	s = strings.ReplaceAll(s, `>`, `\u003e`)
-	s = strings.ReplaceAll(s, `&`, `\u0026`)
-	s = strings.ReplaceAll(s, `'`, `\u0027`)
-	s = strings.ReplaceAll(s, `"`, `\u0022`)
-	return s
-}
-
-// Run starts the application on the given address.
-func (a *App) Run(addr string) error {
-	// Trigger BeforeServe hook
-	if err := plugin.TriggerHook(plugin.BeforeServe, map[string]interface{}{
-		"fiber":  a.Fiber,
-		"config": a.Config,
-	}); err != nil {
-		a.Logger().Error("plugin BeforeServe hook failed", "err", err)
-	}
-
-	// Apply plugin middleware
-	a.applyPluginMiddleware()
-
-	// Scan routes if not already done
-	if len(a.Router.GetRoutes()) == 0 {
-		if err := a.Scan(); err != nil {
-			return err
-		}
-	}
-
-	// Register routes
-	if err := a.RegisterRoutes(); err != nil {
-		return err
-	}
-
-	// Start server
-	a.Logger().Info("starting GoSPA", "version", Version, "addr", addr)
-
-	// Start server in goroutine to allow AfterServe to be called
-	serverErr := make(chan error, 1)
-	go func() {
-		serverErr <- a.Fiber.Listen(addr)
-	}()
-
-	// Wait briefly for server to start - this gives the server time to bind to the port
-	// and either succeed or report an error. The original code had a potential race
-	// condition where we could miss the error, but this is acceptable for typical use.
-	// For stricter error handling, consider using a ready channel from the server.
-	time.Sleep(100 * time.Millisecond)
-
-	select {
-	case err := <-serverErr:
-		if err != nil {
-			// Trigger OnError hook
-			if err := plugin.TriggerHook(plugin.OnError, map[string]interface{}{
-				"error": err.Error(),
-			}); err != nil {
-				a.Logger().Error("plugin OnError hook failed", "err", err)
-			}
-			return err
-		}
-	default:
-		// Server started successfully
-	}
-
-	// Trigger AfterServe hook
-	if err := plugin.TriggerHook(plugin.AfterServe, map[string]interface{}{
-		"fiber":  a.Fiber,
-		"config": a.Config,
-	}); err != nil {
-		a.Logger().Error("plugin AfterServe hook failed", "err", err)
-	}
-
-	// Block until server error
-	return <-serverErr
-}
-
-// RunTLS starts the application with TLS on the given address.
-func (a *App) RunTLS(addr, certFile, keyFile string) error {
-	// Trigger BeforeServe hook
-	if err := plugin.TriggerHook(plugin.BeforeServe, map[string]interface{}{
-		"fiber":  a.Fiber,
-		"config": a.Config,
-	}); err != nil {
-		a.Logger().Error("plugin BeforeServe hook failed", "err", err)
-	}
-
-	// Apply plugin middleware
-	a.applyPluginMiddleware()
-
-	// Scan routes if not already done
-	if len(a.Router.GetRoutes()) == 0 {
-		if err := a.Scan(); err != nil {
-			return err
-		}
-	}
-
-	// Register routes
-	if err := a.RegisterRoutes(); err != nil {
-		return err
-	}
-
-	// Start server with TLS
-	a.Logger().Info("starting GoSPA (TLS)", "version", Version, "addr", addr)
-	return a.Fiber.Listen(addr, fiberpkg.ListenConfig{
-		CertFile:    certFile,
-		CertKeyFile: keyFile,
-	})
-}
-
-// Shutdown gracefully shuts down the application.
-func (a *App) Shutdown() error {
-	// Trigger BeforePrune hook (cleanup before shutdown)
-	if err := plugin.TriggerHook(plugin.BeforePrune, nil); err != nil {
-		a.Logger().Error("plugin BeforePrune hook failed", "err", err)
-	}
-
-	if a.Hub != nil {
-		a.Hub.Close()
-	}
-	if closer, ok := a.Config.Storage.(interface{ Close() error }); ok {
-		_ = closer.Close()
-	}
-
-	err := a.Fiber.Shutdown()
-
-	// Trigger AfterPrune hook (cleanup after shutdown)
-	if err := plugin.TriggerHook(plugin.AfterPrune, nil); err != nil {
-		a.Logger().Error("plugin AfterPrune hook failed", "err", err)
-	}
-
-	return err
-}
-
-// Use adds a middleware to the application.
-func (a *App) Use(middleware ...fiberpkg.Handler) {
-	for _, m := range middleware {
-		a.Fiber.Use(m)
-	}
-}
-
-// Get adds a GET route.
+// Get registers a GET route with the specified path and handlers.
 func (a *App) Get(path string, handlers ...fiberpkg.Handler) {
 	if len(handlers) == 0 {
 		return
@@ -1799,7 +569,7 @@ func (a *App) Get(path string, handlers ...fiberpkg.Handler) {
 	a.Fiber.Get(path, handlers[0], hAny...)
 }
 
-// Post adds a POST route.
+// Post registers a POST route with the specified path and handlers.
 func (a *App) Post(path string, handlers ...fiberpkg.Handler) {
 	if len(handlers) == 0 {
 		return
@@ -1811,7 +581,7 @@ func (a *App) Post(path string, handlers ...fiberpkg.Handler) {
 	a.Fiber.Post(path, handlers[0], hAny...)
 }
 
-// Put adds a PUT route.
+// Put registers a PUT route with the specified path and handlers.
 func (a *App) Put(path string, handlers ...fiberpkg.Handler) {
 	if len(handlers) == 0 {
 		return
@@ -1823,7 +593,7 @@ func (a *App) Put(path string, handlers ...fiberpkg.Handler) {
 	a.Fiber.Put(path, handlers[0], hAny...)
 }
 
-// Delete adds a DELETE route.
+// Delete registers a DELETE route with the specified path and handlers.
 func (a *App) Delete(path string, handlers ...fiberpkg.Handler) {
 	if len(handlers) == 0 {
 		return
@@ -1835,7 +605,7 @@ func (a *App) Delete(path string, handlers ...fiberpkg.Handler) {
 	a.Fiber.Delete(path, handlers[0], hAny...)
 }
 
-// Group creates a route group.
+// Group creates a new route group with the specified prefix and optional handlers.
 func (a *App) Group(prefix string, handlers ...fiberpkg.Handler) fiberpkg.Router {
 	hAny := make([]any, len(handlers))
 	for i, h := range handlers {
@@ -1844,22 +614,22 @@ func (a *App) Group(prefix string, handlers ...fiberpkg.Handler) fiberpkg.Router
 	return a.Fiber.Group(prefix, hAny...)
 }
 
-// Static serves static files via the static middleware.
+// Static registers a static directory with the specified prefix.
 func (a *App) Static(prefix, root string) {
 	a.Fiber.Use(prefix, static.New(root))
 }
 
-// GetHub returns the WebSocket hub.
+// GetHub returns the application's WebSocket hub.
 func (a *App) GetHub() *fiber.WSHub {
 	return a.Hub
 }
 
-// GetRouter returns the file-based router.
+// GetRouter returns the application's file-based router.
 func (a *App) GetRouter() *routing.Router {
 	return a.Router
 }
 
-// GetFiber returns the underlying Fiber app.
+// GetFiber returns the underlying Fiber application instance.
 func (a *App) GetFiber() *fiberpkg.App {
 	return a.Fiber
 }
@@ -1871,13 +641,12 @@ func (a *App) Broadcast(message []byte) {
 	}
 }
 
-// BroadcastState broadcasts a state update to all connected WebSocket clients.
+// BroadcastState broadcasts a state update to all connected clients.
 func (a *App) BroadcastState(key string, value interface{}) error {
 	return fiber.BroadcastState(a.Hub, key, value)
 }
 
-// Broadcast sends a JSON-marshaled message to all connected WebSocket clients
-// using the global implicit application instance.
+// Broadcast is a global convenience function to broadcast a message to all clients.
 func Broadcast(message interface{}) error {
 	if defaultApp == nil || defaultApp.Hub == nil {
 		return fmt.Errorf("gospa app not initialized or websocket not enabled")

@@ -47,7 +47,7 @@ func main() {
 		oldVersion := strings.TrimPrefix(oldTag, "v")
 		fmt.Printf("Bumping version from %s to %s...\n", oldTag, newTag)
 
-		updateGospaGo(oldVersion, newVersion)
+		updateVersionFile(oldVersion, newVersion)
 
 		dirsWithMod := make(map[string]bool)
 
@@ -152,8 +152,8 @@ func main() {
 	fmt.Println("\nSuccessfully updated tag", newTag)
 }
 
-func updateGospaGo(oldVersion, newVersion string) {
-	data, err := os.ReadFile("gospa.go")
+func updateVersionFile(oldVersion, newVersion string) {
+	data, err := os.ReadFile("config.go")
 	if err != nil {
 		return
 	}
@@ -161,11 +161,11 @@ func updateGospaGo(oldVersion, newVersion string) {
 	oldLine := fmt.Sprintf("const Version = %q", oldVersion)
 	newLine := fmt.Sprintf("const Version = %q", newVersion)
 	if strings.Contains(content, oldLine) {
-		fmt.Println("Updating gospa.go version...")
+		fmt.Println("Updating config.go version...")
 		content = strings.Replace(content, oldLine, newLine, 1)
 		// #nosec //nolint:gosec
-		if err := os.WriteFile("gospa.go", []byte(content), 0600); err != nil {
-			fmt.Println("Error writing gospa.go:", err)
+		if err := os.WriteFile("config.go", []byte(content), 0600); err != nil {
+			fmt.Println("Error writing config.go:", err)
 		}
 	}
 }
