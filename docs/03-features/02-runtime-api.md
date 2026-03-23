@@ -108,6 +108,8 @@ Complete reference for the GoSPA client-side TypeScript runtime. The runtime pro
       - [Hydration Modes](#hydration-modes)
   - [DOM Attributes Reference](#dom-attributes-reference)
   - [Global API](#global-api)
+  - [SFC Primitives ($state, $derived, $effect)](#sfc-primitives-state-derived-effect)
+  - [Global Stores (createStore, getStore)](#global-stores-createstore-getstore)
   - [TypeScript Types](#typescript-types)
 
 ---
@@ -174,6 +176,69 @@ This is similar to SvelteKit and other modern frameworks.
 ---
 
 ## Reactive Primitives
+
+GoSPA provides both low-level reactive classes (`Rune`, `Derived`, `Effect`) and ergonomic global functions designed for use in Single File Components.
+
+### SFC Primitives ($state, $derived, $effect)
+
+These functions provide a cleaner, "runic" syntax for state management inside islands.
+
+#### `$state(initialValue)`
+Creates a reactive state box or proxy.
+- **For Primitives**: Returns a `Rune` instance (requires `.value` or `.get()/.set()`).
+- **For Objects**: Returns a `reactive` Proxy (supports direct property mutation).
+
+```typescript
+const count = $state(0);
+count.value++;
+
+const user = $state({ name: 'Alice' });
+user.name = 'Bob'; 
+```
+
+#### `$derived(computeFn)`
+Creates a lazily-evaluated computed value.
+
+```typescript
+const count = $state(5);
+const double = $derived(() => count.value * 2);
+console.log(double()); // 10
+```
+
+#### `$effect(fn)`
+Creates a side effect that auto-tracks accessed reactive dependencies.
+
+```typescript
+const theme = $state('dark');
+$effect(() => {
+  document.body.className = theme.value;
+});
+```
+
+---
+
+### Global Stores (createStore, getStore)
+
+Stores enable reactive state sharing across different islands without server roundtrips.
+
+#### `createStore(name, initialValue)`
+Initializes a named global store. If a store with that name already exists, returns the existing one.
+
+```typescript
+// Shared state across all islands
+const user = createStore('auth_user', { loggedIn: false });
+```
+
+#### `getStore(name)`
+Retrieves an existing global store by name.
+
+```typescript
+const user = getStore('auth_user');
+```
+
+---
+
+### Low-level Primitives
 
 ### Rune
 

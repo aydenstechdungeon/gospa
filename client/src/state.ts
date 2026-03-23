@@ -140,6 +140,13 @@ function trackDisposable<T extends Disposable>(disposable: T): T {
 let currentEffect: Effect | null = null;
 const effectStack: Effect[] = [];
 
+/**
+ * Get the currently executing effect for dependency tracking.
+ */
+export function getCurrentEffect(): Effect | null {
+  return currentEffect;
+}
+
 // === Fast Deep Equality (replaces slow JSON.stringify) ===
 
 /**

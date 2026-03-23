@@ -39,6 +39,8 @@ import {
   type RemoteOptions,
   type RemoteResult,
 } from "./remote.ts";
+import { $state, $derived, $effect } from "./signals.ts";
+import { createStore, getStore } from "./store.ts";
 
 // Re-export StateMessage for convenience
 export type { StateMessage };
@@ -191,6 +193,13 @@ export function init(options: RuntimeConfig = {}): void {
     get sanitizeHtml() {
       return sanitizeHtml;
     },
+    // Unified Reactive Store API
+    $state,
+    $derived,
+    $effect,
+    createStore,
+    getStore,
+    createIsland,
   };
 
   // Expose to window as the primary public API
@@ -358,6 +367,29 @@ export function createComponent(
 
   components.set(def.id, instance);
   return instance;
+}
+
+/**
+ * createIsland helper for .gospa components (SFC).
+ * Provides the reactive state object to the setup function.
+ */
+export function createIsland(options: {
+  name: string,
+  setup: (el: Element, ctx: { props: any, state: any }) => void
+}) {
+  return {
+    hydrate(el: Element, props: any, serverState: any) {
+      // Create reactive state context for the island
+      const stateCtx = {
+        $$state: $state,
+        $$derived: $derived,
+        $$effect: $effect,
+      };
+
+      // Call the island's setup function
+      options.setup(el, { props, state: stateCtx });
+    }
+  };
 }
 
 // Destroy component instance

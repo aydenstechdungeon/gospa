@@ -842,16 +842,16 @@ func main() {
 
 ## Comparison with Client-Side Primitives
 
-| Feature | Go Server | TypeScript Client |
-|---------|-----------|-------------------|
-| Basic State | `Rune[T]` | `Rune<T>` |
-| Computed | `Derived[T]` | `Derived<T>` |
-| Side Effects | `Effect` | `Effect` |
-| Batch Updates | `Batch()` | `batch()` |
-| State Collection | `StateMap` | `StateMap` |
-| Async Resources | Manual | `Resource<T>` |
-| Raw State | N/A | `RuneRaw<T>` |
-| Pre-Effects | N/A | `PreEffect` |
+| Feature | Go Server | TypeScript Client | SFC Ergonomic |
+|---------|-----------|-------------------|---------------|
+| Basic State | `Rune[T]` | `Rune<T>` | `$state(T)` |
+| Computed | `Derived[T]` | `Derived<T>` | `$derived(Fn)` |
+| Side Effects | `Effect` | `Effect` | `$effect(Fn)` |
+| Batch Updates | `Batch()` | `batch()` | Auto-batched |
+| State Collection | `StateMap` | `StateMap` | Global Store |
+| Async Resources | Manual | `Resource<T>` | N/A |
+| Raw State | N/A | `RuneRaw<T>` | N/A |
+| Pre-Effects | N/A | `PreEffect` | N/A |
 
 The Go implementation focuses on server-side concerns:
 - Thread safety for concurrent requests

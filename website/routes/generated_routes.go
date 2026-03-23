@@ -30,6 +30,7 @@ import (
 	docsgetstartedinstallation "github.com/aydenstechdungeon/gospa/website/routes/docs/getstarted/installation"
 	docsgetstartedquickstart "github.com/aydenstechdungeon/gospa/website/routes/docs/getstarted/quickstart"
 	docsgetstartedstructure "github.com/aydenstechdungeon/gospa/website/routes/docs/getstarted/structure"
+	docsgospasfc "github.com/aydenstechdungeon/gospa/website/routes/docs/gospa-sfc"
 	docshmr "github.com/aydenstechdungeon/gospa/website/routes/docs/hmr"
 	docsislands "github.com/aydenstechdungeon/gospa/website/routes/docs/islands"
 	docsparams "github.com/aydenstechdungeon/gospa/website/routes/docs/params"
@@ -133,6 +134,9 @@ func init() {
 	})
 	routing.RegisterPage("/docs/getstarted/structure", func(props map[string]interface{}) templ.Component {
 		return docsgetstartedstructure.Page()
+	})
+	routing.RegisterPage("/docs/gospa-sfc", func(props map[string]interface{}) templ.Component {
+		return docsgospasfc.Page()
 	})
 	routing.RegisterPage("/docs/hmr", func(props map[string]interface{}) templ.Component {
 		return docshmr.Page()

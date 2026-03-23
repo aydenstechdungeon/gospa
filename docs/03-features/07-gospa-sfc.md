@@ -26,9 +26,11 @@ A `.gospa` file is divided into three main sections: `<script>`, `<template>`, a
 
 The script block primarily contains Go code that defines the component's state and server-side behavior. It uses reactive primitives that the compiler translates to TypeScript for the client side.
 
-- **`$state(value)`**: Defines a reactive piece of state.
-- **`$derived(expression)`**: Defines a piece of state derived from other reactive values.
+- **`$state(value)`**: Defines reactive state (local or shared).
+- **`$derived(expression)`**: Defines state derived from other reactive values.
 - **`$effect(func() { ... })`**: Defines a side-effect that runs whenever its dependencies change (client-only).
+
+These primitives work seamlessly across multiple islands without requiring WebSocket connections for local UI state.
 
 ### `<template>` Block
 
@@ -102,6 +104,46 @@ The `.gospa` compiler performs several transformations:
     - Event handlers automatically attach to the server-rendered elements.
 3.  **Scoped CSS**:
     - The CSS is extracted and scoped using a unique component hash.
+
+---
+
+## Cross-Island State
+
+Islands in GoSPA can share state without server-side roundtrips by using global stores. This is ideal for UI-only state like global themes, sidebar visibility, or cart totals.
+
+### Example: Shared Theme Store
+
+```go
+// islands/ThemeToggle.gospa
+<script lang="go">
+  var theme = createStore("theme", "light")
+  
+  func toggle() {
+    if theme.Get() == "light" {
+      theme.Set("dark")
+    } else {
+      theme.Set("light")
+    }
+  }
+</script>
+<template>
+  <button on:click={toggle}>Current: {theme}</button>
+</template>
+```
+
+```go
+// islands/Header.gospa
+<script lang="go">
+  var theme = getStore("theme")
+  
+  $effect(func() {
+     fmt.Printf("Header reacting to theme: %s\n", theme)
+  })
+</script>
+<template>
+  <header class={theme}>GoSPA Header</header>
+</template>
+```
 
 ---
 

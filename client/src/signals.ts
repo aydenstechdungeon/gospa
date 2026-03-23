@@ -2,18 +2,11 @@
 // Proxy-based auto-tracking for ergonomic state management
 // Inspired by Svelte 5's $state and Solid's createSignal
 
-import { Rune, Derived, Effect, batch, type Unsubscribe } from "./state.ts";
-
-// Track current effect for dependency collection
-let currentTrackingEffect: Effect | null = null;
-const trackingStack: Effect[] = [];
+import { Rune, Derived, Effect, batch, type Unsubscribe, untrack, getCurrentEffect } from "./state.ts";
 
 // Symbol to identify reactive proxies
 const REACTIVE_SYMBOL = Symbol("gospa-reactive");
 const RAW_SYMBOL = Symbol("gospa-raw");
-
-// Track which properties are being accessed
-const dependencyTracker = new Map<object, Set<string | symbol>>();
 
 /**
  * Create a reactive proxy that auto-tracks property access.
@@ -56,11 +49,12 @@ export function reactive<T extends object>(initial: T): T {
       if (prop === RAW_SYMBOL) return Object.fromEntries(rawValues);
 
       // Track dependency if inside an effect
-      if (currentTrackingEffect) {
-        if (!dependencyTracker.has(target)) {
-          dependencyTracker.set(target, new Set());
+      const currentEffect = getCurrentEffect();
+      if (currentEffect) {
+        const rune = runes.get(prop);
+        if (rune) {
+          currentEffect.addDependency(rune as unknown as Rune<unknown>);
         }
-        dependencyTracker.get(target)!.add(prop);
       }
 
       // Return the reactive value
@@ -141,11 +135,29 @@ export function reactive<T extends object>(initial: T): T {
 
   const proxy = new Proxy(initial, handler);
 
-  // Store reference to proxy for identity checks
-  (proxy as any)[REACTIVE_SYMBOL] = true;
-  (proxy as any)[RAW_SYMBOL] = Object.fromEntries(rawValues);
-
   return proxy;
+}
+
+/**
+ * $state - Create reactive local state.
+ * Works with both objects (deeply reactive) and primitives (boxed).
+ * 
+ * @example
+ * ```typescript
+ * const count = $state(0);
+ * count.value++; // Access value via .value
+ * 
+ * const user = $state({ name: "Alice" });
+ * user.name = "Bob"; // Direct property access
+ * ```
+ */
+export function $state<T>(initial: T): T {
+  if (typeof initial === "object" && initial !== null) {
+    return reactive(initial as object) as T;
+  }
+  // For primitives, we return a Rune wrapper that behaves like a box
+  // The compiler will handle the .value access if needed, or the user can use .value
+  return new Rune(initial) as unknown as T;
 }
 
 /**
@@ -163,27 +175,16 @@ export function reactive<T extends object>(initial: T): T {
  * ```
  */
 export function derived<T>(compute: () => T): () => T {
-  const derivedInstance = new Derived(() => {
-    // Set up tracking context
-    const prevEffect = currentTrackingEffect;
-    const collector = {
-      addDependency: (rune: Rune<unknown>) => {
-        // Dependencies are tracked automatically by the proxy
-      },
-    } as Effect;
-
-    currentTrackingEffect = collector;
-    trackingStack.push(collector);
-
-    try {
-      return compute();
-    } finally {
-      trackingStack.pop();
-      currentTrackingEffect = prevEffect;
-    }
-  });
-
+  const derivedInstance = new Derived(compute);
   return () => derivedInstance.get();
+}
+
+/**
+ * $derived - Create a derived reactive value.
+ * similar to Svelte 5's $derived.
+ */
+export function $derived<T>(compute: () => T): () => T {
+  return derived(compute);
 }
 
 /**
@@ -202,21 +203,15 @@ export function derived<T>(compute: () => T): () => T {
  * ```
  */
 export function effect(fn: () => void | (() => void)): () => void {
-  const effectInstance = new Effect(() => {
-    // Set up tracking context
-    const prevEffect = currentTrackingEffect;
-    currentTrackingEffect = effectInstance;
-    trackingStack.push(effectInstance);
-
-    try {
-      return fn();
-    } finally {
-      trackingStack.pop();
-      currentTrackingEffect = prevEffect;
-    }
-  });
-
+  const effectInstance = new Effect(fn);
   return () => effectInstance.dispose();
+}
+
+/**
+ * $effect - Create a side effect that auto-tracks dependencies.
+ */
+export function $effect(fn: () => void | (() => void)): () => void {
+  return effect(fn);
 }
 
 /**
@@ -332,4 +327,4 @@ export function reactiveArray<T>(initial: T[]): T[] {
 }
 
 // Re-export state primitives for convenience
-export { Rune, Derived, Effect, batch, type Unsubscribe };
+export { Rune, Derived, Effect, batch, untrack, type Unsubscribe };
