@@ -3,6 +3,7 @@ package main
 import (
 	"crypto/sha256"
 	"encoding/hex"
+	"fmt"
 	"log"
 	"os"
 	"strconv"
@@ -252,10 +253,16 @@ func hasContentHash(path string) bool {
 	return false
 }
 
-// generateETag creates a weak ETag based on file path
+// generateETag creates a weak ETag based on file info (modtime and size)
 func generateETag(path string) string {
-	// Use path as basis for ETag (in production, you'd use file content hash)
-	// This is a weak ETag since we don't have access to file contents here
+	filePath := "." + path
+	if info, err := os.Stat(filePath); err == nil && !info.IsDir() {
+		// Stronger weak ETag using size and modtime
+		h := sha256.New()
+		h.Write([]byte(fmt.Sprintf("%d-%d-%s", info.Size(), info.ModTime().Unix(), path)))
+		return `W/"` + hex.EncodeToString(h.Sum(nil)[:8]) + `"`
+	}
+	// Fallback to path-based ETag if file not found (unlikely for static middleware)
 	h := sha256.Sum256([]byte(path))
 	return `W/"` + hex.EncodeToString(h[:8]) + `"`
 }

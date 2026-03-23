@@ -147,7 +147,16 @@ Islands in GoSPA can share state without server-side roundtrips by using global 
 
 ---
 
-## Performance Benefits
+---
+
+## Security & Best Practices
+
+GoSPA is designed with security in mind, but developers should follow these practices when building SFCs:
+
+1.  **Input Sanitization**: Always sanitize user-provided data before displaying it in templates. GoSPA's interpolation `{ expression }` automatically escapes HTML entities, but be cautious when using `@templ.Raw()`.
+2.  **Style Safety**: The SFC compiler automatically scopes and injects styles. While it escapes typical breakouts, avoid using complex dynamic string interpolation directly inside `<style>` blocks if the input comes from an untrusted source.
+3.  **Local State**: Use `$state` for UI-only state. For sensitive data, prefer server-side state managed via WebSocket or Remote Actions to keep the logic and data off the client where possible.
+4.  **CSP**: We recommend a strong Content Security Policy (CSP). GoSPA works best with policies that allow `style-src 'self' 'unsafe-inline'` for scoped CSS injection, but you can further tighten this by using nonces if using the SSR-only mode.
 
 - **Minimal Hydration**: Only interactive islands ship JavaScript to the client.
 - **Tree-shakeable**: The `@gospa/runtime` only includes the reactive primitives actually used in your components.

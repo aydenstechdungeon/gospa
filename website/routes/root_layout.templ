@@ -136,75 +136,79 @@ templ RootLayout(title string, children templ.Component, runtimePath string, pat
 				}
 			</script>
 		</head>
-		<body class="min-h-screen flex flex-col overflow-x-hidden">
-			<div class="fixed inset-0 pointer-events-none grid-bg opacity-60 z-0"></div>
+		<body class="min-h-screen flex flex-col font-sans selection:bg-cyan-500/30">
+			<!-- Animated background elements -->
+			<div class="fixed inset-0 pointer-events-none z-0 overflow-hidden">
+				<div class="absolute -top-[10%] -left-[10%] w-[40%] h-[40%] bg-cyan-500/10 blur-[120px] rounded-full animate-float"></div>
+				<div class="absolute top-[20%] -right-[5%] w-[30%] h-[30%] bg-purple-500/10 blur-[100px] rounded-full animate-pulse"></div>
+				<div class="absolute inset-0 grid-bg"></div>
+			</div>
 			
-			<div id="app" data-gospa-root class="flex flex-col min-h-screen">
-			<header class="sticky top-0 z-50 border-b border-[var(--border)] bg-[var(--bg-primary)]/80 backdrop-blur-xl">
+			<div id="app" data-gospa-root class="flex flex-col min-h-screen relative z-10">
+			<header class="sticky top-0 z-50 glass border-b border-[var(--border)]">
 				<div class="max-w-7xl mx-auto px-4 h-16 flex items-center justify-between relative">
-					<div class="absolute inset-x-0 bottom-0 h-px bg-gradient-to-r from-transparent via-[var(--accent-primary)]/20 to-transparent"></div>
+					<div class="absolute inset-x-0 bottom-0 h-px bg-gradient-to-r from-transparent via-[var(--accent-primary)]/30 to-transparent"></div>
 					
-					<div class="flex items-center gap-8">
-						<a href="/" class="flex items-center gap-2 group">
-							<img src="/static/gospa1-64.webp" alt="GoSPA - Svelte-like reactivity for Go" class="w-8 h-8 rounded-lg shadow-lg shadow-[var(--accent-primary)]/20 group-hover:shadow-[var(--accent-primary)]/40 transition-all" width="32" height="32" fetchpriority="high" decoding="async" />
-							<span class="text-xl font-bold tracking-tight bg-clip-text text-transparent bg-gradient-to-r from-white to-[var(--text-secondary)]">Go<span class="text-[var(--accent-primary)]">SPA</span></span>
+					<div class="flex items-center gap-10">
+						<a href="/" class="flex items-center gap-3 group">
+							<div class="relative">
+								<div class="absolute inset-0 bg-[var(--accent-primary)] blur-md opacity-0 group-hover:opacity-40 transition-opacity"></div>
+								<img src="/static/gospa1-64.webp" alt="GoSPA" class="w-9 h-9 relative z-10 rounded-xl shadow-2xl transition-transform group-hover:scale-110" width="36" height="36" fetchpriority="high" />
+							</div>
+							<span class="text-2xl font-display font-bold tracking-tight bg-clip-text text-transparent bg-gradient-to-br from-white via-zinc-200 to-zinc-500">Go<span class="text-[var(--accent-primary)]">SPA</span></span>
 						</a>
 						
-						<nav class="hidden md:flex items-center gap-1">
-							<a href="/docs" class={ "px-4 py-2 rounded-lg text-sm font-medium transition-all ", templ.KV("text-[var(--accent-primary)] bg-[var(--accent-primary)]/10", strings.HasPrefix(path, "/docs")), templ.KV("text-[var(--text-secondary)] hover:text-[var(--text-primary)] hover:bg-[var(--bg-secondary)]", !strings.HasPrefix(path, "/docs")) }>Docs</a>
-							<a href="/docs/api" class={ "px-4 py-2 rounded-lg text-sm font-medium transition-all ", templ.KV("text-[var(--accent-primary)] bg-[var(--accent-primary)]/10", path == "/docs/api"), templ.KV("text-[var(--text-secondary)] hover:text-[var(--text-primary)] hover:bg-[var(--bg-secondary)]", path != "/docs/api") }>API</a>
+						<nav class="hidden md:flex items-center gap-2">
+							<a href="/docs" class={ "px-4 py-1.5 rounded-full text-sm font-medium transition-all duration-300 ", templ.KV("text-[var(--accent-primary)] bg-[var(--accent-primary)]/10 border border-[var(--accent-primary)]/20", strings.HasPrefix(path, "/docs")), templ.KV("text-[var(--text-secondary)] hover:text-white hover:bg-white/5", !strings.HasPrefix(path, "/docs")) }>Documentation</a>
+							<a href="/docs/api" class={ "px-4 py-1.5 rounded-full text-sm font-medium transition-all duration-300 ", templ.KV("text-[var(--accent-primary)] bg-[var(--accent-primary)]/10 border border-[var(--accent-primary)]/20", path == "/docs/api"), templ.KV("text-[var(--text-secondary)] hover:text-white hover:bg-white/5", path != "/docs/api") }>API Reference</a>
 						</nav>
 					</div>
 					
-					<div class="flex items-center gap-3">
-						<a href="https://github.com/aydenstechdungeon/gospa" target="_blank" class="p-2 rounded-lg text-[var(--text-secondary)] hover:text-[var(--text-primary)] hover:bg-[var(--bg-secondary)] transition-all" title="GitHub">
-							<svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="lucide lucide-github"><path d="M15 22v-4a4.8 4.8 0 0 0-1-3.5c3 0 6-2 6-5.5.08-1.25-.27-2.48-1-3.5.28-1.15.28-2.35 0-3.5 0 0-1 0-3 1.5-2.64-.5-5.36-.5-8 0C6 2 5 2 5 2c-.3 1.15-.3 2.35 0 3.5A5.403 5.403 0 0 0 4 9c0 3.5 3 5.5 6 5.5-.39.49-.68 1.05-.85 1.65-.17.6-.22 1.23-.15 1.85v4"/><path d="M9 18c-4.51 2-5-2-7-2"/></svg>
-						</a>
-
-						<a href="https://pkg.go.dev/github.com/aydenstechdungeon/gospa" target="_blank" class="p-2 rounded-lg text-[var(--text-secondary)] hover:text-[var(--text-primary)] hover:bg-[var(--bg-secondary)] transition-all" title="View on Go Packages (go.dev)">
-							<svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="lucide lucide-package"><path d="m7.5 4.27 9 5.15"/><path d="M21 8a2 2 0 0 0-1-1.73l-7-4a2 2 0 0 0-2 0l-7 4A2 2 0 0 0 3 8v8a2 2 0 0 0 1 1.73l7 4a2 2 0 0 0 2 0l7-4A2 2 0 0 0 21 16Z"/><path d="m3.3 7 8.7 5 8.7-5"/><path d="M12 22V12"/></svg>
-						</a>
+					<div class="flex items-center gap-4">
+						<div class="hidden sm:flex items-center gap-2">
+							<a href="https://github.com/aydenstechdungeon/gospa" target="_blank" class="p-2 rounded-xl text-[var(--text-secondary)] hover:text-white hover:bg-white/5 transition-all" title="GitHub">
+								<svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M15 22v-4a4.8 4.8 0 0 0-1-3.5c3 0 6-2 6-5.5.08-1.25-.27-2.48-1-3.5.28-1.15.28-2.35 0-3.5 0 0-1 0-3 1.5-2.64-.5-5.36-.5-8 0C6 2 5 2 5 2c-.3 1.15-.3 2.35 0 3.5A5.403 5.403 0 0 0 4 9c0 3.5 3 5.5 6 5.5-.39.49-.68 1.05-.85 1.65-.17.6-.22 1.23-.15 1.85v4"/><path d="M9 18c-4.51 2-5-2-7-2"/></svg>
+							</a>
+						</div>
 						
-						<div class="h-6 w-px bg-[var(--border)] mx-1 hidden md:block"></div>
+						<div class="h-5 w-px bg-white/10 mx-1 hidden md:block"></div>
 						
-						<a href="/docs/getstarted/installation" class="hidden md:flex px-4 py-2 bg-[var(--accent-primary)] hover:bg-cyan-400 text-black text-xs font-bold rounded-lg transition-all shadow-lg shadow-cyan-500/20 active:scale-95">
+						<a href="/docs/getstarted/installation" class="hidden md:flex px-5 py-2 btn-premium bg-[var(--accent-primary)] text-black text-xs font-bold rounded-full shadow-lg shadow-cyan-500/20 active:scale-95">
 							Get Started
 						</a>
 
 						<button 
-							class="md:hidden p-2 rounded-lg text-[var(--text-primary)] hover:bg-[var(--bg-secondary)] transition-all"
+							class="md:hidden p-2 rounded-xl text-[var(--text-primary)] hover:bg-white/5 transition-all"
 							data-action="toggle-mobile-menu"
-							aria-label="Toggle mobile menu"
 						>
-							<svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="lucide lucide-menu"><line x1="4" x2="20" y1="12" y2="12"/><line x1="4" x2="20" y1="6" y2="6"/><line x1="4" x2="20" y1="18" y2="18"/></svg>
+							<svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="4" x2="20" y1="12" y2="12"/><line x1="4" x2="20" y1="6" y2="6"/><line x1="4" x2="20" y1="18" y2="18"/></svg>
 						</button>
 					</div>
 				</div>
 
 				<!-- Mobile Menu Overlay -->
-				<div id="mobile-menu" class="fixed inset-0 z-[60] bg-[var(--bg-primary)] hidden md:hidden flex flex-col animate-in fade-in slide-in-from-top-4 duration-300">
-					<div class="h-16 flex items-center justify-between px-4 border-b border-[var(--border)]">
-						<span class="text-xl font-bold">Go<span class="text-[var(--accent-primary)]">SPA</span></span>
+				<div id="mobile-menu" class="fixed inset-0 z-[60] bg-[var(--bg-primary)] hidden md:hidden flex flex-col p-6 animate-in fade-in slide-in-from-top-4 duration-300">
+					<div class="flex items-center justify-between mb-10">
+						<span class="text-2xl font-display font-bold">Go<span class="text-[var(--accent-primary)]">SPA</span></span>
 						<button 
-							class="p-2 rounded-lg hover:bg-[var(--bg-secondary)]" 
+							class="p-2 rounded-xl hover:bg-white/5" 
 							data-action="close-mobile-menu"
-							aria-label="Close mobile menu"
 						>
 							<svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="18" y1="6" x2="6" y2="18"></line><line x1="6" y1="6" x2="18" y2="18"></line></svg>
 						</button>
 					</div>
-					<nav class="flex-grow p-6 flex flex-col gap-4 text-lg font-medium">
-						<a href="/" data-action="close-mobile-menu" class="p-4 rounded-2xl bg-[var(--bg-secondary)] border border-[var(--border)] hover:border-[var(--accent-primary)]/50 transition-all">Home</a>
-						<a href="/docs" data-action="close-mobile-menu" class="p-4 rounded-2xl bg-[var(--bg-secondary)] border border-[var(--border)] hover:border-[var(--accent-primary)]/50 transition-all">Documentation</a>
-						<a href="/docs/api" data-action="close-mobile-menu" class="p-4 rounded-2xl bg-[var(--bg-secondary)] border border-[var(--border)] hover:border-[var(--accent-primary)]/50 transition-all">API Reference</a>
-
-						<div class="mt-auto pt-8">
-							<a href="/docs/getstarted" data-action="close-mobile-menu" class="w-full py-4 bg-[var(--accent-primary)] text-black text-center font-bold rounded-2xl flex items-center justify-center gap-2">
-								Get Started
-								<svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12h14"></path><path d="m12 5 7 7-7 7"></path></svg>
-							</a>
-						</div>
+					<nav class="flex flex-col gap-2">
+						<a href="/" data-action="close-mobile-menu" class="p-4 rounded-2xl bg-white/5 border border-white/5 hover:border-[var(--accent-primary)]/30 transition-all font-medium">Home</a>
+						<a href="/docs" data-action="close-mobile-menu" class="p-4 rounded-2xl bg-white/5 border border-white/5 hover:border-[var(--accent-primary)]/30 transition-all font-medium">Documentation</a>
+						<a href="/docs/api" data-action="close-mobile-menu" class="p-4 rounded-2xl bg-white/5 border border-white/5 hover:border-[var(--accent-primary)]/30 transition-all font-medium">API Reference</a>
 					</nav>
+
+					<div class="mt-auto">
+						<a href="/docs/getstarted/installation" data-action="close-mobile-menu" class="w-full py-4 bg-[var(--accent-primary)] text-black text-center font-bold rounded-2xl flex items-center justify-center gap-2 shadow-xl shadow-cyan-500/20">
+							Get Started
+							<svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12h14"></path><path d="m12 5 7 7-7 7"></path></svg>
+						</a>
+					</div>
 				</div>
 			</header>
 

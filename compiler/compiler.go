@@ -2,6 +2,7 @@
 package compiler
 
 import (
+	"encoding/json"
 	"fmt"
 	"regexp"
 	"strings"
@@ -114,7 +115,7 @@ func (c *GospaCompiler) generateScopedCSS(style, hash string) string {
 	if style == "" {
 		return ""
 	}
-	// Simple scoping: prefix all selectors with the hash class
-	// This is very naive but works for a prototype
-	return fmt.Sprintf("\n\n/* Scoped CSS */\nconst style = document.createElement('style');\nstyle.textContent = `%s`;\ndocument.head.appendChild(style);\n", strings.ReplaceAll(style, ".", "."+hash))
+	// Safe scoping: use json.Marshal to prevent breakout from JS string
+	encodedStyle, _ := json.Marshal(strings.ReplaceAll(style, ".", "."+hash))
+	return fmt.Sprintf("\n\n/* Scoped CSS */\nconst style = document.createElement('style');\nstyle.textContent = %s;\ndocument.head.appendChild(style);\n", string(encodedStyle))
 }

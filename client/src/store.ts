@@ -60,7 +60,19 @@ export class SharedStore {
    */
   private updateDevTools() {
     if (typeof window !== "undefined") {
-      (window as any).__GOSPA_STORES__ = Object.fromEntries(this.stores);
+      // Only expose stores in debug mode
+      const debug = (window as any).__GOSPA_CONFIG__?.debug;
+      if (!debug) return;
+
+      // Use a getter to avoid full conversion until actually accessed
+      if (!(window as any).__GOSPA_STORES_TRACKER__) {
+        Object.defineProperty(window, "__GOSPA_STORES__", {
+          get: () => Object.fromEntries(this.stores),
+          configurable: true,
+          enumerable: true
+        });
+        (window as any).__GOSPA_STORES_TRACKER__ = true;
+      }
     }
   }
 }

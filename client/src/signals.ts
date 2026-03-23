@@ -237,25 +237,13 @@ export function watchProp<T extends object, K extends keyof T>(
     );
   }
 
-  // Get the rune for this property
-  const rawValues = (obj as any)[RAW_SYMBOL];
-  const rune = new Rune(rawValues[prop as string]);
-
+  // Create a derived that tracks the specific property
+  const derivedProp = new Derived(() => (obj as T)[prop]);
+  
   // Subscribe to changes
-  const unsub = rune.subscribe((newVal: unknown, oldVal: unknown) => {
-    callback(newVal as T[K], oldVal as T[K]);
+  return derivedProp.subscribe((newVal, oldVal) => {
+    callback(newVal as T[K], oldVal as T[K] | undefined as any);
   });
-
-  // Override set to update the rune
-  const originalSet = Object.getOwnPropertyDescriptor(obj, "set")?.set;
-  if (originalSet) {
-    (obj as any).set = (value: T[K]) => {
-      originalSet.call(obj, value);
-      rune.set(value);
-    };
-  }
-
-  return unsub;
 }
 
 /**

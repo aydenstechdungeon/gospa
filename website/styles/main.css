@@ -10,11 +10,11 @@
 }
 
 @font-face {
-	font-family: 'Inter';
-	font-style: italic;
+	font-family: 'Outfit';
+	font-style: normal;
 	font-weight: 100 900;
 	font-display: swap;
-	src: url('/static/fonts/InterVariable-Italic.woff2') format('woff2');
+	src: url('https://fonts.gstatic.com/s/outfit/v11/QGYsz_OBy1_Aqd_3A4CX.woff2') format('woff2');
 }
 
 @font-face {
@@ -25,46 +25,35 @@
 	src: url('/static/fonts/JetBrainsMono-Regular.woff2') format('woff2');
 }
 
-@font-face {
-	font-family: 'JetBrains Mono';
-	font-style: normal;
-	font-weight: 500;
-	font-display: swap;
-	src: url('/static/fonts/JetBrainsMono-Medium.woff2') format('woff2');
-}
-
-@font-face {
-	font-family: 'JetBrains Mono';
-	font-style: normal;
-	font-weight: 700;
-	font-display: swap;
-	src: url('/static/fonts/JetBrainsMono-Bold.woff2') format('woff2');
-}
-
 /* Custom CSS variables for GoSPA website - matches var(--name) usage in HTML */
 @theme {
-	/* Background colors */
-	--bg-primary: #0a0a0f;
-	--bg-secondary: #12121a;
-	--bg-tertiary: #1a1a24;
+	/* Background colors - deeper, richer dark mode */
+	--bg-primary: oklch(0.14 0.02 260);
+	--bg-secondary: oklch(0.17 0.03 260);
+	--bg-tertiary: oklch(0.2 0.04 260);
 
 	/* Text colors */
-	--text-primary: #e4e4e7;
-	--text-secondary: #a1a1aa;
-	--text-muted: #71717a;
+	--text-primary: oklch(0.92 0.01 260);
+	--text-secondary: oklch(0.7 0.02 260);
+	--text-muted: oklch(0.5 0.02 260);
 
-	/* Accent colors */
-	--accent-primary: #22d3ee;
-	--accent-secondary: #a78bfa;
-	--accent-success: #22c55e;
-	--accent-warning: #f59e0b;
+	/* Accent colors - more vibrant OKLCH colors */
+	--accent-primary: oklch(0.7 0.2 195); /* Vibrant Cyan */
+	--accent-secondary: oklch(0.65 0.25 285); /* Electric Purple */
+	--accent-glow: oklch(0.7 0.2 195 / 0.15);
 
 	/* Border color */
-	--border: #27272a;
+	--border: oklch(0.25 0.04 260);
 
 	/* Font families */
 	--font-sans: 'Inter', system-ui, -apple-system, sans-serif;
+	--font-display: 'Outfit', 'Inter', sans-serif;
 	--font-mono: 'JetBrains Mono', monospace;
+
+	/* Transitions */
+	--ease-fluid: cubic-bezier(0.3, 0, 0, 1);
+	--transition-fast: 150ms var(--ease-fluid);
+	--transition-slow: 400ms var(--ease-fluid);
 }
 
 /* Base styles */
@@ -74,16 +63,45 @@ body {
 	color: var(--text-primary);
 	-webkit-font-smoothing: antialiased;
 	scrollbar-gutter: stable;
+	selection-background: var(--accent-primary);
+	selection-color: var(--bg-primary);
 }
 
-.mono {
-	font-family: var(--font-mono);
+h1, h2, h3, h4, h5, h6 {
+	font-family: var(--font-display);
+}
+
+/* Glassmorphism utility */
+@utility glass {
+	background-color: color-mix(in oklch, var(--bg-primary), transparent 20%);
+	backdrop-filter: blur(12px);
+	border: 1px solid var(--border);
+}
+
+/* Modern interactions */
+.btn-premium {
+	position: relative;
+	transition: var(--transition-slow);
+	overflow: hidden;
+}
+
+.btn-premium::after {
+	content: '';
+	position: absolute;
+	inset: 0;
+	background: linear-gradient(to right, transparent, var(--accent-glow), transparent);
+	transform: translateX(-100%);
+	transition: var(--transition-slow);
+}
+
+.btn-premium:hover::after {
+	transform: translateX(100%);
 }
 
 /* Custom scrollbar */
 ::-webkit-scrollbar {
-	width: 8px;
-	height: 8px;
+	width: 6px;
+	height: 6px;
 }
 
 ::-webkit-scrollbar-track {
@@ -92,16 +110,28 @@ body {
 
 ::-webkit-scrollbar-thumb {
 	background: var(--border);
-	border-radius: 4px;
+	border-radius: 10px;
 }
 
 ::-webkit-scrollbar-thumb:hover {
 	background: var(--text-muted);
 }
 
-/* Grid background */
+/* Grid background - animated */
 .grid-bg {
-	background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='40' height='40' viewBox='0 0 40 40'%3E%3Cpath d='M40 40V.5H0' fill='none' stroke='%2327272a' stroke-opacity='1'/%3E%3C/svg%3E");
-	mask-image: radial-gradient(ellipse 60% 50% at 50% 0%, #000 70%, transparent 100%);
-	will-change: opacity;
+	background-image: 
+		linear-gradient(to right, var(--border) 1px, transparent 1px),
+		linear-gradient(to bottom, var(--border) 1px, transparent 1px);
+	background-size: 32px 32px;
+	mask-image: radial-gradient(ellipse 80% 60% at 50% 0%, #000 70%, transparent 100%);
+	opacity: 0.15;
+}
+
+@keyframes float {
+	0%, 100% { transform: translateY(0); }
+	50% { transform: translateY(-10px); }
+}
+
+.animate-float {
+	animation: float 6s ease-in-out infinite;
 }

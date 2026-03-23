@@ -163,7 +163,30 @@ function fastDeepEqual(a: unknown, b: unknown): boolean {
   if (Array.isArray(a) && Array.isArray(b)) {
     if (a.length !== b.length) return false;
     for (let i = 0; i < a.length; i++) {
-      if (!fastDeepEqual(a[i], b[i])) return false;
+        if (!fastDeepEqual(a[i], b[i])) return false;
+    }
+    return true;
+  }
+
+  // Handle Dates
+  if (a instanceof Date && b instanceof Date) {
+    return a.getTime() === b.getTime();
+  }
+
+  // Handle Sets
+  if (a instanceof Set && b instanceof Set) {
+    if (a.size !== b.size) return false;
+    for (const val of a) {
+      if (!b.has(val)) return false;
+    }
+    return true;
+  }
+
+  // Handle Maps
+  if (a instanceof Map && b instanceof Map) {
+    if (a.size !== b.size) return false;
+    for (const [key, val] of a) {
+      if (!b.has(key) || !fastDeepEqual(val, b.get(key))) return false;
     }
     return true;
   }
