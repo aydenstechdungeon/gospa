@@ -165,7 +165,7 @@ func TestMemoryPubSub_PublishSubscribe(t *testing.T) {
 	ps := NewMemoryPubSub()
 	received := make(chan []byte, 1)
 
-	if err := ps.Subscribe("channel1", func(msg []byte) {
+	if _, err := ps.Subscribe("channel1", func(msg []byte) {
 		received <- msg
 	}); err != nil {
 		t.Fatalf("Subscribe failed: %v", err)
@@ -199,7 +199,7 @@ func TestMemoryPubSub_MultipleSubscribers(t *testing.T) {
 
 	for i := 0; i < 3; i++ {
 		idx := i
-		_ = ps.Subscribe("multi", func(_ []byte) {
+		_, _ = ps.Subscribe("multi", func(_ []byte) {
 			received <- idx
 		})
 	}
@@ -227,8 +227,8 @@ func TestMemoryPubSub_MultipleChannels(t *testing.T) {
 	ch1 := make(chan []byte, 1)
 	ch2 := make(chan []byte, 1)
 
-	_ = ps.Subscribe("ch1", func(msg []byte) { ch1 <- msg })
-	_ = ps.Subscribe("ch2", func(msg []byte) { ch2 <- msg })
+	_, _ = ps.Subscribe("ch1", func(msg []byte) { ch1 <- msg })
+	_, _ = ps.Subscribe("ch2", func(msg []byte) { ch2 <- msg })
 
 	_ = ps.Publish("ch1", []byte("msg1"))
 	_ = ps.Publish("ch2", []byte("msg2"))
@@ -256,7 +256,7 @@ func TestMemoryPubSub_ConcurrentPublish(t *testing.T) {
 	ps := NewMemoryPubSub()
 	received := make(chan struct{}, 100)
 
-	_ = ps.Subscribe("concurrent", func(_ []byte) {
+	_, _ = ps.Subscribe("concurrent", func(_ []byte) {
 		received <- struct{}{}
 	})
 
@@ -292,7 +292,7 @@ func TestMemoryPubSub_PublishDoesNotBlockSubscriber(t *testing.T) {
 	done := make(chan struct{})
 
 	// Subscriber that blocks for a while
-	_ = ps.Subscribe("blocking", func(_ []byte) {
+	_, _ = ps.Subscribe("blocking", func(_ []byte) {
 		time.Sleep(200 * time.Millisecond)
 		close(done)
 	})

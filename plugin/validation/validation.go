@@ -7,6 +7,7 @@ import (
 	"fmt"
 	"os"
 	"path/filepath"
+	"regexp"
 	"sort"
 	"strings"
 
@@ -212,6 +213,11 @@ func (p *Plugin) generateValidation(projectDir string) error {
 			return fmt.Errorf("failed to parse schema %s: %w", entry.Name(), err)
 		}
 
+		validID := regexp.MustCompile(`^[A-Za-z_][A-Za-z0-9_]*$`)
+		if !validID.MatchString(schema.Name) {
+			return fmt.Errorf("invalid schema name: %s in %s", schema.Name, entry.Name())
+		}
+
 		// Generate TypeScript types
 		if p.config.GenerateTypes {
 			if err := p.generateTypes(schema, outputDir); err != nil {
@@ -320,8 +326,14 @@ func (p *Plugin) generateGoValidation(schema Schema, outputDir string) error {
 		field := schema.Fields[name]
 		goType := p.tsTypeToGo(field.Type)
 		tags := p.generateValidateTags(field)
+		
+		jsonTag := name
+		if !field.Required {
+			jsonTag += ",omitempty"
+		}
+		
 		fmt.Fprintf(&sb, "  %s %s `json:\"%s\" validate:\"%s\"`\n",
-			p.capitalize(name), goType, name, tags)
+			p.capitalize(name), goType, jsonTag, tags)
 	}
 	sb.WriteString("}\n")
 
@@ -472,6 +484,11 @@ func (p *Plugin) capitalize(s string) string {
 
 // createSchema creates a new validation schema template.
 func (p *Plugin) createSchema(name string) error {
+	validID := regexp.MustCompile(`^[A-Za-z_][A-Za-z0-9_]*$`)
+	if !validID.MatchString(name) {
+		return fmt.Errorf("invalid schema name: %s", name)
+	}
+
 	schema := Schema{
 		Name: name,
 		Fields: map[string]FieldSchema{

@@ -36,6 +36,8 @@ type ManualRoute struct {
 	Priority int
 	// Meta contains route metadata
 	Meta map[string]interface{}
+	// extractor is the pre-compiled parameter extractor
+	extractor *ParamExtractor
 }
 
 // RouteGroup represents a group of routes with shared configuration.
@@ -93,6 +95,7 @@ func (mr *ManualRouter) RegisterRoute(method, path string, handler Handler, midd
 		IsDynamic:  isDynamic,
 		Priority:   priority,
 		Meta:       make(map[string]interface{}),
+		extractor:  NewParamExtractor(path),
 	}
 
 	mr.routes = append(mr.routes, route)
@@ -118,6 +121,7 @@ func (mr *ManualRouter) RegisterComponent(path string, component templ.Component
 		IsDynamic:  isDynamic,
 		Priority:   priority,
 		Meta:       make(map[string]interface{}),
+		extractor:  NewParamExtractor(path),
 	}
 
 	mr.routes = append(mr.routes, route)
@@ -210,8 +214,7 @@ func (mr *ManualRouter) Match(method, path string) (*ManualRoute, Params) {
 			continue
 		}
 
-		extractor := NewParamExtractor(route.Path)
-		if params, ok := extractor.Extract(path); ok {
+		if params, ok := route.extractor.Extract(path); ok {
 			return route, params
 		}
 	}
@@ -226,8 +229,7 @@ func (mr *ManualRouter) MatchAll(path string) []*ManualRoute {
 
 	matches := make([]*ManualRoute, 0)
 	for _, route := range mr.routes {
-		extractor := NewParamExtractor(route.Path)
-		if extractor.Match(path) {
+		if route.extractor.Match(path) {
 			matches = append(matches, route)
 		}
 	}
@@ -469,6 +471,7 @@ func (g *RouteGroup) RegisterRoute(method, path string, handler Handler, middlew
 		IsDynamic:  isDynamic,
 		Priority:   priority,
 		Meta:       make(map[string]interface{}),
+		extractor:  NewParamExtractor(fullPath),
 	}
 
 	g.Routes = append(g.Routes, route)
@@ -500,6 +503,7 @@ func (g *RouteGroup) Page(path string, component templ.Component, middleware ...
 		IsDynamic:  isDynamic,
 		Priority:   priority,
 		Meta:       make(map[string]interface{}),
+		extractor:  NewParamExtractor(fullPath),
 	}
 
 	g.Routes = append(g.Routes, route)

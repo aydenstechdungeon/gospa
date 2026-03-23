@@ -253,7 +253,7 @@ func RenderComponent(c *Component, content templ.Component) templ.Component {
 		attrs := c.Attrs()
 		attrStr := ""
 		for k, v := range attrs {
-			attrStr += fmt.Sprintf(` %s="%v"`, k, v)
+			attrStr += fmt.Sprintf(` %s="%s"`, k, templ.EscapeString(fmt.Sprintf("%v", v)))
 		}
 
 		// Write opening tag

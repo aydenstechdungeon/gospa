@@ -498,19 +498,18 @@ stateMap.OnChange = func(key string, value any) {
 func Batch(fn func())
 ```
 
-Executes function within a batch context. Server-side batching ensures proper synchronization ordering but does NOT defer notifications (unlike client-side). Notifications are dispatched synchronously for thread safety.
+Executes function within a batch context. Server-side batching defers all state change notifications until the `Batch` block completes, then flushes them all at once. This ensures that observers only see the final consistent state and reduces redundant processing for multi-part updates.
 
-> **Server vs Client Behavior Difference:**
-> - **Server (Go)**: `Batch()` executes synchronously with immediate notifications. Used for grouping related updates for atomicity and proper lock ordering.
-> - **Client (TypeScript)**: `batch()` defers notifications to the next microtask, coalescing multiple updates into a single DOM render.
+> **Performance Note:** For high-throughput updates, prefer `BatchWithContext` as it's optimized for request-scoped state without expensive GID lookups.
 
 **Example:**
 ```go
 state.Batch(func() {
     count.Set(1)
     name.Set("updated")
-    // Notifications dispatched immediately for server thread safety
+    // Notifications are NOT dispatched yet
 })
+// All notifications are flushed right here
 ```
 
 ### BatchResult

@@ -340,7 +340,7 @@ func (p *Plugin) discoverPages(projectDir string) ([]PageSEO, error) {
 
 		// Check for page.templ files
 		if strings.HasSuffix(path, "page.templ") {
-			relPath := strings.TrimPrefix(path, routesDir)
+			relPath := strings.TrimPrefix(filepath.ToSlash(path), filepath.ToSlash(routesDir))
 			relPath = strings.TrimSuffix(relPath, "page.templ")
 			relPath = strings.TrimSuffix(relPath, "/")
 			if relPath == "" {

@@ -48,6 +48,8 @@ type SSEBroker struct {
 	clients map[string]*SSEClient
 	// mutex protects concurrent access
 	mutex sync.RWMutex
+	// authorizeSubscribe is the hook to authorize subscriptions
+	authorizeSubscribe func(fiberpkg.Ctx, string) bool
 	// eventBufferSize is the buffer size for client channels
 	eventBufferSize int
 	// heartbeatInterval is the keepalive interval
@@ -72,6 +74,9 @@ type SSEConfig struct {
 	OnDisconnect func(*SSEClient)
 	// PubSub backend for distributed environments
 	PubSub store.PubSub
+	// AuthorizeSubscribe is called to authorize a subscription request.
+	// It should return true if the requester (c) is authorized to subscribe the client (clientID).
+	AuthorizeSubscribe func(c fiberpkg.Ctx, clientID string) bool
 }
 
 // NewSSEBroker creates a new SSE broker.
@@ -96,10 +101,11 @@ func NewSSEBroker(config *SSEConfig) *SSEBroker {
 		onConnect:         config.OnConnect,
 		onDisconnect:      config.OnDisconnect,
 		pubsub:            config.PubSub,
+		authorizeSubscribe: config.AuthorizeSubscribe,
 	}
 
 	// Subscribe to distributed events
-	_ = b.pubsub.Subscribe("gospa:sse", func(message []byte) {
+	_, _ = b.pubsub.Subscribe("gospa:sse", func(message []byte) {
 		var sseMsg struct {
 			Target string   `json:"target"` // "all", "topic:xyz", "client:xyz"
 			Event  SSEEvent `json:"event"`
@@ -352,6 +358,15 @@ func (b *SSEBroker) SSESubscribeHandler() fiberpkg.Handler {
 			})
 		}
 
+		// SECURITY: Verify that the requester is authorized to subscribe this client
+		if b.authorizeSubscribe != nil {
+			if !b.authorizeSubscribe(c, req.ClientID) {
+				return c.Status(403).JSON(fiberpkg.Map{
+					"error": "unauthorized subscription request",
+				})
+			}
+		}
+
 		b.Subscribe(req.ClientID, req.Topics...)
 
 		return c.JSON(fiberpkg.Map{
@@ -387,6 +402,15 @@ func (b *SSEBroker) SSEUnsubscribeHandler() fiberpkg.Handler {
 			return c.Status(404).JSON(fiberpkg.Map{
 				"error": "client not found or not connected",
 			})
+		}
+
+		// SECURITY: Verify that the requester is authorized to unsubscribe this client
+		if b.authorizeSubscribe != nil {
+			if !b.authorizeSubscribe(c, req.ClientID) {
+				return c.Status(403).JSON(fiberpkg.Map{
+					"error": "unauthorized unsubscription request",
+				})
+			}
 		}
 
 		b.Unsubscribe(req.ClientID, req.Topics...)

@@ -267,6 +267,32 @@ func (p *ImagePlugin) optimizeChangedImages(projectDir string) error {
 
 // optimizeImage optimizes a single image.
 func (p *ImagePlugin) optimizeImage(srcPath, outPath string) error {
+	srcStat, err := os.Stat(srcPath)
+	if err != nil {
+		return fmt.Errorf("failed to stat source image: %w", err)
+	}
+
+	ext := strings.ToLower(filepath.Ext(srcPath))
+
+	// Check if already optimized by looking at a representative generated file
+	repPath := outPath + ".original" + ext
+	if !p.config.PreserveOriginals {
+		if len(p.config.Sizes) > 0 {
+			sizeOutPath := p.addSizeSuffix(outPath, p.config.Sizes[0].Name)
+			switch {
+			case p.config.Formats.JPEG && ext != ".png":
+				repPath = sizeOutPath + ".jpg"
+			case p.config.Formats.PNG && ext == ".png":
+				repPath = sizeOutPath + ".png"
+			case p.config.Formats.WebP:
+				repPath = sizeOutPath + ".webp"
+			}
+		}
+	}
+	if dstStat, err := os.Stat(repPath); err == nil && dstStat.ModTime().After(srcStat.ModTime()) {
+		return nil // Already optimized and up to date
+	}
+
 	// Read source image
 	file, err := os.Open(srcPath) // #nosec //nolint:gosec
 	if err != nil {
@@ -276,8 +302,6 @@ func (p *ImagePlugin) optimizeImage(srcPath, outPath string) error {
 
 	// Decode image
 	var img image.Image
-	ext := strings.ToLower(filepath.Ext(srcPath))
-
 	switch ext {
 	case ".jpg", ".jpeg":
 		img, err = jpeg.Decode(file)
@@ -407,6 +431,10 @@ func (p *ImagePlugin) addSizeSuffix(path, size string) string {
 // cleanCache removes all optimized images.
 func (p *ImagePlugin) cleanCache(projectDir string) error {
 	outDir := filepath.Join(projectDir, p.config.OutputDir)
+	rel, err := filepath.Rel(projectDir, outDir)
+	if err != nil || strings.HasPrefix(rel, "..") {
+		return fmt.Errorf("output dir escapes project root")
+	}
 	return os.RemoveAll(outDir)
 }
 

@@ -209,7 +209,7 @@ type DevWatcher struct {
 func NewDevWatcher(dirs ...string) *DevWatcher {
 	return &DevWatcher{
 		dirs:      dirs,
-		Events:    make(chan FileEvent, 100),
+		Events:    make(chan FileEvent, 10000),
 		Errors:    make(chan error, 10),
 		stop:      make(chan struct{}),
 		interval:  500 * time.Millisecond,
@@ -281,6 +281,8 @@ func (w *DevWatcher) scanDir(dir string) error {
 }
 
 func (w *DevWatcher) checkDir(dir string) {
+	currentFiles := make(map[string]bool)
+
 	err := filepath.Walk(dir, func(path string, info os.FileInfo, err error) error {
 		if err != nil {
 			fmt.Fprintf(os.Stderr, "Warning: watcher error accessing %s: %v\n", path, err)
@@ -300,24 +302,31 @@ func (w *DevWatcher) checkDir(dir string) {
 			return nil
 		}
 
+		currentFiles[path] = true
 		oldTime, exists := w.fileTimes[path]
 		modTime := info.ModTime()
 
 		if !exists {
 			// New file
 			w.fileTimes[path] = modTime
-			w.Events <- FileEvent{
+			select {
+			case w.Events <- FileEvent{
 				File:    path,
 				Op:      FileOpCreate,
 				ModTime: modTime,
+			}:
+			default:
 			}
 		} else if !modTime.Equal(oldTime) {
 			// Modified file
 			w.fileTimes[path] = modTime
-			w.Events <- FileEvent{
+			select {
+			case w.Events <- FileEvent{
 				File:    path,
 				Op:      FileOpModify,
 				ModTime: modTime,
+			}:
+			default:
 			}
 		}
 
@@ -330,12 +339,15 @@ func (w *DevWatcher) checkDir(dir string) {
 	// Check for deleted files - scoped strictly to the current scanned directory tree
 	for path := range w.fileTimes {
 		if strings.HasPrefix(path, dir+string(filepath.Separator)) || path == dir || filepath.Dir(path) == dir {
-			if _, err := os.Stat(path); os.IsNotExist(err) {
+			if !currentFiles[path] && path != dir {
 				delete(w.fileTimes, path)
-				w.Events <- FileEvent{
+				select {
+				case w.Events <- FileEvent{
 					File:    path,
 					Op:      FileOpDelete,
 					ModTime: time.Now(),
+				}:
+				default:
 				}
 			}
 		}

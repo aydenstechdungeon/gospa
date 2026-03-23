@@ -455,7 +455,7 @@ func NewWSHub(pubsub store.PubSub) *WSHub {
 	}
 
 	// Subscribe to a global broadcast channel for state syncing across processes
-	_ = h.pubsub.Subscribe("gospa:broadcast", func(message []byte) {
+	_, _ = h.pubsub.Subscribe("gospa:broadcast", func(message []byte) {
 		h.mu.RLock()
 		defer h.mu.RUnlock()
 

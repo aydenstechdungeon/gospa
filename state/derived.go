@@ -53,32 +53,26 @@ func NewDerived[T any](compute func() T) *Derived[T] {
 	return d
 }
 
-// recompute recalculates the derived value
+// recompute recalculates the derived value.
+// CRITICAL: New value is calculated entirely outside the lock.
 func (d *Derived[T]) recompute() {
-	// BUG FIX: Calculate new value entirely outside the lock.
-	// This prevents deadlocks if compute() references other state that
-	// is concurrently being updated or creates circular read-dependencies.
 	newValue := d.compute()
 
 	var subs []subEntry[T]
 	var changed bool
 
 	d.mu.Lock()
-	oldValue := d.value
-	d.value = newValue
-	d.dirty = false
-
-	// Only notify if value actually changed
-	if !equal(oldValue, newValue) {
-		subs = make([]subEntry[T], len(d.subscribers))
-		copy(subs, d.subscribers)
+	if !equal(d.value, newValue) {
+		d.value = newValue
 		changed = true
+		if len(d.subscribers) > 0 {
+			subs = make([]subEntry[T], len(d.subscribers))
+			copy(subs, d.subscribers)
+		}
 	}
+	d.dirty = false
 	d.mu.Unlock()
 
-	// Notify subscribers outside lock to avoid deadlocks and synchronous callback issues.
-	// BUG FIX/PERF: This is synchronous instead of spinning up a goroutine,
-	// drastically reducing goroutine churn on hot paths while remaining safe.
 	if changed {
 		for _, sub := range subs {
 			sub.fn(newValue)

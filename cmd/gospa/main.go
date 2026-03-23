@@ -30,6 +30,10 @@ func main() {
 			fmt.Fprintln(os.Stderr, "Usage: gospa create <name>")
 			os.Exit(1)
 		}
+		if err := cli.ValidateProjectName(os.Args[2]); err != nil {
+			fmt.Fprintf(os.Stderr, "Error: Invalid project name: %v\n", err)
+			os.Exit(1)
+		}
 		cli.CreateProject(os.Args[2])
 	case "dev":
 		fs := flag.NewFlagSet("dev", flag.ExitOnError)

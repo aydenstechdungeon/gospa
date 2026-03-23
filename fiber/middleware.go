@@ -95,6 +95,8 @@ func StateMiddleware(config Config) gofiber.Handler {
 		escapedJSON := strings.ReplaceAll(stateJSON, "<", "\\u003c")
 		escapedJSON = strings.ReplaceAll(escapedJSON, ">", "\\u003e")
 		escapedJSON = strings.ReplaceAll(escapedJSON, "&", "\\u0026")
+		escapedJSON = strings.ReplaceAll(escapedJSON, "\u2028", "\\u2028")
+		escapedJSON = strings.ReplaceAll(escapedJSON, "\u2029", "\\u2029")
 		stateScript := `<script>window.__GOSPA_STATE__ = ` + escapedJSON + `;</script>`
 		if config.DevMode {
 			stateScript += `<script src="` + config.RuntimeScript + `" type="module"></script>`

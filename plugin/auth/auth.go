@@ -434,6 +434,9 @@ func New(cfg *Config) *AuthPlugin {
 	if cfg == nil {
 		cfg = DefaultConfig()
 	}
+	if cfg.JWTExpiry <= 0 {
+		cfg.JWTExpiry = 24
+	}
 	return &AuthPlugin{config: cfg}
 }
 

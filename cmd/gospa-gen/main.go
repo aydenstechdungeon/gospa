@@ -210,38 +210,46 @@ func returnsTemplComponent(fn *ast.FuncDecl) bool {
 // filePathToURLPath converts a file path to a URL path.
 // e.g., "blog/[id]/page_templ.go" -> "/blog/:id", ["id"]
 func filePathToURLPath(relPath string) (string, []string) {
-	// Remove filename
 	dir := filepath.Dir(relPath)
+	filename := filepath.Base(relPath)
 
-	// Handle root case
-	if dir == "." {
-		return "/", nil
-	}
-
-	// Split path components
-	parts := strings.Split(dir, string(filepath.Separator))
 	var params []string
 	var urlParts []string
 
-	for _, part := range parts {
-		// Check for dynamic segment [param]
-		switch {
-		case strings.HasPrefix(part, "[") && strings.HasSuffix(part, "]"):
-			param := strings.Trim(part, "[]")
-			params = append(params, param)
-			urlParts = append(urlParts, ":"+param)
-		case strings.HasPrefix(part, "[..."):
-			// Catch-all route [...rest]
-			param := strings.TrimPrefix(part, "[...")
-			param = strings.TrimSuffix(param, "]")
-			params = append(params, param)
-			urlParts = append(urlParts, "*")
-		default:
-			urlParts = append(urlParts, part)
+	if dir != "." {
+		parts := strings.Split(dir, string(filepath.Separator))
+		for _, part := range parts {
+			switch {
+			case strings.HasPrefix(part, "[") && strings.HasSuffix(part, "]"):
+				param := strings.Trim(part, "[]")
+				params = append(params, param)
+				urlParts = append(urlParts, ":"+param)
+			case strings.HasPrefix(part, "[..."):
+				param := strings.TrimPrefix(part, "[...")
+				param = strings.TrimSuffix(param, "]")
+				params = append(params, param)
+				urlParts = append(urlParts, "*")
+			default:
+				urlParts = append(urlParts, part)
+			}
 		}
 	}
 
-	return "/" + strings.Join(urlParts, "/"), params
+	path := "/"
+	if len(urlParts) > 0 {
+		path = "/" + strings.Join(urlParts, "/")
+	}
+
+	if filename != "page_templ.go" && !strings.Contains(filename, "layout") {
+		name := strings.TrimSuffix(filename, "_templ.go")
+		if path == "/" {
+			path = "/" + name
+		} else {
+			path = path + "/" + name
+		}
+	}
+
+	return path, params
 }
 
 // generateRegistrationFile generates the routes_registration.go file.

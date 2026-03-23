@@ -38,11 +38,17 @@ var activeBatches sync.Map
 // scheduler. Never call Batch() and then hand work off to spawned goroutines and
 // expect them to inherit the batch state — they will not. Use BatchWithContext
 // (passing the enriched ctx to sub-functions) for that pattern instead.
+// GID parsing is expensive (runtime.Stack). Optimizing the string parsing.
 func getGID() int64 {
 	var buf [64]byte
 	n := runtime.Stack(buf[:], false)
-	idField := strings.Fields(strings.TrimPrefix(string(buf[:n]), "goroutine "))[0]
-	id, _ := strconv.ParseInt(idField, 10, 64)
+	// FAST PATH: skip "goroutine " (10 chars), find the first space
+	s := string(buf[10:n])
+	spaceIdx := strings.IndexByte(s, ' ')
+	if spaceIdx == -1 {
+		return 0
+	}
+	id, _ := strconv.ParseInt(s[:spaceIdx], 10, 64)
 	return id
 }
 

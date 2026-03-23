@@ -461,18 +461,26 @@ func (rm *RouteMatch) Query(key string) string {
 // BuildURL builds a URL from a route pattern and parameters.
 func BuildURL(pattern string, pathParams Params, queryParams *QueryParams) string {
 	// Replace path parameters
-	url := pattern
+	u := pattern
 	for key, value := range pathParams {
-		url = strings.ReplaceAll(url, ":"+key, value)
-		url = strings.ReplaceAll(url, "*"+key, value)
+		u = strings.ReplaceAll(u, ":"+key, url.PathEscape(value))
+		// For catch-all, we want to keep slashes but escape other characters
+		if strings.Contains(pattern, "*"+key) {
+			segs := strings.Split(value, "/")
+			escapedSegs := make([]string, len(segs))
+			for i, s := range segs {
+				escapedSegs[i] = url.PathEscape(s)
+			}
+			u = strings.ReplaceAll(u, "*"+key, strings.Join(escapedSegs, "/"))
+		}
 	}
 
 	// Add query parameters
 	if queryParams != nil && len(queryParams.values) > 0 {
-		url += "?" + queryParams.Encode()
+		u += "?" + queryParams.Encode()
 	}
 
-	return url
+	return u
 }
 
 // PathBuilder helps build paths with parameters.
@@ -511,20 +519,27 @@ func (pb *PathBuilder) QueryAdd(key, value string) *PathBuilder {
 
 // Build builds the final URL.
 func (pb *PathBuilder) Build() string {
-	url := pb.pattern
+	u := pb.pattern
 
 	// Replace path parameters
 	for key, value := range pb.params {
-		url = strings.ReplaceAll(url, ":"+key, value)
-		url = strings.ReplaceAll(url, "*"+key, value)
+		u = strings.ReplaceAll(u, ":"+key, url.PathEscape(value))
+		if strings.Contains(pb.pattern, "*"+key) {
+			segs := strings.Split(value, "/")
+			escapedSegs := make([]string, len(segs))
+			for i, s := range segs {
+				escapedSegs[i] = url.PathEscape(s)
+			}
+			u = strings.ReplaceAll(u, "*"+key, strings.Join(escapedSegs, "/"))
+		}
 	}
 
 	// Add query parameters
 	if len(pb.query) > 0 {
-		url += "?" + pb.query.Encode()
+		u += "?" + pb.query.Encode()
 	}
 
-	return url
+	return u
 }
 
 // ValidateParams validates route parameters against a route.

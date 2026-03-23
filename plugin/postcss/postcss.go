@@ -763,12 +763,19 @@ func (p *PostCSSPlugin) criticalCommand(args []string) error {
 
 	// Use cleaned path to prevent path traversal
 	criticalOutputPath := filepath.Clean(p.config.CriticalCSS.CriticalOutput)
-	if err := os.WriteFile(criticalOutputPath, criticalCSS, 0600); err != nil { // #nosec //nolint:gosec // path from config, expected to be safe
+	nonCriticalOutputPath := filepath.Clean(p.config.CriticalCSS.NonCriticalOutput)
+	
+	// Ensure paths do not escape the project directory
+	if !p.isPathSafe(projectDir, criticalOutputPath) || !p.isPathSafe(projectDir, nonCriticalOutputPath) {
+		return fmt.Errorf("safety violation: critical CSS paths must be within project directory")
+	}
+
+	if err := os.WriteFile(criticalOutputPath, criticalCSS, 0600); err != nil { // #nosec //nolint:gosec // path from config, validated
 		return fmt.Errorf("failed to write critical CSS: %w", err)
 	}
 
 	// Write non-critical CSS
-	if err := os.WriteFile(p.config.CriticalCSS.NonCriticalOutput, nonCriticalCSS, 0600); err != nil { // #nosec //nolint:gosec // path from config, expected to be safe
+	if err := os.WriteFile(nonCriticalOutputPath, nonCriticalCSS, 0600); err != nil { // #nosec //nolint:gosec // path from config, validated
 		return fmt.Errorf("failed to write non-critical CSS: %w", err)
 	}
 
@@ -1004,6 +1011,16 @@ func CriticalCSSWithFallback(path, fallback string) string {
 		return fallback
 	}
 	return string(css)
+}
+
+// isPathSafe checks if the given path is within the project directory.
+func (p *PostCSSPlugin) isPathSafe(projectDir, path string) bool {
+	fullPath := path
+	if !filepath.IsAbs(path) {
+		fullPath = filepath.Join(projectDir, path)
+	}
+	rel, err := filepath.Rel(projectDir, fullPath)
+	return err == nil && !strings.HasPrefix(rel, "..")
 }
 
 // Ensure PostCSSPlugin implements CLIPlugin interface.

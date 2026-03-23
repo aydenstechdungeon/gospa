@@ -127,7 +127,7 @@ func validatePluginName(name string) error {
 
 func validatePluginVersion(version string) error {
 	validVersion := regexp.MustCompile(`^[a-zA-Z0-9._/-]+$`)
-	if version == "" || !validVersion.MatchString(version) || strings.Contains(version, "..") {
+	if version == "" || !validVersion.MatchString(version) || strings.Contains(version, "..") || strings.HasPrefix(version, "-") {
 		return fmt.Errorf("invalid version %q", version)
 	}
 	return nil
@@ -149,7 +149,7 @@ func (l *ExternalPluginLoader) download(owner, repo, version string) error {
 		if version != "latest" {
 			cloneArgs = append(cloneArgs, "--branch", version)
 		}
-		cloneArgs = append(cloneArgs, gitURL, pluginPath)
+		cloneArgs = append(cloneArgs, "--", gitURL, pluginPath)
 		cmd := exec.Command("git", cloneArgs...)
 		cmd.Stdout = os.Stdout
 		cmd.Stderr = os.Stderr

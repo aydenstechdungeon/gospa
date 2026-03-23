@@ -51,7 +51,13 @@ func (s *MemoryStorage) Get(key string) ([]byte, error) {
 		return nil, ErrNotFound
 	}
 	if !entry.exp.IsZero() && time.Now().After(entry.exp) {
-		_ = s.Delete(key)
+		// RACE FIX: Perform check and delete atomically under write lock
+		s.mu.Lock()
+		entry, exists = s.store[key] // Re-check
+		if exists && !entry.exp.IsZero() && time.Now().After(entry.exp) {
+			delete(s.store, key)
+		}
+		s.mu.Unlock()
 		return nil, ErrNotFound
 	}
 	// Return a defensive copy to prevent callers from mutating internal storage.
@@ -82,30 +88,42 @@ func (s *MemoryStorage) Delete(key string) error {
 
 // pruneLoop removes expired entries periodically.
 func (s *MemoryStorage) pruneLoop() {
-	ticker := time.NewTicker(5 * time.Minute)
+	ticker := time.NewTicker(2 * time.Minute) // Increased frequency, decreased work per tick
 	defer ticker.Stop()
 	for {
 		select {
 		case <-ticker.C:
-			s.mu.RLock()
-			now := time.Now()
-			var expired []string
-			for key, entry := range s.store {
-				if !entry.exp.IsZero() && now.After(entry.exp) {
-					expired = append(expired, key)
-				}
-			}
-			s.mu.RUnlock()
-			if len(expired) > 0 {
-				s.mu.Lock()
-				for _, key := range expired {
-					delete(s.store, key)
-				}
-				s.mu.Unlock()
-			}
+			s.prune()
 		case <-s.stop:
 			return // Stop processing when closed
 		}
+	}
+}
+
+// prune handles the actual deletion.
+func (s *MemoryStorage) prune() {
+	s.mu.RLock()
+	now := time.Now()
+	var expired []string
+	i := 0
+	const maxScan = 1000 // Only scan up to 1000 entries per tick to prevent blocking
+	for key, entry := range s.store {
+		if !entry.exp.IsZero() && now.After(entry.exp) {
+			expired = append(expired, key)
+		}
+		i++
+		if i >= maxScan {
+			break
+		}
+	}
+	s.mu.RUnlock()
+
+	if len(expired) > 0 {
+		s.mu.Lock()
+		for _, key := range expired {
+			delete(s.store, key)
+		}
+		s.mu.Unlock()
 	}
 }
 

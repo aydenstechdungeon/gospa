@@ -298,11 +298,27 @@ func Disable(name string) error {
 	return fmt.Errorf("plugin %q not found", name)
 }
 
-// TriggerHook triggers a lifecycle hook for all registered CLI plugins.
+// TriggerHook triggers a lifecycle hook for all registered CLI plugins concurrently.
 func TriggerHook(hook Hook, ctx map[string]interface{}) error {
+	var wg sync.WaitGroup
+	errCh := make(chan error, len(GetCLIPlugins()))
+
 	for _, p := range GetCLIPlugins() {
-		if err := p.OnHook(hook, ctx); err != nil {
-			return fmt.Errorf("plugin %s failed on hook %s: %w", p.Name(), hook, err)
+		wg.Add(1)
+		go func(plugin CLIPlugin) {
+			defer wg.Done()
+			if err := plugin.OnHook(hook, ctx); err != nil {
+				errCh <- fmt.Errorf("plugin %s failed on hook %s: %w", plugin.Name(), hook, err)
+			}
+		}(p)
+	}
+
+	wg.Wait()
+	close(errCh)
+
+	for err := range errCh {
+		if err != nil {
+			return err // Return the first error encountered
 		}
 	}
 	return nil

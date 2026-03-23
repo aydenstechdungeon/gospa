@@ -63,8 +63,16 @@ func (p *PubSub) Publish(channel string, message []byte) error {
 }
 
 // Subscribe subscribes to a Redis channel and invokes the handler for each message.
-func (p *PubSub) Subscribe(channel string, handler func(message []byte)) error {
-	return p.SubscribeWithContext(p.ctx, channel, handler)
+// Returns an unsubscribe function to stop the subscription.
+func (p *PubSub) Subscribe(channel string, handler func(message []byte)) (store.Unsubscribe, error) {
+	// Create a new context specifically for this subscription
+	ctx, cancel := context.WithCancel(p.ctx)
+	err := p.SubscribeWithContext(ctx, channel, handler)
+	if err != nil {
+		cancel()
+		return nil, err
+	}
+	return store.Unsubscribe(cancel), nil
 }
 
 // SubscribeWithContext subscribes to a Redis channel and automatically unsubscribes

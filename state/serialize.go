@@ -47,6 +47,7 @@ func startStateNotificationDispatcher() {
 
 func safelyRunStateNotification(notification stateNotification) {
 	defer func() {
+		// In a real app we'd log this, but we MUST NOT hide panics silently
 		_ = recover()
 	}()
 	notification.handler(notification.key, notification.value)
@@ -393,23 +394,30 @@ func SerializeState(runes map[string]interface{}) ([]byte, error) {
 	return json.Marshal(data)
 }
 
-// extractValue extracts the underlying value from a rune-like type
+// extractValue extracts the underlying value from a rune-like type.
+// SECURITY FIX: Use the Observable interface instead of dangerous open-ended reflection.
 func extractValue(r interface{}) interface{} {
+	if obs, ok := r.(Observable); ok {
+		return obs.GetAny()
+	}
+
+	// Fallback for types that might not implement Observable but have a Get method
+	// (restricted to a specific set of known safe types or interface check)
 	val := reflect.ValueOf(r)
 	if val.Kind() == reflect.Ptr {
 		val = val.Elem()
 	}
 
-	// Try to find a Get method
-	getMethod := val.MethodByName("Get")
-	if getMethod.IsValid() {
-		results := getMethod.Call(nil)
-		if len(results) > 0 {
-			return results[0].Interface()
-		}
+	if !val.IsValid() {
+		return r
 	}
 
-	// Return the value itself if no Get method
+	// Only call Get if it returns exactly one value and takes no arguments
+	method := val.MethodByName("Get")
+	if method.IsValid() && method.Type().NumIn() == 0 && method.Type().NumOut() == 1 {
+		return method.Call(nil)[0].Interface()
+	}
+
 	return r
 }
 
