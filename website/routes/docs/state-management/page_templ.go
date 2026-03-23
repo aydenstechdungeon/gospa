@@ -8,8 +8,6 @@ package statemanagement
 import "github.com/a-h/templ"
 import templruntime "github.com/a-h/templ/runtime"
 
-import "github.com/aydenstechdungeon/gospa/website/components"
-
 func Page() templ.Component {
 	return templruntime.GeneratedTemplate(func(templ_7745c5c3_Input templruntime.GeneratedComponentInput) (templ_7745c5c3_Err error) {
 		templ_7745c5c3_W, ctx := templ_7745c5c3_Input.Writer, templ_7745c5c3_Input.Context
@@ -31,23 +29,102 @@ func Page() templ.Component {
 			templ_7745c5c3_Var1 = templ.NopComponent
 		}
 		ctx = templ.ClearChildren(ctx)
-		templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 1, "<div class=\"space-y-12\"><header><h1 class=\"text-4xl font-bold tracking-tight mb-4 text-transparent bg-clip-text bg-gradient-to-r from-[var(--accent-primary)] to-[var(--accent-secondary)]\">State Management</h1><p class=\"text-xl text-[var(--text-secondary)] leading-relaxed\">GoSPA provides a unified state management system that works seamlessly across server and client, with automatic synchronization via WebSocket.</p></header><section class=\"space-y-6\"><h2 class=\"text-2xl font-bold\">Architecture Overview</h2><p class=\"text-[var(--text-secondary)]\">State in GoSPA flows from server to client with real-time synchronization. The server is the source of truth, and clients receive updates through WebSocket connections.</p><div class=\"grid md:grid-cols-2 gap-6\"><div class=\"p-6 rounded-2xl bg-[var(--bg-secondary)] border border-[var(--border)]\"><h3 class=\"font-bold mb-3 flex items-center gap-2\"><span class=\"w-2 h-2 rounded-full bg-[var(--accent-primary)]\"></span> Server State</h3><ul class=\"space-y-2 text-sm text-[var(--text-secondary)]\"><li>• Thread-safe Rune containers</li><li>• StateMap for key-value storage</li><li>• JSON serialization</li><li>• WebSocket broadcast</li></ul></div><div class=\"p-6 rounded-2xl bg-[var(--bg-secondary)] border border-[var(--border)]\"><h3 class=\"font-bold mb-3 flex items-center gap-2\"><span class=\"w-2 h-2 rounded-full bg-[var(--accent-secondary)]\"></span> Client State</h3><ul class=\"space-y-2 text-sm text-[var(--text-secondary)]\"><li>• Reactive Rune primitives</li><li>• Automatic dependency tracking</li><li>• WebSocket sync</li><li>• Local state for UI</li></ul></div></div></section><section class=\"space-y-6\"><h2 class=\"text-2xl font-bold\">Topics</h2><div class=\"grid md:grid-cols-2 gap-4\"><a href=\"/docs/state-management/server\" class=\"p-6 rounded-2xl bg-[var(--bg-secondary)] border border-[var(--border)] hover:border-[var(--accent-primary)]/50 transition-all group\"><h3 class=\"font-bold mb-2 group-hover:text-[var(--accent-primary)]\">Server-Side State</h3><p class=\"text-sm text-[var(--text-secondary)]\">Manage state on the server with StateMap, serialization, and batch updates.</p></a> <a href=\"/docs/state-management/client\" class=\"p-6 rounded-2xl bg-[var(--bg-secondary)] border border-[var(--border)] hover:border-[var(--accent-primary)]/50 transition-all group\"><h3 class=\"font-bold mb-2 group-hover:text-[var(--accent-primary)]\">Client-Side State</h3><p class=\"text-sm text-[var(--text-secondary)]\">Reactive primitives: Runes, Derived state, and Effects.</p></a> <a href=\"/docs/state-management/sync\" class=\"p-6 rounded-2xl bg-[var(--bg-secondary)] border border-[var(--border)] hover:border-[var(--accent-primary)]/50 transition-all group\"><h3 class=\"font-bold mb-2 group-hover:text-[var(--accent-primary)]\">Synchronization</h3><p class=\"text-sm text-[var(--text-secondary)]\">Keep state in sync between server and clients via WebSocket.</p></a> <a href=\"/docs/state-management/patterns\" class=\"p-6 rounded-2xl bg-[var(--bg-secondary)] border border-[var(--border)] hover:border-[var(--accent-primary)]/50 transition-all group\"><h3 class=\"font-bold mb-2 group-hover:text-[var(--accent-primary)]\">Patterns</h3><p class=\"text-sm text-[var(--text-secondary)]\">Common patterns: forms, async state, global stores, and utilities.</p></a></div></section><section class=\"space-y-6\"><h2 class=\"text-2xl font-bold\">Quick Example</h2>")
+		templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 1, "<div class=\"space-y-16 animate-in fade-in slide-in-from-bottom-4 duration-1000 ease-out\"><header class=\"space-y-4\"><h1 class=\"text-4xl md:text-5xl font-black tracking-tighter\">State Management</h1><p class=\"text-xl text-[var(--text-secondary)] leading-relaxed max-w-3xl font-medium\">A unified reactivity system that bridges the gap between Go server-side logic and browser-side interactions.</p></header><section class=\"grid md:grid-cols-2 gap-8\"><div class=\"relative group p-8 rounded-3xl border border-[var(--border)] bg-[var(--bg-secondary)]/30 backdrop-blur-sm overflow-hidden\"><div class=\"absolute -top-12 -right-12 w-32 h-32 bg-[var(--accent-primary)]/5 rounded-full blur-3xl\"></div><h3 class=\"text-xl font-bold mb-6 flex items-center gap-3 relative z-10\"><div class=\"w-6 h-6 rounded-lg bg-[var(--accent-primary)]/10 flex items-center justify-center border border-[var(--accent-primary)]/20\"><div class=\"w-2 h-2 rounded-full bg-[var(--accent-primary)]\"></div></div>Server-Side</h3><ul class=\"space-y-4 relative z-10\">")
 		if templ_7745c5c3_Err != nil {
 			return templ_7745c5c3_Err
 		}
-		templ_7745c5c3_Err = components.CodeBlock(`// Server (Go)
-states := gospa.NewStateMap()
-states.Set("count", 0)
-app.BroadcastState("count", 42)  // Broadcast to all clients
-
-// Client (TypeScript)
-import { syncedRune } from '@gospa/client';
-const count = syncedRune({ key: 'count', initial: 0 });
-count.subscribe(val => console.log('Count:', val));`, "typescript", "example.ts").Render(ctx, templ_7745c5c3_Buffer)
+		for _, item := range []string{"Thread-safe Rune containers", "Scoped StateMaps for components", "JSON-optimized serialization", "Automatic WebSocket broadcasting"} {
+			templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 2, "<li class=\"flex items-start gap-3 text-sm text-[var(--text-secondary)]\"><svg xmlns=\"http://www.w3.org/2000/svg\" width=\"16\" height=\"16\" viewBox=\"0 0 24 24\" fill=\"none\" stroke=\"currentColor\" stroke-width=\"3\" stroke-linecap=\"round\" stroke-linejoin=\"round\" class=\"text-[var(--accent-primary)] mt-0.5\"><path d=\"M20 6 9 17l-5-5\"></path></svg> ")
+			if templ_7745c5c3_Err != nil {
+				return templ_7745c5c3_Err
+			}
+			var templ_7745c5c3_Var2 string
+			templ_7745c5c3_Var2, templ_7745c5c3_Err = templ.JoinStringErrs(item)
+			if templ_7745c5c3_Err != nil {
+				return templ.Error{Err: templ_7745c5c3_Err, FileName: `routes/docs/state-management/page.templ`, Line: 26, Col: 13}
+			}
+			_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ.EscapeString(templ_7745c5c3_Var2))
+			if templ_7745c5c3_Err != nil {
+				return templ_7745c5c3_Err
+			}
+			templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 3, "</li>")
+			if templ_7745c5c3_Err != nil {
+				return templ_7745c5c3_Err
+			}
+		}
+		templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 4, "</ul></div><div class=\"relative group p-8 rounded-3xl border border-[var(--border)] bg-[var(--bg-secondary)]/30 backdrop-blur-sm overflow-hidden\"><div class=\"absolute -top-12 -right-12 w-32 h-32 bg-[var(--accent-secondary)]/5 rounded-full blur-3xl\"></div><h3 class=\"text-xl font-bold mb-6 flex items-center gap-3 relative z-10\"><div class=\"w-6 h-6 rounded-lg bg-[var(--accent-secondary)]/10 flex items-center justify-center border border-[var(--accent-secondary)]/20\"><div class=\"w-2 h-2 rounded-full bg-[var(--accent-secondary)]\"></div></div>Client-Side</h3><ul class=\"space-y-4 relative z-10\">")
 		if templ_7745c5c3_Err != nil {
 			return templ_7745c5c3_Err
 		}
-		templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 2, "</section></div>")
+		for _, item := range []string{"Ultra-lean TypeScript runtime", "Zero-dependency reactivity", "Dynamic DOM data-bindings", "Local-first state with server sync"} {
+			templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 5, "<li class=\"flex items-start gap-3 text-sm text-[var(--text-secondary)]\"><svg xmlns=\"http://www.w3.org/2000/svg\" width=\"16\" height=\"16\" viewBox=\"0 0 24 24\" fill=\"none\" stroke=\"currentColor\" stroke-width=\"3\" stroke-linecap=\"round\" stroke-linejoin=\"round\" class=\"text-[var(--accent-secondary)] mt-0.5\"><path d=\"M20 6 9 17l-5-5\"></path></svg> ")
+			if templ_7745c5c3_Err != nil {
+				return templ_7745c5c3_Err
+			}
+			var templ_7745c5c3_Var3 string
+			templ_7745c5c3_Var3, templ_7745c5c3_Err = templ.JoinStringErrs(item)
+			if templ_7745c5c3_Err != nil {
+				return templ.Error{Err: templ_7745c5c3_Err, FileName: `routes/docs/state-management/page.templ`, Line: 44, Col: 13}
+			}
+			_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ.EscapeString(templ_7745c5c3_Var3))
+			if templ_7745c5c3_Err != nil {
+				return templ_7745c5c3_Err
+			}
+			templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 6, "</li>")
+			if templ_7745c5c3_Err != nil {
+				return templ_7745c5c3_Err
+			}
+		}
+		templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 7, "</ul></div></section><section class=\"space-y-8\"><div class=\"flex items-center gap-4\"><h2 class=\"text-2xl font-bold tracking-tight\">Deep Dive</h2><div class=\"h-px flex-1 bg-[var(--border)]\"></div></div><div class=\"grid sm:grid-cols-2 gap-4\">")
+		if templ_7745c5c3_Err != nil {
+			return templ_7745c5c3_Err
+		}
+		for _, topic := range []struct{ title, path, desc string }{{"Server Runtime", "/docs/state-management/server", "Concurrency-safe primitives for Go."}, {"Client Primitives", "/docs/state-management/client", "Runes, Derived, and Effects in TS."}, {"Real-time Sync", "/docs/state-management/sync", "WebSocket-based state mirroring."}, {"Common Patterns", "/docs/state-management/patterns", "Best practices for complex apps."}} {
+			templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 8, "<a href=\"")
+			if templ_7745c5c3_Err != nil {
+				return templ_7745c5c3_Err
+			}
+			var templ_7745c5c3_Var4 templ.SafeURL
+			templ_7745c5c3_Var4, templ_7745c5c3_Err = templ.JoinURLErrs(topic.path)
+			if templ_7745c5c3_Err != nil {
+				return templ.Error{Err: templ_7745c5c3_Err, FileName: `routes/docs/state-management/page.templ`, Line: 58, Col: 25}
+			}
+			_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ.EscapeString(templ_7745c5c3_Var4))
+			if templ_7745c5c3_Err != nil {
+				return templ_7745c5c3_Err
+			}
+			templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 9, "\" class=\"group p-6 rounded-2xl border border-[var(--border)] bg-[var(--bg-secondary)]/50 hover:bg-[var(--bg-secondary)] hover:border-[var(--accent-primary)]/30 transition-all\"><h3 class=\"font-bold mb-2 group-hover:text-[var(--accent-primary)] transition-colors\">")
+			if templ_7745c5c3_Err != nil {
+				return templ_7745c5c3_Err
+			}
+			var templ_7745c5c3_Var5 string
+			templ_7745c5c3_Var5, templ_7745c5c3_Err = templ.JoinStringErrs(topic.title)
+			if templ_7745c5c3_Err != nil {
+				return templ.Error{Err: templ_7745c5c3_Err, FileName: `routes/docs/state-management/page.templ`, Line: 59, Col: 105}
+			}
+			_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ.EscapeString(templ_7745c5c3_Var5))
+			if templ_7745c5c3_Err != nil {
+				return templ_7745c5c3_Err
+			}
+			templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 10, "</h3><p class=\"text-sm text-[var(--text-secondary)] leading-relaxed\">")
+			if templ_7745c5c3_Err != nil {
+				return templ_7745c5c3_Err
+			}
+			var templ_7745c5c3_Var6 string
+			templ_7745c5c3_Var6, templ_7745c5c3_Err = templ.JoinStringErrs(topic.desc)
+			if templ_7745c5c3_Err != nil {
+				return templ.Error{Err: templ_7745c5c3_Err, FileName: `routes/docs/state-management/page.templ`, Line: 60, Col: 82}
+			}
+			_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ.EscapeString(templ_7745c5c3_Var6))
+			if templ_7745c5c3_Err != nil {
+				return templ_7745c5c3_Err
+			}
+			templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 11, "</p></a>")
+			if templ_7745c5c3_Err != nil {
+				return templ_7745c5c3_Err
+			}
+		}
+		templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 12, "</div></section><div class=\"flex justify-between items-center mt-20 pt-10 border-t border-[var(--border)]\"><a href=\"/docs/core-concepts/rendering\" class=\"group flex items-center gap-4 px-6 py-4 rounded-2xl border border-[var(--border)] bg-[var(--bg-secondary)] hover:border-[var(--text-primary)]/30 transition-all\"><svg xmlns=\"http://www.w3.org/2000/svg\" width=\"20\" height=\"20\" viewBox=\"0 0 24 24\" fill=\"none\" stroke=\"currentColor\" stroke-width=\"3\" stroke-linecap=\"round\" stroke-linejoin=\"round\" class=\"translate-x-0 group-hover:-translate-x-1 transition-transform opacity-50\"><path d=\"m11 17-5-5 5-5\"></path><path d=\"M18 17V7\"></path></svg><div class=\"text-left\"><div class=\"text-[10px] uppercase tracking-widest font-black opacity-40 mb-1\">Previous</div><div class=\"font-bold\">Rendering</div></div></a> <a href=\"/docs/core-concepts/islands\" class=\"group flex items-center gap-4 px-6 py-4 rounded-2xl bg-[var(--text-primary)] text-[var(--bg-primary)] hover:scale-[1.02] transition-all\"><div class=\"text-right\"><div class=\"text-[10px] uppercase tracking-widest font-black opacity-30 mb-1\">Up Next</div><div class=\"font-bold\">Islands</div></div><svg xmlns=\"http://www.w3.org/2000/svg\" width=\"20\" height=\"20\" viewBox=\"0 0 24 24\" fill=\"none\" stroke=\"currentColor\" stroke-width=\"3\" stroke-linecap=\"round\" stroke-linejoin=\"round\" class=\"translate-x-0 group-hover:translate-x-1 transition-transform\"><path d=\"M5 12h14\"></path><path d=\"m12 5 7 7-7 7\"></path></svg></a></div></div>")
 		if templ_7745c5c3_Err != nil {
 			return templ_7745c5c3_Err
 		}
