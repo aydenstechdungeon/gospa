@@ -108,7 +108,7 @@ go 1.23
 
 require (
 	github.com/a-h/templ v0.3.1001
-	github.com/aydenstechdungeon/gospa v0.1.29
+	github.com/aydenstechdungeon/gospa v0.1.30
 )
 `, config.Module)
 
