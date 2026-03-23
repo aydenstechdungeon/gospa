@@ -28,7 +28,7 @@ func decodeRemoteActionBody(body []byte) (interface{}, error) {
 	return v, nil
 }
 
-func validateJSONMaxNesting(data []byte, max int) error {
+func validateJSONMaxNesting(data []byte, maxDepth int) error {
 	dec := json.NewDecoder(bytes.NewReader(data))
 	var depth int
 	for {
@@ -42,13 +42,12 @@ func validateJSONMaxNesting(data []byte, max int) error {
 		if err != nil {
 			return err
 		}
-		switch t := tok.(type) {
-		case json.Delim:
+		if t, ok := tok.(json.Delim); ok {
 			switch t {
 			case '{', '[':
 				depth++
-				if depth > max {
-					return fmt.Errorf("%w: max %d", ErrJSONTooDeep, max)
+				if depth > maxDepth {
+					return fmt.Errorf("%w: max %d", ErrJSONTooDeep, maxDepth)
 				}
 			case '}', ']':
 				if depth > 0 {
