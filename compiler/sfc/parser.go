@@ -22,10 +22,10 @@ type SFC struct {
 }
 
 var (
-	scriptRegex   = regexp.MustCompile(`(?s)<script(.*?)>(.*?)</script>`)
-	templateRegex = regexp.MustCompile(`(?s)<template(.*?)>(.*?)</template>`)
-	styleRegex    = regexp.MustCompile(`(?s)<style(.*?)>(.*?)</style>`)
-	langRegex     = regexp.MustCompile(`lang="([^"]*)"`)
+	scriptRegex   = regexp.MustCompile(`(?is)<script(.*?)>(.*?)</script>`)
+	templateRegex = regexp.MustCompile(`(?is)<template(.*?)>(.*?)</template>`)
+	styleRegex    = regexp.MustCompile(`(?is)<style(.*?)>(.*?)</style>`)
+	langRegex     = regexp.MustCompile(`(?i)lang="([^"]*)"`)
 )
 
 // Parse splits a .gospa file into its component blocks.

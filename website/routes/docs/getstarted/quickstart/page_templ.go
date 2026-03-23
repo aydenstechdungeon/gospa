@@ -57,31 +57,28 @@ go mod tidy`, "bash", "Terminal").Render(ctx, templ_7745c5c3_Buffer)
 		if templ_7745c5c3_Err != nil {
 			return templ_7745c5c3_Err
 		}
-		templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 4, "<div class=\"mt-4 px-6 py-4 rounded-2xl bg-cyan-500/5 border border-cyan-500/10 text-sm font-medium text-[var(--text-secondary)] italic flex items-center gap-3\"><svg xmlns=\"http://www.w3.org/2000/svg\" width=\"16\" height=\"16\" viewBox=\"0 0 24 24\" fill=\"none\" stroke=\"currentColor\" stroke-width=\"2.5\" stroke-linecap=\"round\" stroke-linejoin=\"round\" class=\"text-cyan-500\"><circle cx=\"12\" cy=\"12\" r=\"10\"></circle><path d=\"M12 16v-4\"></path><path d=\"M12 8h.01\"></path></svg> \"Your app is now live at http://localhost:3000\"</div></div></section><!-- Step 4: Add Reactive Route --><section class=\"space-y-6\"><div class=\"flex items-center gap-6\"><div class=\"w-12 h-12 rounded-2xl bg-[var(--text-primary)] text-[var(--bg-primary)] flex items-center justify-center font-black text-xl shadow-xl shadow-white/10\">4</div><h2 id=\"reactive-route\" class=\"text-3xl font-display font-black tracking-tight\">Add a Reactive Route</h2></div><div class=\"pl-0 md:pl-[4.5rem] space-y-4\"><p class=\"text-[var(--text-secondary)] text-lg leading-relaxed font-medium\">Routes are simply files in <code class=\"bg-[var(--bg-tertiary)] px-1.5 py-0.5 rounded text-[var(--accent-primary)] font-bold font-mono\">routes/</code>. Create <code class=\"bg-[var(--bg-tertiary)] px-1.5 py-0.5 rounded text-[var(--accent-primary)] font-bold font-mono\">routes/hello.templ</code>:</p>")
+		templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 4, "<div class=\"mt-4 px-6 py-4 rounded-2xl bg-cyan-500/5 border border-cyan-500/10 text-sm font-medium text-[var(--text-secondary)] italic flex items-center gap-3\"><svg xmlns=\"http://www.w3.org/2000/svg\" width=\"16\" height=\"16\" viewBox=\"0 0 24 24\" fill=\"none\" stroke=\"currentColor\" stroke-width=\"2.5\" stroke-linecap=\"round\" stroke-linejoin=\"round\" class=\"text-cyan-500\"><circle cx=\"12\" cy=\"12\" r=\"10\"></circle><path d=\"M12 16v-4\"></path><path d=\"M12 8h.01\"></path></svg> \"Your app is now live at http://localhost:3000\"</div></div></section><!-- Step 4: Add a Single File Component --><section class=\"space-y-6\"><div class=\"flex items-center gap-6\"><div class=\"w-12 h-12 rounded-2xl bg-[var(--text-primary)] text-[var(--bg-primary)] flex items-center justify-center font-black text-xl shadow-xl shadow-white/10\">4</div><h2 id=\"reactive-route\" class=\"text-3xl font-display font-black tracking-tight\">Create an SFC</h2></div><div class=\"pl-0 md:pl-[4.5rem] space-y-4\"><p class=\"text-[var(--text-secondary)] text-lg leading-relaxed font-medium\">Single File Components allow you to co-locate logic, template, and styles. Create <code class=\"bg-[var(--bg-tertiary)] px-1.5 py-0.5 rounded text-[var(--accent-primary)] font-bold font-mono\">islands/Counter.gospa</code>:</p>")
 		if templ_7745c5c3_Err != nil {
 			return templ_7745c5c3_Err
 		}
-		templ_7745c5c3_Err = components.CodeBlock(`package routes
+		templ_7745c5c3_Err = components.CodeBlock(`<script lang="go">
+    var count = $state(0)
+    func increment() { count++ }
+</script>
 
-import "github.com/aydenstechdungeon/gospa/state"
-
-templ HelloPage() {
-    <div data-gospa-component="hello" class="p-8">
-        <h2 class="text-2xl font-bold">Counter: <span data-bind="count">0</span></h2>
-        <button 
-            data-on="click:increment"
-            class="mt-4 px-6 py-2 bg-[var(--accent-primary)] text-white rounded-full font-bold hover:scale-105 transition-transform"
-        >
+<template>
+    <div class="p-8 border rounded-2xl glass">
+        <h2 class="text-2xl font-bold">Counter: {count}</h2>
+        <button on:click={increment} class="mt-4 px-6 py-2 bg-[var(--accent-primary)] text-white rounded-full font-bold transition-all hover:scale-105">
             Increment
         </button>
     </div>
-}
+</template>
 
-func HelloState() *state.StateMap {
-    sm := state.NewStateMap()
-    sm.AddAny("count", 0)
-    return sm
-}`, "go", "routes/hello.templ").Render(ctx, templ_7745c5c3_Buffer)
+<style>
+    div { transition: all 0.3s ease; }
+    button { box-shadow: 0 4px 12px var(--accent-primary-alpha); }
+</style>`, "svelte", "islands/Counter.gospa").Render(ctx, templ_7745c5c3_Buffer)
 		if templ_7745c5c3_Err != nil {
 			return templ_7745c5c3_Err
 		}

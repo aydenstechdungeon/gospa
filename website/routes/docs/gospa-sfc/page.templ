@@ -97,6 +97,21 @@ templ Page() {
 					</div>
 				</div>
 			</div>
+
+			<div>
+				<h2 class="text-2xl font-bold mb-4 border-b border-[var(--border)] pb-2 italic mono">File-Based Routing</h2>
+				<p class="text-[var(--text-secondary)] mb-4">
+					<code class="bg-[var(--surface)] px-1 rounded">.gospa</code> files are fully integrated into the file-based router. You can use them for pages, layouts, and error boundaries.
+				</p>
+				<div class="p-6 rounded-xl bg-[var(--bg-secondary)] border border-[var(--border)]">
+					<ul class="space-y-2 text-sm text-[var(--text-secondary)]">
+						<li class="flex items-center gap-2"><div class="w-1.5 h-1.5 rounded-full bg-[var(--accent-primary)]"></div> <code class="text-[var(--text-primary)]">page.gospa</code> &mdash; The primary route entry point.</li>
+						<li class="flex items-center gap-2"><div class="w-1.5 h-1.5 rounded-full bg-[var(--accent-primary)]"></div> <code class="text-[var(--text-primary)]">layout.gospa</code> &mdash; A nested layout for the directory segment.</li>
+						<li class="flex items-center gap-2"><div class="w-1.5 h-1.5 rounded-full bg-[var(--accent-primary)]"></div> <code class="text-[var(--text-primary)]">error.gospa</code> &mdash; Error boundary for the segment.</li>
+						<li class="flex items-center gap-2"><div class="w-1.5 h-1.5 rounded-full bg-[var(--accent-primary)]"></div> <code class="text-[var(--text-primary)]">loading.gospa</code> &mdash; Static shell for PPR.</li>
+					</ul>
+				</div>
+			</div>
 		</section>
 	</div>
 }

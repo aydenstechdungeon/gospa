@@ -99,8 +99,8 @@ func (r *Router) Scan() error {
 			return nil
 		}
 
-		// Only process .templ files and _middleware.go
-		if !strings.HasSuffix(path, ".templ") && filepath.Base(path) != "_middleware.go" {
+		// Only process .templ, .gospa files and _middleware.go
+		if !strings.HasSuffix(path, ".templ") && !strings.HasSuffix(path, ".gospa") && filepath.Base(path) != "_middleware.go" {
 			return nil
 		}
 
@@ -139,15 +139,15 @@ func (r *Router) parseRoute(relPath string) (*Route, error) {
 	fileName := filepath.Base(relPath)
 
 	switch {
-	case fileName == "page.templ":
+	case fileName == "page.templ" || fileName == "page.gospa":
 		routeType = RouteTypePage
-	case fileName == "layout.templ":
+	case fileName == "layout.templ" || fileName == "layout.gospa":
 		routeType = RouteTypeLayout
-	case fileName == "error.templ":
+	case fileName == "error.templ" || fileName == "error.gospa":
 		routeType = RouteTypeError
 	case fileName == "_middleware.go":
 		routeType = RouteTypeMiddleware
-	case fileName == "_loading.templ" || fileName == "loading.templ":
+	case fileName == "_loading.templ" || fileName == "loading.templ" || fileName == "_loading.gospa" || fileName == "loading.gospa":
 		routeType = RouteTypeLoading
 	case strings.HasSuffix(fileName, "+server.go"):
 		routeType = RouteTypeAPI

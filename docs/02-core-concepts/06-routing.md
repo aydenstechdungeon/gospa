@@ -8,12 +8,12 @@ GoSPA uses special filenames within the `routes/` directory to construct the app
 
 | Filename | Purpose | Scope |
 |----------|---------|-------|
-| `page.templ` | Renders the primary component for a route directory. | Current route |
-| `layout.templ` | Wraps all nested child pages inside a particular directory segment. | Segment and children |
+| `page.templ` / `page.gospa` | Renders the primary component for a route directory. | Current route |
+| `layout.templ` / `layout.gospa` | Wraps all nested child pages inside a particular directory segment. | Segment and children |
 | `root_layout.templ` | The outermost HTML wrapper (`<html>`, `<body>`). Must include the GoSPA scripts. | Global (root only) |
 | `_middleware.go` | Segment-scoped middleware intercepting requests before they hit pages. | Segment and children |
-| `_error.templ` | Error boundary. If a page panics or returns an error during SSR, it falls back to this. | Segment and children |
-| `_loading.templ` | Automatically compiled as the default static shell during PPR (Partial Page Rendering) if no dynamic slots are provided. | Segment and children |
+| `_error.templ` / `_error.gospa` | Error boundary. If a page panics or returns an error during SSR, it falls back to this. | Segment and children |
+| `_loading.templ` / `_loading.gospa` | Automatically compiled as the default static shell during PPR (Partial Page Rendering). | Segment and children |
 
 ### Middleware Files (`_middleware.go`)
 

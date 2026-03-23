@@ -117,8 +117,8 @@ func generateRoutesWithConfig(config *GenerateConfig) error {
 		return fmt.Errorf("failed to create output directory: %w", err)
 	}
 
-	// Find all .templ files
-	templFiles, err := findTemplFiles(config.InputDir)
+	// Find all .templ and .gospa files
+	sourceFiles, err := findSourceFiles(config.InputDir)
 	if err != nil {
 		return err
 	}
@@ -126,8 +126,8 @@ func generateRoutesWithConfig(config *GenerateConfig) error {
 	// Generate route definitions
 	routes := make([]RouteDefinition, 0)
 
-	for _, file := range templFiles {
-		route, err := parseTemplRoute(file, config.InputDir)
+	for _, file := range sourceFiles {
+		route, err := parseSourceRoute(file, config.InputDir)
 		if err != nil {
 			fmt.Fprintf(os.Stderr, "Warning: failed to parse %s: %v\n", file, err)
 			continue
@@ -192,7 +192,7 @@ func findStateFiles(dir string) ([]string, error) {
 	return files, err
 }
 
-func findTemplFiles(dir string) ([]string, error) {
+func findSourceFiles(dir string) ([]string, error) {
 	var files []string
 
 	err := filepath.Walk(dir, func(path string, info os.FileInfo, err error) error {
@@ -200,7 +200,7 @@ func findTemplFiles(dir string) ([]string, error) {
 			return err
 		}
 
-		if !info.IsDir() && strings.HasSuffix(path, ".templ") {
+		if !info.IsDir() && (strings.HasSuffix(path, ".templ") || strings.HasSuffix(path, ".gospa")) {
 			files = append(files, path)
 		}
 
@@ -317,7 +317,7 @@ func convertGoTypeToTS(expr ast.Expr) string {
 	}
 }
 
-func parseTemplRoute(filename, baseDir string) (*RouteDefinition, error) {
+func parseSourceRoute(filename, baseDir string) (*RouteDefinition, error) {
 	// Get relative path
 	relPath, err := filepath.Rel(baseDir, filename)
 	if err != nil {
@@ -327,9 +327,10 @@ func parseTemplRoute(filename, baseDir string) (*RouteDefinition, error) {
 	// Convert file path to route path
 	dir := filepath.Dir(relPath)
 	file := filepath.Base(relPath)
+	ext := filepath.Ext(file)
 
 	// Skip layout files
-	if file == "layout.templ" {
+	if file == "layout.templ" || file == "layout.gospa" {
 		return nil, nil
 	}
 
@@ -339,10 +340,10 @@ func parseTemplRoute(filename, baseDir string) (*RouteDefinition, error) {
 		path = "/" + strings.ReplaceAll(dir, string(filepath.Separator), "/")
 	}
 
-	// Handle non-page.templ files
-	if file != "page.templ" {
+	// Handle non-page files
+	if file != "page.templ" && file != "page.gospa" {
 		// Add filename to path
-		path = path + "/" + strings.TrimSuffix(file, ".templ")
+		path = path + "/" + strings.TrimSuffix(file, ext)
 	}
 
 	// Clean up path

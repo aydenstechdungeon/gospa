@@ -85,3 +85,23 @@ func TestCompileCounter(t *testing.T) {
 
 	fmt.Println("Counter compilation test passed")
 }
+
+func TestSanitizeName(t *testing.T) {
+	c := NewCompiler()
+	rawName := "Counter'); alert(1); //"
+	_, ts, err := c.Compile(rawName, "<template><div>Test</div></template>")
+	if err != nil {
+		t.Fatalf("Failed to compile: %v", err)
+	}
+
+	if strings.Contains(ts, "alert(1)") {
+		t.Errorf("Sanitization failed: TS still contains alert(1)")
+	}
+
+	if strings.Contains(ts, "name: 'Counteralert1'") {
+		// nameSafeRegex: [^a-zA-Z0-9]
+		// 'Counter' + '); alert(1); //' -> 'Counteralert1'
+	} else if !strings.Contains(ts, "name: 'Counter") {
+		t.Errorf("Unexpected sanitized name in TS: %v", ts)
+	}
+}

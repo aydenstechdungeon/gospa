@@ -37,6 +37,7 @@ docs/
 - [Components](02-core-concepts/04-components.md)
 - [Islands](02-core-concepts/05-islands.md)
 - [Routing](02-core-concepts/06-routing.md)
+- [Single File Components (.gospa)](03-features/07-gospa-sfc.md)
 
 ### Features
 - [Client runtime](03-features/01-client-runtime.md)

@@ -14,14 +14,14 @@ templ Page() {
 		<section class="space-y-6">
 			<h2 class="text-2xl font-bold">Route Structure</h2>
 			<p class="text-[var(--text-secondary)]">
-				Routes are defined in the <code class="text-[var(--accent-primary)]">routes/</code> directory. Each <code class="text-[var(--accent-primary)]">*.templ</code> file becomes a route.
+				Routes are defined in the <code class="text-[var(--accent-primary)]">routes/</code> directory. Each <code class="text-[var(--accent-primary)]">*.templ</code> or <code class="text-[var(--accent-primary)]">*.gospa</code> file becomes a route.
 			</p>
 			@components.CodeBlock(`project/
 ├── routes/
-│   ├── layout.templ          # Root layout
-│   ├── page.templ            # Home page (/)
+│   ├── layout.gospa          # Root layout
+│   ├── page.gospa            # Home page (/)
 │   ├── about/
-│   │   └── page.templ        # About page (/about)
+│   │   └── page.gospa        # About page (/about)
 │   ├── (auth)/              → Grouped routes
 │   │   ├ layout.templ
 │   │   ├ login/
@@ -43,15 +43,15 @@ templ Page() {
 			<h3 class="text-xl font-semibold mt-8" id="route-files">Route Files</h3>
 			<div class="grid md:grid-cols-2 gap-4">
 				<div class="p-4 rounded-xl bg-[var(--bg-secondary)] border border-[var(--border)]">
-					<h4 class="font-mono text-sm text-[var(--accent-primary)] mb-2">page.templ</h4>
+					<h4 class="font-mono text-sm text-[var(--accent-primary)] mb-2">page.templ / page.gospa</h4>
 					<p class="text-sm text-[var(--text-secondary)]">Page component { "for" } a route. Renders the main content.</p>
 				</div>
 				<div class="p-4 rounded-xl bg-[var(--bg-secondary)] border border-[var(--border)]">
-					<h4 class="font-mono text-sm text-[var(--accent-primary)] mb-2">layout.templ</h4>
+					<h4 class="font-mono text-sm text-[var(--accent-primary)] mb-2">layout.templ / layout.gospa</h4>
 					<p class="text-sm text-[var(--text-secondary)]">Layout wrapper. Shared UI { "for" } child routes.</p>
 				</div>
 				<div class="p-4 rounded-xl bg-[var(--bg-secondary)] border border-[var(--border)]">
-					<h4 class="font-mono text-sm text-[var(--accent-primary)] mb-2">error.templ</h4>
+					<h4 class="font-mono text-sm text-[var(--accent-primary)] mb-2">error.templ / error.gospa</h4>
 					<p class="text-sm text-[var(--text-secondary)]">Error boundary. Catches errors in child routes.</p>
 				</div>
 				<div class="p-4 rounded-xl bg-[var(--bg-secondary)] border border-[var(--border)]">

@@ -6,11 +6,6 @@ import (
 
 templ Page() {
 	<div class="flex flex-col">
-		<script type="module">
-			import * as GoSPA from "/_gospa/runtime.js";
-			const count = new GoSPA.Rune(0);
-			console.log(count.get());
-		</script>
 		@components.Hero()
 		
 		<div class="max-w-7xl mx-auto px-4 w-full">
@@ -21,27 +16,6 @@ templ Page() {
 
 		@components.SingleBinary()
 
-		<section class="py-32 max-w-7xl mx-auto px-4">
-			<div class="glass rounded-[3rem] p-12 md:p-24 border border-white/10 relative overflow-hidden group shadow-[0_0_80px_-40px_rgba(167,139,250,0.15)]">
-				<div class="absolute -top-40 -right-40 w-[500px] h-[500px] bg-[var(--accent-secondary)]/10 rounded-full blur-[100px] group-hover:bg-[var(--accent-secondary)]/20 transition-colors duration-1000"></div>
-				<div class="absolute -bottom-40 -left-40 w-[400px] h-[400px] bg-[var(--accent-primary)]/10 rounded-full blur-[100px] group-hover:bg-[var(--accent-primary)]/20 transition-colors duration-1000"></div>
-				
-				<div class="relative z-10 flex flex-col items-center text-center max-w-4xl mx-auto">
-					<h2 class="text-4xl md:text-6xl font-display font-black mb-8 leading-tight tracking-tight">Ready to build <br/> the future of <span class="bg-gradient-to-r from-[var(--accent-secondary)] to-[var(--accent-primary)] bg-clip-text text-transparent">Go Web Apps?</span></h2>
-					<p class="text-[var(--text-secondary)] text-lg mb-10 leading-relaxed font-medium">
-						Join our growing community and start building reactive applications that are faster, safer, and easier to maintain. Experience the power of Go on the frontend.
-					</p>
-					<div class="flex flex-wrap justify-center gap-4">
-						<a href="/docs/getstarted/installation" class="px-10 py-5 btn-premium bg-[var(--accent-primary)] text-black font-black rounded-2xl transition-all hover:scale-105 active:scale-95 shadow-xl shadow-cyan-500/20">
-							Explore Documentation
-						</a>
-						<a href="https://github.com/aydenstechdungeon/gospa" target="_blank" class="px-10 py-5 bg-white/5 border border-white/10 text-white font-bold rounded-2xl transition-all hover:bg-white/10 hover:border-white/20 active:scale-95 flex items-center gap-3">
-							<svg xmlns="http://www.w3.org/2000/svg" width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M15 22v-4a4.8 4.8 0 0 0-1-3.5c3 0 6-2 6-5.5.08-1.25-.27-2.48-1-3.5.28-1.15.28-2.35 0-3.5 0 0-1 0-3 1.5-2.64-.5-5.36-.5-8 0C6 2 5 2 5 2c-.3 1.15-.3 2.35 0 3.5A5.403 5.403 0 0 0 4 9c0 3.5 3 5.5 6 5.5-.39.49-.68 1.05-.85 1.65-.17.6-.22 1.23-.15 1.85v4"/><path d="M9 18c-4.51 2-5-2-7-2"/></svg>
-							Star on GitHub
-						</a>
-					</div>
-				</div>
-			</div>
-		</section>
+		@components.Comparison()
 	</div>
 }

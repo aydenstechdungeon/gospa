@@ -11,6 +11,7 @@ export interface Route {
 export const routes: Route[] = [
   {"Path":"/components/callout","File":"components/callout.templ","Params":[],"IsDynamic":false,"IsCatchAll":false},
   {"Path":"/components/code_block","File":"components/code_block.templ","Params":[],"IsDynamic":false,"IsCatchAll":false},
+  {"Path":"/components/comparison","File":"components/comparison.templ","Params":[],"IsDynamic":false,"IsCatchAll":false},
   {"Path":"/components/dual_code_block","File":"components/dual_code_block.templ","Params":[],"IsDynamic":false,"IsCatchAll":false},
   {"Path":"/components/features","File":"components/features.templ","Params":[],"IsDynamic":false,"IsCatchAll":false},
   {"Path":"/components/hero","File":"components/hero.templ","Params":[],"IsDynamic":false,"IsCatchAll":false},
@@ -79,6 +80,7 @@ export const routes: Route[] = [
 export const routeMap: Record<string, Route> = {
   '/components/callout': routes.find(r => r.path === '/components/callout')!,
   '/components/code_block': routes.find(r => r.path === '/components/code_block')!,
+  '/components/comparison': routes.find(r => r.path === '/components/comparison')!,
   '/components/dual_code_block': routes.find(r => r.path === '/components/dual_code_block')!,
   '/components/features': routes.find(r => r.path === '/components/features')!,
   '/components/hero': routes.find(r => r.path === '/components/hero')!,

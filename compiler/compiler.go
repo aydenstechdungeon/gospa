@@ -19,7 +19,8 @@ func NewCompiler() *GospaCompiler {
 }
 
 // Compile compiles a .gospa component into Templ and TypeScript.
-func (c *GospaCompiler) Compile(name, input string) (templ, ts string, err error) {
+func (c *GospaCompiler) Compile(rawName, input string) (templ, ts string, err error) {
+	name := c.sanitizeName(rawName)
 	parsed, err := sfc.Parse(input)
 	if err != nil {
 		return "", "", err
@@ -44,20 +45,37 @@ func (c *GospaCompiler) Compile(name, input string) (templ, ts string, err error
 	return templ, ts, nil
 }
 
+func (c *GospaCompiler) scopeTemplate(template, hash string) string {
+	// Scope all tags, handling existing class attributes
+	return tagRegex.ReplaceAllStringFunc(template, func(tag string) string {
+		if strings.HasPrefix(strings.ToLower(tag), "<script") || strings.HasPrefix(strings.ToLower(tag), "<style") {
+			return tag
+		}
+		if classAttrRegex.MatchString(tag) {
+			return classAttrRegex.ReplaceAllString(tag, `class="$1 `+hash+`"`)
+		}
+		// If no class, insert it
+		return tagRegex.ReplaceAllString(tag, `<$1 class="`+hash+` "$2>`)
+	})
+}
+
 func (c *GospaCompiler) generateHash(name string) string {
 	return fmt.Sprintf("gospa-%x", strings.ToLower(name))[:10]
 }
 
-func (c *GospaCompiler) scopeTemplate(template, hash string) string {
-	// Simple prototype: add class to all tags
-	re := regexp.MustCompile(`<([a-z0-9]+)([^>]*)>`)
-	return re.ReplaceAllString(template, `<$1 class="`+hash+` "$2>`)
-}
-
 var (
-	stateRegex   = regexp.MustCompile(`\$state\((.*?)\)`)
-	derivedRegex = regexp.MustCompile(`\$derived\((.*?)\)`)
+	stateRegex      = regexp.MustCompile(`\$state\((.*?)\)`)
+	derivedRegex    = regexp.MustCompile(`\$derived\((.*?)\)`)
+	effectRegex     = regexp.MustCompile(`(?s)\$effect\(func\(\)\s*\{(.*?)\}\)`)
+	tagRegex        = regexp.MustCompile(`(?i)<([a-z0-9]+)([^>]*)>`)
+	classAttrRegex  = regexp.MustCompile(`(?i)class="([^"]*)"`)
+	cssDotRegex     = regexp.MustCompile(`\.([a-zA-Z][a-zA-Z0-9-_]*)`)
+	nameSafeRegex   = regexp.MustCompile(`[^a-zA-Z0-9]`)
 )
+
+func (c *GospaCompiler) sanitizeName(name string) string {
+	return nameSafeRegex.ReplaceAllString(name, "")
+}
 
 func (c *GospaCompiler) transformDSL(script string) string {
 	// For Go (SSR), $state(val) -> val
@@ -70,7 +88,10 @@ func (c *GospaCompiler) transformDSL(script string) string {
 	return s
 }
 
-func (c *GospaCompiler) generateTempl(name, template, _, hash string) string {
+func (c *GospaCompiler) generateTempl(name, template, script, hash string) string {
+	// Extract simple variables to make them available in templ scope for SSR
+	// This is a basic approach: just dump the script into the templ function body
+	// before the return/rendering.
 	return fmt.Sprintf(`package islands
 
 import "github.com/aydenstechdungeon/gospa/component"
@@ -78,21 +99,23 @@ import "github.com/aydenstechdungeon/gospa/component"
 type %sProps struct {}
 
 templ %s(props %sProps) {
+	@{
+		%s
+	}
 	<div data-gospa-island="%s" class="%s">
 		%s
 	</div>
 }
-`, name, name, name, name, hash, template)
+`, name, name, name, script, name, hash, template)
 }
 
 func (c *GospaCompiler) generateTS(name, script, _, hash string) string {
 	tsScript := script
 	tsScript = stateRegex.ReplaceAllString(tsScript, "state.$$state($1)")
 	tsScript = derivedRegex.ReplaceAllString(tsScript, "state.$$derived(() => $1)")
-	
-	effectRegex := regexp.MustCompile(`(?s)\$effect\(func\(\)\s*\{(.*?)\}\)`)
 	tsScript = effectRegex.ReplaceAllString(tsScript, "state.$$effect(() => {$1})")
 
+	// Slightly safer replacement for JS (avoids strings in simple cases)
 	tsScript = strings.ReplaceAll(tsScript, "func() {", "() => {")
 	tsScript = strings.ReplaceAll(tsScript, "fmt.Printf", "console.log")
 	tsScript = strings.ReplaceAll(tsScript, "var ", "const ")
@@ -115,7 +138,9 @@ func (c *GospaCompiler) generateScopedCSS(style, hash string) string {
 	if style == "" {
 		return ""
 	}
-	// Safe scoping: use json.Marshal to prevent breakout from JS string
-	encodedStyle, _ := json.Marshal(strings.ReplaceAll(style, ".", "."+hash))
+	// Scoping: Append hash as a class selector (e.g., .card -> .card.gospa-hash)
+	scopedStyle := cssDotRegex.ReplaceAllString(style, ".$1."+hash)
+	
+	encodedStyle, _ := json.Marshal(scopedStyle)
 	return fmt.Sprintf("\n\n/* Scoped CSS */\nconst style = document.createElement('style');\nstyle.textContent = %s;\ndocument.head.appendChild(style);\n", string(encodedStyle))
 }

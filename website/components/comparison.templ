@@ -1,0 +1,153 @@
+package components
+
+templ Comparison() {
+	<section class="py-32 max-w-7xl mx-auto px-4 lg:px-12 relative overflow-hidden">
+		<div class="absolute top-0 left-1/2 -translate-x-1/2 w-full max-w-4xl h-px bg-gradient-to-r from-transparent via-[var(--accent-primary)]/20 to-transparent"></div>
+		
+		<div class="text-center mb-20">
+			<h2 class="text-3xl md:text-5xl font-display font-black mb-6 tracking-tight">The <span class="text-[var(--accent-primary)]">Developer's</span> Dilemma</h2>
+			<p class="text-[var(--text-secondary)] text-lg max-w-2xl mx-auto font-medium">
+				Choosing a stack shouldn't be about compromising between Go's performance and JS's ergonomics.
+			</p>
+		</div>
+
+		<div class="grid lg:grid-cols-3 gap-8 relative z-10">
+			<!-- Next.js / React -->
+			<div class="flex flex-col p-8 rounded-[2rem] border border-[var(--border)] bg-gray-950/20 backdrop-blur-sm group hover:border-blue-500/30 transition-all duration-500 hover:-translate-y-2">
+				<div class="flex items-center gap-3 mb-8">
+					<div class="w-12 h-12 rounded-xl bg-blue-500/10 flex items-center justify-center text-blue-400 border border-blue-500/20 group-hover:bg-blue-500 group-hover:text-black transition-colors">
+						<svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M12 2v2"/><path d="m4.93 4.93 1.41 1.41"/><path d="M2 12h2"/><path d="m4.93 19.07 1.41-1.41"/><path d="M12 22v-2"/><path d="m19.07 19.07-1.41-1.41"/><path d="M22 12h-2"/><path d="m19.07 4.93-1.41 1.41"/><path d="M15.93 4.93a7 7 0 1 1-7.86 0"/></svg>
+					</div>
+					<div>
+						<h3 class="font-bold text-xl">Next.js / JSX</h3>
+						<p class="text-xs text-[var(--text-muted)] font-mono uppercase tracking-widest mt-1">THE "DE-FACTO" STANDARD</p>
+					</div>
+				</div>
+
+				<div class="space-y-6 flex-grow">
+					<div class="p-4 rounded-xl bg-black/40 border border-white/5 font-mono text-xs overflow-x-auto custom-scrollbar">
+						<div class="text-blue-400">export default function <span class="text-white">Counter</span>() {`{`}</div>
+						<div class="pl-4 text-purple-400">const<span class="text-white"> [count, setCount] = </span>useState<span class="text-white">(0);</span></div>
+						<div class="pl-4 text-purple-400">return<span class="text-white"> (</span></div>
+						<div class="pl-8 text-blue-400">&lt;button<span class="text-white"> onClick=</span>{`{`}<span class="text-white">() => </span>setCount<span class="text-white">(count + 1)</span>{`}`}<span class="text-blue-400">&gt;</span></div>
+						<div class="pl-12 text-white">Count is {`{`}count{`}`}</div>
+						<div class="pl-8 text-blue-400">&lt;/button&gt;</div>
+						<div class="pl-4 text-purple-400">);</div>
+						<div class="text-blue-400">{`}`}</div>
+					</div>
+
+					<ul class="space-y-3">
+						<li class="flex items-start gap-3 text-sm text-[var(--text-secondary)]">
+							<svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" class="text-red-500/50 mt-0.5"><path d="M18 6 6 18"/><path d="m6 6 12 12"/></svg>
+							Heavy Virtual DOM diffing overhead
+						</li>
+						<li class="flex items-start gap-3 text-sm text-[var(--text-secondary)]">
+							<svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" class="text-red-500/50 mt-0.5"><path d="M18 6 6 18"/><path d="m6 6 12 12"/></svg>
+							Massive hydration costs on initial load
+						</li>
+						<li class="flex items-start gap-3 text-sm text-[var(--text-secondary)]">
+							<svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" class="text-red-500/50 mt-0.5"><path d="M18 6 6 18"/><path d="m6 6 12 12"/></svg>
+							Requires Node/Bun runtime in prod
+						</li>
+					</ul>
+				</div>
+			</div>
+
+			<!-- Svelte -->
+			<div class="flex flex-col p-8 rounded-[2rem] border border-[var(--border)] bg-gray-950/40 backdrop-blur-sm group hover:border-orange-500/30 transition-all duration-500 hover:-translate-y-2">
+				<div class="flex items-center gap-3 mb-8">
+					<div class="w-12 h-12 rounded-xl bg-orange-500/10 flex items-center justify-center text-orange-400 border border-orange-500/20 group-hover:bg-orange-500 group-hover:text-black transition-colors">
+						<svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M21 16V8a2 2 0 0 0-1-1.73l-7-4a2 2 0 0 0-2 0l-7 4A2 2 0 0 0 3 8v8a2 2 0 0 0 1 1.73l7 4a2 2 0 0 0 2 0l7-4A2 2 0 0 0 21 16z"/><polyline points="3.29 7 12 12 20.71 7"/><line x1="12" y1="22" x2="12" y2="12"/></svg>
+					</div>
+					<div>
+						<h3 class="font-bold text-xl">Svelte 5 / SFC</h3>
+						<p class="text-xs text-[var(--text-muted)] font-mono uppercase tracking-widest mt-1">THE MODERN BENCHMARK</p>
+					</div>
+				</div>
+
+				<div class="space-y-6 flex-grow">
+					<div class="p-4 rounded-xl bg-black/40 border border-white/5 font-mono text-xs overflow-x-auto custom-scrollbar">
+						<div class="text-orange-400">&lt;script&gt;</div>
+						<div class="pl-4 text-purple-400">let<span class="text-white"> count = $state(0);</span></div>
+						<div class="text-orange-400">&lt;/script&gt;</div>
+						<div class="mt-2 text-blue-400">&lt;button<span class="text-white"> onclick=</span>{`{`}<span class="text-white">() => count++</span>{`}`}<span class="text-blue-400">&gt;</span></div>
+						<div class="pl-4 text-white">Count is {`{`}count{`}`}</div>
+						<div class="text-blue-400">&lt;/button&gt;</div>
+					</div>
+
+					<ul class="space-y-3">
+						<li class="flex items-start gap-3 text-sm text-[var(--text-secondary)]">
+							<svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" class="text-green-500/50 mt-0.5"><polyline points="20 6 9 17 4 12"/></svg>
+							Incredible syntax & developer experience
+						</li>
+						<li class="flex items-start gap-3 text-sm text-[var(--text-secondary)]">
+							<svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" class="text-red-500/50 mt-0.5"><path d="M18 6 6 18"/><path d="m6 6 12 12"/></svg>
+							Hard to integrate with Go backends
+						</li>
+						<li class="flex items-start gap-3 text-sm text-[var(--text-secondary)]">
+							<svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" class="text-red-500/50 mt-0.5"><path d="M18 6 6 18"/><path d="m6 6 12 12"/></svg>
+							Requires separate JS build pipeline
+						</li>
+					</ul>
+				</div>
+			</div>
+
+			<!-- GoSPA -->
+			<div class="flex flex-col p-8 rounded-[2rem] border border-[var(--accent-primary)]/40 bg-[var(--accent-primary)]/5 glass relative overflow-hidden group hover:border-[var(--accent-primary)] transition-all duration-500 hover:-translate-y-2 lg:scale-110 lg:z-20 shadow-2xl shadow-[var(--accent-primary)]/5">
+				<div class="absolute top-0 right-0 p-4">
+					<span class="text-[10px] font-black uppercase tracking-tighter bg-[var(--accent-primary)] text-black px-2 py-0.5 rounded">RECOMMENDED</span>
+				</div>
+				
+				<div class="flex items-center gap-3 mb-8">
+					<div class="w-12 h-12 rounded-xl bg-cyan-500/20 flex items-center justify-center text-[var(--accent-primary)] border border-[var(--accent-primary)]/30 group-hover:bg-[var(--accent-primary)] group-hover:text-black transition-colors">
+						<svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M12 2v8"/><path d="m4.93 10.93 1.41-1.41"/><path d="M2 18h2"/><path d="m4.93 25.07 1.41 1.41"/><path d="M12 32v-8"/><path d="m19.07 25.07-1.41-1.41"/><path d="M22 18h-2"/><path d="m19.07 10.93-1.41 1.41"/><circle cx="12" cy="18" r="4"/></svg>
+					</div>
+					<div>
+						<h3 class="font-bold text-xl">GoSPA / .gospa</h3>
+						<p class="text-xs text-[var(--accent-primary)] font-mono uppercase tracking-widest mt-1">THE BEST OF BOTH WORLDS</p>
+					</div>
+				</div>
+
+				<div class="space-y-6 flex-grow">
+					<div class="p-4 rounded-xl bg-black/60 border border-[var(--accent-primary)]/20 font-mono text-xs overflow-x-auto custom-scrollbar shadow-inner">
+						<div class="text-[var(--accent-primary)]">&lt;script lang="go"&gt;</div>
+						<div class="pl-4 text-purple-400">var<span class="text-white"> count = $state(0)</span></div>
+						<div class="pl-4 text-purple-400">func<span class="text-white"> inc() {"{"} count++ {"}"}</span></div>
+						<div class="text-[var(--accent-primary)]">&lt;/script&gt;</div>
+						<div class="mt-2 text-cyan-400">&lt;button<span class="text-white"> on:click=</span>{`{`}<span class="text-white">inc</span>{`}`}<span class="text-cyan-400">&gt;</span></div>
+						<div class="pl-4 text-white">Count is {`{`}count{`}`}</div>
+						<div class="text-cyan-400">&lt;/button&gt;</div>
+					</div>
+
+					<ul class="space-y-3">
+						<li class="flex items-start gap-3 text-sm text-white">
+							<svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" class="text-[var(--accent-primary)] mt-0.5"><polyline points="20 6 9 17 4 12"/></svg>
+							Svelte ergonomics, Go performance
+						</li>
+						<li class="flex items-start gap-3 text-sm text-white">
+							<svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" class="text-[var(--accent-primary)] mt-0.5"><polyline points="20 6 9 17 4 12"/></svg>
+							Compiled to native Go & tiny JS
+						</li>
+						<li class="flex items-start gap-3 text-sm text-white">
+							<svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" class="text-[var(--accent-primary)] mt-0.5"><polyline points="20 6 9 17 4 12"/></svg>
+							Single binary deployment (10MB avg)
+						</li>
+					</ul>
+				</div>
+			</div>
+		</div>
+
+		<div class="mt-24 text-center">
+			<h3 class="text-2xl font-bold mb-8">Ready to escape the JS treadmill?</h3>
+			<div class="flex flex-wrap justify-center gap-6">
+				<a href="/docs/getstarted/quickstart" class="px-12 py-5 bg-[var(--accent-primary)] text-black font-black rounded-2xl hover:scale-105 active:scale-95 transition-all shadow-xl shadow-cyan-500/20">
+					Start Building Now
+				</a>
+				<a href="https://github.com/aydenstechdungeon/gospa" target="_blank" class="px-12 py-5 bg-white/5 border border-white/10 text-white font-bold rounded-2xl hover:bg-white/10 transition-all flex items-center gap-3">
+					<svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M15 22v-4a4.8 4.8 0 0 0-1-3.5c3 0 6-2 6-5.5.08-1.25-.27-2.48-1-3.5.28-1.15.28-2.35 0-3.5 0 0-1 0-3 1.5-2.64-.5-5.36-.5-8 0C6 2 5 2 5 2c-.3 1.15-.3 2.35 0 3.5A5.403 5.403 0 0 0 4 9c0 3.5 3 5.5 6 5.5-.39.49-.68 1.05-.85 1.65-.17.6-.22 1.23-.15 1.85v4"/><path d="M9 18c-4.51 2-5-2-7-2"/></svg>
+					View on GitHub
+				</a>
+			</div>
+		</div>
+	</section>
+}

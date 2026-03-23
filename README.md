@@ -11,7 +11,8 @@ GoSPA (Go Spa and Go S-P-A are the only valid pronunciations)  brings Svelte-lik
 
 - **Native Reactivity** - `Rune`, `Derived`, `Effect` primitives that work exactly like Svelte 5.
 - **WebSocket Sync** - Transparent client-server state synchronization with GZIP delta patching.
-- **File-Based Routing** - SvelteKit-style directory structure for `.templ` files.
+- **SFC System** - Single File Components (`.gospa`) with scoped CSS and Go-based logic.
+- **File-Based Routing** - SvelteKit-style directory structure for `.templ` and `.gospa` files.
 - **Hybrid Rendering** - Mix SSR, SSG, ISR, and PPR on a per-page basis.
 - **Type-Safe RPC** - Call server functions directly from the client without boilerplate endpoints.
 - **High Performance** - Integrated `go-json` and optional MessagePack for minimal overhead.
@@ -39,18 +40,26 @@ gospa dev
 
 > For local client/runtime tooling, use Bun. The GoSPA client package and repo JS/TS workflows are Bun-first.
 
-### 3. A Simple Page
-```templ
-// routes/page.templ
-package routes
+### 3. A Simple SFC
+```svelte
+// islands/Counter.gospa
+<script lang="go">
+  var count = $state(0)
+  func increment() { count++ }
+</script>
 
-templ Page() {
-    <div data-gospa-component="counter" data-gospa-state='{"count":0}'>
-        <h1 data-bind="text:count">0</h1>
-        <button data-on="click:increment">+</button>
-    </div>
-}
+<template>
+  <button on:click={increment}>
+    Count is {count}
+  </button>
+</template>
+
+<style>
+  button { padding: 1rem; border-radius: 8px; }
+</style>
 ```
+
+GoSPA automatically compiles this to a reactive Templ component and a TypeScript hydration island.
 
 ## Comparison
 

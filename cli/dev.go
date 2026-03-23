@@ -358,13 +358,13 @@ func handleFileChange(_ context.Context, event FileEvent, restartCh chan struct{
 	ext := filepath.Ext(event.File)
 
 	switch ext {
-	case ".templ":
-		fmt.Println("Regenerating templates...")
+	case ".templ", ".gospa":
+		fmt.Printf("%s changed, regenerating...\n", ext)
 		if err := regenerateTempl(); err != nil {
 			fmt.Fprintf(os.Stderr, "Error regenerating templates: %v\n", err)
 			return
 		}
-		fmt.Println("✓ Templates regenerated")
+		fmt.Printf("✓ %s regenerated\n", ext)
 
 		// Restart server
 		select {
@@ -387,7 +387,7 @@ func handleFileChange(_ context.Context, event FileEvent, restartCh chan struct{
 	}
 
 	// Generate types
-	if strings.HasSuffix(event.File, ".go") || strings.HasSuffix(event.File, ".templ") {
+	if strings.HasSuffix(event.File, ".go") || strings.HasSuffix(event.File, ".templ") || strings.HasSuffix(event.File, ".gospa") {
 		runGenerate()
 	}
 }

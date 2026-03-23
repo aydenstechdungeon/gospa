@@ -107,6 +107,12 @@ The `.gospa` compiler performs several transformations:
 
 ---
 
+## File-Based Routing
+
+`.gospa` files are fully supported by GoSPA's file-based routing system. You can place them inside the `routes/` directory using the same conventions as `.templ` files (e.g., `page.gospa`, `layout.gospa`, `[id]/page.gospa`).
+
+---
+
 ## Cross-Island State
 
 Islands in GoSPA can share state without server-side roundtrips by using global stores. This is ideal for UI-only state like global themes, sidebar visibility, or cart totals.
