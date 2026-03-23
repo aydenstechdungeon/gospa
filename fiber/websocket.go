@@ -431,13 +431,14 @@ type WSStateUpdate struct {
 
 // WSHub maintains the set of active clients and broadcasts messages.
 type WSHub struct {
-	Clients    map[string]*WSClient
-	Register   chan *WSClient
-	Unregister chan *WSClient
-	Broadcast  chan []byte
-	mu         sync.RWMutex
-	pubsub     store.PubSub
-	stop       chan struct{}
+	Clients          map[string]*WSClient
+	ClientsBySession map[string]map[string]*WSClient // SessionID -> {ClientID -> *WSClient}
+	Register         chan *WSClient
+	Unregister       chan *WSClient
+	Broadcast        chan []byte
+	mu               sync.RWMutex
+	pubsub           store.PubSub
+	stop             chan struct{}
 }
 
 // NewWSHub creates a new WebSocket hub.
@@ -446,12 +447,13 @@ func NewWSHub(pubsub store.PubSub) *WSHub {
 		pubsub = store.NewMemoryPubSub()
 	}
 	h := &WSHub{
-		Clients:    make(map[string]*WSClient),
-		Register:   make(chan *WSClient),
-		Unregister: make(chan *WSClient),
-		Broadcast:  make(chan []byte, 256),
-		pubsub:     pubsub,
-		stop:       make(chan struct{}),
+		Clients:          make(map[string]*WSClient),
+		ClientsBySession: make(map[string]map[string]*WSClient),
+		Register:         make(chan *WSClient),
+		Unregister:       make(chan *WSClient),
+		Broadcast:        make(chan []byte, 256),
+		pubsub:           pubsub,
+		stop:             make(chan struct{}),
 	}
 
 	// Subscribe to a global broadcast channel for state syncing across processes
@@ -468,13 +470,24 @@ func NewWSHub(pubsub store.PubSub) *WSHub {
 			}
 		}
 
-		for _, client := range h.Clients {
-			if sessionID == "" || client.SessionID == sessionID {
-				select {
-				case client.Send <- message:
-				default:
-					// Client buffer full
+		if sessionID != "" {
+			// Targeted broadcast to specific session (O(1) session lookup)
+			if clients, ok := h.ClientsBySession[sessionID]; ok {
+				for _, client := range clients {
+					select {
+					case client.Send <- message:
+					default:
+					}
 				}
+			}
+			return
+		}
+
+		// Global broadcast (O(N) iteration unavoidable here)
+		for _, client := range h.Clients {
+			select {
+			case client.Send <- message:
+			default:
 			}
 		}
 	})
@@ -489,9 +502,25 @@ func (h *WSHub) Run() {
 		case client := <-h.Register:
 			h.mu.Lock()
 			if oldClient, ok := h.Clients[client.ID]; ok {
+				// Cleanup existing indexing
+				if oldClient.SessionID != "" {
+					if clients, ok := h.ClientsBySession[oldClient.SessionID]; ok {
+						delete(clients, oldClient.ID)
+						if len(clients) == 0 {
+							delete(h.ClientsBySession, oldClient.SessionID)
+						}
+					}
+				}
 				_ = oldClient.Conn.Close()
 			}
+
 			h.Clients[client.ID] = client
+			if client.SessionID != "" {
+				if h.ClientsBySession[client.SessionID] == nil {
+					h.ClientsBySession[client.SessionID] = make(map[string]*WSClient)
+				}
+				h.ClientsBySession[client.SessionID][client.ID] = client
+			}
 			h.mu.Unlock()
 			slog.Default().Info("client connected", "id", client.ID)
 
@@ -499,6 +528,14 @@ func (h *WSHub) Run() {
 			h.mu.Lock()
 			if existing, ok := h.Clients[client.ID]; ok && existing == client {
 				delete(h.Clients, client.ID)
+				if client.SessionID != "" {
+					if clients, ok := h.ClientsBySession[client.SessionID]; ok {
+						delete(clients, client.ID)
+						if len(clients) == 0 {
+							delete(h.ClientsBySession, client.SessionID)
+						}
+					}
+				}
 				// Use guarded Close() to prevent double-close panics
 				client.Close()
 			}

@@ -447,10 +447,10 @@ export class WSClient {
           clearTimeout(pending.timeout);
           this.pendingRequests.delete(id);
           if (message.type === "error") {
-            const sanitizedError = message.error
-              ? message.error.replace(/[<>\"']/g, "")
-              : "Unknown error";
-            pending.reject(new Error(sanitizedError));
+            const rawError = message.error || "Unknown error";
+            // Use native Error object which stores message as plain text. 
+            // The danger only exists if the UI developer does el.innerHTML = err.message.
+            pending.reject(new Error(rawError));
           } else {
             pending.resolve(message.data);
           }

@@ -93,6 +93,13 @@ type NavigationViewTransitionsConfig struct {
 	FallbackToClassic *bool `json:"fallbackToClassic,omitempty"`
 }
 
+// NavigationProgressBarConfig configures the navigation progress bar
+type NavigationProgressBarConfig struct {
+	Enabled *bool   `json:"enabled,omitempty"`
+	Color   *string `json:"color,omitempty"`
+	Height  *string `json:"height,omitempty"`
+}
+
 // NavigationOptions configures client-side navigation
 type NavigationOptions struct {
 	SpeculativePrefetching         *NavigationSpeculativePrefetchingConfig    `json:"speculativePrefetching,omitempty"`
@@ -101,6 +108,7 @@ type NavigationOptions struct {
 	LazyRuntimeInitialization      *NavigationLazyRuntimeInitializationConfig `json:"lazyRuntimeInitialization,omitempty"`
 	ServiceWorkerNavigationCaching *NavigationServiceWorkerCachingConfig      `json:"serviceWorkerNavigationCaching,omitempty"`
 	ViewTransitions                *NavigationViewTransitionsConfig           `json:"viewTransitions,omitempty"`
+	ProgressBar                    *NavigationProgressBarConfig               `json:"progressBar,omitempty"`
 }
 
 // Config holds the application configuration.
@@ -1526,6 +1534,15 @@ func (a *App) storeSsgEntry(key string, html []byte) {
 	}
 	if _, exists := a.ssgCache[key]; !exists {
 		a.ssgCacheKeys = append(a.ssgCacheKeys, key)
+	} else {
+		// Move to end of queue for LRU-like behavior (avoids early eviction of active entries)
+		for i, k := range a.ssgCacheKeys {
+			if k == key {
+				a.ssgCacheKeys = append(a.ssgCacheKeys[:i], a.ssgCacheKeys[i+1:]...)
+				a.ssgCacheKeys = append(a.ssgCacheKeys, key)
+				break
+			}
+		}
 	}
 	a.ssgCache[key] = ssgEntry{html: html, createdAt: time.Now()}
 }
@@ -1561,6 +1578,15 @@ func (a *App) storePprShell(key string, shell []byte) {
 	}
 	if _, exists := a.pprShellCache[key]; !exists {
 		a.pprShellKeys = append(a.pprShellKeys, key)
+	} else {
+		// Move to end of queue for LRU-like behavior
+		for i, k := range a.pprShellKeys {
+			if k == key {
+				a.pprShellKeys = append(a.pprShellKeys[:i], a.pprShellKeys[i+1:]...)
+				a.pprShellKeys = append(a.pprShellKeys, key)
+				break
+			}
+		}
 	}
 	a.pprShellCache[key] = pprEntry{html: shell, createdAt: time.Now()}
 }
