@@ -3,64 +3,75 @@ package quickstart
 import "github.com/aydenstechdungeon/gospa/website/components"
 
 templ Page() {
-	<div class="space-y-8">
-		<header>
-			<h1 class="text-4xl font-bold tracking-tight mb-4">Quick Start</h1>
-			<p class="text-xl text-[var(--text-secondary)]">Build your first reactive GoSPA application in minutes.</p>
+	<div class="space-y-12 animate-in fade-in slide-in-from-bottom-4 duration-1500 ease-out">
+		<header class="space-y-4">
+			<h1 class="text-4xl md:text-5xl font-black tracking-tighter">Quick Start</h1>
+			<p class="text-xl text-[var(--text-secondary)] leading-relaxed max-w-2xl font-medium">
+				Build your first reactive GoSPA application in under five minutes.
+			</p>
 		</header>
 
-		<section>
-			<h2 id="create-project" class="text-2xl font-bold mb-4">1. Create a Project</h2>
-			<p class="text-[var(--text-secondary)] mb-4">Use the CLI to scaffold a new project, install dependencies, and verify the workspace before you start coding:</p>
-			@components.CodeBlock("gospa create my-app\ncd my-app\ngo mod tidy\ngospa doctor", "bash", "Terminal")
-		</section>
+		<div class="grid gap-12 lg:grid-cols-[1fr_350px]">
+			<div class="space-y-16">
+				<!-- Step 1: Install CLI -->
+				<section class="space-y-4">
+					<div class="flex items-center gap-4">
+						<div class="w-10 h-10 rounded-full bg-[var(--text-primary)] text-[var(--bg-primary)] flex items-center justify-center font-black text-lg">1</div>
+						<h2 id="install-cli" class="text-2xl font-bold tracking-tight">Install the CLI</h2>
+					</div>
+					<p class="text-[var(--text-secondary)] pl-14">The GoSPA CLI is the central hub for your project lifecycle, from scaffolding to production builds.</p>
+					<div class="pl-14">
+						@components.CodeBlock("go install github.com/aydenstechdungeon/gospa/cmd/gospa@latest", "bash", "Terminal")
+					</div>
+				</section>
 
-		<section class="rounded-[2rem] border border-[var(--border)] bg-[var(--bg-secondary)] p-6 md:p-8">
-			<div class="flex flex-wrap items-center gap-3 mb-4">
-				<div class="px-3 py-1 rounded-full text-xs font-bold uppercase tracking-[0.28em] bg-[var(--accent-primary)]/10 text-[var(--accent-primary)]">Recommended Baseline</div>
-				<div class="text-sm text-[var(--text-secondary)]">Use the presets to keep dev and production stories aligned.</div>
-			</div>
-			@components.CodeBlock(`config := gospa.DefaultConfig()
-config.AppName = "my-app"
+				<!-- Step 2: Scaffold -->
+				<section class="space-y-4">
+					<div class="flex items-center gap-4">
+						<div class="w-10 h-10 rounded-full bg-[var(--text-primary)] text-[var(--bg-primary)] flex items-center justify-center font-black text-lg">2</div>
+						<h2 id="scaffold" class="text-2xl font-bold tracking-tight">Scaffold a Project</h2>
+					</div>
+					<p class="text-[var(--text-secondary)] pl-14">Create a new workspace with all the recommended batteries included.</p>
+					<div class="pl-14">
+						@components.CodeBlock(`gospa create my-app
+cd my-app
+go mod tidy`, "bash", "Terminal")
+					</div>
+				</section>
 
-// for production:
-// config := gospa.ProductionConfig()`, "go", "main.go")
-		</section>
+				<!-- Step 3: Dev Server -->
+				<section class="space-y-4">
+					<div class="flex items-center gap-4">
+						<div class="w-10 h-10 rounded-full bg-[var(--text-primary)] text-[var(--bg-primary)] flex items-center justify-center font-black text-lg">3</div>
+						<h2 id="dev" class="text-2xl font-bold tracking-tight">Enter Dev Mode</h2>
+					</div>
+					<p class="text-[var(--text-secondary)] pl-14">Launch the development environment to start building with hot reloading and automatic generation.</p>
+					<div class="pl-14">
+						@components.CodeBlock("gospa dev", "bash", "Terminal")
+						<div class="mt-4 px-4 py-3 rounded-2xl bg-[var(--accent-secondary)]/10 border border-[var(--accent-secondary)]/20 text-xs font-medium text-[var(--text-secondary)] italic">
+							"Your app is now live at http://localhost:3000"
+						</div>
+					</div>
+				</section>
 
-		<section>
-			<h2 id="dev-server" class="text-2xl font-bold mb-4">2. Start Dev Server</h2>
-			<p class="text-[var(--text-secondary)] mb-4">Launch the development environment with hot reloading:</p>
-			@components.CodeBlock("gospa dev", "bash", "Terminal")
-		</section>
+				<!-- Step 4: Add Reactive Route -->
+				<section class="space-y-4">
+					<div class="flex items-center gap-4">
+						<div class="w-10 h-10 rounded-full bg-[var(--text-primary)] text-[var(--bg-primary)] flex items-center justify-center font-black text-lg">4</div>
+						<h2 id="reactive-route" class="text-2xl font-bold tracking-tight">Add a Reactive Route</h2>
+					</div>
+					<p class="text-[var(--text-secondary)] pl-14">Routes are simply files in <code class="bg-[var(--bg-tertiary)] px-1.5 py-0.5 rounded">routes/</code>. Create <code class="bg-[var(--bg-tertiary)] px-1.5 py-0.5 rounded">routes/hello.templ</code>:</p>
+					<div class="pl-14">
+						@components.CodeBlock(`package routes
 
-		<section>
-			<h2 id="create-route" class="text-2xl font-bold mb-4">3. Create a Route</h2>
-			<p class="text-[var(--text-secondary)] mb-4">Add a new file <code class="bg-[var(--bg-tertiary)] px-1.5 py-0.5 rounded">routes/hello.templ</code>:</p>
-			@components.CodeBlock(`package routes
-
-templ HelloPage() {
-    <div class="p-8">
-        <h1 class="text-3xl font-bold">Hello from GoSPA!</h1>
-        <p>This page was created in seconds.</p>
-    </div>
-}`, "go", "routes/hello.templ")
-		</section>
-
-		<section>
-			<h2 id="add-reactivity" class="text-2xl font-bold mb-4">4. Add Reactivity</h2>
-			<p class="text-[var(--text-secondary)] mb-4">Make it interactive with reactive state:</p>
-			@components.CodeBlock(`package routes
-
-import (
-    "github.com/aydenstechdungeon/gospa/state"
-)
+import "github.com/aydenstechdungeon/gospa/state"
 
 templ HelloPage() {
     <div data-gospa-component="hello" class="p-8">
-        <h1 class="text-3xl font-bold">Counter: <span data-bind="count">0</span></h1>
+        <h2 class="text-2xl font-bold">Counter: <span data-bind="count">0</span></h2>
         <button 
-            class="px-4 py-2 bg-blue-500 text-white rounded mt-4"
             data-on="click:increment"
+            class="mt-4 px-6 py-2 bg-[var(--accent-primary)] text-white rounded-full font-bold hover:scale-105 transition-transform"
         >
             Increment
         </button>
@@ -72,22 +83,59 @@ func HelloState() *state.StateMap {
     sm.AddAny("count", 0)
     return sm
 }`, "go", "routes/hello.templ")
-		</section>
+					</div>
+				</section>
+			</div>
 
-		<div class="flex justify-between mt-16">
-			<a href="/docs/getstarted/installation" class="group flex items-center gap-3 px-6 py-3 rounded-xl border border-[var(--border)] bg-[var(--bg-secondary)] hover:border-[var(--accent-primary)]/50 transition-all">
-				<svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="text-[var(--text-muted)] group-hover:text-[var(--accent-primary)] transition-colors"><path d="M19 12H5"></path><path d="m12 19-7-7 7-7"></path></svg>
-				<div>
-					<div class="text-[var(--text-muted)] text-xs uppercase tracking-widest font-bold mb-1">Previous</div>
-					<div class="font-bold group-hover:text-[var(--accent-primary)] transition-colors">Installation</div>
+			<!-- Sidebar / Sticky Items -->
+			<aside class="hidden lg:block space-y-8">
+				<div class="sticky top-24 p-6 rounded-3xl border border-[var(--border)] bg-[var(--bg-secondary)]/50 space-y-6">
+					<div>
+						<h4 class="text-xs font-black uppercase tracking-widest text-[var(--text-muted)] mb-4">Prerequisites</h4>
+						<ul class="space-y-3 text-sm">
+							<li class="flex items-center gap-2 text-[var(--text-secondary)]">
+								<svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" class="text-green-500"><path d="M20 6 9 17l-5-5"></path></svg>
+								Go 1.23+
+							</li>
+							<li class="flex items-center gap-2 text-[var(--text-secondary)]">
+								<svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" class="text-green-500"><path d="M20 6 9 17l-5-5"></path></svg>
+								Bun (for builds)
+							</li>
+							<li class="flex items-center gap-2 text-[var(--text-secondary)]">
+								<svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" class="text-green-500"><path d="M20 6 9 17l-5-5"></path></svg>
+								Templ CLI
+							</li>
+						</ul>
+					</div>
+
+					<div class="h-px bg-[var(--border)]"></div>
+
+					<div>
+						<h4 class="text-xs font-black uppercase tracking-widest text-[var(--text-muted)] mb-4">Next Steps</h4>
+						<nav class="space-y-2">
+							<a href="/docs/core-concepts/state" class="block text-sm font-bold text-[var(--accent-primary)] hover:underline">Core Concepts: State</a>
+							<a href="/docs/core-concepts/routing" class="block text-sm font-bold text-[var(--accent-primary)] hover:underline">File-based Routing</a>
+							<a href="/docs/api/cli" class="block text-sm font-bold text-[var(--accent-primary)] hover:underline">CLI Reference</a>
+						</nav>
+					</div>
+				</div>
+			</aside>
+		</div>
+
+		<div class="flex justify-between items-center mt-20 pt-10 border-t border-[var(--border)]">
+			<a href="/docs" class="group flex items-center gap-4 px-6 py-4 rounded-2xl border border-[var(--border)] bg-[var(--bg-secondary)] hover:border-[var(--text-primary)]/30 transition-all">
+				<svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round" class="translate-x-0 group-hover:-translate-x-1 transition-transform opacity-50"><path d="m11 17-5-5 5-5"></path><path d="M18 17V7"></path></svg>
+				<div class="text-left">
+					<div class="text-[10px] uppercase tracking-widest font-black opacity-40 mb-1">Previous</div>
+					<div class="font-bold">Introduction</div>
 				</div>
 			</a>
-			<a href="/docs/getstarted/structure" class="group flex items-center gap-3 px-6 py-3 rounded-xl border border-[var(--border)] bg-[var(--bg-secondary)] hover:border-[var(--accent-primary)]/50 transition-all text-right">
-				<div>
-					<div class="text-[var(--text-muted)] text-xs uppercase tracking-widest font-bold mb-1">Next</div>
-					<div class="font-bold group-hover:text-[var(--accent-primary)] transition-colors">Project Structure</div>
+			<a href="/docs/getstarted/structure" class="group flex items-center gap-4 px-6 py-4 rounded-2xl bg-[var(--text-primary)] text-[var(--bg-primary)] hover:scale-[1.02] transition-all">
+				<div class="text-right">
+					<div class="text-[10px] uppercase tracking-widest font-black opacity-30 mb-1">Up Next</div>
+					<div class="font-bold">Project Structure</div>
 				</div>
-				<svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="text-[var(--text-muted)] group-hover:text-[var(--accent-primary)] transition-colors"><path d="M5 12h14"></path><path d="m12 5 7 7-7 7"></path></svg>
+				<svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round" class="translate-x-0 group-hover:translate-x-1 transition-transform"><path d="M5 12h14"></path><path d="m12 5 7 7-7 7"></path></svg>
 			</a>
 		</div>
 	</div>

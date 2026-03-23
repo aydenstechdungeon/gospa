@@ -3,76 +3,111 @@ package docs
 import "github.com/aydenstechdungeon/gospa/website/components"
 
 templ Page() {
-	<div class="space-y-6">
-		<h1 class="text-4xl font-bold tracking-tight">Introduction</h1>
-		<p class="text-xl text-[var(--text-secondary)] leading-relaxed">
-			GoSPA is a modern framework for building reactive single-page applications using Go and Templ. It brings the power of Svelte-like reactivity to the Go ecosystem without compromising on performance or type safety.
-		</p>
-		
-		<div class="grid md:grid-cols-2 gap-6 my-12">
-			<div class="p-6 rounded-2xl border border-[var(--border)] bg-[var(--bg-secondary)]">
-				<h3 class="font-bold mb-2">Fast by Default</h3>
-				<p class="text-sm text-[var(--text-secondary)]">Sub-15KB runtime and optimized SSR ensure your apps load instantly and perform smoothly.</p>
-			</div>
-			<div class="p-6 rounded-2xl border border-[var(--border)] bg-[var(--bg-secondary)]">
-				<h3 class="font-bold mb-2">Truly Reactive</h3>
-				<p class="text-sm text-[var(--text-secondary)]">Primitive-based reactivity system that works seamlessly between Go server and browser.</p>
-			</div>
-		</div>
-
-
-		<div class="rounded-[2rem] border border-[var(--border)] bg-[var(--bg-secondary)]/80 p-6 md:p-8 my-10">
-			<div class="flex flex-wrap items-center gap-3 mb-4">
-				<div class="px-3 py-1 rounded-full text-xs font-bold uppercase tracking-[0.28em] bg-[var(--accent-secondary)]/10 text-[var(--accent-secondary)]">Current Recommended Path</div>
-				<div class="text-sm text-[var(--text-secondary)]">Scaffold, verify, then ship from a preset instead of rebuilding config by hand.</div>
-			</div>
-			<div class="grid gap-6 lg:grid-cols-[1.2fr_0.8fr] items-start">
-				@components.CodeBlock(`gospa create myapp
-cd myapp
-go mod tidy
-gospa doctor
-gospa dev`, "bash", "Terminal")
-				<div class="space-y-3 text-sm text-[var(--text-secondary)]">
-					<p><strong class="text-[var(--text-primary)]">Development</strong>: start from <code class="bg-[var(--surface)] px-1.5 py-0.5 rounded">gospa.DefaultConfig()</code>.</p>
-					<p><strong class="text-[var(--text-primary)]">Production</strong>: start from <code class="bg-[var(--surface)] px-1.5 py-0.5 rounded">gospa.ProductionConfig()</code>.</p>
-					<p><a href="/docs/cli" class="text-[var(--accent-primary)] hover:underline">See CLI reference</a> · <a href="/docs/getstarted/quickstart" class="text-[var(--accent-primary)] hover:underline">Quick start</a></p>
-				</div>
-			</div>
-		</div>
-		<h2 id="why-gospa?" class="text-2xl font-bold mt-12 mb-4 border-b border-[var(--border)] pb-2">Why GoSPA?</h2>
-		<p class="text-[var(--text-secondary)]">
-			Building SPAs in Go has traditionally been a choice between high-performance APIs with complex JS frontends, or simple SSR with limited interactivity. GoSPA bridges this gap by providing:
-		</p>
-		
-		<h3 id="key-features" class="text-xl font-bold mt-8 mb-4">Key Features</h3>
-		<ul class="list-disc pl-6 space-y-3 text-[var(--text-secondary)] my-6">
-			<li><strong class="text-[var(--text-primary)]">Unified Language</strong>: Write your UI logic and state management in Go.</li>
-			<li><strong class="text-[var(--text-primary)]">Automatic Hydration</strong>: Server-rendered templates automatically become interactive on the client.</li>
-			<li><strong class="text-[var(--text-primary)]">Real-time Synchronization</strong>: Built-in WebSocket support for collaborative, multi-user experiences.</li>
-			<li><strong class="text-[var(--text-primary)]">Zero-Config Routing</strong>: SvelteKit-inspired file system based routing.</li>
-		</ul>
-
-		<h3 id="comparison" class="text-xl font-bold mt-8 mb-4">Comparison</h3>
-		<p class="text-[var(--text-secondary)] mb-6">
-			Unlike HTMX which focus on hypermedia updates, GoSPA provides a full reactive state machine mirroring Svelte's approach, but running on your Go server.
-		</p>
-
-		@components.CodeBlock(`go get github.com/aydenstechdungeon/gospa`, "bash", "Terminal")
-
-		<div class="bg-[var(--accent-primary)]/10 border-l-4 border-[var(--accent-primary)] p-6 my-12 rounded-r-2xl">
-			<h4 class="font-bold text-[var(--accent-primary)] mb-2 uppercase tracking-widest text-xs">Note</h4>
-			<p class="text-sm italic">
-				GoSPA is currently in Alpha. While stable enough for documentation projects (like this one!), APIs may change. feedback and contributions are welcome!
+	<div class="space-y-12 animate-in fade-in slide-in-from-bottom-4 duration-1000 ease-out">
+		<header class="space-y-4">
+			<h1 class="text-5xl md:text-6xl font-black tracking-tighter bg-linear-to-r from-[var(--text-primary)] to-[var(--text-muted)] bg-clip-text text-transparent">
+				Documentation
+			</h1>
+			<p class="text-xl text-[var(--text-secondary)] leading-relaxed max-w-2xl font-medium">
+				The high-performance Go framework for building reactive single-page applications. 
+				Experience the simplicity of Svelte with the industrial-grade reliability of Go.
 			</p>
+		</header>
+		
+		<div class="grid md:grid-cols-2 gap-4">
+			<div class="group p-8 rounded-3xl border border-[var(--border)] bg-[var(--bg-secondary)]/50 hover:bg-[var(--bg-secondary)] hover:border-[var(--accent-primary)]/30 transition-all duration-300">
+				<div class="w-12 h-12 rounded-2xl bg-[var(--accent-primary)]/10 flex items-center justify-center mb-6 border border-[var(--accent-primary)]/20 group-hover:scale-110 transition-transform">
+					<svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="text-[var(--accent-primary)]"><path d="m18 16 4-4-4-4"></path><path d="m6 8-4 4 4 4"></path><path d="m14.5 4-5 16"></path></svg>
+				</div>
+				<h3 class="text-xl font-bold mb-3">Server-First Reactivity</h3>
+				<p class="text-[var(--text-secondary)] leading-relaxed">
+					Write your state machines in Go. GoSPA automatically mirrors them to the browser, 
+					handling hydration and synchronization out of the box.
+				</p>
+			</div>
+			<div class="group p-8 rounded-3xl border border-[var(--border)] bg-[var(--bg-secondary)]/50 hover:bg-[var(--bg-secondary)] hover:border-[var(--accent-secondary)]/30 transition-all duration-300">
+				<div class="w-12 h-12 rounded-2xl bg-[var(--accent-secondary)]/10 flex items-center justify-center mb-6 border border-[var(--accent-secondary)]/20 group-hover:scale-110 transition-transform">
+					<svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="text-[var(--accent-secondary)]"><path d="M13 2L3 14h9l-1 8 10-12h-9l1-8z"></path></svg>
+				</div>
+				<h3 class="text-xl font-bold mb-3">Hyper-Fast Runtime</h3>
+				<p class="text-[var(--text-secondary)] leading-relaxed">
+					A sub-15KB client runtime ensures your application stays lean. 
+					Zero heavy JS frameworks. Just tight, optimized reactive logic.
+				</p>
+			</div>
 		</div>
 
-		<div class="flex justify-end mt-16">
-			<a href="/docs/getstarted/installation" class="group flex items-center gap-3 px-6 py-3 rounded-xl border border-[var(--border)] bg-[var(--bg-secondary)] hover:border-[var(--accent-primary)]/50 transition-all">
-				<div class="text-right">
-					<div class="text-[var(--text-muted)] text-xs uppercase tracking-widest font-bold mb-1">Next</div>
-					<div class="font-bold group-hover:text-[var(--accent-primary)] transition-colors">Installation</div>
+		<section class="relative overflow-hidden rounded-[2.5rem] border border-[var(--border)] bg-[var(--bg-secondary)]/30 backdrop-blur-xl p-8 md:p-12">
+			<div class="absolute top-0 right-0 -mr-20 -mt-20 w-64 h-64 bg-[var(--accent-primary)]/5 rounded-full blur-3xl"></div>
+			
+			<div class="relative z-10 flex flex-col lg:flex-row gap-12 items-start">
+				<div class="flex-1 space-y-6">
+					<h2 class="text-3xl font-bold tracking-tight">Rapid Scaffolding</h2>
+					<p class="text-[var(--text-secondary)] leading-relaxed">
+						Start building immediately with the GoSPA CLI. Scaffolding, 
+						project verification, and optimized builds are just a command away.
+					</p>
+					<div class="flex flex-wrap gap-4 pt-4">
+						<a href="/docs/cli" class="text-sm font-bold text-[var(--accent-primary)] hover:opacity-80 flex items-center gap-2 transition-opacity">
+							CLI Reference <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12h14"></path><path d="m12 5 7 7-7 7"></path></svg>
+						</a>
+						<a href="/docs/getstarted/quickstart" class="text-sm font-bold text-[var(--text-primary)] hover:opacity-80 flex items-center gap-2 transition-opacity border-l border-[var(--border)] pl-4">
+							Quick Start Guide
+						</a>
+					</div>
 				</div>
-				<svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="text-[var(--text-muted)] group-hover:text-[var(--accent-primary)] transition-colors"><path d="M5 12h14"></path><path d="m12 5 7 7-7 7"></path></svg>
+				<div class="w-full lg:w-[450px] space-y-2">
+					@components.CodeBlock(`gospa create my-app
+cd my-app
+gospa dev`, "bash", "Terminal")
+					<div class="flex items-center gap-4 px-4 py-2 rounded-xl bg-[var(--bg-tertiary)] border border-[var(--border)] text-[10px] uppercase tracking-widest font-bold text-[var(--text-muted)]">
+						<span class="w-2 h-2 rounded-full bg-green-500"></span>
+						Production Optimized by Default
+					</div>
+				</div>
+			</div>
+		</section>
+
+		<div class="grid md:grid-cols-2 gap-12 pt-8">
+			<article class="space-y-4">
+				<h2 id="why-gospa?" class="text-2xl font-bold tracking-tight border-b border-[var(--border)] pb-4">Core Philosophy</h2>
+				<p class="text-[var(--text-secondary)] leading-relaxed">
+					GoSPA was born from the need to build modern, interactive web applications without the context-switch between backend Go and frontend JS environments. 
+				</p>
+				<ul class="space-y-3">
+					for _, item := range []string{"Unified language for UI and state", "Automatic WebSocket synchronization", "File-based routing (SvelteKit style)", "Industrial-grade security defaults"} {
+						<li class="flex items-center gap-3 text-sm text-[var(--text-secondary)]">
+							<div class="w-1.5 h-1.5 rounded-full bg-[var(--accent-primary)]"></div>
+							{ item }
+						</li>
+					}
+				</ul>
+			</article>
+
+			<article class="space-y-4">
+				<h2 id="comparison" class="text-2xl font-bold tracking-tight border-b border-[var(--border)] pb-4">How it compares</h2>
+				<p class="text-[var(--text-secondary)] leading-relaxed">
+					Unlike <strong>HTMX</strong> which focuses on hypermedia fragments, GoSPA provides a full reactive state machine mirroring Svelte's approach, but running on your Go server.
+				</p>
+				<div class="p-6 rounded-2xl bg-[var(--accent-secondary)]/5 border border-[var(--accent-secondary)]/10">
+					<h4 class="text-xs font-black uppercase tracking-widest text-[var(--accent-secondary)] mb-2">Pro Tip</h4>
+					<p class="text-sm italic text-[var(--text-secondary)]">
+						GoSPA is ideal for dashboards, real-time collab tools, and complex forms where local state management is critical.
+					</p>
+				</div>
+			</article>
+		</div>
+
+		<div class="flex justify-end mt-20 pt-10 border-t border-[var(--border)]">
+			<a href="/docs/getstarted/installation" class="group relative px-8 py-4 rounded-2xl overflow-hidden bg-[var(--text-primary)] text-[var(--bg-primary)] hover:scale-[1.02] transition-all">
+				<div class="absolute inset-0 bg-linear-to-tr from-[var(--accent-primary)]/20 to-transparent"></div>
+				<div class="relative flex items-center gap-4">
+					<div class="text-right">
+						<div class="text-[10px] uppercase tracking-[0.2em] font-black opacity-50 mb-1">Begin here</div>
+						<div class="text-lg font-bold">Installation</div>
+					</div>
+					<svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round" class="translate-x-0 group-hover:translate-x-1 transition-transform"><path d="M5 12h14"></path><path d="m12 5 7 7-7 7"></path></svg>
+				</div>
 			</a>
 		</div>
 	</div>

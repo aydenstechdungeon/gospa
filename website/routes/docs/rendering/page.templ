@@ -3,260 +3,90 @@ package rendering
 import "github.com/aydenstechdungeon/gospa/website/components"
 
 templ Page() {
-	<div class="space-y-12">
-		<header>
-			<h1 class="text-4xl font-bold tracking-tight mb-4 text-transparent bg-clip-text bg-gradient-to-r from-[var(--accent-primary)] to-[var(--accent-secondary)]">Rendering Strategies</h1>
-			<p class="text-xl text-[var(--text-secondary)] leading-relaxed">
-				GoSPA supports four per-page rendering strategies. Mix them freely across routes to get the right performance and freshness trade-off for each page.
+	<div class="space-y-16 animate-in fade-in slide-in-from-bottom-4 duration-1000 ease-out">
+		<header class="space-y-4">
+			<h1 class="text-4xl md:text-5xl font-black tracking-tighter">Rendering Strategies</h1>
+			<p class="text-xl text-[var(--text-secondary)] leading-relaxed max-w-2xl font-medium">
+				GoSPA provides four specialized rendering models. Mix and match per-route to achieve the perfect balance between data freshness and TTFB.
 			</p>
 		</header>
 
-		<section class="space-y-6">
-			<h2 class="text-2xl font-bold" id="overview">Strategy Overview</h2>
-			<div class="overflow-x-auto">
-				<table class="w-full text-sm border border-[var(--border)] rounded-xl">
-					<thead class="bg-[var(--bg-tertiary)]">
-						<tr>
-							<th class="px-4 py-3 text-left font-semibold">Strategy</th>
-							<th class="px-4 py-3 text-left font-semibold">When to Use</th>
-							<th class="px-4 py-3 text-left font-semibold">Cache-Control</th>
-						</tr>
-					</thead>
-					<tbody class="divide-y divide-[var(--border)]">
-						<tr>
-							<td class="px-4 py-3 font-mono text-[var(--accent-primary)]">StrategySSR</td>
-							<td class="px-4 py-3 text-[var(--text-secondary)]">Auth-gated pages, real-time data, per-user content (default)</td>
-							<td class="px-4 py-3 font-mono text-xs">no-store</td>
-						</tr>
-						<tr>
-							<td class="px-4 py-3 font-mono text-[var(--accent-primary)]">StrategySSG</td>
-							<td class="px-4 py-3 text-[var(--text-secondary)]">Fully static: marketing pages, landing pages, docs</td>
-							<td class="px-4 py-3 font-mono text-xs">public, max-age=31536000, immutable</td>
-						</tr>
-						<tr>
-							<td class="px-4 py-3 font-mono text-[var(--accent-primary)]">StrategyISR</td>
-							<td class="px-4 py-3 text-[var(--text-secondary)]">Mostly static, acceptable to serve stale for N minutes</td>
-							<td class="px-4 py-3 font-mono text-xs">public, s-maxage=&lt;TTL&gt;, stale-while-revalidate</td>
-						</tr>
-						<tr>
-							<td class="px-4 py-3 font-mono text-[var(--accent-primary)]">StrategyPPR</td>
-							<td class="px-4 py-3 text-[var(--text-secondary)]">Static shell (nav, footer) + dynamic inner sections per-request</td>
-							<td class="px-4 py-3 font-mono text-xs">no-store</td>
-						</tr>
-					</tbody>
-				</table>
-			</div>
-			<div class="p-4 rounded-xl bg-[var(--bg-secondary)] border border-[var(--border)] text-sm text-[var(--text-secondary)]">
-				All strategies require <code class="text-[var(--accent-primary)]">CacheTemplates: true</code> in your app config — except SSR, which always renders fresh.
-			</div>
+		<section class="grid md:grid-cols-2 gap-4">
+			for _, s := range []struct{title, code, desc, usage string}{ {"SSR", "StrategySSR", "Fresh render on every request. Ideal for auth-gated or personalized data.", "User Dashboards, Settings"}, {"SSG", "StrategySSG", "Render once, serve forever. Peak performance for static content.", "Landing Pages, Docs"}, {"ISR", "StrategyISR", "Background revalidation. Fast initial load with background updates.", "Blogs, Product Pages"}, {"PPR", "StrategyPPR", "Static shell with live slots. Best of both worlds.", "Complex SaaS Apps"} } {
+				<div class="group p-6 rounded-2xl border border-[var(--border)] bg-[var(--bg-secondary)]/50 hover:border-[var(--accent-primary)]/20 transition-all">
+					<div class="flex justify-between items-start mb-4">
+						<h3 class="text-lg font-bold tracking-tight">{ s.title }</h3>
+						<code class="text-[10px] font-mono px-2 py-1 rounded-md bg-[var(--bg-tertiary)] text-[var(--accent-primary)]">{ s.code }</code>
+					</div>
+					<p class="text-sm text-[var(--text-secondary)] leading-relaxed mb-4">{ s.desc }</p>
+					<div class="flex items-center gap-2 text-[10px] font-black uppercase tracking-widest text-[var(--text-muted)]">
+						<span class="w-1 h-1 rounded-full bg-[var(--accent-primary)]"></span>
+						Use for: { s.usage }
+					</div>
+				</div>
+			}
 		</section>
 
-		<section class="space-y-6">
-			<h2 class="text-2xl font-bold" id="ssr">SSR — Server-Side Rendering</h2>
-			<p class="text-[var(--text-secondary)]">
-				Every request triggers a fresh render. This is the default and requires no configuration.
-			</p>
-			@components.CodeBlock(`// Default — no options needed
-routing.RegisterPage("/dashboard", dashboardPage)
+		<section class="space-y-8">
+			<div class="flex items-center gap-4">
+				<h2 id="ssr" class="text-2xl font-bold tracking-tight">SSR (Server-Side)</h2>
+				<div class="h-px flex-1 bg-[var(--border)]"></div>
+			</div>
+			<p class="text-[var(--text-secondary)]">The default mode. Optimal for dynamic content that must be fresh for every user.</p>
+			@components.CodeBlock(`routing.RegisterPage("/dashboard", dashboardPage)`, "go", "routes.go")
+		</section>
 
-// Or explicitly:
-routing.RegisterPageWithOptions("/dashboard", dashboardPage, routing.RouteOptions{
-    Strategy: routing.StrategySSR,
+		<section class="space-y-8">
+			<div class="flex items-center gap-4">
+				<h2 id="ssg" class="text-2xl font-bold tracking-tight">SSG (Static)</h2>
+				<div class="h-px flex-1 bg-[var(--border)]"></div>
+			</div>
+			<p class="text-[var(--text-secondary)]">Prerendered once. Served instantly from memory or distributed storage.</p>
+			@components.CodeBlock(`routing.RegisterPageWithOptions("/about", aboutPage, routing.RouteOptions{
+    Strategy: routing.StrategySSG,
 })`, "go", "routes.go")
 		</section>
 
-		<section class="space-y-6">
-			<h2 class="text-2xl font-bold" id="ssg">SSG — Static Site Generation</h2>
-			<p class="text-[var(--text-secondary)]">
-				The page is rendered <strong>once</strong> on first request and cached until <code class="font-mono text-[var(--accent-primary)]">SSGCacheTTL</code> expires or it is evicted by FIFO policy or server restart. Subsequent requests are served instantly from the in-memory cache.
-			</p>
-			<div class="p-4 mt-4 mb-4 rounded-xl border border-amber-500/20 bg-amber-500/5 text-sm text-[var(--text-secondary)]">
-				<strong class="text-amber-500 font-bold block mb-1">⚠️ Cache Forever Warning</strong>
-				If <code class="font-mono text-[var(--accent-primary)]">SSGCacheTTL</code> is set to 0 (default), SSG entries do not automatically expire. If you use SSG for content that changes over time (like user profiles or dashboards), your server memory will grow unbounded. We highly recommend adding a TTL or using <a href="#isr" class="text-[var(--accent-primary)] hover:underline">ISR</a> instead for dynamic pathways.
+		<section class="space-y-8">
+			<div class="flex items-center gap-4">
+				<h2 id="isr" class="text-2xl font-bold tracking-tight">ISR (Incremental)</h2>
+				<div class="h-px flex-1 bg-[var(--border)]"></div>
 			</div>
-			@components.CodeBlock(`routing.RegisterPageWithOptions("/about", aboutPage, routing.RouteOptions{
-    Strategy: routing.StrategySSG,
-})
-
-// Enable caching in config
-app := gospa.New(gospa.Config{
-    CacheTemplates:     true,
-    SSGCacheMaxEntries: 500, // default for in-memory
-    SSGCacheTTL:        1 * time.Hour, // optional cache expiration
-    // Optional: Configure an external store like Redis to share cache across processes
-    Storage: redisstore.NewStore(redisClient),
-})`, "go", "main.go")
-		</section>
-
-		<section class="space-y-6">
-			<h2 class="text-2xl font-bold" id="isr">ISR — Incremental Static Regeneration</h2>
-			<p class="text-[var(--text-secondary)]">
-				ISR extends SSG with a <strong>TTL</strong>. The page is cached on first request.
-				When a request arrives after the TTL expires, the <em>stale</em> cached version is returned immediately
-				and a background goroutine re-renders and updates the cache — the
-				<strong>stale-while-revalidate</strong> pattern.
-			</p>
+			<p class="text-[var(--text-secondary)]">State-while-revalidate pattern. Serve stale cache while re-rendering in the background.</p>
 			@components.CodeBlock(`routing.RegisterPageWithOptions("/blog", blogPage, routing.RouteOptions{
     Strategy:        routing.StrategyISR,
     RevalidateAfter: 5 * time.Minute,
-})
-
-// Set a global ISR TTL fallback in config
-app := gospa.New(gospa.Config{
-    CacheTemplates:         true,
-    DefaultRevalidateAfter: 10 * time.Minute,
 })`, "go", "routes.go")
-
-			<h3 class="text-xl font-semibold mt-6" id="isr-behaviour">ISR Behaviour</h3>
-			<div class="overflow-x-auto">
-				<table class="w-full text-sm border border-[var(--border)] rounded-xl">
-					<thead class="bg-[var(--bg-tertiary)]">
-						<tr>
-							<th class="px-4 py-3 text-left font-semibold">Scenario</th>
-							<th class="px-4 py-3 text-left font-semibold">Result</th>
-						</tr>
-					</thead>
-					<tbody class="divide-y divide-[var(--border)]">
-						<tr>
-							<td class="px-4 py-3 text-[var(--text-secondary)]">Cache miss (first request)</td>
-							<td class="px-4 py-3 text-[var(--text-secondary)]">Render synchronously, store, respond</td>
-						</tr>
-						<tr>
-							<td class="px-4 py-3 text-[var(--text-secondary)]">Cache hit, age &lt; TTL</td>
-							<td class="px-4 py-3 text-[var(--text-secondary)]">Serve from cache immediately (fresh)</td>
-						</tr>
-						<tr>
-							<td class="px-4 py-3 text-[var(--text-secondary)]">Cache hit, age &gt;= TTL</td>
-							<td class="px-4 py-3 text-[var(--text-secondary)]">Serve stale cache immediately; background goroutine re-renders</td>
-						</tr>
-						<tr>
-							<td class="px-4 py-3 text-[var(--text-secondary)]">Multiple simultaneous stale requests</td>
-							<td class="px-4 py-3 text-[var(--text-secondary)]">Only <strong>one</strong> goroutine launched (deduplicated)</td>
-						</tr>
-					</tbody>
-				</table>
-			</div>
-			
-			<div class="mt-8">
-				<h3 class="text-xl font-semibold mb-2" id="isr-prefork">Interaction with Prefork</h3>
-				<p class="text-[var(--text-secondary)]">
-					In Prefork mode (<code class="text-[var(--accent-primary)]">Prefork: true</code>), if no external `Storage` is configured, each child process has its own independent in-memory cache. Cache entries are not shared between processes. ISR TTLs fire independently per process.
-				</p>
-				<p class="text-[var(--text-secondary)] mt-4">
-					To support shared SSG, ISR, and PPR caching across Prefork child processes or horizontally scaled clusters, configure the <code class="text-[var(--accent-primary)]">Storage</code> option in <code class="text-[var(--accent-primary)]">gospa.Config</code> with a distributed backend such as Redis. This ensures consistent cache hits and dedicates a single background revalidation per route across the entire cluster.
-				</p>
-			</div>
 		</section>
 
-		<section class="space-y-6">
-			<h2 class="text-2xl font-bold" id="ppr">PPR — Partial Prerendering</h2>
-			<p class="text-[var(--text-secondary)]">
-				PPR renders a <strong>static shell</strong> of the page (header, nav, footer, layout skeleton) once and caches it.
-				Per-request, only the <strong>named dynamic slots</strong> are re-rendered and merged into the shell before responding.
-				This gives you SSG speed for the page frame and SSR freshness for dynamic content.
-			</p>
-
-			<h3 class="text-xl font-semibold mt-6" id="ppr-step1">Step 1 — Register the page</h3>
-			@components.CodeBlock(`routing.RegisterPageWithOptions("/dashboard", dashboardPage, routing.RouteOptions{
+		<section class="space-y-8">
+			<div class="flex items-center gap-4">
+				<h2 id="ppr" class="text-2xl font-bold tracking-tight">PPR (Partial)</h2>
+				<div class="h-px flex-1 bg-[var(--border)]"></div>
+			</div>
+			<p class="text-[var(--text-secondary)]">Caches the static shell (layouts) then injects dynamic slots per-request.</p>
+			@components.CodeBlock(`routing.RegisterPageWithOptions("/app", appPage, routing.RouteOptions{
     Strategy:     routing.StrategyPPR,
-    DynamicSlots: []string{"feed", "notifications"},
+    DynamicSlots: []string{"feed"},
 })
-
-routing.RegisterSlot("/dashboard", "feed",          feedSlot)
-routing.RegisterSlot("/dashboard", "notifications", notificationsSlot)`, "go", "routes.go")
-
-			<h3 class="text-xl font-semibold mt-6" id="ppr-step2">Step 2 — Use <code class="text-[var(--accent-primary)]">DynamicSlot</code> in your component</h3>
-			@components.CodeBlock(`// routes/dashboard/page.templ
-package dashboard
-
-import gospatmpl "github.com/aydenstechdungeon/gospa/templ"
-
-templ Page(props map[string]interface{}) {
-    <div class="dashboard">
-        <header>...</header>  // ← baked into cached shell
-        <nav>...</nav>        // ← baked into cached shell
-
-        // Re-rendered fresh on every request
-        @gospatmpl.DynamicSlot("feed", FeedComponent(props))
-        @gospatmpl.DynamicSlot("notifications", NotificationsComponent(props))
-
-        <footer>...</footer>  // ← baked into cached shell
-    </div>
-}`, "go", "page.templ")
-
-			<div class="p-4 rounded-xl bg-[var(--bg-secondary)] border border-[var(--border)] text-sm text-[var(--text-secondary)]">
-				During the shell-build pass, <code class="text-[var(--accent-primary)]">DynamicSlot</code> emits a
-				<code class="text-[var(--accent-primary)]">&lt;!--gospa-slot:name--&gt;</code> placeholder. On each live request
-				the framework replaces each placeholder with the freshly rendered slot wrapped in
-				<code class="text-[var(--accent-primary)]">&lt;div data-gospa-slot="name"&gt;</code>.
-			</div>
+routing.RegisterSlot("/app", "feed", feedSlot)`, "go", "routes.go")
 		</section>
 
-		<section class="space-y-6">
-			<h2 class="text-2xl font-bold" id="per-page">Per-Page Strategy Selector</h2>
-
-			<h3 class="text-xl font-semibold mt-6" id="inline-init">Option A — Inline <code class="text-[var(--accent-primary)]">init()</code></h3>
-			<p class="text-[var(--text-secondary)]">Register strategy directly in your route's <code class="text-[var(--accent-primary)]">init()</code> function:</p>
-			@components.CodeBlock(`// routes/blog/page.templ (or a companion .go file)
-func init() {
-    routing.RegisterPageWithOptions("/blog", blogPage, routing.RouteOptions{
-        Strategy:        routing.StrategyISR,
-        RevalidateAfter: 5 * time.Minute,
-    })
-}`, "go", "page.go")
-
-			<h3 class="text-xl font-semibold mt-6" id="options-file">Option B — <code class="text-[var(--accent-primary)]">page.options.go</code> (code generator)</h3>
-			<p class="text-[var(--text-secondary)]">Place a companion file next to your <code class="text-[var(--accent-primary)]">page.templ</code>:</p>
-			@components.CodeBlock(`// routes/blog/page.options.go
-package blog
-
-import (
-    "time"
-    "github.com/aydenstechdungeon/gospa/routing"
-)
-
-var PageOptions = routing.RouteOptions{
-    Strategy:        routing.StrategyISR,
-    RevalidateAfter: 5 * time.Minute,
-}`, "go", "page.options.go")
-		</section>
-
-		<section class="space-y-6">
-			<h2 class="text-2xl font-bold" id="global-defaults">Global Strategy Defaults</h2>
-			<p class="text-[var(--text-secondary)]">
-				Set defaults in <code class="text-[var(--accent-primary)]">gospa.Config</code> { "for" } pages that do not specify their own strategy:
-			</p>
-			@components.CodeBlock(`app := gospa.New(gospa.Config{
-    CacheTemplates:         true,
-    DefaultRenderStrategy:  routing.StrategyISR,  // fallback for all pages
-    DefaultRevalidateAfter: 10 * time.Minute,     // ISR TTL fallback
-    SSGCacheMaxEntries:     1000,                 // shared eviction limit
-})`, "go", "main.go")
-		</section>
-
-		<div class="bg-gradient-to-r from-[var(--bg-secondary)] to-[var(--bg-tertiary)] p-8 rounded-3xl border border-[var(--border)] shadow-inner">
-			<h3 class="text-lg font-bold mb-4">Quick Reference</h3>
-			@components.CodeBlock(`// SSR (default)
-routing.RegisterPage("/", indexPage)
-
-// SSG
-routing.RegisterPageWithOptions("/about", aboutPage, routing.RouteOptions{
-    Strategy: routing.StrategySSG,
-})
-
-// ISR — revalidate every 5 minutes
-routing.RegisterPageWithOptions("/blog", blogPage, routing.RouteOptions{
-    Strategy:        routing.StrategyISR,
-    RevalidateAfter: 5 * time.Minute,
-})
-
-// PPR — static shell + per-request slots
-routing.RegisterPageWithOptions("/dashboard", dashboardPage, routing.RouteOptions{
-    Strategy:     routing.StrategyPPR,
-    DynamicSlots: []string{"feed", "notifications"},
-})
-routing.RegisterSlot("/dashboard", "feed",          feedSlot)
-routing.RegisterSlot("/dashboard", "notifications", notificationsSlot)`, "go", "routes.go")
+		<div class="flex justify-between items-center mt-20 pt-10 border-t border-[var(--border)]">
+			<a href="/docs/core-concepts/state" class="group flex items-center gap-4 px-6 py-4 rounded-2xl border border-[var(--border)] bg-[var(--bg-secondary)] hover:border-[var(--text-primary)]/30 transition-all">
+				<svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round" class="translate-x-0 group-hover:-translate-x-1 transition-transform opacity-50"><path d="m11 17-5-5 5-5"></path><path d="M18 17V7"></path></svg>
+				<div class="text-left">
+					<div class="text-[10px] uppercase tracking-widest font-black opacity-40 mb-1">Previous</div>
+					<div class="font-bold">State Primitives</div>
+				</div>
+			</a>
+			<a href="/docs/core-concepts/routing" class="group flex items-center gap-4 px-6 py-4 rounded-2xl bg-[var(--text-primary)] text-[var(--bg-primary)] hover:scale-[1.02] transition-all">
+				<div class="text-right">
+					<div class="text-[10px] uppercase tracking-widest font-black opacity-30 mb-1">Up Next</div>
+					<div class="font-bold">Routing</div>
+				</div>
+				<svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round" class="translate-x-0 group-hover:translate-x-1 transition-transform"><path d="M5 12h14"></path><path d="m12 5 7 7-7 7"></path></svg>
+			</a>
 		</div>
 	</div>
 }
