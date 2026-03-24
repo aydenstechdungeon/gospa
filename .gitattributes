@@ -1,0 +1,17 @@
+# ==============================================================================
+# Git Attributes - GitHub Linguist Configuration
+# ==============================================================================
+# This configuration ensures that assembly-level architectural demonstrations
+# are correctly detected and reflected in the repository language stats.
+# ==============================================================================
+
+# Force detection of assembly files in the examples directory
+examples/asm-hello-world/*.s linguist-detectable linguist-language=Assembly
+
+# Ensure correct line-ending normalization for cross-platform dev
+*.go text eol=lf
+*.ts text eol=lf
+*.js text eol=lf
+*.templ text eol=lf
+*.s text eol=lf
+Makefile text eol=lf
