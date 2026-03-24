@@ -108,7 +108,7 @@ app := gospa.New(gospa.Config{
 |--------|------|---------|-------------|
 | `AllowedOrigins` | `[]string` | `[]` | Allowed CORS origins |
 | `EnableCSRF` | `bool` | `true` | Enable automatic CSRF protection (wired by gospa.New) |
-| `ContentSecurityPolicy` | `string` | built-in default | Optional CSP header; empty uses `fiber.DefaultContentSecurityPolicy` (`'self'` plus `'unsafe-inline'` for script and style—typical for GoSPA). Set explicitly to tighten. |
+| `ContentSecurityPolicy` | `string` | built-in default | Optional CSP header; empty uses `fiber.DefaultContentSecurityPolicy` (`'self'` plus `'unsafe-inline'` for script and style—typical for GoSPA). Use `fiber.StrictContentSecurityPolicy` when you can avoid inline scripts. |
 | `PublicOrigin` | `string` | `""` | Public base URL (e.g. `https://app.example.com`) for stable WebSocket URLs behind proxies; empty derives from the request |
 
 ### Navigation options (client)
@@ -438,7 +438,7 @@ EnableCSRF: true,
 
 ### ContentSecurityPolicy
 
-Optional `Content-Security-Policy` header value. If empty, GoSPA uses **`fiber.DefaultContentSecurityPolicy`**: `default-src 'self'`, `frame-ancestors 'none'`, `object-src 'none'`, and **`'unsafe-inline'`** on `script-src` and `style-src` so inline state/bootstrap scripts work. Override with a stricter policy when your app allows it (see [Security](../03-features/04-security.md)).
+Optional `Content-Security-Policy` header value. If empty, GoSPA uses **`fiber.DefaultContentSecurityPolicy`**: `default-src 'self'`, `frame-ancestors 'none'`, `object-src 'none'`, and **`'unsafe-inline'`** on `script-src` and `style-src` so inline state/bootstrap scripts work. Override with a stricter policy when your app allows it; `fiber.StrictContentSecurityPolicy` is the recommended starting point (see [Security](../03-features/04-security.md)).
 
 ### PublicOrigin
 

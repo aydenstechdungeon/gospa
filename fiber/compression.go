@@ -27,6 +27,10 @@ type CompressionConfig struct {
 	CompressibleTypes []string
 	// SkipCompression paths to skip compression for
 	SkipPaths []string
+	// MaxBufferedSize caps the size of responses this middleware will buffer
+	// and compress in-memory. Larger responses are left untouched so callers
+	// can use streaming or upstream compression instead.
+	MaxBufferedSize int
 }
 
 // DefaultCompressionConfig returns default compression configuration.
@@ -49,7 +53,8 @@ func DefaultCompressionConfig() CompressionConfig {
 			"application/xhtml+xml",
 			"image/svg+xml",
 		},
-		SkipPaths: []string{},
+		SkipPaths:       []string{},
+		MaxBufferedSize: 1 << 20,
 	}
 }
 
@@ -125,12 +130,19 @@ func BrotliGzipMiddleware(config CompressionConfig) gofiber.Handler {
 			return err
 		}
 
+		if c.Response().IsBodyStream() {
+			return nil
+		}
+
 		// PERFORMANCE NOTE: This middleware reads the full response body into memory before
 		// compressing. Streaming responses (written via SetBodyStreamWriter) will have an empty
 		// body here and are naturally skipped by the MinSize check below.
 		// For streaming endpoints, add them to config.SkipPaths to avoid the response interception overhead.
 		body := c.Response().Body()
 		if len(body) < config.MinSize {
+			return nil
+		}
+		if config.MaxBufferedSize > 0 && len(body) > config.MaxBufferedSize {
 			return nil
 		}
 

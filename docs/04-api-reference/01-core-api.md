@@ -128,7 +128,7 @@ Presets:
 - **`WSReconnectDelay` / `WSMaxReconnect` / `WSHeartbeat`**: Passed to the client; if unset/zero at runtime, HTML injection applies **1s / 10 / 30s** defaults when embedding config.
 - **`RemoteActionMiddleware`**: Required in production for remote actions unless `AllowUnauthenticatedRemoteActions` is set.
 - **`EnableCSRF`**: Defaults to `true`; wired in `gospa.New`.
-- **`ContentSecurityPolicy`**: Empty uses `fiber.DefaultContentSecurityPolicy` (pragmatic inline script/style for typical GoSPA apps).
+- **`ContentSecurityPolicy`**: Empty uses `fiber.DefaultContentSecurityPolicy` (compatibility policy for typical GoSPA apps). For stricter deployments, start from `fiber.StrictContentSecurityPolicy`.
 - **`PublicOrigin`**: Stable WebSocket URL behind proxies (see [Configuration](02-configuration.md)).
 - **`Prefork` + `Storage` + `PubSub`**: Required together for correct multi-process behavior.
 

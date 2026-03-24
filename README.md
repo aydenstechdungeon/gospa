@@ -20,7 +20,7 @@ GoSPA (Go Spa and Go S-P-A are the only valid pronunciations)  brings Svelte-lik
 ## Quick Start
 
 ### 0. Prerequisites
-- **Go 1.23+** (see `go.mod`; use a current stable toolchain)
+- **Go 1.25.0+** (matches `go.mod`; use a current stable toolchain)
 - **Bun**: Required for the SPA build process (CSS extraction, Vite optimization, JS bundling).
 - **`JWT_SECRET`**: Ensure this environment variable is set for production authentication contexts (when using the Auth plugin).
 
@@ -90,7 +90,7 @@ For prefork deployments, add external `Storage` and `PubSub` backends so state a
 
 - **Vulnerability scanning (Go):** run `govulncheck ./...` regularly; the repo’s GitHub Actions workflow runs tests and govulncheck. For a full local gate, use `./scripts/quality-check.sh`.
 - **Auth plugin:** set `JWT_SECRET` in production. Production is inferred from `GOSPA_ENV`, `ENV` / `APP_ENV` / `GO_ENV`, or legacy `GIN_MODE`—see [Security](docs/03-features/04-security.md#auth-plugin-jwt-and-production-detection).
-- **CSP:** the default policy (`fiber.DefaultContentSecurityPolicy`) allows inline scripts and styles for typical GoSPA output. Override `ContentSecurityPolicy` when you need a stricter policy.
+- **CSP:** the compatibility default (`fiber.DefaultContentSecurityPolicy`) allows inline scripts and styles for typical GoSPA output. For tighter deployments, start from `fiber.StrictContentSecurityPolicy` and set `ContentSecurityPolicy` explicitly.
 
 ## Documentation
 

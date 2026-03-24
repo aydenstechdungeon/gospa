@@ -4,7 +4,7 @@ Get your first reactive GoSPA application running in under five minutes.
 
 ## Prerequisites
 
-- **Go 1.23+**
+- **Go 1.25.0+**
 - **Bun** (for client-side builds)
 - **Templ** CLI (`go install github.com/a-h/templ/cmd/templ@latest`)
 
