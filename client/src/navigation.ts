@@ -56,6 +56,10 @@ export interface ProgressBarConfig {
   height?: string;
 }
 
+export interface ScriptExecutionConfig {
+  executeMarkedOnly?: boolean;
+}
+
 export interface NavigationOptions {
   speculativePrefetching?: SpeculativePrefetchingConfig;
   urlParsingCache?: URLParsingCacheConfig;
@@ -64,6 +68,7 @@ export interface NavigationOptions {
   serviceWorkerNavigationCaching?: ServiceWorkerNavigationCachingConfig;
   viewTransitions?: ViewTransitionsConfig;
   progressBar?: ProgressBarConfig;
+  scriptExecution?: ScriptExecutionConfig;
 }
 
 // Navigation event handlers
@@ -116,6 +121,9 @@ const DEFAULT_NAVIGATION_OPTIONS: Required<NavigationOptions> = {
     color: "#3b82f6",
     height: "2px",
   },
+  scriptExecution: {
+    executeMarkedOnly: true,
+  },
 };
 
 let navigationOptionsConfig: Required<NavigationOptions> = {
@@ -134,6 +142,8 @@ let navigationOptionsConfig: Required<NavigationOptions> = {
     ...DEFAULT_NAVIGATION_OPTIONS.serviceWorkerNavigationCaching,
   },
   viewTransitions: { ...DEFAULT_NAVIGATION_OPTIONS.viewTransitions },
+  progressBar: { ...DEFAULT_NAVIGATION_OPTIONS.progressBar },
+  scriptExecution: { ...DEFAULT_NAVIGATION_OPTIONS.scriptExecution },
 };
 
 interface CachedURL {
@@ -192,6 +202,10 @@ export function setNavigationOptions(config: NavigationOptions): void {
     progressBar: {
       ...navigationOptionsConfig.progressBar,
       ...(config.progressBar ?? {}),
+    },
+    scriptExecution: {
+      ...navigationOptionsConfig.scriptExecution,
+      ...(config.scriptExecution ?? {}),
     },
   };
 }
@@ -681,6 +695,13 @@ function runOnIdle(callback: () => void): void {
 // Update head elements - smart reconciliation to avoid CSS flashes
 // and clean up elements that are no longer needed
 function updateHead(headHtml: string): void {
+  const escapeSelectorValue = (value: string): string => {
+    if (typeof CSS !== "undefined" && typeof CSS.escape === "function") {
+      return CSS.escape(value);
+    }
+    return value.replace(/["\\]/g, "\\$&");
+  };
+
   // Parse head HTML to extract elements
   const parser = new DOMParser();
   const doc = parser.parseFromString(
@@ -709,7 +730,9 @@ function updateHead(headHtml: string): void {
     const rel = newEl.getAttribute("rel");
 
     // Build a unique selector for tracking
-    const selector = href ? `link[href="${href}"]` : null;
+    const selector = href
+      ? `link[href="${escapeSelectorValue(href)}"]`
+      : null;
     if (selector) neededSelectors.add(selector);
 
     // Check if this link already exists in the document
@@ -733,9 +756,11 @@ function updateHead(headHtml: string): void {
 
     // Build selector to find existing meta and for tracking
     let selector = "";
-    if (name) selector = `meta[name="${name}"]`;
-    else if (property) selector = `meta[property="${property}"]`;
-    else if (httpEquiv) selector = `meta[http-equiv="${httpEquiv}"]`;
+    if (name) selector = `meta[name="${escapeSelectorValue(name)}"]`;
+    else if (property) selector = `meta[property="${escapeSelectorValue(property)}"]`;
+    else if (httpEquiv) {
+      selector = `meta[http-equiv="${escapeSelectorValue(httpEquiv)}"]`;
+    }
 
     if (selector) neededSelectors.add(selector);
 
@@ -774,12 +799,16 @@ function updateHead(headHtml: string): void {
   // 5. Handle scripts separately if marked
   newHead.querySelectorAll("script[data-gospa-head]").forEach((el) => {
     const src = el.getAttribute("src");
-    const selector = src ? `script[src="${src}"]` : `script`;
+    const selector = src
+      ? `script[src="${escapeSelectorValue(src)}"]`
+      : `script`;
 
     neededSelectors.add(selector);
 
     const existingEl = src
-      ? document.head.querySelector(`script[src="${src}"]`)
+      ? document.head.querySelector(
+        `script[src="${escapeSelectorValue(src)}"]`,
+      )
       : null;
 
     if (!existingEl) {
@@ -810,22 +839,30 @@ function updateHead(headHtml: string): void {
     // For link and meta elements, also check by attribute patterns
     if (el.matches("link[href]")) {
       const href = el.getAttribute("href");
-      if (href && neededSelectors.has(`link[href="${href}"]`)) {
+      if (href && neededSelectors.has(`link[href="${escapeSelectorValue(href)}"]`)) {
         shouldRemove = false;
       }
     } else if (el.matches("meta[name]")) {
       const name = el.getAttribute("name");
-      if (name && neededSelectors.has(`meta[name="${name}"]`)) {
+      if (name && neededSelectors.has(`meta[name="${escapeSelectorValue(name)}"]`)) {
         shouldRemove = false;
       }
     } else if (el.matches("meta[property]")) {
       const property = el.getAttribute("property");
-      if (property && neededSelectors.has(`meta[property="${property}"]`)) {
+      if (
+        property &&
+        neededSelectors.has(`meta[property="${escapeSelectorValue(property)}"]`)
+      ) {
         shouldRemove = false;
       }
     } else if (el.matches("meta[http-equiv]")) {
       const httpEquiv = el.getAttribute("http-equiv");
-      if (httpEquiv && neededSelectors.has(`meta[http-equiv="${httpEquiv}"]`)) {
+      if (
+        httpEquiv &&
+        neededSelectors.has(
+          `meta[http-equiv="${escapeSelectorValue(httpEquiv)}"]`,
+        )
+      ) {
         shouldRemove = false;
       }
     } else if (el.matches("style[id]")) {
@@ -835,7 +872,7 @@ function updateHead(headHtml: string): void {
       }
     } else if (el.matches("script[data-gospa-head]")) {
       const src = el.getAttribute("src");
-      if (src && neededSelectors.has(`script[src="${src}"]`)) {
+      if (src && neededSelectors.has(`script[src="${escapeSelectorValue(src)}"]`)) {
         shouldRemove = false;
       }
     }
@@ -852,6 +889,10 @@ function executeScripts(container: Element | Document): void {
   scripts.forEach((oldScript) => {
     // Skip scripts marked as permanent or already processed
     if (oldScript.closest("[data-gospa-permanent]")) return;
+    if (
+      navigationOptionsConfig.scriptExecution.executeMarkedOnly &&
+      oldScript.getAttribute("data-gospa-exec") !== "true"
+    ) return;
 
     const newScript = document.createElement("script");
     // Copy all attributes

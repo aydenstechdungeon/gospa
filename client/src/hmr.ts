@@ -59,6 +59,12 @@ interface ModuleRegistry {
   };
 }
 
+const BLOCKED_MERGE_KEYS = new Set(["__proto__", "prototype", "constructor"]);
+
+function isSafeMergeKey(key: string): boolean {
+  return !BLOCKED_MERGE_KEYS.has(key);
+}
+
 /**
  * HMRClient manages WebSocket connection and module updates
  */
@@ -331,11 +337,19 @@ export class HMRClient {
     if (!module?.exports) return;
 
     for (const [key, value] of Object.entries(stateDiff)) {
+      if (!isSafeMergeKey(key)) continue;
       if (key in module.exports && typeof module.exports[key] === "object") {
-        Object.assign(
-          module.exports[key] as Record<string, unknown>,
-          value as Record<string, unknown>,
-        );
+        const currentValue = module.exports[key] as Record<string, unknown>;
+        if (
+          value &&
+          typeof value === "object" &&
+          !Array.isArray(value)
+        ) {
+          for (const [nestedKey, nestedValue] of Object.entries(value)) {
+            if (!isSafeMergeKey(nestedKey)) continue;
+            currentValue[nestedKey] = nestedValue;
+          }
+        }
       } else {
         module.exports[key] = value;
       }
@@ -608,8 +622,19 @@ export class HMRClient {
     const module = this.moduleRegistry[moduleId];
     if (module?.exports) {
       for (const [key, value] of Object.entries(state)) {
+        if (!isSafeMergeKey(key)) continue;
         if (key in module.exports && typeof module.exports[key] === "object") {
-          Object.assign(module.exports[key] as Record<string, unknown>, value);
+          const currentValue = module.exports[key] as Record<string, unknown>;
+          if (
+            value &&
+            typeof value === "object" &&
+            !Array.isArray(value)
+          ) {
+            for (const [nestedKey, nestedValue] of Object.entries(value)) {
+              if (!isSafeMergeKey(nestedKey)) continue;
+              currentValue[nestedKey] = nestedValue;
+            }
+          }
         } else {
           module.exports[key] = value;
         }

@@ -22,8 +22,8 @@ templ Page() {
   const count = new GoSPA.Rune(0);
   console.log(count.get());
 </script>`,
-				`# TypeScript / ES Modules
-npm install @gospa/client
+				`# TypeScript / ES Modules (Bun-first)
+bun add @gospa/client
 
 # Import from the client package
 import { Rune, Effect, navigate } from '@gospa/client';`,
@@ -43,14 +43,14 @@ import { Rune, Effect, navigate } from '@gospa/client';`,
 					</thead>
 					<tbody class="text-[var(--text-secondary)]">
 						<tr class="border-b border-[var(--border)]">
-							<td class="py-3 px-4"><code class="text-[var(--accent-primary)]">runtime.js</code></td>
-							<td class="py-3 px-4">~17KB</td>
-							<td class="py-3 px-4">Full runtime + DOMPurify sanitizer</td>
+							<td class="py-3 px-4"><code class="text-[var(--accent-primary)]">runtime.js (default full runtime)</code></td>
+							<td class="py-3 px-4">~15KB</td>
+							<td class="py-3 px-4">Full runtime without DOMPurify (server-trust model)</td>
 						</tr>
 						<tr class="border-b border-[var(--border)]">
-							<td class="py-3 px-4"><code class="text-[var(--accent-primary)]">runtime-simple.js</code></td>
-							<td class="py-3 px-4">~11KB</td>
-							<td class="py-3 px-4">Lightweight runtime (no sanitizer)</td>
+							<td class="py-3 px-4"><code class="text-[var(--accent-primary)]">runtime-secure.js</code></td>
+							<td class="py-3 px-4">~35KB</td>
+							<td class="py-3 px-4">Full runtime + DOMPurify sanitizer for untrusted HTML/UGC</td>
 						</tr>
 					</tbody>
 				</table>
