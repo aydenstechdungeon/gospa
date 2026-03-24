@@ -187,8 +187,13 @@ func (sp *StatePruner) processGenDecl(decl *ast.GenDecl, path string) {
 		}
 
 		for i, name := range vspec.Names {
-			// Check if this is a state variable (has $ prefix in comments or specific patterns)
-			isState := sp.isStateVariable(name.Name, decl.Doc)
+			var valueExpr ast.Expr
+			if i < len(vspec.Values) {
+				valueExpr = vspec.Values[i]
+			}
+			// Check if this is a state variable using explicit annotations or
+			// recognized state-constructor initializers.
+			isState := sp.isStateVariable(name.Name, decl.Doc, valueExpr)
 
 			if isState {
 				varType := ""
@@ -232,28 +237,34 @@ func (sp *StatePruner) processSelectorExpr(sel *ast.SelectorExpr, _ string) {
 }
 
 // isStateVariable checks if a variable is a state variable.
-func (sp *StatePruner) isStateVariable(name string, doc *ast.CommentGroup) bool {
-	// Check for state-related naming patterns
-	statePatterns := []string{
-		"State",
-		"state",
-		"Store",
-		"store",
-		"Rune",
-		"rune",
-	}
-
-	for _, pattern := range statePatterns {
-		if strings.Contains(name, pattern) {
-			return true
-		}
-	}
-
+func (sp *StatePruner) isStateVariable(_ string, doc *ast.CommentGroup, valueExpr ast.Expr) bool {
 	// Check for gospa state annotations in comments
 	if doc != nil {
 		for _, comment := range doc.List {
 			if strings.Contains(comment.Text, "@gospa:state") ||
 				strings.Contains(comment.Text, "@state") {
+				return true
+			}
+		}
+	}
+
+	// Check initializer constructors used for reactive state.
+	if valueExpr != nil {
+		exprText := sp.exprToString(valueExpr)
+		constructorPatterns := []string{
+			"NewRune(",
+			"state.NewRune(",
+			"NewDerived(",
+			"state.NewDerived(",
+			"DerivedFrom(",
+			"state.DerivedFrom(",
+			"NewEffect(",
+			"state.NewEffect(",
+			"NewStateMap(",
+			"state.NewStateMap(",
+		}
+		for _, pattern := range constructorPatterns {
+			if strings.Contains(exprText, pattern) {
 				return true
 			}
 		}

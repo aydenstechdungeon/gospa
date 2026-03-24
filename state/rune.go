@@ -3,7 +3,9 @@
 package state
 
 import (
+	"log"
 	"reflect"
+	"runtime/debug"
 	"strconv"
 	"sync"
 	"sync/atomic"
@@ -180,7 +182,14 @@ func (r *Rune[T]) SubscribeAny(fn func(any)) Unsubscribe {
 // This is called outside the lock to prevent deadlocks.
 func (r *Rune[T]) notify(subs []subEntry[T], value T) {
 	for _, sub := range subs {
-		sub.fn(value)
+		func(fn Subscriber[T]) {
+			defer func() {
+				if rec := recover(); rec != nil {
+					log.Printf("gospa: recovered panic in rune subscriber: %v\n%s", rec, debug.Stack())
+				}
+			}()
+			fn(value)
+		}(sub.fn)
 	}
 }
 

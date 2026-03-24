@@ -6,6 +6,7 @@ package state
 
 import (
 	"context"
+	"fmt"
 	"runtime"
 	"strconv"
 	"strings"
@@ -30,6 +31,11 @@ type notifier interface {
 
 // activeBatches maps goroutine ID to *batchState
 var activeBatches sync.Map
+
+// activeContextBatches maps context identities to active batch states.
+// This allows BatchWithContext to work with the caller-provided ctx even when
+// fn does not receive the enriched context directly.
+var activeContextBatches sync.Map
 
 // getGID returns the current goroutine ID by parsing a runtime stack trace.
 // WARNING: This is an intentional — but limited — use of goroutine-local state.
@@ -59,6 +65,9 @@ func getBatchState(ctx context.Context) *batchState {
 		if bs, ok := ctx.Value(batchContextKey{}).(*batchState); ok {
 			return bs
 		}
+		if bs, ok := activeContextBatches.Load(contextKey(ctx)); ok {
+			return bs.(*batchState)
+		}
 	}
 
 	// 2. Fallback to goroutine-local storage
@@ -67,6 +76,10 @@ func getBatchState(ctx context.Context) *batchState {
 		return bs.(*batchState)
 	}
 	return nil
+}
+
+func contextKey(ctx context.Context) string {
+	return fmt.Sprintf("%T:%p", ctx, ctx)
 }
 
 // inBatch returns true if the current goroutine is within a batch operation.
@@ -125,7 +138,10 @@ func BatchWithContext(ctx context.Context, fn func() error) error {
 	// Embed the batch state into the context so that downstream callers that
 	// receive this context can participate in the batch via getBatchState(ctx).
 	batchCtx := context.WithValue(ctx, batchContextKey{}, bs)
-	_ = batchCtx // batchCtx is available to callers that accept a context argument.
+	activeContextBatches.Store(contextKey(ctx), bs)
+	activeContextBatches.Store(contextKey(batchCtx), bs)
+	defer activeContextBatches.Delete(contextKey(ctx))
+	defer activeContextBatches.Delete(contextKey(batchCtx))
 	// Goroutine-local fallback so that mutations in the same goroutine (without
 	// explicit context passing) are also captured.
 	gid := getGID()
@@ -154,6 +170,10 @@ func BatchWithContextFn(ctx context.Context, fn func(batchCtx context.Context) e
 	}
 
 	batchCtx := context.WithValue(ctx, batchContextKey{}, bs)
+	activeContextBatches.Store(contextKey(ctx), bs)
+	activeContextBatches.Store(contextKey(batchCtx), bs)
+	defer activeContextBatches.Delete(contextKey(ctx))
+	defer activeContextBatches.Delete(contextKey(batchCtx))
 
 	gid := getGID()
 	activeBatches.Store(gid, bs)

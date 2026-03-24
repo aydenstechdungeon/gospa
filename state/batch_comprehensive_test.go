@@ -157,6 +157,30 @@ func TestBatchWithContext_Error_StillFlushes(t *testing.T) {
 	}
 }
 
+func TestBatchWithContext_OriginalContextParticipates(t *testing.T) {
+	ctx := context.Background()
+	r := NewRune(0)
+	notifications := 0
+	r.Subscribe(func(int) { notifications++ })
+
+	err := BatchWithContext(ctx, func() error {
+		if getBatchState(ctx) == nil {
+			t.Fatal("expected original context to map to active batch state")
+		}
+		r.Set(1)
+		if notifications != 0 {
+			t.Fatalf("expected deferred notifications, got %d", notifications)
+		}
+		return nil
+	})
+	if err != nil {
+		t.Fatalf("BatchWithContext returned error: %v", err)
+	}
+	if notifications != 1 {
+		t.Fatalf("expected one notification after flush, got %d", notifications)
+	}
+}
+
 var errTestError = errTest("test error")
 
 type errTest string
