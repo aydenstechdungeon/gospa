@@ -102,3 +102,91 @@ func TestSanitizeName(t *testing.T) {
 		t.Errorf("Sanitized name 'Counteralert1' not found in TS: %v", ts)
 	}
 }
+
+func TestCompileWithEmptySanitizedName(t *testing.T) {
+	c := NewCompiler()
+	templ, ts, err := c.Compile("!!!", "<template><div>Test</div></template>")
+	if err != nil {
+		t.Fatalf("Failed to compile with empty sanitized name: %v", err)
+	}
+
+	if !strings.Contains(ts, "name: 'Component'") {
+		t.Fatalf("Expected fallback component name in TS output, got: %s", ts)
+	}
+	if !strings.Contains(templ, "data-gospa-island=\"Component\"") {
+		t.Fatalf("Expected fallback component name in templ output, got: %s", templ)
+	}
+}
+
+func TestParseRejectsMultipleTemplates(t *testing.T) {
+	input := `
+<template><div>One</div></template>
+<template><div>Two</div></template>
+`
+	_, err := sfc.Parse(input)
+	if err == nil {
+		t.Fatal("Expected Parse to reject multiple template blocks")
+	}
+	if !strings.Contains(err.Error(), "multiple <template> blocks") {
+		t.Fatalf("Unexpected error: %v", err)
+	}
+}
+
+func TestParseAllowsSeparateGoAndTSScripts(t *testing.T) {
+	input := `
+<script lang="go">
+  var count = $state(1)
+</script>
+<script lang="ts">
+  const count = state.$state(1)
+  const doubled = state.$derived(() => count.value * 2)
+</script>
+<template><div>{count}</div></template>
+`
+	parsed, err := sfc.Parse(input)
+	if err != nil {
+		t.Fatalf("Expected parser to accept one go script and one ts script: %v", err)
+	}
+	if parsed.Script.Lang != "go" || parsed.ScriptTS.Lang != "ts" {
+		t.Fatalf("Unexpected parsed script languages: go=%q ts=%q", parsed.Script.Lang, parsed.ScriptTS.Lang)
+	}
+}
+
+func TestCompileUsesTSScriptWhenProvided(t *testing.T) {
+	c := NewCompiler()
+	input := `
+<script lang="go">
+  var count = $state(1)
+</script>
+<script lang="ts">
+  const count = state.$state(1)
+  const greet = "func() { should stay unchanged }"
+</script>
+<template><div>{count}</div></template>
+`
+	_, ts, err := c.Compile("DualScript", input)
+	if err != nil {
+		t.Fatalf("Failed to compile dual-script component: %v", err)
+	}
+	if !strings.Contains(ts, `const greet = "func() { should stay unchanged }"`) {
+		t.Fatalf("Expected TS script to be used as-is when lang=ts is present, got: %s", ts)
+	}
+	if strings.Contains(ts, "state.$$state(") {
+		t.Fatalf("Did not expect Go DSL transform on explicit TS script, got: %s", ts)
+	}
+}
+
+func TestParseRejectsDuplicateGoScripts(t *testing.T) {
+	input := `
+<script lang="go">var a = 1</script>
+<script lang="go">var b = 2</script>
+<template><div>ok</div></template>
+`
+	_, err := sfc.Parse(input)
+	if err == nil {
+		t.Fatal("Expected parse failure for duplicate go scripts")
+	}
+	if !strings.Contains(err.Error(), "multiple <script lang=\"go\">") {
+		t.Fatalf("Unexpected error: %v", err)
+	}
+}
