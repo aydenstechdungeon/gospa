@@ -6,7 +6,6 @@ package routes
 import (
 	"github.com/a-h/templ"
 	"github.com/aydenstechdungeon/gospa/routing"
-	"github.com/aydenstechdungeon/gospa/website/routes/demo"
 	"github.com/aydenstechdungeon/gospa/website/routes/docs"
 	docsapi "github.com/aydenstechdungeon/gospa/website/routes/docs/api"
 	docsapiclient "github.com/aydenstechdungeon/gospa/website/routes/docs/api/client"
@@ -67,19 +66,6 @@ import (
 
 func init() {
 	// Register pages
-	routing.RegisterPage("/demo", func(props map[string]interface{}) templ.Component {
-		return demo.Page(func() string {
-		if v, ok := props["title"].(string); ok {
-			return v
-		}
-		return ""
-	}(), func() int {
-		if v, ok := props["initialCount"].(int); ok {
-			return v
-		}
-		return 0
-	}())
-	})
 	routing.RegisterPage("/docs/api/client", func(props map[string]interface{}) templ.Component {
 		return docsapiclient.Page()
 	})
