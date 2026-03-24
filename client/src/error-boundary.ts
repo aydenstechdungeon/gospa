@@ -115,9 +115,8 @@ export function withErrorBoundary(
           ? config.fallback(error, componentId)
           : (config.fallback.cloneNode(true) as Element);
 
-      // Clear existing content
-      element.innerHTML = "";
-      element.appendChild(fallbackEl);
+      // Clear existing content safely
+      element.replaceChildren(fallbackEl);
 
       // Add retry button if retryable
       if (config.retryable && state.retryCount < (config.maxRetries ?? 3)) {
@@ -214,16 +213,46 @@ export function createErrorFallback(message?: string): Element {
   const el = document.createElement("div");
   el.className = "gospa-error-fallback";
   el.setAttribute("role", "alert");
-  el.innerHTML = `
-		<div class="gospa-error-content">
-			<svg class="gospa-error-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-				<circle cx="12" cy="12" r="10"/>
-				<line x1="12" y1="8" x2="12" y2="12"/>
-				<line x1="12" y1="16" x2="12.01" y2="16"/>
-			</svg>
-			<p class="gospa-error-message">${message || "Something went wrong"}</p>
-		</div>
-	`;
+
+  const content = document.createElement("div");
+  content.className = "gospa-error-content";
+
+  const icon = document.createElementNS("http://www.w3.org/2000/svg", "svg");
+  icon.setAttribute("class", "gospa-error-icon");
+  icon.setAttribute("viewBox", "0 0 24 24");
+  icon.setAttribute("fill", "none");
+  icon.setAttribute("stroke", "currentColor");
+  icon.setAttribute("stroke-width", "2");
+
+  const circle = document.createElementNS("http://www.w3.org/2000/svg", "circle");
+  circle.setAttribute("cx", "12");
+  circle.setAttribute("cy", "12");
+  circle.setAttribute("r", "10");
+
+  const line1 = document.createElementNS("http://www.w3.org/2000/svg", "line");
+  line1.setAttribute("x1", "12");
+  line1.setAttribute("y1", "8");
+  line1.setAttribute("x2", "12");
+  line1.setAttribute("y2", "12");
+
+  const line2 = document.createElementNS("http://www.w3.org/2000/svg", "line");
+  line2.setAttribute("x1", "12");
+  line2.setAttribute("y1", "16");
+  line2.setAttribute("x2", "12.01");
+  line2.setAttribute("y2", "16");
+
+  icon.appendChild(circle);
+  icon.appendChild(line1);
+  icon.appendChild(line2);
+
+  const text = document.createElement("p");
+  text.className = "gospa-error-message";
+  text.textContent = message || "Something went wrong";
+
+  content.appendChild(icon);
+  content.appendChild(text);
+  el.appendChild(content);
+
   return el;
 }
 

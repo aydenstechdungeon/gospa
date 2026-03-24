@@ -122,6 +122,15 @@ export interface WebSocketConfig {
   onConnectionFailed?: (error: Error) => void;
   onMessage?: (message: StateMessage) => void;
   serializationFormat?: "json" | "msgpack";
+  /**
+   * Persist session token/clientId in sessionStorage.
+   * Disabled by default to reduce token exposure in XSS scenarios.
+   */
+  persistSession?: boolean;
+  /**
+   * Persist unsent WS message queue across reloads.
+   */
+  persistQueueOnUnload?: boolean;
 }
 
 // Helper functions for session persistence
@@ -172,6 +181,7 @@ export class WSClient {
   >();
   private requestId = 0;
   private sessionData: SessionData | null = null;
+  private beforeUnloadHandler: (() => void) | null = null;
 
   constructor(config: WebSocketConfig) {
     this.config = {
@@ -185,22 +195,30 @@ export class WSClient {
       onConnectionFailed: () => {},
       onMessage: () => {},
       serializationFormat: "json",
+      persistSession: false,
+      persistQueueOnUnload: true,
       ...config,
     };
     this.connectionState = new Rune<ConnectionState>("disconnected");
-    this.sessionData = loadSession();
-
-    try {
-      const savedQueue = sessionStorage.getItem("gospa_ws_queue");
-      if (savedQueue) {
-        this.messageQueue = JSON.parse(savedQueue) || [];
-        sessionStorage.removeItem("gospa_ws_queue");
-      }
-    } catch (e) {
-      console.warn("[GoSPA] Failed to restore message queue:", e);
+    this.sessionData = this.config.persistSession ? loadSession() : null;
+    if (!this.config.persistSession) {
+      clearSession();
     }
 
-    window.addEventListener("beforeunload", () => {
+    if (this.config.persistQueueOnUnload) {
+      try {
+        const savedQueue = sessionStorage.getItem("gospa_ws_queue");
+        if (savedQueue) {
+          this.messageQueue = JSON.parse(savedQueue) || [];
+          sessionStorage.removeItem("gospa_ws_queue");
+        }
+      } catch (e) {
+        console.warn("[GoSPA] Failed to restore message queue:", e);
+      }
+    }
+
+    this.beforeUnloadHandler = () => {
+      if (!this.config.persistQueueOnUnload) return;
       if (this.messageQueue.length > 0) {
         try {
           sessionStorage.setItem(
@@ -211,7 +229,8 @@ export class WSClient {
           console.warn("[GoSPA] Failed to persist message queue:", e);
         }
       }
-    });
+    };
+    window.addEventListener("beforeunload", this.beforeUnloadHandler);
   }
 
   get state(): ConnectionState {
@@ -306,6 +325,10 @@ export class WSClient {
       this.ws.close(1000, "Client disconnect");
       this.ws = null;
       this.connectionState.set("disconnected");
+    }
+    if (this.beforeUnloadHandler) {
+      window.removeEventListener("beforeunload", this.beforeUnloadHandler);
+      this.beforeUnloadHandler = null;
     }
   }
 
@@ -436,7 +459,9 @@ export class WSClient {
           token: message.sessionToken,
           clientId: message.clientId,
         };
-        saveSession(this.sessionData);
+        if (this.config.persistSession) {
+          saveSession(this.sessionData);
+        }
       }
 
       // Handle response to pending request

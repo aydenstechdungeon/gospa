@@ -81,7 +81,6 @@ export interface IslandManagerConfig {
 // Hydration queue item
 interface HydrationQueueItem {
   island: IslandElementData;
-  priority: IslandPriority;
   resolve: (result: IslandHydrationResult) => void;
   reject: (error: Error) => void;
 }
@@ -93,7 +92,11 @@ export class IslandManager {
   private islands: Map<string, IslandElementData> = new Map();
   private hydrated: Set<string> = new Set();
   private pending: Map<string, Promise<IslandHydrationResult>> = new Map();
-  private queue: HydrationQueueItem[] = [];
+  private queue: Record<IslandPriority, HydrationQueueItem[]> = {
+    high: [],
+    normal: [],
+    low: [],
+  };
   private processing = false;
   private moduleLoader: IslandModuleLoader;
   private moduleBasePath: string;
@@ -180,6 +183,8 @@ export class IslandManager {
 
     const thresholdAttr = element.getAttribute("data-gospa-threshold");
     const deferAttr = element.getAttribute("data-gospa-defer");
+    const threshold = thresholdAttr ? parseInt(thresholdAttr, 10) : undefined;
+    const defer = deferAttr ? parseInt(deferAttr, 10) : undefined;
 
     return {
       id,
@@ -188,8 +193,14 @@ export class IslandManager {
       priority,
       props,
       state,
-      threshold: thresholdAttr ? parseInt(thresholdAttr, 10) : undefined,
-      defer: deferAttr ? parseInt(deferAttr, 10) : undefined,
+      threshold:
+        threshold !== undefined && Number.isFinite(threshold) && threshold >= 0
+          ? threshold
+          : undefined,
+      defer:
+        defer !== undefined && Number.isFinite(defer) && defer >= 0
+          ? defer
+          : undefined,
       clientOnly: element.getAttribute("data-gospa-client-only") === "true",
       serverOnly: element.getAttribute("data-gospa-server-only") === "true",
       element,
@@ -242,9 +253,8 @@ export class IslandManager {
     }
 
     const promise = new Promise<IslandHydrationResult>((resolve, reject) => {
-      this.queue.push({
+      this.queue[island.priority].push({
         island,
-        priority: island.priority,
         resolve,
         reject,
       });
@@ -261,14 +271,16 @@ export class IslandManager {
     if (this.processing) return;
     this.processing = true;
 
-    while (this.queue.length > 0) {
-      // Sort by priority
-      this.queue.sort((a, b) => {
-        const priorityOrder = { high: 0, normal: 1, low: 2 };
-        return priorityOrder[a.priority] - priorityOrder[b.priority];
-      });
-
-      const item = this.queue.shift()!;
+    while (
+      this.queue.high.length > 0 ||
+      this.queue.normal.length > 0 ||
+      this.queue.low.length > 0
+    ) {
+      const item =
+        this.queue.high.shift() ??
+        this.queue.normal.shift() ??
+        this.queue.low.shift();
+      if (!item) break;
       try {
         const result = await this.hydrateIsland(item.island);
         item.resolve(result);
