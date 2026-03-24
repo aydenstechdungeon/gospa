@@ -3,6 +3,16 @@ set -euo pipefail
 
 ROOT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
 cd "$ROOT_DIR"
+ 
+# Check for CGO dependencies
+if command -v pkg-config >/dev/null 2>&1; then
+  if ! pkg-config --exists libwebp libheif; then
+    echo "Warning: libwebp or libheif not found. Image plugin compilation will fail."
+    echo "To fix on Arch Linux: sudo pacman -S libwebp libheif"
+    echo "To fix on Ubuntu: sudo apt-get install libwebp-dev libheif-dev"
+    echo ""
+  fi
+fi
 
 RUN_FMT=1
 RUN_VET=1

@@ -35,6 +35,8 @@ func Doctor(config *DoctorConfig) {
 		checkProjectDir(config.RoutesDir, false, "routes directory"),
 		checkAnyFile("client", []string{"src/runtime.ts", "src/index.ts", "src/main.ts"}, false, "client runtime entrypoint"),
 		checkAnyFile(".", []string{"package.json", "client/package.json"}, false, "Bun package manifest"),
+		checkLibrary("libwebp", false),
+		checkLibrary("libheif", false),
 	}
 
 	hasFailure := false
@@ -78,6 +80,32 @@ func checkBinary(name string, required bool) doctorCheck {
 		Detail:   path,
 		Required: required,
 		Err:      err,
+	}
+}
+
+func checkLibrary(name string, required bool) doctorCheck {
+	_, err := exec.LookPath("pkg-config")
+	if err != nil {
+		return doctorCheck{
+			Name:     fmt.Sprintf("Library %s", name),
+			Required: required,
+			Err:      fmt.Errorf("pkg-config not found (cannot check for %s)", name),
+		}
+	}
+
+	cmd := exec.Command("pkg-config", "--exists", name)
+	if err := cmd.Run(); err != nil {
+		return doctorCheck{
+			Name:     fmt.Sprintf("Library %s", name),
+			Required: required,
+			Err:      fmt.Errorf("%s missing (arch: sudo pacman -S %s, ubuntu: sudo apt-get install %s-dev)", name, name, name),
+		}
+	}
+
+	return doctorCheck{
+		Name:     fmt.Sprintf("Library %s", name),
+		Detail:   fmt.Sprintf("%s found", name),
+		Required: required,
 	}
 }
 
