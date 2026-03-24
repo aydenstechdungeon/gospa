@@ -43,8 +43,8 @@ func Page() templ.Component {
   const count = new GoSPA.Rune(0);
   console.log(count.get());
 </script>`,
-			`# TypeScript / ES Modules
-npm install @gospa/client
+			`# TypeScript / ES Modules (Bun-first)
+bun add @gospa/client
 
 # Import from the client package
 import { Rune, Effect, navigate } from '@gospa/client';`,
@@ -52,7 +52,7 @@ import { Rune, Effect, navigate } from '@gospa/client';`,
 		if templ_7745c5c3_Err != nil {
 			return templ_7745c5c3_Err
 		}
-		templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 2, "</section><section class=\"space-y-6\"><h2 class=\"text-2xl font-bold\">Runtime Variants</h2><div class=\"overflow-x-auto\"><table class=\"w-full border-collapse\"><thead><tr class=\"border-b border-[var(--border)]\"><th class=\"text-left py-3 px-4 font-semibold\">Variant</th><th class=\"text-left py-3 px-4 font-semibold\">Size</th><th class=\"text-left py-3 px-4 font-semibold\">Includes</th></tr></thead> <tbody class=\"text-[var(--text-secondary)]\"><tr class=\"border-b border-[var(--border)]\"><td class=\"py-3 px-4\"><code class=\"text-[var(--accent-primary)]\">runtime.js</code></td><td class=\"py-3 px-4\">~17KB</td><td class=\"py-3 px-4\">Full runtime + DOMPurify sanitizer</td></tr><tr class=\"border-b border-[var(--border)]\"><td class=\"py-3 px-4\"><code class=\"text-[var(--accent-primary)]\">runtime-simple.js</code></td><td class=\"py-3 px-4\">~11KB</td><td class=\"py-3 px-4\">Lightweight runtime (no sanitizer)</td></tr></tbody></table></div></section><section class=\"space-y-6\"><h2 class=\"text-2xl font-bold\" id=\"rune\">Rune</h2><p class=\"text-[var(--text-secondary)]\">Core reactive state container. Similar to Svelte's <code class=\"text-[var(--accent-primary)]\">$state</code> rune.</p>")
+		templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 2, "</section><section class=\"space-y-6\"><h2 class=\"text-2xl font-bold\">Runtime Variants</h2><div class=\"overflow-x-auto\"><table class=\"w-full border-collapse\"><thead><tr class=\"border-b border-[var(--border)]\"><th class=\"text-left py-3 px-4 font-semibold\">Variant</th><th class=\"text-left py-3 px-4 font-semibold\">Size</th><th class=\"text-left py-3 px-4 font-semibold\">Includes</th></tr></thead> <tbody class=\"text-[var(--text-secondary)]\"><tr class=\"border-b border-[var(--border)]\"><td class=\"py-3 px-4\"><code class=\"text-[var(--accent-primary)]\">runtime.js (default full runtime)</code></td><td class=\"py-3 px-4\">~15KB</td><td class=\"py-3 px-4\">Full runtime without DOMPurify (server-trust model)</td></tr><tr class=\"border-b border-[var(--border)]\"><td class=\"py-3 px-4\"><code class=\"text-[var(--accent-primary)]\">runtime-secure.js</code></td><td class=\"py-3 px-4\">~35KB</td><td class=\"py-3 px-4\">Full runtime + DOMPurify sanitizer for untrusted HTML/UGC</td></tr></tbody></table></div></section><section class=\"space-y-6\"><h2 class=\"text-2xl font-bold\" id=\"rune\">Rune</h2><p class=\"text-[var(--text-secondary)]\">Core reactive state container. Similar to Svelte's <code class=\"text-[var(--accent-primary)]\">$state</code> rune.</p>")
 		if templ_7745c5c3_Err != nil {
 			return templ_7745c5c3_Err
 		}

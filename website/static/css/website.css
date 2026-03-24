@@ -3108,10 +3108,10 @@ h1, h2, h3, h4, h5, h6 {
   background-size: 32px 32px;
   -webkit-mask-image: radial-gradient(ellipse 80% 60% at 50% 0%, #000 70%, transparent 100%);
           mask-image: radial-gradient(ellipse 80% 60% at 50% 0%, #000 70%, transparent 100%);
-  opacity: 0.15;
+  opacity: 0.30;
 }
 @keyframes float {
-  0%, 100% {
+  0%,	100% {
     transform: translateY(0);
   }
   50% {

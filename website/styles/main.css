@@ -38,8 +38,10 @@
 	--text-muted: oklch(0.5 0.02 260);
 
 	/* Accent colors - more vibrant OKLCH colors */
-	--accent-primary: oklch(0.7 0.2 195); /* Vibrant Cyan */
-	--accent-secondary: oklch(0.65 0.25 285); /* Electric Purple */
+	--accent-primary: oklch(0.7 0.2 195);
+	/* Vibrant Cyan */
+	--accent-secondary: oklch(0.65 0.25 285);
+	/* Electric Purple */
 	--accent-glow: oklch(0.7 0.2 195 / 0.15);
 
 	/* Border color */
@@ -67,7 +69,12 @@ body {
 	selection-color: var(--bg-primary);
 }
 
-h1, h2, h3, h4, h5, h6 {
+h1,
+h2,
+h3,
+h4,
+h5,
+h6 {
 	font-family: var(--font-display);
 }
 
@@ -119,17 +126,24 @@ h1, h2, h3, h4, h5, h6 {
 
 /* Grid background - animated */
 .grid-bg {
-	background-image: 
+	background-image:
 		linear-gradient(to right, var(--border) 1px, transparent 1px),
 		linear-gradient(to bottom, var(--border) 1px, transparent 1px);
 	background-size: 32px 32px;
 	mask-image: radial-gradient(ellipse 80% 60% at 50% 0%, #000 70%, transparent 100%);
-	opacity: 0.15;
+	opacity: 0.30;
 }
 
 @keyframes float {
-	0%, 100% { transform: translateY(0); }
-	50% { transform: translateY(-10px); }
+
+	0%,
+	100% {
+		transform: translateY(0);
+	}
+
+	50% {
+		transform: translateY(-10px);
+	}
 }
 
 .animate-float {
