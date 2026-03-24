@@ -760,7 +760,7 @@ loader := plugin.NewExternalPluginLoader()
 // - github.com/owner/repo@version
 // - owner/repo
 // - owner/repo@version
-p, err := loader.LoadFromGitHub("github.com/username/gospa-plugin-example")
+p, err := loader.LoadFromGitHub("github.com/username/gospa-plugin-example@v1.0.0")
 
 // Or use the convenience functions
 err := plugin.InstallPlugin("username/gospa-plugin-example")

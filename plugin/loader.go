@@ -14,21 +14,31 @@ import (
 
 // ExternalPluginLoader handles loading plugins from external sources.
 type ExternalPluginLoader struct {
-	cacheDir string
+	cacheDir         string
+	allowMutableRefs bool
 }
 
 // NewExternalPluginLoader creates a new loader with the default cache directory.
 func NewExternalPluginLoader() *ExternalPluginLoader {
 	return &ExternalPluginLoader{
-		cacheDir: PluginCacheDir,
+		cacheDir:         PluginCacheDir,
+		allowMutableRefs: false,
 	}
 }
 
 // NewExternalPluginLoaderWithCache creates a new loader with a custom cache directory.
 func NewExternalPluginLoaderWithCache(cacheDir string) *ExternalPluginLoader {
 	return &ExternalPluginLoader{
-		cacheDir: cacheDir,
+		cacheDir:         cacheDir,
+		allowMutableRefs: false,
 	}
+}
+
+// AllowMutableRefs enables or disables mutable refs such as "latest".
+// Mutable refs are disabled by default to keep plugin installs reproducible.
+func (l *ExternalPluginLoader) AllowMutableRefs(allow bool) *ExternalPluginLoader {
+	l.allowMutableRefs = allow
+	return l
 }
 
 // ParsePluginRef parses a plugin reference string into owner, repo, and version.
@@ -94,6 +104,9 @@ func (l *ExternalPluginLoader) LoadFromGitHub(ref string) (Plugin, error) {
 	// Ensure cache directory exists
 	if err := validatePluginVersion(version); err != nil {
 		return nil, fmt.Errorf("failed to validate version: %w", err)
+	}
+	if version == "latest" && !l.allowMutableRefs {
+		return nil, fmt.Errorf("mutable plugin ref %q is not allowed; pin an immutable tag or commit SHA", ref)
 	}
 	if err := os.MkdirAll(l.cacheDir, 0750); err != nil {
 		return nil, fmt.Errorf("failed to create plugin cache directory: %w", err)

@@ -42,7 +42,7 @@ function init(options: RuntimeConfig = {}): void {
     console.warn(
       "[GoSPA DEPRECATION] gospa/simple is deprecated and will be removed in v2.0.\n" +
         'Migration: Use "gospa" for server-trusted content or "gospa/runtime-secure" for UGC.\n' +
-        "See: https://gospa.dev/docs/migration-v2",
+        "See: https://gospa.onrender.com/docs",
     );
   }
 

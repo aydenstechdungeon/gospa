@@ -54,7 +54,7 @@ Content-Security-Policy:
   connect-src 'self' wss:;
 ```
 
-The snippet above is a **stricter** optional policy. If you leave `ContentSecurityPolicy` empty, GoSPA applies `fiber.DefaultContentSecurityPolicy`: same baseline (`default-src 'self'`, frame/object restrictions) but **`script-src` and `style-src` include `'unsafe-inline'`** so framework-injected scripts (for example `__GOSPA_STATE__`) and typical inline CSS work. Set `ContentSecurityPolicy` explicitly when you need to lock this down.
+The snippet above is a **stricter** optional policy. If you leave `ContentSecurityPolicy` empty, GoSPA applies `fiber.DefaultContentSecurityPolicy`: same baseline (`default-src 'self'`, frame/object restrictions) but **`script-src` and `style-src` include `'unsafe-inline'`** so framework-injected scripts (for example `__GOSPA_STATE__`) and typical inline CSS work. For tighter deployments, start from `fiber.StrictContentSecurityPolicy` and set `ContentSecurityPolicy` explicitly.
 
 ### Layer 3: DOMPurify (User-Generated Content Only)
 
@@ -238,7 +238,7 @@ If you're upgrading from GoSPA v1.x:
    - It's no longer needed (and no longer exists)
    - The default runtime now trusts the server by default
 
-See the [Migration Guide](/docs/migration-v2) for detailed instructions.
+See the [v1 → v2 migration guide](../06-migration/01-v1-to-v2.md) for detailed instructions.
 
 ## Auth plugin: JWT and production detection
 

@@ -4,9 +4,12 @@ package state
 
 import (
 	"bytes"
+	"log"
 	"reflect"
 	"runtime"
+	"runtime/debug"
 	"sync"
+	"sync/atomic"
 	"time"
 
 	json "github.com/goccy/go-json"
@@ -26,6 +29,7 @@ type stateNotification struct {
 var (
 	stateNotificationQueue chan stateNotification
 	stateDispatchOnce      sync.Once
+	droppedNotifications   atomic.Uint64
 )
 
 func startStateNotificationDispatcher() {
@@ -47,15 +51,26 @@ func startStateNotificationDispatcher() {
 
 func safelyRunStateNotification(notification stateNotification) {
 	defer func() {
-		// In a real app we'd log this, but we MUST NOT hide panics silently
-		_ = recover()
+		if r := recover(); r != nil {
+			log.Printf("gospa: recovered panic in StateMap.OnChange: %v\n%s", r, debug.Stack())
+		}
 	}()
 	notification.handler(notification.key, notification.value)
 }
 
 func enqueueStateNotification(notification stateNotification) {
 	startStateNotificationDispatcher()
-	stateNotificationQueue <- notification
+	select {
+	case stateNotificationQueue <- notification:
+	default:
+		droppedNotifications.Add(1)
+	}
+}
+
+// DroppedStateNotifications returns the number of notifications dropped because
+// the bounded dispatcher queue was full.
+func DroppedStateNotifications() uint64 {
+	return droppedNotifications.Load()
 }
 
 // StateMap is a collection of generic observables for component state
