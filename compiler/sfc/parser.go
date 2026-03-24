@@ -32,14 +32,8 @@ var (
 // Parse splits a .gospa file into its component blocks.
 func Parse(input string) (*SFC, error) {
 	sfc := &SFC{}
-	if countMatches(templateRegex, input) > 1 {
-		return nil, fmt.Errorf("multiple <template> blocks are not supported")
-	}
-	if countMatches(styleRegex, input) > 1 {
-		return nil, fmt.Errorf("multiple <style> blocks are not supported")
-	}
 
-	// Extract Script
+	// 1. Extract Script Blocks
 	for _, matches := range scriptRegex.FindAllStringSubmatch(input, -1) {
 		if len(matches) <= 2 {
 			continue
@@ -66,15 +60,7 @@ func Parse(input string) (*SFC, error) {
 		}
 	}
 
-	// Extract Template
-	if matches := templateRegex.FindStringSubmatch(input); len(matches) > 2 {
-		sfc.Template = Block{
-			Type:    "template",
-			Content: strings.TrimSpace(matches[2]),
-		}
-	}
-
-	// Extract Style
+	// 2. Extract Style Block
 	if matches := styleRegex.FindStringSubmatch(input); len(matches) > 2 {
 		sfc.Style = Block{
 			Type:    "style",
@@ -83,8 +69,29 @@ func Parse(input string) (*SFC, error) {
 		}
 	}
 
+	// 3. Extract Template Block (Explicit or Implicit)
+	templateMatches := templateRegex.FindStringSubmatch(input)
+	if len(templateMatches) > 2 {
+		if countMatches(templateRegex, input) > 1 {
+			return nil, fmt.Errorf("multiple <template> blocks are not supported")
+		}
+		sfc.Template = Block{
+			Type:    "template",
+			Content: strings.TrimSpace(templateMatches[2]),
+		}
+	} else {
+		// Implicit template: everything that isn't script or style
+		temp := input
+		temp = scriptRegex.ReplaceAllString(temp, "")
+		temp = styleRegex.ReplaceAllString(temp, "")
+		sfc.Template = Block{
+			Type:    "template",
+			Content: strings.TrimSpace(temp),
+		}
+	}
+
 	if sfc.Template.Content == "" {
-		return nil, fmt.Errorf("missing <template> block")
+		return nil, fmt.Errorf("missing template content")
 	}
 
 	return sfc, nil

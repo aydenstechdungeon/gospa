@@ -202,7 +202,11 @@ func compileSFCs(config *GenerateConfig) error {
 		if relDir != "." {
 			parts := strings.Split(relDir, string(filepath.Separator))
 			pkgParts := []string{}
-			for _, part := range parts {
+			for i, part := range parts {
+				// Skip the root 'routes' or 'pages' directory to better match Go package conventions
+				if i == 0 && (part == "routes" || part == "pages") {
+					continue
+				}
 				// Skip route groups (name)
 				if strings.HasPrefix(part, "(") && strings.HasSuffix(part, ")") {
 					continue
@@ -212,8 +216,10 @@ func compileSFCs(config *GenerateConfig) error {
 				p = strings.ReplaceAll(p, "]", "")
 				pkgParts = append(pkgParts, p)
 			}
-			pkgName = strings.Join(pkgParts, "")
-			pkgName = rePkgName.ReplaceAllString(pkgName, "")
+			if len(pkgParts) > 0 {
+				pkgName = strings.Join(pkgParts, "")
+				pkgName = rePkgName.ReplaceAllString(pkgName, "")
+			}
 		}
 
 		// 3. Determine Go component name (Standardize Page/Layout)
