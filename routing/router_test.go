@@ -229,6 +229,25 @@ func TestRouterScan_DynamicRoutes(t *testing.T) {
 	}
 }
 
+func TestRouterScan_IsIdempotent(t *testing.T) {
+	fs := makeFS(
+		"page.templ",
+		"about/page.templ",
+	)
+	r := NewRouter(fs)
+	if err := r.Scan(); err != nil {
+		t.Fatalf("first Scan() error: %v", err)
+	}
+	first := len(r.GetPages())
+	if err := r.Scan(); err != nil {
+		t.Fatalf("second Scan() error: %v", err)
+	}
+	second := len(r.GetPages())
+	if first != second {
+		t.Fatalf("expected idempotent Scan results; first=%d second=%d", first, second)
+	}
+}
+
 // ─── Router.Match ─────────────────────────────────────────────────────────────
 
 func TestRouterMatch_Static(t *testing.T) {

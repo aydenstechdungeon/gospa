@@ -16,6 +16,7 @@ import (
 type ExternalPluginLoader struct {
 	cacheDir         string
 	allowMutableRefs bool
+	expectedRef      string
 }
 
 // NewExternalPluginLoader creates a new loader with the default cache directory.
@@ -38,6 +39,13 @@ func NewExternalPluginLoaderWithCache(cacheDir string) *ExternalPluginLoader {
 // Mutable refs are disabled by default to keep plugin installs reproducible.
 func (l *ExternalPluginLoader) AllowMutableRefs(allow bool) *ExternalPluginLoader {
 	l.allowMutableRefs = allow
+	return l
+}
+
+// ExpectResolvedRef pins plugin loading to an exact commit SHA (40 hex chars).
+// When set, cached and newly downloaded plugins must match this commit.
+func (l *ExternalPluginLoader) ExpectResolvedRef(ref string) *ExternalPluginLoader {
+	l.expectedRef = strings.ToLower(strings.TrimSpace(ref))
 	return l
 }
 
@@ -105,6 +113,11 @@ func (l *ExternalPluginLoader) LoadFromGitHub(ref string) (Plugin, error) {
 	if err := validatePluginVersion(version); err != nil {
 		return nil, fmt.Errorf("failed to validate version: %w", err)
 	}
+	if l.expectedRef != "" {
+		if err := validateResolvedRef(l.expectedRef); err != nil {
+			return nil, fmt.Errorf("failed to validate expected resolved ref: %w", err)
+		}
+	}
 	if version == "latest" && !l.allowMutableRefs {
 		return nil, fmt.Errorf("mutable plugin ref %q is not allowed; pin an immutable tag or commit SHA", ref)
 	}
@@ -118,7 +131,7 @@ func (l *ExternalPluginLoader) LoadFromGitHub(ref string) (Plugin, error) {
 
 	if _, err := os.Stat(pluginDataPath); err == nil {
 		// Load from cache
-		return l.loadFromPath(pluginPath)
+		return l.loadFromPath(pluginPath, l.expectedRef)
 	}
 
 	// Download the plugin
@@ -126,7 +139,7 @@ func (l *ExternalPluginLoader) LoadFromGitHub(ref string) (Plugin, error) {
 		return nil, fmt.Errorf("failed to download plugin: %w", err)
 	}
 
-	return l.loadFromPath(pluginPath)
+	return l.loadFromPath(pluginPath, l.expectedRef)
 }
 
 // validatePluginName validates that a plugin owner/repo name is safe.
@@ -142,6 +155,14 @@ func validatePluginVersion(version string) error {
 	validVersion := regexp.MustCompile(`^[a-zA-Z0-9._/-]+$`)
 	if version == "" || !validVersion.MatchString(version) || strings.Contains(version, "..") || strings.HasPrefix(version, "-") {
 		return fmt.Errorf("invalid version %q", version)
+	}
+	return nil
+}
+
+func validateResolvedRef(ref string) error {
+	validRef := regexp.MustCompile(`^[a-f0-9]{40}$`)
+	if !validRef.MatchString(ref) {
+		return fmt.Errorf("invalid resolved ref %q: expected 40-char lowercase SHA-1", ref)
 	}
 	return nil
 }
@@ -201,7 +222,7 @@ func (l *ExternalPluginLoader) download(owner, repo, version string) error {
 }
 
 // loadFromPath loads a plugin from a local path.
-func (l *ExternalPluginLoader) loadFromPath(pluginPath string) (Plugin, error) {
+func (l *ExternalPluginLoader) loadFromPath(pluginPath string, expectedRef string) (Plugin, error) {
 	// Read plugin metadata - use filepath.Clean to prevent path traversal
 	metadataPath := filepath.Clean(filepath.Join(pluginPath, "plugin.json"))
 	metadataBytes, err := os.ReadFile(metadataPath)
@@ -212,6 +233,9 @@ func (l *ExternalPluginLoader) loadFromPath(pluginPath string) (Plugin, error) {
 	var metadata Metadata
 	if err := json.Unmarshal(metadataBytes, &metadata); err != nil {
 		return nil, fmt.Errorf("failed to parse plugin metadata: %w", err)
+	}
+	if expectedRef != "" && strings.ToLower(strings.TrimSpace(metadata.ResolvedRef)) != expectedRef {
+		return nil, fmt.Errorf("plugin resolved ref mismatch: expected %s, got %s", expectedRef, metadata.ResolvedRef)
 	}
 
 	// Look for a compiled plugin binary (.so file)

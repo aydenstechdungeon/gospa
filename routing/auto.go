@@ -88,6 +88,9 @@ func NewRouter(routesSource interface{}) *Router {
 
 // Scan scans the routes directory and builds the route tree.
 func (r *Router) Scan() error {
+	// Reset previously discovered routes so repeated Scan calls are idempotent.
+	r.routes = r.routes[:0]
+
 	// Walk the routes filesystem
 	err := fs.WalkDir(r.fs, ".", func(path string, d fs.DirEntry, err error) error {
 		if err != nil {

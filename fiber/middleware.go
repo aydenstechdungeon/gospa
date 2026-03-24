@@ -144,6 +144,11 @@ func CSRFSetTokenMiddleware() gofiber.Handler {
 			return c.Next()
 		}
 
+		// Keep token stable across tabs/requests unless it doesn't exist.
+		if existing := c.Cookies("csrf_token"); existing != "" {
+			return c.Next()
+		}
+
 		token, err := generateCSRFToken()
 		if err != nil {
 			return c.Next()
