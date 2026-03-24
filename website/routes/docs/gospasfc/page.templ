@@ -1,0 +1,120 @@
+package routesdocsgospasfc
+
+import "github.com/aydenstechdungeon/gospa/website/components"
+
+templ Page() {
+	
+	<div data-gospa-island="routesdocsgospasfcpage" class="gospa-9d0f">
+		<div class="space-y-12 gospa-9d0f">
+		<header class="gospa-9d0f ">
+			<h1 class="text-4xl font-bold tracking-tight mb-4 text-transparent bg-clip-text bg-gradient-to-r from-[var(--accent-primary)] to-[var(--accent-secondary)] gospa-9d0f">Gospa SFC (Single File Components)</h1>
+			<p class="text-xl text-[var(--text-secondary)] leading-relaxed gospa-9d0f">
+				Modern, single-file component architecture for Go. Combine server-side logic, reactive templates, and scoped styles in a single .gospa file.
+			</p>
+		</header>
+
+		<section class="space-y-8 gospa-9d0f">
+			<div class="gospa-9d0f ">
+				<h2 class="text-2xl font-bold mb-4 border-b border-[var(--border)] pb-2 italic mono gospa-9d0f">Overview</h2>
+				<p class="text-[var(--text-secondary)] mb-4 gospa-9d0f">
+					The <code class="bg-[var(--surface)] px-1 rounded gospa-9d0f">.gospa</code> format enables a seamless developer experience by bringing server and client code together.
+				</p>
+				<div class="grid md:grid-cols-3 gap-4 mb-6 gospa-9d0f">
+					<div class="p-4 rounded-xl bg-[var(--bg-secondary)] border border-[var(--border)] gospa-9d0f">
+						<h3 class="font-bold border-b border-[var(--border)] pb-1 mb-2 gospa-9d0f">Unified Reactive DSL</h3>
+						<p class="text-sm text-[var(--text-secondary)] gospa-9d0f">Use $state, $derived, and $effect in both Go and TypeScript.</p>
+					</div>
+					<div class="p-4 rounded-xl bg-[var(--bg-secondary)] border border-[var(--border)] gospa-9d0f">
+						<h3 class="font-bold border-b border-[var(--border)] pb-1 mb-2 gospa-9d0f">Scoped CSS</h3>
+						<p class="text-sm text-[var(--text-secondary)] gospa-9d0f">Styles are automatically scoped to the component using unique hashes.</p>
+					</div>
+					<div class="p-4 rounded-xl bg-[var(--bg-secondary)] border border-[var(--border)] gospa-9d0f">
+						<h3 class="font-bold border-b border-[var(--border)] pb-1 mb-2 gospa-9d0f">Templ Compilation</h3>
+						<p class="text-sm text-[var(--text-secondary)] gospa-9d0f">Compiles directly to .templ files for high-performance server rendering.</p>
+					</div>
+				</div>
+			</div>
+
+			<div class="gospa-9d0f ">
+				<h2 class="text-2xl font-bold mb-4 border-b border-[var(--border)] pb-2 italic mono gospa-9d0f">Anatomy of a .gospa File</h2>
+				@components.CodeBlock(`<script lang="go">
+  var count = $state(0)
+  var doubled = $derived(count * 2)
+  
+  $effect(func() {
+    fmt.Printf("Count: %d\n", count)
+  })
+
+  func increment() {
+    count++
+  }
+  </script>
+
+  <template>
+  <button on:click={increment} class="btn">
+    {count} (x2 = {doubled})
+  </button>
+  </template>
+
+  <style>
+  .btn { font-weight: bold; padding: 1rem; }
+  </style>`, "svelte", "Counter.gospa")
+			</div>
+
+			<div class="gospa-9d0f ">
+				<h2 class="text-2xl font-bold mb-4 border-b border-[var(--border)] pb-2 italic mono gospa-9d0f">Reactive Primitives</h2>
+				<div class="overflow-x-auto mb-6 gospa-9d0f">
+					<table class="w-full text-sm text-left text-[var(--text-secondary)] gospa-9d0f">
+						<thead class="text-xs uppercase bg-[var(--surface)] text-[var(--text-primary)] gospa-9d0f">
+							<tr class="gospa-9d0f ">
+								<th class="px-4 py-2 gospa-9d0f">Primitive</th>
+								<th class="px-4 py-2 gospa-9d0f">Purpose</th>
+								<th class="px-4 py-2 gospa-9d0f">Client Context</th>
+							</tr>
+						</thead>
+						<tbody class="gospa-9d0f ">
+							<tr class="border-b border-[var(--border)] gospa-9d0f"><td class="px-4 py-2 font-mono gospa-9d0f">$state(v)</td><td class="px-4 py-2 gospa-9d0f">Declares a reactive state variable.</td><td class="px-4 py-2 gospa-9d0f">Mutable proxy.</td></tr>
+							<tr class="border-b border-[var(--border)] gospa-9d0f"><td class="px-4 py-2 font-mono gospa-9d0f">$derived(expr)</td><td class="px-4 py-2 gospa-9d0f">Computes a value from other states.</td><td class="px-4 py-2 gospa-9d0f">Auto-updating.</td></tr>
+							<tr class="border-b border-[var(--border)] gospa-9d0f"><td class="px-4 py-2 font-mono gospa-9d0f">$effect(fn)</td><td class="px-4 py-2 gospa-9d0f">Runs side effects on state change.</td><td class="px-4 py-2 gospa-9d0f">Client-side only.</td></tr>
+						</tbody>
+					</table>
+				</div>
+			</div>
+
+			<div class="gospa-9d0f ">
+				<h2 class="text-2xl font-bold mb-4 border-b border-[var(--border)] pb-2 italic mono gospa-9d0f">Compiler Pipeline</h2>
+				<p class="text-[var(--text-secondary)] mb-4 gospa-9d0f">The compiler transforms the SFC into two distinct modules:</p>
+				<div class="space-y-4 gospa-9d0f">
+					<div class="p-6 rounded-xl bg-[var(--bg-secondary)] border border-[var(--border)] gospa-9d0f">
+						<h3 class="font-bold text-[var(--accent-primary)] mb-2 gospa-9d0f">1. Server Module (.templ)</h3>
+						<p class="text-[var(--text-secondary)] text-sm gospa-9d0f">
+							Extracts the template and applies unique scoping classes. Replaces reactive primitives with Go variable initializations for SSR.
+						</p>
+					</div>
+					<div class="p-6 rounded-xl bg-[var(--bg-secondary)] border border-[var(--border)] gospa-9d0f">
+						<h3 class="font-bold text-[var(--accent-secondary)] mb-2 gospa-9d0f">2. Client Module (.ts)</h3>
+						<p class="text-[var(--text-secondary)] text-sm gospa-9d0f">
+							Transpiles the script block into an interactive island module. Automatically handles event binding and hydration.
+						</p>
+					</div>
+				</div>
+			</div>
+
+			<div class="gospa-9d0f ">
+				<h2 class="text-2xl font-bold mb-4 border-b border-[var(--border)] pb-2 italic mono gospa-9d0f">File-Based Routing</h2>
+				<p class="text-[var(--text-secondary)] mb-4 gospa-9d0f">
+					<code class="bg-[var(--surface)] px-1 rounded gospa-9d0f">.gospa</code> files are fully integrated into the file-based router. You can use them for pages, layouts, and error boundaries.
+				</p>
+				<div class="p-6 rounded-xl bg-[var(--bg-secondary)] border border-[var(--border)] gospa-9d0f">
+					<ul class="space-y-2 text-sm text-[var(--text-secondary)] gospa-9d0f">
+						<li class="flex items-center gap-2 gospa-9d0f"><div class="w-1.5 h-1.5 rounded-full bg-[var(--accent-primary)] gospa-9d0f"></div> <code class="text-[var(--text-primary)] gospa-9d0f">page.gospa</code> &mdash; The primary route entry point.</li>
+						<li class="flex items-center gap-2 gospa-9d0f"><div class="w-1.5 h-1.5 rounded-full bg-[var(--accent-primary)] gospa-9d0f"></div> <code class="text-[var(--text-primary)] gospa-9d0f">layout.gospa</code> &mdash; A nested layout for the directory segment.</li>
+						<li class="flex items-center gap-2 gospa-9d0f"><div class="w-1.5 h-1.5 rounded-full bg-[var(--accent-primary)] gospa-9d0f"></div> <code class="text-[var(--text-primary)] gospa-9d0f">error.gospa</code> &mdash; Error boundary for the segment.</li>
+						<li class="flex items-center gap-2 gospa-9d0f"><div class="w-1.5 h-1.5 rounded-full bg-[var(--accent-primary)] gospa-9d0f"></div> <code class="text-[var(--text-primary)] gospa-9d0f">loading.gospa</code> &mdash; Static shell for PPR.</li>
+					</ul>
+				</div>
+			</div>
+		</section>
+	</div>
+	</div>
+}

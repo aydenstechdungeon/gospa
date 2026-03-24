@@ -23,9 +23,9 @@ type SFC struct {
 }
 
 var (
-	scriptRegex   = regexp.MustCompile(`(?is)<script(.*?)>(.*?)</script>`)
-	templateRegex = regexp.MustCompile(`(?is)<template(.*?)>(.*?)</template>`)
-	styleRegex    = regexp.MustCompile(`(?is)<style(.*?)>(.*?)</style>`)
+	scriptRegex   = regexp.MustCompile(`(?ism)^<script(.*?)>(.*?)^</script>`)
+	templateRegex = regexp.MustCompile(`(?ism)^<template(.*?)>(.*?)^</template>`)
+	styleRegex    = regexp.MustCompile(`(?ism)^<style(.*?)>(.*?)^</style>`)
 	langRegex     = regexp.MustCompile(`(?i)lang="([^"]*)"`)
 )
 

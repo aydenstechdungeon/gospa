@@ -6,6 +6,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"regexp"
+	"sort"
 	"strings"
 
 	"github.com/aydenstechdungeon/gospa/compiler/sfc"
@@ -20,8 +21,9 @@ func NewCompiler() *GospaCompiler {
 }
 
 // Compile compiles a .gospa component into Templ and TypeScript.
-func (c *GospaCompiler) Compile(rawName, input string) (templ, ts string, err error) {
-	name := c.sanitizeName(rawName)
+func (c *GospaCompiler) Compile(goName, islandID, input, pkgName string) (templ, ts string, err error) {
+	name := c.sanitizeName(goName)
+	islandID = c.sanitizeName(islandID)
 	parsed, err := sfc.Parse(input)
 	if err != nil {
 		return "", "", err
@@ -30,12 +32,12 @@ func (c *GospaCompiler) Compile(rawName, input string) (templ, ts string, err er
 	// 1. Process Reactive DSL in Script
 	processedScript := c.transformDSL(parsed.Script.Content)
 
-	// 2. Generate Unique Hash for Scoping
-	hash := c.generateHash(name)
+	// 2. Generate Unique Hash for Scoping (based on islandID for uniqueness)
+	hash := c.generateHash(islandID)
 
 	// 3. Generate Templ with Scoped CSS classes
 	scopedTemplate := c.scopeTemplate(parsed.Template.Content, hash)
-	templ = c.generateTempl(name, scopedTemplate, processedScript, hash)
+	templ = c.generateTempl(name, islandID, scopedTemplate, processedScript, hash, pkgName)
 
 	// 4. Generate TypeScript Island
 	tsScript := parsed.Script.Content
@@ -44,7 +46,7 @@ func (c *GospaCompiler) Compile(rawName, input string) (templ, ts string, err er
 		tsScript = parsed.ScriptTS.Content
 		tsFromGo = false
 	}
-	ts = c.generateTS(name, tsScript, tsFromGo, parsed.Template.Content, hash)
+	ts = c.generateTS(islandID, tsScript, tsFromGo, parsed.Style.Content, hash)
 
 	// 5. Generate Scoped CSS
 	ts += c.generateScopedCSS(parsed.Style.Content, hash)
@@ -53,8 +55,27 @@ func (c *GospaCompiler) Compile(rawName, input string) (templ, ts string, err er
 }
 
 func (c *GospaCompiler) scopeTemplate(template, hash string) string {
-	// Scope all tags, handling existing class attributes
-	return tagRegex.ReplaceAllStringFunc(template, func(tag string) string {
+	// 1. Protect strings/backticks from scoping
+	// This prevents tags inside code blocks/literals from being corrupted
+	stringMap := make(map[string]string)
+	placeholderCounter := 0
+
+	// Regex for Go-style backtick strings and double-quoted strings
+	strRegex := regexp.MustCompile("(?s)`[^`]*`|\"[^\"]*\"")
+	
+	protected := strRegex.ReplaceAllStringFunc(template, func(s string) string {
+		// Only protect if it contains tags to keep output readable and prevent attribute collision
+		if !strings.ContainsAny(s, "<>") {
+			return s
+		}
+		placeholder := fmt.Sprintf("__GOSPA_STR_ID_%d__", placeholderCounter)
+		stringMap[placeholder] = s
+		placeholderCounter++
+		return placeholder
+	})
+
+	// 2. Scope remaining tags
+	scoped := tagRegex.ReplaceAllStringFunc(protected, func(tag string) string {
 		if strings.HasPrefix(strings.ToLower(tag), "<script") || strings.HasPrefix(strings.ToLower(tag), "<style") {
 			return tag
 		}
@@ -64,6 +85,23 @@ func (c *GospaCompiler) scopeTemplate(template, hash string) string {
 		// If no class, insert it
 		return tagRegex.ReplaceAllString(tag, `<$1 class="`+hash+` "$2>`)
 	})
+
+	// 3. Restore strings in a way that avoids partial placeholder replacements
+	type mapping struct{ k, v string }
+	sorted := make([]mapping, 0, len(stringMap))
+	for k, v := range stringMap {
+		sorted = append(sorted, mapping{k, v})
+	}
+	// Longest placeholders first to avoid replacing part of a longer one
+	sort.Slice(sorted, func(i, j int) bool {
+		return len(sorted[i].k) > len(sorted[j].k)
+	})
+
+	for _, m := range sorted {
+		scoped = strings.ReplaceAll(scoped, m.k, m.v)
+	}
+
+	return scoped
 }
 
 func (c *GospaCompiler) generateHash(name string) string {
@@ -103,25 +141,43 @@ func (c *GospaCompiler) transformDSL(script string) string {
 	return s
 }
 
-func (c *GospaCompiler) generateTempl(name, template, script, hash string) string {
-	// Extract simple variables to make them available in templ scope for SSR
-	// This is a basic approach: just dump the script into the templ function body
-	// before the return/rendering.
-	return fmt.Sprintf(`package islands
-
-import "github.com/aydenstechdungeon/gospa/component"
-
-type %sProps struct {}
-
-templ %s(props %sProps) {
-	@{
-		%s
+func (c *GospaCompiler) generateTempl(name, islandID, template, script, hash, pkgName string) string {
+	if pkgName == "" {
+		pkgName = "islands"
 	}
+
+	// Extract imports from script
+	importRegex := regexp.MustCompile(`(?m)^import\s+(?:"[^"]+"|\(.*\))`)
+	imports := importRegex.FindAllString(script, -1)
+	cleanScript := importRegex.ReplaceAllString(script, "")
+
+	extraImports := strings.Join(imports, "\n")
+
+	// Inject script if non-empty
+	scriptInjection := ""
+	if strings.TrimSpace(cleanScript) != "" {
+		scriptInjection = "\n\t" + strings.ReplaceAll(strings.TrimSpace(cleanScript), "\n", "\n\t") + "\n"
+	}
+
+	// Pages should have a simple Page() signature for the route generator
+	// Layouts might need children, handled separately if we want to support nested .gospa layouts
+	signature := "Page()"
+	if strings.ToLower(name) == "layout" {
+		signature = "Layout(children templ.Component)"
+	}
+
+	// Extract simple variables to make them available in templ scope for SSR
+	return fmt.Sprintf(`package %s
+
+%s
+
+templ %s {
+	%s
 	<div data-gospa-island="%s" class="%s">
 		%s
 	</div>
 }
-`, name, name, name, script, name, hash, template)
+`, pkgName, extraImports, signature, scriptInjection, islandID, hash, template)
 }
 
 func (c *GospaCompiler) generateTS(name, script string, fromGo bool, _ string, hash string) string {

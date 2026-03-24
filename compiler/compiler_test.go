@@ -62,7 +62,7 @@ func TestCompileCounter(t *testing.T) {
   <button on:click={increment}>{count}</button>
 </template>
 `
-	templ, ts, err := c.Compile("Counter", input)
+	templ, ts, err := c.Compile("Counter", "Counter", input, "islands")
 	if err != nil {
 		t.Fatalf("Failed to compile: %v", err)
 	}
@@ -89,7 +89,7 @@ func TestCompileCounter(t *testing.T) {
 func TestSanitizeName(t *testing.T) {
 	c := NewCompiler()
 	rawName := "Counter'); alert(1); //"
-	_, ts, err := c.Compile(rawName, "<template><div>Test</div></template>")
+	_, ts, err := c.Compile(rawName, rawName, "<template><div>Test</div></template>", "islands")
 	if err != nil {
 		t.Fatalf("Failed to compile: %v", err)
 	}
@@ -105,7 +105,7 @@ func TestSanitizeName(t *testing.T) {
 
 func TestCompileWithEmptySanitizedName(t *testing.T) {
 	c := NewCompiler()
-	templ, ts, err := c.Compile("!!!", "<template><div>Test</div></template>")
+	templ, ts, err := c.Compile("!!!", "!!!", "<template><div>Test</div></template>", "islands")
 	if err != nil {
 		t.Fatalf("Failed to compile with empty sanitized name: %v", err)
 	}
@@ -164,7 +164,7 @@ func TestCompileUsesTSScriptWhenProvided(t *testing.T) {
 </script>
 <template><div>{count}</div></template>
 `
-	_, ts, err := c.Compile("DualScript", input)
+	_, ts, err := c.Compile("DualScript", "DualScript", input, "islands")
 	if err != nil {
 		t.Fatalf("Failed to compile dual-script component: %v", err)
 	}

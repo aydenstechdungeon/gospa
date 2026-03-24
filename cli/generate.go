@@ -7,11 +7,18 @@ import (
 	"go/parser"
 	"go/token"
 	"os"
+	"os/exec"
 	"path/filepath"
+	"regexp"
 	"strings"
 
+	"github.com/aydenstechdungeon/gospa/compiler"
 	"github.com/aydenstechdungeon/gospa/plugin"
 	routing_generator "github.com/aydenstechdungeon/gospa/routing/generator"
+)
+ 
+var (
+	rePkgName = regexp.MustCompile(`[^a-zA-Z0-9]+`)
 )
 
 // Generate generates TypeScript types and routes from Go templates.
@@ -27,6 +34,20 @@ func Generate(config *GenerateConfig) {
 			InputDir:  ".",
 			OutputDir: "./generated",
 		}
+	}
+
+	// Compile .gospa files first
+	if err := compileSFCs(config); err != nil {
+		fmt.Fprintf(os.Stderr, "Error compiling SFCs: %v\n", err)
+	}
+
+	// Run templ generate to ensure .go files are created/updated before route generation
+	fmt.Println("Running templ generate...")
+	// #nosec G204
+	templCmd := exec.Command("templ", "generate")
+	templCmd.Dir = config.InputDir
+	if out, err := templCmd.CombinedOutput(); err != nil {
+		fmt.Fprintf(os.Stderr, "Warning: templ generate failed: %v\n%s\n", err, string(out))
 	}
 
 	// Generate Go route registry (e.g., generated_routes.go)
@@ -143,6 +164,87 @@ func generateRoutesWithConfig(config *GenerateConfig) error {
 		return err
 	}
 
+	return nil
+}
+
+func compileSFCs(config *GenerateConfig) error {
+	sourceFiles, err := findSourceFiles(config.InputDir)
+	if err != nil {
+		return err
+	}
+
+	c := compiler.NewCompiler()
+	for _, file := range sourceFiles {
+		if !strings.HasSuffix(file, ".gospa") {
+			continue
+		}
+
+		content, err := os.ReadFile(filepath.Clean(file))
+		if err != nil {
+			return err
+		}
+
+		// Determine relative path for unique naming
+		relPath, _ := filepath.Rel(config.InputDir, file)
+		
+		// 1. Generate unique island name (e.g., routes_blog_id_page)
+		uniqueName := strings.TrimSuffix(relPath, ".gospa")
+		uniqueName = strings.ReplaceAll(uniqueName, string(filepath.Separator), "_")
+		uniqueName = strings.ReplaceAll(uniqueName, "[", "")
+		uniqueName = strings.ReplaceAll(uniqueName, "]", "")
+		uniqueName = strings.ReplaceAll(uniqueName, ".", "")
+		uniqueName = rePkgName.ReplaceAllString(uniqueName, "")
+
+		// 2. Determine robust package name (matching routing_generator)
+		dir := filepath.Dir(file)
+		relDir, _ := filepath.Rel(config.InputDir, dir)
+		pkgName := "islands"
+		if relDir != "." {
+			parts := strings.Split(relDir, string(filepath.Separator))
+			pkgParts := []string{}
+			for _, part := range parts {
+				// Skip route groups (name)
+				if strings.HasPrefix(part, "(") && strings.HasSuffix(part, ")") {
+					continue
+				}
+				p := strings.TrimPrefix(part, "_")
+				p = strings.ReplaceAll(p, "[", "")
+				p = strings.ReplaceAll(p, "]", "")
+				pkgParts = append(pkgParts, p)
+			}
+			pkgName = strings.Join(pkgParts, "")
+			pkgName = rePkgName.ReplaceAllString(pkgName, "")
+		}
+
+		// 3. Determine Go component name (Standardize Page/Layout)
+		baseName := filepath.Base(file)
+		goName := strings.TrimSuffix(baseName, ".gospa")
+		switch baseName {
+		case "page.gospa":
+			goName = "Page"
+		case "layout.gospa":
+			goName = "Layout"
+		}
+
+		templ, ts, err := c.Compile(goName, uniqueName, string(content), pkgName)
+		if err != nil {
+			return fmt.Errorf("failed to compile %s: %w", file, err)
+		}
+
+		// Write .templ file in the same directory
+		templPath := strings.TrimSuffix(file, ".gospa") + ".templ"
+		// #nosec G703
+		if err := os.WriteFile(filepath.Clean(templPath), []byte(templ), 0600); err != nil {
+			return err
+		}
+
+		// Write .ts file in the output directory (using unique name to avoid collisions)
+		tsPath := filepath.Join(config.OutputDir, uniqueName+".ts")
+		// #nosec G703
+		if err := os.WriteFile(filepath.Clean(tsPath), []byte(ts), 0600); err != nil {
+			return err
+		}
+	}
 	return nil
 }
 

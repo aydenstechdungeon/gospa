@@ -1,0 +1,117 @@
+<script lang="go">
+import "github.com/aydenstechdungeon/gospa/website/components"
+</script>
+
+<template>
+	<div class="space-y-12">
+		<header>
+			<h1 class="text-4xl font-bold tracking-tight mb-4 text-transparent bg-clip-text bg-gradient-to-r from-[var(--accent-primary)] to-[var(--accent-secondary)]">Gospa SFC (Single File Components)</h1>
+			<p class="text-xl text-[var(--text-secondary)] leading-relaxed">
+				Modern, single-file component architecture for Go. Combine server-side logic, reactive templates, and scoped styles in a single .gospa file.
+			</p>
+		</header>
+
+		<section class="space-y-8">
+			<div>
+				<h2 class="text-2xl font-bold mb-4 border-b border-[var(--border)] pb-2 italic mono">Overview</h2>
+				<p class="text-[var(--text-secondary)] mb-4">
+					The <code class="bg-[var(--surface)] px-1 rounded">.gospa</code> format enables a seamless developer experience by bringing server and client code together.
+				</p>
+				<div class="grid md:grid-cols-3 gap-4 mb-6">
+					<div class="p-4 rounded-xl bg-[var(--bg-secondary)] border border-[var(--border)]">
+						<h3 class="font-bold border-b border-[var(--border)] pb-1 mb-2">Unified Reactive DSL</h3>
+						<p class="text-sm text-[var(--text-secondary)]">Use $state, $derived, and $effect in both Go and TypeScript.</p>
+					</div>
+					<div class="p-4 rounded-xl bg-[var(--bg-secondary)] border border-[var(--border)]">
+						<h3 class="font-bold border-b border-[var(--border)] pb-1 mb-2">Scoped CSS</h3>
+						<p class="text-sm text-[var(--text-secondary)]">Styles are automatically scoped to the component using unique hashes.</p>
+					</div>
+					<div class="p-4 rounded-xl bg-[var(--bg-secondary)] border border-[var(--border)]">
+						<h3 class="font-bold border-b border-[var(--border)] pb-1 mb-2">Templ Compilation</h3>
+						<p class="text-sm text-[var(--text-secondary)]">Compiles directly to .templ files for high-performance server rendering.</p>
+					</div>
+				</div>
+			</div>
+
+			<div>
+				<h2 class="text-2xl font-bold mb-4 border-b border-[var(--border)] pb-2 italic mono">Anatomy of a .gospa File</h2>
+				@components.CodeBlock(`<script lang="go">
+  var count = $state(0)
+  var doubled = $derived(count * 2)
+  
+  $effect(func() {
+    fmt.Printf("Count: %d\n", count)
+  })
+
+  func increment() {
+    count++
+  }
+  </script>
+
+  <template>
+  <button on:click={increment} class="btn">
+    {count} (x2 = {doubled})
+  </button>
+  </template>
+
+  <style>
+  .btn { font-weight: bold; padding: 1rem; }
+  </style>`, "svelte", "Counter.gospa")
+			</div>
+
+			<div>
+				<h2 class="text-2xl font-bold mb-4 border-b border-[var(--border)] pb-2 italic mono">Reactive Primitives</h2>
+				<div class="overflow-x-auto mb-6">
+					<table class="w-full text-sm text-left text-[var(--text-secondary)]">
+						<thead class="text-xs uppercase bg-[var(--surface)] text-[var(--text-primary)]">
+							<tr>
+								<th class="px-4 py-2">Primitive</th>
+								<th class="px-4 py-2">Purpose</th>
+								<th class="px-4 py-2">Client Context</th>
+							</tr>
+						</thead>
+						<tbody>
+							<tr class="border-b border-[var(--border)]"><td class="px-4 py-2 font-mono">$state(v)</td><td class="px-4 py-2">Declares a reactive state variable.</td><td class="px-4 py-2">Mutable proxy.</td></tr>
+							<tr class="border-b border-[var(--border)]"><td class="px-4 py-2 font-mono">$derived(expr)</td><td class="px-4 py-2">Computes a value from other states.</td><td class="px-4 py-2">Auto-updating.</td></tr>
+							<tr class="border-b border-[var(--border)]"><td class="px-4 py-2 font-mono">$effect(fn)</td><td class="px-4 py-2">Runs side effects on state change.</td><td class="px-4 py-2">Client-side only.</td></tr>
+						</tbody>
+					</table>
+				</div>
+			</div>
+
+			<div>
+				<h2 class="text-2xl font-bold mb-4 border-b border-[var(--border)] pb-2 italic mono">Compiler Pipeline</h2>
+				<p class="text-[var(--text-secondary)] mb-4">The compiler transforms the SFC into two distinct modules:</p>
+				<div class="space-y-4">
+					<div class="p-6 rounded-xl bg-[var(--bg-secondary)] border border-[var(--border)]">
+						<h3 class="font-bold text-[var(--accent-primary)] mb-2">1. Server Module (.templ)</h3>
+						<p class="text-[var(--text-secondary)] text-sm">
+							Extracts the template and applies unique scoping classes. Replaces reactive primitives with Go variable initializations for SSR.
+						</p>
+					</div>
+					<div class="p-6 rounded-xl bg-[var(--bg-secondary)] border border-[var(--border)]">
+						<h3 class="font-bold text-[var(--accent-secondary)] mb-2">2. Client Module (.ts)</h3>
+						<p class="text-[var(--text-secondary)] text-sm">
+							Transpiles the script block into an interactive island module. Automatically handles event binding and hydration.
+						</p>
+					</div>
+				</div>
+			</div>
+
+			<div>
+				<h2 class="text-2xl font-bold mb-4 border-b border-[var(--border)] pb-2 italic mono">File-Based Routing</h2>
+				<p class="text-[var(--text-secondary)] mb-4">
+					<code class="bg-[var(--surface)] px-1 rounded">.gospa</code> files are fully integrated into the file-based router. You can use them for pages, layouts, and error boundaries.
+				</p>
+				<div class="p-6 rounded-xl bg-[var(--bg-secondary)] border border-[var(--border)]">
+					<ul class="space-y-2 text-sm text-[var(--text-secondary)]">
+						<li class="flex items-center gap-2"><div class="w-1.5 h-1.5 rounded-full bg-[var(--accent-primary)]"></div> <code class="text-[var(--text-primary)]">page.gospa</code> &mdash; The primary route entry point.</li>
+						<li class="flex items-center gap-2"><div class="w-1.5 h-1.5 rounded-full bg-[var(--accent-primary)]"></div> <code class="text-[var(--text-primary)]">layout.gospa</code> &mdash; A nested layout for the directory segment.</li>
+						<li class="flex items-center gap-2"><div class="w-1.5 h-1.5 rounded-full bg-[var(--accent-primary)]"></div> <code class="text-[var(--text-primary)]">error.gospa</code> &mdash; Error boundary for the segment.</li>
+						<li class="flex items-center gap-2"><div class="w-1.5 h-1.5 rounded-full bg-[var(--accent-primary)]"></div> <code class="text-[var(--text-primary)]">loading.gospa</code> &mdash; Static shell for PPR.</li>
+					</ul>
+				</div>
+			</div>
+		</section>
+	</div>
+</template>
