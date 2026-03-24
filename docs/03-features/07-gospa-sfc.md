@@ -32,6 +32,21 @@ The script block primarily contains Go code that defines the component's state a
 
 These primitives work seamlessly across multiple islands without requiring WebSocket connections for local UI state.
 
+### Script Language Architecture (Go + TS/JS)
+
+GoSPA supports two script roles in one `.gospa` file:
+
+1. **`<script lang="go">` (optional, max 1)**  
+   - Used for SSR/Templ-side logic.
+   - Also used as the source for automatic TS generation **when no explicit TS/JS script is provided**.
+
+2. **`<script lang="ts">` / `<script lang="js">` (optional, max 1 total)**  
+   - Used directly as the client hydration script.
+   - When this block exists, the compiler does **not** run Go-to-TS DSL rewriting on that block.
+
+So yes—you can have both a Go script and a TS/JS script in the same component.  
+What is disallowed is **duplicates of the same role** (e.g., two Go scripts), to keep parsing deterministic and avoid shadowed logic.
+
 ### `<template>` Block
 
 The template block uses a syntax similar to Svelte and Templ.

@@ -2,6 +2,7 @@
 package compiler
 
 import (
+	"crypto/sha256"
 	"encoding/json"
 	"fmt"
 	"regexp"
@@ -37,7 +38,13 @@ func (c *GospaCompiler) Compile(rawName, input string) (templ, ts string, err er
 	templ = c.generateTempl(name, scopedTemplate, processedScript, hash)
 
 	// 4. Generate TypeScript Island
-	ts = c.generateTS(name, parsed.Script.Content, parsed.Template.Content, hash)
+	tsScript := parsed.Script.Content
+	tsFromGo := true
+	if parsed.ScriptTS.Content != "" {
+		tsScript = parsed.ScriptTS.Content
+		tsFromGo = false
+	}
+	ts = c.generateTS(name, tsScript, tsFromGo, parsed.Template.Content, hash)
 
 	// 5. Generate Scoped CSS
 	ts += c.generateScopedCSS(parsed.Style.Content, hash)
@@ -60,7 +67,12 @@ func (c *GospaCompiler) scopeTemplate(template, hash string) string {
 }
 
 func (c *GospaCompiler) generateHash(name string) string {
-	return fmt.Sprintf("gospa-%x", strings.ToLower(name))[:10]
+	normalized := strings.ToLower(strings.TrimSpace(name))
+	if normalized == "" {
+		normalized = "component"
+	}
+	sum := sha256.Sum256([]byte(normalized))
+	return fmt.Sprintf("gospa-%x", sum[:2])
 }
 
 var (
@@ -74,7 +86,11 @@ var (
 )
 
 func (c *GospaCompiler) sanitizeName(name string) string {
-	return nameSafeRegex.ReplaceAllString(name, "")
+	safe := nameSafeRegex.ReplaceAllString(name, "")
+	if safe == "" {
+		return "Component"
+	}
+	return safe
 }
 
 func (c *GospaCompiler) transformDSL(script string) string {
@@ -83,7 +99,6 @@ func (c *GospaCompiler) transformDSL(script string) string {
 	// For Go (SSR), $derived(expr) -> expr
 	s = derivedRegex.ReplaceAllString(s, "$1")
 	// For Go (SSR), $effect(...) -> empty (effects only run on client)
-	effectRegex := regexp.MustCompile(`(?s)\$effect\(func\(\)\s*\{(.*?)\}\)`)
 	s = effectRegex.ReplaceAllString(s, "")
 	return s
 }
@@ -109,16 +124,18 @@ templ %s(props %sProps) {
 `, name, name, name, script, name, hash, template)
 }
 
-func (c *GospaCompiler) generateTS(name, script, _, hash string) string {
+func (c *GospaCompiler) generateTS(name, script string, fromGo bool, _ string, hash string) string {
 	tsScript := script
-	tsScript = stateRegex.ReplaceAllString(tsScript, "state.$$state($1)")
-	tsScript = derivedRegex.ReplaceAllString(tsScript, "state.$$derived(() => $1)")
-	tsScript = effectRegex.ReplaceAllString(tsScript, "state.$$effect(() => {$1})")
+	if fromGo {
+		tsScript = stateRegex.ReplaceAllString(tsScript, "state.$$state($1)")
+		tsScript = derivedRegex.ReplaceAllString(tsScript, "state.$$derived(() => $1)")
+		tsScript = effectRegex.ReplaceAllString(tsScript, "state.$$effect(() => {$1})")
 
-	// Slightly safer replacement for JS (avoids strings in simple cases)
-	tsScript = strings.ReplaceAll(tsScript, "func() {", "() => {")
-	tsScript = strings.ReplaceAll(tsScript, "fmt.Printf", "console.log")
-	tsScript = strings.ReplaceAll(tsScript, "var ", "const ")
+		// Slightly safer replacement for JS (avoids strings in simple cases)
+		tsScript = strings.ReplaceAll(tsScript, "func() {", "() => {")
+		tsScript = strings.ReplaceAll(tsScript, "fmt.Printf", "console.log")
+		tsScript = strings.ReplaceAll(tsScript, "var ", "const ")
+	}
 
 	return fmt.Sprintf(`import { createIsland } from '@gospa/runtime';
 
