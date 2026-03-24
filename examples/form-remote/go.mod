@@ -2,12 +2,10 @@ module github.com/aydenstechdungeon/gospa/examples/form-remote
 
 go 1.25.0
 
-require (
-	github.com/a-h/templ v0.3.1001
-	github.com/aydenstechdungeon/gospa v0.0.0
-)
+require github.com/aydenstechdungeon/gospa v0.0.0
 
 require (
+	github.com/a-h/templ v0.3.1001 // indirect
 	github.com/andybalholm/brotli v1.2.0 // indirect
 	github.com/fasthttp/websocket v1.5.12 // indirect
 	github.com/fsnotify/fsnotify v1.9.0 // indirect

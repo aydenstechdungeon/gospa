@@ -1,3 +1,4 @@
+// Package main provides a prefork counter test example using GoSPA.
 package main
 
 import (

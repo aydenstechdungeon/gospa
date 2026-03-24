@@ -1,3 +1,4 @@
+// Package routes defines remote actions for the guestbook example.
 package routes
 
 import (
@@ -18,7 +19,7 @@ type MessageInput struct {
 
 func init() {
 	// Register remote action for submitting messages
-	routing.RegisterRemoteAction("submitMessage", func(ctx context.Context, rc routing.RemoteContext, input any) (any, error) {
+	routing.RegisterRemoteAction("submitMessage", func(_ context.Context, _ routing.RemoteContext, input any) (any, error) {
 		data, ok := input.(map[string]any)
 		if !ok {
 			return nil, fmt.Errorf("invalid input")
@@ -34,7 +35,7 @@ func init() {
 		msg := GetStore().AddMessage(name, content)
 
 		// Broadcast to all connected clients via WebSocket
-		gospa.Broadcast(map[string]any{
+		_ = gospa.Broadcast(map[string]any{
 			"type":    "new_message",
 			"message": msg,
 		})
@@ -43,7 +44,7 @@ func init() {
 	})
 
 	// Register remote action for getting messages with pagination
-	routing.RegisterRemoteAction("getMessages", func(ctx context.Context, rc routing.RemoteContext, input any) (any, error) {
+	routing.RegisterRemoteAction("getMessages", func(_ context.Context, _ routing.RemoteContext, input any) (any, error) {
 		page := 1
 		if data, ok := input.(map[string]any); ok {
 			if p, ok := data["page"].(float64); ok {

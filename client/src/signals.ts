@@ -2,7 +2,15 @@
 // Proxy-based auto-tracking for ergonomic state management
 // Inspired by Svelte 5's $state and Solid's createSignal
 
-import { Rune, Derived, Effect, batch, type Unsubscribe, untrack, getCurrentEffect } from "./state.ts";
+import {
+  Rune,
+  Derived,
+  Effect,
+  batch,
+  type Unsubscribe,
+  untrack,
+  getCurrentEffect,
+} from "./state.ts";
 
 // Symbol to identify reactive proxies
 const REACTIVE_SYMBOL = Symbol("gospa-reactive");
@@ -141,12 +149,12 @@ export function reactive<T extends object>(initial: T): T {
 /**
  * $state - Create reactive local state.
  * Works with both objects (deeply reactive) and primitives (boxed).
- * 
+ *
  * @example
  * ```typescript
  * const count = $state(0);
  * count.value++; // Access value via .value
- * 
+ *
  * const user = $state({ name: "Alice" });
  * user.name = "Bob"; // Direct property access
  * ```
@@ -239,7 +247,7 @@ export function watchProp<T extends object, K extends keyof T>(
 
   // Create a derived that tracks the specific property
   const derivedProp = new Derived(() => (obj as T)[prop]);
-  
+
   // Subscribe to changes
   return derivedProp.subscribe((newVal, oldVal) => {
     callback(newVal as T[K], oldVal as T[K] | undefined as any);

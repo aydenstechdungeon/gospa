@@ -1,3 +1,4 @@
+// Package main provides a prefork example using GoSPA.
 package main
 
 import (

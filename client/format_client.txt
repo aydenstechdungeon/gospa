@@ -1,0 +1,46 @@
+$ prettier --write .
+dist/navigation-2prja3jz.js 113ms
+dist/purify.es-hv5njgc4.js 77ms
+dist/runtime-112zp32e.js 3ms
+dist/runtime-core.js 58ms
+dist/runtime-micro.js 4ms
+dist/runtime-mqmwtnaw.js 33ms
+dist/runtime-secure.js 12ms
+dist/runtime-simple.js 9ms
+dist/runtime.js 48ms
+dist/transition-ec2hvxv0.js 13ms
+dist/websocket-zg9qqed2.js 48ms
+package.json 2ms (unchanged)
+src/a11y.ts 61ms (unchanged)
+src/debug.ts 26ms
+src/dom.ts 41ms
+src/error_overlay.ts 23ms (unchanged)
+src/error-boundary.ts 17ms (unchanged)
+src/events.ts 19ms (unchanged)
+src/hmr.ts 42ms (unchanged)
+src/indexeddb.ts 22ms (unchanged)
+src/island.ts 25ms (unchanged)
+src/navigation.ts 72ms
+src/performance.ts 20ms (unchanged)
+src/priority.ts 24ms (unchanged)
+src/remote.test.ts 19ms (unchanged)
+src/remote.ts 11ms (unchanged)
+src/runtime-core.ts 28ms
+src/runtime-micro.ts 6ms (unchanged)
+src/runtime-secure.ts 2ms (unchanged)
+src/runtime-simple.ts 5ms (unchanged)
+src/runtime.ts 6ms
+src/sanitize-simple.ts 11ms (unchanged)
+src/sanitize.ts 12ms (unchanged)
+src/signals.ts 9ms
+src/sse.test.ts 2ms (unchanged)
+src/sse.ts 20ms (unchanged)
+src/state-min.ts 15ms (unchanged)
+src/state.test.ts 24ms (unchanged)
+src/state.ts 52ms
+src/store.ts 4ms
+src/streaming.ts 16ms (unchanged)
+src/transition.ts 22ms (unchanged)
+src/websocket.ts 34ms
+src/ws-tab-sync.ts 14ms (unchanged)
+tsconfig.json 1ms (unchanged)

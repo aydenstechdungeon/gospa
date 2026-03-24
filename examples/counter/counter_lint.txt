@@ -1,0 +1,5 @@
+examples/counter/main.go:1:1: package-comments: should have a package comment (revive)
+package main
+^
+1 issues:
+* revive: 1

@@ -27,7 +27,7 @@ export class SharedStore {
 
     const store = $state(initialValue);
     this.stores.set(name, store);
-    
+
     // DevTools integration
     this.updateDevTools();
 
@@ -69,7 +69,7 @@ export class SharedStore {
         Object.defineProperty(window, "__GOSPA_STORES__", {
           get: () => Object.fromEntries(this.stores),
           configurable: true,
-          enumerable: true
+          enumerable: true,
         });
         (window as any).__GOSPA_STORES_TRACKER__ = true;
       }

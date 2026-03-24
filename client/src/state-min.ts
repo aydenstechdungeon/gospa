@@ -9,7 +9,7 @@ export type ComputeFn<T> = () => T;
 let _id = 0;
 let _eid = 0;
 let _batch = 0;
-let _pending: Set<Notifier> = new Set();
+const _pending: Set<Notifier> = new Set();
 
 interface Notifier {
   notify(): void;

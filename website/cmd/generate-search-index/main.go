@@ -1,3 +1,4 @@
+// Package main provides a tool to generate the documentation search index.
 package main
 
 import (
@@ -48,7 +49,8 @@ func generateSearchIndex() error {
 			return nil
 		}
 
-		content, err := os.ReadFile(path)
+		path = filepath.Clean(path)
+		content, err := os.ReadFile(path) // #nosec G122 - Build script, symlink TOCTOU not a risk for this project structure.
 		if err != nil {
 			return fmt.Errorf("reading %s: %w", path, err)
 		}
@@ -73,7 +75,7 @@ func generateSearchIndex() error {
 
 	// Write to file
 	outputPath := "static/docs_search_index.json"
-	if err := os.WriteFile(outputPath, jsonData, 0644); err != nil {
+	if err := os.WriteFile(outputPath, jsonData, 0600); err != nil {
 		return fmt.Errorf("writing %s: %w", outputPath, err)
 	}
 

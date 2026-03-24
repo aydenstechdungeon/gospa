@@ -1,3 +1,4 @@
+// Package main provides a simple counter example using GoSPA.
 package main
 
 import (

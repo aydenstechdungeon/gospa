@@ -448,7 +448,7 @@ export class WSClient {
           this.pendingRequests.delete(id);
           if (message.type === "error") {
             const rawError = message.error || "Unknown error";
-            // Use native Error object which stores message as plain text. 
+            // Use native Error object which stores message as plain text.
             // The danger only exists if the UI developer does el.innerHTML = err.message.
             pending.reject(new Error(rawError));
           } else {

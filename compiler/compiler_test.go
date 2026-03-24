@@ -98,10 +98,7 @@ func TestSanitizeName(t *testing.T) {
 		t.Errorf("Sanitization failed: TS still contains alert(1)")
 	}
 
-	if strings.Contains(ts, "name: 'Counteralert1'") {
-		// nameSafeRegex: [^a-zA-Z0-9]
-		// 'Counter' + '); alert(1); //' -> 'Counteralert1'
-	} else if !strings.Contains(ts, "name: 'Counter") {
-		t.Errorf("Unexpected sanitized name in TS: %v", ts)
+	if !strings.Contains(ts, "name: 'Counteralert1'") {
+		t.Errorf("Sanitized name 'Counteralert1' not found in TS: %v", ts)
 	}
 }

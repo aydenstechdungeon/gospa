@@ -191,7 +191,11 @@ export {
 } from "./signals.ts";
 
 // RAF-batched DOM updates
-export { cancelPendingDOMUpdates, flushDOMUpdatesNow, setSanitizer } from "./dom.ts";
+export {
+  cancelPendingDOMUpdates,
+  flushDOMUpdatesNow,
+  setSanitizer,
+} from "./dom.ts";
 
 // Error boundaries
 export {

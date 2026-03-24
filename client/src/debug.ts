@@ -260,9 +260,11 @@ export function updateDevToolsPanel(): void {
       const stores = (window as any).__GOSPA_STORES__;
       if (stores) {
         html += '<div class="gospa-devtools-section">';
-        html += '<div class="gospa-devtools-section-title">Reactive Stores</div>';
+        html +=
+          '<div class="gospa-devtools-section-title">Reactive Stores</div>';
         for (const [name, store] of Object.entries(stores)) {
-          const valueStr = typeof store === "object" ? JSON.stringify(store) : String(store);
+          const valueStr =
+            typeof store === "object" ? JSON.stringify(store) : String(store);
           html += `<div class="gospa-devtools-item">
             <span class="gospa-devtools-key">${name}:</span>
             <span class="gospa-devtools-value">${valueStr}</span>

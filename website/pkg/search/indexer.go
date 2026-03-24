@@ -1,3 +1,4 @@
+// Package search provides utilities for indexing documentation pages for searching.
 package search
 
 import (
@@ -10,6 +11,7 @@ import (
 	json "github.com/goccy/go-json"
 )
 
+// DocPage represents a single searchable document page.
 type DocPage struct {
 	Title       string    `json:"title"`
 	Description string    `json:"description"`
@@ -18,6 +20,7 @@ type DocPage struct {
 	Sections    []Section `json:"sections"`
 }
 
+// Section represents a section within a documentation page.
 type Section struct {
 	ID    string `json:"id"`
 	Title string `json:"title"`
@@ -30,6 +33,7 @@ var (
 	headingRegex     = regexp.MustCompile(`<h[23][^>]*id="(.*?)"[^>]*>(.*?)</h[23]>`)
 )
 
+// GenerateIndex walks the routes directory and generates a search index JSON file.
 func GenerateIndex(routesDir string, outputDir string) error {
 	var index []DocPage
 
@@ -42,7 +46,8 @@ func GenerateIndex(routesDir string, outputDir string) error {
 			return nil
 		}
 
-		content, err := os.ReadFile(path)
+		path = filepath.Clean(path)
+		content, err := os.ReadFile(path) // #nosec G122 - Internal tool, symlink TOCTOU avoided by project structure.
 		if err != nil {
 			return err
 		}
@@ -110,7 +115,7 @@ func GenerateIndex(routesDir string, outputDir string) error {
 		return err
 	}
 
-	return os.WriteFile(filepath.Join(outputDir, "docs_search_index.json"), data, 0644)
+	return os.WriteFile(filepath.Join(outputDir, "docs_search_index.json"), data, 0600)
 }
 
 func stripTags(s string) string {

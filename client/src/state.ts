@@ -9,7 +9,7 @@ export type CleanupFn = () => void;
 let runeId = 0;
 let effectId = 0;
 let batchDepth = 0;
-let pendingNotifications: Set<Notifier> = new Set();
+const pendingNotifications: Set<Notifier> = new Set();
 let autoBatchScheduled = false;
 
 interface Notifier {
@@ -163,7 +163,7 @@ function fastDeepEqual(a: unknown, b: unknown): boolean {
   if (Array.isArray(a) && Array.isArray(b)) {
     if (a.length !== b.length) return false;
     for (let i = 0; i < a.length; i++) {
-        if (!fastDeepEqual(a[i], b[i])) return false;
+      if (!fastDeepEqual(a[i], b[i])) return false;
     }
     return true;
   }

@@ -64,13 +64,13 @@ func (c *GospaCompiler) generateHash(name string) string {
 }
 
 var (
-	stateRegex      = regexp.MustCompile(`\$state\((.*?)\)`)
-	derivedRegex    = regexp.MustCompile(`\$derived\((.*?)\)`)
-	effectRegex     = regexp.MustCompile(`(?s)\$effect\(func\(\)\s*\{(.*?)\}\)`)
-	tagRegex        = regexp.MustCompile(`(?i)<([a-z0-9]+)([^>]*)>`)
-	classAttrRegex  = regexp.MustCompile(`(?i)class="([^"]*)"`)
-	cssDotRegex     = regexp.MustCompile(`\.([a-zA-Z][a-zA-Z0-9-_]*)`)
-	nameSafeRegex   = regexp.MustCompile(`[^a-zA-Z0-9]`)
+	stateRegex     = regexp.MustCompile(`\$state\((.*?)\)`)
+	derivedRegex   = regexp.MustCompile(`\$derived\((.*?)\)`)
+	effectRegex    = regexp.MustCompile(`(?s)\$effect\(func\(\)\s*\{(.*?)\}\)`)
+	tagRegex       = regexp.MustCompile(`(?i)<([a-z0-9]+)([^>]*)>`)
+	classAttrRegex = regexp.MustCompile(`(?i)class="([^"]*)"`)
+	cssDotRegex    = regexp.MustCompile(`\.([a-zA-Z][a-zA-Z0-9-_]*)`)
+	nameSafeRegex  = regexp.MustCompile(`[^a-zA-Z0-9]`)
 )
 
 func (c *GospaCompiler) sanitizeName(name string) string {
@@ -140,7 +140,7 @@ func (c *GospaCompiler) generateScopedCSS(style, hash string) string {
 	}
 	// Scoping: Append hash as a class selector (e.g., .card -> .card.gospa-hash)
 	scopedStyle := cssDotRegex.ReplaceAllString(style, ".$1."+hash)
-	
+
 	encodedStyle, _ := json.Marshal(scopedStyle)
 	return fmt.Sprintf("\n\n/* Scoped CSS */\nconst style = document.createElement('style');\nstyle.textContent = %s;\ndocument.head.appendChild(style);\n", string(encodedStyle))
 }

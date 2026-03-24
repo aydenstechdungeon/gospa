@@ -1,0 +1,18 @@
+examples/form-remote/routes/actions.go:37:18: Error return value of `gospa.Broadcast` is not checked (errcheck)
+		gospa.Broadcast(map[string]any{
+		               ^
+examples/form-remote/main.go:1:1: package-comments: should have a package comment (revive)
+package main
+^
+examples/form-remote/routes/actions.go:1:1: package-comments: should have a package comment (revive)
+package routes
+^
+examples/form-remote/routes/actions.go:21:53: unused-parameter: parameter 'ctx' seems to be unused, consider removing or renaming it as _ (revive)
+	routing.RegisterRemoteAction("submitMessage", func(ctx context.Context, rc routing.RemoteContext, input any) (any, error) {
+	                                                   ^
+examples/form-remote/routes/actions.go:46:51: unused-parameter: parameter 'ctx' seems to be unused, consider removing or renaming it as _ (revive)
+	routing.RegisterRemoteAction("getMessages", func(ctx context.Context, rc routing.RemoteContext, input any) (any, error) {
+	                                                 ^
+5 issues:
+* errcheck: 1
+* revive: 4

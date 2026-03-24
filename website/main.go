@@ -1,3 +1,4 @@
+// Package main provides the entry point for the GoSPA documentation website.
 package main
 
 import (
@@ -6,6 +7,7 @@ import (
 	"fmt"
 	"log"
 	"os"
+	"path/filepath"
 	"strconv"
 	"strings"
 	"sync"
@@ -168,12 +170,15 @@ func cacheMiddleware(c fiber.Ctx) error {
 		}
 
 		// Fonts and static assets with content hash: 1 year cache, immutable
-		if isFont || hasContentHash(path) {
+		// Set Cache-Control based on file type
+		switch {
+		case isFont || hasContentHash(path):
+			// Fonts and static assets with content hash: 1 year cache, immutable
 			c.Set("Cache-Control", "public, max-age=31536000, immutable")
-		} else if isImage {
+		case isImage:
 			// Image files without hash: 1 week cache with revalidation
 			c.Set("Cache-Control", "public, max-age=604800, stale-while-revalidate=2419200")
-		} else {
+		default:
 			// Other static assets without hash: 1 day cache, revalidate
 			c.Set("Cache-Control", "public, max-age=86400, stale-while-revalidate=604800")
 		}
@@ -259,7 +264,7 @@ func generateETag(path string) string {
 	if info, err := os.Stat(filePath); err == nil && !info.IsDir() {
 		// Stronger weak ETag using size and modtime
 		h := sha256.New()
-		h.Write([]byte(fmt.Sprintf("%d-%d-%s", info.Size(), info.ModTime().Unix(), path)))
+		_, _ = fmt.Fprintf(h, "%d-%d-%s", info.Size(), info.ModTime().Unix(), path)
 		return `W/"` + hex.EncodeToString(h.Sum(nil)[:8]) + `"`
 	}
 	// Fallback to path-based ETag if file not found (unlikely for static middleware)
@@ -280,6 +285,7 @@ func generateFileETag(path string) string {
 	// Try to read file and compute hash
 	filePath := "." + path // Convert URL path to file path
 	if info, err := os.Stat(filePath); err == nil && !info.IsDir() {
+		filePath = filepath.Clean(filePath)
 		if data, err := os.ReadFile(filePath); err == nil {
 			h := sha256.Sum256(data)
 			hash := hex.EncodeToString(h[:8])

@@ -241,53 +241,53 @@ func init() {
 	// Register layouts
 	routing.RegisterLayout("/docs", func(children templ.Component, props map[string]interface{}) templ.Component {
 		return docs.DocsLayout(children, func() string {
-		if v, ok := props["path"].(string); ok {
-			return v
-		}
-		return ""
-	}())
+			if v, ok := props["path"].(string); ok {
+				return v
+			}
+			return ""
+		}())
 	})
 	routing.RegisterRootLayout(func(children templ.Component, props map[string]interface{}) templ.Component {
 		return RootLayout(func() string {
-		if v, ok := props["title"].(string); ok {
-			return v
-		}
-		return ""
-	}(), children, func() string {
-		if v, ok := props["runtimePath"].(string); ok {
-			return v
-		}
-		return ""
-	}(), func() string {
-		if v, ok := props["path"].(string); ok {
-			return v
-		}
-		return ""
-	}(), func() string {
-		if v, ok := props["wsUrl"].(string); ok {
-			return v
-		}
-		return ""
-	}(), func() bool {
-		if v, ok := props["debug"].(bool); ok {
-			return v
-		}
-		return false
-	}(), func() string {
-		if v, ok := props["hydrationMode"].(string); ok {
-			return v
-		}
-		return ""
-	}(), func() int {
-		if v, ok := props["hydrationTimeout"].(int); ok {
-			return v
-		}
-		return 0
-	}(), func() string {
-		if v, ok := props["serializationFormat"].(string); ok {
-			return v
-		}
-		return ""
-	}())
+			if v, ok := props["title"].(string); ok {
+				return v
+			}
+			return ""
+		}(), children, func() string {
+			if v, ok := props["runtimePath"].(string); ok {
+				return v
+			}
+			return ""
+		}(), func() string {
+			if v, ok := props["path"].(string); ok {
+				return v
+			}
+			return ""
+		}(), func() string {
+			if v, ok := props["wsUrl"].(string); ok {
+				return v
+			}
+			return ""
+		}(), func() bool {
+			if v, ok := props["debug"].(bool); ok {
+				return v
+			}
+			return false
+		}(), func() string {
+			if v, ok := props["hydrationMode"].(string); ok {
+				return v
+			}
+			return ""
+		}(), func() int {
+			if v, ok := props["hydrationTimeout"].(int); ok {
+				return v
+			}
+			return 0
+		}(), func() string {
+			if v, ok := props["serializationFormat"].(string); ok {
+				return v
+			}
+			return ""
+		}())
 	})
 }

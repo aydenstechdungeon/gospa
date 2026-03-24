@@ -1,3 +1,4 @@
+// Package main provides a guestbook example using remote actions and WebSockets in GoSPA.
 package main
 
 import (

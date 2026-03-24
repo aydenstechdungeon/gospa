@@ -537,7 +537,7 @@ function patchNode(currentNode: Node, incomingNode: Node): void {
     (currentNode.id && currentNode.id !== incomingNode.id) ||
     (incomingNode.id && currentNode.id !== incomingNode.id) ||
     currentNode.getAttribute("data-gospa-page") !==
-    incomingNode.getAttribute("data-gospa-page")
+      incomingNode.getAttribute("data-gospa-page")
   ) {
     currentNode.parentNode?.replaceChild(
       incomingNode.cloneNode(true),
@@ -940,7 +940,9 @@ async function initDeferredBindings(
   }
 }
 
-async function initNewContent(container: Element = document.body): Promise<void> {
+async function initNewContent(
+  container: Element = document.body,
+): Promise<void> {
   // First, re-execute any scripts found in the new content
   executeScripts(container);
 

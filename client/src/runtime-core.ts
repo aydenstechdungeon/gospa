@@ -374,8 +374,8 @@ export function createComponent(
  * Provides the reactive state object to the setup function.
  */
 export function createIsland(options: {
-  name: string,
-  setup: (el: Element, ctx: { props: any, state: any }) => void
+  name: string;
+  setup: (el: Element, ctx: { props: any; state: any }) => void;
 }) {
   return {
     hydrate(el: Element, props: any, serverState: any) {
@@ -388,7 +388,7 @@ export function createIsland(options: {
 
       // Call the island's setup function
       options.setup(el, { props, state: stateCtx });
-    }
+    },
   };
 }
 

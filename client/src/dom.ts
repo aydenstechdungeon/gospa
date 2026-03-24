@@ -4,9 +4,13 @@ import { Rune, Derived, batch } from "./state.ts";
 // Sanitization is opt-in. For user-generated content, import from 'gospa/runtime-secure'
 // or manually configure with setSanitizer() and a sanitizer like DOMPurify
 let defaultSanitizerUsed = false;
-export let sanitizeHtml: (html: string) => string | Promise<string> = (html) => {
+export let sanitizeHtml: (html: string) => string | Promise<string> = (
+  html,
+) => {
   if (!defaultSanitizerUsed) {
-    console.warn("[GoSPA] Security Warning: Using default pass-through HTML sanitizer for data-bind=\"html:*\". For user-generated content, use 'gospa/runtime-secure' to enable DOMPurify.");
+    console.warn(
+      "[GoSPA] Security Warning: Using default pass-through HTML sanitizer for data-bind=\"html:*\". For user-generated content, use 'gospa/runtime-secure' to enable DOMPurify.",
+    );
     defaultSanitizerUsed = true;
   }
   return html;

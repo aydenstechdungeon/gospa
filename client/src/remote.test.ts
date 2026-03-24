@@ -8,7 +8,7 @@ import {
 } from "./remote";
 
 // Mock global fetch
-declare var global: {
+declare let global: {
   fetch: typeof fetch;
 };
 
