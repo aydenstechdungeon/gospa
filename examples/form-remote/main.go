@@ -15,10 +15,11 @@ func main() {
 	config.DevMode = true
 	config.AppName = "guestbook"
 	config.EnableWebSocket = true
+	config.ContentSecurityPolicy = "default-src 'self'; script-src 'self' 'unsafe-inline' https://unpkg.com unpkg.com; style-src 'self' 'unsafe-inline' https://unpkg.com unpkg.com; img-src 'self' data: https:; connect-src 'self' ws: wss: localhost:*;"
 
 	app := gospa.New(config)
 
-	if err := app.Run(":3000"); err != nil {
+	if err := app.Run(":3001"); err != nil {
 		log.Fatal(err)
 	}
 }

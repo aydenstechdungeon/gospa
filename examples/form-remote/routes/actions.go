@@ -35,10 +35,13 @@ func init() {
 		msg := GetStore().AddMessage(name, content)
 
 		// Broadcast to all connected clients via WebSocket
-		_ = gospa.Broadcast(map[string]any{
+		if err := gospa.Broadcast(map[string]any{
 			"type":    "new_message",
 			"message": msg,
-		})
+		}); err != nil {
+			// In a real app, you might want to log this but continue
+			fmt.Printf("Broadcast error: %v\n", err)
+		}
 
 		return msg, nil
 	})

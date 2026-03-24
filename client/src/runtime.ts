@@ -68,22 +68,7 @@ export type {
 export type { Unsubscribe } from "./state.ts";
 export type { RemoteOptions, RemoteResult } from "./remote.ts";
 
-// Direct imports for full-featured runtime (backward compatibility)
 import {
-  Rune,
-  Derived,
-  Effect,
-  StateMap,
-  batch,
-  effect,
-  watch,
-  type Unsubscribe,
-} from "./state.ts";
-import {
-  bindElement,
-  bindTwoWay,
-  renderIf,
-  renderList,
   registerBinding,
   unregisterBinding,
 } from "./dom.ts";

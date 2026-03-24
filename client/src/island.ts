@@ -495,7 +495,7 @@ export class IslandManager {
     this.observers = [];
 
     // Cancel idle callbacks
-    for (const [id, callbackId] of this.idleCallbacks) {
+    for (const [_id, callbackId] of this.idleCallbacks) {
       if ("cancelIdleCallback" in window) {
         (window as any).cancelIdleCallback(callbackId);
       } else {
@@ -505,8 +505,8 @@ export class IslandManager {
     this.idleCallbacks.clear();
 
     // Remove interaction listeners
-    for (const [id, listener] of this.interactionListeners) {
-      const island = this.islands.get(id);
+    for (const [_id, listener] of this.interactionListeners) {
+      const island = this.islands.get(_id);
       if (island) {
         const events = ["mouseenter", "touchstart", "focusin", "click"];
         for (const event of events) {

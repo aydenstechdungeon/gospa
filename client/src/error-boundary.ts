@@ -1,7 +1,7 @@
 // GoSPA Error Boundary System
 // Provides component-level error handling with fallback rendering
 
-import { Rune } from "./state.ts";
+import type { Rune } from "./state.ts";
 
 /**
  * Error boundary configuration

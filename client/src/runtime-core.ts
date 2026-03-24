@@ -11,6 +11,16 @@ import {
   watch,
   type Unsubscribe,
 } from "./state.ts";
+export {
+  Rune,
+  Derived,
+  Effect,
+  StateMap,
+  batch,
+  effect,
+  watch,
+  type Unsubscribe,
+};
 import {
   bindElement,
   bindTwoWay,
@@ -20,6 +30,15 @@ import {
   unregisterBinding,
   sanitizeHtml,
 } from "./dom.ts";
+export {
+  bindElement,
+  bindTwoWay,
+  renderIf,
+  renderList,
+  registerBinding,
+  unregisterBinding,
+  sanitizeHtml,
+};
 import {
   on,
   offAll,
@@ -30,7 +49,38 @@ import {
   keys,
   transformers,
 } from "./events.ts";
-import type { StateMessage } from "./websocket.ts";
+export {
+  on,
+  offAll,
+  debounce,
+  throttle,
+  delegate,
+  onKey,
+  keys,
+  transformers,
+};
+import {
+  initWebSocket,
+  getWebSocketClient,
+  sendAction,
+  type StateMessage,
+} from "./websocket.ts";
+export {
+  initWebSocket,
+  getWebSocketClient,
+  sendAction,
+  type StateMessage,
+};
+import {
+  navigate,
+  back,
+  prefetch,
+} from "./navigation.ts";
+export {
+  navigate,
+  back,
+  prefetch,
+};
 import {
   remote,
   remoteAction,
@@ -39,57 +89,61 @@ import {
   type RemoteOptions,
   type RemoteResult,
 } from "./remote.ts";
+export {
+  remote,
+  remoteAction,
+  configureRemote,
+  getRemotePrefix,
+  type RemoteOptions,
+  type RemoteResult,
+};
 import { $state, $derived, $effect } from "./signals.ts";
 import { createStore, getStore } from "./store.ts";
 
-// Re-export StateMessage for convenience
-export type { StateMessage };
+// Re-export types
 
-// Re-export remote action types
-export type { RemoteOptions, RemoteResult };
-
-// Component definition
-export interface ComponentDefinition {
-  id: string;
-  name: string;
-  state: Record<string, unknown>;
-  actions?: Record<string, (...args: unknown[]) => unknown>;
-  computed?: Record<string, () => unknown>;
-  watch?: Record<string, (value: unknown, oldValue: unknown) => void>;
-  mount?: () => void | (() => void);
-  destroy?: () => void;
-}
-
-// Component instance
-export interface ComponentInstance {
-  id: string;
-  definition: ComponentDefinition;
-  states: StateMap;
-  derived: Map<string, Derived<unknown>>;
-  unsubscribers: Unsubscribe[];
-  cleanup: (() => void)[];
-  element: Element | null;
-  isLocal: boolean;
-}
-
-// Runtime configuration (minimal)
+/** Core runtime configuration */
 export interface RuntimeConfig {
+  /** WebSocket URL for real-time updates */
   wsUrl?: string;
+  /** Whether to enable debug logging */
   debug?: boolean;
-  onConnectionError?: (error: Error) => void;
+  /** Custom WebSocket reconnection delay (ms) */
+  wsReconnectDelay?: number;
+  /** Maximum WebSocket reconnection attempts */
+  wsMaxReconnect?: number;
+  /** WebSocket heartbeat interval (ms) */
+  wsHeartbeat?: number;
+  /** Hydration mode ('immediate', 'idle', 'visible') */
   hydration?: {
-    mode?: "immediate" | "lazy" | "visible" | "idle";
+    mode: "immediate" | "idle" | "visible";
     timeout?: number;
   };
-  /** Allow SVG elements in simple runtime sanitizer (WARNING: security risk for untrusted content) */
+  /** Callback for WebSocket connection errors */
+  onConnectionError?: (err: Error) => void;
+  /** Whether to use simple runtime SVGs for hydration */
   simpleRuntimeSVGs?: boolean;
-  /** Disable client-side HTML sanitization. When enabled, GoSPA trusts server-rendered HTML
-   *  without additional sanitization. Only use if you trust your content (like SvelteKit).
-   *  WARNING: Disabling sanitization may expose XSS vulnerabilities with user-generated content.
-   */
+  /** Whether to disable HTML sanitization (not recommended) */
   disableSanitization?: boolean;
   /** WebSocket serialization format */
   serializationFormat?: "json" | "msgpack";
+}
+
+/** Component definition from server */
+export interface ComponentDefinition {
+  name: string;
+  initialState?: Record<string, any>;
+  onMount?: (instance: ComponentInstance) => void;
+  onDestroy?: (instance: ComponentInstance) => void;
+}
+
+/** Active component instance */
+export interface ComponentInstance {
+  id: string;
+  name: string;
+  states: StateMap;
+  elements: Set<HTMLElement>;
+  dispose: () => void;
 }
 
 // Global component registry
@@ -105,15 +159,20 @@ let wsModule: Promise<typeof import("./websocket.ts")> | null = null;
 let navModule: Promise<typeof import("./navigation.ts")> | null = null;
 let transitionModule: Promise<typeof import("./transition.ts")> | null = null;
 
-// Initialize runtime
-export function init(options: RuntimeConfig = {}): void {
+/**
+ * Initialize the GoSPA runtime.
+ * Should be called once at application startup.
+ */
+export function init(userConfig: Partial<RuntimeConfig> = {}): void {
+  // Prevent multiple initializations (safe to call multiple times if no config change)
   if (isInitialized) {
-    console.warn("GoSPA runtime already initialized");
+    if (Object.keys(userConfig).length > 0) {
+      config = { ...config, ...userConfig };
+    }
     return;
   }
-
-  config = options;
   isInitialized = true;
+  config = { ...config, ...userConfig };
 
   // Initialize WebSocket if URL provided (lazy load)
   if (config.wsUrl) {
@@ -135,78 +194,201 @@ export function init(options: RuntimeConfig = {}): void {
   }
 
   // Set up global error handler
-  window.addEventListener("error", (event) => {
-    if (config.debug) console.error("Runtime error:", event.error);
-  });
+  if (typeof window !== "undefined") {
+    window.addEventListener("error", (event) => {
+      if (config.debug) console.error("Runtime error:", event.error);
+    });
+  }
+}
 
-  // Create the public GoSPA global object
-  const GoSPA = {
-    // Configuration
-    config,
-    components,
-    globalState,
-    // Core API
-    init,
-    createComponent,
-    destroyComponent,
-    getComponent,
-    getState,
-    setState,
-    callAction,
-    bind,
-    autoInit,
-    // Remote actions
-    remote,
-    remoteAction,
-    configureRemote,
-    getRemotePrefix,
-    // State primitives (lazy-loaded on access)
-    get Rune() {
-      return Rune;
+// The public GoSPA global object
+const GoSPA = {
+  // Configuration
+  get config() { return config; },
+  components,
+  globalState,
+  // Core API
+  init,
+  createComponent,
+  destroyComponent,
+  getComponent,
+  getState,
+  setState,
+  callAction,
+  bind,
+  autoInit,
+  // Remote actions
+  remote,
+  remoteAction,
+  configureRemote,
+  getRemotePrefix,
+  // State primitives
+  get Rune() { return Rune; },
+  get Derived() { return Derived; },
+  get Effect() { return Effect; },
+  get StateMap() { return StateMap; },
+  // Utility functions
+  batch,
+  effect,
+  watch,
+  // Events
+  get on() { return on; },
+  get offAll() { return offAll; },
+  get debounce() { return debounce; },
+  get throttle() { return throttle; },
+  get sanitizeHtml() { return sanitizeHtml; },
+  // Unified Reactive Store API
+  $state,
+  $derived,
+  $effect,
+  createStore,
+  getStore,
+  createIsland,
+  // Realtime & Navigation (Full API)
+  initWebSocket,
+  getWebSocketClient,
+  sendAction,
+  navigate,
+  back,
+  prefetch,
+};
+
+// Expose to window immediately
+if (typeof window !== "undefined") {
+  (window as any).GoSPA = GoSPA;
+  (window as any).__GOSPA__ = GoSPA;
+}
+
+/**
+ * Create a new component instance.
+ */
+export function createComponent(id: string, name: string): ComponentInstance {
+  if (components.has(id)) return components.get(id)!;
+
+  const instance: ComponentInstance = {
+    id,
+    name,
+    states: new StateMap(),
+    elements: new Set(),
+    dispose: () => {
+      instance.states.dispose();
+      instance.elements.clear();
+      components.delete(id);
     },
-    get Derived() {
-      return Derived;
-    },
-    get Effect() {
-      return Effect;
-    },
-    get StateMap() {
-      return StateMap;
-    },
-    // Utility functions
-    batch,
-    effect,
-    watch,
-    // Events (lazy-loaded)
-    get on() {
-      return on;
-    },
-    get offAll() {
-      return offAll;
-    },
-    get debounce() {
-      return debounce;
-    },
-    get throttle() {
-      return throttle;
-    },
-    get sanitizeHtml() {
-      return sanitizeHtml;
-    },
-    // Unified Reactive Store API
-    $state,
-    $derived,
-    $effect,
-    createStore,
-    getStore,
-    createIsland,
   };
 
-  // Expose to window as the primary public API
-  (window as any).GoSPA = GoSPA;
+  components.set(id, instance);
+  return instance;
+}
 
-  // Also expose __GOSPA__ for debugging (same object)
-  (window as any).__GOSPA__ = GoSPA;
+/**
+ * Destroy a component instance.
+ */
+export function destroyComponent(id: string): void {
+  const component = components.get(id);
+  if (component) component.dispose();
+}
+
+/**
+ * Get a component instance by ID.
+ */
+export function getComponent(id: string): ComponentInstance | undefined {
+  return components.get(id);
+}
+
+/**
+ * Get state value for a component.
+ */
+export function getState<T>(componentId: string, key: string): T | undefined {
+  const component = components.get(componentId);
+  if (!component) return undefined;
+  const rune = component.states.get<T>(key);
+  return rune ? rune.get() : undefined;
+}
+
+/**
+ * Set state value for a component.
+ */
+export function setState<T>(componentId: string, key: string, value: T): void {
+  const component = components.get(componentId);
+  if (component) {
+    component.states.set(key, value);
+  }
+}
+
+/**
+ * Call a remote action (alias for remote).
+ */
+export function callAction<T = any, R = any>(name: string, input?: T): Promise<RemoteResult<R>> {
+  return remote(name, input);
+}
+
+/**
+ * Bind an element to a reactive state.
+ */
+export function bind(
+  componentId: string,
+  element: HTMLElement,
+  property: string,
+  key: string,
+  options: { twoWay?: boolean; transformer?: (v: any) => any } = {},
+): Unsubscribe {
+  const component = components.get(componentId);
+  if (!component) return () => {};
+
+  component.elements.add(element);
+
+  let rune = component.states.get(key);
+  if (!rune) {
+    // Check if initial state exists in DOM (data-gospa-state)
+    const container = element.closest("[data-gospa-state]");
+    if (container) {
+      try {
+        const initialState = JSON.parse(container.getAttribute("data-gospa-state") || "{}");
+        if (initialState[key] !== undefined) {
+          rune = component.states.set(key, initialState[key]);
+        }
+      } catch (e) { /* ignore */ }
+    }
+    if (!rune) rune = component.states.set(key, undefined as any);
+  }
+
+  if (options.twoWay) {
+    return bindTwoWay(element as any, rune! as any);
+  }
+  return bindElement(element, rune!, {
+    type: property as any,
+    transform: options.transformer,
+  });
+}
+
+/**
+ * Create a reactive island for SFC components.
+ */
+export function createIsland(id: string, name: string): ComponentInstance {
+  const instance = createComponent(id, name);
+  // Auto-bind elements with data-gospa-bind or data-model
+  const root = document.querySelector(`[data-gospa-component="${name}"][id="${id}"]`) as HTMLElement;
+  if (root) {
+    autoBindIsland(id, root);
+  }
+  return instance;
+}
+
+function autoBindIsland(componentId: string, root: HTMLElement): void {
+  const elements = root.querySelectorAll("[data-gospa-bind], [data-model]");
+  for (const el of elements) {
+    const element = el as HTMLElement;
+    const bindAttr = element.getAttribute("data-gospa-bind");
+    if (bindAttr) {
+      const [prop, key] = bindAttr.split(":");
+      bind(componentId, element, prop, key);
+      continue;
+    }
+
+    const key = element.getAttribute("data-model");
+    if (key) bind(componentId, element, "value", key, { twoWay: true });
+  }
 }
 
 // Handle messages from server
@@ -238,8 +420,7 @@ function handleServerMessage(message: StateMessage): void {
       break;
     case "patch":
       if (message.patch) {
-        const diffObj = message.patch as Record<string, unknown>;
-        globalState.fromJSON(diffObj);
+        globalState.fromJSON(message.patch as Record<string, unknown>);
       }
       break;
     case "update":
@@ -265,379 +446,36 @@ function handleServerMessage(message: StateMessage): void {
     case "error":
       if (config.debug) console.error("Server error:", message.error);
       break;
-    // Ignore ping/pong/action messages - handled by websocket module
   }
-}
-
-// LocalStorage key prefix
-const LOCAL_STORAGE_PREFIX = "gospa_local_";
-
-function loadLocalState(componentId: string): Record<string, unknown> | null {
-  try {
-    const stored = localStorage.getItem(LOCAL_STORAGE_PREFIX + componentId);
-    return stored ? JSON.parse(stored) : null;
-  } catch {
-    return null;
-  }
-}
-
-function saveLocalState(
-  componentId: string,
-  state: Record<string, unknown>,
-): void {
-  try {
-    localStorage.setItem(
-      LOCAL_STORAGE_PREFIX + componentId,
-      JSON.stringify(state),
-    );
-  } catch {
-    // Ignore storage errors
-  }
-}
-
-// Create component instance
-export function createComponent(
-  def: ComponentDefinition,
-  element?: Element,
-  isLocal = false,
-): ComponentInstance {
-  const instance: ComponentInstance = {
-    id: def.id,
-    definition: def,
-    states: new StateMap(),
-    derived: new Map(),
-    unsubscribers: [],
-    cleanup: [],
-    element: element || null,
-    isLocal,
-  };
-
-  // Load from localStorage for local components
-  if (isLocal) {
-    const savedState = loadLocalState(def.id);
-    if (savedState) {
-      for (const [key, value] of Object.entries(savedState)) {
-        instance.states.set(key, value);
-      }
-    }
-  }
-
-  // Initialize state
-  for (const [key, value] of Object.entries(def.state)) {
-    if (!isLocal || instance.states.get(key) === undefined) {
-      instance.states.set(key, value);
-    }
-  }
-
-  // Persist local state changes
-  if (isLocal) {
-    for (const key of Object.keys(def.state)) {
-      const rune = instance.states.get(key);
-      if (rune) {
-        const unsub = watch(rune, () => {
-          saveLocalState(def.id, instance.states.toJSON());
-        });
-        instance.unsubscribers.push(unsub);
-      }
-    }
-  }
-
-  // Initialize computed properties
-  if (def.computed) {
-    for (const [key, compute] of Object.entries(def.computed)) {
-      instance.derived.set(key, new Derived(compute));
-    }
-  }
-
-  // Initialize watchers
-  if (def.watch) {
-    for (const [key, callback] of Object.entries(def.watch)) {
-      const state = instance.states.get(key);
-      if (state) {
-        instance.unsubscribers.push(watch(state, callback));
-      }
-    }
-  }
-
-  // Call mount hook
-  if (def.mount) {
-    const cleanup = def.mount();
-    if (cleanup) instance.cleanup.push(cleanup);
-  }
-
-  components.set(def.id, instance);
-  return instance;
 }
 
 /**
- * createIsland helper for .gospa components (SFC).
- * Provides the reactive state object to the setup function.
+ * Scan DOM for GoSPA components and initialize them.
  */
-export function createIsland(options: {
-  name: string;
-  setup: (el: Element, ctx: { props: any; state: any }) => void;
-}) {
-  return {
-    hydrate(el: Element, props: any, serverState: any) {
-      // Create reactive state context for the island
-      const stateCtx = {
-        $$state: $state,
-        $$derived: $derived,
-        $$effect: $effect,
-      };
+export function autoInit(): void {
+  const componentRoots = document.querySelectorAll("[data-gospa-component]");
+  componentRoots.forEach((root) => {
+    const el = root as HTMLElement;
+    const name = el.getAttribute("data-gospa-component")!;
+    const id = el.id || `c-${Math.random().toString(36).substring(2, 9)}`;
+    if (!el.id) el.id = id;
 
-      // Call the island's setup function
-      options.setup(el, { props, state: stateCtx });
-    },
-  };
-}
+    const instance = createComponent(id, name);
 
-// Destroy component instance
-export function destroyComponent(id: string): void {
-  const instance = components.get(id);
-  if (!instance) return;
-
-  if (instance.definition.destroy) instance.definition.destroy();
-  for (const cleanup of instance.cleanup) cleanup();
-  for (const unsub of instance.unsubscribers) unsub();
-  for (const derivedVal of instance.derived.values()) derivedVal.dispose();
-  components.delete(id);
-}
-
-// Get component instance
-export function getComponent(id: string): ComponentInstance | undefined {
-  return components.get(id);
-}
-
-// Get state from component
-export function getState(
-  componentId: string,
-  key: string,
-): Rune<unknown> | undefined {
-  return components.get(componentId)?.states.get(key);
-}
-
-// Set state value
-export async function setState(
-  componentId: string,
-  key: string,
-  value: unknown,
-): Promise<void> {
-  const component = components.get(componentId);
-  if (!component) return;
-
-  component.states.set(key, value);
-
-  // Send update to server for synced components
-  if (!component.isLocal && wsModule) {
-    const mod = await wsModule;
-    const ws = mod.getWebSocketClient();
-    if (ws?.isConnected) {
-      ws.send({ type: "update", componentId, payload: { key, value } });
+    // Initial state from data-gospa-state
+    const stateData = el.getAttribute("data-gospa-state");
+    if (stateData) {
+      try {
+        instance.states.fromJSON(JSON.parse(stateData));
+      } catch (e) {
+        if (config.debug) console.error("Error parsing initial state for", name, e);
+      }
     }
-  }
-}
 
-// Call component action
-export function callAction(
-  componentId: string,
-  action: string,
-  ...args: unknown[]
-): unknown {
-  const component = components.get(componentId);
-  if (!component?.definition.actions?.[action]) {
-    throw new Error(
-      `Action "${action}" not found on component "${componentId}"`,
-    );
-  }
-  return component.definition.actions[action](...args);
-}
-
-// Bind element to state
-export function bind(
-  componentId: string,
-  element: Element,
-  binding: string,
-  key: string,
-  options?: { twoWay?: boolean; transform?: (value: any) => any },
-): () => void {
-  const state = getState(componentId, key);
-  if (!state) {
-    console.warn(`State "${key}" not found on component "${componentId}"`);
-    return () => {};
-  }
-
-  if (options?.twoWay) {
-    return bindTwoWay(
-      element as HTMLInputElement | HTMLTextAreaElement | HTMLSelectElement,
-      state as Rune<string | number | boolean>,
-    );
-  }
-
-  return bindElement(element, state as Rune<unknown>, {
-    type: binding as any,
-    transform: options?.transform,
+    // Bind elements
+    autoBindIsland(id, el);
   });
 }
-
-// Auto-initialize from DOM
-export function autoInit(): void {
-  const elements = document.querySelectorAll("[data-gospa-component]");
-
-  for (const element of elements) {
-    const id = element.getAttribute("data-gospa-component");
-    const stateJson = element.getAttribute("data-gospa-state");
-    const isLocal = element.hasAttribute("data-gospa-local");
-    if (!id) continue;
-
-    let state: Record<string, unknown> = {};
-    try {
-      state = stateJson ? JSON.parse(stateJson) : {};
-    } catch {
-      // Ignore parse errors
-    }
-
-    const hydrate =
-      element.getAttribute("data-gospa-hydrate") ||
-      config.hydration?.mode ||
-      "immediate";
-
-    const initComponent = () => {
-      createComponent({ id, name: id, state }, element, isLocal);
-      setupBindings(element);
-    };
-
-    if (hydrate === "visible") {
-      const observer = new IntersectionObserver((entries) => {
-        if (entries[0].isIntersecting) {
-          observer.disconnect();
-          initComponent();
-        }
-      });
-      observer.observe(element);
-    } else if (hydrate === "idle" && "requestIdleCallback" in window) {
-      (window as any).requestIdleCallback(() => initComponent(), {
-        timeout: config.hydration?.timeout || 2000,
-      });
-    } else {
-      initComponent();
-    }
-  }
-}
-
-// Set up reactive bindings from DOM attributes
-function setupBindings(root: Element | Document = document): void {
-  // Data-bind elements
-  for (const element of root.querySelectorAll("[data-bind]")) {
-    const closestComponent = element.closest("[data-gospa-component]");
-    const componentId =
-      closestComponent?.getAttribute("data-gospa-component") || "";
-
-    // Skip if this element belongs to a nested component root
-    if (
-      root instanceof Element &&
-      closestComponent !== root &&
-      root.contains(closestComponent)
-    ) {
-      continue;
-    }
-
-    const bindingSpec = element.getAttribute("data-bind");
-    const transformName = element.getAttribute("data-transform");
-    if (!bindingSpec) continue;
-
-    const [key, binding = "text"] = bindingSpec.split(":").map((s) => s.trim());
-    let transform: ((v: unknown) => unknown) | undefined;
-    if (transformName && typeof (window as any)[transformName] === "function") {
-      transform = (window as any)[transformName];
-    }
-
-    bind(componentId, element, binding, key, { transform });
-  }
-
-  // Event handlers
-  for (const element of root.querySelectorAll("[data-on]")) {
-    const closestComponent = element.closest("[data-gospa-component]");
-    const componentId =
-      closestComponent?.getAttribute("data-gospa-component") || "";
-
-    // Skip if this element belongs to a nested component
-    if (
-      root instanceof Element &&
-      closestComponent !== root &&
-      root.contains(closestComponent)
-    ) {
-      continue;
-    }
-
-    const eventSpec = element.getAttribute("data-on");
-    if (!eventSpec) continue;
-
-    const [event, action, argsStr] = eventSpec.split(":").map((s) => s.trim());
-    const args = argsStr ? argsStr.split(",").map((s) => s.trim()) : [];
-
-    on(element, event, async () => {
-      try {
-        callAction(componentId, action, ...args);
-      } catch {
-        if (wsModule) {
-          const mod = await wsModule;
-          const ws = mod.getWebSocketClient();
-          if (ws?.isConnected) ws.sendAction(action);
-        }
-      }
-    });
-  }
-
-  // Two-way bindings
-  for (const element of root.querySelectorAll("[data-model]")) {
-    const closestComponent = element.closest("[data-gospa-component]");
-    const componentId =
-      closestComponent?.getAttribute("data-gospa-component") || "";
-
-    // Skip if this element belongs to a nested component
-    if (
-      root instanceof Element &&
-      closestComponent !== root &&
-      root.contains(closestComponent)
-    ) {
-      continue;
-    }
-
-    const key = element.getAttribute("data-model");
-    if (key) bind(componentId, element, "value", key, { twoWay: true });
-  }
-}
-
-// Export core APIs
-export {
-  Rune,
-  Derived,
-  Effect,
-  StateMap,
-  batch,
-  effect,
-  watch,
-  bindElement,
-  bindTwoWay,
-  renderIf,
-  renderList,
-  registerBinding,
-  unregisterBinding,
-  on,
-  offAll,
-  debounce,
-  throttle,
-  delegate,
-  onKey,
-  keys,
-  transformers,
-  // Remote actions
-  remote,
-  remoteAction,
-  configureRemote,
-  getRemotePrefix,
-};
 
 // Lazy module loaders
 export async function getWebSocket() {
@@ -667,30 +505,23 @@ if (typeof document !== "undefined") {
 }
 
 // FIX: Register navigation callbacks to clean up stale state on page navigation
-// This prevents memory leaks and stale subscriptions when navigating between pages
 function registerNavigationCleanup(): void {
-  // Check if navigation module is available
   if (typeof window === "undefined") return;
 
-  // Try to get navigation module
   import("./navigation.ts")
     .then((nav) => {
-      // Clean up component state before navigation
       nav.onBeforeNavigate(() => {
-        // Dispose all component subscriptions to prevent stale state
         for (const [id] of components) {
           destroyComponent(id);
         }
-        // Clear global state as well
         globalState.clear();
       });
     })
-    .catch(() => {
-      // Navigation module not available, skip
-    });
+    .catch(() => { /* skip */ });
 }
 
-// Register navigation cleanup when runtime is initialized
-export function initNavigationCleanup(): void {
+if (typeof window !== "undefined") {
   registerNavigationCleanup();
 }
+
+export default GoSPA;

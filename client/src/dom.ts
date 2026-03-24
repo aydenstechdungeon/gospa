@@ -1,4 +1,5 @@
-import { Rune, Derived, batch } from "./state.ts";
+import { Rune, batch } from "./state.ts";
+import type { Derived } from "./state.ts";
 
 // Configurable sanitizer (defaults to passthrough - trust the server/Templ)
 // Sanitization is opt-in. For user-generated content, import from 'gospa/runtime-secure'
@@ -368,12 +369,12 @@ export function bindTwoWay<T extends string | number | boolean>(
   element: HTMLInputElement | HTMLTextAreaElement | HTMLSelectElement,
   rune: Rune<T>,
 ): () => void {
-  const isCheckbox =
-    element instanceof HTMLInputElement && element.type === "checkbox";
-  const isRadio =
-    element instanceof HTMLInputElement && element.type === "radio";
+  // Initial value
   const isNumber =
     element instanceof HTMLInputElement && element.type === "number";
+
+  const isCheckbox =
+    element instanceof HTMLInputElement && element.type === "checkbox";
 
   // Initial value
   if (isCheckbox) {

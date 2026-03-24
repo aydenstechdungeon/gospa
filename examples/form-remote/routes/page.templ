@@ -72,11 +72,21 @@ templ Page() {
 		let totalPages = 1;
 		let messages = [];
 
-		// Initialize on page load
-		document.addEventListener('DOMContentLoaded', async () => {
-			await loadMessages(1);
+		// Initialize
+		function setup() {
+			loadMessages(1);
 			setupWebSocket();
-		});
+		}
+
+		// Handle initial load
+		if (document.readyState === 'loading') {
+			document.addEventListener('DOMContentLoaded', setup);
+		} else {
+			setup();
+		}
+
+		// Handle subsequent SPA navigations
+		document.addEventListener('gospa:navigated', setup);
 
 		// Handle form submission via remote action
 		async function handleSubmit(event) {
@@ -90,7 +100,7 @@ templ Page() {
 
 			try {
 				const result = await GoSPA.remote('submitMessage', input);
-				if (result.ok) {
+				if (result.code === 'SUCCESS') {
 					form.reset();
 					// Reload messages to show the new one
 					await loadMessages(currentPage);
@@ -107,7 +117,7 @@ templ Page() {
 		async function loadMessages(page) {
 			try {
 				const result = await GoSPA.remote('getMessages', { page: page });
-				if (result.ok) {
+				if (result.code === 'SUCCESS') {
 					messages = result.data.messages;
 					currentPage = result.data.page;
 					totalPages = result.data.totalPages;
@@ -122,6 +132,7 @@ templ Page() {
 		// Render messages to the DOM
 		function renderMessages() {
 			const container = document.getElementById('messages-container');
+			if (!container) return;
 			
 			if (messages.length === 0) {
 				container.innerHTML = '<p class="text-zinc-500 text-center py-8">No messages yet. Be the first to sign!</p>';
@@ -146,6 +157,7 @@ templ Page() {
 		// Render pagination controls
 		function renderPagination() {
 			const container = document.getElementById('pagination');
+			if (!container) return;
 			
 			if (totalPages <= 1) {
 				container.innerHTML = '';
@@ -173,29 +185,30 @@ templ Page() {
 		// Set up WebSocket for real-time updates
 		function setupWebSocket() {
 			const statusEl = document.getElementById('connection-status');
+			if (!statusEl) return;
 			const dot = statusEl.querySelector('span:first-child');
 			const text = statusEl.querySelector('span:last-child');
 			
 			// Use GoSPA's WebSocket if available
-			if (typeof initWebSocket === 'function') {
+			if (typeof GoSPA.initWebSocket === 'function') {
 				const protocol = window.location.protocol === 'https:' ? 'wss:' : 'ws:';
 				const wsUrl = `${protocol}//${window.location.host}/_gospa/ws`;
 				
-				const ws = initWebSocket({
+				const ws = GoSPA.initWebSocket({
 					url: wsUrl,
 					reconnect: true,
-					onConnect: () => {
+					onOpen: () => {
 						dot.classList.remove('bg-zinc-600');
 						dot.classList.add('bg-green-500');
 						text.textContent = 'Connected';
 					},
-					onDisconnect: () => {
+					onClose: () => {
 						dot.classList.remove('bg-green-500');
 						dot.classList.add('bg-zinc-600');
 						text.textContent = 'Disconnected';
 					},
 					onMessage: (data) => {
-						if (data.type === 'new_message') {
+						if (data.type === 'new_message' || (data.data && data.data.type === 'new_message')) {
 							// Reload messages when a new one arrives
 							loadMessages(currentPage);
 						}
@@ -206,9 +219,11 @@ templ Page() {
 			} else {
 				// Fallback: just show connected after a delay
 				setTimeout(() => {
-					dot.classList.remove('bg-zinc-600');
-					dot.classList.add('bg-zinc-500');
-					text.textContent = 'WebSocket not available';
+					if (dot) {
+						dot.classList.remove('bg-zinc-600');
+						dot.classList.add('bg-zinc-500');
+					}
+					if (text) text.textContent = 'WebSocket not available';
 				}, 2000);
 			}
 		}
