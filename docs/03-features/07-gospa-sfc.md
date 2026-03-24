@@ -1,6 +1,6 @@
 # .gospa Single File Components (SFC)
 
-The `.gospa` file format is a modern, single-file component system for the GoSPA framework. It allows you to define server-rendered HTML (Go/Templ), client-side reactivity (TypeScript), and component styles in a single file, following a syntax familiar to Svelte or React developer.
+The `.gospa` file format is a modern, single-file component system for the GoSPA framework. It allows you to define server-rendered HTML (Go/Templ), optional client-side reactivity (TypeScript), and component styles in a single file, following a syntax familiar to Svelte or React developers.
 
 ---
 
@@ -21,6 +21,21 @@ A `.gospa` file is divided into three main sections: `<script>`, `<template>`, a
   /* Scoped component styles */
 </style>
 ```
+
+### Optional Frontmatter
+
+You can place YAML-style frontmatter at the top of a `.gospa` file to control compiler behavior:
+
+```yaml
+---
+type: page        # island | page | layout | static | server
+hydrate: false    # true/false (islands only)
+server_only: true # true/false
+package: pages    # optional Go package override
+---
+```
+
+Frontmatter is optional. If omitted, `.gospa` defaults to `type: island`.
 
 ### `<script>` Block
 
@@ -46,6 +61,22 @@ GoSPA supports two script roles in one `.gospa` file:
 
 So yes—you can have both a Go script and a TS/JS script in the same component.  
 What is disallowed is **duplicates of the same role** (e.g., two Go scripts), to keep parsing deterministic and avoid shadowed logic.
+
+---
+
+## Component Types
+
+The compiler supports multiple output modes:
+
+| Type | Server output (`.templ`) | Client output (`.ts`) | Typical use |
+|------|---------------------------|------------------------|-------------|
+| `island` | Wrapped with `data-gospa-island` | Generated when `hydrate: true` | Interactive UI |
+| `page` | Wrapped with scoped `<div class="{hash}">` | None | Route pages |
+| `layout` | Scoped wrapper + `children templ.Component` support | None | Route/layout wrappers |
+| `static` | No outer wrapper; template rendered directly | None | Static server components |
+| `server` | Same output style as `static` | None | Server-only components |
+
+TypeScript generation is conditional: only hydrated islands produce `.ts`.
 
 ### `<template>` Block
 
@@ -113,8 +144,8 @@ The `.gospa` compiler performs several transformations:
     - Generates a `.templ` file.
     - `$state(val)` is replaced with `val` for initial rendering.
     - Scoped CSS classes are added to the HTML elements.
-2.  **Client-side (TypeScript)**:
-    - Generates a TypeScript island module.
+2.  **Client-side (TypeScript, islands only)**:
+    - Generates a TypeScript island module only when the component type is `island` and hydration is enabled.
     - `$state`, `$derived`, and `$effect` are translated to the reactive system in `@gospa/runtime`.
     - Event handlers automatically attach to the server-rendered elements.
 3.  **Scoped CSS**:
@@ -125,6 +156,18 @@ The `.gospa` compiler performs several transformations:
 ## File-Based Routing
 
 `.gospa` files are fully supported by GoSPA's file-based routing system. You can place them inside the `routes/` directory using the same conventions as `.templ` files (e.g., `page.gospa`, `layout.gospa`, `[id]/page.gospa`).
+
+### Routing Examples
+
+```text
+routes/
+  home.gospa       -> home.templ (page)
+  layout.gospa     -> layout.templ (layout)
+islands/
+  counter.gospa    -> counter.templ + counter.ts (island)
+components/
+  footer.gospa     -> footer.templ (static/server)
+```
 
 ---
 

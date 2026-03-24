@@ -260,8 +260,9 @@ gospa generate [options]
 
 | Flag | Short | Default | Description |
 |------|-------|---------|-------------|
-| `--input` | `-i` | `.` | Input directory to scan |
+| `--input-dir` | - | `.` | Input directory to scan |
 | `--output` | `-o` | `./generated` | Output directory for generated files |
+| `--type` | - | `island` | Default `.gospa` component type (`island`, `page`, `layout`, `static`, `server`) |
 | `--help` | `-h` | - | Show help for this command |
 
 ### What Gets Generated
@@ -277,6 +278,10 @@ gospa generate [options]
 3. **TypeScript Routes** (`generated/routes.ts`)
    - Route definitions with paths, params, and metadata
    - Helper functions: `getRoute()`, `buildPath()`
+
+4. **Compiled SFC Artifacts** (for `.gospa` files)
+   - Generates `generated_<name>.templ` beside each source `.gospa`
+   - Generates `<output>/<unique-name>.ts` only for hydrated islands
 
 ### Generated TypeScript Types
 

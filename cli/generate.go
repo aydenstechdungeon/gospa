@@ -16,7 +16,7 @@ import (
 	"github.com/aydenstechdungeon/gospa/plugin"
 	routing_generator "github.com/aydenstechdungeon/gospa/routing/generator"
 )
- 
+
 var (
 	rePkgName = regexp.MustCompile(`[^a-zA-Z0-9]+`)
 )
@@ -31,8 +31,9 @@ func Generate(config *GenerateConfig) {
 	// Use defaults if config is nil
 	if config == nil {
 		config = &GenerateConfig{
-			InputDir:  ".",
-			OutputDir: "./generated",
+			InputDir:      ".",
+			OutputDir:     "./generated",
+			ComponentType: string(compiler.ComponentTypeIsland),
 		}
 	}
 
@@ -83,10 +84,11 @@ func Generate(config *GenerateConfig) {
 
 // GenerateConfig holds configuration for code generation.
 type GenerateConfig struct {
-	InputDir   string
-	OutputDir  string
-	StateFiles []string
-	RouteFiles []string
+	InputDir      string
+	OutputDir     string
+	StateFiles    []string
+	RouteFiles    []string
+	ComponentType string
 }
 
 // GenerateWithConfig generates code with custom configuration.
@@ -186,7 +188,7 @@ func compileSFCs(config *GenerateConfig) error {
 
 		// Determine relative path for unique naming
 		relPath, _ := filepath.Rel(config.InputDir, file)
-		
+
 		// 1. Generate unique island name (e.g., routes_blog_id_page)
 		uniqueName := strings.TrimSuffix(relPath, ".gospa")
 		uniqueName = strings.ReplaceAll(uniqueName, string(filepath.Separator), "_")
@@ -195,32 +197,7 @@ func compileSFCs(config *GenerateConfig) error {
 		uniqueName = strings.ReplaceAll(uniqueName, ".", "")
 		uniqueName = rePkgName.ReplaceAllString(uniqueName, "")
 
-		// 2. Determine robust package name (matching routing_generator)
 		dir := filepath.Dir(file)
-		relDir, _ := filepath.Rel(config.InputDir, dir)
-		pkgName := "islands"
-		if relDir != "." {
-			parts := strings.Split(relDir, string(filepath.Separator))
-			pkgParts := []string{}
-			for i, part := range parts {
-				// Skip the root 'routes' or 'pages' directory to better match Go package conventions
-				if i == 0 && (part == "routes" || part == "pages") {
-					continue
-				}
-				// Skip route groups (name)
-				if strings.HasPrefix(part, "(") && strings.HasSuffix(part, ")") {
-					continue
-				}
-				p := strings.TrimPrefix(part, "_")
-				p = strings.ReplaceAll(p, "[", "")
-				p = strings.ReplaceAll(p, "]", "")
-				pkgParts = append(pkgParts, p)
-			}
-			if len(pkgParts) > 0 {
-				pkgName = strings.Join(pkgParts, "")
-				pkgName = rePkgName.ReplaceAllString(pkgName, "")
-			}
-		}
 
 		// 3. Determine Go component name (Standardize Page/Layout)
 		baseName := filepath.Base(file)
@@ -232,7 +209,19 @@ func compileSFCs(config *GenerateConfig) error {
 			goName = "Layout"
 		}
 
-		templ, ts, err := c.Compile(goName, uniqueName, string(content), pkgName)
+		selectedType := compiler.ComponentType(config.ComponentType)
+		if selectedType == "" {
+			selectedType = compiler.ComponentTypeIsland
+		}
+		opts := compiler.CompileOptions{
+			Type:     selectedType,
+			Name:     goName,
+			PkgName:  inferPackage(selectedType),
+			Hydrate:  selectedType == compiler.ComponentTypeIsland,
+			IslandID: uniqueName,
+		}
+
+		templ, ts, err := c.Compile(opts, string(content))
 		if err != nil {
 			return fmt.Errorf("failed to compile %s: %w", file, err)
 		}
@@ -245,13 +234,28 @@ func compileSFCs(config *GenerateConfig) error {
 		}
 
 		// Write .ts file in the output directory (using unique name to avoid collisions)
-		tsPath := filepath.Join(config.OutputDir, uniqueName+".ts")
-		// #nosec G703
-		if err := os.WriteFile(filepath.Clean(tsPath), []byte(ts), 0600); err != nil {
-			return err
+		if strings.TrimSpace(ts) != "" {
+			tsPath := filepath.Join(config.OutputDir, uniqueName+".ts")
+			// #nosec G703
+			if err := os.WriteFile(filepath.Clean(tsPath), []byte(ts), 0600); err != nil {
+				return err
+			}
 		}
 	}
 	return nil
+}
+
+func inferPackage(t compiler.ComponentType) string {
+	switch t {
+	case compiler.ComponentTypeIsland:
+		return "islands"
+	case compiler.ComponentTypePage:
+		return "pages"
+	case compiler.ComponentTypeLayout:
+		return "layouts"
+	default:
+		return "components"
+	}
 }
 
 // TypeScriptType represents a TypeScript type definition.

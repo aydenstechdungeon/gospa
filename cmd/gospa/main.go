@@ -62,8 +62,9 @@ func main() {
 		fs := flag.NewFlagSet("generate", flag.ExitOnError)
 		out := fs.String("o", "./generated", "Output directory")
 		inputDir := fs.String("input-dir", ".", "Input directory to scan for routes and state")
+		componentType := fs.String("type", "island", "Default .gospa component type: island, page, layout, static, server")
 		_ = fs.Parse(os.Args[2:])
-		cli.Generate(&cli.GenerateConfig{OutputDir: *out, InputDir: *inputDir})
+		cli.Generate(&cli.GenerateConfig{OutputDir: *out, InputDir: *inputDir, ComponentType: *componentType})
 	case "doctor":
 		fs := flag.NewFlagSet("doctor", flag.ExitOnError)
 		routesDir := fs.String("routes-dir", "./routes", "Routes directory to validate")

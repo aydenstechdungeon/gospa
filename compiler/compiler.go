@@ -15,18 +15,72 @@ import (
 // GospaCompiler handles the compilation of .gospa files.
 type GospaCompiler struct{}
 
+type ComponentType string
+
+const (
+	ComponentTypeIsland ComponentType = "island"
+	ComponentTypePage   ComponentType = "page"
+	ComponentTypeLayout ComponentType = "layout"
+	ComponentTypeStatic ComponentType = "static"
+	ComponentTypeServer ComponentType = "server"
+)
+
+type CompileOptions struct {
+	Type       ComponentType
+	IslandID   string
+	Name       string
+	PkgName    string
+	Hydrate    bool
+	ServerOnly bool
+}
+
 // NewCompiler creates a new GospaCompiler.
 func NewCompiler() *GospaCompiler {
 	return &GospaCompiler{}
 }
 
 // Compile compiles a .gospa component into Templ and TypeScript.
-func (c *GospaCompiler) Compile(goName, islandID, input, pkgName string) (templ, ts string, err error) {
-	name := c.sanitizeName(goName)
-	islandID = c.sanitizeName(islandID)
+func (c *GospaCompiler) Compile(opts CompileOptions, input string) (templ, ts string, err error) {
+	componentType := opts.Type
+	if componentType == "" {
+		componentType = ComponentTypeIsland
+	}
+
+	name := c.sanitizeName(opts.Name)
+	islandID := c.sanitizeName(opts.IslandID)
 	parsed, err := sfc.Parse(input)
 	if err != nil {
 		return "", "", err
+	}
+
+	if parsed.FrontMatter != nil {
+		if frontType := strings.TrimSpace(parsed.FrontMatter["type"]); frontType != "" {
+			componentType = ComponentType(strings.ToLower(frontType))
+		}
+		if hydrateRaw := strings.TrimSpace(parsed.FrontMatter["hydrate"]); hydrateRaw != "" {
+			opts.Hydrate = strings.EqualFold(hydrateRaw, "true")
+		}
+		if serverOnlyRaw := strings.TrimSpace(parsed.FrontMatter["server_only"]); serverOnlyRaw != "" {
+			opts.ServerOnly = strings.EqualFold(serverOnlyRaw, "true")
+		}
+		if pkgRaw := strings.TrimSpace(parsed.FrontMatter["package"]); pkgRaw != "" {
+			opts.PkgName = pkgRaw
+		}
+	}
+
+	if name == "" {
+		name = "Component"
+	}
+	if islandID == "" {
+		islandID = name
+	}
+
+	if opts.PkgName == "" {
+		opts.PkgName = inferPackage(componentType)
+	}
+	if componentType == ComponentTypeIsland && !opts.ServerOnly && !opts.Hydrate {
+		// default hydration for islands unless explicitly disabled
+		opts.Hydrate = true
 	}
 
 	// 1. Process Reactive DSL in Script and extract Props
@@ -40,21 +94,41 @@ func (c *GospaCompiler) Compile(goName, islandID, input, pkgName string) (templ,
 
 	// 4. Generate Templ with Scoped CSS
 	scopedTemplate := c.scopeTemplate(transformedTemplate, hash)
-	templ = c.generateTempl(name, islandID, scopedTemplate, processedScript, hash, pkgName, props)
+	switch componentType {
+	case ComponentTypePage:
+		templ = c.generatePageTempl(name, scopedTemplate, processedScript, hash, opts.PkgName, props)
+	case ComponentTypeLayout:
+		templ = c.generateLayoutTempl(name, scopedTemplate, processedScript, hash, opts.PkgName, props)
+	case ComponentTypeStatic, ComponentTypeServer:
+		templ = c.generateStaticTempl(name, scopedTemplate, processedScript, hash, opts.PkgName, props)
+	default:
+		templ = c.generateIslandTempl(name, islandID, scopedTemplate, processedScript, hash, opts.PkgName, props)
+	}
 
 	// 5. Generate TypeScript Island
-	tsScript := parsed.Script.Content
-	tsFromGo := true
-	if parsed.ScriptTS.Content != "" {
-		tsScript = parsed.ScriptTS.Content
-		tsFromGo = false
+	if componentType == ComponentTypeIsland && opts.Hydrate && !opts.ServerOnly {
+		tsScript := parsed.Script.Content
+		tsFromGo := true
+		if parsed.ScriptTS.Content != "" {
+			tsScript = parsed.ScriptTS.Content
+			tsFromGo = false
+		}
+		ts = c.generateTS(islandID, tsScript, tsFromGo, parsed.Style.Content, hash)
+		ts += c.generateScopedCSS(parsed.Style.Content, hash)
 	}
-	ts = c.generateTS(islandID, tsScript, tsFromGo, parsed.Style.Content, hash)
-
-	// 6. Generate Scoped CSS
-	ts += c.generateScopedCSS(parsed.Style.Content, hash)
 
 	return templ, ts, nil
+}
+
+// CompileLegacy preserves the old island-only API.
+func (c *GospaCompiler) CompileLegacy(goName, islandID, input, pkgName string) (templ, ts string, err error) {
+	return c.Compile(CompileOptions{
+		Type:     ComponentTypeIsland,
+		IslandID: islandID,
+		Name:     goName,
+		PkgName:  pkgName,
+		Hydrate:  true,
+	}, input)
 }
 
 func (c *GospaCompiler) scopeTemplate(template, hash string) string {
@@ -62,7 +136,7 @@ func (c *GospaCompiler) scopeTemplate(template, hash string) string {
 	stringMap := make(map[string]string)
 	placeholderCounter := 0
 	strRegex := regexp.MustCompile("(?s)`[^`]*`|\"[^\"]*\"")
-	
+
 	protected := strRegex.ReplaceAllStringFunc(template, func(s string) string {
 		if !strings.ContainsAny(s, "<>") {
 			return s
@@ -78,7 +152,7 @@ func (c *GospaCompiler) scopeTemplate(template, hash string) string {
 		if strings.HasPrefix(strings.ToLower(tag), "<script") || strings.HasPrefix(strings.ToLower(tag), "<style") {
 			return tag
 		}
-		
+
 		// If it's a component call (e.g. @Component), don't scope it here as Templ handles it
 		if strings.HasPrefix(tag, "@") {
 			return tag
@@ -121,29 +195,29 @@ func (c *GospaCompiler) generateHash(name string) string {
 }
 
 var (
-	stateRegex       = regexp.MustCompile(`\$state\((.*?)\)`)
-	derivedRegex     = regexp.MustCompile(`\$derived\((.*?)\)`)
-	effectRegex      = regexp.MustCompile(`(?s)\$effect\(func\(\)\s*\{(.*?)\}\)`)
-	tagRegex         = regexp.MustCompile(`(?i)<([a-z0-9-]+)([^>]*)>`) // Added dash for custom components
-	classAttrRegex   = regexp.MustCompile(`(?i)class="([^"]*)"`)
-	cssDotRegex      = regexp.MustCompile(`\.([a-zA-Z][a-zA-Z0-9-_]*)`)
-	cssElementRegex  = regexp.MustCompile(`(?m)^([a-z0-9]+)\s*\{`)
-	nameSafeRegex    = regexp.MustCompile(`[^a-zA-Z0-9]`)
-	propsRegex       = regexp.MustCompile(`(?m)var\s+\{\s*(.*?)\s*\}\s*=\s*\$props\(\)`)
-	ifRegex          = regexp.MustCompile(`\{#if\s+(.*?)\}`)
-	elseIfRegex      = regexp.MustCompile(`\{:else\s+if\s+(.*?)\}`)
-	elseRegex        = regexp.MustCompile(`\{:else\}`)
-	endIfRegex       = regexp.MustCompile(`\{/if\}`)
-	eachRegex        = regexp.MustCompile(`\{#each\s+(.*?)\s+as\s+(.*?)\}`)
-	endEachRegex     = regexp.MustCompile(`\{/each\}`)
-	shorthandRegex   = regexp.MustCompile(`\s\{([a-zA-Z0-9_]+)\}([\s/>])`) // Only match in attribute position
-	bindRegex        = regexp.MustCompile(`bind:([a-zA-Z0-9-]+)=\{([a-zA-Z0-9_.]+)\}`)
-	transitionRegex  = regexp.MustCompile(`transition:([a-zA-Z0-9-]+)(?:=\{([^}]*)\})?`)
-	componentTagRegex = regexp.MustCompile(`<([A-Z][a-zA-Z0-9-_]*)([^>]*)>`) // Removed (?i)
-	endComponentRegex = regexp.MustCompile(`</([A-Z][a-zA-Z0-9-_]*)>`)      // Removed (?i)
-	snippetRegex     = regexp.MustCompile(`\{#snippet\s+([a-zA-Z0-9_]+)\((.*?)\)\}`)
-	endSnippetRegex  = regexp.MustCompile(`\{/snippet\}`)
-	onRegex          = regexp.MustCompile(`\son:([a-zA-Z0-9:]+)=\{([a-zA-Z0-9_.]+)\}`)
+	stateRegex         = regexp.MustCompile(`\$state\((.*?)\)`)
+	derivedRegex       = regexp.MustCompile(`\$derived\((.*?)\)`)
+	effectRegex        = regexp.MustCompile(`(?s)\$effect\(func\(\)\s*\{(.*?)\}\)`)
+	tagRegex           = regexp.MustCompile(`(?i)<([a-z0-9-]+)([^>]*)>`) // Added dash for custom components
+	classAttrRegex     = regexp.MustCompile(`(?i)class="([^"]*)"`)
+	cssDotRegex        = regexp.MustCompile(`\.([a-zA-Z][a-zA-Z0-9-_]*)`)
+	cssElementRegex    = regexp.MustCompile(`(?m)^([a-z0-9]+)\s*\{`)
+	nameSafeRegex      = regexp.MustCompile(`[^a-zA-Z0-9]`)
+	propsRegex         = regexp.MustCompile(`(?m)var\s+\{\s*(.*?)\s*\}\s*=\s*\$props\(\)`)
+	ifRegex            = regexp.MustCompile(`\{#if\s+(.*?)\}`)
+	elseIfRegex        = regexp.MustCompile(`\{:else\s+if\s+(.*?)\}`)
+	elseRegex          = regexp.MustCompile(`\{:else\}`)
+	endIfRegex         = regexp.MustCompile(`\{/if\}`)
+	eachRegex          = regexp.MustCompile(`\{#each\s+(.*?)\s+as\s+(.*?)\}`)
+	endEachRegex       = regexp.MustCompile(`\{/each\}`)
+	shorthandRegex     = regexp.MustCompile(`\s\{([a-zA-Z0-9_]+)\}([\s/>])`) // Only match in attribute position
+	bindRegex          = regexp.MustCompile(`bind:([a-zA-Z0-9-]+)=\{([a-zA-Z0-9_.]+)\}`)
+	transitionRegex    = regexp.MustCompile(`transition:([a-zA-Z0-9-]+)(?:=\{([^}]*)\})?`)
+	componentTagRegex  = regexp.MustCompile(`<([A-Z][a-zA-Z0-9-_]*)([^>]*)>`) // Removed (?i)
+	endComponentRegex  = regexp.MustCompile(`</([A-Z][a-zA-Z0-9-_]*)>`)       // Removed (?i)
+	snippetRegex       = regexp.MustCompile(`\{#snippet\s+([a-zA-Z0-9_]+)\((.*?)\)\}`)
+	endSnippetRegex    = regexp.MustCompile(`\{/snippet\}`)
+	onRegex            = regexp.MustCompile(`\son:([a-zA-Z0-9:]+)=\{([a-zA-Z0-9_.]+)\}`)
 	reactiveLabelRegex = regexp.MustCompile(`\$:\s*([a-zA-Z0-9_]+)\s*=\s*([^;\n]+)`)
 )
 
@@ -180,9 +254,9 @@ func (c *GospaCompiler) transformTemplate(template string) string {
 	// 0. Protect backtick strings
 	stringMap := make(map[string]string)
 	placeholderCounter := 0
-	
+
 	backtickRegex := regexp.MustCompile("(?s)`[^`]*`")
-	
+
 	s := backtickRegex.ReplaceAllStringFunc(template, func(match string) string {
 		placeholder := fmt.Sprintf("__GOSPA_PROTECTED_%d__", placeholderCounter)
 		stringMap[placeholder] = match
@@ -249,7 +323,20 @@ func (c *GospaCompiler) transformTemplate(template string) string {
 	return s
 }
 
-func (c *GospaCompiler) generateTempl(name, islandID, template, script, hash, pkgName string, props []string) string {
+func inferPackage(t ComponentType) string {
+	switch t {
+	case ComponentTypeIsland:
+		return "islands"
+	case ComponentTypePage:
+		return "pages"
+	case ComponentTypeLayout:
+		return "layouts"
+	default:
+		return "components"
+	}
+}
+
+func (c *GospaCompiler) generateIslandTempl(name, islandID, template, script, hash, pkgName string, props []string) string {
 	header := "// Code generated by GoSPA; DO NOT EDIT.\n\n"
 	if pkgName == "" {
 		pkgName = "islands"
@@ -284,16 +371,16 @@ func (c *GospaCompiler) generateTempl(name, islandID, template, script, hash, pk
 		if startLoc == nil {
 			break
 		}
-		
+
 		snippetName := cleanTemplate[startLoc[2]:startLoc[3]]
 		snippetArgs := cleanTemplate[startLoc[4]:startLoc[5]]
-		
+
 		remaining := cleanTemplate[startLoc[1]:]
 		endLoc := endSnippetRegex.FindStringIndex(remaining)
 		if endLoc == nil {
 			break
 		}
-		
+
 		content := remaining[:endLoc[0]]
 		snippetDefs = append(snippetDefs, fmt.Sprintf("templ %s(%s) {\n\t%s\n}", snippetName, typeArgs(snippetArgs), strings.TrimSpace(content)))
 		cleanTemplate = cleanTemplate[:startLoc[0]] + cleanTemplate[startLoc[1]+endLoc[1]:]
@@ -301,12 +388,12 @@ func (c *GospaCompiler) generateTempl(name, islandID, template, script, hash, pk
 
 	// 2. Extract imports and transform script
 	importRegex := regexp.MustCompile(`(?m)^import\s+(?:"[^"]+"|\(.*\))`)
-	
+
 	imports := importRegex.FindAllString(script, -1)
 	extraImports := strings.Join(imports, "\n")
-	
+
 	cleanScript := importRegex.ReplaceAllString(script, "")
-	
+
 	// Ensure fmt import if used
 	if strings.Contains(cleanScript, "fmt.") && !strings.Contains(extraImports, "\"fmt\"") {
 		if extraImports == "" {
@@ -320,7 +407,7 @@ func (c *GospaCompiler) generateTempl(name, islandID, template, script, hash, pk
 	if strings.Contains(extraImports, "\"fmt\"") {
 		cleanScript = "var _ = fmt.Sprint\n" + cleanScript
 	}
-	
+
 	// Add dummy usage for all variables in cleanScript to avoid "declared and not used"
 	vRegex := regexp.MustCompile(`(?m)^(?:var\s+)?([a-zA-Z0-9_]+)\s*(?::=|=)`)
 	matches := vRegex.FindAllStringSubmatch(cleanScript, -1)
@@ -362,17 +449,7 @@ func (c *GospaCompiler) generateTempl(name, islandID, template, script, hash, pk
 
 	// Signature generation
 	propArgs := typeArgs(strings.Join(props, ", "))
-
 	signature := name + "(" + propArgs + ")"
-	if strings.ToLower(name) == "layout" {
-		if propArgs != "" {
-			signature = "Layout(children templ.Component, " + propArgs + ")"
-		} else {
-			signature = "Layout(children templ.Component)"
-		}
-	} else if strings.ToLower(name) == "page" {
-		signature = "Page(" + propArgs + ")"
-	}
 
 	return header + fmt.Sprintf(`package %s
 
@@ -389,10 +466,33 @@ templ %s {
 `, pkgName, extraImports, extraSnippets, signature, scriptInjection, islandID, hash, cleanTemplate)
 }
 
+func (c *GospaCompiler) generatePageTempl(name, template, script, hash, pkgName string, props []string) string {
+	templ := c.generateIslandTempl(name, "", template, script, hash, pkgName, props)
+	return strings.Replace(templ, "<div data-gospa-island=\"\" class=\""+hash+"\">", "<div class=\""+hash+"\">", 1)
+}
+
+func (c *GospaCompiler) generateLayoutTempl(name, template, script, hash, pkgName string, props []string) string {
+	templ := c.generateIslandTempl(name, "", template, script, hash, pkgName, props)
+	templ = strings.Replace(templ, "<div data-gospa-island=\"\" class=\""+hash+"\">", "<div class=\""+hash+"\">", 1)
+	templ = strings.ReplaceAll(templ, "@children", "{ children }")
+	signatureNeedle := "templ " + name + "("
+	signatureReplace := "templ " + name + "(children templ.Component"
+	if len(props) > 0 {
+		signatureReplace += ", "
+	}
+	return strings.Replace(templ, signatureNeedle, signatureReplace, 1)
+}
+
+func (c *GospaCompiler) generateStaticTempl(name, template, script, hash, pkgName string, props []string) string {
+	templ := c.generateIslandTempl(name, "", template, script, hash, pkgName, props)
+	templ = strings.Replace(templ, "\n\t<div data-gospa-island=\"\" class=\""+hash+"\">\n\t\t", "\n\t\t", 1)
+	return strings.Replace(templ, "\n\t</div>\n}\n", "\n}\n", 1)
+}
+
 func (c *GospaCompiler) generateTS(name, script string, fromGo bool, _ string, hash string) string {
 	tsScript := script
 	funcNames := []string{}
-	
+
 	if fromGo {
 		// 1. $props() -> destructuring (Strip types)
 		if matches := propsRegex.FindStringSubmatch(tsScript); len(matches) > 1 {
@@ -409,7 +509,7 @@ func (c *GospaCompiler) generateTS(name, script string, fromGo bool, _ string, h
 		}
 
 		// 2. Convert Go func to JS function
-		funcRegex := regexp.MustCompile(`(?m)^func\s+([a-zA-Z0-9_]+)\((.*?)\)\s*\{`)
+		funcRegex := regexp.MustCompile(`(?m)^\s*func\s+([a-zA-Z0-9_]+)\((.*?)\)\s*\{`)
 		tsScript = funcRegex.ReplaceAllString(tsScript, "function $1($2) {")
 
 		// 3. Handle runes
@@ -427,6 +527,7 @@ func (c *GospaCompiler) generateTS(name, script string, fromGo bool, _ string, h
 		tsScript = strings.ReplaceAll(tsScript, " := ", " = ")
 		tsScript = strings.ReplaceAll(tsScript, "fmt.Sprint", "String")
 		tsScript = strings.ReplaceAll(tsScript, "fmt.Sprintf", "String") // fallback
+		tsScript = strings.ReplaceAll(tsScript, "fmt.Printf", "console.log")
 
 		// Extract function names for event binding (must do after conversion)
 		namedFuncRegex := regexp.MustCompile(`function\s+([a-zA-Z0-9_]+)`)
@@ -437,7 +538,7 @@ func (c *GospaCompiler) generateTS(name, script string, fromGo bool, _ string, h
 	}
 
 	header := "/**\n * Code generated by GoSPA; DO NOT EDIT.\n */\n\n"
-	
+
 	funcsObject := "{ " + strings.Join(funcNames, ", ") + " }"
 	if len(funcNames) == 0 {
 		funcsObject = "{}"
@@ -476,7 +577,7 @@ func (c *GospaCompiler) generateScopedCSS(style, hash string) string {
 	if style == "" {
 		return ""
 	}
-	// Scoping: 
+	// Scoping:
 	// 1. .card -> .card.gospa-hash
 	scopedStyle := cssDotRegex.ReplaceAllString(style, ".$1."+hash)
 	// 2. h1 -> h1.gospa-hash (simplified, works for elements too)

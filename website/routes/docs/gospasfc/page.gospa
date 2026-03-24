@@ -31,6 +31,18 @@ import "github.com/aydenstechdungeon/gospa/website/components"
 						<p class="text-sm text-[var(--text-secondary)]">Compiles directly to .templ files for high-performance server rendering.</p>
 					</div>
 				</div>
+				<div class="rounded-xl border border-[var(--border)] bg-[var(--bg-secondary)] p-4">
+					<h3 class="font-bold border-b border-[var(--border)] pb-1 mb-3">Compiler Frontmatter</h3>
+					<p class="text-sm text-[var(--text-secondary)] mb-3">Use frontmatter to choose component type and hydration behavior per file.</p>
+					@components.CodeBlock(`---
+type: page
+hydrate: false
+---
+
+<template>
+  <h1>Home</h1>
+</template>`, "yaml", "page.gospa")
+				</div>
 			</div>
 
 			<div>
@@ -81,18 +93,18 @@ import "github.com/aydenstechdungeon/gospa/website/components"
 
 			<div>
 				<h2 class="text-2xl font-bold mb-4 border-b border-[var(--border)] pb-2 italic mono">Compiler Pipeline</h2>
-				<p class="text-[var(--text-secondary)] mb-4">The compiler transforms the SFC into two distinct modules:</p>
+				<p class="text-[var(--text-secondary)] mb-4">The compiler output depends on component type:</p>
 				<div class="space-y-4">
 					<div class="p-6 rounded-xl bg-[var(--bg-secondary)] border border-[var(--border)]">
-						<h3 class="font-bold text-[var(--accent-primary)] mb-2">1. Server Module (.templ)</h3>
+						<h3 class="font-bold text-[var(--accent-primary)] mb-2">1. Server Module (.templ) for All Types</h3>
 						<p class="text-[var(--text-secondary)] text-sm">
-							Extracts the template and applies unique scoping classes. Replaces reactive primitives with Go variable initializations for SSR.
+							Compiles to server-rendered Templ output. Pages/layouts/static/server components render without island hydration metadata.
 						</p>
 					</div>
 					<div class="p-6 rounded-xl bg-[var(--bg-secondary)] border border-[var(--border)]">
-						<h3 class="font-bold text-[var(--accent-secondary)] mb-2">2. Client Module (.ts)</h3>
+						<h3 class="font-bold text-[var(--accent-secondary)] mb-2">2. Client Module (.ts) for Hydrated Islands Only</h3>
 						<p class="text-[var(--text-secondary)] text-sm">
-							Transpiles the script block into an interactive island module. Automatically handles event binding and hydration.
+							Generated only when the component type is <code>island</code> and hydration is enabled.
 						</p>
 					</div>
 				</div>
@@ -109,6 +121,8 @@ import "github.com/aydenstechdungeon/gospa/website/components"
 						<li class="flex items-center gap-2"><div class="w-1.5 h-1.5 rounded-full bg-[var(--accent-primary)]"></div> <code class="text-[var(--text-primary)]">layout.gospa</code> &mdash; A nested layout for the directory segment.</li>
 						<li class="flex items-center gap-2"><div class="w-1.5 h-1.5 rounded-full bg-[var(--accent-primary)]"></div> <code class="text-[var(--text-primary)]">error.gospa</code> &mdash; Error boundary for the segment.</li>
 						<li class="flex items-center gap-2"><div class="w-1.5 h-1.5 rounded-full bg-[var(--accent-primary)]"></div> <code class="text-[var(--text-primary)]">loading.gospa</code> &mdash; Static shell for PPR.</li>
+						<li class="flex items-center gap-2"><div class="w-1.5 h-1.5 rounded-full bg-[var(--accent-primary)]"></div> <code class="text-[var(--text-primary)]">components/*.gospa</code> &mdash; Static/server-only reusable blocks.</li>
+						<li class="flex items-center gap-2"><div class="w-1.5 h-1.5 rounded-full bg-[var(--accent-primary)]"></div> <code class="text-[var(--text-primary)]">islands/*.gospa</code> &mdash; Interactive hydrated islands.</li>
 					</ul>
 				</div>
 			</div>
