@@ -231,3 +231,24 @@ func TestDerived_DependOn(t *testing.T) {
 		t.Errorf("expected 15 after count=5, got %d", d.Get())
 	}
 }
+
+func TestDerived_DependOn_DeduplicatesObservable(t *testing.T) {
+	count := NewRune(0)
+	recomputes := 0
+
+	d := NewDerived(func() int {
+		recomputes++
+		return count.Get() * 2
+	})
+
+	d.DependOn(count)
+	d.DependOn(count)
+	before := recomputes
+
+	count.Set(1)
+	_ = d.Get()
+	after := recomputes - before
+	if after != 1 {
+		t.Fatalf("expected exactly one recompute for duplicate dependency, got %d", after)
+	}
+}

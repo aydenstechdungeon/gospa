@@ -4,6 +4,7 @@ package state
 
 import (
 	"encoding/json"
+	"reflect"
 	"sync"
 )
 
@@ -148,6 +149,11 @@ func (d *Derived[T]) SubscribeAny(fn func(any)) Unsubscribe {
 func (d *Derived[T]) DependOn(o Observable) {
 	d.mu.Lock()
 	defer d.mu.Unlock()
+	for _, dep := range d.deps {
+		if sameObservable(dep.observable, o) {
+			return
+		}
+	}
 
 	// Subscribe to the observable's changes
 	unsub := o.SubscribeAny(func(_ any) {
@@ -158,6 +164,18 @@ func (d *Derived[T]) DependOn(o Observable) {
 		observable:  o,
 		unsubscribe: unsub,
 	})
+}
+
+func sameObservable(a, b Observable) bool {
+	if a == nil || b == nil {
+		return a == b
+	}
+	va := reflect.ValueOf(a)
+	vb := reflect.ValueOf(b)
+	if va.IsValid() && vb.IsValid() && va.Type() == vb.Type() && va.Type().Comparable() {
+		return va.Interface() == vb.Interface()
+	}
+	return false
 }
 
 // markDirty marks this derived value as needing recomputation and notifies

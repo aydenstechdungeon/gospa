@@ -5,9 +5,10 @@ import (
 	"time"
 )
 
-func TestEnqueueStateNotificationDropsWhenQueueIsFull(t *testing.T) {
+func TestEnqueueStateNotificationFallsBackToSyncWhenQueueIsFull(t *testing.T) {
 	startStateNotificationDispatcher()
 	startDropped := droppedNotifications.Load()
+	done := make(chan struct{}, 1)
 
 	originalQueue := stateNotificationQueue
 	stateNotificationQueue = make(chan stateNotification)
@@ -15,10 +16,20 @@ func TestEnqueueStateNotificationDropsWhenQueueIsFull(t *testing.T) {
 		stateNotificationQueue = originalQueue
 	}()
 
-	enqueueStateNotification(stateNotification{handler: func(string, any) {}, key: "k", value: 1})
+	enqueueStateNotification(stateNotification{
+		handler: func(string, any) { done <- struct{}{} },
+		key:     "k",
+		value:   1,
+	})
 
-	if got := droppedNotifications.Load(); got != startDropped+1 {
-		t.Fatalf("expected dropped notification count to increase, got start=%d current=%d", startDropped, got)
+	select {
+	case <-done:
+	case <-time.After(time.Second):
+		t.Fatal("expected synchronous fallback to invoke handler")
+	}
+
+	if got := droppedNotifications.Load(); got != startDropped {
+		t.Fatalf("expected no dropped notification increment, got start=%d current=%d", startDropped, got)
 	}
 }
 

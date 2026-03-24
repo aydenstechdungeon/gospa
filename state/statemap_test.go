@@ -346,6 +346,13 @@ func TestParseMessage_InvalidJSON(t *testing.T) {
 	}
 }
 
+func TestParseMessage_InvalidType(t *testing.T) {
+	_, err := ParseMessage([]byte(`{"type":"admin_override","componentId":"x"}`))
+	if err == nil {
+		t.Error("ParseMessage should return error for invalid message type")
+	}
+}
+
 // ─── StateSnapshot ────────────────────────────────────────────────────────────
 
 func TestNewSnapshot(t *testing.T) {

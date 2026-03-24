@@ -4,6 +4,7 @@ package state
 
 import (
 	"bytes"
+	"fmt"
 	"log"
 	"reflect"
 	"runtime"
@@ -63,7 +64,9 @@ func enqueueStateNotification(notification stateNotification) {
 	select {
 	case stateNotificationQueue <- notification:
 	default:
-		droppedNotifications.Add(1)
+		// Fallback to synchronous dispatch to preserve state consistency under load.
+		// This applies backpressure instead of silently dropping updates.
+		safelyRunStateNotification(notification)
 	}
 }
 
@@ -565,6 +568,11 @@ func ParseMessage(data []byte) (*StateMessage, error) {
 	var msg StateMessage
 	if err := json.Unmarshal(data, &msg); err != nil {
 		return nil, err
+	}
+	switch msg.Type {
+	case "init", "update", "sync", "error":
+	default:
+		return nil, fmt.Errorf("invalid state message type: %q", msg.Type)
 	}
 	return &msg, nil
 }
