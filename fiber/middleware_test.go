@@ -20,7 +20,7 @@ func TestCSRFSetTokenMiddleware_DoesNotRotateExistingToken(t *testing.T) {
 	if err != nil {
 		t.Fatalf("first request failed: %v", err)
 	}
-	defer resp1.Body.Close()
+	defer func() { _ = resp1.Body.Close() }()
 
 	setCookie := resp1.Header.Get("Set-Cookie")
 	if setCookie == "" {
@@ -33,7 +33,7 @@ func TestCSRFSetTokenMiddleware_DoesNotRotateExistingToken(t *testing.T) {
 	if err != nil {
 		t.Fatalf("second request failed: %v", err)
 	}
-	defer resp2.Body.Close()
+	defer func() { _ = resp2.Body.Close() }()
 
 	if got := resp2.Header.Get("Set-Cookie"); strings.Contains(got, "csrf_token=") {
 		t.Fatalf("expected csrf token not to rotate, got Set-Cookie=%q", got)

@@ -93,6 +93,7 @@ func checkLibrary(name string, required bool) doctorCheck {
 		}
 	}
 
+	// #nosec G204
 	cmd := exec.Command("pkg-config", "--exists", name)
 	if err := cmd.Run(); err != nil {
 		return doctorCheck{
