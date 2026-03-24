@@ -16,22 +16,31 @@ type Block struct {
 
 // SFC represents the parsed structure of a .gospa file.
 type SFC struct {
-	Script   Block
-	ScriptTS Block
-	Template Block
-	Style    Block
+	FrontMatter map[string]string
+	Script      Block
+	ScriptTS    Block
+	Template    Block
+	Style       Block
 }
 
 var (
-	scriptRegex   = regexp.MustCompile(`(?ism)^<script(.*?)>(.*?)^</script>`)
-	templateRegex = regexp.MustCompile(`(?ism)^<template(.*?)>(.*?)^</template>`)
-	styleRegex    = regexp.MustCompile(`(?ism)^<style(.*?)>(.*?)^</style>`)
+	scriptRegex   = regexp.MustCompile(`(?is)<script(.*?)>(.*?)</script>`)
+	templateRegex = regexp.MustCompile(`(?is)<template(.*?)>(.*?)</template>`)
+	styleRegex    = regexp.MustCompile(`(?is)<style(.*?)>(.*?)</style>`)
 	langRegex     = regexp.MustCompile(`(?i)lang="([^"]*)"`)
 )
 
 // Parse splits a .gospa file into its component blocks.
 func Parse(input string) (*SFC, error) {
 	sfc := &SFC{}
+	trimmed := strings.TrimSpace(input)
+
+	frontMatterRegex := regexp.MustCompile(`(?s)^---\s*\n(.*?)\n---\s*\n?`)
+	if matches := frontMatterRegex.FindStringSubmatch(trimmed); len(matches) > 1 {
+		sfc.FrontMatter = parseFrontMatter(matches[1])
+		trimmed = strings.TrimSpace(strings.TrimPrefix(trimmed, matches[0]))
+	}
+	input = trimmed
 
 	// 1. Extract Script Blocks
 	for _, matches := range scriptRegex.FindAllStringSubmatch(input, -1) {
@@ -118,4 +127,24 @@ func normalizeScriptLang(lang string) string {
 	default:
 		return l
 	}
+}
+
+func parseFrontMatter(content string) map[string]string {
+	result := make(map[string]string)
+	for _, line := range strings.Split(content, "\n") {
+		line = strings.TrimSpace(line)
+		if line == "" || strings.HasPrefix(line, "#") {
+			continue
+		}
+		parts := strings.SplitN(line, ":", 2)
+		if len(parts) != 2 {
+			continue
+		}
+		key := strings.TrimSpace(parts[0])
+		val := strings.TrimSpace(parts[1])
+		if key != "" {
+			result[key] = val
+		}
+	}
+	return result
 }

@@ -62,7 +62,13 @@ func TestCompileCounter(t *testing.T) {
   <button on:click={increment}>{count}</button>
 </template>
 `
-	templ, ts, err := c.Compile("Counter", "Counter", input, "islands")
+	templ, ts, err := c.Compile(CompileOptions{
+		Type:     ComponentTypeIsland,
+		Name:     "Counter",
+		IslandID: "Counter",
+		PkgName:  "islands",
+		Hydrate:  true,
+	}, input)
 	if err != nil {
 		t.Fatalf("Failed to compile: %v", err)
 	}
@@ -89,7 +95,13 @@ func TestCompileCounter(t *testing.T) {
 func TestSanitizeName(t *testing.T) {
 	c := NewCompiler()
 	rawName := "Counter'); alert(1); //"
-	_, ts, err := c.Compile(rawName, rawName, "<template><div>Test</div></template>", "islands")
+	_, ts, err := c.Compile(CompileOptions{
+		Type:     ComponentTypeIsland,
+		Name:     rawName,
+		IslandID: rawName,
+		PkgName:  "islands",
+		Hydrate:  true,
+	}, "<template><div>Test</div></template>")
 	if err != nil {
 		t.Fatalf("Failed to compile: %v", err)
 	}
@@ -105,7 +117,13 @@ func TestSanitizeName(t *testing.T) {
 
 func TestCompileWithEmptySanitizedName(t *testing.T) {
 	c := NewCompiler()
-	templ, ts, err := c.Compile("!!!", "!!!", "<template><div>Test</div></template>", "islands")
+	templ, ts, err := c.Compile(CompileOptions{
+		Type:     ComponentTypeIsland,
+		Name:     "!!!",
+		IslandID: "!!!",
+		PkgName:  "islands",
+		Hydrate:  true,
+	}, "<template><div>Test</div></template>")
 	if err != nil {
 		t.Fatalf("Failed to compile with empty sanitized name: %v", err)
 	}
@@ -164,7 +182,13 @@ func TestCompileUsesTSScriptWhenProvided(t *testing.T) {
 </script>
 <template><div>{count}</div></template>
 `
-	_, ts, err := c.Compile("DualScript", "DualScript", input, "islands")
+	_, ts, err := c.Compile(CompileOptions{
+		Type:     ComponentTypeIsland,
+		Name:     "DualScript",
+		IslandID: "DualScript",
+		PkgName:  "islands",
+		Hydrate:  true,
+	}, input)
 	if err != nil {
 		t.Fatalf("Failed to compile dual-script component: %v", err)
 	}
@@ -188,5 +212,119 @@ func TestParseRejectsDuplicateGoScripts(t *testing.T) {
 	}
 	if !strings.Contains(err.Error(), "multiple <script lang=\"go\">") {
 		t.Fatalf("Unexpected error: %v", err)
+	}
+}
+
+func TestCompilePageNoIslandAndNoTS(t *testing.T) {
+	c := NewCompiler()
+	input := `<template><h1>Hello</h1></template>`
+
+	templ, ts, err := c.Compile(CompileOptions{
+		Type:    ComponentTypePage,
+		Name:    "Home",
+		PkgName: "pages",
+	}, input)
+	if err != nil {
+		t.Fatalf("compile failed: %v", err)
+	}
+	if strings.Contains(templ, "data-gospa-island") {
+		t.Fatalf("page templ should not include island wrapper: %s", templ)
+	}
+	if strings.TrimSpace(ts) != "" {
+		t.Fatalf("page should not generate TS output: %s", ts)
+	}
+}
+
+func TestCompileLayoutIncludesChildrenAndNoTS(t *testing.T) {
+	c := NewCompiler()
+	input := `<template><main>@children</main></template>`
+
+	templ, ts, err := c.Compile(CompileOptions{
+		Type:    ComponentTypeLayout,
+		Name:    "MainLayout",
+		PkgName: "layouts",
+	}, input)
+	if err != nil {
+		t.Fatalf("compile failed: %v", err)
+	}
+	if !strings.Contains(templ, "children templ.Component") {
+		t.Fatalf("layout should accept children in signature: %s", templ)
+	}
+	if !strings.Contains(templ, "{ children }") {
+		t.Fatalf("layout should render children placeholder: %s", templ)
+	}
+	if strings.TrimSpace(ts) != "" {
+		t.Fatalf("layout should not generate TS output: %s", ts)
+	}
+}
+
+func TestCompileStaticNoWrapperAndNoTS(t *testing.T) {
+	c := NewCompiler()
+	input := `<template><p>Footer</p></template>`
+
+	templ, ts, err := c.Compile(CompileOptions{
+		Type:    ComponentTypeStatic,
+		Name:    "Footer",
+		PkgName: "components",
+	}, input)
+	if err != nil {
+		t.Fatalf("compile failed: %v", err)
+	}
+	if strings.Contains(templ, "data-gospa-island") {
+		t.Fatalf("static templ should not include island marker: %s", templ)
+	}
+	if strings.Contains(templ, "<div class=") {
+		t.Fatalf("static templ should not include outer wrapper: %s", templ)
+	}
+	if strings.TrimSpace(ts) != "" {
+		t.Fatalf("static should not generate TS output: %s", ts)
+	}
+}
+
+func TestFrontMatterParsingAndTypeDefaulting(t *testing.T) {
+	parsed, err := sfc.Parse(`---
+type: page
+hydrate: false
+---
+<template><div>ok</div></template>`)
+	if err != nil {
+		t.Fatalf("parse failed: %v", err)
+	}
+	if parsed.FrontMatter["type"] != "page" {
+		t.Fatalf("expected frontmatter type page, got %q", parsed.FrontMatter["type"])
+	}
+
+	c := NewCompiler()
+	templ, ts, err := c.Compile(CompileOptions{
+		Name: "FrontMatterPage",
+	}, `---
+type: page
+---
+<template><div>ok</div></template>`)
+	if err != nil {
+		t.Fatalf("compile failed: %v", err)
+	}
+	if strings.Contains(templ, "data-gospa-island") {
+		t.Fatalf("frontmatter page should not include island wrapper: %s", templ)
+	}
+	if strings.TrimSpace(ts) != "" {
+		t.Fatalf("frontmatter page should not generate TS output: %s", ts)
+	}
+}
+
+func TestCompileDefaultsToIslandWithoutFrontMatter(t *testing.T) {
+	c := NewCompiler()
+	templ, ts, err := c.Compile(CompileOptions{
+		Name:     "Counter",
+		IslandID: "counter",
+	}, `<template><div>Counter</div></template>`)
+	if err != nil {
+		t.Fatalf("compile failed: %v", err)
+	}
+	if !strings.Contains(templ, "data-gospa-island=\"counter\"") {
+		t.Fatalf("default compile should remain island behavior: %s", templ)
+	}
+	if strings.TrimSpace(ts) == "" {
+		t.Fatalf("default island compile should generate TS output")
 	}
 }
