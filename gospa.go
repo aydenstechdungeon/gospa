@@ -328,7 +328,7 @@ func (a *App) handleRemoteAction(c fiberpkg.Ctx) error {
 	rc := routing.RemoteContext{
 		IP:        c.IP(),
 		UserAgent: string(c.Request().Header.UserAgent()),
-		RequestID: c.GetRespHeader("X-Request-Id"),
+		RequestID: c.Get("X-Request-Id"),
 		SessionID: c.Get("X-Session-Id"),
 		Headers:   headers,
 	}
@@ -458,11 +458,6 @@ func (a *App) Run(addr string) error {
 		a.Logger().Error("plugin BeforeServe hook failed", "err", err)
 	}
 	a.applyPluginMiddleware()
-	if len(a.Router.GetRoutes()) == 0 {
-		if err := a.Scan(); err != nil {
-			return err
-		}
-	}
 	if err := a.RegisterRoutes(); err != nil {
 		return err
 	}
@@ -479,11 +474,6 @@ func (a *App) RunTLS(addr, certFile, keyFile string) error {
 		a.Logger().Error("plugin BeforeServe hook failed", "err", err)
 	}
 	a.applyPluginMiddleware()
-	if len(a.Router.GetRoutes()) == 0 {
-		if err := a.Scan(); err != nil {
-			return err
-		}
-	}
 	if err := a.RegisterRoutes(); err != nil {
 		return err
 	}
