@@ -109,7 +109,7 @@
     --accent-secondary: oklch(0.65 0.25 285);
     --accent-glow: oklch(0.7 0.2 195 / 0.15);
     --border: oklch(0.25 0.04 260);
-    --font-display: 'Outfit', 'Inter', sans-serif;
+    --font-display: 'Inter', sans-serif;
     --ease-fluid: cubic-bezier(0.3, 0, 0, 1);
     --transition-slow: 400ms var(--ease-fluid);
   }

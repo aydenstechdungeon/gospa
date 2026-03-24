@@ -1546,13 +1546,6 @@
   src: url('/static/fonts/InterVariable.woff2') format('woff2');
 }
 @font-face {
-  font-family: 'Outfit';
-  font-style: normal;
-  font-weight: 100 900;
-  font-display: swap;
-  src: url('https://fonts.gstatic.com/s/outfit/v11/QGYsz_OBy1_Aqd_3A4CX.woff2') format('woff2');
-}
-@font-face {
   font-family: 'JetBrains Mono';
   font-style: normal;
   font-weight: 400;

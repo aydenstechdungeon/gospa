@@ -109,7 +109,7 @@
     --accent-secondary: oklch(0.65 0.25 285);
     --accent-glow: oklch(0.7 0.2 195 / 0.15);
     --border: oklch(0.25 0.04 260);
-    --font-display: 'Outfit', 'Inter', sans-serif;
+    --font-display: 'Inter', sans-serif;
     --ease-fluid: cubic-bezier(0.3, 0, 0, 1);
     --transition-slow: 400ms var(--ease-fluid);
   }
@@ -3046,13 +3046,6 @@
   font-weight: 100 900;
   font-display: swap;
   src: url('/static/fonts/InterVariable.woff2') format('woff2');
-}
-@font-face {
-  font-family: 'Outfit';
-  font-style: normal;
-  font-weight: 100 900;
-  font-display: swap;
-  src: url('https://fonts.gstatic.com/s/outfit/v11/QGYsz_OBy1_Aqd_3A4CX.woff2') format('woff2');
 }
 @font-face {
   font-family: 'JetBrains Mono';
