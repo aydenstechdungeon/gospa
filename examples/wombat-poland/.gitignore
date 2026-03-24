@@ -1,0 +1,3 @@
+# Ignore binaries and intermediate objects
+wombat
+*.o
