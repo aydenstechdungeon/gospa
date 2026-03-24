@@ -15,8 +15,10 @@ import (
 // GospaCompiler handles the compilation of .gospa files.
 type GospaCompiler struct{}
 
+// ComponentType represents the type of a compiled component.
 type ComponentType string
 
+// Component type constants.
 const (
 	ComponentTypeIsland ComponentType = "island"
 	ComponentTypePage   ComponentType = "page"
@@ -25,6 +27,7 @@ const (
 	ComponentTypeServer ComponentType = "server"
 )
 
+// CompileOptions configures the compilation of a .gospa component.
 type CompileOptions struct {
 	Type       ComponentType
 	IslandID   string
@@ -396,11 +399,12 @@ func (c *GospaCompiler) generateIslandTempl(name, islandID, template, script, ha
 
 	// Ensure fmt import if used
 	if strings.Contains(cleanScript, "fmt.") && !strings.Contains(extraImports, "\"fmt\"") {
-		if extraImports == "" {
+		switch {
+		case extraImports == "":
 			extraImports = "import \"fmt\""
-		} else if strings.HasPrefix(extraImports, "import (") {
+		case strings.HasPrefix(extraImports, "import ("):
 			extraImports = strings.Replace(extraImports, "import (", "import (\n\t\"fmt\"", 1)
-		} else {
+		default:
 			extraImports = "import \"fmt\"\n" + extraImports
 		}
 	}
