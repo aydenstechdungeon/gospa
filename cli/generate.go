@@ -231,8 +231,8 @@ func compileSFCs(config *GenerateConfig) error {
 			return fmt.Errorf("failed to compile %s: %w", file, err)
 		}
 
-		// Write .templ file in the same directory
-		templPath := strings.TrimSuffix(file, ".gospa") + ".templ"
+		// Write .templ file in the same directory with a "generated_" prefix
+		templPath := filepath.Join(dir, "generated_"+strings.TrimSuffix(baseName, ".gospa")+".templ")
 		// #nosec G703
 		if err := os.WriteFile(filepath.Clean(templPath), []byte(templ), 0600); err != nil {
 			return err
@@ -432,7 +432,7 @@ func parseSourceRoute(filename, baseDir string) (*RouteDefinition, error) {
 	ext := filepath.Ext(file)
 
 	// Skip layout files
-	if file == "layout.templ" || file == "layout.gospa" {
+	if file == "layout.templ" || file == "layout.gospa" || file == "generated_layout.templ" || file == "root_layout.templ" || file == "generated_root_layout.templ" {
 		return nil, nil
 	}
 
@@ -443,7 +443,7 @@ func parseSourceRoute(filename, baseDir string) (*RouteDefinition, error) {
 	}
 
 	// Handle non-page files
-	if file != "page.templ" && file != "page.gospa" {
+	if file != "page.templ" && file != "page.gospa" && file != "generated_page.templ" {
 		// Add filename to path
 		path = path + "/" + strings.TrimSuffix(file, ext)
 	}

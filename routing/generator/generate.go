@@ -125,7 +125,7 @@ func parseRoute(relPath, routesDir string) RouteInfo {
 	filename := filepath.Base(relPath)
 
 	// Check if it's a layout
-	route.IsLayout = filename == "layout.templ" || filename == "root_layout.templ"
+	route.IsLayout = filename == "layout.templ" || filename == "root_layout.templ" || filename == "generated_layout.templ" || filename == "generated_root_layout.templ"
 
 	// Determine package name and import path based on directory
 	// For subdirectory routes like blog/page.templ, the package should be "blog"
@@ -297,7 +297,7 @@ func parseFunctionParams(paramsStr string) []FuncParam {
 // Route groups (name) are stripped from the URL path entirely.
 func filePathToURLPath(dir, filename string) string {
 	// Handle root page
-	if dir == "." && filename == "page.templ" {
+	if dir == "." && (filename == "page.templ" || filename == "generated_page.templ") {
 		return "/"
 	}
 
@@ -325,10 +325,11 @@ func filePathToURLPath(dir, filename string) string {
 	}
 
 	// Add the page name if it's not an index page
-	if filename != "page.templ" {
+	if filename != "page.templ" && filename != "generated_page.templ" {
 		// For non-page files, use the filename
 		name := strings.TrimSuffix(filename, ".templ")
-		if name != "layout" {
+		name = strings.TrimPrefix(name, "generated_") // Strip prefix if it exists
+		if name != "layout" && name != "root_layout" {
 			urlParts = append(urlParts, name)
 		}
 	}

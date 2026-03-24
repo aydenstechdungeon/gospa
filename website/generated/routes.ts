@@ -40,8 +40,8 @@ export const routes: Route[] = [
   {"Path":"/routes/docs/getstarted/installation","File":"routes/docs/getstarted/installation/page.templ","Params":[],"IsDynamic":false,"IsCatchAll":false},
   {"Path":"/routes/docs/getstarted/quickstart","File":"routes/docs/getstarted/quickstart/page.templ","Params":[],"IsDynamic":false,"IsCatchAll":false},
   {"Path":"/routes/docs/getstarted/structure","File":"routes/docs/getstarted/structure/page.templ","Params":[],"IsDynamic":false,"IsCatchAll":false},
+  {"Path":"/routes/docs/gospasfc","File":"routes/docs/gospasfc/generated_page.templ","Params":[],"IsDynamic":false,"IsCatchAll":false},
   {"Path":"/routes/docs/gospasfc","File":"routes/docs/gospasfc/page.gospa","Params":[],"IsDynamic":false,"IsCatchAll":false},
-  {"Path":"/routes/docs/gospasfc","File":"routes/docs/gospasfc/page.templ","Params":[],"IsDynamic":false,"IsCatchAll":false},
   {"Path":"/routes/docs/hmr","File":"routes/docs/hmr/page.templ","Params":[],"IsDynamic":false,"IsCatchAll":false},
   {"Path":"/routes/docs/islands","File":"routes/docs/islands/page.templ","Params":[],"IsDynamic":false,"IsCatchAll":false},
   {"Path":"/routes/docs","File":"routes/docs/page.templ","Params":[],"IsDynamic":false,"IsCatchAll":false},
@@ -75,7 +75,6 @@ export const routes: Route[] = [
   {"Path":"/routes/docs/troubleshooting","File":"routes/docs/troubleshooting/page.templ","Params":[],"IsDynamic":false,"IsCatchAll":false},
   {"Path":"/routes/docs/websocket","File":"routes/docs/websocket/page.templ","Params":[],"IsDynamic":false,"IsCatchAll":false},
   {"Path":"/routes","File":"routes/page.templ","Params":[],"IsDynamic":false,"IsCatchAll":false},
-  {"Path":"/routes/root_layout","File":"routes/root_layout.templ","Params":[],"IsDynamic":false,"IsCatchAll":false},
 ];
 
 export const routeMap: Record<string, Route> = {
@@ -145,7 +144,6 @@ export const routeMap: Record<string, Route> = {
   '/routes/docs/troubleshooting': routes.find(r => r.path === '/routes/docs/troubleshooting')!,
   '/routes/docs/websocket': routes.find(r => r.path === '/routes/docs/websocket')!,
   '/routes': routes.find(r => r.path === '/routes')!,
-  '/routes/root_layout': routes.find(r => r.path === '/routes/root_layout')!,
 };
 
 export function getRoute(path: string): Route | undefined {
