@@ -49,18 +49,22 @@ func (a *App) validatePublicHost(host string) (string, bool) {
 
 func (a *App) renderError(c gofiber.Ctx, statusCode int, errToDisplay error) error {
 	path := c.Path()
+	message := "Internal Server Error"
+	if a.Config.DevMode && errToDisplay != nil {
+		message = errToDisplay.Error()
+	}
 	errRoute := a.Router.GetErrorRoute(path)
 	if errRoute == nil {
-		return c.Status(statusCode).SendString(errToDisplay.Error())
+		return c.Status(statusCode).SendString(message)
 	}
 
 	errCompFn := routing.GetError(errRoute.Path)
 	if errCompFn == nil {
-		return c.Status(statusCode).SendString(errToDisplay.Error())
+		return c.Status(statusCode).SendString(message)
 	}
 
 	props := map[string]interface{}{
-		"error": errToDisplay.Error(),
+		"error": message,
 		"code":  statusCode,
 		"path":  path,
 	}

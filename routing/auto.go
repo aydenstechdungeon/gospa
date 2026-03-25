@@ -61,8 +61,11 @@ type Route struct {
 
 // Router manages all routes.
 type Router struct {
-	routes []*Route
-	fs     fs.FS
+	routes          []*Route
+	fs              fs.FS
+	layoutIndex     map[string]*Route
+	middlewareIndex map[string]*Route
+	errorRouteIndex map[string]*Route
 }
 
 // NewRouter creates a new router with the given routes directory or filesystem.
@@ -81,8 +84,11 @@ func NewRouter(routesSource interface{}) *Router {
 	}
 
 	return &Router{
-		routes: make([]*Route, 0),
-		fs:     fileSystem,
+		routes:          make([]*Route, 0),
+		fs:              fileSystem,
+		layoutIndex:     make(map[string]*Route),
+		middlewareIndex: make(map[string]*Route),
+		errorRouteIndex: make(map[string]*Route),
 	}
 }
 
@@ -128,6 +134,7 @@ func (r *Router) Scan() error {
 
 	// Build layout hierarchy
 	r.buildLayoutHierarchy()
+	r.rebuildIndexes()
 
 	return nil
 }
@@ -204,11 +211,11 @@ func (r *Router) filePathToURLPath(relPath string, _ RouteType) string {
 		} else {
 			path = strings.TrimSuffix(path, "error")
 		}
-	case path == "_middleware.go" || strings.HasSuffix(path, "/_middleware.go"):
-		if path == "_middleware.go" {
+	case path == "_middleware" || strings.HasSuffix(path, "/_middleware"):
+		if path == "_middleware" {
 			path = ""
 		} else {
-			path = strings.TrimSuffix(path, "_middleware.go")
+			path = strings.TrimSuffix(path, "_middleware")
 		}
 	case path == "_loading" || strings.HasSuffix(path, "/_loading") || path == "loading" || strings.HasSuffix(path, "/loading"):
 		if path == "_loading" || path == "loading" {
@@ -268,14 +275,14 @@ func convertDynamicSegments(path string) string {
 		// Check for optional catch-all [[...rest]]
 		if strings.HasPrefix(seg, "[[...") && strings.HasSuffix(seg, "]]") {
 			param := seg[5 : len(seg)-2]
-			result = append(result, "*"+param)
+			result = append(result, "*?"+param)
 			continue
 		}
 
 		// Check for optional [[param]]
 		if strings.HasPrefix(seg, "[[") && strings.HasSuffix(seg, "]]") {
 			param := seg[2 : len(seg)-2]
-			result = append(result, ":"+param)
+			result = append(result, ":?"+param)
 			continue
 		}
 
@@ -313,7 +320,11 @@ func extractParams(path string) (params []string, isDynamic bool, isCatchAll boo
 
 		// Catch-all parameter
 		if strings.HasPrefix(seg, "*") {
-			params = append(params, seg[1:])
+			if strings.HasPrefix(seg, "*?") {
+				params = append(params, seg[2:])
+			} else {
+				params = append(params, seg[1:])
+			}
 			isDynamic = true
 			isCatchAll = true
 			continue
@@ -321,7 +332,11 @@ func extractParams(path string) (params []string, isDynamic bool, isCatchAll boo
 
 		// Dynamic parameter
 		if strings.HasPrefix(seg, ":") {
-			params = append(params, seg[1:])
+			if strings.HasPrefix(seg, ":?") {
+				params = append(params, seg[2:])
+			} else {
+				params = append(params, seg[1:])
+			}
 			isDynamic = true
 			continue
 		}
@@ -344,6 +359,12 @@ func calculatePriority(path string, _ bool, _ bool) int {
 		// Catch-all has lowest priority
 		if strings.HasPrefix(seg, "*") {
 			priority += 1000 + i
+			continue
+		}
+
+		// Optional dynamic segments are less specific than required dynamics
+		if strings.HasPrefix(seg, ":?") {
+			priority += 150 + i
 			continue
 		}
 
@@ -413,65 +434,70 @@ func (r *Router) Match(urlPath string) (*Route, map[string]string) {
 
 // matchRoute checks if a route pattern matches a URL path.
 func (r *Router) matchRoute(pattern, path string) (map[string]string, bool) {
-	patternSegs := strings.Split(strings.Trim(pattern, "/"), "/")
-	pathSegs := strings.Split(strings.Trim(path, "/"), "/")
+	patternSegs := splitPathSegments(pattern)
+	pathSegs := splitPathSegments(path)
 
 	params := make(map[string]string)
-
-	// Handle catch-all
-	if len(patternSegs) > 0 && strings.HasPrefix(patternSegs[len(patternSegs)-1], "*") {
-		// Check prefix match
-		prefixSegs := patternSegs[:len(patternSegs)-1]
-		if len(pathSegs) < len(prefixSegs) {
-			return nil, false
-		}
-
-		// Match prefix segments
-		for i, seg := range prefixSegs {
-			if seg == "" {
-				continue
-			}
-			if !r.matchSegment(seg, pathSegs[i], params) {
-				return nil, false
-			}
-		}
-
-		// Capture remaining as catch-all param
-		paramName := patternSegs[len(patternSegs)-1][1:]
-		remaining := strings.Join(pathSegs[len(prefixSegs):], "/")
-		params[paramName] = remaining
-
-		return params, true
-	}
-
-	// Exact segment match
-	// Allow mismatch of 1 if pattern contains an optional segment (converted to :param but originally [[param]])
-	// Note: convertDynamicSegments converts [[param]] to :param, so we check for presence of : in pattern
-	if len(patternSegs) != len(pathSegs) {
-		// Handle the case where the last segment is optional and missing from path
-		if len(patternSegs) == len(pathSegs)+1 && strings.HasPrefix(patternSegs[len(patternSegs)-1], ":") {
-			// This is likely an optional segment. Match the prefix and captured the rest as empty.
-			for i := 0; i < len(pathSegs); i++ {
-				if !r.matchSegment(patternSegs[i], pathSegs[i], params) {
-					return nil, false
-				}
-			}
-			params[patternSegs[len(patternSegs)-1][1:]] = ""
-			return params, true
-		}
-		return nil, false
-	}
-
-	for i, seg := range patternSegs {
-		if seg == "" && pathSegs[i] == "" {
+	i, j := 0, 0
+	for i < len(patternSegs) {
+		seg := patternSegs[i]
+		if seg == "" {
+			i++
 			continue
 		}
-		if !r.matchSegment(seg, pathSegs[i], params) {
+
+		if strings.HasPrefix(seg, "*?") {
+			paramName := seg[2:]
+			if j >= len(pathSegs) {
+				params[paramName] = ""
+			} else {
+				params[paramName] = strings.Join(pathSegs[j:], "/")
+			}
+			return params, true
+		}
+
+		if strings.HasPrefix(seg, "*") {
+			paramName := seg[1:]
+			params[paramName] = strings.Join(pathSegs[j:], "/")
+			return params, true
+		}
+
+		if strings.HasPrefix(seg, ":?") {
+			paramName := seg[2:]
+			if j >= len(pathSegs) {
+				params[paramName] = ""
+				i++
+				continue
+			}
+			params[paramName] = pathSegs[j]
+			i++
+			j++
+			continue
+		}
+
+		if j >= len(pathSegs) {
 			return nil, false
 		}
+
+		if !r.matchSegment(seg, pathSegs[j], params) {
+			return nil, false
+		}
+		i++
+		j++
 	}
 
+	if j != len(pathSegs) {
+		return nil, false
+	}
 	return params, true
+}
+
+func splitPathSegments(path string) []string {
+	trimmed := strings.Trim(path, "/")
+	if trimmed == "" {
+		return []string{}
+	}
+	return strings.Split(trimmed, "/")
 }
 
 // matchSegment matches a single path segment.
@@ -479,6 +505,9 @@ func (r *Router) matchSegment(pattern, value string, params map[string]string) b
 	// Dynamic parameter
 	if strings.HasPrefix(pattern, ":") {
 		paramName := pattern[1:]
+		if strings.HasPrefix(pattern, ":?") {
+			paramName = pattern[2:]
+		}
 		params[paramName] = value
 		return true
 	}
@@ -545,9 +574,17 @@ func (r *Route) RouteRegex() *regexp.Regexp {
 		// Escape special regex characters
 		pattern = regexp.QuoteMeta(pattern)
 
+		// Replace optional :?param with optional single-segment capture group
+		optionalParamPattern := `(?:/([^/]+))?`
+		pattern = regexp.MustCompile(`/:\?[a-zA-Z_][a-zA-Z0-9_]*`).ReplaceAllString(pattern, optionalParamPattern)
+
 		// Replace :param with capture group
 		paramPattern := `([^/]+)`
 		pattern = regexp.MustCompile(`:[a-zA-Z_][a-zA-Z0-9_]*`).ReplaceAllString(pattern, paramPattern)
+
+		// Replace optional *?param with optional catch-all capture group
+		optionalCatchAllPattern := `(?:/(.*))?`
+		pattern = regexp.MustCompile(`/\*\?[a-zA-Z_][a-zA-Z0-9_]*`).ReplaceAllString(pattern, optionalCatchAllPattern)
 
 		// Replace *param with capture group for catch-all
 		catchAllPattern := `(.*)`
@@ -576,20 +613,12 @@ func (r *Router) ResolveLayoutChain(route *Route) []*Route {
 
 	chain := make([]*Route, 0)
 
-	// Collect all layouts
-	layouts := make(map[string]*Route)
-	for _, rt := range r.routes {
-		if rt.Type == RouteTypeLayout {
-			layouts[rt.Path] = rt
-		}
-	}
-
 	// Walk up the path hierarchy collecting layouts
 	path := route.Path
 
 	// Check for layout at current path (if it's a page or error)
 	if route.Type == RouteTypePage || route.Type == RouteTypeError {
-		if layout, ok := layouts[path]; ok {
+		if layout, ok := r.layoutIndex[path]; ok {
 			chain = append([]*Route{layout}, chain...)
 		}
 	}
@@ -601,7 +630,7 @@ func (r *Router) ResolveLayoutChain(route *Route) []*Route {
 			break
 		}
 
-		if layout, ok := layouts[parent]; ok {
+		if layout, ok := r.layoutIndex[parent]; ok {
 			chain = append([]*Route{layout}, chain...)
 		}
 
@@ -609,7 +638,7 @@ func (r *Router) ResolveLayoutChain(route *Route) []*Route {
 	}
 
 	// Check for root layout
-	if layout, ok := layouts["/"]; ok {
+	if layout, ok := r.layoutIndex["/"]; ok {
 		if len(chain) == 0 || chain[0].Path != "/" {
 			chain = append([]*Route{layout}, chain...)
 		}
@@ -627,17 +656,9 @@ func (r *Router) ResolveMiddlewareChain(route *Route) []*Route {
 
 	chain := make([]*Route, 0)
 
-	// Collect all middlewares
-	mws := make(map[string]*Route)
-	for _, rt := range r.routes {
-		if rt.Type == RouteTypeMiddleware {
-			mws[rt.Path] = rt
-		}
-	}
-
 	path := route.Path
 	if route.Type == RouteTypePage || route.Type == RouteTypeError {
-		if mw, ok := mws[path]; ok {
+		if mw, ok := r.middlewareIndex[path]; ok {
 			chain = append([]*Route{mw}, chain...)
 		}
 	}
@@ -647,14 +668,14 @@ func (r *Router) ResolveMiddlewareChain(route *Route) []*Route {
 		if parent == path {
 			break
 		}
-		if mw, ok := mws[parent]; ok {
+		if mw, ok := r.middlewareIndex[parent]; ok {
 			chain = append([]*Route{mw}, chain...)
 		}
 		path = parent
 	}
 
 	// Check for root middleware
-	if mw, ok := mws["/"]; ok {
+	if mw, ok := r.middlewareIndex["/"]; ok {
 		if len(chain) == 0 || chain[0].Path != "/" {
 			chain = append([]*Route{mw}, chain...)
 		}
@@ -703,18 +724,10 @@ func (r *Router) MatchWithLayout(urlPath string) (*Route, []*Route, map[string]s
 
 // GetErrorRoute returns the nearest error route for a given path.
 func (r *Router) GetErrorRoute(path string) *Route {
-	// Collect all error routes
-	errors := make(map[string]*Route)
-	for _, rt := range r.routes {
-		if rt.Type == RouteTypeError {
-			errors[rt.Path] = rt
-		}
-	}
-
 	// Walk up the path hierarchy
 	current := path
 	for {
-		if errRoute, ok := errors[current]; ok {
+		if errRoute, ok := r.errorRouteIndex[current]; ok {
 			return errRoute
 		}
 
@@ -726,9 +739,26 @@ func (r *Router) GetErrorRoute(path string) *Route {
 	}
 
 	// Check for root error
-	if errRoute, ok := errors["/"]; ok {
+	if errRoute, ok := r.errorRouteIndex["/"]; ok {
 		return errRoute
 	}
 
 	return nil
+}
+
+func (r *Router) rebuildIndexes() {
+	r.layoutIndex = make(map[string]*Route)
+	r.middlewareIndex = make(map[string]*Route)
+	r.errorRouteIndex = make(map[string]*Route)
+
+	for _, rt := range r.routes {
+		switch rt.Type {
+		case RouteTypeLayout:
+			r.layoutIndex[rt.Path] = rt
+		case RouteTypeMiddleware:
+			r.middlewareIndex[rt.Path] = rt
+		case RouteTypeError:
+			r.errorRouteIndex[rt.Path] = rt
+		}
+	}
 }
