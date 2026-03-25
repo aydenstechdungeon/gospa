@@ -71,19 +71,31 @@ GoSPA SFC uses **Runes** to define reactive logic. These are available in the `<
 The `<template>` block uses Go's logic via **Templ** integration.
 
 ### Control Flow
-Directly use Go's `if` and `for` blocks:
+Directly use Svelte-aligned logic blocks:
 
 ```svelte
 <template>
-  {if isAdmin}
+  {#if isAdmin}
     <button>Delete User</button>
+  {:else if isModerator}
+    <button>Hide Post</button>
+  {:else}
+    <span>No Actions</span>
   {/if}
 
   <ul>
-    {for _, item := range items}
-      <li>{item.Name}</li>
-    {/for}
+    {#each items as item, index}
+      <li>{index + 1}: {item.Name}</li>
+    {/each}
   </ul>
+
+  {#await promise}
+    <p>Loading...</p>
+  {:then result}
+    <p>Result: {result}</p>
+  {:catch error}
+    <p>Error: {error.message}</p>
+  {/await}
 </template>
 ```
 
@@ -151,3 +163,37 @@ You can include both a Go script and a TypeScript script in the same file. The G
 1. **Keep Islands Small**: Use `static` or `page` types for non-interactive content to keep the client-side JS bundle small.
 2. **Use Tailwind for Layout**: Combine scoped CSS for component-specific visuals and Tailwind for overall layout and spacing.
 3. **Leverage Go Types**: Take advantage of Go's strong typing in your script blocks for robust data handling.
+## Technical Deep Dive: Go -> TS Transpilation
+
+GoSPA components use a custom compiler to transform Go logic into efficient TypeScript for client-side hydration. Here are the primary rules:
+
+### 1. Prop Destructuring
+Inside `<script lang="go">`, use the `$props()` rune to access component properties. 
+
+```go
+// Source (.gospa)
+var { title, count } = $props()
+```
+
+The compiler transforms this into TypeScript destructuring while maintaining type safety:
+
+```typescript
+// Generated (.ts)
+const { title, count } = $props();
+```
+
+### 2. Type Stripping
+Go-specific types and syntax that don't exist in TypeScript are stripped or mapped:
+- `int`, `float64`, `int32` → `number`
+- `string` → `string`
+- `bool` → `boolean`
+- `map[string]any` → `Record<string, any>`
+
+### 3. Expression Translation
+The compiler performs basic regex-based translation for common Go patterns to their JavaScript equivalents:
+- `fmt.Printf(...)` → `console.log(...)`
+- `len(arr)` → `arr.length`
+- `append(arr, item)` → `[...arr, item]`
+
+### 4. Rune Synchronization
+Any variable marked with `$state()` is automatically synchronized with the server-side state map. The compiler generates the necessary WebSocket bridge code to ensure that updates on the server are reflected in the client's reactive runes.

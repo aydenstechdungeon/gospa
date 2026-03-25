@@ -486,7 +486,16 @@ stateMap.OnChange = func(key string, value any) {
     fmt.Printf("State changed: %s = %v\n", key, value)
 }
 ```
-> **Note for OnChange:** The `OnChange` callback runs as a background goroutine entirely outside the `StateMap` mutex bounds, meaning it is **100% safe** to call `Add()`, `Remove()`, `Set()`, or `Clear()` on the very same `StateMap` without risking a deadlock.
+
+> [!WARNING]
+> **OnChange and Backpressure:** 
+> Notifications are dispatched via a bounded worker queue (default size: 1024). 
+> - If the queue has space, the callback runs in a background goroutine. 
+> - **If the queue is full**, the dispatcher falls back to **synchronous execution** to ensure state consistency. This applies backpressure to the goroutine triggering the state change.
+>
+> **Deadlock Risk:** Because of this synchronous fallback, you must be extremely careful. If your `OnChange` handler attempts to acquire a lock that the producer goroutine is already holding (or vice versa), it **will deadlock**. 
+>
+> **Best Practice:** Keep `OnChange` handlers lightweight and non-blocking. If you need to perform heavy I/O or complex logic, spawn a new goroutine inside the handler.
 
 ---
 

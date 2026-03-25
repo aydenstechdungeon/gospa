@@ -16,8 +16,10 @@ go install github.com/aydenstechdungeon/gospa/cmd/gospa@latest
 | `dev` | - | Start development server with hot reload |
 | `build` | - | Build for production |
 | `generate` | - | Generate route registration code |
+| `doctor` | - | Validate local project/tooling setup |
 | `prune` | - | Remove unused state from state stores |
-| `add` | - | Add a feature (e.g., tailwind) |
+| `clean` | - | Remove generated/build artifacts |
+| `add` | - | Add a feature (Experimental) |
 | `version` | `-v`, `--version` | Show GoSPA version |
 | `help` | `-h`, `--help` | Show help message |
 
@@ -263,6 +265,16 @@ gospa generate [options]
 | `--input-dir` | - | `.` | Input directory to scan |
 | `--output` | `-o` | `./generated` | Output directory for generated files |
 | `--type` | - | `island` | Default `.gospa` component type (`island`, `page`, `layout`, `static`, `server`) |
+
+### Component Types
+
+| Type | Hydration | Routing | Purpose |
+|------|-----------|---------|---------|
+| `island` | ✅ Yes | No | Interactive client-side components (default). |
+| `page` | ❌ No | ✅ Yes | Main route entry points in the `routes/` directory. |
+| `layout` | ❌ No | ✅ Yes | Wrappers for nested routes (uses `{ children }`). |
+| `static` | ❌ No | No | Pure server-rendered HTML with zero client-side JS. |
+| `server` | ❌ No | No | Logic-only components or fragments without a wrapper. |
 | `--help` | `-h` | - | Show help for this command |
 
 ### What Gets Generated
@@ -379,14 +391,8 @@ gospa add <feature>
 ### Examples
 
 ```bash
-# Add Tailwind CSS
+# Add Tailwind CSS (Experimental)
 gospa add tailwind
-
-# Add authentication
-gospa add auth
-
-# Add SEO optimization
-gospa add seo
 ```
 
 ---
@@ -538,6 +544,63 @@ gospa prune --aggressive --json
 
 - `gospa prune` is a manual maintenance command.
 - The current `gospa.Config` type does not expose automatic state-pruning fields.
+
+---
+
+## `gospa doctor`
+
+Inspects the current project for common setup issues, missing dependencies, or misconfigured entrypoints.
+
+```bash
+gospa doctor [options]
+```
+
+### Options
+
+| Flag | Short | Default | Description |
+|------|-------|---------|-------------|
+| `--routes-dir` | - | `./routes` | Routes directory to validate |
+| `--help` | `-h` | - | Show help for this command |
+
+### What it checks
+
+1. **Environment**: `go` and `bun` availability.
+2. **Project Layout**: `go.mod`, `main.go`, and routes directory existence.
+3. **Runtime**: Presence of client runtime entrypoints (`src/runtime.ts`, etc.).
+4. **Dependencies**: `package.json` for Bun and system libraries like `libwebp`/`libheif` (via `pkg-config`).
+
+### Examples
+
+```bash
+# Run standard check
+gospa doctor
+
+# Validate custom routes directory
+gospa doctor --routes-dir ./src/routes
+```
+
+---
+
+## `gospa clean`
+
+Removes build artifacts and generated files to ensure a clean state.
+
+```bash
+gospa clean
+```
+
+### What it removes
+
+1. **Build Artifacts**: The `dist/` directory.
+2. **Dependencies**: The `node_modules/` directory.
+3. **Generated Code**: All `_templ.go` and `_templ.txt` files recursively.
+
+### Examples
+
+```bash
+# Clean project
+gospa clean
+```
 
 ---
 

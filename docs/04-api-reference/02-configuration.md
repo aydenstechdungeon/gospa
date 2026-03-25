@@ -64,6 +64,7 @@ app := gospa.New(gospa.Config{
 | `DisableSanitization` | `bool` | `false` | Trusts server-rendered HTML without DOMPurify (SvelteKit-like model) |
 | `SSGCacheMaxEntries` | `int` | `500` | FIFO eviction limit shared by SSG, ISR, and PPR shell caches. `-1` = unbounded. |
 | `SSGCacheTTL` | `time.Duration` | `0` | Expiration time for SSG cache entries. `0` means cache forever. |
+| `NotificationBufferSize` | `int` | `1024` | Size of the asynchronous state change notification queue. |
 
 ### Rendering Strategy Options
 
@@ -71,6 +72,8 @@ app := gospa.New(gospa.Config{
 |--------|------|---------|-------------|
 | `DefaultRenderStrategy` | `routing.RenderStrategy` | `""` (StrategySSR) | Fallback strategy for pages that don't explicitly call `RegisterPageWithOptions` |
 | `DefaultRevalidateAfter` | `time.Duration` | `0` | ISR TTL fallback for ISR pages that don't set `RouteOptions.RevalidateAfter` |
+| `ISRSemaphoreLimit` | `int` | `10` | Limits concurrent background ISR revalidations to prevent resource exhaustion. |
+| `ISRTimeout` | `time.Duration` | `60s` | Maximum time allowed for a single background ISR revalidation. |
 
 ### Hydration Options
 
@@ -278,6 +281,14 @@ Only send state differences over WebSocket instead of full state. Reduces bandwi
 StateDiffing: true,
 ```
 
+### NotificationBufferSize
+
+Size of the state change notification queue. Increasing this can help prevent backpressure on the server when many clients are connected and state is changing rapidly.
+
+```go
+NotificationBufferSize: 2048,
+```
+
 ### CacheTemplates
 
 Cache compiled templates in memory. Enables SSG, ISR, and PPR page caching. Required for all three strategies to operate; without it every request is rendered fresh (SSR behaviour).
@@ -316,6 +327,15 @@ SimpleRuntimeSVGs: true,  // Allow SVG/math elements in simple runtime
 ```
 
 > ⚠️ **Security Warning**: SVG elements can contain embedded JavaScript and event handlers (e.g., `<svg onload="alert('xss')">`). Only enable this option if you completely trust all HTML content being rendered. Never enable when rendering user-generated content. This option has no effect when using the full runtime (when `SimpleRuntime: false`).
+
+### ISR Options
+
+Configure background revalidation limits for Incremental Static Regeneration (ISR):
+
+```go
+ISRSemaphoreLimit: 20,              // Up to 20 concurrent background renders
+ISRTimeout:        5 * time.Minute, // Max 5 mins per render
+```
 
 ### HydrationMode
 

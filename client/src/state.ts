@@ -266,6 +266,13 @@ export class Rune<T> implements Notifier, Disposable {
     this.value = newValue;
   }
 
+  /**
+   * Get value without tracking dependencies.
+   */
+  peek(): T {
+    return this._value;
+  }
+
   update(fn: (current: T) => T): void {
     this.value = fn(this._value);
   }

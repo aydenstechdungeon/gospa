@@ -12,7 +12,16 @@ export type IslandHydrationMode =
   | "lazy";
 
 // Island priority levels
-export type IslandPriority = "high" | "normal" | "low";
+export type IslandPriority = "critical" | "high" | "normal" | "low" | "deferred";
+
+// Numeric priority mapping
+export const PRIORITY_MAP: Record<IslandPriority, number> = {
+  critical: 100,
+  high: 75,
+  normal: 50,
+  low: 25,
+  deferred: 10,
+};
 
 // Island data from DOM
 export interface IslandElementData {
@@ -93,9 +102,11 @@ export class IslandManager {
   private hydrated: Set<string> = new Set();
   private pending: Map<string, Promise<IslandHydrationResult>> = new Map();
   private queue: Record<IslandPriority, HydrationQueueItem[]> = {
+    critical: [],
     high: [],
     normal: [],
     low: [],
+    deferred: [],
   };
   private processing = false;
   private moduleLoader: IslandModuleLoader;
@@ -272,14 +283,18 @@ export class IslandManager {
     this.processing = true;
 
     while (
+      this.queue.critical.length > 0 ||
       this.queue.high.length > 0 ||
       this.queue.normal.length > 0 ||
-      this.queue.low.length > 0
+      this.queue.low.length > 0 ||
+      this.queue.deferred.length > 0
     ) {
       const item =
+        this.queue.critical.shift() ??
         this.queue.high.shift() ??
         this.queue.normal.shift() ??
-        this.queue.low.shift();
+        this.queue.low.shift() ??
+        this.queue.deferred.shift();
       if (!item) break;
       try {
         const result = await this.hydrateIsland(item.island);
@@ -532,9 +547,11 @@ export class IslandManager {
     this.islands.clear();
     this.hydrated.clear();
     this.pending.clear();
+    this.queue.critical = [];
     this.queue.high = [];
     this.queue.normal = [];
     this.queue.low = [];
+    this.queue.deferred = [];
   }
 }
 
