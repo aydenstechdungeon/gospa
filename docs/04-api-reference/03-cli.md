@@ -500,11 +500,16 @@ gospa prune [options]
 
 | Flag | Short | Default | Description |
 |------|-------|---------|-------------|
-| `--dry-run` | `-d` | `false` | Show what would be pruned without removing |
-| `--older-than` | `-o` | `1h` | Remove state older than duration (e.g., `30m`, `2h`, `1d`) |
-| `--all` | `-a` | `false` | Remove all state (use with caution) |
-| `--store` | `-s` | `all` | Target specific store: `session`, `client`, or `all` |
-| `--help` | `-h` | - | Show help for this command |
+| `--root-dir` | - | `.` | Project root directory to scan |
+| `--output-dir` | - | `""` | Optional output directory for rewritten files |
+| `--report-file` | - | `""` | Write pruning report to a file |
+| `--exclude` | - | `""` | Comma-separated exclude glob patterns |
+| `--include` | - | `""` | Comma-separated include glob patterns |
+| `--dry-run` | - | `false` | Analyze and report without modifying files |
+| `--keep-unused` | - | `false` | Keep unused state variables (analysis mode) |
+| `--aggressive` | - | `false` | Enable more aggressive pruning heuristics |
+| `--verbose` | - | `false` | Print detailed report output |
+| `--json` | - | `false` | Emit report in JSON format |
 
 ### When to Use
 
@@ -519,14 +524,14 @@ gospa prune [options]
 # Dry run to see what would be pruned
 gospa prune --dry-run
 
-# Prune state older than 2 hours
-gospa prune --older-than 2h
+# Write a detailed report
+gospa prune --dry-run --verbose --report-file pruning-report.json
 
-# Prune only session store
-gospa prune --store session
+# Exclude generated folders
+gospa prune --exclude "generated/**,vendor/**"
 
-# Prune everything (dangerous - use with caution)
-gospa prune --all
+# Aggressive prune with JSON output
+gospa prune --aggressive --json
 ```
 
 ### Operational Notes

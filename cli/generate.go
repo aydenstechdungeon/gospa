@@ -7,7 +7,6 @@ import (
 	"go/parser"
 	"go/token"
 	"os"
-	"os/exec"
 	"path/filepath"
 	"regexp"
 	"strings"
@@ -44,11 +43,8 @@ func Generate(config *GenerateConfig) {
 
 	// Run templ generate to ensure .go files are created/updated before route generation
 	fmt.Println("Running templ generate...")
-	// #nosec G204
-	templCmd := exec.Command("templ", "generate")
-	templCmd.Dir = config.InputDir
-	if out, err := templCmd.CombinedOutput(); err != nil {
-		fmt.Fprintf(os.Stderr, "Warning: templ generate failed: %v\n%s\n", err, string(out))
+	if err := regenerateTempl(); err != nil {
+		fmt.Fprintf(os.Stderr, "Warning: templ generate failed: %v\n", err)
 	}
 
 	// Generate Go route registry (e.g., generated_routes.go)
