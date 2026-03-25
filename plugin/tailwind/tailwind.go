@@ -268,6 +268,17 @@ func (p *TailwindPlugin) watchWithContext() {
 		return
 	}
 
+	// Stop existing watcher if running to prevent process leaks
+	if p.cancel != nil {
+		p.cancel()
+		p.cancel = nil
+	}
+	if p.cmd != nil && p.cmd.Process != nil {
+		// Try graceful shutdown first
+		_ = p.cmd.Process.Signal(os.Interrupt)
+		p.cmd = nil
+	}
+
 	ctx, cancel := context.WithCancel(context.Background())
 	p.cancel = cancel
 	p.mu.Unlock()

@@ -249,12 +249,13 @@ export function delegate(
 ): () => void {
   const { event, modifiers: mods } = parseEventString(eventStr);
 
+  const wrappedHandler = createWrappedHandler(handler, mods);
+
   const delegatedHandler = (e: Event) => {
     const target = e.target as Element;
     const matched = target.closest(selector);
 
     if (matched) {
-      const wrappedHandler = createWrappedHandler(handler, mods);
       wrappedHandler(e);
     }
   };

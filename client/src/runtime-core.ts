@@ -508,16 +508,26 @@ if (typeof document !== "undefined") {
 function registerNavigationCleanup(): void {
   if (typeof window === "undefined") return;
 
-  import("./navigation.ts")
-    .then((nav) => {
-      nav.onBeforeNavigate(() => {
-        for (const [id] of components) {
-          destroyComponent(id);
-        }
-        globalState.clear();
-      });
-    })
-    .catch(() => { /* skip */ });
+  Promise.all([
+    import("./navigation.ts"),
+    import("./island.ts")
+  ]).then(([nav, island]) => {
+    nav.onBeforeNavigate(() => {
+      // Cleanup component instances
+      for (const [id] of components) {
+        destroyComponent(id);
+      }
+      globalState.clear();
+
+      // Cleanup island manager resources
+      island.getIslandManager()?.destroy();
+    });
+
+    // Re-discover islands after navigation completed
+    document.addEventListener("gospa:navigated", () => {
+      island.getIslandManager()?.discoverIslands();
+    });
+  }).catch(() => { /* skip */ });
 }
 
 if (typeof window !== "undefined") {

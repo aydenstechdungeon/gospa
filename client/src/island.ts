@@ -497,7 +497,7 @@ export class IslandManager {
   }
 
   /**
-   * Cleanup observers and listeners.
+   * Cleanup observers, listeners, and references.
    */
   destroy(): void {
     // Disconnect intersection observers
@@ -511,7 +511,7 @@ export class IslandManager {
       if ("cancelIdleCallback" in window) {
         (window as any).cancelIdleCallback(callbackId);
       } else {
-        clearTimeout(callbackId);
+        clearTimeout(callbackId as number);
       }
     }
     this.idleCallbacks.clear();
@@ -527,6 +527,14 @@ export class IslandManager {
       }
     }
     this.interactionListeners.clear();
+
+    // Clear reference maps
+    this.islands.clear();
+    this.hydrated.clear();
+    this.pending.clear();
+    this.queue.high = [];
+    this.queue.normal = [];
+    this.queue.low = [];
   }
 }
 
