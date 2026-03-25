@@ -1,0 +1,118 @@
+---
+package: typescript
+---
+<script lang="go">
+import "github.com/aydenstechdungeon/gospa/website/components"
+</script>
+
+<template>
+	<div class="space-y-12">
+		<header>
+			<div class="flex items-center gap-2 mb-4">
+				<span class="px-2 py-1 rounded bg-[var(--accent-primary)]/10 text-[var(--accent-primary)] text-xs font-bold uppercase tracking-wider">Features</span>
+				<span class="text-[var(--text-muted)] text-sm">/</span>
+				<span class="text-[var(--text-muted)] text-sm font-medium">Gospa SFC</span>
+			</div>
+			<h1 class="text-4xl font-bold tracking-tight mb-4 text-transparent bg-clip-text bg-gradient-to-r from-[var(--accent-primary)] to-[var(--accent-secondary)]">TypeScript Integration</h1>
+			<p class="text-xl text-[var(--text-secondary)] leading-relaxed">
+				Seamlessly bridge server-side Go logic with client-side TypeScript interactivity.
+			</p>
+		</header>
+
+		<section class="space-y-8">
+			<div>
+				<h2 class="text-2xl font-bold mb-4 border-b border-[var(--border)] pb-2 italic mono">Unified Reactive DSL</h2>
+				<p class="text-[var(--text-secondary)] mb-6">
+					When you use <code class="bg-[var(--surface)] px-1 rounded">island</code> components, GoSPA's compiler automatically extracts and converts your reactive runes from Go into their TypeScript equivalents. This happens automatically behind the scenes.
+				</p>
+				<div class="grid md:grid-cols-2 gap-8 items-start mb-8">
+					<div class="space-y-4">
+						<h3 class="font-bold flex items-center gap-2 text-sm uppercase tracking-widest text-[var(--text-muted)]">
+							<div class="w-2 h-2 rounded-full bg-cyan-500"></div>
+							Source (Go Script)
+						</h3>
+						@components.CodeBlock(`<script lang="go">
+  var message = $state("Hello")
+  var count = $state(0)
+  var combined = $derived(
+    fmt.Sprintf("%s (%d)", message, count)
+  )
+</script>`, "go", "Source.gospa")
+					</div>
+					<div class="space-y-4">
+						<h3 class="font-bold flex items-center gap-2 text-sm uppercase tracking-widest text-[var(--text-muted)]">
+							<div class="w-2 h-2 rounded-full bg-blue-600"></div>
+							Generated (TS Module)
+						</h3>
+						@components.CodeBlock(`import { $state, $derived } from "@gospa/runtime"
+
+export const message = $state("Hello")
+export const count = $state(0)
+export const combined = $derived(() => 
+  message.get() + " (" + count.get() + ")"
+)`, "typescript", "Generated.ts")
+					</div>
+				</div>
+			</div>
+
+			<div>
+				<h2 class="text-2xl font-bold mb-4 border-b border-[var(--border)] pb-2 italic mono">Explicit &lt;script lang="ts"&gt;</h2>
+				<p class="text-[var(--text-secondary)] mb-6">
+					For more complex client-side logic, you can define a dedicated TypeScript block. This is ideal for using browser APIs, third-party libraries, or highly custom interaction logic.
+				</p>
+				@components.CodeBlock(`<script lang="go">
+  var id = $state(1)
+</script>
+
+<script lang="ts">
+  import { onMount } from "@gospa/runtime"
+  
+  onMount(() => {
+    console.log("Component hydrated on client!")
+    // Access DOM, initialize libraries, etc.
+  })
+</script>
+
+<template>
+  <div class="container">
+    <span>Item ID: {id}</span>
+  </div>
+</template>`, "svelte", "MixedScripts.gospa")
+			</div>
+
+			<div class="rounded-xl bg-[var(--bg-secondary)] border border-[var(--border)] p-8">
+				<h2 class="text-2xl font-bold mb-4 flex items-center gap-3">
+					<svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="text-blue-500"><path d="M12 2v20"></path><path d="m17 5-5-3-5 3"></path><path d="m17 19-5 3-5-3"></path><path d="m2 12 10 5 10-5-10-5Z"></path><path d="m2 12 10-5 10 5-10 5Z"></path></svg>
+					Client-Only State
+				</h2>
+				<p class="text-[var(--text-secondary)] mb-6">
+					Not all state needs to originate in Go. You can define reactive state purely in TypeScript within a <code>&lt;script lang="ts"&gt;</code> block. This state will exist only on the client and won't be part of the initial server-side hydration snapshot.
+				</p>
+				@components.CodeBlock(`<script lang="ts">
+  import { $state } from "@gospa/runtime"
+  
+  // This state is client-side only
+  const isMenuOpen = $state(false)
+  
+  function toggle() {
+    isMenuOpen.set(!isMenuOpen.get())
+  }
+</script>
+
+<template>
+  <button on:click={toggle}>
+    {if isMenuOpen.get()} Close {else} Open {/if}
+  </button>
+</template>`, "svelte", "ClientState.gospa")
+			</div>
+
+			<div class="flex justify-between items-center pt-8">
+				<a href="/docs/gospasfc/examples" class="flex flex-col items-start gap-1 p-4 rounded-xl border border-[var(--border)] hover:bg-[var(--bg-secondary)] transition-all">
+					<span class="text-xs text-[var(--text-muted)] font-bold uppercase tracking-widest">Previous</span>
+					<span class="font-bold text-[var(--accent-primary)]">Examples & Guides</span>
+				</a>
+				<div class="w-1/2"></div>
+			</div>
+		</section>
+	</div>
+</template>

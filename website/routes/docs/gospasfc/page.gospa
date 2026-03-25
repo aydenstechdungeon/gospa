@@ -1,130 +1,97 @@
-<script lang="go">
-import "github.com/aydenstechdungeon/gospa/website/components"
-</script>
+---
+package: gospasfc
+---
+
 
 <template>
 	<div class="space-y-12">
 		<header>
 			<h1 class="text-4xl font-bold tracking-tight mb-4 text-transparent bg-clip-text bg-gradient-to-r from-[var(--accent-primary)] to-[var(--accent-secondary)]">Gospa SFC (Single File Components)</h1>
 			<p class="text-xl text-[var(--text-secondary)] leading-relaxed">
-				Modern, single-file component architecture for Go. Combine server-side logic, reactive templates, and scoped styles in a single .gospa file.
+				The ultimate way to build modern Go web applications. Combine logic, templates, and styles in a single, powerful <code>.gospa</code> file.
 			</p>
 		</header>
 
 		<section class="space-y-8">
-			<div>
-				<h2 class="text-2xl font-bold mb-4 border-b border-[var(--border)] pb-2 italic mono">Overview</h2>
-				<p class="text-[var(--text-secondary)] mb-4">
-					The <code class="bg-[var(--surface)] px-1 rounded">.gospa</code> format enables a seamless developer experience by bringing server and client code together.
+			<div class="grid md:grid-cols-2 gap-6">
+				<a href="/docs/gospasfc/getting-started" class="group p-6 rounded-2xl bg-[var(--bg-secondary)] border border-[var(--border)] hover:border-[var(--accent-primary)]/50 transition-all">
+					<h3 class="text-xl font-bold mb-2 group-hover:text-[var(--accent-primary)] transition-colors">🚀 Getting Started</h3>
+					<p class="text-[var(--text-secondary)] text-sm mb-4">Learn the basics of the .gospa format, component types, and the development workflow.</p>
+					<span class="text-[var(--accent-primary)] text-sm font-bold flex items-center gap-1">Read more <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12h14"></path><path d="m12 5 7 7-7 7"></path></svg></span>
+				</a>
+
+				<a href="/docs/gospasfc/reactivity" class="group p-6 rounded-2xl bg-[var(--bg-secondary)] border border-[var(--border)] hover:border-[var(--accent-primary)]/50 transition-all">
+					<h3 class="text-xl font-bold mb-2 group-hover:text-[var(--accent-primary)] transition-colors">⚡ Runes & Reactivity</h3>
+					<p class="text-[var(--text-secondary)] text-sm mb-4">Deep dive into $state, $derived, and $effect runes for unified reactive logic.</p>
+					<span class="text-[var(--accent-primary)] text-sm font-bold flex items-center gap-1">Read more <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12h14"></path><path d="m12 5 7 7-7 7"></path></svg></span>
+				</a>
+
+				<a href="/docs/gospasfc/templates" class="group p-6 rounded-2xl bg-[var(--bg-secondary)] border border-[var(--border)] hover:border-[var(--accent-primary)]/50 transition-all">
+					<h3 class="text-xl font-bold mb-2 group-hover:text-[var(--accent-primary)] transition-colors">📄 Template Syntax</h3>
+					<p class="text-[var(--text-secondary)] text-sm mb-4">Master the Templ-based template system with reactive event bindings.</p>
+					<span class="text-[var(--accent-primary)] text-sm font-bold flex items-center gap-1">Read more <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12h14"></path><path d="m12 5 7 7-7 7"></path></svg></span>
+				</a>
+
+				<a href="/docs/gospasfc/styles" class="group p-6 rounded-2xl bg-[var(--bg-secondary)] border border-[var(--border)] hover:border-[var(--accent-primary)]/50 transition-all">
+					<h3 class="text-xl font-bold mb-2 group-hover:text-[var(--accent-primary)] transition-colors">🎨 Scoped CSS</h3>
+					<p class="text-[var(--text-secondary)] text-sm mb-4">How GoSPA handles style isolation and integration with utility frameworks like Tailwind.</p>
+					<span class="text-[var(--accent-primary)] text-sm font-bold flex items-center gap-1">Read more <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12h14"></path><path d="m12 5 7 7-7 7"></path></svg></span>
+				</a>
+
+				<a href="/docs/gospasfc/typescript" class="group p-6 rounded-2xl bg-[var(--bg-secondary)] border border-[var(--border)] hover:border-[var(--accent-primary)]/50 transition-all">
+					<h3 class="text-xl font-bold mb-2 group-hover:text-[var(--accent-primary)] transition-colors">📘 TypeScript Integration</h3>
+					<p class="text-[var(--text-secondary)] text-sm mb-4">Bridge Go and TypeScript seamlessly with unified reactive primitives and event handlers.</p>
+					<span class="text-[var(--accent-primary)] text-sm font-bold flex items-center gap-1">Read more <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12h14"></path><path d="m12 5 7 7-7 7"></path></svg></span>
+				</a>
+
+				<a href="/docs/gospasfc/advanced" class="group p-6 rounded-2xl bg-[var(--bg-secondary)] border border-[var(--border)] hover:border-[var(--accent-primary)]/50 transition-all">
+					<h3 class="text-xl font-bold mb-2 group-hover:text-[var(--accent-primary)] transition-colors">⚙️ Advanced Usage</h3>
+					<p class="text-[var(--text-secondary)] text-sm mb-4">Deep dive into the compiler pipeline, custom generation, and generated file structure.</p>
+					<span class="text-[var(--accent-primary)] text-sm font-bold flex items-center gap-1">Read more <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12h14"></path><path d="m12 5 7 7-7 7"></path></svg></span>
+				</a>
+
+				<a href="/docs/gospasfc/examples" class="group p-6 rounded-2xl bg-[var(--bg-secondary)] border border-[var(--border)] hover:border-[var(--accent-primary)]/50 transition-all">
+					<h3 class="text-xl font-bold mb-2 group-hover:text-[var(--accent-primary)] transition-colors">💡 Examples & Recipes</h3>
+					<p class="text-[var(--text-secondary)] text-sm mb-4">Practical UI patterns and real-world recipes built with GoSPA SFC.</p>
+					<span class="text-[var(--accent-primary)] text-sm font-bold flex items-center gap-1">Read more <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12h14"></path><path d="m12 5 7 7-7 7"></path></svg></span>
+				</a>
+			</div>
+
+			<div class="mt-12 p-8 rounded-3xl bg-gradient-to-br from-[var(--bg-secondary)] via-[var(--surface)] to-[var(--bg-secondary)] border border-[var(--border)] relative overflow-hidden">
+				<div class="absolute top-0 right-0 w-64 h-64 bg-[var(--accent-primary)]/5 blur-3xl rounded-full -mr-32 -mt-32"></div>
+				<h2 class="text-2xl font-bold mb-4 relative z-10">Why Gospa SFC?</h2>
+				<p class="text-[var(--text-secondary)] mb-6 relative z-10">
+					Traditional Go web development often feels fragmented. You have Go files for logic, Templ files for templates, and separate CSS/JS files. Gospa SFC bridges this gap by providing a cohesive, Svelte-inspired experience that compiles to high-performance Go code.
 				</p>
-				<div class="grid md:grid-cols-3 gap-4 mb-6">
-					<div class="p-4 rounded-xl bg-[var(--bg-secondary)] border border-[var(--border)]">
-						<h3 class="font-bold border-b border-[var(--border)] pb-1 mb-2">Unified Reactive DSL</h3>
-						<p class="text-sm text-[var(--text-secondary)]">Use $state, $derived, and $effect in both Go and TypeScript.</p>
-					</div>
-					<div class="p-4 rounded-xl bg-[var(--bg-secondary)] border border-[var(--border)]">
-						<h3 class="font-bold border-b border-[var(--border)] pb-1 mb-2">Scoped CSS</h3>
-						<p class="text-sm text-[var(--text-secondary)]">Styles are automatically scoped to the component using unique hashes.</p>
-					</div>
-					<div class="p-4 rounded-xl bg-[var(--bg-secondary)] border border-[var(--border)]">
-						<h3 class="font-bold border-b border-[var(--border)] pb-1 mb-2">Templ Compilation</h3>
-						<p class="text-sm text-[var(--text-secondary)]">Compiles directly to .templ files for high-performance server rendering.</p>
-					</div>
-				</div>
-				<div class="rounded-xl border border-[var(--border)] bg-[var(--bg-secondary)] p-4">
-					<h3 class="font-bold border-b border-[var(--border)] pb-1 mb-3">Compiler Frontmatter</h3>
-					<p class="text-sm text-[var(--text-secondary)] mb-3">Use frontmatter to choose component type and hydration behavior per file.</p>
-					@components.CodeBlock(`---
-type: page
-hydrate: false
----
-
-<template>
-  <h1>Home</h1>
-</template>`, "yaml", "page.gospa")
-				</div>
-			</div>
-
-			<div>
-				<h2 class="text-2xl font-bold mb-4 border-b border-[var(--border)] pb-2 italic mono">Anatomy of a .gospa File</h2>
-				@components.CodeBlock(`<script lang="go">
-  var count = $state(0)
-  var doubled = $derived(count * 2)
-  
-  $effect(func() {
-    fmt.Printf("Count: %d\n", count)
-  })
-
-  func increment() {
-    count++
-  }
-  </script>
-
-  <template>
-  <button on:click={increment} class="btn">
-    {count} (x2 = {doubled})
-  </button>
-  </template>
-
-  <style>
-  .btn { font-weight: bold; padding: 1rem; }
-  </style>`, "svelte", "Counter.gospa")
-			</div>
-
-			<div>
-				<h2 class="text-2xl font-bold mb-4 border-b border-[var(--border)] pb-2 italic mono">Reactive Primitives</h2>
-				<div class="overflow-x-auto mb-6">
-					<table class="w-full text-sm text-left text-[var(--text-secondary)]">
-						<thead class="text-xs uppercase bg-[var(--surface)] text-[var(--text-primary)]">
-							<tr>
-								<th class="px-4 py-2">Primitive</th>
-								<th class="px-4 py-2">Purpose</th>
-								<th class="px-4 py-2">Client Context</th>
-							</tr>
-						</thead>
-						<tbody>
-							<tr class="border-b border-[var(--border)]"><td class="px-4 py-2 font-mono">$state(v)</td><td class="px-4 py-2">Declares a reactive state variable.</td><td class="px-4 py-2">Mutable proxy.</td></tr>
-							<tr class="border-b border-[var(--border)]"><td class="px-4 py-2 font-mono">$derived(expr)</td><td class="px-4 py-2">Computes a value from other states.</td><td class="px-4 py-2">Auto-updating.</td></tr>
-							<tr class="border-b border-[var(--border)]"><td class="px-4 py-2 font-mono">$effect(fn)</td><td class="px-4 py-2">Runs side effects on state change.</td><td class="px-4 py-2">Client-side only.</td></tr>
-						</tbody>
-					</table>
-				</div>
-			</div>
-
-			<div>
-				<h2 class="text-2xl font-bold mb-4 border-b border-[var(--border)] pb-2 italic mono">Compiler Pipeline</h2>
-				<p class="text-[var(--text-secondary)] mb-4">The compiler output depends on component type:</p>
-				<div class="space-y-4">
-					<div class="p-6 rounded-xl bg-[var(--bg-secondary)] border border-[var(--border)]">
-						<h3 class="font-bold text-[var(--accent-primary)] mb-2">1. Server Module (.templ) for All Types</h3>
-						<p class="text-[var(--text-secondary)] text-sm">
-							Compiles to server-rendered Templ output. Pages/layouts/static/server components render without island hydration metadata.
-						</p>
-					</div>
-					<div class="p-6 rounded-xl bg-[var(--bg-secondary)] border border-[var(--border)]">
-						<h3 class="font-bold text-[var(--accent-secondary)] mb-2">2. Client Module (.ts) for Hydrated Islands Only</h3>
-						<p class="text-[var(--text-secondary)] text-sm">
-							Generated only when the component type is <code>island</code> and hydration is enabled.
-						</p>
-					</div>
-				</div>
-			</div>
-
-			<div>
-				<h2 class="text-2xl font-bold mb-4 border-b border-[var(--border)] pb-2 italic mono">File-Based Routing</h2>
-				<p class="text-[var(--text-secondary)] mb-4">
-					<code class="bg-[var(--surface)] px-1 rounded">.gospa</code> files are fully integrated into the file-based router. You can use them for pages, layouts, and error boundaries.
-				</p>
-				<div class="p-6 rounded-xl bg-[var(--bg-secondary)] border border-[var(--border)]">
-					<ul class="space-y-2 text-sm text-[var(--text-secondary)]">
-						<li class="flex items-center gap-2"><div class="w-1.5 h-1.5 rounded-full bg-[var(--accent-primary)]"></div> <code class="text-[var(--text-primary)]">page.gospa</code> &mdash; The primary route entry point.</li>
-						<li class="flex items-center gap-2"><div class="w-1.5 h-1.5 rounded-full bg-[var(--accent-primary)]"></div> <code class="text-[var(--text-primary)]">layout.gospa</code> &mdash; A nested layout for the directory segment.</li>
-						<li class="flex items-center gap-2"><div class="w-1.5 h-1.5 rounded-full bg-[var(--accent-primary)]"></div> <code class="text-[var(--text-primary)]">error.gospa</code> &mdash; Error boundary for the segment.</li>
-						<li class="flex items-center gap-2"><div class="w-1.5 h-1.5 rounded-full bg-[var(--accent-primary)]"></div> <code class="text-[var(--text-primary)]">loading.gospa</code> &mdash; Static shell for PPR.</li>
-						<li class="flex items-center gap-2"><div class="w-1.5 h-1.5 rounded-full bg-[var(--accent-primary)]"></div> <code class="text-[var(--text-primary)]">components/*.gospa</code> &mdash; Static/server-only reusable blocks.</li>
-						<li class="flex items-center gap-2"><div class="w-1.5 h-1.5 rounded-full bg-[var(--accent-primary)]"></div> <code class="text-[var(--text-primary)]">islands/*.gospa</code> &mdash; Interactive hydrated islands.</li>
-					</ul>
-				</div>
+				<ul class="space-y-4 relative z-10">
+					<li class="flex items-start gap-3">
+						<div class="w-6 h-6 rounded-full bg-cyan-500/10 flex items-center justify-center text-cyan-500 flex-shrink-0 mt-1">
+							<svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"></polyline></svg>
+						</div>
+						<div>
+							<span class="font-bold text-[var(--text-primary)]">Zero-Config Hydration</span>
+							<p class="text-sm text-[var(--text-secondary)]">Mark a component as an <code>island</code> and the compiler handles the rest.</p>
+						</div>
+					</li>
+					<li class="flex items-start gap-3">
+						<div class="w-6 h-6 rounded-full bg-cyan-500/10 flex items-center justify-center text-cyan-500 flex-shrink-0 mt-1">
+							<svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"></polyline></svg>
+						</div>
+						<div>
+							<span class="font-bold text-[var(--text-primary)]">Type Safety</span>
+							<p class="text-sm text-[var(--text-secondary)]">Enjoy full Go type safety in your templates and logic blocks.</p>
+						</div>
+					</li>
+					<li class="flex items-start gap-3">
+						<div class="w-6 h-6 rounded-full bg-cyan-500/10 flex items-center justify-center text-cyan-500 flex-shrink-0 mt-1">
+							<svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"></polyline></svg>
+						</div>
+						<div>
+							<span class="font-bold text-[var(--text-primary)]">Performance First</span>
+							<p class="text-sm text-[var(--text-secondary)]">Direct compilation to Templ means minimal overhead and maximum speed.</p>
+						</div>
+					</li>
+				</ul>
 			</div>
 		</section>
 	</div>

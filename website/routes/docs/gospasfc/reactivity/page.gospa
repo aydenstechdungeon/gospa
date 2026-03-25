@@ -1,0 +1,95 @@
+---
+package: reactivity
+---
+<script lang="go">
+import "github.com/aydenstechdungeon/gospa/website/components"
+</script>
+
+<template>
+	<div class="space-y-12">
+		<header>
+			<div class="flex items-center gap-2 mb-4">
+				<span class="px-2 py-1 rounded bg-[var(--accent-primary)]/10 text-[var(--accent-primary)] text-xs font-bold uppercase tracking-wider">Features</span>
+				<span class="text-[var(--text-muted)] text-sm">/</span>
+				<span class="text-[var(--text-muted)] text-sm font-medium">Gospa SFC</span>
+			</div>
+			<h1 class="text-4xl font-bold tracking-tight mb-4 text-transparent bg-clip-text bg-gradient-to-r from-[var(--accent-primary)] to-[var(--accent-secondary)]">Runes & Reactivity</h1>
+			<p class="text-xl text-[var(--text-secondary)] leading-relaxed">
+				Powering dynamic interactive UIs with GoSPA's unified reactivity system.
+			</p>
+		</header>
+
+		<section class="space-y-8">
+			<div>
+				<h2 class="text-2xl font-bold mb-4 border-b border-[var(--border)] pb-2 italic mono">The Core Runes</h2>
+				<p class="text-[var(--text-secondary)] mb-6">
+					GoSPA introduces a set of reactive primitives called **Runes**. These are available in both Go (server-side logic) and TypeScript (client-side hydration).
+				</p>
+				<div class="grid md:grid-cols-3 gap-6 mb-8">
+					<div class="p-6 rounded-2xl bg-[var(--bg-secondary)] border border-[var(--border)]">
+						<h3 class="font-bold text-[var(--accent-primary)] mb-2">$state(value)</h3>
+						<p class="text-sm text-[var(--text-secondary)]">Declares a reactive state variable.</p>
+					</div>
+					<div class="p-6 rounded-2xl bg-[var(--bg-secondary)] border border-[var(--border)]">
+						<h3 class="font-bold text-[var(--accent-secondary)] mb-2">$derived(expr)</h3>
+						<p class="text-sm text-[var(--text-secondary)]">Computes a value from other state dependencies.</p>
+					</div>
+					<div class="p-6 rounded-2xl bg-[var(--bg-secondary)] border border-[var(--border)]">
+						<h3 class="font-bold text-cyan-500 mb-2">$effect(fn)</h3>
+						<p class="text-sm text-[var(--text-secondary)]">Runs side effects on state change.</p>
+					</div>
+				</div>
+
+				@components.CodeBlock(`<script lang="go">
+  var count = $state(0)
+  var doubled = $derived(count * 2)
+
+  func increment() {
+    count++
+  }
+</script>
+
+<template>
+  <button on:click={increment} class="btn">
+    {count} (x2 = {doubled})
+  </button>
+</template>`, "svelte", "Counter.gospa")
+			</div>
+
+			<div>
+				<h2 class="text-2xl font-bold mb-4 border-b border-[var(--border)] pb-2 italic mono">Advanced Reactivity Concepts</h2>
+				<div class="space-y-6">
+					<div class="p-6 rounded-xl bg-gradient-to-br from-[var(--bg-secondary)] to-[var(--surface)] border border-[var(--border)]">
+						<h3 class="text-xl font-bold mb-3 flex items-center gap-2">
+							<svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="text-[var(--accent-primary)]"><path d="M12 2v20"></path><path d="m5 12 7-7 7 7"></path></svg>
+							Cross-Platform Synchronization
+						</h3>
+						<p class="text-[var(--text-secondary)] text-sm mb-4">
+							When using <code>island</code> components, state initialized in Go is automatically synchronized with the TypeScript client-side runtime during hydration.
+						</p>
+					</div>
+
+					<div class="p-6 rounded-xl bg-[var(--bg-secondary)] border border-[var(--border)]">
+						<h3 class="text-xl font-bold mb-3">Reactivity Rules</h3>
+						<ul class="space-y-2 text-sm text-[var(--text-secondary)]">
+							<li class="flex items-start gap-2"><div class="w-1.5 h-1.5 rounded-full bg-cyan-500 mt-1.5"></div> States are reactive upon reassignment (<code>count = count + 1</code>).</li>
+							<li class="flex items-start gap-2"><div class="w-1.5 h-1.5 rounded-full bg-cyan-500 mt-1.5"></div> Derived values are read-only and cache their results.</li>
+							<li class="flex items-start gap-2"><div class="w-1.5 h-1.5 rounded-full bg-cyan-500 mt-1.5"></div> Effects only run on the client after hydration is complete.</li>
+						</ul>
+					</div>
+				</div>
+			</div>
+
+			<div class="flex justify-between items-center pt-8">
+				<a href="/docs/gospasfc/getting-started" class="flex flex-col items-start gap-1 p-4 rounded-xl border border-[var(--border)] hover:bg-[var(--bg-secondary)] transition-all">
+					<span class="text-xs text-[var(--text-muted)] font-bold uppercase tracking-widest">Previous</span>
+					<span class="font-bold text-[var(--accent-primary)]">Getting Started</span>
+				</a>
+				<a href="/docs/gospasfc/templates" class="flex flex-col items-end gap-1 p-4 rounded-xl border border-[var(--border)] hover:bg-[var(--bg-secondary)] transition-all">
+					<span class="text-xs text-[var(--text-muted)] font-bold uppercase tracking-widest">Next</span>
+					<span class="font-bold text-[var(--accent-primary)]">Template Syntax</span>
+				</a>
+			</div>
+		</section>
+	</div>
+</template>

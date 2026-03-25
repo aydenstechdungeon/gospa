@@ -48,6 +48,22 @@ func getPageDescription(path string) string {
 		return "Real-time synchronization using WebSockets in GoSPA."
 	case "/docs/components":
 		return "Building and using reactive components in GoSPA."
+	case "/docs/gospasfc":
+		return "Gospa SFC (Single File Components) - Modern component architecture for Go."
+	case "/docs/gospasfc/getting-started":
+		return "Getting started with Gospa SFC - Learn the basic format and workflow."
+	case "/docs/gospasfc/reactivity":
+		return "Runes and Reactivity in Gospa SFC - $state, $derived, and $effect guide."
+	case "/docs/gospasfc/templates":
+		return "Gospa SFC Template Syntax - Go-powered templates with reactive bindings."
+	case "/docs/gospasfc/styles":
+		return "Scoped CSS in Gospa SFC - Isolated styles for your components."
+	case "/docs/gospasfc/advanced":
+		return "Advanced Gospa SFC - Compiler pipeline and custom generation."
+	case "/docs/gospasfc/typescript":
+		return "Gospa SFC TypeScript Integration - How Go logic translates to client-side interactivity."
+	case "/docs/gospasfc/examples":
+		return "GoSPA SFC Examples & Guides - Practical UI patterns and recipes."
 	}
 	return defaultDescription
 }
@@ -80,7 +96,7 @@ func RootLayout(title string, children templ.Component, runtimePath string, path
 		var templ_7745c5c3_Var2 string
 		templ_7745c5c3_Var2, templ_7745c5c3_Err = templ.JoinStringErrs(title)
 		if templ_7745c5c3_Err != nil {
-			return templ.Error{Err: templ_7745c5c3_Err, FileName: `routes/root_layout.templ`, Line: 56, Col: 17}
+			return templ.Error{Err: templ_7745c5c3_Err, FileName: `routes/root_layout.templ`, Line: 72, Col: 17}
 		}
 		_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ.EscapeString(templ_7745c5c3_Var2))
 		if templ_7745c5c3_Err != nil {
@@ -93,7 +109,7 @@ func RootLayout(title string, children templ.Component, runtimePath string, path
 		var templ_7745c5c3_Var3 string
 		templ_7745c5c3_Var3, templ_7745c5c3_Err = templ.JoinStringErrs(title + " | GoSPA")
 		if templ_7745c5c3_Err != nil {
-			return templ.Error{Err: templ_7745c5c3_Err, FileName: `routes/root_layout.templ`, Line: 57, Col: 50}
+			return templ.Error{Err: templ_7745c5c3_Err, FileName: `routes/root_layout.templ`, Line: 73, Col: 50}
 		}
 		_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ.EscapeString(templ_7745c5c3_Var3))
 		if templ_7745c5c3_Err != nil {
@@ -106,7 +122,7 @@ func RootLayout(title string, children templ.Component, runtimePath string, path
 		var templ_7745c5c3_Var4 string
 		templ_7745c5c3_Var4, templ_7745c5c3_Err = templ.JoinStringErrs(getPageDescription(path))
 		if templ_7745c5c3_Err != nil {
-			return templ.Error{Err: templ_7745c5c3_Err, FileName: `routes/root_layout.templ`, Line: 58, Col: 62}
+			return templ.Error{Err: templ_7745c5c3_Err, FileName: `routes/root_layout.templ`, Line: 74, Col: 62}
 		}
 		_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ.EscapeString(templ_7745c5c3_Var4))
 		if templ_7745c5c3_Err != nil {
@@ -164,7 +180,7 @@ func RootLayout(title string, children templ.Component, runtimePath string, path
 		var templ_7745c5c3_Var5 templ.SafeURL
 		templ_7745c5c3_Var5, templ_7745c5c3_Err = templ.JoinURLErrs(siteURL + path)
 		if templ_7745c5c3_Err != nil {
-			return templ.Error{Err: templ_7745c5c3_Err, FileName: `routes/root_layout.templ`, Line: 87, Col: 46}
+			return templ.Error{Err: templ_7745c5c3_Err, FileName: `routes/root_layout.templ`, Line: 103, Col: 46}
 		}
 		_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ.EscapeString(templ_7745c5c3_Var5))
 		if templ_7745c5c3_Err != nil {
@@ -177,7 +193,7 @@ func RootLayout(title string, children templ.Component, runtimePath string, path
 		var templ_7745c5c3_Var6 string
 		templ_7745c5c3_Var6, templ_7745c5c3_Err = templ.JoinStringErrs(siteURL + path)
 		if templ_7745c5c3_Err != nil {
-			return templ.Error{Err: templ_7745c5c3_Err, FileName: `routes/root_layout.templ`, Line: 98, Col: 51}
+			return templ.Error{Err: templ_7745c5c3_Err, FileName: `routes/root_layout.templ`, Line: 114, Col: 51}
 		}
 		_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ.EscapeString(templ_7745c5c3_Var6))
 		if templ_7745c5c3_Err != nil {
@@ -190,7 +206,7 @@ func RootLayout(title string, children templ.Component, runtimePath string, path
 		var templ_7745c5c3_Var7 string
 		templ_7745c5c3_Var7, templ_7745c5c3_Err = templ.JoinStringErrs(title + " | GoSPA")
 		if templ_7745c5c3_Err != nil {
-			return templ.Error{Err: templ_7745c5c3_Err, FileName: `routes/root_layout.templ`, Line: 99, Col: 57}
+			return templ.Error{Err: templ_7745c5c3_Err, FileName: `routes/root_layout.templ`, Line: 115, Col: 57}
 		}
 		_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ.EscapeString(templ_7745c5c3_Var7))
 		if templ_7745c5c3_Err != nil {
@@ -203,7 +219,7 @@ func RootLayout(title string, children templ.Component, runtimePath string, path
 		var templ_7745c5c3_Var8 string
 		templ_7745c5c3_Var8, templ_7745c5c3_Err = templ.JoinStringErrs(getPageDescription(path))
 		if templ_7745c5c3_Err != nil {
-			return templ.Error{Err: templ_7745c5c3_Err, FileName: `routes/root_layout.templ`, Line: 100, Col: 69}
+			return templ.Error{Err: templ_7745c5c3_Err, FileName: `routes/root_layout.templ`, Line: 116, Col: 69}
 		}
 		_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ.EscapeString(templ_7745c5c3_Var8))
 		if templ_7745c5c3_Err != nil {
@@ -216,7 +232,7 @@ func RootLayout(title string, children templ.Component, runtimePath string, path
 		var templ_7745c5c3_Var9 string
 		templ_7745c5c3_Var9, templ_7745c5c3_Err = templ.JoinStringErrs(defaultImage)
 		if templ_7745c5c3_Err != nil {
-			return templ.Error{Err: templ_7745c5c3_Err, FileName: `routes/root_layout.templ`, Line: 101, Col: 51}
+			return templ.Error{Err: templ_7745c5c3_Err, FileName: `routes/root_layout.templ`, Line: 117, Col: 51}
 		}
 		_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ.EscapeString(templ_7745c5c3_Var9))
 		if templ_7745c5c3_Err != nil {
@@ -229,7 +245,7 @@ func RootLayout(title string, children templ.Component, runtimePath string, path
 		var templ_7745c5c3_Var10 string
 		templ_7745c5c3_Var10, templ_7745c5c3_Err = templ.JoinStringErrs(siteName)
 		if templ_7745c5c3_Err != nil {
-			return templ.Error{Err: templ_7745c5c3_Err, FileName: `routes/root_layout.templ`, Line: 104, Col: 51}
+			return templ.Error{Err: templ_7745c5c3_Err, FileName: `routes/root_layout.templ`, Line: 120, Col: 51}
 		}
 		_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ.EscapeString(templ_7745c5c3_Var10))
 		if templ_7745c5c3_Err != nil {
@@ -242,7 +258,7 @@ func RootLayout(title string, children templ.Component, runtimePath string, path
 		var templ_7745c5c3_Var11 string
 		templ_7745c5c3_Var11, templ_7745c5c3_Err = templ.JoinStringErrs(siteURL + path)
 		if templ_7745c5c3_Err != nil {
-			return templ.Error{Err: templ_7745c5c3_Err, FileName: `routes/root_layout.templ`, Line: 109, Col: 52}
+			return templ.Error{Err: templ_7745c5c3_Err, FileName: `routes/root_layout.templ`, Line: 125, Col: 52}
 		}
 		_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ.EscapeString(templ_7745c5c3_Var11))
 		if templ_7745c5c3_Err != nil {
@@ -255,7 +271,7 @@ func RootLayout(title string, children templ.Component, runtimePath string, path
 		var templ_7745c5c3_Var12 string
 		templ_7745c5c3_Var12, templ_7745c5c3_Err = templ.JoinStringErrs(title + " | GoSPA")
 		if templ_7745c5c3_Err != nil {
-			return templ.Error{Err: templ_7745c5c3_Err, FileName: `routes/root_layout.templ`, Line: 110, Col: 58}
+			return templ.Error{Err: templ_7745c5c3_Err, FileName: `routes/root_layout.templ`, Line: 126, Col: 58}
 		}
 		_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ.EscapeString(templ_7745c5c3_Var12))
 		if templ_7745c5c3_Err != nil {
@@ -268,7 +284,7 @@ func RootLayout(title string, children templ.Component, runtimePath string, path
 		var templ_7745c5c3_Var13 string
 		templ_7745c5c3_Var13, templ_7745c5c3_Err = templ.JoinStringErrs(getPageDescription(path))
 		if templ_7745c5c3_Err != nil {
-			return templ.Error{Err: templ_7745c5c3_Err, FileName: `routes/root_layout.templ`, Line: 111, Col: 70}
+			return templ.Error{Err: templ_7745c5c3_Err, FileName: `routes/root_layout.templ`, Line: 127, Col: 70}
 		}
 		_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ.EscapeString(templ_7745c5c3_Var13))
 		if templ_7745c5c3_Err != nil {
@@ -281,7 +297,7 @@ func RootLayout(title string, children templ.Component, runtimePath string, path
 		var templ_7745c5c3_Var14 string
 		templ_7745c5c3_Var14, templ_7745c5c3_Err = templ.JoinStringErrs(defaultImage)
 		if templ_7745c5c3_Err != nil {
-			return templ.Error{Err: templ_7745c5c3_Err, FileName: `routes/root_layout.templ`, Line: 112, Col: 52}
+			return templ.Error{Err: templ_7745c5c3_Err, FileName: `routes/root_layout.templ`, Line: 128, Col: 52}
 		}
 		_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ.EscapeString(templ_7745c5c3_Var14))
 		if templ_7745c5c3_Err != nil {
@@ -351,7 +367,7 @@ func RootLayout(title string, children templ.Component, runtimePath string, path
 			var templ_7745c5c3_Var19 string
 			templ_7745c5c3_Var19, templ_7745c5c3_Err = templ.JoinStringErrs(path)
 			if templ_7745c5c3_Err != nil {
-				return templ.Error{Err: templ_7745c5c3_Err, FileName: `routes/root_layout.templ`, Line: 249, Col: 34}
+				return templ.Error{Err: templ_7745c5c3_Err, FileName: `routes/root_layout.templ`, Line: 265, Col: 34}
 			}
 			_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ.EscapeString(templ_7745c5c3_Var19))
 			if templ_7745c5c3_Err != nil {
@@ -377,7 +393,7 @@ func RootLayout(title string, children templ.Component, runtimePath string, path
 			var templ_7745c5c3_Var20 string
 			templ_7745c5c3_Var20, templ_7745c5c3_Err = templ.JoinStringErrs(path)
 			if templ_7745c5c3_Err != nil {
-				return templ.Error{Err: templ_7745c5c3_Err, FileName: `routes/root_layout.templ`, Line: 268, Col: 32}
+				return templ.Error{Err: templ_7745c5c3_Err, FileName: `routes/root_layout.templ`, Line: 284, Col: 32}
 			}
 			_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ.EscapeString(templ_7745c5c3_Var20))
 			if templ_7745c5c3_Err != nil {
