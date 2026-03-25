@@ -14134,7 +14134,7 @@ Scope: `/workspace/gospa` (core framework, client runtime, plugins, docs)
 | 2 | Low | CSRF | CSRF can be disabled by config (`EnableCSRF: false`) for trusted environments. | `gospa.go` |
 | 3 | Low | Reliability/Perf | Redis PubSub now supports context-aware cancellation; handlers still need bounded work. | `store/redis/redis.go` |
 | 4 | Low | Performance/Scalability | Rate limiter lock scope reduced for storage backends; remaining optimization is per-key atomic updates. | `fiber/websocket.go` |
-| 5 | Medium | Security (XSS footgun) | `SafeHTML`/`SafeAttr` intentionally bypass escaping and can be misused by app code. | `templ/bind.go` |
+| 5 | Medium | Security (XSS footgun) | `UnsafeHTML`/`UnsafeAttr` intentionally bypass escaping and can be misused by app code. | `templ/bind.go` |
 
 ## Security Findings
 
@@ -14178,12 +14178,12 @@ curl -i -X POST http://localhost:3000/_gospa/remote/deleteAccount \
 - **Mitigation:** keep CSRF enabled, and only disable for fully trusted internal traffic.
 
 ### 3) Unsafe HTML helper footgun (Medium)
-- **Risk (OWASP A03 Injection / XSS):** `SafeHTML` and `SafeAttr` disable escaping intentionally.
+- **Risk (OWASP A03 Injection / XSS):** `UnsafeHTML` and `UnsafeAttr` disable escaping intentionally.
 - **Impact:** if app developers pass untrusted input to these helpers, stored/reflected XSS becomes trivial.
 - **Safe PoC:**
 
 ```go
-templ.Raw(templ.SafeHTML("<img src=x onerror=alert(1)>") )
+templ.Raw(templ.UnsafeHTML("<img src=x onerror=alert(1)>") )
 ```
 
 - **Mitigation:** retain API but add strong warning docs + linter hook + optional runtime guard in dev mode.

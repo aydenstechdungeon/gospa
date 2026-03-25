@@ -51,9 +51,11 @@ func SPAMiddleware(config Config) gofiber.Handler {
 	return func(c gofiber.Ctx) error {
 		// Initialize state for this request
 		stateMap := state.NewStateMap()
-		for k, v := range config.DefaultState {
-			r := state.NewRune(v)
-			stateMap.Add(k, r)
+		if config.DefaultState != nil {
+			for k, v := range config.DefaultState {
+				r := state.NewRune(v)
+				stateMap.Add(k, r)
+			}
 		}
 
 		// Store state in context

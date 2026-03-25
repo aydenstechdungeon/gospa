@@ -8,7 +8,7 @@ Scope: `/workspace/gospa` core runtime, Fiber integration, plugins, and first-pa
 | Rank | Severity | Category | Issue | Evidence |
 | --- | --- | --- | --- | --- |
 | 1 | High | Security / XSS | The streaming runtime writes `chunk.content` directly into `innerHTML`, so any untrusted progressive HTML fragment becomes executable DOM. | `templ/streaming.go` |
-| 2 | Medium | Security / XSS footgun | `SafeHTML` and `SafeAttr` intentionally disable escaping and are easy for application code to misuse with user-controlled content. | `templ/bind.go` |
+| 2 | Medium | Security / XSS footgun | `UnsafeHTML` and `UnsafeAttr` intentionally disable escaping and are easy for application code to misuse with user-controlled content. | `templ/bind.go` |
 | 3 | Medium | Reliability / Performance | Compression middleware checks the **request** `Content-Encoding` instead of the response header, so already-encoded responses can be recompressed or misclassified. | `fiber/compression.go` |
 | 4 | Medium | Performance / Scalability | `StateMap.Add` spawns a new goroutine for every state change, which can amplify load and memory pressure during bursty updates. | `state/serialize.go` |
 | 5 | Low | Security / Host header trust | `getWSUrl` still trusts arbitrary hostnames as long as they do not contain `@` or `://`; this is not a strong allowlist and leaves room for host-header-driven websocket URL tampering in misconfigured proxy deployments. | `gospa.go` |
@@ -74,16 +74,16 @@ GoSPA's normal DOM binding path supports pluggable sanitizers, but the streaming
 
 ---
 
-### 2. Medium — `SafeHTML` / `SafeAttr` are sharp-edge APIs
+### 2. Medium — `UnsafeHTML` / `UnsafeAttr` are sharp-edge APIs
 
 **Evidence**
 
 ```go
-func SafeHTML(s string) template.HTML {
+func UnsafeHTML(s string) template.HTML {
     return template.HTML(s)
 }
 
-func SafeAttr(s string) template.HTMLAttr {
+func UnsafeAttr(s string) template.HTMLAttr {
     return template.HTMLAttr(s)
 }
 ```
@@ -96,7 +96,7 @@ These helpers are intentionally unsafe wrappers. They are acceptable as low-leve
 
 ```go
 unsafeName := `<img src=x onerror=alert('xss')>`
-html := templ.SafeHTML(unsafeName)
+html := templ.UnsafeHTML(unsafeName)
 ```
 
 If application code feeds user input into these helpers, the resulting markup is rendered verbatim.
@@ -113,12 +113,12 @@ If application code feeds user input into these helpers, the resulting markup is
 --- a/templ/bind.go
 +++ b/templ/bind.go
 @@
--// SafeHTML marks a string as safe HTML.
-+// SafeHTML marks a string as trusted HTML.
+-// UnsafeHTML marks a string as safe HTML.
++// UnsafeHTML marks a string as trusted HTML.
 +// WARNING: never pass user-controlled content here.
 @@
--// SafeAttr marks a string as a safe attribute value.
-+// SafeAttr marks a string as a trusted attribute value.
+-// UnsafeAttr marks a string as a safe attribute value.
++// UnsafeAttr marks a string as a trusted attribute value.
 +// WARNING: never pass user-controlled content here.
 ```
 

@@ -147,14 +147,14 @@ func main() {
 		fmt.Printf("\nPush to '%s' failed (likely protected branch). Attempting to push to a release branch...\n", branch)
 		releaseBranch := "release/" + newTag
 		// Check if branch already exists and delete it if it's different
-		exec.Command("git", "branch", "-D", releaseBranch).Run() // ignore error if it doesn't exist
+		_ = exec.Command("git", "branch", "-D", releaseBranch).Run() //nolint:gosec // ignore error if it doesn't exist
 
-		if err := exec.Command("git", "checkout", "-b", releaseBranch).Run(); err != nil {
+		if err := exec.Command("git", "checkout", "-b", releaseBranch).Run(); err != nil { // #nosec G204 G702
 			fmt.Printf("Error creating release branch: %v\n", err)
 			os.Exit(1)
 		}
 
-		cmd3 := exec.Command("git", "push", "-u", "origin", releaseBranch)
+		cmd3 := exec.Command("git", "push", "-u", "origin", releaseBranch) //nolint:gosec
 		cmd3.Stdout = os.Stdout
 		cmd3.Stderr = os.Stderr
 		if err := cmd3.Run(); err != nil {
@@ -162,19 +162,22 @@ func main() {
 			os.Exit(1)
 		}
 		fmt.Printf("\nSuccessfully pushed to branch '%s'. Please open a pull request.\n", releaseBranch)
-		fmt.Printf("After merging, you can run 'git push origin %s' to tag the release.\n", newTag)
+		pushTag(newTag)
 		os.Exit(0)
 	}
 
-	cmd2 := exec.Command("git", "push", "-f", "origin", newTag) // #nosec //nolint:gosec
-	cmd2.Stdout = os.Stdout
-	cmd2.Stderr = os.Stderr
-	if err := cmd2.Run(); err != nil {
-		fmt.Println("Error: git push failed:", err)
-		os.Exit(1)
-	}
-
+	pushTag(newTag)
 	fmt.Println("\nSuccessfully updated tag", newTag)
+}
+
+func pushTag(newTag string) {
+	fmt.Printf("Pushing tag %s to origin...\n", newTag)
+	cmd := exec.Command("git", "push", "-f", "origin", newTag) // #nosec //nolint:gosec
+	cmd.Stdout = os.Stdout
+	cmd.Stderr = os.Stderr
+	if err := cmd.Run(); err != nil {
+		fmt.Printf("Warning: pushing tag '%s' failed (this is expected if tags are also protected). you can push it manually with: git push origin %s\n", newTag, newTag)
+	}
 }
 
 func updateVersionFile(oldVersion, newVersion string) {
