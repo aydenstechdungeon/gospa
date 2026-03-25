@@ -456,6 +456,11 @@ func CORSMiddleware(allowedOrigins []string) gofiber.Handler {
 			c.Set("Access-Control-Allow-Headers", "Content-Type,Authorization,X-CSRF-Token")
 			c.Set("Access-Control-Expose-Headers", "X-GoSPA-Partial")
 		} else if wildcard {
+			// SECURITY: Do NOT allow wildcard origin if Credentials (Auth header or Session cookie) are present.
+			// This prevents credential leakage when allowedOrigins contains "*".
+			if c.Get("Authorization") != "" || c.Cookies("gospa_session") != "" || c.Get("X-CSRF-Token") != "" {
+				return c.Next()
+			}
 			c.Set("Access-Control-Allow-Origin", "*")
 			c.Set("Access-Control-Allow-Methods", "GET,POST,PUT,DELETE,PATCH,OPTIONS")
 			c.Set("Access-Control-Allow-Headers", "Content-Type,Authorization,X-CSRF-Token")

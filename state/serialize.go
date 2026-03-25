@@ -31,7 +31,16 @@ var (
 	stateNotificationQueue chan stateNotification
 	stateDispatchOnce      sync.Once
 	droppedNotifications   atomic.Uint64
+	notificationQueueSize  = 1024 // Default size
 )
+
+// SetNotificationQueueSize sets the size of the state change notification queue.
+// This must be called before any state changes occur.
+func SetNotificationQueueSize(size int) {
+	if size > 0 {
+		notificationQueueSize = size
+	}
+}
 
 func startStateNotificationDispatcher() {
 	stateDispatchOnce.Do(func() {
@@ -39,7 +48,7 @@ func startStateNotificationDispatcher() {
 		if workerCount < 2 {
 			workerCount = 2
 		}
-		stateNotificationQueue = make(chan stateNotification, 1024)
+		stateNotificationQueue = make(chan stateNotification, notificationQueueSize)
 		for range workerCount {
 			go func() {
 				for notification := range stateNotificationQueue {

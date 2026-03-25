@@ -122,6 +122,8 @@ type Config struct {
 	SimpleRuntimeSVGs bool
 	// DisableSanitization disables client-side HTML sanitization for SPA navigation.
 	DisableSanitization bool
+	// NotificationBufferSize sets the size of the state change notification queue (default 1024).
+	NotificationBufferSize int
 
 	// WebSocket Options — these values are passed directly to the client runtime's init() call.
 	WSReconnectDelay time.Duration // Initial reconnect delay (default 1s)
@@ -201,8 +203,9 @@ func DefaultConfig() Config {
 		SerializationFormat:   SerializationJSON,
 		EnableCSRF:            true,
 		ContentSecurityPolicy: fiber.DefaultContentSecurityPolicy,
-		ISRSemaphoreLimit:     10,
-		ISRTimeout:            60 * time.Second,
+		ISRSemaphoreLimit:      10,
+		ISRTimeout:             60 * time.Second,
+		NotificationBufferSize: 1024,
 	}
 }
 
