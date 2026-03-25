@@ -8,7 +8,11 @@ import {
   StateMap,
   batch,
   effect,
+  rune,
+  derived,
   watch,
+  untrack,
+  preEffect,
   type Unsubscribe,
 } from "./state.ts";
 export {
@@ -18,7 +22,11 @@ export {
   StateMap,
   batch,
   effect,
+  rune,
+  derived,
   watch,
+  untrack,
+  preEffect,
   type Unsubscribe,
 };
 import {

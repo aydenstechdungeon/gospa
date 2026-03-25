@@ -36,63 +36,53 @@ gospa dev
 
 Your app is now running at `http://localhost:3000`.
 
-## 4. Define a Route
+## 4. Create your first SFC
 
-Routes are based on the file system. Create `routes/hello.templ`:
+Single File Components (`.gospa`) co-locate your logic, template, and styles. Create `islands/Counter.gospa`:
 
-```go
-package routes
+```svelte
+<script lang="go">
+    var count = $state(0)
+    func increment() { count++ }
+</script>
 
-templ HelloPage() {
-    <div class="p-8 max-w-md mx-auto">
-        <h1 class="text-4xl font-black italic tracking-tighter mb-4 underline decoration-[var(--accent-primary)]">
-            Hello GoSPA
-        </h1>
-        <p class="text-lg text-[var(--text-secondary)]">
-            You just created a route in seconds.
-        </p>
-    </div>
-}
-```
-
-The CLI automatically detects this new file and registers the route `/hello`.
-
-## 5. Add Reactive State
-
-GoSPA uses a "state machine on the server" approach. Update `routes/hello.templ`:
-
-```go
-package routes
-
-import (
-    "github.com/aydenstechdungeon/gospa/state"
-)
-
-templ HelloPage() {
-    <div data-gospa-component="hello" class="p-8">
-        <h2 class="text-2xl font-bold">Counter: <span data-bind="count">0</span></h2>
-        
-        <button 
-            data-on="click:increment"
-            class="mt-4 px-6 py-2 bg-[var(--accent-primary)] text-white rounded-full font-bold hover:scale-105 transition-transform"
-        >
+<template>
+    <div class="p-8 border rounded-2xl glass">
+        <h2 class="text-2xl font-bold">Counter: {count}</h2>
+        <button on:click={increment} class="mt-4 px-6 py-2 bg-[var(--accent-primary)] text-white rounded-full font-bold transition-all hover:scale-105">
             Increment
         </button>
     </div>
-}
+</template>
 
-// HelloState defines the initial state for the 'hello' component
-func HelloState() *state.StateMap {
-    sm := state.NewStateMap()
-    sm.AddAny("count", 0)
-    return sm
-}
+<style>
+    div { transition: all 0.3s ease; }
+    button { box-shadow: 0 4px 12px var(--accent-primary-alpha); }
+</style>
 ```
 
 ### What's happening here?
-1. `data-gospa-component`: Identifies this element as a reactive component.
-2. `data-bind="count"`: Automatically updates the text content when the "count" state changes.
-3. `data-on="click:increment"`: Maps a browser click to a server-side action (if using WebSockets) or a client-side transition.
+1. **`<script lang="go">`**: Defines component logic and reactive state using the `$state` rune.
+2. **`$state(0)`**: Creates a reactive variable that synchronized between server and client.
+3. **`on:click={increment}`**: Binds the click event to your Go function.
+4. **Scoping**: Styles in the `<style>` block are automatically scoped to this component.
+
+## 5. Use the Component
+
+Open `routes/page.templ` and import/use your new island:
+
+```go
+package routes
+
+import "myapp/generated/islands"
+
+templ Page() {
+    <div class="p-12">
+        <h1 class="text-4xl font-extrabold mb-8">Welcome to GoSPA</h1>
+        @islands.Counter()
+    </div>
+}
+```
 
 ## Next Steps
 

@@ -162,13 +162,42 @@ gospa add:tailwind
 ```yaml
 plugins:
   tailwind:
-    input: ./styles/main.css      # Input CSS file (default: ./styles/main.css)
-    output: ./static/css/main.css # Output CSS file (default: ./static/css/main.css)
+    input: ./static/css/app.css      # Input CSS file (default: ./static/css/app.css)
+    output: ./static/dist/app.css # Output CSS file (default: ./static/dist/app.css)
     content:                      # Content paths for class scanning
       - ./routes/**/*.templ
+      - ./routes/**/*.go
       - ./components/**/*.templ
-      - ./views/**/*.go
+      - ./components/**/*.go
+      - ./islands/**/*.ts
+      - ./islands/**/*.js
     minify: true                  # Minify in production (default: true)
+```
+
+**Configuration (Go):**
+If you prefer configuring the plugin in Go, use `NewWithConfig`:
+
+```go
+import "github.com/aydenstechdungeon/gospa/plugin/tailwind"
+
+func main() {
+    config := &tailwind.Config{
+        Input:  "static/css/app.css",
+        Output: "static/dist/app.css",
+        Content: []string{
+            "./routes/**/*.templ",
+            "./routes/**/*.go",
+            "./components/**/*.templ",
+            "./components/**/*.go",
+            "./islands/**/*.ts",
+            "./islands/**/*.js",
+        },
+        Minify: true,
+    }
+
+    plugin := tailwind.NewWithConfig(config)
+    // Register or use with app.UsePlugin(plugin)
+}
 ```
 
 **CLI Commands:**
@@ -180,7 +209,11 @@ plugins:
 
 **Usage:**
 1. Run `gospa add:tailwind` to install dependencies and create starter files
-2. Create `styles/main.css`:
+2. Create input directory (if not using `gospa add:tailwind`):
+```bash
+mkdir -p static/css
+```
+3. Create `static/css/app.css`:
 ```css
 @import 'tailwindcss';
 
@@ -752,7 +785,11 @@ GoSPA supports loading plugins from external GitHub repositories:
 import "github.com/aydenstechdungeon/gospa/plugin"
 
 // Create a loader
-loader := plugin.NewExternalPluginLoader()
+// Mutating the loader for security hardening
+loader := plugin.NewExternalPluginLoader().
+    AllowMutableRefs(false). // Default: disallow "latest" for reproducibility
+    ExpectResolvedRef("a1b2c3d4e5f6g7h8i9j0k1l2m3n4o5p6q7r8s9t0"). // Pin to commit SHA
+    ExpectChecksum("sha256:...") // Verify content integrity
 
 // Load a plugin from GitHub
 // Supported formats:
@@ -760,7 +797,7 @@ loader := plugin.NewExternalPluginLoader()
 // - github.com/owner/repo@version
 // - owner/repo
 // - owner/repo@version
-p, err := loader.LoadFromGitHub("github.com/username/gospa-plugin-example@v1.0.0")
+p, err := loader.LoadFromGitHub("owner/repo@v1.0.0")
 
 // Or use the convenience functions
 err := plugin.InstallPlugin("username/gospa-plugin-example")
@@ -819,7 +856,7 @@ type Command struct {
     Alias       string
     Description string
     Action      func(args []string) error
-    Flags       []Flag
+    Flags       []Flag // Custom flags for this command
 }
 
 type Flag struct {

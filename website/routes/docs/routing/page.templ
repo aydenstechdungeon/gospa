@@ -40,23 +40,35 @@ templ Page() {
     ├── routes.ts             # Client-side routes
     └── types.ts              # TypeScript types`, "plaintext", "structure.txt")
 
-			<h3 class="text-xl font-semibold mt-8" id="route-files">Route Files</h3>
-			<div class="grid md:grid-cols-2 gap-4">
-				<div class="p-4 rounded-xl bg-[var(--bg-secondary)] border border-[var(--border)]">
-					<h4 class="font-mono text-sm text-[var(--accent-primary)] mb-2">page.templ / page.gospa</h4>
-					<p class="text-sm text-[var(--text-secondary)]">Page component { "for" } a route. Renders the main content.</p>
+			<h3 class="text-xl font-semibold mt-8" id="route-files">Special Route Files</h3>
+			<div class="grid md:grid-cols-2 gap-6">
+				<div class="p-5 rounded-2xl bg-[var(--bg-secondary)] border border-[var(--border)] shadow-sm">
+					<div class="flex items-center gap-3 mb-3">
+						<span class="p-2 rounded-lg bg-[var(--accent-primary)]/10 text-[var(--accent-primary)] font-mono text-xs">page.templ</span>
+						<h4 class="font-bold">Entry Point</h4>
+					</div>
+					<p class="text-sm text-[var(--text-secondary)] leading-relaxed">The primary component for a route directory. Handles the main render loop.</p>
 				</div>
-				<div class="p-4 rounded-xl bg-[var(--bg-secondary)] border border-[var(--border)]">
-					<h4 class="font-mono text-sm text-[var(--accent-primary)] mb-2">layout.templ / layout.gospa</h4>
-					<p class="text-sm text-[var(--text-secondary)]">Layout wrapper. Shared UI { "for" } child routes.</p>
+				<div class="p-5 rounded-2xl bg-[var(--bg-secondary)] border border-[var(--border)] shadow-sm">
+					<div class="flex items-center gap-3 mb-3">
+						<span class="p-2 rounded-lg bg-[var(--accent-primary)]/10 text-[var(--accent-primary)] font-mono text-xs">_middleware.go</span>
+						<h4 class="font-bold">Middleware</h4>
+					</div>
+					<p class="text-sm text-[var(--text-secondary)] leading-relaxed">Segment-scoped handlers that intercept requests before they hit your pages.</p>
 				</div>
-				<div class="p-4 rounded-xl bg-[var(--bg-secondary)] border border-[var(--border)]">
-					<h4 class="font-mono text-sm text-[var(--accent-primary)] mb-2">error.templ / error.gospa</h4>
-					<p class="text-sm text-[var(--text-secondary)]">Error boundary. Catches errors in child routes.</p>
+				<div class="p-5 rounded-2xl bg-[var(--bg-secondary)] border border-[var(--border)] shadow-sm">
+					<div class="flex items-center gap-3 mb-3">
+						<span class="p-2 rounded-lg bg-[var(--accent-primary)]/10 text-[var(--accent-primary)] font-mono text-xs">_error.templ</span>
+						<h4 class="font-bold">Error Boundaries</h4>
+					</div>
+					<p class="text-sm text-[var(--text-secondary)] leading-relaxed">Catches panics or errors during SSR and renders a fallback UI automatically.</p>
 				</div>
-				<div class="p-4 rounded-xl bg-[var(--bg-secondary)] border border-[var(--border)]">
-					<h4 class="font-mono text-sm text-[var(--accent-primary)] mb-2">*.go</h4>
-					<p class="text-sm text-[var(--text-secondary)]">Server-side handlers (API endpoints, remote actions).</p>
+				<div class="p-5 rounded-2xl bg-[var(--bg-secondary)] border border-[var(--border)] shadow-sm">
+					<div class="flex items-center gap-3 mb-3">
+						<span class="p-2 rounded-lg bg-[var(--accent-primary)]/10 text-[var(--accent-primary)] font-mono text-xs">_loading.templ</span>
+						<h4 class="font-bold">Loading Shells</h4>
+					</div>
+					<p class="text-sm text-[var(--text-secondary)] leading-relaxed">Defines the static shell for Partial Page Rendering (PPR) during async loads.</p>
 				</div>
 			</div>
 		</section>

@@ -204,6 +204,14 @@ func (p *MyPlugin) Commands() []plugin.Command {
             Alias:       "mr",
             Description: "Run my plugin",
             Action:      p.runAction,
+            Flags: []plugin.Flag{
+                {
+                    Name:        "force",
+                    Shorthand:   "f",
+                    Description: "Force run",
+                    Default:     false,
+                },
+            },
         },
     }
 }`, "go", "myplugin_hooks.go").Render(ctx, templ_7745c5c3_Buffer)
@@ -274,16 +282,14 @@ if ok && info.State == plugin.StateEnabled {
 		}
 		templ_7745c5c3_Err = components.CodeBlock(`import "github.com/aydenstechdungeon/gospa/plugin"
 
-// Create a loader
-loader := plugin.NewExternalPluginLoader()
+// Create a loader with security hardening
+loader := plugin.NewExternalPluginLoader().
+    AllowMutableRefs(false). // Default: disallow "latest" for reproducibility
+    ExpectResolvedRef("a1b2c3d4e5f6g7h8i9j0k1l2m3n4o5p6q7r8s9t0"). // Pin to commit SHA
+    ExpectChecksum("sha256:...") // Verify content integrity
 
 // Load a plugin from GitHub
-// Supported formats:
-// - github.com/owner/repo
-// - github.com/owner/repo@version
-// - owner/repo
-// - owner/repo@version
-p, err := loader.LoadFromGitHub("github.com/username/gospa-plugin-example@v1.0.0")
+p, err := loader.LoadFromGitHub("username/gospa-plugin-example@v1.0.0")
 
 // Or use convenience functions
 err := plugin.InstallPlugin("username/gospa-plugin-example")
@@ -373,7 +379,7 @@ func pluginCard(title string, href string, description string) templ.Component {
 		var templ_7745c5c3_Var3 templ.SafeURL
 		templ_7745c5c3_Var3, templ_7745c5c3_Err = templ.JoinURLErrs(templ.SafeURL(href))
 		if templ_7745c5c3_Err != nil {
-			return templ.Error{Err: templ_7745c5c3_Err, FileName: `routes/docs/plugins/page.templ`, Line: 386, Col: 30}
+			return templ.Error{Err: templ_7745c5c3_Err, FileName: `routes/docs/plugins/page.templ`, Line: 392, Col: 30}
 		}
 		_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ.EscapeString(templ_7745c5c3_Var3))
 		if templ_7745c5c3_Err != nil {
@@ -386,7 +392,7 @@ func pluginCard(title string, href string, description string) templ.Component {
 		var templ_7745c5c3_Var4 string
 		templ_7745c5c3_Var4, templ_7745c5c3_Err = templ.JoinStringErrs(title)
 		if templ_7745c5c3_Err != nil {
-			return templ.Error{Err: templ_7745c5c3_Err, FileName: `routes/docs/plugins/page.templ`, Line: 387, Col: 103}
+			return templ.Error{Err: templ_7745c5c3_Err, FileName: `routes/docs/plugins/page.templ`, Line: 393, Col: 103}
 		}
 		_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ.EscapeString(templ_7745c5c3_Var4))
 		if templ_7745c5c3_Err != nil {
@@ -399,7 +405,7 @@ func pluginCard(title string, href string, description string) templ.Component {
 		var templ_7745c5c3_Var5 string
 		templ_7745c5c3_Var5, templ_7745c5c3_Err = templ.JoinStringErrs(description)
 		if templ_7745c5c3_Err != nil {
-			return templ.Error{Err: templ_7745c5c3_Err, FileName: `routes/docs/plugins/page.templ`, Line: 388, Col: 59}
+			return templ.Error{Err: templ_7745c5c3_Err, FileName: `routes/docs/plugins/page.templ`, Line: 394, Col: 59}
 		}
 		_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ.EscapeString(templ_7745c5c3_Var5))
 		if templ_7745c5c3_Err != nil {

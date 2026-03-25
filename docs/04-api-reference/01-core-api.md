@@ -114,6 +114,9 @@ Presets:
 | `PublicOrigin` | `string` |
 | `SSGCacheMaxEntries` | `int` |
 | `SSGCacheTTL` | `time.Duration` |
+| `NotificationBufferSize` | `int` |
+| `ISRSemaphoreLimit` | `int` |
+| `ISRTimeout` | `time.Duration` |
 | `Prefork` | `bool` |
 | `Storage` | `store.Storage` |
 | `PubSub` | `store.PubSub` |
@@ -896,7 +899,8 @@ rendered := templ.RenderComponent(comp *Component, content templ.Component) temp
 ```javascript
 const count = new GoSPA.Rune(0)
 
-count.get()           // 0
+count.get()           // 0 (tracks dependencies)
+count.peek()          // 0 (non-tracking read)
 count.set(5)
 count.update(v => v + 1)
 
@@ -1342,7 +1346,6 @@ const manager = initIslands({
     moduleBasePath: '/islands',    // Where island JS files are served from
     defaultTimeout: 30000,
     debug: false,
-    moduleLoader: async (name) => import(`./islands/${name}`), // optional custom loader
 });
 
 // Manually hydrate a lazy island
@@ -1354,15 +1357,28 @@ manager.getIslands();       // all discovered islands
 manager.discoverIslands();  // re-scan DOM (use after SPA nav)
 manager.destroy();          // clean up observers
 
-// Browser globals (available when island.ts is loaded)
-window.GoSPA_ISLAND_MANAGER.init(config)
-window.GoSPA_ISLAND_MANAGER.get()
-window.GoSPA_ISLAND_MANAGER.hydrate(name)
+// Priority Scheduling
+import { getPriorityScheduler } from './priority.ts';
+const scheduler = getPriorityScheduler();
 
-// DOM event — fired on the island element after hydration
-element.addEventListener('gospa:hydrated', (ev) => {
-    console.log(ev.detail.island); // IslandElementData
+scheduler.registerPlan({
+  id: 'island-1',
+  priority: 100, // critical
+  mode: 'immediate'
 });
+
+await scheduler.forceHydrate('island-1');
+console.log(scheduler.getStats());
+
+// Streaming SSR
+import { initStreaming, getStreamingManager } from './streaming.ts';
+const streamer = initStreaming({
+  enableLogging: true,
+  hydrationTimeout: 5000
+});
+
+streamer.isHydrated('island-1');
+const islands = streamer.getIslands();
 ```
 
 ### Hydration Modes (via `data-gospa-mode`)

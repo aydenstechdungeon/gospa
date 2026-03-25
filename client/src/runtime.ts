@@ -51,8 +51,12 @@ export {
   Effect,
   StateMap,
   batch,
+  rune,
+  derived,
   effect,
   watch,
+  untrack,
+  preEffect,
   bindElement,
   bindTwoWay,
   renderIf,
@@ -92,6 +96,23 @@ import {
   type StateMessage,
 } from "./websocket.ts";
 import {
+  initIslands,
+  getIslandManager,
+  hydrateIsland,
+} from "./island.ts";
+import {
+  getPriorityScheduler,
+  initPriorityHydration,
+} from "./priority.ts";
+import {
+  initStreaming,
+  getStreamingManager,
+} from "./streaming.ts";
+import {
+  Resource,
+  resourceReactive,
+} from "./resource.ts";
+import {
   navigate,
   back,
   forward,
@@ -124,7 +145,7 @@ export { registerBinding, unregisterBinding };
 // Re-export events
 export { on, offAll, debounce, throttle, delegate, onKey, keys, transformers };
 
-// Re-export WebSocket, Navigation, and Transition APIs for backward compatibility
+// Re-export Core Functionality for library users
 export {
   // WebSocket
   WSClient,
@@ -142,6 +163,21 @@ export {
   blur,
   crossfade,
   setupTransitions,
+
+  // Islands & Priority
+  initIslands,
+  getIslandManager,
+  hydrateIsland,
+  getPriorityScheduler,
+  initPriorityHydration,
+
+  // Streaming
+  initStreaming,
+  getStreamingManager,
+
+  // Resources
+  Resource,
+  resourceReactive,
 
   // Navigation
   navigate,
@@ -167,7 +203,7 @@ export type { NavigateOptions, NavigationOptions, StateMessage };
 // Signal-based reactivity (proxy-based auto-tracking)
 export {
   reactive,
-  derived,
+  // derived is already exported from runtime-core above
   effect as signalEffect,
   watchProp,
   toRaw,
@@ -192,11 +228,14 @@ export {
   onComponentError,
 } from "./error-boundary.ts";
 
-// DevTools integration
+// DevTools & Debugging
 export {
   createDevToolsPanel,
   updateDevToolsPanel,
   toggleDevTools,
+  inspect,
+  timing,
+  memoryUsage,
 } from "./debug.ts";
 
 // WebSocket tab sharing (BroadcastChannel)
