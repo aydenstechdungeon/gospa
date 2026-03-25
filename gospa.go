@@ -48,6 +48,10 @@ type App struct {
 	ssgCacheMu sync.RWMutex
 	// isrRevalidating guards against duplicate background revalidations.
 	isrRevalidating sync.Map
+	// isrSemaphore limits concurrent ISR background revalidations.
+	isrSemaphore chan struct{}
+	// isrSemOnce ensures semaphore is initialized once.
+	isrSemOnce sync.Once
 	// pprShellCache stores cached static shells for PPR pages.
 	pprShellCache map[string]pprEntry
 	// pprShellKeys tracks insertion order for PPR shell FIFO eviction.

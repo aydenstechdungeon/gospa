@@ -42,8 +42,9 @@ func TestFilePathToURLPath_DynamicSegment(t *testing.T) {
 		{"blog/[id]/page.templ", "/blog/:id"},
 		{"_id/page.templ", "/:id"},
 		{"blog/[...rest]/page.templ", "/blog/*rest"},
-		{"blog/[[...optional]]/page.templ", "/blog/*optional"},
-		{"blog/[[param]]/page.templ", "/blog/:param"},
+		{"blog/[[...optional]]/page.templ", "/blog/*?optional"},
+		{"blog/[[param]]/page.templ", "/blog/:?param"},
+		{"admin/_middleware.go", "/admin"},
 	}
 
 	for _, tt := range tests {
@@ -81,8 +82,8 @@ func TestConvertDynamicSegments(t *testing.T) {
 		{"/blog/:id", "/blog/:id"},
 		{"/blog/[id]", "/blog/:id"},
 		{"/blog/[...rest]", "/blog/*rest"},
-		{"/blog/[[...opt]]", "/blog/*opt"},
-		{"/blog/[[param]]", "/blog/:param"},
+		{"/blog/[[...opt]]", "/blog/*?opt"},
+		{"/blog/[[param]]", "/blog/:?param"},
 		{"/blog/_id", "/blog/:id"},
 		{"/(group)/page", "/page"},
 		{"/a/(b)/c", "/a/c"},
@@ -376,13 +377,30 @@ func TestResolveLayoutChain_NilRoute(t *testing.T) {
 
 func TestMatchRoute_OptionalSegment(t *testing.T) {
 	r := NewRouter("./routes")
-	// Simulate [[param]] (optional), which becomes :param in pattern
-	params, ok := r.matchRoute("/blog/:page", "/blog")
+	params, ok := r.matchRoute("/blog/:?page", "/blog")
 	if !ok {
 		t.Error("expected match when optional segment is absent")
 	}
 	if params["page"] != "" {
 		t.Errorf("expected empty string for absent optional param, got %q", params["page"])
+	}
+}
+
+func TestMatchRoute_RequiredSegmentDoesNotMatchMissing(t *testing.T) {
+	r := NewRouter("./routes")
+	if _, ok := r.matchRoute("/blog/:page", "/blog"); ok {
+		t.Error("required segment should not match when missing")
+	}
+}
+
+func TestMatchRoute_OptionalCatchAll(t *testing.T) {
+	r := NewRouter("./routes")
+	params, ok := r.matchRoute("/docs/*?rest", "/docs")
+	if !ok {
+		t.Fatal("optional catch-all should match missing remainder")
+	}
+	if params["rest"] != "" {
+		t.Fatalf("expected empty rest, got %q", params["rest"])
 	}
 }
 
