@@ -4,6 +4,7 @@ package sfc
 import (
 	"fmt"
 	"regexp"
+	"sort"
 	"strings"
 )
 
@@ -42,60 +43,98 @@ func Parse(input string) (*SFC, error) {
 	}
 	input = trimmed
 
-	// 1. Extract Script Blocks
-	for _, matches := range scriptRegex.FindAllStringSubmatch(input, -1) {
-		if len(matches) <= 2 {
-			continue
-		}
-		lang := normalizeScriptLang(extractLang(matches[1], "go"))
-		block := Block{
-			Type:    "script",
-			Lang:    lang,
-			Content: strings.TrimSpace(matches[2]),
-		}
-		switch lang {
-		case "go":
-			if sfc.Script.Content != "" {
-				return nil, fmt.Errorf("multiple <script lang=\"go\"> blocks are not supported")
-			}
-			sfc.Script = block
-		case "ts":
-			if sfc.ScriptTS.Content != "" {
-				return nil, fmt.Errorf("multiple <script lang=\"ts\"> (or js/typescript/javascript) blocks are not supported")
-			}
-			sfc.ScriptTS = block
-		default:
-			return nil, fmt.Errorf("unsupported <script> language %q: supported languages are go, ts, js, typescript, javascript", lang)
+	// 1. Identify top-level blocks using masked input to ignore tags in strings/comments
+	maskedInput := maskForParsing(input)
+
+	type rawBlock struct {
+		typ     string // "script", "template", "style"
+		start   int
+		end     int
+		attr    string
+		content string
+	}
+	var candidates []rawBlock
+
+	for _, m := range scriptRegex.FindAllStringSubmatchIndex(maskedInput, -1) {
+		candidates = append(candidates, rawBlock{"script", m[0], m[1], input[m[2]:m[3]], input[m[4]:m[5]]})
+	}
+	for _, m := range templateRegex.FindAllStringSubmatchIndex(maskedInput, -1) {
+		candidates = append(candidates, rawBlock{"template", m[0], m[1], input[m[2]:m[3]], input[m[4]:m[5]]})
+	}
+	for _, m := range styleRegex.FindAllStringSubmatchIndex(maskedInput, -1) {
+		candidates = append(candidates, rawBlock{"style", m[0], m[1], input[m[2]:m[3]], input[m[4]:m[5]]})
+	}
+
+	sort.Slice(candidates, func(i, j int) bool {
+		return candidates[i].start < candidates[j].start
+	})
+
+	var topLevel []rawBlock
+	lastEnd := 0
+	for _, b := range candidates {
+		if b.start >= lastEnd {
+			topLevel = append(topLevel, b)
+			lastEnd = b.end
 		}
 	}
 
-	// 2. Extract Style Block
-	if matches := styleRegex.FindStringSubmatch(input); len(matches) > 2 {
-		sfc.Style = Block{
-			Type:    "style",
-			Lang:    extractLang(matches[1], "css"),
-			Content: strings.TrimSpace(matches[2]),
+	// 2. Process top-level blocks
+	var explicitTemplate bool
+	for _, b := range topLevel {
+		switch b.typ {
+		case "script":
+			lang := normalizeScriptLang(extractLang(b.attr, "go"))
+			block := Block{
+				Type:    "script",
+				Lang:    lang,
+				Content: strings.TrimSpace(b.content),
+			}
+			if lang == "go" {
+				if sfc.Script.Content != "" {
+					return nil, fmt.Errorf("multiple <script lang=\"go\"> blocks are not supported")
+				}
+				sfc.Script = block
+			} else if lang == "ts" {
+				if sfc.ScriptTS.Content != "" {
+					return nil, fmt.Errorf("multiple <script lang=\"ts\"> (or js/typescript/javascript) blocks are not supported")
+				}
+				sfc.ScriptTS = block
+			} else {
+				return nil, fmt.Errorf("unsupported <script> language %q: supported languages are go, ts, js, typescript, javascript", lang)
+			}
+		case "style":
+			if sfc.Style.Content != "" {
+				return nil, fmt.Errorf("multiple <style> blocks are not supported")
+			}
+			sfc.Style = Block{
+				Type:    "style",
+				Lang:    extractLang(b.attr, "css"),
+				Content: strings.TrimSpace(b.content),
+			}
+		case "template":
+			if explicitTemplate {
+				return nil, fmt.Errorf("multiple <template> blocks are not supported")
+			}
+			explicitTemplate = true
+			sfc.Template = Block{
+				Type:    "template",
+				Content: strings.TrimSpace(b.content),
+			}
 		}
 	}
 
-	// 3. Extract Template Block (Explicit or Implicit)
-	templateMatches := templateRegex.FindStringSubmatch(input)
-	if len(templateMatches) > 2 {
-		if countMatches(templateRegex, input) > 1 {
-			return nil, fmt.Errorf("multiple <template> blocks are not supported")
+	// 3. Handle implicit template if needed
+	if !explicitTemplate {
+		var builder strings.Builder
+		lastPos := 0
+		for _, b := range topLevel {
+			builder.WriteString(input[lastPos:b.start])
+			lastPos = b.end
 		}
+		builder.WriteString(input[lastPos:])
 		sfc.Template = Block{
 			Type:    "template",
-			Content: strings.TrimSpace(templateMatches[2]),
-		}
-	} else {
-		// Implicit template: everything that isn't script or style
-		temp := input
-		temp = scriptRegex.ReplaceAllString(temp, "")
-		temp = styleRegex.ReplaceAllString(temp, "")
-		sfc.Template = Block{
-			Type:    "template",
-			Content: strings.TrimSpace(temp),
+			Content: strings.TrimSpace(builder.String()),
 		}
 	}
 
@@ -113,9 +152,6 @@ func extractLang(attr, defaultLang string) string {
 	return defaultLang
 }
 
-func countMatches(re *regexp.Regexp, input string) int {
-	return len(re.FindAllStringSubmatch(input, -1))
-}
 
 func normalizeScriptLang(lang string) string {
 	l := strings.ToLower(strings.TrimSpace(lang))
@@ -147,4 +183,20 @@ func parseFrontMatter(content string) map[string]string {
 		}
 	}
 	return result
+}
+
+var maskRegex = regexp.MustCompile("(?s)`[^`]*`|\"(?:\\\\.|[^\"\\\\])*\"|//.*|/\\*.*?\\*/")
+
+func maskForParsing(input string) string {
+	return maskRegex.ReplaceAllStringFunc(input, func(s string) string {
+		res := make([]byte, len(s))
+		for i := 0; i < len(s); i++ {
+			if s[i] == '\n' {
+				res[i] = '\n'
+			} else {
+				res[i] = ' '
+			}
+		}
+		return string(res)
+	})
 }
