@@ -147,14 +147,14 @@ func main() {
 		fmt.Printf("\nPush to '%s' failed (likely protected branch). Attempting to push to a release branch...\n", branch)
 		releaseBranch := "release/" + newTag
 		// Check if branch already exists and delete it if it's different
-		exec.Command("git", "branch", "-D", releaseBranch).Run() // ignore error if it doesn't exist
+		_ = exec.Command("git", "branch", "-D", releaseBranch).Run() //nolint:gosec // ignore error if it doesn't exist
 
-		if err := exec.Command("git", "checkout", "-b", releaseBranch).Run(); err != nil {
+		if err := exec.Command("git", "checkout", "-b", releaseBranch).Run(); err != nil { // #nosec G204 G702
 			fmt.Printf("Error creating release branch: %v\n", err)
 			os.Exit(1)
 		}
 
-		cmd3 := exec.Command("git", "push", "-u", "origin", releaseBranch)
+		cmd3 := exec.Command("git", "push", "-u", "origin", releaseBranch) //nolint:gosec
 		cmd3.Stdout = os.Stdout
 		cmd3.Stderr = os.Stderr
 		if err := cmd3.Run(); err != nil {

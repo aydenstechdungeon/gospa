@@ -230,6 +230,10 @@ func (a *App) getWSUrl(c gofiber.Ctx) string {
 		}
 	}
 
+	if !a.Config.DevMode {
+		a.Logger().Warn("PublicOrigin is not set in production. WebSocket URL generation will fall back to the Host header, which can be spoofed. Set PublicOrigin for better security.", "host", string(c.Request().Host()))
+	}
+
 	protocol := "ws://"
 	if c.Protocol() == "https" || strings.ToLower(c.Get("X-Forwarded-Proto")) == "https" {
 		protocol = "wss://"
@@ -240,7 +244,11 @@ func (a *App) getWSUrl(c gofiber.Ctx) string {
 		return protocol + validatedHost + a.Config.WebSocketPath
 	}
 
-	return protocol + "localhost" + a.Config.WebSocketPath
+	if a.Config.DevMode {
+		return protocol + "localhost" + a.Config.WebSocketPath
+	}
+
+	return protocol + "127.0.0.1" + a.Config.WebSocketPath
 }
 
 func (a *App) normalizeWSConfig() (rd, mr, hb int) {
