@@ -22,6 +22,13 @@ func (a *App) validatePublicHost(host string) (string, bool) {
 		return "", false
 	}
 
+	// Filter out dangerous characters that shouldn't be in a hostname
+	for _, r := range host {
+		if (r < 'a' || r > 'z') && (r < 'A' || r > 'Z') && (r < '0' || r > '9') && r != '.' && r != '-' && r != ':' {
+			return "", false
+		}
+	}
+
 	candidate := host
 	if !strings.Contains(candidate, ":") || strings.Count(candidate, ":") > 1 {
 		candidate = net.JoinHostPort(host, "80")
@@ -42,6 +49,9 @@ func (a *App) validatePublicHost(host string) (string, bool) {
 				return "", false
 			}
 		}
+	} else if !a.Config.DevMode {
+		// In production, if PublicOrigin is NOT set, we do NOT trust the Host header
+		return "", false
 	}
 
 	return host, true
@@ -230,24 +240,22 @@ func (a *App) getWSUrl(c gofiber.Ctx) string {
 		}
 	}
 
-	if !a.Config.DevMode {
-		a.Logger().Warn("PublicOrigin is not set in production. WebSocket URL generation will fall back to the Host header, which can be spoofed. Set PublicOrigin for better security.", "host", string(c.Request().Host()))
-	}
-
 	protocol := "ws://"
 	if c.Protocol() == "https" || strings.ToLower(c.Get("X-Forwarded-Proto")) == "https" {
 		protocol = "wss://"
 	}
 
-	host := strings.TrimSpace(string(c.Request().Host()))
-	if validatedHost, ok := a.validatePublicHost(host); ok {
-		return protocol + validatedHost + a.Config.WebSocketPath
-	}
-
 	if a.Config.DevMode {
+		host := strings.TrimSpace(string(c.Request().Host()))
+		if validatedHost, ok := a.validatePublicHost(host); ok {
+			return protocol + validatedHost + a.Config.WebSocketPath
+		}
 		return protocol + "localhost" + a.Config.WebSocketPath
 	}
 
+	// In production, failure to have PublicOrigin results in loopback safely
+	// and logging a configuration error.
+	a.Logger().Error("CRITICAL: PublicOrigin is not set in production. WebSocket connections will fail or use loopback. Set PublicOrigin for security.")
 	return protocol + "127.0.0.1" + a.Config.WebSocketPath
 }
 

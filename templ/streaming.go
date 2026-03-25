@@ -210,31 +210,46 @@ window.__GOSPA_SANITIZE_STREAM_HTML__ = window.__GOSPA_SANITIZE_STREAM_HTML__ ||
 	if (window.GoSPA && typeof window.GoSPA.sanitizeHtml === 'function') {
 		return window.GoSPA.sanitizeHtml(html);
 	}
-	// Last resort: manual sanitization with improved XSS prevention
+	// Last resort: manual sanitization with strict whitelist
 	var template = document.createElement('template');
 	template.innerHTML = String(html || '');
-	// Remove ALL dangerous elements (expanded list)
-	var forbidden = ['script', 'iframe', 'object', 'embed', 'link', 'style', 'meta', 'applet', 'base', 'body', 'head', 'html', 'form', 'input', 'button', 'textarea', 'select', 'option', 'svg', 'math'];
-	forbidden.forEach(tag => {
-		template.content.querySelectorAll(tag).forEach(n => n.remove());
-	});
-	// Remove ALL event handlers (expanded to catch variations)
-	template.content.querySelectorAll('*').forEach(el => {
+	var doc = template.content;
+
+	// Whitelist approach: Remove everything NOT in the whitelist
+	var allowedTags = ['b', 'i', 'u', 'em', 'strong', 'a', 'span', 'br', 'p', 'ul', 'ol', 'li'];
+	var allElements = Array.from(doc.querySelectorAll('*'));
+	allElements.forEach(el => {
+		var tag = el.tagName.toLowerCase();
+		if (!allowedTags.includes(tag)) {
+			// Replace non-whitelisted tags with their text content to preserve readability while stripping risk
+			while (el.firstChild) {
+				el.parentNode.insertBefore(el.firstChild, el);
+			}
+			el.remove();
+			return;
+		}
+
+		// Sanitize attributes: only allow specific safe attributes
+		var allowedAttrs = ['class', 'id', 'title'];
+		if (tag === 'a') allowedAttrs.push('href');
+
 		Array.from(el.attributes).forEach(attr => {
 			var name = attr.name.toLowerCase();
-			// Remove any attribute starting with 'on' (onclick, onerror, etc.)
-			if (name.startsWith('on') || name.startsWith('on')) {
+			if (!allowedAttrs.includes(name)) {
 				el.removeAttribute(attr.name);
+				return;
 			}
-			// Remove javascript:, data:, vbscript: URLs
-			if (['src', 'href', 'xlink:href', 'action', 'data', 'formaction'].includes(name)) {
-				var value = attr.value.toLowerCase().trim();
-				if (value.startsWith('javascript:') || value.startsWith('data:') || value.startsWith('vbscript:')) {
+
+			// Special handling for href: must be safe protocol
+			if (name === 'href') {
+				var val = attr.value.toLowerCase().trim();
+				if (val.startsWith('javascript:') || val.startsWith('data:') || val.startsWith('vbscript:')) {
 					el.removeAttribute(attr.name);
 				}
 			}
 		});
 	});
+
 	return template.innerHTML;
 };
 window.__GOSPA_STREAM__ = window.__GOSPA_STREAM__ || function(chunk) {

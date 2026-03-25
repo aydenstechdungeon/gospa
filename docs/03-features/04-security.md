@@ -234,9 +234,9 @@ If you're upgrading from GoSPA v1.x:
    - Use `@gospa/client` for the default trust-the-server runtime
    - Use `@gospa/client/runtime-secure` if you need sanitization
 
-3. **Remove `DisableSanitization: true` from server config**
-   - It's no longer needed (and no longer exists)
-   - The default runtime now trusts the server by default
+3. **Review `DisableSanitization` usage**
+   - This option remains available but is **strongly discouraged** in production.
+   - It disables client-side HTML sanitization for SPA navigation, which can be dangerous if untrusted content is streamed.
 
 See the [v1 → v2 migration guide](../06-migration/01-v1-to-v2.md) for detailed instructions.
 

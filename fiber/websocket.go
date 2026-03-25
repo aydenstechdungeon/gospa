@@ -1159,12 +1159,29 @@ func WebSocketHandler(config WebSocketConfig) fiberpkg.Handler {
 		}
 
 		// Handle session authentication
-		if initMsg.Type == "init" && initMsg.SessionToken != "" {
-			// SECURITY: Session token provided in message (preferred method)
-			if prevSessionID, ok := globalSessionStore.ValidateSession(initMsg.SessionToken); ok {
-				// Check if we have saved state for this session
+		// 1. Try cookie from middleware locals or direct header (most secure)
+		cookieToken := c.Cookies("gospa_session")
+		if cookieToken == "" {
+			// Fallback: check if it was set in locals by middleware
+			if l, ok := c.Locals("gospa.session").(string); ok {
+				cookieToken = l
+			}
+		}
+
+		if cookieToken != "" {
+			if prevSessionID, ok := globalSessionStore.ValidateSession(cookieToken); ok {
 				if savedState, hasState := globalClientStateStore.Get(prevSessionID); hasState {
-					slog.Default().Debug("restoring session state", "sessionID", prevSessionID)
+					sessionID = prevSessionID
+					restoredState = savedState
+					sessionToken = cookieToken
+				}
+			}
+		}
+
+		// 2. Fallback: Session token provided in message (deprecated/less secure)
+		if sessionID == "" && initMsg.Type == "init" && initMsg.SessionToken != "" {
+			if prevSessionID, ok := globalSessionStore.ValidateSession(initMsg.SessionToken); ok {
+				if savedState, hasState := globalClientStateStore.Get(prevSessionID); hasState {
 					sessionID = prevSessionID
 					restoredState = savedState
 					sessionToken = initMsg.SessionToken

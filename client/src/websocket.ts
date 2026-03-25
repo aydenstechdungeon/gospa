@@ -134,9 +134,11 @@ export interface WebSocketConfig {
 }
 
 // Helper functions for session persistence
+// NOTE: Token is now handled by HttpOnly cookies for security.
+// We only persist the clientId if needed for local identification.
 function loadSession(): SessionData | null {
   try {
-    const saved = sessionStorage.getItem(SESSION_COOKIE_KEY);
+    const saved = localStorage.getItem(SESSION_COOKIE_KEY);
     if (saved) {
       return JSON.parse(saved) as SessionData;
     }
@@ -148,8 +150,8 @@ function loadSession(): SessionData | null {
 
 function saveSession(data: SessionData): void {
   try {
-    // Store in sessionStorage for client-side access
-    sessionStorage.setItem(SESSION_COOKIE_KEY, JSON.stringify(data));
+    // Only save non-sensitive identification if needed
+    localStorage.setItem(SESSION_COOKIE_KEY, JSON.stringify({ clientId: data.clientId }));
   } catch (e) {
     console.warn("[GoSPA] Failed to save session:", e);
   }
@@ -157,7 +159,7 @@ function saveSession(data: SessionData): void {
 
 function clearSession(): void {
   try {
-    sessionStorage.removeItem(SESSION_COOKIE_KEY);
+    localStorage.removeItem(SESSION_COOKIE_KEY);
   } catch (e) {
     console.warn("[GoSPA] Failed to clear session:", e);
   }
@@ -270,12 +272,18 @@ export class WSClient {
 
         // SECURITY: Send session token as first message (not in URL)
         // Server will validate and associate this connection with the session
-        if (this.sessionData?.token) {
-          this.send({
+        if (this.sessionData?.clientId) { // Only send init if we have a clientId
+          const initMsg: StateMessage = {
             type: "init",
-            sessionToken: this.sessionData.token,
             clientId: this.sessionData.clientId,
-          });
+          };
+
+          // Only send token if explicitly provided (legacy support)
+          if (this.sessionData.token) {
+            initMsg.sessionToken = this.sessionData.token;
+          }
+
+          this.send(initMsg);
         }
 
         this.flushMessageQueue();
