@@ -109,6 +109,14 @@ func New(config Config) *App {
 	if config.HydrationMode == "" {
 		config.HydrationMode = "immediate"
 	}
+	// HydrationTimeout validation: must be within 0-10s to prevent hanging or UI jank
+	if config.HydrationTimeout < 0 {
+		config.HydrationTimeout = 0
+	} else if config.HydrationTimeout > 10000 {
+		config.Logger.Warn("HydrationTimeout is too high (>10s). Capping to 10 seconds for UX safety.", "value", config.HydrationTimeout)
+		config.HydrationTimeout = 10000
+	}
+
 	if config.WSMaxMessageSize == 0 {
 		config.WSMaxMessageSize = 64 * 1024
 	}
@@ -154,6 +162,9 @@ func New(config Config) *App {
 	if config.DevMode {
 		config.Logger.Warn("DevMode is enabled — disable in production")
 		fiberConfig.ServerHeader = "GoSPA/" + Version
+	} else if config.PublicOrigin == "" {
+		// CRITICAL: Production enforcement of PublicOrigin
+		config.Logger.Error("CRITICAL: PublicOrigin must be set in production mode for secure WebSocket and absolute URL generation.")
 	}
 	fiberApp := fiberpkg.New(fiberConfig)
 
@@ -206,6 +217,7 @@ func (a *App) setupRoutes() {
 
 	if a.Hub != nil {
 		handlers := []fiberpkg.Handler{
+			fiber.SessionMiddleware(),
 			fiber.WebSocketUpgradeMiddleware(),
 		}
 		if a.Config.WebSocketMiddleware != nil {
@@ -227,7 +239,10 @@ func (a *App) setupRoutes() {
 		a.Fiber.Get(a.Config.WebSocketPath, hAny[0], hAny[1:]...)
 	}
 
-	remoteHandlers := []fiberpkg.Handler{fiber.RemoteActionRateLimitMiddleware()}
+	remoteHandlers := []fiberpkg.Handler{
+		fiber.SessionMiddleware(),
+		fiber.RemoteActionRateLimitMiddleware(),
+	}
 	if !a.Config.DevMode && a.Config.RemoteActionMiddleware == nil && !a.Config.AllowUnauthenticatedRemoteActions {
 		remoteHandlers = append(remoteHandlers, func(c fiberpkg.Ctx) error {
 			return c.Status(fiberpkg.StatusUnauthorized).JSON(fiberpkg.Map{

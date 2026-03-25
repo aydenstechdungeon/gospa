@@ -25,7 +25,10 @@ func init() {
 			return nil, fmt.Errorf("invalid input")
 		}
 
-		name, _ := data["name"].(string)
+		name, ok := data["name"].(string)
+	if !ok {
+		return nil, fmt.Errorf("invalid name type: expected string")
+	}
 		content, _ := data["content"].(string)
 
 		if name == "" || content == "" {

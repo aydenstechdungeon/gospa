@@ -177,6 +177,41 @@ func generateCSRFToken() (string, error) {
 	return hex.EncodeToString(b), nil
 }
 
+// SessionMiddleware ensures a session token exists in an HttpOnly cookie.
+// This mitigates XSS risks compared to storing tokens in sessionStorage.
+func SessionMiddleware() gofiber.Handler {
+	return func(c gofiber.Ctx) error {
+		cookie := c.Cookies("gospa_session")
+		if cookie != "" {
+			// Validate existing session
+			if _, ok := globalSessionStore.ValidateSession(cookie); ok {
+				c.Locals("gospa.session", cookie)
+				return c.Next()
+			}
+		}
+
+		// Create new session
+		clientID := generateComponentID()
+		token, err := globalSessionStore.CreateSession(clientID)
+		if err != nil {
+			return c.Next()
+		}
+
+		c.Cookie(&gofiber.Cookie{
+			Name:     "gospa_session",
+			Value:    token,
+			HTTPOnly: true,
+			SameSite: "Lax",
+			Secure:   c.Protocol() == "https",
+			Path:     "/",
+			Expires:  time.Now().Add(SessionTTL),
+		})
+
+		c.Locals("gospa.session", token)
+		return c.Next()
+	}
+}
+
 // CSRFTokenMiddleware validates CSRF tokens on mutating requests.
 func CSRFTokenMiddleware() gofiber.Handler {
 	return func(c gofiber.Ctx) error {
