@@ -15,6 +15,8 @@ import (
 	"github.com/aydenstechdungeon/gospa/plugin"
 )
 
+const templVersion = "v0.3.1001"
+
 // Dev starts the development server with hot reload.
 func Dev(config *DevConfig) {
 	fmt.Println("Starting development server...")
@@ -162,7 +164,12 @@ func startServerProcess(ctx context.Context, config *DevConfig) *exec.Cmd {
 	cmd := exec.CommandContext(ctx, "go", args...)
 	cmd.Stdout = os.Stdout
 	cmd.Stderr = os.Stderr
-	cmd.Env = append(os.Environ(), "GOSPA_DEV=1")
+	cmd.Env = append(
+		os.Environ(),
+		"GOSPA_DEV=1",
+		fmt.Sprintf("PORT=%d", config.Port),
+		"HOST="+config.Host,
+	)
 
 	if err := cmd.Start(); err != nil {
 		fmt.Fprintf(os.Stderr, "Error starting server: %v\n", err)
@@ -393,8 +400,8 @@ func handleFileChange(_ context.Context, event FileEvent, restartCh chan struct{
 }
 
 func regenerateTempl() error {
-	// Using go run to ensure it works even if templ is not in the PATH
-	cmd := exec.Command("go", "run", "github.com/a-h/templ/cmd/templ@latest", "generate")
+	// Use a pinned templ version to avoid supply-chain drift from @latest.
+	cmd := exec.Command("go", "run", "github.com/a-h/templ/cmd/templ@"+templVersion, "generate")
 	cmd.Stdout = os.Stdout
 	cmd.Stderr = os.Stderr
 	return cmd.Run()

@@ -2,10 +2,12 @@
 package cli
 
 import (
+	"errors"
 	"fmt"
 	"os"
 	"os/exec"
 	"path/filepath"
+	"regexp"
 	"strings"
 )
 
@@ -18,8 +20,18 @@ type ProjectConfig struct {
 	WithDocker bool
 }
 
+var (
+	projectNamePattern = regexp.MustCompile(`^[a-zA-Z0-9][a-zA-Z0-9._-]*$`)
+	modulePathPattern  = regexp.MustCompile(`^[a-zA-Z0-9._~/-]+$`)
+)
+
 // CreateProject creates a new GoSPA project with the given name.
 func CreateProject(name string) {
+	if err := ValidateProjectName(name); err != nil {
+		fmt.Fprintf(os.Stderr, "Error: invalid project name %q: %v\n", name, err)
+		os.Exit(1)
+	}
+
 	config := &ProjectConfig{
 		Name:      name,
 		Module:    fmt.Sprintf("github.com/%s/%s", getGitUsername(), name),
@@ -45,6 +57,28 @@ func CreateProjectWithConfig(config *ProjectConfig) error {
 }
 
 func createProject(config *ProjectConfig) error {
+	if config == nil {
+		return errors.New("project config is required")
+	}
+	if err := ValidateProjectName(config.Name); err != nil {
+		return fmt.Errorf("invalid project name %q: %w", config.Name, err)
+	}
+	if config.Module == "" || !modulePathPattern.MatchString(config.Module) {
+		return fmt.Errorf("invalid module path %q", config.Module)
+	}
+
+	cleanOutputDir := filepath.Clean(config.OutputDir)
+	if cleanOutputDir == "." || cleanOutputDir == string(filepath.Separator) {
+		return fmt.Errorf("invalid output directory %q", config.OutputDir)
+	}
+	if filepath.IsAbs(cleanOutputDir) {
+		return fmt.Errorf("absolute output directory is not allowed: %q", config.OutputDir)
+	}
+	if strings.HasPrefix(cleanOutputDir, ".."+string(filepath.Separator)) || cleanOutputDir == ".." {
+		return fmt.Errorf("output directory escapes current directory: %q", config.OutputDir)
+	}
+	config.OutputDir = cleanOutputDir
+
 	// Create project directory
 	if err := os.MkdirAll(config.OutputDir, 0750); err != nil {
 		return fmt.Errorf("failed to create project directory: %w", err)
@@ -121,6 +155,7 @@ func createMainGo(config *ProjectConfig) error {
 
 import (
 	"log"
+	"os"
 
 	_ "%s/routes" // Import routes to trigger init()
 
@@ -128,6 +163,11 @@ import (
 )
 
 func main() {
+	port := os.Getenv("PORT")
+	if port == "" {
+		port = "3000"
+	}
+
 	config := gospa.DefaultConfig()
 	config.RoutesDir = "./routes"
 	config.DevMode = true
@@ -135,7 +175,7 @@ func main() {
 
 	app := gospa.New(config)
 
-	if err := app.Run(":3000"); err != nil {
+	if err := app.Run(":" + port); err != nil {
 		log.Fatal(err)
 	}
 }
@@ -425,16 +465,24 @@ func getGitUsername() string {
 
 // ValidateProjectName checks if a project name is valid.
 func ValidateProjectName(name string) error {
-	if name == "" {
+	if strings.TrimSpace(name) == "" {
 		return fmt.Errorf("project name cannot be empty")
 	}
 
-	if strings.Contains(name, " ") {
-		return fmt.Errorf("project name cannot contain spaces")
+	if strings.Contains(name, "..") {
+		return fmt.Errorf("project name cannot contain '..'")
+	}
+
+	if strings.ContainsAny(name, `/\`) {
+		return fmt.Errorf("project name cannot contain path separators")
 	}
 
 	if strings.HasPrefix(name, "-") || strings.HasPrefix(name, "_") {
 		return fmt.Errorf("project name cannot start with - or _")
+	}
+
+	if !projectNamePattern.MatchString(name) {
+		return fmt.Errorf("project name can only include letters, numbers, '.', '_' or '-'")
 	}
 
 	return nil

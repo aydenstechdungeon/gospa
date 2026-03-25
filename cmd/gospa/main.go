@@ -5,6 +5,7 @@ import (
 	"flag"
 	"fmt"
 	"os"
+	"strings"
 
 	"github.com/aydenstechdungeon/gospa"
 	"github.com/aydenstechdungeon/gospa/cli"
@@ -70,6 +71,31 @@ func main() {
 		routesDir := fs.String("routes-dir", "./routes", "Routes directory to validate")
 		_ = fs.Parse(os.Args[2:])
 		cli.Doctor(&cli.DoctorConfig{RoutesDir: *routesDir})
+	case "prune":
+		fs := flag.NewFlagSet("prune", flag.ExitOnError)
+		rootDir := fs.String("root-dir", ".", "Project root directory to analyze")
+		outputDir := fs.String("output-dir", "", "Optional output directory for rewritten files")
+		reportFile := fs.String("report-file", "", "Write pruning report to file")
+		keepUnused := fs.Bool("keep-unused", false, "Keep unused state variables (analysis-only behavior)")
+		aggressive := fs.Bool("aggressive", false, "Enable aggressive pruning heuristics")
+		dryRun := fs.Bool("dry-run", false, "Analyze only; do not modify files")
+		verbose := fs.Bool("verbose", false, "Print detailed report output")
+		jsonOut := fs.Bool("json", false, "Emit report as JSON")
+		exclude := fs.String("exclude", "", "Comma-separated exclude glob patterns")
+		include := fs.String("include", "", "Comma-separated include glob patterns")
+		_ = fs.Parse(os.Args[2:])
+		cli.Prune(&cli.PruneConfig{
+			RootDir:    *rootDir,
+			OutputDir:  *outputDir,
+			ReportFile: *reportFile,
+			KeepUnused: *keepUnused,
+			Aggressive: *aggressive,
+			Exclude:    splitCSV(*exclude),
+			Include:    splitCSV(*include),
+			DryRun:     *dryRun,
+			Verbose:    *verbose,
+			JSONOutput: *jsonOut,
+		})
 	case "clean":
 		cli.Clean()
 	default:
@@ -85,12 +111,30 @@ func usage() {
 Usage:
   gospa <command> [flags]
 
-Commands:
-  create <name>   Create a new project
-  dev             Start the development server
-  build           Build for production
-  generate        Generate routes and client artifacts
-  doctor          Validate local project/tooling setup
-  clean           Remove generated/build artifacts
-  version         Print the CLI/framework version`)
+	Commands:
+	  create <name>   Create a new project
+	  dev             Start the development server
+	  build           Build for production
+	  generate        Generate routes and client artifacts
+	  doctor          Validate local project/tooling setup
+	  prune           Analyze and prune unused state
+	  clean           Remove generated/build artifacts
+	  version         Print the CLI/framework version`)
+}
+
+func splitCSV(input string) []string {
+	if input == "" {
+		return nil
+	}
+	parts := make([]string, 0)
+	for _, part := range strings.Split(input, ",") {
+		trimmed := strings.TrimSpace(part)
+		if trimmed != "" {
+			parts = append(parts, trimmed)
+		}
+	}
+	if len(parts) == 0 {
+		return nil
+	}
+	return parts
 }
