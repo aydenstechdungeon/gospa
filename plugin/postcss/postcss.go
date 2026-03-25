@@ -508,6 +508,18 @@ func (p *PostCSSPlugin) watchWithContext(projectDir string) {
 		return
 	}
 
+	// Stop existing watchers if running to prevent process and context leaks
+	if p.cancel != nil {
+		p.cancel()
+		p.cancel = nil
+	}
+	for _, cmd := range p.cmds {
+		if cmd != nil && cmd.Process != nil {
+			_ = cmd.Process.Signal(os.Interrupt)
+		}
+	}
+	p.cmds = nil
+
 	ctx, cancel := context.WithCancel(context.Background())
 	p.cancel = cancel
 	p.mu.Unlock()

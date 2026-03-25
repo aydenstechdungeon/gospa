@@ -1,0 +1,170 @@
+---
+package: examples
+---
+<script lang="go">
+import "github.com/aydenstechdungeon/gospa/website/components"
+</script>
+
+<template>
+	<div class="space-y-12">
+		<header>
+			<div class="flex items-center gap-2 mb-4">
+				<span class="px-2 py-1 rounded bg-[var(--accent-primary)]/10 text-[var(--accent-primary)] text-xs font-bold uppercase tracking-wider">Features</span>
+				<span class="text-[var(--text-muted)] text-sm">/</span>
+				<span class="text-[var(--text-muted)] text-sm font-medium">Gospa SFC</span>
+			</div>
+			<h1 class="text-4xl font-bold tracking-tight mb-4 text-transparent bg-clip-text bg-gradient-to-r from-[var(--accent-primary)] to-[var(--accent-secondary)]">How-to Guides & Examples</h1>
+			<p class="text-xl text-[var(--text-secondary)] leading-relaxed">
+				Practical recipes for building common UI patterns with Gospa SFC.
+			</p>
+		</header>
+
+		<section class="space-y-12">
+			<div>
+				<h2 class="text-2xl font-bold mb-4 flex items-center gap-3">
+					<div class="w-8 h-8 rounded-lg bg-cyan-500/10 flex items-center justify-center text-cyan-500 text-sm">01</div>
+					Multi-Step Form
+				</h2>
+				<p class="text-[var(--text-secondary)] mb-6">
+					Manage complex form state using the <code>$state</code> rune and conditional rendering.
+				</p>
+				@components.CodeBlock(`<script lang="go">
+  var step = $state(1)
+  var formData = $state(map[string]string{})
+
+  func next() { step++ }
+  func prev() { step-- }
+</script>
+
+<template>
+  <div class="form-container">
+    {if step == 1}
+      <section>
+        <h3>Step 1: Identity</h3>
+        <input on:input={func(e *gospa.Event) { formData["name"] = e.Value }} placeholder="Name" />
+        <button on:click={next}>Next</button>
+      </section>
+    {else if step == 2}
+      <section>
+        <h3>Step 2: Contact</h3>
+        <input on:input={func(e *gospa.Event) { formData["email"] = e.Value }} placeholder="Email" />
+        <div class="flex gap-2">
+          <button on:click={prev}>Back</button>
+          <button on:click={next}>Submit</button>
+        </div>
+      </section>
+    {else}
+      <section>
+        <h3>Success!</h3>
+        <p>Thanks, {formData["name"]}!</p>
+      </section>
+    {/if}
+  </div>
+</template>`, "svelte", "MultiStepForm.gospa")
+			</div>
+
+			<div>
+				<h2 class="text-2xl font-bold mb-4 flex items-center gap-3">
+					<div class="w-8 h-8 rounded-lg bg-purple-500/10 flex items-center justify-center text-purple-500 text-sm">02</div>
+					Real-time Search Filter
+				</h2>
+				<p class="text-[var(--text-secondary)] mb-6">
+					Use <code>$derived</code> to automatically filter a list based on user input.
+				</p>
+				@components.CodeBlock(`<script lang="go">
+  var query = $state("")
+  var items = $state([]string{"Apple", "Banana", "Cherry", "Date"})
+  
+  var filtered = $derived(func() []string {
+    var result []string
+    for _, item := range items {
+      if strings.Contains(strings.ToLower(item), strings.ToLower(query)) {
+        result = append(result, item)
+      }
+    }
+    return result
+  }())
+</script>
+
+<template>
+  <div class="search-box">
+    <input on:input={func(e *gospa.Event) { query = e.Value }} placeholder="Search..." />
+    <ul>
+      {for _, item := range filtered}
+        <li>{item}</li>
+      {/for}
+    </ul>
+  </div>
+</template>`, "svelte", "SearchFilter.gospa")
+			</div>
+
+			<div>
+				<h2 class="text-2xl font-bold mb-4 flex items-center gap-3">
+					<div class="w-8 h-8 rounded-lg bg-orange-500/10 flex items-center justify-center text-orange-500 text-sm">03</div>
+					Using JS Libraries (e.g. Chart.js)
+				</h2>
+				<p class="text-[var(--text-secondary)] mb-6">
+					Integrate external JavaScript libraries using the <code>$effect</code> rune to initialize them after the component hydrates.
+				</p>
+				@components.CodeBlock(`<script lang="go">
+  var data = $state([]int{10, 20, 30})
+  
+  $effect(func() {
+    // This code will be translated to a TS client effect
+    // Initialize your library here
+    const ctx = document.getElementById('myChart');
+    new Chart(ctx, {
+      type: 'bar',
+      data: { datasets: [{ data: $state.get(data) }] }
+    });
+  })
+</script>
+
+<template>
+  <canvas id="myChart"></canvas>
+</template>`, "svelte", "Chart.gospa")
+			</div>
+
+			<div>
+				<h2 class="text-2xl font-bold mb-4 flex items-center gap-3">
+					<div class="w-8 h-8 rounded-lg bg-blue-500/10 flex items-center justify-center text-blue-500 text-sm">04</div>
+					Mixed Go + TypeScript Logic
+				</h2>
+				<p class="text-[var(--text-secondary)] mb-6">
+					Handle data on the server with Go and perform complex client-side calculations or DOM manipulations with TypeScript.
+				</p>
+				@components.CodeBlock(`<script lang="go">
+  package mycomponent
+  
+  // Go state that hydrates from the server
+  var serverData = $state("Initial Server Data")
+</script>
+
+<script lang="ts">
+  import { $state, $derived } from "@gospa/runtime"
+  
+  // Client-only state
+  const clientTime = $state(Date.now())
+  const uptime = $derived(() => {
+    return Math.floor((Date.now() - clientTime.get()) / 1000)
+  })
+</script>
+
+<template>
+  <div class="stats-panel">
+    <p>Server-side: {serverData}</p>
+    <p>Client Uptime: {uptime.get()} seconds</p>
+  </div>
+</template>`, "svelte", "MixedLogic.gospa")
+			</div>
+
+			<div class="flex justify-between items-center pt-8">
+				<a href="/docs/gospasfc/typescript" class="flex flex-col items-start gap-1 p-4 rounded-xl border border-[var(--border)] hover:bg-[var(--bg-secondary)] transition-all">
+					<span class="text-xs text-[var(--text-muted)] font-bold uppercase tracking-widest">Previous</span>
+					<span class="font-bold text-[var(--accent-primary)]">TypeScript Integration</span>
+				</a>
+				<div class="w-1/2"></div>
+			</div>
+		</section>
+	</div>
+</template>

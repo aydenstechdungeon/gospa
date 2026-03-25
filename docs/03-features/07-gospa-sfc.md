@@ -1,227 +1,153 @@
 # .gospa Single File Components (SFC)
 
-The `.gospa` file format is a modern, single-file component system for the GoSPA framework. It allows you to define server-rendered HTML (Go/Templ), optional client-side reactivity (TypeScript), and component styles in a single file, following a syntax familiar to Svelte or React developers.
+The `.gospa` file format is a modern, single-file component system for the GoSPA framework. It allows you to define server-rendered HTML (Go/Templ), optional client-side reactivity (TypeScript), and component styles in a single file, following a syntax familiar to Svelte developers.
 
 ---
 
 ## Structure
 
-A `.gospa` file is divided into three main sections: `<script>`, `<template>`, and `<style>`.
+A `.gospa` file is divided into four main sections: **Frontmatter** (optional), `<script>`, `<template>`, and `<style>`.
 
 ```svelte
+---
+type: island
+hydrate: true
+---
+
 <script lang="go">
   // Go logic for server-side state and hydration
+  var count = $state(0)
 </script>
 
 <template>
-  <!-- HTML template with reactive bindings and control flow -->
+  <button on:click={func() { count++ }}>
+    Count is {count}
+  </button>
 </template>
 
 <style>
-  /* Scoped component styles */
+  button { padding: 1rem; border-radius: 8px; }
 </style>
 ```
 
-### Optional Frontmatter
+### Frontmatter Reference
 
-You can place YAML-style frontmatter at the top of a `.gospa` file to control compiler behavior:
+Configure the compiler by adding a YAML block at the very top of your file.
 
-```yaml
+| Parameter | Options | Default | Description |
+|-----------|---------|---------|-------------|
+| `type` | `island`, `page`, `layout`, `static`, `server` | `island` | Determines the hydration role and wrapper. |
+| `hydrate` | `true`, `false` | `true` | Enables/disables TypeScript generation for `island`. |
+| `server_only`| `true`, `false` | `false` | If true, skips TS generation even for islands. |
+| `package` | string | (folder name) | Custom Go package name for the generated `.templ` file. |
+
 ---
-type: page        # island | page | layout | static | server
-hydrate: false    # true/false (islands only)
-server_only: true # true/false
-package: pages    # optional Go package override
----
+
+## Reactivity: Runes
+
+GoSPA SFC uses **Runes** to define reactive logic. These are available in the `<script lang="go">` block and are automatically translated to TypeScript for client-side hydration.
+
+- **`$state(value)`**: Declares a reactive state variable.
+- **`$derived(expression)`**: Computes a value from other states. It automatically updates when dependencies change.
+- **`$effect(func())`**: Runs a side effect on the client whenever its dependencies change.
+
+### Example: Derived State
+```go
+<script lang="go">
+  var first = $state("John")
+  var last = $state("Doe")
+  var full = $derived(first + " " + last)
+</script>
+
+<template>
+  <p>Full name: {full}</p>
+</template>
 ```
 
-Frontmatter is optional. If omitted, `.gospa` defaults to `type: island`.
+---
 
-### `<script>` Block
+## Template Syntax
 
-The script block primarily contains Go code that defines the component's state and server-side behavior. It uses reactive primitives that the compiler translates to TypeScript for the client side.
+The `<template>` block uses Go's logic via **Templ** integration.
 
-- **`$state(value)`**: Defines reactive state (local or shared).
-- **`$derived(expression)`**: Defines state derived from other reactive values.
-- **`$effect(func() { ... })`**: Defines a side-effect that runs whenever its dependencies change (client-only).
+### Control Flow
+Directly use Go's `if` and `for` blocks:
 
-These primitives work seamlessly across multiple islands without requiring WebSocket connections for local UI state.
+```svelte
+<template>
+  {if isAdmin}
+    <button>Delete User</button>
+  {/if}
 
-### Script Language Architecture (Go + TS/JS)
+  <ul>
+    {for _, item := range items}
+      <li>{item.Name}</li>
+    {/for}
+  </ul>
+</template>
+```
 
-GoSPA supports two script roles in one `.gospa` file:
+### Event Handlers
+Bind user interactions using `on:<event>`:
 
-1. **`<script lang="go">` (optional, max 1)**  
-   - Used for SSR/Templ-side logic.
-   - Also used as the source for automatic TS generation **when no explicit TS/JS script is provided**.
-
-2. **`<script lang="ts">` / `<script lang="js">` (optional, max 1 total)**  
-   - Used directly as the client hydration script.
-   - When this block exists, the compiler does **not** run Go-to-TS DSL rewriting on that block.
-
-So yes—you can have both a Go script and a TS/JS script in the same component.  
-What is disallowed is **duplicates of the same role** (e.g., two Go scripts), to keep parsing deterministic and avoid shadowed logic.
+```svelte
+<template>
+  <button on:click={handleClick}>Click Me</button>
+  <input on:input={func(e *gospa.Event) { value = e.Value }} />
+</template>
+```
 
 ---
 
-## Component Types
+## Style Scoping
 
-The compiler supports multiple output modes:
+Styles in the `<style>` block are automatically scoped. This means a selector like `h1` will only affect `<h1>` elements *inside* that specific component.
 
-| Type | Server output (`.templ`) | Client output (`.ts`) | Typical use |
-|------|---------------------------|------------------------|-------------|
-| `island` | Wrapped with `data-gospa-island` | Generated when `hydrate: true` | Interactive UI |
-| `page` | Wrapped with scoped `<div class="{hash}">` | None | Route pages |
-| `layout` | Scoped wrapper + `children templ.Component` support | None | Route/layout wrappers |
-| `static` | No outer wrapper; template rendered directly | None | Static server components |
-| `server` | Same output style as `static` | None | Server-only components |
+### Global Escaping
+Use `:global()` to define styles that affect the whole page:
 
-TypeScript generation is conditional: only hydrated islands produce `.ts`.
-
-### `<template>` Block
-
-The template block uses a syntax similar to Svelte and Templ.
-
-- **Interpolation**: `{ expression }`
-- **Control Flow**: 
-    - `{#if condition} ... {/if}`
-    - `{#each items as item} ... {/each}`
-- **Events**: `on:event={ handler }` (e.g., `on:click={ handleClick }`)
-
-### `<style>` Block
-
-Styles defined in the `<style>` block are **scoped** to the component by default. The compiler generates a unique CSS class for each component, ensuring that styles do not leak to other parts of the application.
+```css
+<style>
+  h1 { color: red; } /* Scoped */
+  :global(body) { background: #000; } /* Global */
+</style>
+```
 
 ---
 
-## Example: Counter
+## Advanced Usage & Patterns
+
+### 1. Mixed Scripts (Go + TS)
+You can include both a Go script and a TypeScript script in the same file. The Go script handles SSR logic, while the TS script provides the hydration logic.
 
 ```svelte
 <script lang="go">
-  var count = $state(0)
-  var doubled = $derived(count * 2)
-  
-  $effect(func() {
-    fmt.Printf("Count changed to: %d\n", count)
-  })
-
-  func increment() {
-    count++
-  }
+  var initialVersion = "1.0.0"
 </script>
 
-<template>
-  <div class="counter-card">
-    <h2>Counter</h2>
-    <p>Count: {count}</p>
-    <p>Doubled: {doubled}</p>
-    <button on:click={increment} class="btn-primary">Increment</button>
-  </div>
-</template>
-
-<style>
-  .counter-card {
-    padding: 1rem;
-    border: 1px solid var(--color-gray-200);
-    border-radius: 0.5rem;
-  }
-  .btn-primary {
-    background: var(--color-blue-500);
-    color: white;
-    padding: 0.5rem 1rem;
-    border-radius: 0.25rem;
-  }
-</style>
-```
-
----
-
-## How it Works
-
-The `.gospa` compiler performs several transformations:
-
-1.  **Server-side (Go/Templ)**:
-    - Generates a `.templ` file.
-    - `$state(val)` is replaced with `val` for initial rendering.
-    - Scoped CSS classes are added to the HTML elements.
-2.  **Client-side (TypeScript, islands only)**:
-    - Generates a TypeScript island module only when the component type is `island` and hydration is enabled.
-    - `$state`, `$derived`, and `$effect` are translated to the reactive system in `@gospa/runtime`.
-    - Event handlers automatically attach to the server-rendered elements.
-3.  **Scoped CSS**:
-    - The CSS is extracted and scoped using a unique component hash.
-
----
-
-## File-Based Routing
-
-`.gospa` files are fully supported by GoSPA's file-based routing system. You can place them inside the `routes/` directory using the same conventions as `.templ` files (e.g., `page.gospa`, `layout.gospa`, `[id]/page.gospa`).
-
-### Routing Examples
-
-```text
-routes/
-  home.gospa       -> home.templ (page)
-  layout.gospa     -> layout.templ (layout)
-islands/
-  counter.gospa    -> counter.templ + counter.ts (island)
-components/
-  footer.gospa     -> footer.templ (static/server)
-```
-
----
-
-## Cross-Island State
-
-Islands in GoSPA can share state without server-side roundtrips by using global stores. This is ideal for UI-only state like global themes, sidebar visibility, or cart totals.
-
-### Example: Shared Theme Store
-
-```go
-// islands/ThemeToggle.gospa
-<script lang="go">
-  var theme = createStore("theme", "light")
-  
-  func toggle() {
-    if theme.Get() == "light" {
-      theme.Set("dark")
-    } else {
-      theme.Set("light")
-    }
-  }
+<script lang="ts">
+  console.log("Hydrated on client!");
 </script>
-<template>
-  <button on:click={toggle}>Current: {theme}</button>
-</template>
 ```
 
-```go
-// islands/Header.gospa
-<script lang="go">
-  var theme = getStore("theme")
-  
-  $effect(func() {
-     fmt.Printf("Header reacting to theme: %s\n", theme)
-  })
-</script>
-<template>
-  <header class={theme}>GoSPA Header</header>
-</template>
-```
+### 2. File-Based Routing Integration
+`.gospa` files are first-class citizens in the router:
+- `page.gospa`: Main route entry.
+- `layout.gospa`: Nested layout for the directory.
+- `error.gospa`: Error boundary for the segment.
+
+### 3. Component Types Deep Dive
+
+- **`island`**: The workhorse of GoSPA. Provides interactive, hydrated UI berries.
+- **`page`**: Individual route pages. Wrapped in a scoped div but typically not hydrated (unless marked as such).
+- **`layout`**: Shared structure that wraps children using `{ children }`.
+- **`static`**: Pure server-rendered output with no wrapper or JS.
+- **`server`**: Logic-only components or fragments.
 
 ---
 
----
+## Best Practices
 
-## Security & Best Practices
-
-GoSPA is designed with security in mind, but developers should follow these practices when building SFCs:
-
-1.  **Input Sanitization**: Always sanitize user-provided data before displaying it in templates. GoSPA's interpolation `{ expression }` automatically escapes HTML entities, but be cautious when using `@templ.Raw()`.
-2.  **Style Safety**: The SFC compiler automatically scopes and injects styles. While it escapes typical breakouts, avoid using complex dynamic string interpolation directly inside `<style>` blocks if the input comes from an untrusted source.
-3.  **Local State**: Use `$state` for UI-only state. For sensitive data, prefer server-side state managed via WebSocket or Remote Actions to keep the logic and data off the client where possible.
-4.  **CSP**: We recommend a strong Content Security Policy (CSP). GoSPA works best with policies that allow `style-src 'self' 'unsafe-inline'` for scoped CSS injection, but you can further tighten this by using nonces if using the SSR-only mode.
-
-- **Minimal Hydration**: Only interactive islands ship JavaScript to the client.
-- **Tree-shakeable**: The `@gospa/runtime` only includes the reactive primitives actually used in your components.
-- **Fast SSR**: Templates are compiled directly to Go code (via Templ), ensuring low latency and high concurrency.
+1. **Keep Islands Small**: Use `static` or `page` types for non-interactive content to keep the client-side JS bundle small.
+2. **Use Tailwind for Layout**: Combine scoped CSS for component-specific visuals and Tailwind for overall layout and spacing.
+3. **Leverage Go Types**: Take advantage of Go's strong typing in your script blocks for robust data handling.

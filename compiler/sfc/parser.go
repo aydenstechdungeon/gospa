@@ -89,17 +89,18 @@ func Parse(input string) (*SFC, error) {
 				Lang:    lang,
 				Content: strings.TrimSpace(b.content),
 			}
-			if lang == "go" {
+			switch lang {
+			case "go":
 				if sfc.Script.Content != "" {
 					return nil, fmt.Errorf("multiple <script lang=\"go\"> blocks are not supported")
 				}
 				sfc.Script = block
-			} else if lang == "ts" {
+			case "ts":
 				if sfc.ScriptTS.Content != "" {
 					return nil, fmt.Errorf("multiple <script lang=\"ts\"> (or js/typescript/javascript) blocks are not supported")
 				}
 				sfc.ScriptTS = block
-			} else {
+			default:
 				return nil, fmt.Errorf("unsupported <script> language %q: supported languages are go, ts, js, typescript, javascript", lang)
 			}
 		case "style":
@@ -151,7 +152,6 @@ func extractLang(attr, defaultLang string) string {
 	}
 	return defaultLang
 }
-
 
 func normalizeScriptLang(lang string) string {
 	l := strings.ToLower(strings.TrimSpace(lang))

@@ -40,6 +40,22 @@ func getPageDescription(path string) string {
 		return "Real-time synchronization using WebSockets in GoSPA."
 	case "/docs/components":
 		return "Building and using reactive components in GoSPA."
+	case "/docs/gospasfc":
+		return "Gospa SFC (Single File Components) - Modern component architecture for Go."
+	case "/docs/gospasfc/getting-started":
+		return "Getting started with Gospa SFC - Learn the basic format and workflow."
+	case "/docs/gospasfc/reactivity":
+		return "Runes and Reactivity in Gospa SFC - $state, $derived, and $effect guide."
+	case "/docs/gospasfc/templates":
+		return "Gospa SFC Template Syntax - Go-powered templates with reactive bindings."
+	case "/docs/gospasfc/styles":
+		return "Scoped CSS in Gospa SFC - Isolated styles for your components."
+	case "/docs/gospasfc/advanced":
+		return "Advanced Gospa SFC - Compiler pipeline and custom generation."
+	case "/docs/gospasfc/typescript":
+		return "Gospa SFC TypeScript Integration - How Go logic translates to client-side interactivity."
+	case "/docs/gospasfc/examples":
+		return "GoSPA SFC Examples & Guides - Practical UI patterns and recipes."
 	}
 	return defaultDescription
 }

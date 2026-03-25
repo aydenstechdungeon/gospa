@@ -31,6 +31,13 @@ import (
 	docsgetstartedquickstart "github.com/aydenstechdungeon/gospa/website/routes/docs/getstarted/quickstart"
 	docsgetstartedstructure "github.com/aydenstechdungeon/gospa/website/routes/docs/getstarted/structure"
 	docsgospasfc "github.com/aydenstechdungeon/gospa/website/routes/docs/gospasfc"
+	docsgospasfcadvanced "github.com/aydenstechdungeon/gospa/website/routes/docs/gospasfc/advanced"
+	docsgospasfcexamples "github.com/aydenstechdungeon/gospa/website/routes/docs/gospasfc/examples"
+	docsgospasfcgettingstarted "github.com/aydenstechdungeon/gospa/website/routes/docs/gospasfc/getting-started"
+	docsgospasfcreactivity "github.com/aydenstechdungeon/gospa/website/routes/docs/gospasfc/reactivity"
+	docsgospasfcstyles "github.com/aydenstechdungeon/gospa/website/routes/docs/gospasfc/styles"
+	docsgospasfctemplates "github.com/aydenstechdungeon/gospa/website/routes/docs/gospasfc/templates"
+	docsgospasfctypescript "github.com/aydenstechdungeon/gospa/website/routes/docs/gospasfc/typescript"
 	docshmr "github.com/aydenstechdungeon/gospa/website/routes/docs/hmr"
 	docsislands "github.com/aydenstechdungeon/gospa/website/routes/docs/islands"
 	docsparams "github.com/aydenstechdungeon/gospa/website/routes/docs/params"
@@ -135,8 +142,29 @@ func init() {
 	routing.RegisterPage("/docs/getstarted/structure", func(props map[string]interface{}) templ.Component {
 		return docsgetstartedstructure.Page()
 	})
+	routing.RegisterPage("/docs/gospasfc/advanced", func(props map[string]interface{}) templ.Component {
+		return docsgospasfcadvanced.Page()
+	})
+	routing.RegisterPage("/docs/gospasfc/examples", func(props map[string]interface{}) templ.Component {
+		return docsgospasfcexamples.Page()
+	})
 	routing.RegisterPage("/docs/gospasfc", func(props map[string]interface{}) templ.Component {
 		return docsgospasfc.Page()
+	})
+	routing.RegisterPage("/docs/gospasfc/getting-started", func(props map[string]interface{}) templ.Component {
+		return docsgospasfcgettingstarted.Page()
+	})
+	routing.RegisterPage("/docs/gospasfc/reactivity", func(props map[string]interface{}) templ.Component {
+		return docsgospasfcreactivity.Page()
+	})
+	routing.RegisterPage("/docs/gospasfc/styles", func(props map[string]interface{}) templ.Component {
+		return docsgospasfcstyles.Page()
+	})
+	routing.RegisterPage("/docs/gospasfc/templates", func(props map[string]interface{}) templ.Component {
+		return docsgospasfctemplates.Page()
+	})
+	routing.RegisterPage("/docs/gospasfc/typescript", func(props map[string]interface{}) templ.Component {
+		return docsgospasfctypescript.Page()
 	})
 	routing.RegisterPage("/docs/hmr", func(props map[string]interface{}) templ.Component {
 		return docshmr.Page()

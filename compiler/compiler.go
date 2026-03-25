@@ -588,5 +588,5 @@ func (c *GospaCompiler) generateScopedCSS(style, hash string) string {
 	scopedStyle = cssElementRegex.ReplaceAllString(scopedStyle, "$1."+hash+" {")
 
 	encodedStyle, _ := json.Marshal(scopedStyle)
-	return fmt.Sprintf("\n\n/* Scoped CSS */\nconst style = document.createElement('style');\nstyle.textContent = %s;\ndocument.head.appendChild(style);\n", string(encodedStyle))
+	return fmt.Sprintf("\n\n/* Scoped CSS */\nif (!document.querySelector(`style[data-gospa-style=\"%s\"]`)) {\n\tconst style = document.createElement('style');\n\tstyle.setAttribute('data-gospa-style', '%s');\n\tstyle.textContent = %s;\n\tdocument.head.appendChild(style);\n}\n", hash, hash, string(encodedStyle))
 }

@@ -1,0 +1,85 @@
+---
+package: templates
+---
+<script lang="go">
+import "github.com/aydenstechdungeon/gospa/website/components"
+</script>
+
+<template>
+	<div class="space-y-12">
+		<header>
+			<div class="flex items-center gap-2 mb-4">
+				<span class="px-2 py-1 rounded bg-[var(--accent-primary)]/10 text-[var(--accent-primary)] text-xs font-bold uppercase tracking-wider">Features</span>
+				<span class="text-[var(--text-muted)] text-sm">/</span>
+				<span class="text-[var(--text-muted)] text-sm font-medium">Gospa SFC</span>
+			</div>
+			<h1 class="text-4xl font-bold tracking-tight mb-4 text-transparent bg-clip-text bg-gradient-to-r from-[var(--accent-primary)] to-[var(--accent-secondary)]">Template Syntax</h1>
+			<p class="text-xl text-[var(--text-secondary)] leading-relaxed">
+				Seamless Go templates with reactive interactive features.
+			</p>
+		</header>
+
+		<section class="space-y-8">
+			<div>
+				<h2 class="text-2xl font-bold mb-4 border-b border-[var(--border)] pb-2 italic mono">Standard Go in Templates</h2>
+				<p class="text-[var(--text-secondary)] mb-6">
+					GoSPA SFC templates use the familiar Templ syntax. Any Go variable or function available in your <code>&lt;script lang="go"&gt;</code> block can be used directly in the template.
+				</p>
+				@components.CodeBlock(`<template>
+  <div class="user-profile">
+    <h2>User: {user.Name}</h2>
+    <p>Age: {fmt.Sprintf("%d", user.Age)}</p>
+  </div>
+</template>`, "svelte", "Profile.gospa")
+			</div>
+
+			<div>
+				<h2 class="text-2xl font-bold mb-4 border-b border-[var(--border)] pb-2 italic mono">Control Flow</h2>
+				<p class="text-[var(--text-secondary)] mb-6">
+					Directly include Go control flow logic within your templates using Templ's <code>if</code>, <code>else</code>, and <code>for</code> directives.
+				</p>
+				@components.CodeBlock(`<template>
+  {if count > 10}
+    <p>Danger: Count too high!</p>
+  {else}
+    <p>Safe level.</p>
+  {/if}
+
+  <ul>
+    {for _, item := range items}
+      <li>{item.Name}</li>
+    {/for}
+  </ul>
+</template>`, "svelte", "Control.gospa")
+			</div>
+
+			<div>
+				<h2 class="text-2xl font-bold mb-4 border-b border-[var(--border)] pb-2 italic mono">Event Binding</h2>
+				<p class="text-[var(--text-secondary)] mb-6">
+					Bind user interactions to Go functions or TypeScript actions using the <code>on:&lt;event&gt;</code> syntax.
+				</p>
+				<table class="w-full text-sm text-left text-[var(--text-secondary)] mb-6">
+					<thead class="text-xs uppercase bg-[var(--bg-secondary)] text-[var(--text-primary)]">
+						<tr><th class="px-4 py-2">Event</th><th class="px-4 py-2">Binding Example</th><th class="px-4 py-2">Effect</th></tr>
+					</thead>
+					<tbody>
+						<tr class="border-b border-[var(--border)]"><td class="px-4 py-2">Click</td><td class="px-4 py-2 font-mono">on:click=&lcub;handleClick&rcub;</td><td class="px-4 py-2">Triggered on mouse click.</td></tr>
+						<tr class="border-b border-[var(--border)]"><td class="px-4 py-2">Input</td><td class="px-4 py-2 font-mono">on:input=&lcub;updateValue&rcub;</td><td class="px-4 py-2">Triggered on value change.</td></tr>
+						<tr class="border-b border-[var(--border)]"><td class="px-4 py-2">Submit</td><td class="px-4 py-2 font-mono">on:submit=&lcub;handleForm&rcub;</td><td class="px-4 py-2">Triggered on form submission.</td></tr>
+					</tbody>
+				</table>
+			</div>
+
+			<div class="flex justify-between items-center pt-8">
+				<a href="/docs/gospasfc/reactivity" class="flex flex-col items-start gap-1 p-4 rounded-xl border border-[var(--border)] hover:bg-[var(--bg-secondary)] transition-all">
+					<span class="text-xs text-[var(--text-muted)] font-bold uppercase tracking-widest">Previous</span>
+					<span class="font-bold text-[var(--accent-primary)]">Runes & Reactivity</span>
+				</a>
+				<a href="/docs/gospasfc/styles" class="flex flex-col items-end gap-1 p-4 rounded-xl border border-[var(--border)] hover:bg-[var(--bg-secondary)] transition-all">
+					<span class="text-xs text-[var(--text-muted)] font-bold uppercase tracking-widest">Next</span>
+					<span class="font-bold text-[var(--accent-primary)]">Scoped CSS</span>
+				</a>
+			</div>
+		</section>
+	</div>
+</template>
