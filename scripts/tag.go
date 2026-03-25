@@ -23,6 +23,13 @@ func main() {
 	}
 	newVersion := strings.TrimPrefix(newTag, "v")
 
+	// Check if git is clean
+	cleanOut, _ := exec.Command("git", "status", "--porcelain").Output()
+	if len(cleanOut) > 0 {
+		fmt.Println("Error: git working directory is not clean. Please commit or stash changes before tagging.")
+		os.Exit(1)
+	}
+
 	modData, err := os.ReadFile("go.mod")
 	if err != nil {
 		fmt.Println("Error: Could not read go.mod:", err)
@@ -137,8 +144,26 @@ func main() {
 	cmd1.Stdout = os.Stdout
 	cmd1.Stderr = os.Stderr
 	if err := cmd1.Run(); err != nil {
-		fmt.Println("Error: git push failed:", err)
-		os.Exit(1)
+		fmt.Printf("\nPush to '%s' failed (likely protected branch). Attempting to push to a release branch...\n", branch)
+		releaseBranch := "release/" + newTag
+		// Check if branch already exists and delete it if it's different
+		exec.Command("git", "branch", "-D", releaseBranch).Run() // ignore error if it doesn't exist
+
+		if err := exec.Command("git", "checkout", "-b", releaseBranch).Run(); err != nil {
+			fmt.Printf("Error creating release branch: %v\n", err)
+			os.Exit(1)
+		}
+
+		cmd3 := exec.Command("git", "push", "-u", "origin", releaseBranch)
+		cmd3.Stdout = os.Stdout
+		cmd3.Stderr = os.Stderr
+		if err := cmd3.Run(); err != nil {
+			fmt.Printf("Error pushing release branch: %v\n", err)
+			os.Exit(1)
+		}
+		fmt.Printf("\nSuccessfully pushed to branch '%s'. Please open a pull request.\n", releaseBranch)
+		fmt.Printf("After merging, you can run 'git push origin %s' to tag the release.\n", newTag)
+		os.Exit(0)
 	}
 
 	cmd2 := exec.Command("git", "push", "-f", "origin", newTag) // #nosec //nolint:gosec
