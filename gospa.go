@@ -131,6 +131,7 @@ func New(config Config) *App {
 	}
 
 	fiber.SetConnectionRateLimiter(config.WSConnBurst, config.WSConnRateLimit)
+	state.SetNotificationQueueSize(config.NotificationBufferSize)
 
 	if config.Storage == nil {
 		if config.Prefork {
@@ -158,6 +159,7 @@ func New(config Config) *App {
 	fiberConfig := fiberpkg.Config{
 		AppName:      config.AppName,
 		ServerHeader: "GoSPA",
+		BodyLimit:    config.MaxRequestBodySize,
 	}
 	if config.DevMode {
 		config.Logger.Warn("DevMode is enabled — disable in production")

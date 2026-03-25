@@ -5,10 +5,14 @@ package plugin
 import (
 	"encoding/json"
 	"fmt"
+	"crypto/sha256"
+	"encoding/hex"
+	"io"
 	"os"
 	"os/exec"
 	"path/filepath"
 	"regexp"
+	"sort"
 	"strings"
 )
 
@@ -17,6 +21,7 @@ type ExternalPluginLoader struct {
 	cacheDir         string
 	allowMutableRefs bool
 	expectedRef      string
+	checksumSHA256   string
 }
 
 // NewExternalPluginLoader creates a new loader with the default cache directory.
@@ -46,6 +51,12 @@ func (l *ExternalPluginLoader) AllowMutableRefs(allow bool) *ExternalPluginLoade
 // When set, cached and newly downloaded plugins must match this commit.
 func (l *ExternalPluginLoader) ExpectResolvedRef(ref string) *ExternalPluginLoader {
 	l.expectedRef = strings.ToLower(strings.TrimSpace(ref))
+	return l
+}
+
+// ExpectChecksum ensures the downloaded plugin's content matches the provided SHA-256 hash.
+func (l *ExternalPluginLoader) ExpectChecksum(sha string) *ExternalPluginLoader {
+	l.checksumSHA256 = strings.ToLower(strings.TrimSpace(sha))
 	return l
 }
 
@@ -131,7 +142,7 @@ func (l *ExternalPluginLoader) LoadFromGitHub(ref string) (Plugin, error) {
 
 	if _, err := os.Stat(pluginDataPath); err == nil {
 		// Load from cache
-		return l.loadFromPath(pluginPath, l.expectedRef)
+		return l.loadFromPath(pluginPath, l.expectedRef, l.checksumSHA256)
 	}
 
 	// Download the plugin
@@ -139,7 +150,7 @@ func (l *ExternalPluginLoader) LoadFromGitHub(ref string) (Plugin, error) {
 		return nil, fmt.Errorf("failed to download plugin: %w", err)
 	}
 
-	return l.loadFromPath(pluginPath, l.expectedRef)
+	return l.loadFromPath(pluginPath, l.expectedRef, l.checksumSHA256)
 }
 
 // validatePluginName validates that a plugin owner/repo name is safe.
@@ -221,8 +232,79 @@ func (l *ExternalPluginLoader) download(owner, repo, version string) error {
 	return nil
 }
 
+// verifyIntegrity calculates the SHA-256 hash of the entire plugin directory and compares it.
+func (l *ExternalPluginLoader) verifyIntegrity(dir string, expected string) error {
+	hasher := sha256.New()
+	var paths []string
+
+	err := filepath.Walk(dir, func(path string, info os.FileInfo, err error) error {
+		if err != nil {
+			return err
+		}
+		if info.IsDir() {
+			if info.Name() == ".git" {
+				return filepath.SkipDir
+			}
+			return nil
+		}
+		// Skip metadata file which is generated locally and would break the hash
+		if info.Name() == "plugin.json" {
+			return nil
+		}
+		rel, err := filepath.Rel(dir, path)
+		if err != nil {
+			return err
+		}
+		paths = append(paths, rel)
+		return nil
+	})
+	if err != nil {
+		return err
+	}
+
+	sort.Strings(paths)
+
+	for _, p := range paths {
+		err := func() error {
+			// #nosec G304 - paths are validated before being passed to verifyIntegrity
+			f, err := os.Open(filepath.Join(dir, p))
+			if err != nil {
+				return err
+			}
+			defer func() {
+				_ = f.Close()
+			}()
+
+			// Include filename in hash to detect renames
+			if _, err := hasher.Write([]byte(p)); err != nil {
+				return err
+			}
+			if _, err := io.Copy(hasher, f); err != nil {
+				return err
+			}
+			return nil
+		}()
+		if err != nil {
+			return err
+		}
+	}
+
+	actual := hex.EncodeToString(hasher.Sum(nil))
+	if actual != expected {
+		return fmt.Errorf("checksum mismatch: expected %s, got %s", expected, actual)
+	}
+	return nil
+}
+
 // loadFromPath loads a plugin from a local path.
-func (l *ExternalPluginLoader) loadFromPath(pluginPath string, expectedRef string) (Plugin, error) {
+func (l *ExternalPluginLoader) loadFromPath(pluginPath string, expectedRef string, expectedChecksum string) (Plugin, error) {
+	// 1. Verify integrity if checksum is provided
+	if expectedChecksum != "" {
+		if err := l.verifyIntegrity(pluginPath, expectedChecksum); err != nil {
+			return nil, fmt.Errorf("integrity check failed: %w", err)
+		}
+	}
+
 	// Read plugin metadata - use filepath.Clean to prevent path traversal
 	metadataPath := filepath.Clean(filepath.Join(pluginPath, "plugin.json"))
 	metadataBytes, err := os.ReadFile(metadataPath)

@@ -143,6 +143,16 @@ func Parse(input string) (*SFC, error) {
 		return nil, fmt.Errorf("missing template content")
 	}
 
+	// 4. Final safety check: ensure no unclosed tags remain in the discarded or implicit content
+	remainingMasked := maskedInput
+	for i := len(topLevel) - 1; i >= 0; i-- {
+		b := topLevel[i]
+		remainingMasked = remainingMasked[:b.start] + remainingMasked[b.end:]
+	}
+	if regexp.MustCompile(`(?i)<(?:script|style|template)[\s/>]`).MatchString(remainingMasked) {
+		return nil, fmt.Errorf("detected unclosed or malformed <script>, <style> or <template> block")
+	}
+
 	return sfc, nil
 }
 
