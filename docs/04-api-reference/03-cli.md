@@ -291,7 +291,11 @@ gospa generate [options]
    - Route definitions with paths, params, and metadata
    - Helper functions: `getRoute()`, `buildPath()`
 
-4. **Compiled SFC Artifacts** (for `.gospa` files)
+4. **TypeScript Actions** (`generated/actions.ts`)
+   - Type definitions for all registered `RemoteActions`
+   - Typed helper: `remoteAction()`
+
+5. **Compiled SFC Artifacts** (for `.gospa` files)
    - Generates `generated_<name>.templ` beside each source `.gospa`
    - Generates `<output>/<unique-name>.ts` only for hydrated islands
 

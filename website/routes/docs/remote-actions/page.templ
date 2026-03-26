@@ -122,9 +122,25 @@ async function handleSignup() {
     }
 }
 
-// Using the typed remoteAction helper
 const createUser = remoteAction<{ username: string; email: string }, { id: string }>('createUser');
 const result = await createUser({ username: 'ayden', email: 'ayden@example.com' });`, "typescript", "signup.ts")
+
+			<h3 class="text-lg font-semibold mt-6 mb-3">Type-Safe Bridge (Generated)</h3>
+			<p class="text-[var(--text-secondary)]">
+				Instead of manually specifying types, you can use the <strong>GoSPA Type-Safe Bridge</strong>. By running <code class="mono text-[var(--accent-primary)]">gospa generate</code>, the framework scans your Go code for <code class="mono">RegisterRemoteAction</code> calls and generates a TypeScript file with all your action definitions.
+			</p>
+			@components.CodeBlock(`// generated/actions.ts (Auto-generated)
+export interface RemoteActions {
+  greet: (input: string) => Promise<string>;
+  submitMessage: (input: Message) => Promise<Status>;
+}
+
+export function remoteAction<T extends keyof RemoteActions>(name: T, input: any): Promise<any> {
+    return window.GoSPA.remoteAction(name, input);
+}`, "typescript", "actions.ts")
+			<p class="text-[var(--text-secondary)]">
+				This provides full autocomplete and compile-time checking for your remote action names and inputs.
+			</p>
 		</section>
 
 		<section id="csrf-protection" class="space-y-6">

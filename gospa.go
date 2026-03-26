@@ -657,6 +657,13 @@ func (a *App) BroadcastState(key string, value interface{}) error {
 	return fiber.BroadcastState(a.Hub, key, value)
 }
 
+// Computed adds a computed state variable to the application's global state.
+// It automatically updates when its dependencies change and broadcasts the result to all clients.
+func (a *App) Computed(key string, deps []string, fn func(map[string]interface{}) interface{}) *App {
+	a.StateMap.AddComputed(key, deps, fn)
+	return a
+}
+
 // Broadcast is a global convenience function to broadcast a message to all clients.
 func Broadcast(message interface{}) error {
 	if defaultApp == nil || defaultApp.Hub == nil {

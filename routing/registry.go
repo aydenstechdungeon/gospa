@@ -48,6 +48,8 @@ type RouteOptions struct {
 	// and re-rendered per-request. Each name must match a slot registered with
 	// RegisterSlot for this page path.
 	DynamicSlots []string
+	// DeferredSlots are slots that are rendered out-of-order after the initial page load.
+	DeferredSlots []string
 
 	// Optional per-route rate limiter config.
 	RateLimit *RateLimitOptions

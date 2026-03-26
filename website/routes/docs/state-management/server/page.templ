@@ -79,15 +79,28 @@ states.Batch(func(m *gospa.StateMap) {
     m.Set("c", 3)
 })
 
-// Global batch across multiple runes
-a := gospa.NewRune(1)
-b := gospa.NewRune(2)
-
 gospa.Batch(func() {
     a.Set(10)
     b.Set(20)
 })
 // Subscribers to a and b notified once after batch completes`, "go", "batch.go")
+		</section>
+
+		<section class="space-y-6">
+			<h2 class="text-2xl font-bold" id="computed-state">Computed State</h2>
+			<p class="text-[var(--text-secondary)]">
+				Create derived state values that automatically update when their dependencies change.
+			</p>
+			@components.CodeBlock(`// Add a value and a computed derivation
+states.Set("count", 10)
+
+states.AddComputed("doubled", []string{"count"}, func(vals map[string]any) any {
+    count := vals["count"].(int)
+    return count * 2
+})
+
+// 'doubled' is now 20.
+// When 'count' is set to 50, 'doubled' automatically updates to 100.`, "go", "computed.go")
 		</section>
 
 		<div class="flex justify-between pt-6 border-t border-[var(--border)]">

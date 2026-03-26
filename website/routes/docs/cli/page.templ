@@ -81,7 +81,7 @@ gospa build --minify=false --compress=false`, "bash", "terminal")
 
 			<div>
 				<h2 class="text-2xl font-bold mb-4 border-b border-[var(--border)] pb-2 italic mono">gospa generate</h2>
-				<p class="text-[var(--text-secondary)] mb-4">Generate Go routes plus TypeScript types and route metadata, with configurable default `.gospa` compilation type.</p>
+				<p class="text-[var(--text-secondary)] mb-4">Generate Go routes, TypeScript types, action definitions, and route metadata. This creates <code>routes.ts</code>, <code>types.ts</code>, and <code>actions.ts</code> to enable a full type-safe bridge.</p>
 				@components.CodeBlock(`gospa generate
 gospa generate -o ./generated --input-dir .
 gospa generate --type page`, "bash", "terminal")

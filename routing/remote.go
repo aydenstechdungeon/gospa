@@ -43,3 +43,14 @@ func GetRemoteAction(name string) (RemoteActionFunc, bool) {
 	fn, ok := globalRemoteRegistry.actions[name]
 	return fn, ok
 }
+
+// GetAllActions returns all registered action names.
+func GetAllActions() []string {
+	globalRemoteRegistry.mu.RLock()
+	defer globalRemoteRegistry.mu.RUnlock()
+	actions := make([]string, 0, len(globalRemoteRegistry.actions))
+	for name := range globalRemoteRegistry.actions {
+		actions = append(actions, name)
+	}
+	return actions
+}

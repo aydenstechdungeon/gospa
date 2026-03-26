@@ -10,9 +10,10 @@ import (
 
 // Block represents a section of a .gospa file.
 type Block struct {
-	Type    string // "script", "template", "style"
-	Lang    string // e.g., "go", "ts", "css"
-	Content string
+	Type       string // "script", "template", "style"
+	Lang       string // e.g., "go", "ts", "css"
+	Content    string
+	ByteOffset int // Start of the content block in the original source
 }
 
 // SFC represents the parsed structure of a .gospa file.
@@ -85,9 +86,10 @@ func Parse(input string) (*SFC, error) {
 		case "script":
 			lang := normalizeScriptLang(extractLang(b.attr, "go"))
 			block := Block{
-				Type:    "script",
-				Lang:    lang,
-				Content: strings.TrimSpace(b.content),
+				Type:       "script",
+				Lang:       lang,
+				Content:    strings.TrimSpace(b.content),
+				ByteOffset: b.start,
 			}
 			switch lang {
 			case "go":
@@ -108,9 +110,10 @@ func Parse(input string) (*SFC, error) {
 				return nil, fmt.Errorf("multiple <style> blocks are not supported")
 			}
 			sfc.Style = Block{
-				Type:    "style",
-				Lang:    extractLang(b.attr, "css"),
-				Content: strings.TrimSpace(b.content),
+				Type:       "style",
+				Lang:       extractLang(b.attr, "css"),
+				Content:    strings.TrimSpace(b.content),
+				ByteOffset: b.start,
 			}
 		case "template":
 			if explicitTemplate {
@@ -118,8 +121,9 @@ func Parse(input string) (*SFC, error) {
 			}
 			explicitTemplate = true
 			sfc.Template = Block{
-				Type:    "template",
-				Content: strings.TrimSpace(b.content),
+				Type:       "template",
+				Content:    strings.TrimSpace(b.content),
+				ByteOffset: b.start,
 			}
 		}
 	}
@@ -209,4 +213,19 @@ func maskForParsing(input string) string {
 		}
 		return string(res)
 	})
+}
+
+// OffsetToPosition converts a byte offset to a (line, column) coordinate.
+func OffsetToPosition(input string, offset int) (int, int) {
+	line := 0
+	col := 0
+	for i := 0; i < offset && i < len(input); i++ {
+		if input[i] == '\n' {
+			line++
+			col = 0
+		} else {
+			col++
+		}
+	}
+	return line, col
 }

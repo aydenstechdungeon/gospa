@@ -65,3 +65,22 @@ func DynamicSlot(name string, content templ.Component) templ.Component {
 func SlotPlaceholder(name string) string {
 	return fmt.Sprintf("<!--gospa-slot:%s-->", name)
 }
+
+// DeferredSlot creates a templ.Component that is rendered out-of-order.
+// It emits a placeholder div that the GoSPA renderer will later replace
+// by streaming the actual content in a background goroutine.
+func DeferredSlot(name string, fallback templ.Component) templ.Component {
+	return templ.ComponentFunc(func(ctx context.Context, w io.Writer) error {
+		// Emit a uniquely identified div that matches the ID the renderer will use for streaming.
+		if _, err := fmt.Fprintf(w, `<div id="gospa-deferred-%s" data-gospa-deferred="%s">`, name, name); err != nil {
+			return err
+		}
+		if fallback != nil {
+			if err := fallback.Render(ctx, w); err != nil {
+				return err
+			}
+		}
+		_, err := fmt.Fprint(w, `</div>`)
+		return err
+	})
+}

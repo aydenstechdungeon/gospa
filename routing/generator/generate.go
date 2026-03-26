@@ -70,8 +70,20 @@ func Generate(routesDir string) error {
 	generatedDir := filepath.Join(routesDir, "..", "generated")
 	if err := os.MkdirAll(generatedDir, 0750); err != nil {
 		fmt.Printf("Warning: failed to create generated directory: %v\n", err)
-	} else if err := routeGen.GenerateRoutesFile(generatedDir); err != nil {
-		fmt.Printf("Warning: failed to generate route helpers: %v\n", err)
+	} else {
+		if err := routeGen.GenerateRoutesFile(generatedDir); err != nil {
+			fmt.Printf("Warning: failed to generate route helpers: %v\n", err)
+		}
+
+		// Generate Remote Action helpers
+		actionGen := NewActionTypeScriptGenerator()
+		// Scan from module root to find all actions
+		_, moduleRoot := getModuleInfo(routesDir)
+		if err := actionGen.ScanCodebase(moduleRoot); err == nil {
+			if err := actionGen.GenerateActionsFile(generatedDir); err != nil {
+				fmt.Printf("Warning: failed to generate action helpers: %v\n", err)
+			}
+		}
 	}
 
 	fmt.Printf("Generated %s with %d routes\n", outputPath, len(routes))
