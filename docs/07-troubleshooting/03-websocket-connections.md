@@ -127,6 +127,40 @@ For self-signed certificates in development, you may need to accept the certific
 
 ---
 
+## Allow Insecure WebSockets in Production/Testing
+
+### Problem
+You see "CRITICAL: PublicOrigin must be set in production" errors, or WebSocket connection to `ws://...` fails because the browser blocks insecure connections on secure pages.
+
+### Solution
+
+In some testing or special production environments (e.g., local preview of a build), you may want to allow insecure `ws://` connections even when the framework thinks it's in production.
+
+#### 1. Configuration (Recommended for specific builds)
+Set `AllowInsecureWS: true` in your `gospa.Config`:
+
+```go
+app := gospa.New(gospa.Config{
+    // ... other config
+    AllowInsecureWS: true, // Allow ws:// even if not in DevMode
+})
+```
+
+#### 2. Environment Variable (Quick override)
+Set `GOSPA_WS_INSECURE=1` before starting your server:
+
+```bash
+# Run the built binary with insecure WebSocket allowed
+GOSPA_WS_INSECURE=1 ./dist/server
+```
+
+When enabled, GoSPA will:
+- Stop complaining about `PublicOrigin` being missing (downgraded to warning).
+- Use `ws://` instead of `wss://` even for requests detected as HTTPS/behind-proxy.
+- Fallback to the current request's `Host` instead of forcing `127.0.0.1` if `PublicOrigin` is missing.
+
+---
+
 ## "WebSocket is already in CONNECTING or OPEN state"
 
 ### Problem

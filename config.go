@@ -3,6 +3,7 @@ package gospa
 import (
 	"io/fs"
 	"log/slog"
+	"os"
 	"time"
 
 	"github.com/aydenstechdungeon/gospa/fiber"
@@ -164,8 +165,11 @@ type Config struct {
 	EnableCSRF            bool
 	ContentSecurityPolicy string
 	PublicOrigin          string
-	SSGCacheMaxEntries    int           // Default: 500
-	SSGCacheTTL           time.Duration // Default: 0 (no expiry)
+	// AllowInsecureWS allows unsecure ws:// connections even on https:// pages.
+	// This is useful for development setups with reverse proxies that don't support wss://.
+	AllowInsecureWS    bool
+	SSGCacheMaxEntries int           // Default: 500
+	SSGCacheTTL        time.Duration // Default: 0 (no expiry)
 
 	// Prefork enables Fiber's prefork mode.
 	Prefork bool
@@ -206,6 +210,7 @@ func DefaultConfig() Config {
 		ISRSemaphoreLimit:      10,
 		ISRTimeout:             60 * time.Second,
 		NotificationBufferSize: 1024,
+		AllowInsecureWS:        os.Getenv("GOSPA_WS_INSECURE") == "1",
 	}
 }
 

@@ -22,7 +22,8 @@ type HMRConfig struct {
 	WatchPaths   []string      `json:"watchPaths"`
 	IgnorePaths  []string      `json:"ignorePaths"`
 	DebounceTime time.Duration `json:"debounceTime"`
-	BroadcastAll bool          `json:"broadcastAll"`
+	BroadcastAll    bool          `json:"broadcastAll"`
+	AllowInsecureWS bool          `json:"allowInsecureWS"`
 }
 
 // HMRManager manages hot module replacement.
@@ -477,10 +478,11 @@ func (mgr *HMRManager) HMRMiddleware() fiberpkg.Handler {
 
 // generateHMRScript generates the client-side HMR script.
 func (mgr *HMRManager) generateHMRScript() string {
-	return `
+	return fmt.Sprintf(`
 <script>
 (function() {
-	const wsProto = window.location.protocol === 'https:' ? 'wss://' : 'ws://';
+	// Use wss if the page is https AND we aren't allowing insecure connections.
+	const wsProto = (window.location.protocol === 'https:' && !%v) ? 'wss://' : 'ws://';
 	const ws = new WebSocket(wsProto + window.location.host + '/__hmr');
 	
 	ws.onopen = function() {
@@ -537,7 +539,7 @@ func (mgr *HMRManager) generateHMRScript() string {
 	});
 })();
 </script>
-`
+`, mgr.config.AllowInsecureWS)
 }
 
 // Start begins HMR operation.
