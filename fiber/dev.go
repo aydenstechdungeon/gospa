@@ -33,6 +33,8 @@ type DevConfig struct {
 	OnReload func()
 	// StateKey is the context key for state
 	StateKey string
+	// AllowInsecureWS allows unsecure ws:// connections
+	AllowInsecureWS bool
 }
 
 // DefaultDevConfig returns default development configuration.
@@ -388,7 +390,7 @@ func (d *DevTools) sendStateKeys(c *websocket.Conn) {
 // DevPanelHandler creates a handler for the dev panel UI.
 func (d *DevTools) DevPanelHandler() fiberpkg.Handler {
 	return func(c fiberpkg.Ctx) error {
-		html := devPanelHTML()
+		html := fmt.Sprintf(devPanelHTML(), d.config.AllowInsecureWS)
 		c.Set("Content-Type", "text/html; charset=utf-8")
 		return c.SendString(html)
 	}
@@ -472,7 +474,7 @@ func devPanelHTML() string {
 		let connected = false;
 
 		function connect() {
-			const protocol = window.location.protocol === 'https:' ? 'wss:' : 'ws:';
+			const protocol = (window.location.protocol === 'https:' && !%v) ? 'wss:' : 'ws:';
 			ws = new WebSocket(protocol + '//' + window.location.host + '/_gospa/dev/ws');
 
 			ws.onopen = function() {

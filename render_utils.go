@@ -241,7 +241,7 @@ func (a *App) getWSUrl(c gofiber.Ctx) string {
 	}
 
 	protocol := "ws://"
-	if c.Protocol() == "https" || strings.ToLower(c.Get("X-Forwarded-Proto")) == "https" {
+	if (c.Protocol() == "https" || strings.ToLower(c.Get("X-Forwarded-Proto")) == "https") && !a.Config.AllowInsecureWS {
 		protocol = "wss://"
 	}
 
@@ -253,8 +253,13 @@ func (a *App) getWSUrl(c gofiber.Ctx) string {
 		return protocol + "localhost" + a.Config.WebSocketPath
 	}
 
-	// In production, failure to have PublicOrigin results in loopback safely
-	// and logging a configuration error.
+	// Production fallback — use current host if PublicOrigin is missing
+	if host := strings.TrimSpace(string(c.Request().Host())); host != "" {
+		if a.Config.AllowInsecureWS {
+			return protocol + host + a.Config.WebSocketPath
+		}
+	}
+
 	a.Logger().Error("CRITICAL: PublicOrigin is not set in production. WebSocket connections will fail or use loopback. Set PublicOrigin for security.")
 	return protocol + "127.0.0.1" + a.Config.WebSocketPath
 }

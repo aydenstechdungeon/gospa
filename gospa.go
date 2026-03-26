@@ -129,6 +129,9 @@ func New(config Config) *App {
 	if config.WSConnBurst == 0 {
 		config.WSConnBurst = 15.0
 	}
+	if !config.AllowInsecureWS && os.Getenv("GOSPA_WS_INSECURE") == "1" {
+		config.AllowInsecureWS = true
+	}
 
 	fiber.SetConnectionRateLimiter(config.WSConnBurst, config.WSConnRateLimit)
 	state.SetNotificationQueueSize(config.NotificationBufferSize)
@@ -165,8 +168,12 @@ func New(config Config) *App {
 		config.Logger.Warn("DevMode is enabled — disable in production")
 		fiberConfig.ServerHeader = "GoSPA/" + Version
 	} else if config.PublicOrigin == "" {
-		// CRITICAL: Production enforcement of PublicOrigin
-		config.Logger.Error("CRITICAL: PublicOrigin must be set in production mode for secure WebSocket and absolute URL generation.")
+		// CRITICAL: Production enforcement of PublicOrigin unless AllowInsecureWS is set
+		if config.AllowInsecureWS {
+			config.Logger.Warn("Warning: PublicOrigin is not set in production mode. insecure WebSocket will be used because AllowInsecureWS is enabled.")
+		} else {
+			config.Logger.Error("CRITICAL: PublicOrigin must be set in production mode for secure WebSocket and absolute URL generation.")
+		}
 	}
 	fiberApp := fiberpkg.New(fiberConfig)
 
