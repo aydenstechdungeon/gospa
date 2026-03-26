@@ -479,6 +479,29 @@ func (sm *StateMap) ToJSON() (string, error)
 
 Returns state as JSON string.
 
+#### AddComputed
+
+```go
+func (sm *StateMap) AddComputed(name string, depKeys []string, fn func(values map[string]interface{}) interface{}) *StateMap
+```
+
+Adds a computed state variable that automatically updates when its dependencies change. Dependencies are identified by their keys in the `StateMap`.
+
+**Example:**
+```go
+stateMap := state.NewStateMap()
+stateMap.AddAny("count", 10)
+
+// 'doubled' will always be 2x 'count'
+stateMap.AddComputed("doubled", []string{"count"}, func(vals map[string]interface{}) interface{} {
+    count := vals["count"].(int)
+    return count * 2
+})
+
+// 'doubled' is now 20
+// After count.Set(20), 'doubled' becomes 40 automatically
+```
+
 ### OnChange Callback
 
 ```go

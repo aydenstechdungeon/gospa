@@ -280,3 +280,55 @@ routing.RegisterPageWithOptions("/dashboard", dashboardPage, routing.RouteOption
 routing.RegisterSlot("/dashboard", "feed",          feedSlot)
 routing.RegisterSlot("/dashboard", "notifications", notificationsSlot)
 ```
+
+---
+
+## Out-of-Order (OOO) Streaming
+
+Out-of-Order Streaming allows you to defer the rendering of slow components while still delivering the initial app shell immediately. Unlike PPR, which is synchronous on the server, OOO streaming renders components in the background and sends them to the client as soon as they are ready, swapping them into designated placeholders.
+
+### Step 1 — Register Deferred Slots
+
+```go
+routing.RegisterPageWithOptions("/slow-page", slowPage, routing.RouteOptions{
+    DeferredSlots: []string{"heavy-data", "external-api"},
+})
+
+// Register the slot render functions (same as PPR)
+routing.RegisterSlot("/slow-page", "heavy-data", heavyDataComponent)
+routing.RegisterSlot("/slow-page", "external-api", apiComponent)
+```
+
+### Step 2 — Use `DeferredSlot` in your component
+
+```go
+// routes/slow-page/page.templ
+import "github.com/aydenstechdungeon/gospa/templ"
+
+templ Page(props map[string]interface{}) {
+    <div class="page">
+        <h1>Slow Page</h1>
+        
+        // This renders a placeholder immediately and streams the real content later
+        @templ.DeferredSlot("heavy-data", SkeletonLoader())
+        
+        @templ.DeferredSlot("external-api", Spinner())
+    </div>
+}
+```
+
+### How it Works
+
+1. The server sends the initial HTML with placeholders like `<div id="gospa-deferred-heavy-data">...</div>`.
+2. The server continues the connection and starts background goroutines for each deferred slot.
+3. As each slot completes, the server streams a `<template>` chunk and a script that calls `__GOSPA_STREAM__` to swap the placeholder's content.
+4. The client runtime handles the replacement seamlessly, maintaining scroll position and focus where possible.
+
+### Comparison: PPR vs OOO Streaming
+
+| Feature | PPR (Partial Prerendering) | OOO (Out-of-Order) Streaming |
+|---------|---------------------------|----------------------------|
+| Rendering | Synchronous on server | Asynchronous/Parallel on server |
+| Shell | Cached (SSG/ISR) | Any (SSR/SSG/ISR) |
+| Latency | Per-request render of slots | Zero-latency initial shell response |
+| Use Case | Mixed static/dynamic content | Slow data sources, high-latency APIs |

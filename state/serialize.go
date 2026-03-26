@@ -173,6 +173,44 @@ func (sm *StateMap) Add(name string, obs Observable) *StateMap {
 	return sm
 }
 
+// AddComputed adds a derived observable that depends on other observables in the StateMap.
+// It automatically resolves the dependency keys and creates a state.Derived[any] rune.
+// When any dependency changes, the computed value is recalculated and broadcast via OnChange.
+func (sm *StateMap) AddComputed(name string, depKeys []string, fn func(values map[string]interface{}) interface{}) *StateMap {
+	// 1. Initial computation and dependency resolution
+	compute := func() interface{} {
+		vals := make(map[string]interface{}, len(depKeys))
+		sm.mu.RLock()
+		for _, key := range depKeys {
+			if obs, ok := sm.observables[key]; ok {
+				vals[key] = obs.GetAny()
+			}
+		}
+		sm.mu.RUnlock()
+		return fn(vals)
+	}
+
+	// 2. Create the derived rune
+	d := NewDerived[interface{}](compute)
+
+	// 3. Setup dependencies
+	sm.mu.RLock()
+	var registeredDeps []Observable
+	for _, key := range depKeys {
+		if obs, ok := sm.observables[key]; ok {
+			registeredDeps = append(registeredDeps, obs)
+		}
+	}
+	sm.mu.RUnlock()
+
+	for _, obs := range registeredDeps {
+		d.DependOn(obs)
+	}
+
+	// 4. Add to StateMap
+	return sm.Add(name, d)
+}
+
 // AddAny adds any primitive value as a rune to the state collection
 func (sm *StateMap) AddAny(name string, value interface{}) *StateMap {
 	return sm.Add(name, NewRune[any](value))

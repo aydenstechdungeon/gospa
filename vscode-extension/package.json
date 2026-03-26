@@ -1,0 +1,67 @@
+{
+	"name": "gospa",
+	"displayName": "GoSPA",
+	"description": "Language support for GoSPA Single File Components (.gospa)",
+	"version": "0.0.1",
+	"publisher": "aydenstechdungeon",
+	"engines": {
+		"vscode": "^1.75.0"
+	},
+	"categories": [
+		"Programming Languages"
+	],
+	"activationEvents": [],
+	"main": "./dist/extension.js",
+	"contributes": {
+		"languages": [
+			{
+				"id": "gospa",
+				"aliases": [
+					"GoSPA",
+					"gospa"
+				],
+				"extensions": [
+					".gospa"
+				],
+				"configuration": "./language-configuration.json"
+			}
+		],
+		"grammars": [
+			{
+				"language": "gospa",
+				"scopeName": "source.gospa",
+				"path": "./syntaxes/gospa.tmLanguage.json",
+				"embeddedLanguages": {
+					"source.go": "go",
+					"source.ts": "typescript",
+					"source.css": "css",
+					"text.html.derivative": "html"
+				}
+			}
+		],
+		"configuration": {
+			"type": "object",
+			"title": "GoSPA",
+			"properties": {
+				"gospa.lsp.path": {
+					"type": "string",
+					"default": "gospa-lsp",
+					"description": "Path to the gospa-lsp binary."
+				}
+			}
+		}
+	},
+	"scripts": {
+		"vscode:prepublish": "bun build ./src/extension.ts --outdir ./dist --target node --external vscode",
+		"compile": "bun build ./src/extension.ts --outdir ./dist --target node --external vscode",
+		"watch": "bun build ./src/extension.ts --outdir ./dist --target node --watch --external vscode"
+	},
+	"devDependencies": {
+		"@types/node": "^18.11.18",
+		"@types/vscode": "^1.75.0",
+		"typescript": "^5.0.0"
+	},
+	"dependencies": {
+		"vscode-languageclient": "^9.0.1"
+	}
+}

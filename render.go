@@ -3,7 +3,9 @@ package gospa
 import (
 	"bufio"
 	"bytes"
+	"context"
 	"fmt"
+	"sync"
 	"time"
 
 	"github.com/aydenstechdungeon/gospa/routing"
@@ -252,6 +254,8 @@ func (a *App) renderRoute(c gofiber.Ctx, route *routing.Route) error {
 
 	c.Set("Cache-Control", "no-store")
 	c.Response().SetBodyStreamWriter(fasthttp.StreamWriter(func(w *bufio.Writer) {
+		var mu sync.Mutex // Mutex for thread-safe writing to the buffer
+
 		_, _ = fmt.Fprint(w, `<!DOCTYPE html><html lang="en" data-gospa-auto><head><meta charset="UTF-8"><meta name="viewport" content="width=device-width, initial-scale=1.0"><title>`)
 		_, _ = fmt.Fprint(w, a.Config.AppName)
 		_, _ = fmt.Fprint(w, `</title></head><body><div id="app" data-gospa-root><main>`)
@@ -279,8 +283,48 @@ runtime.init({
 	}
 });
 </script>`, toJS(runtimePath), toJS(a.Config.NavigationOptions), toJS(wsURL), a.Config.DevMode, a.Config.SimpleRuntimeSVGs, a.Config.DisableSanitization, wsRD, wsMR, wsHB, toJS(a.Config.HydrationMode), a.Config.HydrationTimeout)
+
+		// Handle Deferred Slots
+		if len(opts.DeferredSlots) > 0 {
+			var wg sync.WaitGroup
+			for _, slotName := range opts.DeferredSlots {
+				wg.Add(1)
+				go func(name string) {
+					defer wg.Done()
+					a.renderAndStreamDeferredSlot(&mu, w, route, name, params, c.Path())
+				}(slotName)
+			}
+			wg.Wait()
+		}
+
 		_, _ = fmt.Fprint(w, `</body></html>`)
 		_ = w.Flush()
 	}))
 	return nil
+}
+
+// renderAndStreamDeferredSlot renders a slot in the background and streams it immediately as a replacement chunk.
+func (a *App) renderAndStreamDeferredSlot(mu *sync.Mutex, w *bufio.Writer, route *routing.Route, slotName string, params map[string]string, path string) {
+	slotFn := routing.GetSlot(route.Path, slotName)
+	if slotFn == nil {
+		return
+	}
+	slotProps := map[string]interface{}{"path": path}
+	for k, v := range params {
+		slotProps[k] = v
+	}
+
+	var buf bytes.Buffer
+	if err := slotFn(slotProps).Render(context.Background(), &buf); err != nil {
+		a.Logger().Error("Deferred slot render error", "slot", slotName, "err", err)
+		return
+	}
+
+	mu.Lock()
+	defer mu.Unlock()
+
+	// Stream a template and a script to replace the placeholder
+	_, _ = fmt.Fprintf(w, `<template id="gospa-deferred-content-%s">%s</template>`, slotName, buf.String())
+	_, _ = fmt.Fprintf(w, `<script>if(window.__GOSPA_STREAM__){__GOSPA_STREAM__({type:'html', id:'gospa-deferred-%s', content: document.getElementById('gospa-deferred-content-%s').innerHTML})}</script>`, slotName, slotName)
+	_ = w.Flush()
 }

@@ -46,6 +46,9 @@ logger := app.Logger() // Returns the configured slog.Logger
 app.Broadcast([]byte("message"))
 err := app.BroadcastState("key", value)
 
+// Computed state - add a derived variable that auto-broadcasts
+app.Computed(key string, depKeys []string, fn func(values map[string]interface{}) interface{})
+
 // Add routes manually
 app.Get("/path", handler)
 app.Post("/path", handler)
@@ -321,6 +324,7 @@ sm := state.NewStateMap()
 // Add reactive value
 sm.Add(key string, observable Observable)
 sm.AddAny(key string, value any) error // Adds plain value as auto-rune
+sm.AddComputed(name string, depKeys []string, fn func(values map[string]interface{}) interface{}) *StateMap
 
 // Get value
 obs, ok := sm.Get(key string)
@@ -608,6 +612,9 @@ type RouteOptions struct {
     // PPR only: names of dynamic slots excluded from the cached static shell.
     // Each name must match a SlotFunc registered via RegisterSlot for this path.
     DynamicSlots []string
+
+    // OOO Streaming: names of slots to be rendered asynchronously and streamed.
+    DeferredSlots []string
 
     // RateLimit defines the per-route rate limit configuration (overrides global).
     RateLimit *RateLimitOptions

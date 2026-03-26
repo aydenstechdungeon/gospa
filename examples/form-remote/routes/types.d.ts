@@ -7,18 +7,18 @@ export interface MessageInput {
 }
 
 export interface Message {
-	name: string;
-	content: string;
 	timestamp: string;
 	id: number;
+	name: string;
+	content: string;
 }
 
 export interface PaginatedMessages {
+	pageSize: number;
 	totalPages: number;
 	messages: Message[];
 	total: number;
 	page: number;
-	pageSize: number;
 }
 
 export interface MessageStore {

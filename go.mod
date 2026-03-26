@@ -23,6 +23,7 @@ require (
 
 require (
 	github.com/kr/text v0.2.0 // indirect
+	github.com/tliron/glsp v0.2.2 // indirect
 	github.com/vmihailenco/tagparser/v2 v2.0.0 // indirect
 )
 
