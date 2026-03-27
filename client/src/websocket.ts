@@ -151,7 +151,10 @@ function loadSession(): SessionData | null {
 function saveSession(data: SessionData): void {
   try {
     // Only save non-sensitive identification if needed
-    localStorage.setItem(SESSION_COOKIE_KEY, JSON.stringify({ clientId: data.clientId }));
+    localStorage.setItem(
+      SESSION_COOKIE_KEY,
+      JSON.stringify({ clientId: data.clientId }),
+    );
   } catch (e) {
     console.warn("[GoSPA] Failed to save session:", e);
   }
@@ -272,7 +275,8 @@ export class WSClient {
 
         // SECURITY: Send session token as first message (not in URL)
         // Server will validate and associate this connection with the session
-        if (this.sessionData?.clientId) { // Only send init if we have a clientId
+        if (this.sessionData?.clientId) {
+          // Only send init if we have a clientId
           const initMsg: StateMessage = {
             type: "init",
             clientId: this.sessionData.clientId,

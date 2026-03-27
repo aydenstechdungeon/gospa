@@ -37,6 +37,8 @@ templ Page() {
 						<tr><td class="px-4 py-2 font-mono text-[var(--accent-primary)]">WSConnRateLimit</td><td class="px-4 py-2">float64</td><td class="px-4 py-2">1.5</td><td class="px-4 py-2">Max upgrades/sec per IP</td></tr>
 						<tr><td class="px-4 py-2 font-mono text-[var(--accent-primary)]">WSConnBurst</td><td class="px-4 py-2">float64</td><td class="px-4 py-2">15.0</td><td class="px-4 py-2">Burst capacity for upgrades</td></tr>
 						<tr><td class="px-4 py-2 font-mono text-[var(--accent-primary)]">SerializationFormat</td><td class="px-4 py-2">string</td><td class="px-4 py-2">"json"</td><td class="px-4 py-2">Serialization format: "json" or "msgpack"</td></tr>
+						<tr><td class="px-4 py-2 font-mono text-[var(--accent-primary)]">AllowInsecureWS</td><td class="px-4 py-2">bool</td><td class="px-4 py-2">false</td><td class="px-4 py-2">Allow unsecure WS even on HTTPS (e.g. for proxies)</td></tr>
+						<tr><td class="px-4 py-2 font-mono text-[var(--accent-primary)]">AllowPortsWithInsecureWS</td><td class="px-4 py-2">[]int</td><td class="px-4 py-2">[3000]</td><td class="px-4 py-2">Ports permitted to use insecure WS on HTTPS</td></tr>
 					</tbody>
 				</table>
 			</div>

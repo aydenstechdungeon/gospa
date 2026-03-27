@@ -113,6 +113,8 @@ app := gospa.New(gospa.Config{
 | `EnableCSRF` | `bool` | `true` | Enable automatic CSRF protection (wired by gospa.New) |
 | `ContentSecurityPolicy` | `string` | built-in default | Optional CSP header; empty uses `fiber.DefaultContentSecurityPolicy` (`'self'` plus `'unsafe-inline'` for script and style—typical for GoSPA). Use `fiber.StrictContentSecurityPolicy` when you can avoid inline scripts. |
 | `PublicOrigin` | `string` | `""` | Public base URL (e.g. `https://app.example.com`) for stable WebSocket URLs behind proxies; empty derives from the request |
+| `AllowInsecureWS` | `bool` | `false` | Allow insecure `ws://` connections even on `https://` pages |
+| `AllowPortsWithInsecureWS` | `[]int` | `[3000]` | Ports allowed to use insecure `ws://` even on `https://` pages |
 
 ### Navigation options (client)
 
@@ -463,6 +465,26 @@ Optional `Content-Security-Policy` header value. If empty, GoSPA uses **`fiber.D
 ### PublicOrigin
 
 When set (e.g. `https://myapp.com`), WebSocket URLs in generated HTML use this origin’s host/scheme instead of inferring from the incoming request—useful behind reverse proxies or CDNs. Empty string keeps request-derived behavior via `getWSUrl`.
+
+### AllowInsecureWS
+
+When `true`, GoSPA will use `ws://` instead of `wss://` even if the page is served over HTTPS. This is useful for development setups with reverse proxies that don't support `wss://`.
+
+```go
+AllowInsecureWS: true
+```
+
+Can also be set via environment variable `GOSPA_WS_INSECURE=1`.
+
+### AllowPortsWithInsecureWS
+
+A list of ports that are allowed to use insecure `ws://` connections even if the page is served over HTTPS. This is useful for local development where you might be using a tool like Localtunnel or Ngrok for the main page but the WebSocket is still local.
+
+Defaults to `[]int{3000}`.
+
+```go
+AllowPortsWithInsecureWS: []int{3000, 8080}
+```
 
 ### NavigationOptions
 

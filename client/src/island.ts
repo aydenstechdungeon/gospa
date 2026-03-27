@@ -12,7 +12,12 @@ export type IslandHydrationMode =
   | "lazy";
 
 // Island priority levels
-export type IslandPriority = "critical" | "high" | "normal" | "low" | "deferred";
+export type IslandPriority =
+  | "critical"
+  | "high"
+  | "normal"
+  | "low"
+  | "deferred";
 
 // Numeric priority mapping
 export const PRIORITY_MAP: Record<IslandPriority, number> = {
@@ -522,7 +527,7 @@ export class IslandManager {
     this.observers = [];
 
     // Cancel idle callbacks
-    for (const [_id, callbackId] of this.idleCallbacks) {
+    for (const [, callbackId] of this.idleCallbacks) {
       if ("cancelIdleCallback" in window) {
         (window as any).cancelIdleCallback(callbackId);
       } else {

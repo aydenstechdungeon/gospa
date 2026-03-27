@@ -22,9 +22,9 @@ func main() {
 		Shutdown:               shutdown,
 		SetTrace:               setTrace,
 		TextDocumentDidOpen:    didOpen,
-		TextDocumentDidChange: didChange,
-		TextDocumentDidSave:   didSave,
-		TextDocumentHover:     hover,
+		TextDocumentDidChange:  didChange,
+		TextDocumentDidSave:    didSave,
+		TextDocumentHover:      hover,
 		TextDocumentCompletion: completion,
 	}
 

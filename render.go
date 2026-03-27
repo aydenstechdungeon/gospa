@@ -5,6 +5,7 @@ import (
 	"bytes"
 	"context"
 	"fmt"
+	"html"
 	"sync"
 	"time"
 
@@ -257,7 +258,8 @@ func (a *App) renderRoute(c gofiber.Ctx, route *routing.Route) error {
 		var mu sync.Mutex // Mutex for thread-safe writing to the buffer
 
 		_, _ = fmt.Fprint(w, `<!DOCTYPE html><html lang="en" data-gospa-auto><head><meta charset="UTF-8"><meta name="viewport" content="width=device-width, initial-scale=1.0"><title>`)
-		_, _ = fmt.Fprint(w, a.Config.AppName)
+		// SECURITY: Escape AppName to prevent XSS via title injection.
+		_, _ = fmt.Fprint(w, html.EscapeString(a.Config.AppName))
 		_, _ = fmt.Fprint(w, `</title></head><body><div id="app" data-gospa-root><main>`)
 		if err := content.Render(ctx, w); err != nil {
 			a.Logger().Error("streaming render error", "err", err)
@@ -323,8 +325,10 @@ func (a *App) renderAndStreamDeferredSlot(mu *sync.Mutex, w *bufio.Writer, route
 	mu.Lock()
 	defer mu.Unlock()
 
-	// Stream a template and a script to replace the placeholder
-	_, _ = fmt.Fprintf(w, `<template id="gospa-deferred-content-%s">%s</template>`, slotName, buf.String())
-	_, _ = fmt.Fprintf(w, `<script>if(window.__GOSPA_STREAM__){__GOSPA_STREAM__({type:'html', id:'gospa-deferred-%s', content: document.getElementById('gospa-deferred-content-%s').innerHTML})}</script>`, slotName, slotName)
+	// SECURITY: Escape slotName to prevent XSS via attribute injection.
+	// buf.String() contains templ-rendered content which is already HTML-safe.
+	safeSlotName := html.EscapeString(slotName)
+	_, _ = fmt.Fprintf(w, `<template id="gospa-deferred-content-%s">%s</template>`, safeSlotName, buf.String())
+	_, _ = fmt.Fprintf(w, `<script>if(window.__GOSPA_STREAM__){__GOSPA_STREAM__({type:'html', id:'gospa-deferred-%s', content: document.getElementById('gospa-deferred-content-%s').innerHTML})}</script>`, safeSlotName, safeSlotName)
 	_ = w.Flush()
 }

@@ -8,6 +8,7 @@ import (
 	"io"
 	"net"
 	"net/url"
+	"strconv"
 	"strings"
 
 	"github.com/a-h/templ"
@@ -240,27 +241,47 @@ func (a *App) getWSUrl(c gofiber.Ctx) string {
 		}
 	}
 
+	host := strings.TrimSpace(string(c.Request().Host()))
+	_, portStr, _ := net.SplitHostPort(host)
+	port, _ := strconv.Atoi(portStr)
+
+	isPortAllowedInsecure := false
+	if port > 0 {
+		for _, p := range a.Config.AllowPortsWithInsecureWS {
+			if p == port {
+				isPortAllowedInsecure = true
+				break
+			}
+		}
+	}
+
 	protocol := "ws://"
-	if (c.Protocol() == "https" || strings.ToLower(c.Get("X-Forwarded-Proto")) == "https") && !a.Config.AllowInsecureWS {
+	shouldUseWSS := (c.Protocol() == "https" || strings.ToLower(c.Get("X-Forwarded-Proto")) == "https")
+	if shouldUseWSS && !a.Config.AllowInsecureWS && !isPortAllowedInsecure {
 		protocol = "wss://"
 	}
 
-	if a.Config.DevMode {
-		host := strings.TrimSpace(string(c.Request().Host()))
+	if a.Config.DevMode || a.Config.AllowInsecureWS || isPortAllowedInsecure {
 		if validatedHost, ok := a.validatePublicHost(host); ok {
 			return protocol + validatedHost + a.Config.WebSocketPath
 		}
-		return protocol + "localhost" + a.Config.WebSocketPath
-	}
-
-	// Production fallback — use current host if PublicOrigin is missing
-	if host := strings.TrimSpace(string(c.Request().Host())); host != "" {
-		if a.Config.AllowInsecureWS {
-			return protocol + host + a.Config.WebSocketPath
+		if portStr != "" {
+			return protocol + "127.0.0.1:" + portStr + a.Config.WebSocketPath
 		}
+		return protocol + "127.0.0.1" + a.Config.WebSocketPath
 	}
 
-	a.Logger().Error("CRITICAL: PublicOrigin is not set in production. WebSocket connections will fail or use loopback. Set PublicOrigin for security.")
+	// SECURITY FIX: In production we must NEVER reflect the Host header into the
+	// WebSocket URL. An attacker controlling the Host header could perform SSRF.
+	// If PublicOrigin is set, it was handled above and we won't reach this point.
+	// If PublicOrigin is missing in production, fail safe to loopback and log a
+	// hard-error so operators see it immediately.
+	a.Logger().Error("CRITICAL: PublicOrigin is not set in production. WebSocket connections will fail. Set PublicOrigin (e.g. https://yourapp.com) to fix this.")
+	
+	// Try to include port in the fallback if we're on a non-standard port
+	if portStr != "" {
+		return protocol + "127.0.0.1:" + portStr + a.Config.WebSocketPath
+	}
 	return protocol + "127.0.0.1" + a.Config.WebSocketPath
 }
 

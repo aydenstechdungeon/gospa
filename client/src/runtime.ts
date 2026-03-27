@@ -72,10 +72,7 @@ export type {
 export type { Unsubscribe } from "./state.ts";
 export type { RemoteOptions, RemoteResult } from "./remote.ts";
 
-import {
-  registerBinding,
-  unregisterBinding,
-} from "./dom.ts";
+import { registerBinding, unregisterBinding } from "./dom.ts";
 import {
   on,
   offAll,
@@ -95,23 +92,10 @@ import {
   applyStateUpdate,
   type StateMessage,
 } from "./websocket.ts";
-import {
-  initIslands,
-  getIslandManager,
-  hydrateIsland,
-} from "./island.ts";
-import {
-  getPriorityScheduler,
-  initPriorityHydration,
-} from "./priority.ts";
-import {
-  initStreaming,
-  getStreamingManager,
-} from "./streaming.ts";
-import {
-  Resource,
-  resourceReactive,
-} from "./resource.ts";
+import { initIslands, getIslandManager, hydrateIsland } from "./island.ts";
+import { getPriorityScheduler, initPriorityHydration } from "./priority.ts";
+import { initStreaming, getStreamingManager } from "./streaming.ts";
+import { Resource, resourceReactive } from "./resource.ts";
 import {
   navigate,
   back,

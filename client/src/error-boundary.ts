@@ -1,8 +1,6 @@
 // GoSPA Error Boundary System
 // Provides component-level error handling with fallback rendering
 
-import type { Rune } from "./state.ts";
-
 /**
  * Error boundary configuration
  */
@@ -224,7 +222,10 @@ export function createErrorFallback(message?: string): Element {
   icon.setAttribute("stroke", "currentColor");
   icon.setAttribute("stroke-width", "2");
 
-  const circle = document.createElementNS("http://www.w3.org/2000/svg", "circle");
+  const circle = document.createElementNS(
+    "http://www.w3.org/2000/svg",
+    "circle",
+  );
   circle.setAttribute("cx", "12");
   circle.setAttribute("cy", "12");
   circle.setAttribute("r", "10");

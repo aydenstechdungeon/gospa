@@ -73,7 +73,7 @@ export class Rune<T> implements Notifier {
     return () => this._s.delete(fn);
   }
 
-  private _notify(o: T): void {
+  private _notify(_o: T): void {
     if (_batch > 0) {
       _pending.add(this);
       return;
@@ -263,7 +263,7 @@ export function watch<T>(
     unsubs.push(
       src.subscribe((v, o) => {
         const vs = arr.map((s) => s.get());
-        const os = arr.map((s) => o);
+        const os = arr.map((_s) => o);
         callback(
           Array.isArray(sources) ? vs : vs[0],
           Array.isArray(sources) ? os : os[0],

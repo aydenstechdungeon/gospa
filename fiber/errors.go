@@ -7,7 +7,6 @@ import (
 	"log/slog"
 	"runtime/debug"
 
-	"github.com/aydenstechdungeon/gospa/state"
 	fiberpkg "github.com/gofiber/fiber/v3"
 )
 
@@ -148,48 +147,29 @@ func ErrorHandler(config ErrorHandlerConfig) fiberpkg.ErrorHandler {
 			return handler(c, appErr)
 		}
 
-		// Recover state if possible
-		var stateData map[string]interface{}
-		if config.RecoverState {
-			if stateMap, ok := c.Locals(config.StateKey).(*state.StateMap); ok && stateMap != nil {
-				if jsonData, err := stateMap.ToJSON(); err == nil {
-					_ = json.Unmarshal([]byte(jsonData), &stateData)
-				}
-			}
-		}
+		// SECURITY: Do NOT include application state in error responses.
+		// Doing so is a high-severity information disclosure vulnerability.
+		// State recovery is handled by the client-side runtime after re-hydration.
 
 		// Determine response type
 		accept := c.Get("Accept")
 		if len(accept) >= 16 && accept[:16] == "application/json" {
-			// JSON response
+			// JSON response — never include state
 			return c.Status(appErr.StatusCode).JSON(fiberpkg.Map{
 				"error":   appErr.Code,
 				"message": appErr.Message,
 				"details": appErr.Details,
 				"recover": appErr.Recover,
-				"state":   stateData,
 			})
 		}
 
 		// HTML response
-		return renderErrorPage(c, appErr, stateData, config.DevMode)
+		return renderErrorPage(c, appErr, config.DevMode)
 	}
-}
-
-// escapeJS escapes a string for safe inclusion in JavaScript string literals.
-func escapeJS(s string) string {
-	s = html.EscapeString(s)
-	// Additional escaping for JavaScript string context
-	s = fmt.Sprintf("%q", s)
-	// Remove surrounding quotes since we're embedding in a JS string literal
-	if len(s) >= 2 {
-		return s[1 : len(s)-1]
-	}
-	return s
 }
 
 // renderErrorPage renders an error page.
-func renderErrorPage(c fiberpkg.Ctx, appErr *AppError, stateData map[string]interface{}, devMode bool) error {
+func renderErrorPage(c fiberpkg.Ctx, appErr *AppError, devMode bool) error {
 	c.Set("Content-Type", "text/html; charset=utf-8")
 
 	// Escape all user-controlled values to prevent XSS
@@ -250,22 +230,9 @@ func renderErrorPage(c fiberpkg.Ctx, appErr *AppError, stateData map[string]inte
 		</div>`
 	}
 
-	// Add state recovery script with proper escaping
-	if stateData != nil {
-		stateJSON, _ := json.Marshal(stateData)
-		// Escape JS string values for safe embedding
-		escapedCodeJS := escapeJS(string(appErr.Code))
-		escapedMessageJS := escapeJS(appErr.Message)
-		htmlContent += `
-		<script>
-			window.__GOSPA_STATE__ = ` + string(stateJSON) + `;
-			window.__GOSPA_ERROR__ = {
-				code: "` + escapedCodeJS + `",
-				message: "` + escapedMessageJS + `",
-				recover: ` + fmt.Sprintf("%v", appErr.Recover) + `
-			};
-		</script>`
-	}
+	// SECURITY FIX: Do NOT inject application state (window.__GOSPA_STATE__)
+	// into error pages. This was a high-severity information disclosure.
+	// State recovery is delegated to the client-side runtime on re-hydration.
 
 	htmlContent += `
 	</div>
