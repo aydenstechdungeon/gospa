@@ -21,7 +21,9 @@ func TestRemoteAction_ProductionBlocksWithoutMiddleware(t *testing.T) {
 		return map[string]string{"ok": "true"}, nil
 	})
 
-	app := New(Config{DevMode: false})
+	app := New(Config{DevMode: false, PublicOrigin: "http://localhost"})
+	app.applyPluginMiddleware()
+	app.setupRoutes()
 	defer func() { _ = app.Fiber.Shutdown() }()
 
 	req := httptest.NewRequest(http.MethodPost, "/_gospa/remote/"+name, strings.NewReader(`{}`))
@@ -53,6 +55,8 @@ func TestRemoteAction_JSONTooDeep(t *testing.T) {
 	})
 
 	app := New(Config{DevMode: true})
+	app.applyPluginMiddleware()
+	app.setupRoutes()
 	defer func() { _ = app.Fiber.Shutdown() }()
 
 	n := remoteJSONMaxNesting + 1
@@ -87,7 +91,10 @@ func TestRemoteActionMiddleware_BlocksRequestBeforeHandler(t *testing.T) {
 		RemoteActionMiddleware: func(c fiber.Ctx) error {
 			return c.Status(fiber.StatusUnauthorized).JSON(fiber.Map{"error": "blocked"})
 		},
+		PublicOrigin: "http://localhost",
 	})
+	app.applyPluginMiddleware()
+	app.setupRoutes()
 	defer func() { _ = app.Fiber.Shutdown() }()
 
 	req := httptest.NewRequest(http.MethodPost, "/_gospa/remote/"+actionName, strings.NewReader(`{"k":"v"}`))
