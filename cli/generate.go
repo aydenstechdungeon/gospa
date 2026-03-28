@@ -123,7 +123,6 @@ func generateTypesWithConfig(config *GenerateConfig) error {
 	return nil
 }
 
-
 func compileSFCs(config *GenerateConfig) error {
 	sourceFiles, err := findSourceFiles(config.InputDir)
 	if err != nil {
@@ -225,7 +224,6 @@ type TypeScriptField struct {
 	Type     string
 	Optional bool
 }
-
 
 func findStateFiles(dir string) ([]string, error) {
 	var files []string
@@ -376,7 +374,6 @@ func convertGoTypeToTS(expr ast.Expr) string {
 	}
 }
 
-
 func writeTypeScriptFile(outputDir string, types map[string]TypeScriptType) error {
 	var sb strings.Builder
 
@@ -412,4 +409,3 @@ func writeTypeScriptFile(outputDir string, types map[string]TypeScriptType) erro
 	outputPath := filepath.Join(outputDir, "types.ts")
 	return os.WriteFile(outputPath, []byte(sb.String()), 0600)
 }
-

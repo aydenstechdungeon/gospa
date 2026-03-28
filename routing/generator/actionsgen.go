@@ -24,7 +24,7 @@ func NewActionTypeScriptGenerator() *ActionTypeScriptGenerator {
 // ScanCodebase scans the project for RegisterRemoteAction calls.
 func (g *ActionTypeScriptGenerator) ScanCodebase(dir string) error {
 	fset := token.NewFileSet()
-	
+
 	err := filepath.Walk(dir, func(path string, info os.FileInfo, err error) error {
 		if err != nil || info.IsDir() || !strings.HasSuffix(path, ".go") || strings.Contains(path, "vendor") || strings.Contains(path, "node_modules") {
 			return nil

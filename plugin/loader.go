@@ -3,10 +3,10 @@
 package plugin
 
 import (
-	"encoding/json"
-	"fmt"
 	"crypto/sha256"
 	"encoding/hex"
+	"encoding/json"
+	"fmt"
 	"io"
 	"os"
 	"os/exec"

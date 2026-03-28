@@ -37,7 +37,6 @@ export type RoutePath =
   | "/docs/getstarted/structure"
   | "/docs/gospasfc"
   | "/docs/gospasfc/advanced"
-  | "/docs/gospasfc/examples"
   | "/docs/gospasfc/getting-started"
   | "/docs/gospasfc/reactivity"
   | "/docs/gospasfc/styles"
@@ -107,7 +106,6 @@ export interface RouteMap {
   DocsGetstartedStructure: "/docs/getstarted/structure";
   DocsGospasfc: "/docs/gospasfc";
   DocsGospasfcAdvanced: "/docs/gospasfc/advanced";
-  DocsGospasfcExamples: "/docs/gospasfc/examples";
   DocsGospasfcGetting-started: "/docs/gospasfc/getting-started";
   DocsGospasfcReactivity: "/docs/gospasfc/reactivity";
   DocsGospasfcStyles: "/docs/gospasfc/styles";
@@ -320,10 +318,6 @@ export function docsGospasfcRoute(): string {
 
 export function docsGospasfcAdvancedRoute(): string {
   return "/docs/gospasfc/advanced";
-}
-
-export function docsGospasfcExamplesRoute(): string {
-  return "/docs/gospasfc/examples";
 }
 
 export function docsGospasfcGetting-startedRoute(): string {
@@ -778,12 +772,6 @@ export const routes: RouteMeta[] = [
   {
     path: "/docs/gospasfc/advanced",
     name: "DocsGospasfcAdvanced",
-    isDynamic: false,
-    params: [],
-  },
-  {
-    path: "/docs/gospasfc/examples",
-    name: "DocsGospasfcExamples",
     isDynamic: false,
     params: [],
   },

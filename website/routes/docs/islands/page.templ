@@ -39,10 +39,12 @@ templ Page() {
 				</div>
 				@components.CodeBlock(`<div data-gospa-island="Counter" 
      data-gospa-mode="visible"
-     data-gospa-priority="high"
-     data-gospa-props='{"initial": 10}'>
+     data-gospa-priority="high">
     <!-- Server-rendered content goes here -->
 </div>`, "html", "counter.templ")
+				<p class="text-sm text-[var(--text-secondary)] mt-4">
+					ℹ️ <strong>Note:</strong> Initial props and state are now served via a centralized <code class="bg-[var(--surface)] px-1 rounded">window.__GOSPA_DATA__</code> registry to reduce DOM bloat and improve hydration speed.
+				</p>
 			</div>
 
 			<div>
