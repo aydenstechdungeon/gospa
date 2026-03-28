@@ -25,8 +25,8 @@ templ Page() {
 				<span class="text-[var(--text-muted)] text-sm gospa-562b">/</span>
 				<span class="text-[var(--text-muted)] text-sm font-medium gospa-562b">Gospa SFC</span>
 			</div>
-			<h1 class="text-4xl font-bold tracking-tight mb-4 text-transparent bg-clip-text bg-gradient-to-r from-[var(--accent-primary)] to-[var(--accent-secondary)] gospa-562b">TypeScript Integration</h1>
-			<p class="text-xl text-[var(--text-secondary)] leading-relaxed gospa-562b">
+			<h1 class="text-4xl font-bold tracking-tight mb-4 text-transparent bg-clip-text bg-gradient-to-r from-[var(--accent-primary)] to-[var(--accent-secondary)] gospa-1071">TypeScript Integration</h1>
+			<p class="text-xl text-[var(--text-secondary)] leading-relaxed gospa-1071">
 				Seamlessly bridge server-side Go logic with client-side TypeScript interactivity.
 			</p>
 		</header>
@@ -37,10 +37,10 @@ templ Page() {
 				<p class="text-[var(--text-secondary)] mb-6 gospa-562b">
 					When you use <code class="bg-[var(--surface)] px-1 rounded gospa-562b">island</code> components, GoSPA's compiler automatically extracts and converts your reactive runes from Go into their TypeScript equivalents. This happens automatically behind the scenes.
 				</p>
-				<div class="grid md:grid-cols-2 gap-8 items-start mb-8 gospa-562b">
-					<div class="space-y-4 gospa-562b">
-						<h3 class="font-bold flex items-center gap-2 text-sm uppercase tracking-widest text-[var(--text-muted)] gospa-562b">
-							<div class="w-2 h-2 rounded-full bg-cyan-500 gospa-562b"></div>
+				<div class="grid md:grid-cols-2 gap-8 items-start mb-8 gospa-1071">
+					<div class="space-y-4 gospa-1071">
+						<h3 class="font-bold flex items-center gap-2 text-sm uppercase tracking-widest text-[var(--text-muted)] gospa-1071">
+							<div class="w-2 h-2 rounded-full bg-cyan-500 gospa-1071"></div>
 							Source (Go Script)
 						</h3>
 						@components.CodeBlock(`<script lang="go">
@@ -51,9 +51,9 @@ templ Page() {
   )
 </script>`, "go", "Source.gospa")
 					</div>
-					<div class="space-y-4 gospa-562b">
-						<h3 class="font-bold flex items-center gap-2 text-sm uppercase tracking-widest text-[var(--text-muted)] gospa-562b">
-							<div class="w-2 h-2 rounded-full bg-blue-600 gospa-562b"></div>
+					<div class="space-y-4 gospa-1071">
+						<h3 class="font-bold flex items-center gap-2 text-sm uppercase tracking-widest text-[var(--text-muted)] gospa-1071">
+							<div class="w-2 h-2 rounded-full bg-blue-600 gospa-1071"></div>
 							Generated (TS Module)
 						</h3>
 						@components.CodeBlock(`import { $state, $derived } from "@gospa/runtime"
@@ -118,12 +118,12 @@ export const combined = $derived(() =>
 </template>`, "svelte", "ClientState.gospa")
 			</div>
 
-			<div class="flex justify-between items-center pt-8 gospa-562b">
-				<a href="/docs/gospasfc/examples" class="flex flex-col items-start gap-1 p-4 rounded-xl border border-[var(--border)] hover:bg-[var(--bg-secondary)] transition-all gospa-562b">
-					<span class="text-xs text-[var(--text-muted)] font-bold uppercase tracking-widest gospa-562b">Previous</span>
-					<span class="font-bold text-[var(--accent-primary)] gospa-562b">Examples & Guides</span>
+			<div class="flex justify-between items-center pt-8 gospa-1071">
+				<a href="/docs/gospasfc/examples" class="flex flex-col items-start gap-1 p-4 rounded-xl border border-[var(--border)] hover:bg-[var(--bg-secondary)] transition-all gospa-1071">
+					<span class="text-xs text-[var(--text-muted)] font-bold uppercase tracking-widest gospa-1071">Previous</span>
+					<span class="font-bold text-[var(--accent-primary)] gospa-1071">Examples & Guides</span>
 				</a>
-				<div class="w-1/2 gospa-562b"></div>
+				<div class="w-1/2 gospa-1071"></div>
 			</div>
 		</section>
 	</div>
