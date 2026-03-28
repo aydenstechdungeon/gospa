@@ -133,15 +133,15 @@ templ RootLayout(title string, children templ.Component, runtimePath string, pat
 
 			<link rel="alternate" type="application/ld+json" href="/static/structured-data.json" />
 		</head>
-			<body
-				class="min-h-screen flex flex-col font-sans selection:bg-cyan-500/30"
-				data-gospa-runtime-path={ runtimePath }
-				data-gospa-ws-url={ wsUrl }
-				data-gospa-debug={ fmt.Sprintf("%t", debug) }
-				data-gospa-hydration-mode={ hydrationMode }
-				data-gospa-hydration-timeout={ hydrationTimeout }
-				data-gospa-serialization-format={ serializationFormat }
-			>
+		<body
+			class="min-h-screen flex flex-col font-sans selection:bg-cyan-500/30"
+			data-gospa-runtime-path={ runtimePath }
+			data-gospa-ws-url={ wsUrl }
+			data-gospa-debug={ templ.KV("true", debug), templ.KV("false", !debug) }
+			data-gospa-hydration-mode={ hydrationMode }
+			data-gospa-hydration-timeout={ hydrationTimeout }
+			data-gospa-serialization-format={ serializationFormat }
+		>
 			<!-- Animated background elements -->
 			<div class="fixed inset-0 pointer-events-none z-0 overflow-hidden">
 				<div class="absolute -top-[10%] -left-[10%] w-[40%] h-[40%] bg-cyan-500/10 blur-[120px] rounded-full animate-float"></div>
