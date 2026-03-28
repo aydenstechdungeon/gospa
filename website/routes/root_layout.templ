@@ -130,29 +130,17 @@ templ RootLayout(title string, children templ.Component, runtimePath string, pat
 			<meta name="google-site-verification" content="Dn6cwasiI8rWfkU4SLKLrJwfSp8rh4QsZcsA4PSgmkw" />
 			<meta name="keywords" content="Go, Golang, SPA, Single Page Application, SSR, Server-Side Rendering, Reactive, Svelte-like, Framework, Web Development" />
 
-			<!-- JSON-LD Structured Data -->
-			<script type="application/ld+json">
-				{
-					"@context": "https://schema.org",
-					"@type": "SoftwareSourceCode",
-					"name": "GoSPA",
-					"description": "A lightweight Go framework for building high-performance, reactive single-page applications with server-side rendering.",
-					"url": "https://gospa.onrender.com",
-					"codeRepository": "https://github.com/aydenstechdungeon/gospa",
-					"license": "https://opensource.org/licenses/MIT",
-					"programmingLanguage": {
-						"@type": "ComputerLanguage",
-						"name": "Go",
-						"url": "https://golang.org"
-					},
-					"author": {
-						"@type": "Organization",
-						"name": "GoSPA Contributors"
-					}
-				}
-			</script>
+			<link rel="alternate" type="application/ld+json" href="/static/structured-data.json" />
 		</head>
-		<body class="min-h-screen flex flex-col font-sans selection:bg-cyan-500/30">
+		<body
+			class="min-h-screen flex flex-col font-sans selection:bg-cyan-500/30"
+			data-gospa-runtime-path={ runtimePath }
+			data-gospa-ws-url={ wsUrl }
+			data-gospa-debug={ templ.KV("true", debug), templ.KV("false", !debug) }
+			data-gospa-hydration-mode={ hydrationMode }
+			data-gospa-hydration-timeout={ hydrationTimeout }
+			data-gospa-serialization-format={ serializationFormat }
+		>
 			<!-- Animated background elements -->
 			<div class="fixed inset-0 pointer-events-none z-0 overflow-hidden">
 				<div class="absolute -top-[10%] -left-[10%] w-[40%] h-[40%] bg-cyan-500/10 blur-[120px] rounded-full animate-float"></div>
@@ -320,117 +308,6 @@ templ RootLayout(title string, children templ.Component, runtimePath string, pat
 				</div>
 			</footer>
 			</div>
-			@initGoSPA(runtimePath, wsUrl, debug, hydrationMode, hydrationTimeout, serializationFormat)
-			@setupGlobalActions()
 		</body>
 	</html>
-}
-
-script initGoSPA(runtimePath, wsUrl string, debug bool, hydrationMode string, hydrationTimeout int, serializationFormat string) {
-	window.__GOSPA_CONFIG__ = {
-		navigationOptions: {
-			speculativePrefetching: {
-				enabled: true,
-				ttl: 45000,
-				hoverDelay: 80,
-				viewportMargin: 220,
-			},
-			serviceWorkerNavigationCaching: {
-				enabled: true,
-				cacheName: 'gospa-docs-navigation-cache',
-				path: '/gospa-navigation-sw.js',
-			},
-		}
-	};
-
-	import(runtimePath).then(runtime => {
-		window.GoSPA = runtime;
-		runtime.init({
-			wsUrl: wsUrl,
-			debug: debug,
-			hydration: {
-				mode: hydrationMode,
-				timeout: hydrationTimeout
-			},
-			serializationFormat: serializationFormat
-		});
-	});
-}
-
-script setupGlobalActions() {
-	// Global switchLang function for DualCodeBlock component
-	// Synchronizes all blocks on the page and persists preference
-	window.switchLang = function(btn, lang) {
-		const targetLang = lang || localStorage.getItem('gospa-pref-lang') || 'js';
-		localStorage.setItem('gospa-pref-lang', targetLang);
-		
-		const activeClasses = ['bg-[var(--accent-primary)]', 'text-white'];
-		const inactiveClasses = ['bg-[var(--bg-primary)]', 'text-[var(--text-secondary)]', 'hover:text-[var(--text-primary)]'];
-		
-		document.querySelectorAll('[data-dual-code-block]').forEach(container => {
-			const jsBtn = container.querySelector('[data-lang="js"]');
-			const tsBtn = container.querySelector('[data-lang="ts"]');
-			const jsCode = container.querySelector('[data-code="js"]');
-			const tsCode = container.querySelector('[data-code="ts"]');
-			
-			if (!jsBtn || !tsBtn || !jsCode || !tsCode) return;
-			
-			if (targetLang === 'js') {
-				activeClasses.forEach(c => jsBtn.classList.add(c));
-				inactiveClasses.forEach(c => jsBtn.classList.remove(c));
-				inactiveClasses.forEach(c => tsBtn.classList.add(c));
-				activeClasses.forEach(c => tsBtn.classList.remove(c));
-				jsCode.classList.remove('hidden');
-				tsCode.classList.add('hidden');
-			} else {
-				activeClasses.forEach(c => tsBtn.classList.add(c));
-				inactiveClasses.forEach(c => tsBtn.classList.remove(c));
-				inactiveClasses.forEach(c => jsBtn.classList.add(c));
-				activeClasses.forEach(c => jsBtn.classList.remove(c));
-				tsCode.classList.remove('hidden');
-				jsCode.classList.add('hidden');
-			}
-		});
-
-	};
-
-	// Initialize language on load and navigation
-	const initLang = () => window.switchLang(null);
-	initLang();
-	document.addEventListener('gospa:navigated', initLang);
-
-	// Global event delegation for data-action attributes
-	// This survives SPA navigation since it's attached at document level
-	document.addEventListener('click', (e) => {
-		const target = e.target.closest('[data-action]');
-		if (!target) return;
-		
-		const action = target.getAttribute('data-action');
-		
-		switch (action) {
-			case 'copy-code':
-				// Find either the single code block or the VISIBLE one in a dual block
-				const codeEl = target.parentElement?.querySelector('pre:not(.hidden) code') || 
-							   target.parentElement?.querySelector('code');
-				if (codeEl) {
-					navigator.clipboard.writeText(codeEl.innerText).then(() => {
-						const span = target.querySelector('span');
-						if (span) {
-							const old = span.innerText;
-							span.innerText = 'Copied!';
-							setTimeout(() => { span.innerText = old; }, 2000);
-						}
-					});
-				}
-				break;
-			case 'toggle-mobile-menu':
-				document.getElementById('mobile-menu')?.classList.toggle('hidden');
-				document.body.classList.toggle('overflow-hidden');
-				break;
-			case 'close-mobile-menu':
-				document.getElementById('mobile-menu')?.classList.add('hidden');
-				document.body.classList.remove('overflow-hidden');
-				break;
-		}
-	});
 }

@@ -987,8 +987,8 @@ func GenerateCriticalCSSHelper(projectDir, criticalCSSPath string) (string, erro
 
 // GenerateAsyncCSSScript generates the HTML for async loading non-critical CSS.
 func GenerateAsyncCSSScript(cssPath string) string {
-	return fmt.Sprintf(`<link rel="preload" href="%s" as="style" onload="this.onload=null;this.rel='stylesheet'">
-	<noscript><link rel="stylesheet" href="%s"></noscript>`, cssPath, cssPath)
+	return fmt.Sprintf(`<link rel="preload" href="%s" as="style" data-gospa-async-css="1">
+<noscript><link rel="stylesheet" href="%s"></noscript>`, cssPath, cssPath)
 }
 
 // CriticalCSS reads the critical CSS file and returns its content for inlining in templates.
