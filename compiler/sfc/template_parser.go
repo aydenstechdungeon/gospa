@@ -33,12 +33,6 @@ func (p *TemplateParser) Parse() ([]Node, error) {
 func (p *TemplateParser) parseNodes(closingTag string) ([]Node, error) {
 	var nodes []Node
 	for p.pos < len(p.input) {
-		// Skip Go string literals (backtick and double-quoted) BEFORE checking
-		// for closing tags, to avoid false-positive matches inside strings
-		if p.skipStringLiteral() {
-			continue
-		}
-
 		if closingTag != "" && strings.HasPrefix(p.input[p.pos:], closingTag) {
 			break
 		}
@@ -67,12 +61,17 @@ func (p *TemplateParser) parseNodes(closingTag string) ([]Node, error) {
 			}
 			nodes = append(nodes, node)
 		case '@':
-			// Handle @Component(...) syntax (templ-style component calls)
-			node, err := p.parseAtComponent()
-			if err != nil {
-				return nil, err
+			// Handle @Component(...) syntax (templ-style component calls).
+			// If this is plain text (e.g., email/user handle), keep it as text.
+			if p.canParseAtComponentCall() {
+				node, err := p.parseAtComponent()
+				if err != nil {
+					return nil, err
+				}
+				nodes = append(nodes, node)
+			} else {
+				nodes = append(nodes, p.parseText())
 			}
-			nodes = append(nodes, node)
 		default:
 			nodes = append(nodes, p.parseText())
 		}
@@ -86,7 +85,14 @@ func (p *TemplateParser) parseAtComponent() (Node, error) {
 	p.pos++ // skip @
 
 	name := p.parseIdentifierWithDots()
-	attrs := p.parseParenArgs()
+	if name == "" {
+		return nil, p.error("expected component name after @")
+	}
+	p.skipWhitespace()
+	attrs, err := p.parseParenArgs(true)
+	if err != nil {
+		return nil, err
+	}
 
 	node := &ComponentNode{
 		Name:       name,
@@ -107,9 +113,12 @@ func (p *TemplateParser) parseIdentifierWithDots() string {
 
 // parseParenArgs parses parenthesized arguments like (arg1, "arg2", `arg3`).
 // Returns attributes where each positional arg gets a generated name.
-func (p *TemplateParser) parseParenArgs() []Attribute {
+func (p *TemplateParser) parseParenArgs(required bool) ([]Attribute, error) {
 	if !p.consume("(") {
-		return nil
+		if required {
+			return nil, p.error("expected (")
+		}
+		return nil, nil
 	}
 
 	var attrs []Attribute
@@ -141,26 +150,29 @@ func (p *TemplateParser) parseParenArgs() []Attribute {
 			for p.pos < len(p.input) && p.input[p.pos] != '`' {
 				p.pos++
 			}
-			attr.Value = p.input[start:p.pos]
-			if p.pos < len(p.input) {
-				p.pos++ // skip closing `
+			if p.pos >= len(p.input) {
+				return nil, p.error("unterminated backtick string argument")
 			}
+			attr.Value = p.input[start:p.pos]
+			p.pos++ // skip closing `
 			attr.IsExpression = true // Mark as expression to preserve raw value
 		case p.pos < len(p.input) && p.input[p.pos] == '"':
 			// Double-quoted string
 			p.pos++ // skip opening "
 			attr.Value = p.consumeEscapedUntil("\"")
-			if p.pos < len(p.input) {
-				p.pos++ // skip closing "
+			if p.pos >= len(p.input) {
+				return nil, p.error("unterminated quoted string argument")
 			}
+			p.pos++ // skip closing "
 		case p.pos < len(p.input) && p.input[p.pos] == '{':
 			// Expression in braces
 			p.pos++ // skip {
 			attr.Value = p.consumeUntil("}")
-			attr.IsExpression = true
-			if p.pos < len(p.input) {
-				p.pos++ // skip }
+			if p.pos >= len(p.input) {
+				return nil, p.error("unterminated expression argument")
 			}
+			attr.IsExpression = true
+			p.pos++ // skip }
 		default:
 			// Unquoted value (identifier, number, etc.)
 			start := p.pos
@@ -174,8 +186,10 @@ func (p *TemplateParser) parseParenArgs() []Attribute {
 		argIndex++
 	}
 
-	p.consume(")")
-	return attrs
+	if !p.consume(")") {
+		return nil, p.error("expected )")
+	}
+	return attrs, nil
 }
 
 func (p *TemplateParser) parseTag() (Node, error) {
@@ -363,44 +377,11 @@ func (p *TemplateParser) parseCurly() (Node, error) {
 	return node, nil
 }
 
-// skipStringLiteral advances past a Go string literal (backtick or double-quoted).
-// Returns true if a string was skipped.
-func (p *TemplateParser) skipStringLiteral() bool {
-	if p.pos >= len(p.input) {
-		return false
-	}
-	if p.input[p.pos] == '`' {
-		p.pos++ // skip opening `
-		for p.pos < len(p.input) && p.input[p.pos] != '`' {
-			p.pos++
-		}
-		if p.pos < len(p.input) {
-			p.pos++ // skip closing `
-		}
-		return true
-	}
-	if p.input[p.pos] == '"' {
-		p.pos++ // skip opening "
-		for p.pos < len(p.input) && p.input[p.pos] != '"' {
-			if p.input[p.pos] == '\\' {
-				p.pos += 2 // skip escaped character
-			} else {
-				p.pos++
-			}
-		}
-		if p.pos < len(p.input) {
-			p.pos++ // skip closing "
-		}
-		return true
-	}
-	return false
-}
-
 func (p *TemplateParser) parseText() Node {
 	start := p.pos
 	var sb strings.Builder
 	for p.pos < len(p.input) {
-		if p.input[p.pos] == '<' || p.input[p.pos] == '{' || p.input[p.pos] == '`' || p.input[p.pos] == '"' || p.input[p.pos] == '@' {
+		if p.input[p.pos] == '<' || p.input[p.pos] == '{' || (p.input[p.pos] == '@' && p.canParseAtComponentCall()) {
 			break
 		}
 		sb.WriteByte(p.input[p.pos])
@@ -536,4 +517,29 @@ func isVoidTag(tag string) bool {
 		return true
 	}
 	return false
+}
+
+func isIdentifierStart(ch byte) bool {
+	return ch == '_' || unicode.IsLetter(rune(ch))
+}
+
+func isIdentifierPart(ch byte) bool {
+	return ch == '-' || ch == '_' || ch == '.' || ch == ':' || unicode.IsLetter(rune(ch)) || unicode.IsDigit(rune(ch))
+}
+
+func (p *TemplateParser) canParseAtComponentCall() bool {
+	if p.pos >= len(p.input) || p.input[p.pos] != '@' {
+		return false
+	}
+	i := p.pos + 1
+	if i >= len(p.input) || !isIdentifierStart(p.input[i]) {
+		return false
+	}
+	for i < len(p.input) && isIdentifierPart(p.input[i]) {
+		i++
+	}
+	for i < len(p.input) && unicode.IsSpace(rune(p.input[i])) {
+		i++
+	}
+	return i < len(p.input) && p.input[i] == '('
 }
