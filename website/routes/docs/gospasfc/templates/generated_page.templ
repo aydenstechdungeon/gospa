@@ -8,25 +8,25 @@ import "github.com/aydenstechdungeon/gospa/website/components"
 
 templ Page() {
 
-	<div data-gospa-island="kiloworktreesflaxenbestsellerwebsiteroutesdocsgospasfctemplatespage" class="gospa-e66f">
-		<div class="space-y-12 gospa-e66f">
-		<header class="gospa-e66f ">
-			<div class="flex items-center gap-2 mb-4 gospa-e66f">
-				<span class="px-2 py-1 rounded bg-[var(--accent-primary)]/10 text-[var(--accent-primary)] text-xs font-bold uppercase tracking-wider gospa-e66f">Features</span>
-				<span class="text-[var(--text-muted)] text-sm gospa-e66f">/</span>
-				<span class="text-[var(--text-muted)] text-sm font-medium gospa-e66f">Gospa SFC</span>
+	<div data-gospa-island="kiloworktreesfansortwebsiteroutesdocsgospasfctemplatespage" class="gospa-e4e7">
+		<div class="space-y-12 gospa-e4e7">
+		<header class="gospa-e4e7 ">
+			<div class="flex items-center gap-2 mb-4 gospa-e4e7">
+				<span class="px-2 py-1 rounded bg-[var(--accent-primary)]/10 text-[var(--accent-primary)] text-xs font-bold uppercase tracking-wider gospa-e4e7">Features</span>
+				<span class="text-[var(--text-muted)] text-sm gospa-e4e7">/</span>
+				<span class="text-[var(--text-muted)] text-sm font-medium gospa-e4e7">Gospa SFC</span>
 			</div>
-			<h1 class="text-4xl font-bold tracking-tight mb-4 text-transparent bg-clip-text bg-gradient-to-r from-[var(--accent-primary)] to-[var(--accent-secondary)] gospa-e66f">Template Syntax</h1>
-			<p class="text-xl text-[var(--text-secondary)] leading-relaxed gospa-e66f">
+			<h1 class="text-4xl font-bold tracking-tight mb-4 text-transparent bg-clip-text bg-gradient-to-r from-[var(--accent-primary)] to-[var(--accent-secondary)] gospa-e4e7">Template Syntax</h1>
+			<p class="text-xl text-[var(--text-secondary)] leading-relaxed gospa-e4e7">
 				Seamless Go templates with reactive interactive features.
 			</p>
 		</header>
 
-		<section class="space-y-8 gospa-e66f">
-			<div class="gospa-e66f ">
-				<h2 class="text-2xl font-bold mb-4 border-b border-[var(--border)] pb-2 italic mono gospa-e66f">Standard Go in Templates</h2>
-				<p class="text-[var(--text-secondary)] mb-6 gospa-e66f">
-					GoSPA SFC templates use the familiar Templ syntax. Any Go variable or function available in your <code class="gospa-e66f ">&lt;script lang="go"&gt;</code> block can be used directly in the template.
+		<section class="space-y-8 gospa-e4e7">
+			<div class="gospa-e4e7 ">
+				<h2 class="text-2xl font-bold mb-4 border-b border-[var(--border)] pb-2 italic mono gospa-e4e7">Standard Go in Templates</h2>
+				<p class="text-[var(--text-secondary)] mb-6 gospa-e4e7">
+					GoSPA SFC templates use the familiar Templ syntax. Any Go variable or function available in your <code class="gospa-e4e7 ">&lt;script lang="go"&gt;</code> block can be used directly in the template.
 				</p>
 				@components.CodeBlock(`<template>
   <div class="user-profile">
@@ -36,10 +36,10 @@ templ Page() {
 </template>`, "svelte", "Profile.gospa")
 			</div>
 
-			<div class="gospa-e66f ">
-				<h2 class="text-2xl font-bold mb-4 border-b border-[var(--border)] pb-2 italic mono gospa-e66f">Control Flow</h2>
-				<p class="text-[var(--text-secondary)] mb-6 gospa-e66f">
-					Directly include Go control flow logic within your templates using Templ's <code class="gospa-e66f ">if</code>, <code class="gospa-e66f ">else</code>, and <code class="gospa-e66f ">for</code> directives.
+			<div class="gospa-e4e7 ">
+				<h2 class="text-2xl font-bold mb-4 border-b border-[var(--border)] pb-2 italic mono gospa-e4e7">Control Flow</h2>
+				<p class="text-[var(--text-secondary)] mb-6 gospa-e4e7">
+					Directly include Go control flow logic within your templates using Templ's <code class="gospa-e4e7 ">if</code>, <code class="gospa-e4e7 ">else</code>, and <code class="gospa-e4e7 ">for</code> directives.
 				</p>
 				@components.CodeBlock(`<template>
   {if count > 10}
@@ -56,31 +56,31 @@ templ Page() {
 </template>`, "svelte", "Control.gospa")
 			</div>
 
-			<div class="gospa-e66f ">
-				<h2 class="text-2xl font-bold mb-4 border-b border-[var(--border)] pb-2 italic mono gospa-e66f">Event Binding</h2>
-				<p class="text-[var(--text-secondary)] mb-6 gospa-e66f">
-					Bind user interactions to Go functions or TypeScript actions using the <code class="gospa-e66f ">on:&lt;event&gt;</code> syntax.
+			<div class="gospa-e4e7 ">
+				<h2 class="text-2xl font-bold mb-4 border-b border-[var(--border)] pb-2 italic mono gospa-e4e7">Event Binding</h2>
+				<p class="text-[var(--text-secondary)] mb-6 gospa-e4e7">
+					Bind user interactions to Go functions or TypeScript actions using the <code class="gospa-e4e7 ">on:&lt;event&gt;</code> syntax.
 				</p>
-				<table class="w-full text-sm text-left text-[var(--text-secondary)] mb-6 gospa-e66f">
-					<thead class="text-xs uppercase bg-[var(--bg-secondary)] text-[var(--text-primary)] gospa-e66f">
-						<tr class="gospa-e66f "><th class="px-4 py-2 gospa-e66f">Event</th><th class="px-4 py-2 gospa-e66f">Binding Example</th><th class="px-4 py-2 gospa-e66f">Effect</th></tr>
+				<table class="w-full text-sm text-left text-[var(--text-secondary)] mb-6 gospa-e4e7">
+					<thead class="text-xs uppercase bg-[var(--bg-secondary)] text-[var(--text-primary)] gospa-e4e7">
+						<tr class="gospa-e4e7 "><th class="px-4 py-2 gospa-e4e7">Event</th><th class="px-4 py-2 gospa-e4e7">Binding Example</th><th class="px-4 py-2 gospa-e4e7">Effect</th></tr>
 					</thead>
-					<tbody class="gospa-e66f ">
-						<tr class="border-b border-[var(--border)] gospa-e66f"><td class="px-4 py-2 gospa-e66f">Click</td><td class="px-4 py-2 font-mono gospa-e66f">on:click=&lcub;handleClick&rcub;</td><td class="px-4 py-2 gospa-e66f">Triggered on mouse click.</td></tr>
-						<tr class="border-b border-[var(--border)] gospa-e66f"><td class="px-4 py-2 gospa-e66f">Input</td><td class="px-4 py-2 font-mono gospa-e66f">on:input=&lcub;updateValue&rcub;</td><td class="px-4 py-2 gospa-e66f">Triggered on value change.</td></tr>
-						<tr class="border-b border-[var(--border)] gospa-e66f"><td class="px-4 py-2 gospa-e66f">Submit</td><td class="px-4 py-2 font-mono gospa-e66f">on:submit=&lcub;handleForm&rcub;</td><td class="px-4 py-2 gospa-e66f">Triggered on form submission.</td></tr>
+					<tbody class="gospa-e4e7 ">
+						<tr class="border-b border-[var(--border)] gospa-e4e7"><td class="px-4 py-2 gospa-e4e7">Click</td><td class="px-4 py-2 font-mono gospa-e4e7">on:click=&lcub;handleClick&rcub;</td><td class="px-4 py-2 gospa-e4e7">Triggered on mouse click.</td></tr>
+						<tr class="border-b border-[var(--border)] gospa-e4e7"><td class="px-4 py-2 gospa-e4e7">Input</td><td class="px-4 py-2 font-mono gospa-e4e7">on:input=&lcub;updateValue&rcub;</td><td class="px-4 py-2 gospa-e4e7">Triggered on value change.</td></tr>
+						<tr class="border-b border-[var(--border)] gospa-e4e7"><td class="px-4 py-2 gospa-e4e7">Submit</td><td class="px-4 py-2 font-mono gospa-e4e7">on:submit=&lcub;handleForm&rcub;</td><td class="px-4 py-2 gospa-e4e7">Triggered on form submission.</td></tr>
 					</tbody>
 				</table>
 			</div>
 
-			<div class="flex justify-between items-center pt-8 gospa-e66f">
-				<a href="/docs/gospasfc/reactivity" class="flex flex-col items-start gap-1 p-4 rounded-xl border border-[var(--border)] hover:bg-[var(--bg-secondary)] transition-all gospa-e66f">
-					<span class="text-xs text-[var(--text-muted)] font-bold uppercase tracking-widest gospa-e66f">Previous</span>
-					<span class="font-bold text-[var(--accent-primary)] gospa-e66f">Runes & Reactivity</span>
+			<div class="flex justify-between items-center pt-8 gospa-e4e7">
+				<a href="/docs/gospasfc/reactivity" class="flex flex-col items-start gap-1 p-4 rounded-xl border border-[var(--border)] hover:bg-[var(--bg-secondary)] transition-all gospa-e4e7">
+					<span class="text-xs text-[var(--text-muted)] font-bold uppercase tracking-widest gospa-e4e7">Previous</span>
+					<span class="font-bold text-[var(--accent-primary)] gospa-e4e7">Runes & Reactivity</span>
 				</a>
-				<a href="/docs/gospasfc/styles" class="flex flex-col items-end gap-1 p-4 rounded-xl border border-[var(--border)] hover:bg-[var(--bg-secondary)] transition-all gospa-e66f">
-					<span class="text-xs text-[var(--text-muted)] font-bold uppercase tracking-widest gospa-e66f">Next</span>
-					<span class="font-bold text-[var(--accent-primary)] gospa-e66f">Scoped CSS</span>
+				<a href="/docs/gospasfc/styles" class="flex flex-col items-end gap-1 p-4 rounded-xl border border-[var(--border)] hover:bg-[var(--bg-secondary)] transition-all gospa-e4e7">
+					<span class="text-xs text-[var(--text-muted)] font-bold uppercase tracking-widest gospa-e4e7">Next</span>
+					<span class="font-bold text-[var(--accent-primary)] gospa-e4e7">Scoped CSS</span>
 				</a>
 			</div>
 		</section>

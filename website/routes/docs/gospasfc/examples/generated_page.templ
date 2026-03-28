@@ -8,28 +8,28 @@ import "github.com/aydenstechdungeon/gospa/website/components"
 
 templ Page() {
 
-	<div data-gospa-island="kiloworktreesflaxenbestsellerwebsiteroutesdocsgospasfcexamplespage" class="gospa-3f1f">
-		<div class="space-y-12 gospa-3f1f">
-		<header class="gospa-3f1f ">
-			<div class="flex items-center gap-2 mb-4 gospa-3f1f">
-				<span class="px-2 py-1 rounded bg-[var(--accent-primary)]/10 text-[var(--accent-primary)] text-xs font-bold uppercase tracking-wider gospa-3f1f">Features</span>
-				<span class="text-[var(--text-muted)] text-sm gospa-3f1f">/</span>
-				<span class="text-[var(--text-muted)] text-sm font-medium gospa-3f1f">Gospa SFC</span>
+	<div data-gospa-island="kiloworktreesfansortwebsiteroutesdocsgospasfcexamplespage" class="gospa-546b">
+		<div class="space-y-12 gospa-546b">
+		<header class="gospa-546b ">
+			<div class="flex items-center gap-2 mb-4 gospa-546b">
+				<span class="px-2 py-1 rounded bg-[var(--accent-primary)]/10 text-[var(--accent-primary)] text-xs font-bold uppercase tracking-wider gospa-546b">Features</span>
+				<span class="text-[var(--text-muted)] text-sm gospa-546b">/</span>
+				<span class="text-[var(--text-muted)] text-sm font-medium gospa-546b">Gospa SFC</span>
 			</div>
-			<h1 class="text-4xl font-bold tracking-tight mb-4 text-transparent bg-clip-text bg-gradient-to-r from-[var(--accent-primary)] to-[var(--accent-secondary)] gospa-3f1f">How-to Guides & Examples</h1>
-			<p class="text-xl text-[var(--text-secondary)] leading-relaxed gospa-3f1f">
+			<h1 class="text-4xl font-bold tracking-tight mb-4 text-transparent bg-clip-text bg-gradient-to-r from-[var(--accent-primary)] to-[var(--accent-secondary)] gospa-546b">How-to Guides & Examples</h1>
+			<p class="text-xl text-[var(--text-secondary)] leading-relaxed gospa-546b">
 				Practical recipes for building common UI patterns with Gospa SFC.
 			</p>
 		</header>
 
-		<section class="space-y-12 gospa-3f1f">
-			<div class="gospa-3f1f ">
-				<h2 class="text-2xl font-bold mb-4 flex items-center gap-3 gospa-3f1f">
-					<div class="w-8 h-8 rounded-lg bg-cyan-500/10 flex items-center justify-center text-cyan-500 text-sm gospa-3f1f">01</div>
+		<section class="space-y-12 gospa-546b">
+			<div class="gospa-546b ">
+				<h2 class="text-2xl font-bold mb-4 flex items-center gap-3 gospa-546b">
+					<div class="w-8 h-8 rounded-lg bg-cyan-500/10 flex items-center justify-center text-cyan-500 text-sm gospa-546b">01</div>
 					Multi-Step Form
 				</h2>
-				<p class="text-[var(--text-secondary)] mb-6 gospa-3f1f">
-					Manage complex form state using the <code class="gospa-3f1f ">$state</code> rune and conditional rendering.
+				<p class="text-[var(--text-secondary)] mb-6 gospa-546b">
+					Manage complex form state using the <code class="gospa-546b ">$state</code> rune and conditional rendering.
 				</p>
 				@components.CodeBlock(`<script lang="go">
   var step = $state(1)
@@ -66,13 +66,13 @@ templ Page() {
 </template>`, "svelte", "MultiStepForm.gospa")
 			</div>
 
-			<div class="gospa-3f1f ">
-				<h2 class="text-2xl font-bold mb-4 flex items-center gap-3 gospa-3f1f">
-					<div class="w-8 h-8 rounded-lg bg-purple-500/10 flex items-center justify-center text-purple-500 text-sm gospa-3f1f">02</div>
+			<div class="gospa-546b ">
+				<h2 class="text-2xl font-bold mb-4 flex items-center gap-3 gospa-546b">
+					<div class="w-8 h-8 rounded-lg bg-purple-500/10 flex items-center justify-center text-purple-500 text-sm gospa-546b">02</div>
 					Real-time Search Filter
 				</h2>
-				<p class="text-[var(--text-secondary)] mb-6 gospa-3f1f">
-					Use <code class="gospa-3f1f ">$derived</code> to automatically filter a list based on user input.
+				<p class="text-[var(--text-secondary)] mb-6 gospa-546b">
+					Use <code class="gospa-546b ">$derived</code> to automatically filter a list based on user input.
 				</p>
 				@components.CodeBlock(`<script lang="go">
   var query = $state("")
@@ -101,13 +101,13 @@ templ Page() {
 </template>`, "svelte", "SearchFilter.gospa")
 			</div>
 
-			<div class="gospa-3f1f ">
-				<h2 class="text-2xl font-bold mb-4 flex items-center gap-3 gospa-3f1f">
-					<div class="w-8 h-8 rounded-lg bg-orange-500/10 flex items-center justify-center text-orange-500 text-sm gospa-3f1f">03</div>
+			<div class="gospa-546b ">
+				<h2 class="text-2xl font-bold mb-4 flex items-center gap-3 gospa-546b">
+					<div class="w-8 h-8 rounded-lg bg-orange-500/10 flex items-center justify-center text-orange-500 text-sm gospa-546b">03</div>
 					Using JS Libraries (e.g. Chart.js)
 				</h2>
-				<p class="text-[var(--text-secondary)] mb-6 gospa-3f1f">
-					Integrate external JavaScript libraries using the <code class="gospa-3f1f ">$effect</code> rune to initialize them after the component hydrates.
+				<p class="text-[var(--text-secondary)] mb-6 gospa-546b">
+					Integrate external JavaScript libraries using the <code class="gospa-546b ">$effect</code> rune to initialize them after the component hydrates.
 				</p>
 				@components.CodeBlock(`<script lang="go">
   var data = $state([]int{10, 20, 30})
@@ -128,12 +128,12 @@ templ Page() {
 </template>`, "svelte", "Chart.gospa")
 			</div>
 
-			<div class="gospa-3f1f ">
-				<h2 class="text-2xl font-bold mb-4 flex items-center gap-3 gospa-3f1f">
-					<div class="w-8 h-8 rounded-lg bg-blue-500/10 flex items-center justify-center text-blue-500 text-sm gospa-3f1f">04</div>
+			<div class="gospa-546b ">
+				<h2 class="text-2xl font-bold mb-4 flex items-center gap-3 gospa-546b">
+					<div class="w-8 h-8 rounded-lg bg-blue-500/10 flex items-center justify-center text-blue-500 text-sm gospa-546b">04</div>
 					Mixed Go + TypeScript Logic
 				</h2>
-				<p class="text-[var(--text-secondary)] mb-6 gospa-3f1f">
+				<p class="text-[var(--text-secondary)] mb-6 gospa-546b">
 					Handle data on the server with Go and perform complex client-side calculations or DOM manipulations with TypeScript.
 				</p>
 				@components.CodeBlock(`<script lang="go">
@@ -161,12 +161,12 @@ templ Page() {
 </template>`, "svelte", "MixedLogic.gospa")
 			</div>
 
-			<div class="flex justify-between items-center pt-8 gospa-3f1f">
-				<a href="/docs/gospasfc/typescript" class="flex flex-col items-start gap-1 p-4 rounded-xl border border-[var(--border)] hover:bg-[var(--bg-secondary)] transition-all gospa-3f1f">
-					<span class="text-xs text-[var(--text-muted)] font-bold uppercase tracking-widest gospa-3f1f">Previous</span>
-					<span class="font-bold text-[var(--accent-primary)] gospa-3f1f">TypeScript Integration</span>
+			<div class="flex justify-between items-center pt-8 gospa-546b">
+				<a href="/docs/gospasfc/typescript" class="flex flex-col items-start gap-1 p-4 rounded-xl border border-[var(--border)] hover:bg-[var(--bg-secondary)] transition-all gospa-546b">
+					<span class="text-xs text-[var(--text-muted)] font-bold uppercase tracking-widest gospa-546b">Previous</span>
+					<span class="font-bold text-[var(--accent-primary)] gospa-546b">TypeScript Integration</span>
 				</a>
-				<div class="w-1/2 gospa-3f1f"></div>
+				<div class="w-1/2 gospa-546b"></div>
 			</div>
 		</section>
 	</div>
