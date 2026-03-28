@@ -9,6 +9,7 @@ import "github.com/a-h/templ"
 import templruntime "github.com/a-h/templ/runtime"
 
 import (
+	"fmt"
 	"github.com/aydenstechdungeon/gospa/plugin/postcss"
 	"github.com/aydenstechdungeon/gospa/website/components"
 	"strings"
