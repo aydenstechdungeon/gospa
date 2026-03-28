@@ -3,10 +3,10 @@
 package plugin
 
 import (
-	"encoding/json"
-	"fmt"
 	"crypto/sha256"
 	"encoding/hex"
+	"encoding/json"
+	"fmt"
 	"io"
 	"os"
 	"os/exec"
@@ -22,6 +22,10 @@ type ExternalPluginLoader struct {
 	allowMutableRefs bool
 	expectedRef      string
 	checksumSHA256   string
+	// requireChecksum enforces that ExpectChecksum() has been called before
+	// LoadFromGitHub(). When true, loading without a checksum is a hard error.
+	// Use RequireChecksum() to enable this for production environments.
+	requireChecksum bool
 }
 
 // NewExternalPluginLoader creates a new loader with the default cache directory.
@@ -57,6 +61,15 @@ func (l *ExternalPluginLoader) ExpectResolvedRef(ref string) *ExternalPluginLoad
 // ExpectChecksum ensures the downloaded plugin's content matches the provided SHA-256 hash.
 func (l *ExternalPluginLoader) ExpectChecksum(sha string) *ExternalPluginLoader {
 	l.checksumSHA256 = strings.ToLower(strings.TrimSpace(sha))
+	return l
+}
+
+// RequireChecksum enables enforcement mode: LoadFromGitHub will return an error
+// if ExpectChecksum() has not been called with a non-empty value.
+// Use this in production environments to prevent supply-chain attacks via
+// unauthenticated plugin downloads.
+func (l *ExternalPluginLoader) RequireChecksum() *ExternalPluginLoader {
+	l.requireChecksum = true
 	return l
 }
 
@@ -107,6 +120,11 @@ func ParsePluginRef(ref string) (owner, repo, version string, err error) {
 //   - owner/repo
 //   - owner/repo@version
 func (l *ExternalPluginLoader) LoadFromGitHub(ref string) (Plugin, error) {
+	// SECURITY: In enforced mode a checksum is mandatory before any download.
+	if l.requireChecksum && l.checksumSHA256 == "" {
+		return nil, fmt.Errorf("plugin integrity enforcement is enabled but no checksum was provided via ExpectChecksum(); refusing to load %q", ref)
+	}
+
 	owner, repo, version, err := ParsePluginRef(ref)
 	if err != nil {
 		return nil, fmt.Errorf("failed to parse plugin reference: %w", err)

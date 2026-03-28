@@ -13,7 +13,7 @@ import (
 )
 
 // Version is the current version of GoSPA.
-const Version = "0.1.31"
+const Version = "0.1.32"
 
 // Serialization formats
 const (
@@ -168,6 +168,10 @@ type Config struct {
 	// AllowInsecureWS allows unsecure ws:// connections even on https:// pages.
 	// This is useful for development setups with reverse proxies that don't support wss://.
 	AllowInsecureWS    bool
+	// AllowPortsWithInsecureWS allows unsecure ws:// connections for these specific ports, even on https:// pages.
+	// This is useful for development setups with reverse proxies that don't support wss://.
+	// Defaults to []int{3000}.
+	AllowPortsWithInsecureWS []int
 	SSGCacheMaxEntries int           // Default: 500
 	SSGCacheTTL        time.Duration // Default: 0 (no expiry)
 
@@ -193,24 +197,25 @@ type Config struct {
 // DefaultConfig returns the default configuration.
 func DefaultConfig() Config {
 	return Config{
-		RoutesDir:             "./routes",
-		DevMode:               false,
-		RuntimeScript:         "/_gospa/runtime.js",
-		StaticDir:             "./static",
-		StaticPrefix:          "/static",
-		AppName:               "GoSPA App",
-		DefaultState:          make(map[string]interface{}),
-		EnableWebSocket:       true,
-		WebSocketPath:         "/_gospa/ws",
-		RemotePrefix:          "/_gospa/remote",
-		MaxRequestBodySize:    4 * 1024 * 1024,
-		SerializationFormat:   SerializationJSON,
-		EnableCSRF:            true,
-		ContentSecurityPolicy: fiber.DefaultContentSecurityPolicy,
+		RoutesDir:              "./routes",
+		DevMode:                false,
+		RuntimeScript:          "/_gospa/runtime.js",
+		StaticDir:              "./static",
+		StaticPrefix:           "/static",
+		AppName:                "GoSPA App",
+		DefaultState:           make(map[string]interface{}),
+		EnableWebSocket:        true,
+		WebSocketPath:          "/_gospa/ws",
+		RemotePrefix:           "/_gospa/remote",
+		MaxRequestBodySize:     4 * 1024 * 1024,
+		SerializationFormat:    SerializationJSON,
+		EnableCSRF:             true,
+		ContentSecurityPolicy:  fiber.DefaultContentSecurityPolicy,
 		ISRSemaphoreLimit:      10,
 		ISRTimeout:             60 * time.Second,
 		NotificationBufferSize: 1024,
 		AllowInsecureWS:        os.Getenv("GOSPA_WS_INSECURE") == "1",
+		AllowPortsWithInsecureWS: []int{3000},
 	}
 }
 

@@ -123,7 +123,6 @@ func generateTypesWithConfig(config *GenerateConfig) error {
 	return nil
 }
 
-
 func compileSFCs(config *GenerateConfig) error {
 	sourceFiles, err := findSourceFiles(config.InputDir)
 	if err != nil {
@@ -226,7 +225,6 @@ type TypeScriptField struct {
 	Optional bool
 }
 
-
 func findStateFiles(dir string) ([]string, error) {
 	var files []string
 
@@ -235,13 +233,20 @@ func findStateFiles(dir string) ([]string, error) {
 			return err
 		}
 
-		// Skip vendor and generated directories
-		if info.IsDir() && (info.Name() == "vendor" || info.Name() == "generated" || info.Name() == "node_modules") {
-			return filepath.SkipDir
+		if info.IsDir() {
+			// Skip hidden directories (e.g., .kilo, .git, .github)
+			if strings.HasPrefix(info.Name(), ".") && info.Name() != "." {
+				return filepath.SkipDir
+			}
+			// Skip vendor and generated directories
+			if info.Name() == "vendor" || info.Name() == "generated" || info.Name() == "node_modules" {
+				return filepath.SkipDir
+			}
+			return nil
 		}
 
 		// Look for Go files that might contain state structs
-		if !info.IsDir() && strings.HasSuffix(path, ".go") {
+		if strings.HasSuffix(path, ".go") {
 			files = append(files, path)
 		}
 
@@ -259,7 +264,15 @@ func findSourceFiles(dir string) ([]string, error) {
 			return err
 		}
 
-		if !info.IsDir() && (strings.HasSuffix(path, ".templ") || strings.HasSuffix(path, ".gospa")) {
+		if info.IsDir() {
+			// Skip hidden directories (e.g., .kilo, .git, .github)
+			if strings.HasPrefix(info.Name(), ".") && info.Name() != "." {
+				return filepath.SkipDir
+			}
+			return nil
+		}
+
+		if strings.HasSuffix(path, ".templ") || strings.HasSuffix(path, ".gospa") {
 			files = append(files, path)
 		}
 
@@ -376,7 +389,6 @@ func convertGoTypeToTS(expr ast.Expr) string {
 	}
 }
 
-
 func writeTypeScriptFile(outputDir string, types map[string]TypeScriptType) error {
 	var sb strings.Builder
 
@@ -412,4 +424,3 @@ func writeTypeScriptFile(outputDir string, types map[string]TypeScriptType) erro
 	outputPath := filepath.Join(outputDir, "types.ts")
 	return os.WriteFile(outputPath, []byte(sb.String()), 0600)
 }
-

@@ -32,12 +32,13 @@ Mark an element as an island using `data-gospa-island`:
 | `data-gospa-island` | string | **Required.** Island name — maps to `/islands/{name}.js` |
 | `data-gospa-mode` | string | Hydration mode (see below, default: `immediate`) |
 | `data-gospa-priority` | string | Queue priority: `high`, `normal`, `low` (default: `normal`) |
-| `data-gospa-props` | JSON | Props passed to `hydrate(element, props, state)` |
-| `data-gospa-state` | JSON | State passed to `hydrate(element, props, state)` |
 | `data-gospa-threshold` | number | Intersection margin in px for `visible` mode (default: 200) |
 | `data-gospa-defer` | number | ms delay for `idle` mode (default: 2000) |
 | `data-gospa-client-only` | boolean | Skip server rendering entirely |
 | `data-gospa-server-only` | boolean | Never hydrate — render only |
+
+> [!NOTE]
+> Initial props and state are now served via a centralized `window.__GOSPA_DATA__` registry to reduce DOM bloat. Individual `data-gospa-props` attributes are deprecated but still supported for manually injected islands.
 
 ### Hydration Modes
 
@@ -80,6 +81,17 @@ export default {
 ```
 
 Both `hydrate` and `mount` are accepted (either on the default export or as named exports). `hydrate` takes precedence.
+
+---
+
+## Event Delegation
+
+GoSPA uses **root-level event delegation** for island events. This means `on:click`, `on:input`, etc., do not attach listeners to individual DOM nodes. Instead, a single listener at the root manages all island events.
+
+Benefits:
+- **Zero Listener Overhead**: Memory usage stays flat regardless of component count.
+- **Instant Interaction**: Events work even before specific island JS has loaded (if handlers are globally registered).
+- **Smooth Hydration**: No need to re-bind listeners after DOM updates.
 
 ---
 

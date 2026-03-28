@@ -18,10 +18,10 @@ import (
 
 // HMRConfig configures the HMR system.
 type HMRConfig struct {
-	Enabled      bool          `json:"enabled"`
-	WatchPaths   []string      `json:"watchPaths"`
-	IgnorePaths  []string      `json:"ignorePaths"`
-	DebounceTime time.Duration `json:"debounceTime"`
+	Enabled         bool          `json:"enabled"`
+	WatchPaths      []string      `json:"watchPaths"`
+	IgnorePaths     []string      `json:"ignorePaths"`
+	DebounceTime    time.Duration `json:"debounceTime"`
 	BroadcastAll    bool          `json:"broadcastAll"`
 	AllowInsecureWS bool          `json:"allowInsecureWS"`
 }

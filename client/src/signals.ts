@@ -80,7 +80,7 @@ export function reactive<T extends object>(initial: T): T {
       return value;
     },
 
-    set(target, prop, value, receiver) {
+    set(target, prop, value, _receiver) {
       // Don't allow setting internal symbols
       if (prop === REACTIVE_SYMBOL || prop === RAW_SYMBOL) {
         return false;
@@ -123,7 +123,7 @@ export function reactive<T extends object>(initial: T): T {
       return rawValues.has(prop) || Reflect.has(target, prop);
     },
 
-    ownKeys(target) {
+    ownKeys(_target) {
       return Array.from(rawValues.keys()).filter(
         (k) => typeof k === "string",
       ) as string[];

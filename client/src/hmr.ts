@@ -36,7 +36,6 @@ type HMRUpdateHandler = (msg: HMRMessage) => void | Promise<void>;
 type HMRErrorHandler = (error: string) => void;
 
 // State preservation function type
-type StatePreservationFn = () => Record<string, unknown>;
 
 // HMR Client Configuration
 interface HMRClientConfig {
@@ -165,7 +164,7 @@ export class HMRClient {
       this.scheduleReconnect();
     };
 
-    this.ws.onerror = (error) => {
+    this.ws.onerror = (_error) => {
       this.isConnecting = false;
       this.config.onError("WebSocket error");
     };
@@ -340,11 +339,7 @@ export class HMRClient {
       if (!isSafeMergeKey(key)) continue;
       if (key in module.exports && typeof module.exports[key] === "object") {
         const currentValue = module.exports[key] as Record<string, unknown>;
-        if (
-          value &&
-          typeof value === "object" &&
-          !Array.isArray(value)
-        ) {
+        if (value && typeof value === "object" && !Array.isArray(value)) {
           for (const [nestedKey, nestedValue] of Object.entries(value)) {
             if (!isSafeMergeKey(nestedKey)) continue;
             currentValue[nestedKey] = nestedValue;
@@ -447,7 +442,7 @@ export class HMRClient {
     if (!this.broadcastChannel) return;
 
     const allStates: Record<string, unknown> = {};
-    for (const [moduleId, module] of Object.entries(this.moduleRegistry)) {
+    for (const moduleId of Object.keys(this.moduleRegistry)) {
       const state = this.extractModuleState(moduleId);
       if (state) allStates[moduleId] = state;
     }
@@ -625,11 +620,7 @@ export class HMRClient {
         if (!isSafeMergeKey(key)) continue;
         if (key in module.exports && typeof module.exports[key] === "object") {
           const currentValue = module.exports[key] as Record<string, unknown>;
-          if (
-            value &&
-            typeof value === "object" &&
-            !Array.isArray(value)
-          ) {
+          if (value && typeof value === "object" && !Array.isArray(value)) {
             for (const [nestedKey, nestedValue] of Object.entries(value)) {
               if (!isSafeMergeKey(nestedKey)) continue;
               currentValue[nestedKey] = nestedValue;

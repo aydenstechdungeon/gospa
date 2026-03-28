@@ -19,7 +19,11 @@ func (a *App) initSemaphore() {
 }
 
 func (a *App) backgroundRevalidate(cacheKey string, routeSnap interface{}) {
-	route := routeSnap.(*routing.Route)
+	route, ok := routeSnap.(*routing.Route)
+	if !ok {
+		a.Logger().Error("ISR: invalid route snapshot type", "path", cacheKey)
+		return
+	}
 	defer a.isrRevalidating.Delete(cacheKey)
 	select {
 	case a.isrSemaphore <- struct{}{}:

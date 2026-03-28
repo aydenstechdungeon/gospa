@@ -232,10 +232,12 @@ func (rd *ReactiveDetector) detectIslands(line string, lineNum int, result *Dete
 	}
 }
 
+// assignPattern is compiled once at package level to avoid per-call overhead.
+var assignPattern = regexp.MustCompile(`(\w+)\s*:?=`)
+
 // extractVariableName extracts the variable name from a line.
 func (rd *ReactiveDetector) extractVariableName(line string) string {
 	// Look for variable assignment pattern: varName := or varName =
-	assignPattern := regexp.MustCompile(`(\w+)\s*:?=`)
 	matches := assignPattern.FindStringSubmatch(line)
 	if len(matches) > 1 {
 		return matches[1]

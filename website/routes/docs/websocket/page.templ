@@ -121,6 +121,16 @@ count.subscribe(v => console.log('Synced value:', v));`, "typescript", "state.ts
 							<td class="px-4 py-3">false</td>
 							<td class="px-4 py-3">Enable GZIP compression for state updates.</td>
 						</tr>
+						<tr>
+							<td class="px-4 py-3 mono font-bold">AllowInsecureWS</td>
+							<td class="px-4 py-3">false</td>
+							<td class="px-4 py-3">Allow unsecure WS even on HTTPS (e.g. for proxies).</td>
+						</tr>
+						<tr>
+							<td class="px-4 py-3 mono font-bold">AllowPortsWithInsecureWS</td>
+							<td class="px-4 py-3">[3000]</td>
+							<td class="px-4 py-3">Ports permitted to use insecure WS on HTTPS.</td>
+						</tr>
 					</tbody>
 				</table>
 			</div>

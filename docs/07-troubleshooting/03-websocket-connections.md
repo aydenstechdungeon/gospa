@@ -154,10 +154,18 @@ Set `GOSPA_WS_INSECURE=1` before starting your server:
 GOSPA_WS_INSECURE=1 ./dist/server
 ```
 
-When enabled, GoSPA will:
-- Stop complaining about `PublicOrigin` being missing (downgraded to warning).
-- Use `ws://` instead of `wss://` even for requests detected as HTTPS/behind-proxy.
-- Fallback to the current request's `Host` instead of forcing `127.0.0.1` if `PublicOrigin` is missing.
+#### 3. Allow Specific Ports (New in v0.1.32)
+
+By default, GoSPA allows insecure `ws://` connections on port **3000** even if the page is served over HTTPS. You can configure this list:
+
+```go
+app := gospa.New(gospa.Config{
+    // Allow insecure WS on port 3000 (default) and 8080
+    AllowPortsWithInsecureWS: []int{3000, 8080},
+})
+```
+
+This is particularly useful when using a service like Localtunnel or Ngrok that provides an HTTPS URL for your application, but your WebSocket connection is still being made to your local development machine.
 
 ---
 

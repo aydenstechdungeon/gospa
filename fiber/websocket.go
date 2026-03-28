@@ -439,6 +439,8 @@ type WSHub struct {
 	mu               sync.RWMutex
 	pubsub           store.PubSub
 	stop             chan struct{}
+	// stopOnce ensures Close() is idempotent and never panics on double-call.
+	stopOnce sync.Once
 }
 
 // NewWSHub creates a new WebSocket hub.
@@ -553,8 +555,11 @@ func (h *WSHub) Run() {
 }
 
 // Close explicitly stops the WSHub loop.
+// It is safe to call Close multiple times.
 func (h *WSHub) Close() {
-	close(h.stop)
+	h.stopOnce.Do(func() {
+		close(h.stop)
+	})
 }
 
 // BroadcastTo broadcasts a message to specific clients.
@@ -630,6 +635,26 @@ const maxWSMessageSize = 64 * 1024
 // maxActionNameLen is the maximum length of an action name field.
 const maxActionNameLen = 256
 
+// maxJSONDepth is the maximum nesting depth allowed for WebSocket JSON messages.
+const maxJSONDepth = 64
+
+// validateJSONDepth checks that JSON data doesn't exceed the maximum nesting depth.
+func validateJSONDepth(data []byte, maxDepth int) error {
+	depth := 0
+	for _, b := range data {
+		switch b {
+		case '{', '[':
+			depth++
+			if depth > maxDepth {
+				return fmt.Errorf("JSON nesting depth exceeds %d", maxDepth)
+			}
+		case '}', ']':
+			depth--
+		}
+	}
+	return nil
+}
+
 // ReadPump pumps messages from the WebSocket connection to the hub.
 func (c *WSClient) ReadPump(hub *WSHub, onMessage func(*WSClient, WSMessage)) {
 	defer func() {
@@ -652,6 +677,14 @@ func (c *WSClient) ReadPump(hub *WSHub, onMessage func(*WSClient, WSMessage)) {
 				slog.Default().Warn("ws disconnect", "client", c.ID, "err", err)
 			}
 			break
+		}
+
+		// Validate JSON nesting depth to prevent stack overflow attacks
+		if c.format != "msgpack" {
+			if err := validateJSONDepth(message, 64); err != nil {
+				c.SendError("JSON nesting too deep")
+				continue
+			}
 		}
 
 		var msg WSMessage
@@ -729,9 +762,28 @@ func (c *WSClient) Unmarshal(data []byte, v interface{}) error {
 		return c.deserializer(data, v)
 	}
 	if c.format == "msgpack" {
+		// Only allow unmarshaling into known safe types to prevent type confusion attacks.
+		if !isSafeMsgpackTarget(v) {
+			return fmt.Errorf("msgpack: unmarshal into unsupported type %T", v)
+		}
 		return msgpack.Unmarshal(data, v)
 	}
 	return json.Unmarshal(data, v)
+}
+
+// isSafeMsgpackTarget returns true if the target type is a known safe struct type
+// for msgpack deserialization, preventing arbitrary type instantiation.
+func isSafeMsgpackTarget(v interface{}) bool {
+	switch v.(type) {
+	case *WSMessage, *WSStateUpdate, *sessionEntry, *rateBucket:
+		return true
+	}
+	// Allow maps and slices of interface{} (common pattern)
+	switch v.(type) {
+	case *map[string]interface{}, *[]interface{}:
+		return true
+	}
+	return false
 }
 
 // SendJSON sends a message to the client using the configured format.
@@ -1137,8 +1189,14 @@ func WebSocketHandler(config WebSocketConfig) fiberpkg.Handler {
 		client.serializer = config.Serializer
 		client.deserializer = config.Deserializer
 
-		// Register client
-		config.Hub.Register <- client
+		// Register client with timeout to prevent blocking if hub is slow
+		select {
+		case config.Hub.Register <- client:
+		case <-time.After(5 * time.Second):
+			slog.Default().Warn("ws register timeout", "client", connID)
+			_ = c.Close()
+			return
+		}
 
 		// Set up read deadline for initial auth message
 		_ = c.SetReadDeadline(time.Now().Add(10 * time.Second))
@@ -1479,10 +1537,19 @@ func GetActionHandler(name string) (ActionHandler, bool) {
 }
 
 // RegisterOnConnectHandler registers a global connect handler.
-func RegisterOnConnectHandler(handler ConnectHandler) {
+// Returns a function to unregister the handler.
+func RegisterOnConnectHandler(handler ConnectHandler) func() {
 	connectMu.Lock()
 	defer connectMu.Unlock()
 	connectHandlers = append(connectHandlers, handler)
+	idx := len(connectHandlers) - 1
+	return func() {
+		connectMu.Lock()
+		defer connectMu.Unlock()
+		if idx < len(connectHandlers) {
+			connectHandlers = append(connectHandlers[:idx], connectHandlers[idx+1:]...)
+		}
+	}
 }
 
 // callConnectHandlers calls all registered connect handlers.

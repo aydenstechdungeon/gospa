@@ -4,7 +4,6 @@ import {
   remoteAction,
   configureRemote,
   getRemotePrefix,
-  type RemoteResult,
 } from "./remote";
 
 // Mock global fetch

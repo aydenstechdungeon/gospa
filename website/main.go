@@ -18,7 +18,6 @@ import (
 	"github.com/aydenstechdungeon/gospa"
 	"github.com/aydenstechdungeon/gospa/routing"
 	"github.com/gofiber/fiber/v3"
-	"github.com/gofiber/fiber/v3/middleware/compress"
 
 	// Register built-in plugins for runtime features (if any)
 	_ "github.com/aydenstechdungeon/gospa/plugin/image"
@@ -38,20 +37,22 @@ func main() {
 	devMode := getEnvBool("GOSPA_DEV", false)
 
 	app := gospa.New(gospa.Config{
-		RoutesDir:             "./routes",
-		DevMode:               devMode,
-		AppName:               "GoSPA Documentation",
-		CacheTemplates:        !devMode,            // Enable template caching in production
-		DefaultRenderStrategy: routing.StrategySSG, // Make the entire docs site static by default
-		SSGCacheMaxEntries:    -1,                  // Cache all pages without eviction
-		CompressState:         true,                // Compress WebSocket messages
-		StateDiffing:          true,                // Only send state diffs
-		EnableWebSocket:       true,
-		SerializationFormat:   gospa.SerializationMsgPack,
-		WSHeartbeat:           30 * time.Second,
-		WSReconnectDelay:      1 * time.Second,
-		WSMaxReconnect:        5,
-		HydrationMode:         "idle",
+		RoutesDir:                "./routes",
+		DevMode:                  devMode,
+		AppName:                  "GoSPA Documentation",
+		CacheTemplates:           !devMode,            // Enable template caching in production
+		DefaultRenderStrategy:    routing.StrategySSG, // Make the entire docs site static by default
+		SSGCacheMaxEntries:       -1,                  // Cache all pages without eviction
+		CompressState:            true,                // Compress WebSocket messages
+		StateDiffing:             true,                // Only send state diffs
+		EnableWebSocket:          true,
+		SerializationFormat:      gospa.SerializationMsgPack,
+		WSHeartbeat:              30 * time.Second,
+		WSReconnectDelay:         1 * time.Second,
+		WSMaxReconnect:           5,
+		AllowInsecureWS:          true,
+		AllowPortsWithInsecureWS: []int{3000},
+		HydrationMode:            "idle",
 		NavigationOptions: gospa.NavigationOptions{
 			IdleCallbackBatchUpdates: &gospa.NavigationIdleCallbackBatchUpdatesConfig{
 				Enabled: boolPtr(true),
@@ -73,14 +74,10 @@ func main() {
 		},
 	})
 
-	// Add middleware for performance (Link headers, compression, caching)
+	// Add middleware for performance (Link headers, caching)
 	// IMPORTANT: This must come BEFORE routes to catch static assets
+	// We've updated the framework to register static routes later so this works as expected.
 	app.Fiber.Use(cacheMiddleware)
-
-	// Enable Brotli/Gzip compression for all responses
-	app.Fiber.Use(compress.New(compress.Config{
-		Level: compress.LevelBestSpeed,
-	}))
 
 	// Legacy redirects after documentation restructuring
 	app.Fiber.Get("/docs/getstarted", func(c fiber.Ctx) error {
@@ -133,7 +130,7 @@ func cacheMiddleware(c fiber.Ctx) error {
 	if isHTMLPage(path) {
 		// Preload fonts and images
 		links := []string{
-			"</static/fonts/InterVariable.woff2>; rel=preload; as=font; type=font/woff2; crossorigin; fetchpriority=high",
+			"</static/fonts/InterVariable.woff2>; rel=preload; as=font; type=font/woff2; crossorigin=anonymous; fetchpriority=high",
 			"</static/gospa1-64.webp>; rel=preload; as=image; fetchpriority=high",
 		}
 
@@ -173,14 +170,14 @@ func cacheMiddleware(c fiber.Ctx) error {
 		// Set Cache-Control based on file type
 		switch {
 		case isFont || hasContentHash(path):
-			// Fonts and static assets with content hash: 1 year cache, immutable
+			// Critical assets and hashed assets: 1 year cache, immutable
 			c.Set("Cache-Control", "public, max-age=31536000, immutable")
 		case isImage:
-			// Image files without hash: 1 week cache with revalidation
-			c.Set("Cache-Control", "public, max-age=604800, stale-while-revalidate=2419200")
+			// Image files without hash: 30 days cache with revalidation
+			c.Set("Cache-Control", "public, max-age=2592000, stale-while-revalidate=31536000")
 		default:
-			// Other static assets without hash: 1 day cache, revalidate
-			c.Set("Cache-Control", "public, max-age=86400, stale-while-revalidate=604800")
+			// Other static assets (JS/CSS) without hash: 7 days cache, revalidate for 1 year
+			c.Set("Cache-Control", "public, max-age=604800, stale-while-revalidate=31536000")
 		}
 
 		// Generate ETag for conditional requests

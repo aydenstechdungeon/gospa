@@ -57,38 +57,16 @@ import {
   keys,
   transformers,
 } from "./events.ts";
-export {
-  on,
-  offAll,
-  debounce,
-  throttle,
-  delegate,
-  onKey,
-  keys,
-  transformers,
-};
+export { on, offAll, debounce, throttle, delegate, onKey, keys, transformers };
 import {
   initWebSocket,
   getWebSocketClient,
   sendAction,
   type StateMessage,
 } from "./websocket.ts";
-export {
-  initWebSocket,
-  getWebSocketClient,
-  sendAction,
-  type StateMessage,
-};
-import {
-  navigate,
-  back,
-  prefetch,
-} from "./navigation.ts";
-export {
-  navigate,
-  back,
-  prefetch,
-};
+export { initWebSocket, getWebSocketClient, sendAction, type StateMessage };
+import { navigate, back, prefetch } from "./navigation.ts";
+export { navigate, back, prefetch };
 import {
   remote,
   remoteAction,
@@ -212,7 +190,9 @@ export function init(userConfig: Partial<RuntimeConfig> = {}): void {
 // The public GoSPA global object
 const GoSPA = {
   // Configuration
-  get config() { return config; },
+  get config() {
+    return config;
+  },
   components,
   globalState,
   // Core API
@@ -231,20 +211,38 @@ const GoSPA = {
   configureRemote,
   getRemotePrefix,
   // State primitives
-  get Rune() { return Rune; },
-  get Derived() { return Derived; },
-  get Effect() { return Effect; },
-  get StateMap() { return StateMap; },
+  get Rune() {
+    return Rune;
+  },
+  get Derived() {
+    return Derived;
+  },
+  get Effect() {
+    return Effect;
+  },
+  get StateMap() {
+    return StateMap;
+  },
   // Utility functions
   batch,
   effect,
   watch,
   // Events
-  get on() { return on; },
-  get offAll() { return offAll; },
-  get debounce() { return debounce; },
-  get throttle() { return throttle; },
-  get sanitizeHtml() { return sanitizeHtml; },
+  get on() {
+    return on;
+  },
+  get offAll() {
+    return offAll;
+  },
+  get debounce() {
+    return debounce;
+  },
+  get throttle() {
+    return throttle;
+  },
+  get sanitizeHtml() {
+    return sanitizeHtml;
+  },
   // Unified Reactive Store API
   $state,
   $derived,
@@ -327,7 +325,10 @@ export function setState<T>(componentId: string, key: string, value: T): void {
 /**
  * Call a remote action (alias for remote).
  */
-export function callAction<T = any, R = any>(name: string, input?: T): Promise<RemoteResult<R>> {
+export function callAction<T = any, R = any>(
+  name: string,
+  input?: T,
+): Promise<RemoteResult<R>> {
   return remote(name, input);
 }
 
@@ -352,11 +353,15 @@ export function bind(
     const container = element.closest("[data-gospa-state]");
     if (container) {
       try {
-        const initialState = JSON.parse(container.getAttribute("data-gospa-state") || "{}");
+        const initialState = JSON.parse(
+          container.getAttribute("data-gospa-state") || "{}",
+        );
         if (initialState[key] !== undefined) {
           rune = component.states.set(key, initialState[key]);
         }
-      } catch (e) { /* ignore */ }
+      } catch (e) {
+        /* ignore */
+      }
     }
     if (!rune) rune = component.states.set(key, undefined as any);
   }
@@ -376,7 +381,9 @@ export function bind(
 export function createIsland(id: string, name: string): ComponentInstance {
   const instance = createComponent(id, name);
   // Auto-bind elements with data-gospa-bind or data-model
-  const root = document.querySelector(`[data-gospa-component="${name}"][id="${id}"]`) as HTMLElement;
+  const root = document.querySelector(
+    `[data-gospa-component="${name}"][id="${id}"]`,
+  ) as HTMLElement;
   if (root) {
     autoBindIsland(id, root);
   }
@@ -476,7 +483,8 @@ export function autoInit(): void {
       try {
         instance.states.fromJSON(JSON.parse(stateData));
       } catch (e) {
-        if (config.debug) console.error("Error parsing initial state for", name, e);
+        if (config.debug)
+          console.error("Error parsing initial state for", name, e);
       }
     }
 
@@ -516,26 +524,27 @@ if (typeof document !== "undefined") {
 function registerNavigationCleanup(): void {
   if (typeof window === "undefined") return;
 
-  Promise.all([
-    import("./navigation.ts"),
-    import("./island.ts")
-  ]).then(([nav, island]) => {
-    nav.onBeforeNavigate(() => {
-      // Cleanup component instances
-      for (const [id] of components) {
-        destroyComponent(id);
-      }
-      globalState.clear();
+  Promise.all([import("./navigation.ts"), import("./island.ts")])
+    .then(([nav, island]) => {
+      nav.onBeforeNavigate(() => {
+        // Cleanup component instances
+        for (const [id] of components) {
+          destroyComponent(id);
+        }
+        globalState.clear();
 
-      // Cleanup island manager resources
-      island.getIslandManager()?.destroy();
-    });
+        // Cleanup island manager resources
+        island.getIslandManager()?.destroy();
+      });
 
-    // Re-discover islands after navigation completed
-    document.addEventListener("gospa:navigated", () => {
-      island.getIslandManager()?.discoverIslands();
+      // Re-discover islands after navigation completed
+      document.addEventListener("gospa:navigated", () => {
+        island.getIslandManager()?.discoverIslands();
+      });
+    })
+    .catch(() => {
+      /* skip */
     });
-  }).catch(() => { /* skip */ });
 }
 
 if (typeof window !== "undefined") {

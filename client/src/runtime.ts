@@ -72,10 +72,7 @@ export type {
 export type { Unsubscribe } from "./state.ts";
 export type { RemoteOptions, RemoteResult } from "./remote.ts";
 
-import {
-  registerBinding,
-  unregisterBinding,
-} from "./dom.ts";
+import { registerBinding, unregisterBinding } from "./dom.ts";
 import {
   on,
   offAll,
@@ -95,23 +92,10 @@ import {
   applyStateUpdate,
   type StateMessage,
 } from "./websocket.ts";
-import {
-  initIslands,
-  getIslandManager,
-  hydrateIsland,
-} from "./island.ts";
-import {
-  getPriorityScheduler,
-  initPriorityHydration,
-} from "./priority.ts";
-import {
-  initStreaming,
-  getStreamingManager,
-} from "./streaming.ts";
-import {
-  Resource,
-  resourceReactive,
-} from "./resource.ts";
+import { initIslands, getIslandManager, hydrateIsland } from "./island.ts";
+import { getPriorityScheduler, initPriorityHydration } from "./priority.ts";
+import { initStreaming, getStreamingManager } from "./streaming.ts";
+import { Resource, resourceReactive } from "./resource.ts";
 import {
   navigate,
   back,
@@ -198,11 +182,12 @@ export {
 // Export types
 export type { NavigateOptions, NavigationOptions, StateMessage };
 
-// === New Runtime Enhancements ===
-
 // Signal-based reactivity (proxy-based auto-tracking)
 export {
   reactive,
+  $state,
+  $derived,
+  $effect,
   // derived is already exported from runtime-core above
   effect as signalEffect,
   watchProp,
