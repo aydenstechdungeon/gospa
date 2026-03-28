@@ -100,6 +100,10 @@ func scanRoutes(routesDir string) ([]RouteInfo, error) {
 		}
 
 		if info.IsDir() {
+			// Skip hidden directories (e.g., .kilo, .git, .github)
+			if strings.HasPrefix(info.Name(), ".") && info.Name() != "." {
+				return filepath.SkipDir
+			}
 			return nil
 		}
 

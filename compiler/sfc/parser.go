@@ -99,9 +99,9 @@ func Parse(input string) (*SFC, error) {
 				startTagRawLen := len(raw)
 				contentOffset := baseOffset + startTagRawLen
 
-				// Manually find end tag to avoid tokenizer parsing content
+				// Find end tag, skipping over string literals to avoid false matches
 				endTagBytes := []byte("</" + tagName + ">")
-				endIdx := bytes.Index(rawInput[contentOffset:], endTagBytes)
+				endIdx := findEndTagSkippingStrings(rawInput, contentOffset, endTagBytes, stringRanges)
 				if endIdx == -1 {
 					return nil, fmt.Errorf("unclosed <%s> block starting at offset %d", tagName, baseOffset)
 				}
@@ -265,8 +265,9 @@ type stringLiteralRange struct {
 	end   int
 }
 
-// findStringLiteralRanges returns all Go string literal ranges (backtick and double-quoted)
+// findStringLiteralRanges returns all Go string literal ranges (backtick only)
 // in the input. This is used to skip false-positive HTML tags found inside string literals.
+// We only track backtick strings because double-quoted strings are ambiguous with HTML attributes.
 func findStringLiteralRanges(input string) []stringLiteralRange {
 	var ranges []stringLiteralRange
 	i := 0
@@ -279,22 +280,6 @@ func findStringLiteralRanges(input string) []stringLiteralRange {
 			}
 			if i < len(input) {
 				i++ // skip closing `
-				ranges = append(ranges, stringLiteralRange{start, i})
-			}
-		} else if input[i] == '"' {
-			start := i
-			i++ // skip opening "
-			for i < len(input) {
-				if input[i] == '\\' {
-					i += 2 // skip escaped character
-				} else if input[i] == '"' {
-					break
-				} else {
-					i++
-				}
-			}
-			if i < len(input) {
-				i++ // skip closing "
 				ranges = append(ranges, stringLiteralRange{start, i})
 			}
 		} else {
@@ -316,4 +301,25 @@ func isInsideStringLiteral(pos int, ranges []stringLiteralRange) bool {
 		}
 	}
 	return false
+}
+
+// findEndTagSkippingStrings searches for endTagBytes in data starting from offset,
+// skipping over positions that fall within string literal ranges.
+// Returns the index RELATIVE to offset (like bytes.Index), or -1 if not found.
+func findEndTagSkippingStrings(data []byte, offset int, endTagBytes []byte, stringRanges []stringLiteralRange) int {
+	searchStart := offset
+	for searchStart < len(data) {
+		idx := bytes.Index(data[searchStart:], endTagBytes)
+		if idx == -1 {
+			return -1
+		}
+		absIdx := searchStart + idx
+		// Check if this match is inside a string literal
+		if !isInsideStringLiteral(absIdx, stringRanges) {
+			return absIdx - offset // Return relative index
+		}
+		// Skip past this match and continue searching
+		searchStart = absIdx + len(endTagBytes)
+	}
+	return -1
 }

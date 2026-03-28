@@ -32,6 +32,7 @@ import (
 	docsgetstartedstructure "github.com/aydenstechdungeon/gospa/website/routes/docs/getstarted/structure"
 	docsgospasfc "github.com/aydenstechdungeon/gospa/website/routes/docs/gospasfc"
 	docsgospasfcadvanced "github.com/aydenstechdungeon/gospa/website/routes/docs/gospasfc/advanced"
+	docsgospasfcexamples "github.com/aydenstechdungeon/gospa/website/routes/docs/gospasfc/examples"
 	docsgospasfcgettingstarted "github.com/aydenstechdungeon/gospa/website/routes/docs/gospasfc/getting-started"
 	docsgospasfcreactivity "github.com/aydenstechdungeon/gospa/website/routes/docs/gospasfc/reactivity"
 	docsgospasfcstyles "github.com/aydenstechdungeon/gospa/website/routes/docs/gospasfc/styles"
@@ -143,6 +144,9 @@ func init() {
 	})
 	routing.RegisterPage("/docs/gospasfc/advanced", func(props map[string]interface{}) templ.Component {
 		return docsgospasfcadvanced.Page()
+	})
+	routing.RegisterPage("/docs/gospasfc/examples", func(props map[string]interface{}) templ.Component {
+		return docsgospasfcexamples.Page()
 	})
 	routing.RegisterPage("/docs/gospasfc", func(props map[string]interface{}) templ.Component {
 		return docsgospasfc.Page()
