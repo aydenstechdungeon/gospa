@@ -183,7 +183,7 @@ func (c *BaseComponent) Clone() Component {
 	clone := &BaseComponent{
 		id:       c.id + "_clone",
 		name:     c.name,
-		state:    c.state,
+		state:    c.state.Clone(),
 		props:    c.props.Clone(),
 		children: make([]Component, len(c.children)),
 		slots:    make(map[string]Slot),
@@ -333,8 +333,11 @@ func (t *ComponentTree) Remove(id ComponentID) error {
 		parent.RemoveChild(id)
 	}
 
-	// Remove from lookup
+	// Remove from lookup and lifecycle maps
 	delete(t.lookup, id)
+	delete(t.onMount, id)
+	delete(t.onUpdate, id)
+	delete(t.onDestroy, id)
 
 	// Remove children recursively
 	t.removeChildren(component)
@@ -350,6 +353,9 @@ func (t *ComponentTree) removeChildren(c Component) {
 			hook(child)
 		}
 		delete(t.lookup, child.ID())
+		delete(t.onMount, child.ID())
+		delete(t.onUpdate, child.ID())
+		delete(t.onDestroy, child.ID())
 		t.removeChildren(child)
 	}
 }

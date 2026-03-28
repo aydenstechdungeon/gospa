@@ -18,10 +18,11 @@ type Storage interface {
 
 // MemoryStorage provides an in-memory implementation of the Storage interface.
 type MemoryStorage struct {
-	mu    sync.RWMutex
-	store map[string]memoryEntry
-	stop  chan struct{}
-	once  sync.Once
+	mu         sync.RWMutex
+	store      map[string]memoryEntry
+	stop       chan struct{}
+	once       sync.Once
+	maxEntries int // Max entries for zero-TTL keys to prevent unbounded growth
 }
 
 // memoryEntry stores a value and its expiration time.
@@ -33,8 +34,9 @@ type memoryEntry struct {
 // NewMemoryStorage creates a new in-memory storage.
 func NewMemoryStorage() *MemoryStorage {
 	s := &MemoryStorage{
-		store: make(map[string]memoryEntry),
-		stop:  make(chan struct{}),
+		store:      make(map[string]memoryEntry),
+		stop:       make(chan struct{}),
+		maxEntries: 10000, // Safety limit for zero-TTL entries
 	}
 	// Start cleanup goroutine
 	go s.pruneLoop()
@@ -72,6 +74,23 @@ func (s *MemoryStorage) Set(key string, val []byte, exp time.Duration) error {
 	var expiration time.Time
 	if exp > 0 {
 		expiration = time.Now().Add(exp)
+	} else if s.maxEntries > 0 {
+		// Zero-TTL entries never expire; evict oldest zero-exp entries if at capacity
+		zeroTTLCount := 0
+		for _, entry := range s.store {
+			if entry.exp.IsZero() {
+				zeroTTLCount++
+			}
+		}
+		if zeroTTLCount >= s.maxEntries {
+			// Evict the first zero-exp entry found (approximate LRU)
+			for k, entry := range s.store {
+				if entry.exp.IsZero() {
+					delete(s.store, k)
+					break
+				}
+			}
+		}
 	}
 	s.store[key] = memoryEntry{val: val, exp: expiration}
 	s.mu.Unlock()

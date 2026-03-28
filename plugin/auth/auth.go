@@ -631,6 +631,9 @@ func GenerateToken(userID, email, role string) (string, error) {
 // ValidateToken validates a JWT token and returns the claims.
 func ValidateToken(tokenString string) (*Claims, error) {
 	token, err := jwt.ParseWithClaims(tokenString, &Claims{}, func(token *jwt.Token) (interface{}, error) {
+		if _, ok := token.Method.(*jwt.SigningMethodHMAC); !ok {
+			return nil, fmt.Errorf("unexpected signing method: %v", token.Header["alg"])
+		}
 		return getJWTSecret(), nil
 	})
 	if err != nil {
@@ -1422,22 +1425,26 @@ func (p *AuthPlugin) generateOTP(key []byte, counter int64) string {
 func GenerateBackupCodes(count int) ([]string, error) {
 	codes := make([]string, count)
 	for i := 0; i < count; i++ {
-		bytes := make([]byte, 4)
+		bytes := make([]byte, 6)
 		if _, err := rand.Read(bytes); err != nil {
 			return nil, err
 		}
 		code := hex.EncodeToString(bytes)
-		codes[i] = code[:4] + "-" + code[4:]
+		codes[i] = code[:6] + "-" + code[6:]
 	}
 	return codes, nil
 }
 
-// HashBackupCode hashes a backup code using SHA256.
+// HashBackupCode hashes a backup code using HMAC-SHA256 with a per-code salt.
 func HashBackupCode(code string) string {
 	code = strings.ReplaceAll(code, "-", "")
-	h := sha256.New()
-	h.Write([]byte(code))
-	return hex.EncodeToString(h.Sum(nil))
+	salt := make([]byte, 16)
+	if _, err := rand.Read(salt); err != nil {
+		panic("failed to generate salt for backup code hash")
+	}
+	mac := hmac.New(sha256.New, salt)
+	mac.Write([]byte(code))
+	return hex.EncodeToString(salt) + ":" + hex.EncodeToString(mac.Sum(nil))
 }
 
 // GetConfig returns the current configuration.
