@@ -2,15 +2,24 @@
 
 package styles
 
+import "github.com/aydenstechdungeon/gospa/state"
 import "github.com/aydenstechdungeon/gospa/website/components"
 
-
+type PageProps struct {
+}
 
 templ Page() {
 
+
+	if r := state.FromContext(ctx); r != nil {
+		pMap := map[string]interface{}{
+			
+		}
+		r.Register("routesdocsgospasfcstylespage", pMap, nil)
+	}
 	<div data-gospa-island="routesdocsgospasfcstylespage" class="gospa-3184">
 		<div class="space-y-12 gospa-3184">
-		<header class="gospa-3184 ">
+		<header class="gospa-3184">
 			<div class="flex items-center gap-2 mb-4 gospa-3184">
 				<span class="px-2 py-1 rounded bg-[var(--accent-primary)]/10 text-[var(--accent-primary)] text-xs font-bold uppercase tracking-wider gospa-3184">Features</span>
 				<span class="text-[var(--text-muted)] text-sm gospa-3184">/</span>
@@ -23,10 +32,10 @@ templ Page() {
 		</header>
 
 		<section class="space-y-8 gospa-3184">
-			<div class="gospa-3184 ">
+			<div class="gospa-3184">
 				<h2 class="text-2xl font-bold mb-4 border-b border-[var(--border)] pb-2 italic mono gospa-3184">The &lt;style&gt; Block</h2>
 				<p class="text-[var(--text-secondary)] mb-6 gospa-3184">
-					Styles defined within a <code class="gospa-3184 ">.gospa</code> file are automatically scoped to that file by default. A unique hash is generated and appended to your selectors during the build process.
+					Styles defined within a <code class="gospa-3184">.gospa</code> file are automatically scoped to that file by default. A unique hash is generated and appended to your selectors during the build process.
 				</p>
 				@components.CodeBlock(`<style>
   .btn {
@@ -41,10 +50,10 @@ templ Page() {
 </template>`, "svelte", "Button.gospa")
 			</div>
 
-			<div class="gospa-3184 ">
+			<div class="gospa-3184">
 				<h2 class="text-2xl font-bold mb-4 border-b border-[var(--border)] pb-2 italic mono gospa-3184">Global Styles</h2>
 				<p class="text-[var(--text-secondary)] mb-6 gospa-3184">
-					If you need to define styles that affect elements globally, use the <code class="gospa-3184 ">:global()</code> selector. This will prevent the compiler from hashing the selector.
+					If you need to define styles that affect elements globally, use the <code class="gospa-3184">:global()</code> selector. This will prevent the compiler from hashing the selector.
 				</p>
 				@components.CodeBlock(`<style>
   :global(body) {
@@ -58,7 +67,7 @@ templ Page() {
 </style>`, "svelte", "Global.gospa")
 			</div>
 
-			<div class="gospa-3184 ">
+			<div class="gospa-3184">
 				<h2 class="text-2xl font-bold mb-4 border-b border-[var(--border)] pb-2 italic mono gospa-3184">Integration with Utility Frameworks</h2>
 				<p class="text-[var(--text-secondary)] mb-6 gospa-3184">
 					GoSPA works perfectly with **Tailwind CSS**. You can use Tailwind's utility classes directly within your templates alongside scoped styles for specific custom design elements.

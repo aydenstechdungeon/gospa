@@ -462,6 +462,10 @@ func buildStateTreeRecursive(name string, value any, path string) *StateTree {
 		node.Type = "object"
 		node.Children = make(map[string]*StateTree)
 		for key, val := range v {
+			// Guard against self-referencing maps that would cause infinite recursion
+			if val == value {
+				continue
+			}
 			node.Children[key] = buildStateTreeRecursive(key, val, node.Path)
 		}
 	case []any:

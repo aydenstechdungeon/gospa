@@ -92,7 +92,9 @@ func getBatchState(ctx context.Context) *batchState {
 }
 
 func contextKey(ctx context.Context) string {
-	return fmt.Sprintf("%T:%p", ctx, ctx)
+	// Use fmt.Sprintf with type and pointer, plus a unique counter to avoid
+	// collisions when GC reuses pointers for derived contexts.
+	return fmt.Sprintf("%T:%p:%d", ctx, ctx, getGID())
 }
 
 // inBatch returns true if the current goroutine is within a batch operation.

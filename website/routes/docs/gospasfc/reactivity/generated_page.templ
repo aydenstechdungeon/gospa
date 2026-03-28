@@ -2,15 +2,24 @@
 
 package reactivity
 
+import "github.com/aydenstechdungeon/gospa/state"
 import "github.com/aydenstechdungeon/gospa/website/components"
 
-
+type PageProps struct {
+}
 
 templ Page() {
 
+
+	if r := state.FromContext(ctx); r != nil {
+		pMap := map[string]interface{}{
+			
+		}
+		r.Register("routesdocsgospasfcreactivitypage", pMap, nil)
+	}
 	<div data-gospa-island="routesdocsgospasfcreactivitypage" class="gospa-123a">
 		<div class="space-y-12 gospa-123a">
-		<header class="gospa-123a ">
+		<header class="gospa-123a">
 			<div class="flex items-center gap-2 mb-4 gospa-123a">
 				<span class="px-2 py-1 rounded bg-[var(--accent-primary)]/10 text-[var(--accent-primary)] text-xs font-bold uppercase tracking-wider gospa-123a">Features</span>
 				<span class="text-[var(--text-muted)] text-sm gospa-123a">/</span>
@@ -23,7 +32,7 @@ templ Page() {
 		</header>
 
 		<section class="space-y-8 gospa-123a">
-			<div class="gospa-123a ">
+			<div class="gospa-123a">
 				<h2 class="text-2xl font-bold mb-4 border-b border-[var(--border)] pb-2 italic mono gospa-123a">The Core Runes</h2>
 				<p class="text-[var(--text-secondary)] mb-6 gospa-123a">
 					GoSPA introduces a set of reactive primitives called **Runes**. These are available in both Go (server-side logic) and TypeScript (client-side hydration).
@@ -59,23 +68,23 @@ templ Page() {
 </template>`, "svelte", "Counter.gospa")
 			</div>
 
-			<div class="gospa-123a ">
+			<div class="gospa-123a">
 				<h2 class="text-2xl font-bold mb-4 border-b border-[var(--border)] pb-2 italic mono gospa-123a">Advanced Reactivity Concepts</h2>
 				<div class="space-y-6 gospa-123a">
 					<div class="p-6 rounded-xl bg-gradient-to-br from-[var(--bg-secondary)] to-[var(--surface)] border border-[var(--border)] gospa-123a">
 						<h3 class="text-xl font-bold mb-3 flex items-center gap-2 gospa-123a">
-							<svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="text-[var(--accent-primary)] gospa-123a"><path class="gospa-123a " d="M12 2v20"></path><path class="gospa-123a " d="m5 12 7-7 7 7"></path></svg>
+							<svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="text-[var(--accent-primary)] gospa-123a"><path d="M12 2v20" class="gospa-123a"></path><path d="m5 12 7-7 7 7" class="gospa-123a"></path></svg>
 							Cross-Platform Synchronization
 						</h3>
 						<p class="text-[var(--text-secondary)] text-sm mb-4 gospa-123a">
-							When using <code class="gospa-123a ">island</code> components, state initialized in Go is automatically synchronized with the TypeScript client-side runtime during hydration.
+							When using <code class="gospa-123a">island</code> components, state initialized in Go is automatically synchronized with the TypeScript client-side runtime during hydration.
 						</p>
 					</div>
 
 					<div class="p-6 rounded-xl bg-[var(--bg-secondary)] border border-[var(--border)] gospa-123a">
 						<h3 class="text-xl font-bold mb-3 gospa-123a">Reactivity Rules</h3>
 						<ul class="space-y-2 text-sm text-[var(--text-secondary)] gospa-123a">
-							<li class="flex items-start gap-2 gospa-123a"><div class="w-1.5 h-1.5 rounded-full bg-cyan-500 mt-1.5 gospa-123a"></div> States are reactive upon reassignment (<code class="gospa-123a ">count = count + 1</code>).</li>
+							<li class="flex items-start gap-2 gospa-123a"><div class="w-1.5 h-1.5 rounded-full bg-cyan-500 mt-1.5 gospa-123a"></div> States are reactive upon reassignment (<code class="gospa-123a">count = count + 1</code>).</li>
 							<li class="flex items-start gap-2 gospa-123a"><div class="w-1.5 h-1.5 rounded-full bg-cyan-500 mt-1.5 gospa-123a"></div> Derived values are read-only and cache their results.</li>
 							<li class="flex items-start gap-2 gospa-123a"><div class="w-1.5 h-1.5 rounded-full bg-cyan-500 mt-1.5 gospa-123a"></div> Effects only run on the client after hydration is complete.</li>
 						</ul>

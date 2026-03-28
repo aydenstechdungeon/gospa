@@ -2,6 +2,7 @@
  * Client-side island runtime for GoSPA.
  * Handles island detection, hydration orchestration, and priority-based loading.
  */
+import { setupEventDelegation } from "./events";
 
 // Island hydration modes
 export type IslandHydrationMode =
@@ -137,6 +138,10 @@ export class IslandManager {
     } else {
       this.discoverIslands();
     }
+
+    // Setup event delegation on the root element
+    const root = document.getElementById("app") || document.body;
+    setupEventDelegation(root);
   }
 
   /**
@@ -179,21 +184,37 @@ export class IslandManager {
     let props: Record<string, unknown> | undefined;
     let state: Record<string, unknown> | undefined;
 
-    const propsAttr = element.getAttribute("data-gospa-props");
-    if (propsAttr) {
-      try {
-        props = JSON.parse(propsAttr);
-      } catch (e) {
-        this.log("Failed to parse props for island:", name, e);
+    // Try to get data from centralized registry first
+    const registry = (window as any).__GOSPA_DATA__;
+    if (Array.isArray(registry)) {
+      // Find island by ID or by name (if ID is auto-generated)
+      const islandData = registry.find((d: any) => d.id === id || d.id === name);
+      if (islandData) {
+        props = islandData.props;
+        state = islandData.state;
       }
     }
 
-    const stateAttr = element.getAttribute("data-gospa-state");
-    if (stateAttr) {
-      try {
-        state = JSON.parse(stateAttr);
-      } catch (e) {
-        this.log("Failed to parse state for island:", name, e);
+    // Fallback to data attributes if not in registry
+    if (!props) {
+      const propsAttr = element.getAttribute("data-gospa-props");
+      if (propsAttr) {
+        try {
+          props = JSON.parse(propsAttr);
+        } catch (e) {
+          this.log("Failed to parse props for island:", name, e);
+        }
+      }
+    }
+
+    if (!state) {
+      const stateAttr = element.getAttribute("data-gospa-state");
+      if (stateAttr) {
+        try {
+          state = JSON.parse(stateAttr);
+        } catch (e) {
+          this.log("Failed to parse state for island:", name, e);
+        }
       }
     }
 

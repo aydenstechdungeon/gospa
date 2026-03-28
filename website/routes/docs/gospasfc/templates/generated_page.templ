@@ -2,15 +2,24 @@
 
 package templates
 
+import "github.com/aydenstechdungeon/gospa/state"
 import "github.com/aydenstechdungeon/gospa/website/components"
 
-
+type PageProps struct {
+}
 
 templ Page() {
 
+
+	if r := state.FromContext(ctx); r != nil {
+		pMap := map[string]interface{}{
+			
+		}
+		r.Register("routesdocsgospasfctemplatespage", pMap, nil)
+	}
 	<div data-gospa-island="routesdocsgospasfctemplatespage" class="gospa-985f">
 		<div class="space-y-12 gospa-985f">
-		<header class="gospa-985f ">
+		<header class="gospa-985f">
 			<div class="flex items-center gap-2 mb-4 gospa-985f">
 				<span class="px-2 py-1 rounded bg-[var(--accent-primary)]/10 text-[var(--accent-primary)] text-xs font-bold uppercase tracking-wider gospa-985f">Features</span>
 				<span class="text-[var(--text-muted)] text-sm gospa-985f">/</span>
@@ -23,10 +32,10 @@ templ Page() {
 		</header>
 
 		<section class="space-y-8 gospa-985f">
-			<div class="gospa-985f ">
+			<div class="gospa-985f">
 				<h2 class="text-2xl font-bold mb-4 border-b border-[var(--border)] pb-2 italic mono gospa-985f">Standard Go in Templates</h2>
 				<p class="text-[var(--text-secondary)] mb-6 gospa-985f">
-					GoSPA SFC templates use the familiar Templ syntax. Any Go variable or function available in your <code class="gospa-985f ">&lt;script lang="go"&gt;</code> block can be used directly in the template.
+					GoSPA SFC templates use the familiar Templ syntax. Any Go variable or function available in your <code class="gospa-985f">&lt;script lang=&gt;</code> block can be used directly in the template.
 				</p>
 				@components.CodeBlock(`<template>
   <div class="user-profile">
@@ -36,10 +45,10 @@ templ Page() {
 </template>`, "svelte", "Profile.gospa")
 			</div>
 
-			<div class="gospa-985f ">
+			<div class="gospa-985f">
 				<h2 class="text-2xl font-bold mb-4 border-b border-[var(--border)] pb-2 italic mono gospa-985f">Control Flow</h2>
 				<p class="text-[var(--text-secondary)] mb-6 gospa-985f">
-					Directly include Go control flow logic within your templates using Templ's <code class="gospa-985f ">if</code>, <code class="gospa-985f ">else</code>, and <code class="gospa-985f ">for</code> directives.
+					Directly include Go control flow logic within your templates using Templ's <code class="gospa-985f">if</code>, <code class="gospa-985f">else</code>, and <code class="gospa-985f">for</code> directives.
 				</p>
 				@components.CodeBlock(`<template>
   {if count > 10}
@@ -56,16 +65,16 @@ templ Page() {
 </template>`, "svelte", "Control.gospa")
 			</div>
 
-			<div class="gospa-985f ">
+			<div class="gospa-985f">
 				<h2 class="text-2xl font-bold mb-4 border-b border-[var(--border)] pb-2 italic mono gospa-985f">Event Binding</h2>
 				<p class="text-[var(--text-secondary)] mb-6 gospa-985f">
-					Bind user interactions to Go functions or TypeScript actions using the <code class="gospa-985f ">on:&lt;event&gt;</code> syntax.
+					Bind user interactions to Go functions or TypeScript actions using the <code class="gospa-985f">on:&lt;event&gt;</code> syntax.
 				</p>
 				<table class="w-full text-sm text-left text-[var(--text-secondary)] mb-6 gospa-985f">
 					<thead class="text-xs uppercase bg-[var(--bg-secondary)] text-[var(--text-primary)] gospa-985f">
-						<tr class="gospa-985f "><th class="px-4 py-2 gospa-985f">Event</th><th class="px-4 py-2 gospa-985f">Binding Example</th><th class="px-4 py-2 gospa-985f">Effect</th></tr>
+						<tr class="gospa-985f"><th class="px-4 py-2 gospa-985f">Event</th><th class="px-4 py-2 gospa-985f">Binding Example</th><th class="px-4 py-2 gospa-985f">Effect</th></tr>
 					</thead>
-					<tbody class="gospa-985f ">
+					<tbody class="gospa-985f">
 						<tr class="border-b border-[var(--border)] gospa-985f"><td class="px-4 py-2 gospa-985f">Click</td><td class="px-4 py-2 font-mono gospa-985f">on:click=&lcub;handleClick&rcub;</td><td class="px-4 py-2 gospa-985f">Triggered on mouse click.</td></tr>
 						<tr class="border-b border-[var(--border)] gospa-985f"><td class="px-4 py-2 gospa-985f">Input</td><td class="px-4 py-2 font-mono gospa-985f">on:input=&lcub;updateValue&rcub;</td><td class="px-4 py-2 gospa-985f">Triggered on value change.</td></tr>
 						<tr class="border-b border-[var(--border)] gospa-985f"><td class="px-4 py-2 gospa-985f">Submit</td><td class="px-4 py-2 font-mono gospa-985f">on:submit=&lcub;handleForm&rcub;</td><td class="px-4 py-2 gospa-985f">Triggered on form submission.</td></tr>

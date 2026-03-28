@@ -4,12 +4,14 @@ import (
 	"bufio"
 	"bytes"
 	"context"
+	"encoding/json"
 	"fmt"
 	"html"
 	"sync"
 	"time"
 
 	"github.com/aydenstechdungeon/gospa/routing"
+	"github.com/aydenstechdungeon/gospa/state"
 	templpkg "github.com/aydenstechdungeon/gospa/templ"
 	gofiber "github.com/gofiber/fiber/v3"
 	"github.com/valyala/fasthttp"
@@ -127,6 +129,8 @@ func (a *App) renderRoute(c gofiber.Ctx, route *routing.Route) error {
 	layouts := a.Router.ResolveLayoutChain(route)
 	_, params := a.Router.Match(c.Path())
 	ctx := c.Context()
+	registry := state.NewRegistry()
+	ctx = context.WithValue(ctx, state.RegistryContextKey, registry)
 
 	content := a.buildPageContent(route, params, c.Path())
 	content = a.wrapWithLayouts(content, layouts, params, c.Path())
@@ -285,6 +289,10 @@ runtime.init({
 	}
 });
 </script>`, toJS(runtimePath), toJS(a.Config.NavigationOptions), toJS(wsURL), a.Config.DevMode, a.Config.SimpleRuntimeSVGs, a.Config.DisableSanitization, wsRD, wsMR, wsHB, toJS(a.Config.HydrationMode), a.Config.HydrationTimeout)
+
+		// Centralized State Registry
+		data, _ := json.Marshal(registry.GetData())
+		_, _ = fmt.Fprintf(w, `<script id="__GOSPA_DATA__" type="application/json">%s</script>`, string(data))
 
 		// Handle Deferred Slots
 		if len(opts.DeferredSlots) > 0 {

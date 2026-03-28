@@ -2,15 +2,24 @@
 
 package examples
 
+import "github.com/aydenstechdungeon/gospa/state"
 import "github.com/aydenstechdungeon/gospa/website/components"
 
-
+type PageProps struct {
+}
 
 templ Page() {
 
+
+	if r := state.FromContext(ctx); r != nil {
+		pMap := map[string]interface{}{
+			
+		}
+		r.Register("routesdocsgospasfcexamplespage", pMap, nil)
+	}
 	<div data-gospa-island="routesdocsgospasfcexamplespage" class="gospa-09fd">
 		<div class="space-y-12 gospa-09fd">
-		<header class="gospa-09fd ">
+		<header class="gospa-09fd">
 			<div class="flex items-center gap-2 mb-4 gospa-09fd">
 				<span class="px-2 py-1 rounded bg-[var(--accent-primary)]/10 text-[var(--accent-primary)] text-xs font-bold uppercase tracking-wider gospa-09fd">Features</span>
 				<span class="text-[var(--text-muted)] text-sm gospa-09fd">/</span>
@@ -23,13 +32,13 @@ templ Page() {
 		</header>
 
 		<section class="space-y-12 gospa-09fd">
-			<div class="gospa-09fd ">
+			<div class="gospa-09fd">
 				<h2 class="text-2xl font-bold mb-4 flex items-center gap-3 gospa-09fd">
 					<div class="w-8 h-8 rounded-lg bg-cyan-500/10 flex items-center justify-center text-cyan-500 text-sm gospa-09fd">01</div>
 					Multi-Step Form
 				</h2>
 				<p class="text-[var(--text-secondary)] mb-6 gospa-09fd">
-					Manage complex form state using the <code class="gospa-09fd ">$state</code> rune and conditional rendering.
+					Manage complex form state using the <code class="gospa-09fd">$state</code> rune and conditional rendering.
 				</p>
 				@components.CodeBlock(`<script lang="go">
   var step = $state(1)
@@ -66,13 +75,13 @@ templ Page() {
 </template>`, "svelte", "MultiStepForm.gospa")
 			</div>
 
-			<div class="gospa-09fd ">
+			<div class="gospa-09fd">
 				<h2 class="text-2xl font-bold mb-4 flex items-center gap-3 gospa-09fd">
 					<div class="w-8 h-8 rounded-lg bg-purple-500/10 flex items-center justify-center text-purple-500 text-sm gospa-09fd">02</div>
 					Real-time Search Filter
 				</h2>
 				<p class="text-[var(--text-secondary)] mb-6 gospa-09fd">
-					Use <code class="gospa-09fd ">$derived</code> to automatically filter a list based on user input.
+					Use <code class="gospa-09fd">$derived</code> to automatically filter a list based on user input.
 				</p>
 				@components.CodeBlock(`<script lang="go">
   var query = $state("")
@@ -101,13 +110,13 @@ templ Page() {
 </template>`, "svelte", "SearchFilter.gospa")
 			</div>
 
-			<div class="gospa-09fd ">
+			<div class="gospa-09fd">
 				<h2 class="text-2xl font-bold mb-4 flex items-center gap-3 gospa-09fd">
 					<div class="w-8 h-8 rounded-lg bg-orange-500/10 flex items-center justify-center text-orange-500 text-sm gospa-09fd">03</div>
 					Using JS Libraries (e.g. Chart.js)
 				</h2>
 				<p class="text-[var(--text-secondary)] mb-6 gospa-09fd">
-					Integrate external JavaScript libraries using the <code class="gospa-09fd ">$effect</code> rune to initialize them after the component hydrates.
+					Integrate external JavaScript libraries using the <code class="gospa-09fd">$effect</code> rune to initialize them after the component hydrates.
 				</p>
 				@components.CodeBlock(`<script lang="go">
   var data = $state([]int{10, 20, 30})
@@ -128,7 +137,7 @@ templ Page() {
 </template>`, "svelte", "Chart.gospa")
 			</div>
 
-			<div class="gospa-09fd ">
+			<div class="gospa-09fd">
 				<h2 class="text-2xl font-bold mb-4 flex items-center gap-3 gospa-09fd">
 					<div class="w-8 h-8 rounded-lg bg-blue-500/10 flex items-center justify-center text-blue-500 text-sm gospa-09fd">04</div>
 					Mixed Go + TypeScript Logic

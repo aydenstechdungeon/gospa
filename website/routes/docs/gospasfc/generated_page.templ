@@ -2,18 +2,29 @@
 
 package gospasfc
 
+import "github.com/aydenstechdungeon/gospa/state"
 
-
-
+type PageProps struct {
+}
 
 templ Page() {
+{{ var title = "GoSPA Documentation" }}
+{{ println("Hello from Go!") }}
+{{ var _ = title }}
 
+
+	if r := state.FromContext(ctx); r != nil {
+		pMap := map[string]interface{}{
+			
+		}
+		r.Register("routesdocsgospasfcpage", pMap, nil)
+	}
 	<div data-gospa-island="routesdocsgospasfcpage" class="gospa-9d0f">
 		<div class="space-y-12 gospa-9d0f">
-		<header class="gospa-9d0f ">
-			<h1 class="text-4xl font-bold tracking-tight mb-4 text-transparent bg-clip-text bg-gradient-to-r from-[var(--accent-primary)] to-[var(--accent-secondary)] gospa-9d0f">Gospa SFC (Single File Components)</h1>
+		<header class="gospa-9d0f">
+			<h1 class="text-4xl font-bold tracking-tight mb-4 text-transparent bg-clip-text bg-gradient-to-r from-[var(--accent-primary)] to-[var(--accent-secondary)] gospa-9d0f">{ title }</h1>
 			<p class="text-xl text-[var(--text-secondary)] leading-relaxed gospa-9d0f">
-				The ultimate way to build modern Go web applications. Combine logic, templates, and styles in a single, powerful <code class="gospa-9d0f ">.gospa</code> file.
+				The ultimate way to build modern Go web applications. Combine logic, templates, and styles in a single, powerful <code class="gospa-9d0f">.gospa</code> file.
 			</p>
 		</header>
 
@@ -22,43 +33,43 @@ templ Page() {
 				<a href="/docs/gospasfc/getting-started" class="group p-6 rounded-2xl bg-[var(--bg-secondary)] border border-[var(--border)] hover:border-[var(--accent-primary)]/50 transition-all gospa-9d0f">
 					<h3 class="text-xl font-bold mb-2 group-hover:text-[var(--accent-primary)] transition-colors gospa-9d0f">🚀 Getting Started</h3>
 					<p class="text-[var(--text-secondary)] text-sm mb-4 gospa-9d0f">Learn the basics of the .gospa format, component types, and the development workflow.</p>
-					<span class="text-[var(--accent-primary)] text-sm font-bold flex items-center gap-1 gospa-9d0f">Read more <svg class="gospa-9d0f " xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path class="gospa-9d0f " d="M5 12h14"></path><path class="gospa-9d0f " d="m12 5 7 7-7 7"></path></svg></span>
+					<span class="text-[var(--accent-primary)] text-sm font-bold flex items-center gap-1 gospa-9d0f">Read more <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="gospa-9d0f"><path d="M5 12h14" class="gospa-9d0f"></path><path d="m12 5 7 7-7 7" class="gospa-9d0f"></path></svg></span>
 				</a>
 
 				<a href="/docs/gospasfc/reactivity" class="group p-6 rounded-2xl bg-[var(--bg-secondary)] border border-[var(--border)] hover:border-[var(--accent-primary)]/50 transition-all gospa-9d0f">
 					<h3 class="text-xl font-bold mb-2 group-hover:text-[var(--accent-primary)] transition-colors gospa-9d0f">⚡ Runes & Reactivity</h3>
 					<p class="text-[var(--text-secondary)] text-sm mb-4 gospa-9d0f">Deep dive into $state, $derived, and $effect runes for unified reactive logic.</p>
-					<span class="text-[var(--accent-primary)] text-sm font-bold flex items-center gap-1 gospa-9d0f">Read more <svg class="gospa-9d0f " xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path class="gospa-9d0f " d="M5 12h14"></path><path class="gospa-9d0f " d="m12 5 7 7-7 7"></path></svg></span>
+					<span class="text-[var(--accent-primary)] text-sm font-bold flex items-center gap-1 gospa-9d0f">Read more <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="gospa-9d0f"><path d="M5 12h14" class="gospa-9d0f"></path><path d="m12 5 7 7-7 7" class="gospa-9d0f"></path></svg></span>
 				</a>
 
 				<a href="/docs/gospasfc/templates" class="group p-6 rounded-2xl bg-[var(--bg-secondary)] border border-[var(--border)] hover:border-[var(--accent-primary)]/50 transition-all gospa-9d0f">
 					<h3 class="text-xl font-bold mb-2 group-hover:text-[var(--accent-primary)] transition-colors gospa-9d0f">📄 Template Syntax</h3>
 					<p class="text-[var(--text-secondary)] text-sm mb-4 gospa-9d0f">Master the Templ-based template system with reactive event bindings.</p>
-					<span class="text-[var(--accent-primary)] text-sm font-bold flex items-center gap-1 gospa-9d0f">Read more <svg class="gospa-9d0f " xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path class="gospa-9d0f " d="M5 12h14"></path><path class="gospa-9d0f " d="m12 5 7 7-7 7"></path></svg></span>
+					<span class="text-[var(--accent-primary)] text-sm font-bold flex items-center gap-1 gospa-9d0f">Read more <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="gospa-9d0f"><path d="M5 12h14" class="gospa-9d0f"></path><path d="m12 5 7 7-7 7" class="gospa-9d0f"></path></svg></span>
 				</a>
 
 				<a href="/docs/gospasfc/styles" class="group p-6 rounded-2xl bg-[var(--bg-secondary)] border border-[var(--border)] hover:border-[var(--accent-primary)]/50 transition-all gospa-9d0f">
 					<h3 class="text-xl font-bold mb-2 group-hover:text-[var(--accent-primary)] transition-colors gospa-9d0f">🎨 Scoped CSS</h3>
 					<p class="text-[var(--text-secondary)] text-sm mb-4 gospa-9d0f">How GoSPA handles style isolation and integration with utility frameworks like Tailwind.</p>
-					<span class="text-[var(--accent-primary)] text-sm font-bold flex items-center gap-1 gospa-9d0f">Read more <svg class="gospa-9d0f " xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path class="gospa-9d0f " d="M5 12h14"></path><path class="gospa-9d0f " d="m12 5 7 7-7 7"></path></svg></span>
+					<span class="text-[var(--accent-primary)] text-sm font-bold flex items-center gap-1 gospa-9d0f">Read more <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="gospa-9d0f"><path d="M5 12h14" class="gospa-9d0f"></path><path d="m12 5 7 7-7 7" class="gospa-9d0f"></path></svg></span>
 				</a>
 
 				<a href="/docs/gospasfc/typescript" class="group p-6 rounded-2xl bg-[var(--bg-secondary)] border border-[var(--border)] hover:border-[var(--accent-primary)]/50 transition-all gospa-9d0f">
 					<h3 class="text-xl font-bold mb-2 group-hover:text-[var(--accent-primary)] transition-colors gospa-9d0f">📘 TypeScript Integration</h3>
 					<p class="text-[var(--text-secondary)] text-sm mb-4 gospa-9d0f">Bridge Go and TypeScript seamlessly with unified reactive primitives and event handlers.</p>
-					<span class="text-[var(--accent-primary)] text-sm font-bold flex items-center gap-1 gospa-9d0f">Read more <svg class="gospa-9d0f " xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path class="gospa-9d0f " d="M5 12h14"></path><path class="gospa-9d0f " d="m12 5 7 7-7 7"></path></svg></span>
+					<span class="text-[var(--accent-primary)] text-sm font-bold flex items-center gap-1 gospa-9d0f">Read more <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="gospa-9d0f"><path d="M5 12h14" class="gospa-9d0f"></path><path d="m12 5 7 7-7 7" class="gospa-9d0f"></path></svg></span>
 				</a>
 
 				<a href="/docs/gospasfc/advanced" class="group p-6 rounded-2xl bg-[var(--bg-secondary)] border border-[var(--border)] hover:border-[var(--accent-primary)]/50 transition-all gospa-9d0f">
 					<h3 class="text-xl font-bold mb-2 group-hover:text-[var(--accent-primary)] transition-colors gospa-9d0f">⚙️ Advanced Usage</h3>
 					<p class="text-[var(--text-secondary)] text-sm mb-4 gospa-9d0f">Deep dive into the compiler pipeline, custom generation, and generated file structure.</p>
-					<span class="text-[var(--accent-primary)] text-sm font-bold flex items-center gap-1 gospa-9d0f">Read more <svg class="gospa-9d0f " xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path class="gospa-9d0f " d="M5 12h14"></path><path class="gospa-9d0f " d="m12 5 7 7-7 7"></path></svg></span>
+					<span class="text-[var(--accent-primary)] text-sm font-bold flex items-center gap-1 gospa-9d0f">Read more <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="gospa-9d0f"><path d="M5 12h14" class="gospa-9d0f"></path><path d="m12 5 7 7-7 7" class="gospa-9d0f"></path></svg></span>
 				</a>
 
 				<a href="/docs/gospasfc/examples" class="group p-6 rounded-2xl bg-[var(--bg-secondary)] border border-[var(--border)] hover:border-[var(--accent-primary)]/50 transition-all gospa-9d0f">
 					<h3 class="text-xl font-bold mb-2 group-hover:text-[var(--accent-primary)] transition-colors gospa-9d0f">💡 Examples & Recipes</h3>
 					<p class="text-[var(--text-secondary)] text-sm mb-4 gospa-9d0f">Practical UI patterns and real-world recipes built with GoSPA SFC.</p>
-					<span class="text-[var(--accent-primary)] text-sm font-bold flex items-center gap-1 gospa-9d0f">Read more <svg class="gospa-9d0f " xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path class="gospa-9d0f " d="M5 12h14"></path><path class="gospa-9d0f " d="m12 5 7 7-7 7"></path></svg></span>
+					<span class="text-[var(--accent-primary)] text-sm font-bold flex items-center gap-1 gospa-9d0f">Read more <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="gospa-9d0f"><path d="M5 12h14" class="gospa-9d0f"></path><path d="m12 5 7 7-7 7" class="gospa-9d0f"></path></svg></span>
 				</a>
 			</div>
 
@@ -71,27 +82,27 @@ templ Page() {
 				<ul class="space-y-4 relative z-10 gospa-9d0f">
 					<li class="flex items-start gap-3 gospa-9d0f">
 						<div class="w-6 h-6 rounded-full bg-cyan-500/10 flex items-center justify-center text-cyan-500 flex-shrink-0 mt-1 gospa-9d0f">
-							<svg class="gospa-9d0f " xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><polyline class="gospa-9d0f " points="20 6 9 17 4 12"></polyline></svg>
+							<svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round" class="gospa-9d0f"><polyline points="20 6 9 17 4 12" class="gospa-9d0f"></polyline></svg>
 						</div>
-						<div class="gospa-9d0f ">
+						<div class="gospa-9d0f">
 							<span class="font-bold text-[var(--text-primary)] gospa-9d0f">Zero-Config Hydration</span>
-							<p class="text-sm text-[var(--text-secondary)] gospa-9d0f">Mark a component as an <code class="gospa-9d0f ">island</code> and the compiler handles the rest.</p>
+							<p class="text-sm text-[var(--text-secondary)] gospa-9d0f">Mark a component as an <code class="gospa-9d0f">island</code> and the compiler handles the rest.</p>
 						</div>
 					</li>
 					<li class="flex items-start gap-3 gospa-9d0f">
 						<div class="w-6 h-6 rounded-full bg-cyan-500/10 flex items-center justify-center text-cyan-500 flex-shrink-0 mt-1 gospa-9d0f">
-							<svg class="gospa-9d0f " xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><polyline class="gospa-9d0f " points="20 6 9 17 4 12"></polyline></svg>
+							<svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round" class="gospa-9d0f"><polyline points="20 6 9 17 4 12" class="gospa-9d0f"></polyline></svg>
 						</div>
-						<div class="gospa-9d0f ">
+						<div class="gospa-9d0f">
 							<span class="font-bold text-[var(--text-primary)] gospa-9d0f">Type Safety</span>
 							<p class="text-sm text-[var(--text-secondary)] gospa-9d0f">Enjoy full Go type safety in your templates and logic blocks.</p>
 						</div>
 					</li>
 					<li class="flex items-start gap-3 gospa-9d0f">
 						<div class="w-6 h-6 rounded-full bg-cyan-500/10 flex items-center justify-center text-cyan-500 flex-shrink-0 mt-1 gospa-9d0f">
-							<svg class="gospa-9d0f " xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline class="gospa-9d0f " points="20 6 9 17 4 12"></polyline></svg>
+							<svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="gospa-9d0f"><polyline points="20 6 9 17 4 12" class="gospa-9d0f"></polyline></svg>
 						</div>
-						<div class="gospa-9d0f ">
+						<div class="gospa-9d0f">
 							<span class="font-bold text-[var(--text-primary)] gospa-9d0f">Performance First</span>
 							<p class="text-sm text-[var(--text-secondary)] gospa-9d0f">Direct compilation to Templ means minimal overhead and maximum speed.</p>
 						</div>

@@ -432,6 +432,20 @@ func (sm *StateMap) ToJSON() (string, error) {
 	return string(data), nil
 }
 
+// Clone creates a deep copy of the StateMap, preserving reactive subscriptions.
+// Each observable is re-created so mutations on the clone don't affect the original.
+func (sm *StateMap) Clone() *StateMap {
+	sm.mu.RLock()
+	defer sm.mu.RUnlock()
+
+	clone := NewStateMap()
+	for name, obs := range sm.observables {
+		// Get the current value and create a new Rune with it
+		clone.AddAny(name, obs.GetAny())
+	}
+	return clone
+}
+
 // SerializeState serializes multiple runes into a JSON object
 func SerializeState(runes map[string]interface{}) ([]byte, error) {
 	data := make(map[string]interface{})

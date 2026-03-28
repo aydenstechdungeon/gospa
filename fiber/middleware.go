@@ -5,6 +5,7 @@ import (
 	"crypto/rand"
 	"crypto/subtle"
 	"encoding/hex"
+	stdjson "encoding/json"
 	"fmt"
 	"log/slog"
 	"strings"
@@ -88,17 +89,17 @@ func StateMiddleware(config Config) gofiber.Handler {
 
 		// Inject state as a script tag before </body>
 		body := c.Response().Body()
-		stateJSON, err := stateMap.ToJSON()
-		if err != nil {
+
+		// Use encoding/json with SetEscapeHTML for robust HTML-safe JSON encoding.
+		// This escapes <, >, &, U+2028, and U+2029 which can break out of <script> contexts.
+		var buf bytes.Buffer
+		encoder := stdjson.NewEncoder(&buf)
+		encoder.SetEscapeHTML(true)
+		if err := encoder.Encode(stateMap.ToMap()); err != nil {
 			return err
 		}
-
-		// Escape the JSON to prevent XSS and script tag breakouts inside <script>.
-		escapedJSON := strings.ReplaceAll(stateJSON, "<", "\\u003c")
-		escapedJSON = strings.ReplaceAll(escapedJSON, ">", "\\u003e")
-		escapedJSON = strings.ReplaceAll(escapedJSON, "&", "\\u0026")
-		escapedJSON = strings.ReplaceAll(escapedJSON, "\u2028", "\\u2028")
-		escapedJSON = strings.ReplaceAll(escapedJSON, "\u2029", "\\u2029")
+		// Encode appends a trailing newline; trim it for inline embedding.
+		escapedJSON := strings.TrimRight(buf.String(), "\n")
 		stateScript := `<script>window.__GOSPA_STATE__ = ` + escapedJSON + `;</script>`
 		if config.DevMode {
 			stateScript += `<script src="` + config.RuntimeScript + `" type="module"></script>`
@@ -138,6 +139,13 @@ func RuntimeMiddlewareWithContent(runtimeContent []byte) gofiber.Handler {
 	}
 }
 
+// isHTTPS returns true if the request was made over HTTPS, even when behind
+// a TLS-terminating reverse proxy. It checks both the direct protocol and the
+// X-Forwarded-Proto header.
+func isHTTPS(c gofiber.Ctx) bool {
+	return c.Protocol() == "https" || c.Get("X-Forwarded-Proto") == "https"
+}
+
 // CSRFSetTokenMiddleware issues and rotates the CSRF cookie on safe HTTP methods.
 func CSRFSetTokenMiddleware() gofiber.Handler {
 	return func(c gofiber.Ctx) error {
@@ -160,7 +168,7 @@ func CSRFSetTokenMiddleware() gofiber.Handler {
 			Value:    token,
 			HTTPOnly: false, // Must be readable by JS to set the X-CSRF-Token header
 			SameSite: "Strict",
-			Secure:   c.Protocol() == "https",
+			Secure:   isHTTPS(c),
 			Path:     "/", // Protect global endpoints
 		})
 
@@ -202,7 +210,7 @@ func SessionMiddleware() gofiber.Handler {
 			Value:    token,
 			HTTPOnly: true,
 			SameSite: "Lax",
-			Secure:   c.Protocol() == "https",
+			Secure:   isHTTPS(c),
 			Path:     "/",
 			Expires:  time.Now().Add(SessionTTL),
 		})
@@ -361,15 +369,19 @@ func PreloadHeadersMiddlewareMinimal(config PreloadConfig) gofiber.Handler {
 	}
 }
 
-// DefaultContentSecurityPolicy is the compatibility CSP used when gospa.Config.ContentSecurityPolicy is empty.
-// It balances safety (default-src 'self', no frames, limited object-src) with typical GoSPA/Templ output:
-// inline scripts (e.g. __GOSPA_STATE__) and inline styles use 'unsafe-inline'. Prefer
-// StrictContentSecurityPolicy for high-risk apps that can avoid inline scripts.
-const DefaultContentSecurityPolicy = "default-src 'self'; base-uri 'self'; frame-ancestors 'none'; object-src 'none'; script-src 'self' 'unsafe-inline'; style-src 'self' 'unsafe-inline'; img-src 'self' data: blob: https:; font-src 'self' data:; connect-src 'self' ws: wss:; form-action 'self'"
+// DefaultContentSecurityPolicy is the CSP used when gospa.Config.ContentSecurityPolicy is empty.
+// Uses a nonce-compatible strict policy. Prefer StrictContentSecurityPolicy for apps
+// that don't require any inline scripts. For full compatibility with inline scripts,
+// use LegacyContentSecurityPolicy.
+const DefaultContentSecurityPolicy = "default-src 'self'; base-uri 'self'; frame-ancestors 'none'; object-src 'none'; script-src 'self'; style-src 'self' 'unsafe-inline'; img-src 'self' data: blob: https:; font-src 'self' data:; connect-src 'self' ws: wss:; form-action 'self'"
 
 // StrictContentSecurityPolicy is a hardened CSP preset for applications that do
-// not rely on inline scripts.
-const StrictContentSecurityPolicy = "default-src 'self'; base-uri 'self'; frame-ancestors 'none'; object-src 'none'; script-src 'self'; style-src 'self' 'unsafe-inline'; img-src 'self' data: blob: https:; font-src 'self' data:; connect-src 'self' ws: wss:; form-action 'self'"
+// not rely on inline scripts or inline styles.
+const StrictContentSecurityPolicy = "default-src 'self'; base-uri 'self'; frame-ancestors 'none'; object-src 'none'; script-src 'self'; style-src 'self'; img-src 'self' data: blob: https:; font-src 'self' data:; connect-src 'self' ws: wss:; form-action 'self'"
+
+// LegacyContentSecurityPolicy allows unsafe-inline for script-src. Use only when
+// the application requires inline event handlers or eval-based script execution.
+const LegacyContentSecurityPolicy = "default-src 'self'; base-uri 'self'; frame-ancestors 'none'; object-src 'none'; script-src 'self' 'unsafe-inline'; style-src 'self' 'unsafe-inline'; img-src 'self' data: blob: https:; font-src 'self' data:; connect-src 'self' ws: wss:; form-action 'self'"
 
 // SecurityHeadersMiddleware adds security headers.
 func SecurityHeadersMiddleware(policy string) gofiber.Handler {
@@ -377,7 +389,7 @@ func SecurityHeadersMiddleware(policy string) gofiber.Handler {
 		policy = DefaultContentSecurityPolicy
 	}
 	return func(c gofiber.Ctx) error {
-		if c.Protocol() == "https" || c.Get("X-Forwarded-Proto") == "https" {
+		if isHTTPS(c) {
 			c.Set("Strict-Transport-Security", "max-age=31536000; includeSubDomains; preload")
 		}
 		c.Set("Content-Security-Policy", policy)
