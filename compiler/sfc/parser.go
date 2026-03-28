@@ -2,10 +2,12 @@
 package sfc
 
 import (
+	"bytes"
 	"fmt"
-	"regexp"
-	"sort"
+	"io"
 	"strings"
+
+	"golang.org/x/net/html"
 )
 
 // Block represents a section of a .gospa file.
@@ -14,6 +16,8 @@ type Block struct {
 	Lang       string // e.g., "go", "ts", "css"
 	Content    string
 	ByteOffset int // Start of the content block in the original source
+	Line       int // 0-indexed line number
+	Column     int // 0-indexed column number
 }
 
 // SFC represents the parsed structure of a .gospa file.
@@ -25,146 +29,187 @@ type SFC struct {
 	Style       Block
 }
 
-var (
-	scriptRegex   = regexp.MustCompile(`(?is)<script(.*?)>(.*?)</script>`)
-	templateRegex = regexp.MustCompile(`(?is)<template(.*?)>(.*?)</template>`)
-	styleRegex    = regexp.MustCompile(`(?is)<style(.*?)>(.*?)</style>`)
-	langRegex     = regexp.MustCompile(`(?i)lang="([^"]*)"`)
-)
-
 // Parse splits a .gospa file into its component blocks.
 func Parse(input string) (*SFC, error) {
 	sfc := &SFC{}
-	trimmed := strings.TrimSpace(input)
+	var offset int
 
-	frontMatterRegex := regexp.MustCompile(`(?s)^---\s*\n(.*?)\n---\s*\n?`)
-	if matches := frontMatterRegex.FindStringSubmatch(trimmed); len(matches) > 1 {
-		sfc.FrontMatter = parseFrontMatter(matches[1])
-		trimmed = strings.TrimSpace(strings.TrimPrefix(trimmed, matches[0]))
-	}
-	input = trimmed
-
-	// 1. Identify top-level blocks using masked input to ignore tags in strings/comments
-	maskedInput := maskForParsing(input)
-
-	type rawBlock struct {
-		typ     string // "script", "template", "style"
-		start   int
-		end     int
-		attr    string
-		content string
-	}
-	var candidates []rawBlock
-
-	for _, m := range scriptRegex.FindAllStringSubmatchIndex(maskedInput, -1) {
-		candidates = append(candidates, rawBlock{"script", m[0], m[1], input[m[2]:m[3]], input[m[4]:m[5]]})
-	}
-	for _, m := range templateRegex.FindAllStringSubmatchIndex(maskedInput, -1) {
-		candidates = append(candidates, rawBlock{"template", m[0], m[1], input[m[2]:m[3]], input[m[4]:m[5]]})
-	}
-	for _, m := range styleRegex.FindAllStringSubmatchIndex(maskedInput, -1) {
-		candidates = append(candidates, rawBlock{"style", m[0], m[1], input[m[2]:m[3]], input[m[4]:m[5]]})
-	}
-
-	sort.Slice(candidates, func(i, j int) bool {
-		return candidates[i].start < candidates[j].start
-	})
-
-	var topLevel []rawBlock
-	lastEnd := 0
-	for _, b := range candidates {
-		if b.start >= lastEnd {
-			topLevel = append(topLevel, b)
-			lastEnd = b.end
+	// 1. Handle Front Matter
+	if strings.HasPrefix(input, "---") {
+		endIdx := strings.Index(input[3:], "---")
+		if endIdx != -1 {
+			fmContent := input[3 : endIdx+3]
+			sfc.FrontMatter = parseFrontMatter(fmContent)
+			offset = endIdx + 6 // "---" + content + "---"
+			// Skip newline if any
+			if offset < len(input) && input[offset] == '\n' {
+				offset++
+			}
+			if offset < len(input) && input[offset] == '\n' {
+				offset++
+			}
 		}
 	}
 
-	// 2. Process top-level blocks
-	var explicitTemplate bool
-	for _, b := range topLevel {
-		switch b.typ {
-		case "script":
-			lang := normalizeScriptLang(extractLang(b.attr, "go"))
-			block := Block{
-				Type:       "script",
-				Lang:       lang,
-				Content:    strings.TrimSpace(b.content),
-				ByteOffset: b.start,
+	// 2. Tokenize top-level blocks
+	rawInput := []byte(input)
+	var topLevelBlocks []Block
+	var implicitContent strings.Builder
+	var implicitStartOffset = -1 // Tracks the start of the first implicit content block
+	var baseOffset = offset
+
+	// Pre-compute string literal ranges to skip false-positive tags
+	stringRanges := findStringLiteralRanges(input)
+
+	for baseOffset < len(input) {
+		z := html.NewTokenizer(strings.NewReader(input[baseOffset:]))
+		tt := z.Next()
+
+		if tt == html.ErrorToken {
+			if z.Err() == io.EOF {
+				break // End of input
 			}
+			return nil, z.Err()
+		}
+
+		raw := z.Raw() // The raw bytes of the current token
+		token := z.Token()
+
+		if tt == html.StartTagToken {
+			tagName := token.DataAtom.String()
+			if tagName == "" {
+				tagName = token.Data
+			}
+
+			if tagName == "script" || tagName == "style" || tagName == "template" {
+				// Skip tags found inside Go string literals (e.g., backtick strings in CodeBlock calls)
+				if isInsideStringLiteral(baseOffset, stringRanges) {
+					// Treat the entire raw token as implicit content
+					if implicitStartOffset == -1 {
+						implicitStartOffset = baseOffset
+					}
+					implicitContent.Write(raw)
+					if len(raw) == 0 {
+						baseOffset++
+					} else {
+						baseOffset += len(raw)
+					}
+					continue
+				}
+				startTagRawLen := len(raw)
+				contentOffset := baseOffset + startTagRawLen
+
+				// Manually find end tag to avoid tokenizer parsing content
+				endTagBytes := []byte("</" + tagName + ">")
+				endIdx := bytes.Index(rawInput[contentOffset:], endTagBytes)
+				if endIdx == -1 {
+					return nil, fmt.Errorf("unclosed <%s> block starting at offset %d", tagName, baseOffset)
+				}
+
+				content := string(rawInput[contentOffset : contentOffset+endIdx])
+
+				// Extract lang attribute from the current token
+				lang := ""
+				for _, attr := range token.Attr {
+					if attr.Key == "lang" {
+						lang = attr.Val
+						break
+					}
+				}
+				if lang == "" {
+					lang = extractLangFromToken(token, tagName)
+				}
+
+				block := Block{
+					Type:       tagName,
+					Lang:       lang,
+					Content:    strings.TrimSpace(content), // Trim whitespace
+					ByteOffset: contentOffset,
+				}
+				block.Line, block.Column = OffsetToPosition(input, contentOffset)
+				topLevelBlocks = append(topLevelBlocks, block)
+
+				baseOffset += startTagRawLen + endIdx + len(endTagBytes)
+				continue
+			}
+		}
+
+		// Any other token type or non-top-level StartTag is considered part of the implicit template
+		if implicitStartOffset == -1 {
+			implicitStartOffset = baseOffset
+		}
+		implicitContent.Write(raw)
+		if len(raw) == 0 {
+			baseOffset++
+		} else {
+			baseOffset += len(raw)
+		}
+	}
+
+	// 3. Process blocks
+	var explicitTemplate bool
+	for _, b := range topLevelBlocks {
+		switch b.Type {
+		case "script":
+			lang := normalizeScriptLang(b.Lang)
+			b.Lang = lang
 			switch lang {
 			case "go":
 				if sfc.Script.Content != "" {
 					return nil, fmt.Errorf("multiple <script lang=\"go\"> blocks are not supported")
 				}
-				sfc.Script = block
+				sfc.Script = b
 			case "ts":
 				if sfc.ScriptTS.Content != "" {
-					return nil, fmt.Errorf("multiple <script lang=\"ts\"> (or js/typescript/javascript) blocks are not supported")
+					return nil, fmt.Errorf("multiple <script lang=\"ts\"> blocks are not supported")
 				}
-				sfc.ScriptTS = block
-			default:
-				return nil, fmt.Errorf("unsupported <script> language %q: supported languages are go, ts, js, typescript, javascript", lang)
+				sfc.ScriptTS = b
 			}
 		case "style":
 			if sfc.Style.Content != "" {
 				return nil, fmt.Errorf("multiple <style> blocks are not supported")
 			}
-			sfc.Style = Block{
-				Type:       "style",
-				Lang:       extractLang(b.attr, "css"),
-				Content:    strings.TrimSpace(b.content),
-				ByteOffset: b.start,
-			}
+			sfc.Style = b
 		case "template":
 			if explicitTemplate {
 				return nil, fmt.Errorf("multiple <template> blocks are not supported")
 			}
 			explicitTemplate = true
-			sfc.Template = Block{
-				Type:       "template",
-				Content:    strings.TrimSpace(b.content),
-				ByteOffset: b.start,
-			}
+			sfc.Template = b
 		}
 	}
 
-	// 3. Handle implicit template if needed
-	if !explicitTemplate {
-		var builder strings.Builder
-		lastPos := 0
-		for _, b := range topLevel {
-			builder.WriteString(input[lastPos:b.start])
-			lastPos = b.end
-		}
-		builder.WriteString(input[lastPos:])
+	// 4. Handle implicit template
+	if !explicitTemplate && implicitContent.Len() > 0 {
 		sfc.Template = Block{
-			Type:    "template",
-			Content: strings.TrimSpace(builder.String()),
+			Type:       "template",
+			Content:    strings.TrimSpace(implicitContent.String()),
+			ByteOffset: implicitStartOffset,
 		}
+		sfc.Template.Line, sfc.Template.Column = OffsetToPosition(input, implicitStartOffset)
 	}
 
-	if sfc.Template.Content == "" {
-		return nil, fmt.Errorf("missing template content")
-	}
-
-	// 4. Final safety check: ensure no unclosed tags remain in the discarded or implicit content
-	remainingMasked := maskedInput
-	for i := len(topLevel) - 1; i >= 0; i-- {
-		b := topLevel[i]
-		remainingMasked = remainingMasked[:b.start] + remainingMasked[b.end:]
-	}
-	if regexp.MustCompile(`(?i)<(?:script|style|template)[\s/>]`).MatchString(remainingMasked) {
-		return nil, fmt.Errorf("detected unclosed or malformed <script>, <style> or <template> block")
+	if sfc.Template.Content == "" && sfc.Script.Content == "" && sfc.ScriptTS.Content == "" {
+		return nil, fmt.Errorf("SFC is empty")
 	}
 
 	return sfc, nil
 }
 
-func extractLang(attr, defaultLang string) string {
-	if matches := langRegex.FindStringSubmatch(attr); len(matches) > 1 {
-		return matches[1]
+func extractLangFromToken(t html.Token, tagName string) string {
+	for _, attr := range t.Attr {
+		if attr.Key == "lang" {
+			return attr.Val
+		}
 	}
-	return defaultLang
+	switch tagName {
+	case "script":
+		return "go"
+	case "style":
+		return "css"
+	default:
+		return ""
+	}
 }
 
 func normalizeScriptLang(lang string) string {
@@ -199,22 +244,6 @@ func parseFrontMatter(content string) map[string]string {
 	return result
 }
 
-var maskRegex = regexp.MustCompile("(?s)`[^`]*`|\"(?:\\\\.|[^\"\\\\])*\"|//.*|/\\*.*?\\*/")
-
-func maskForParsing(input string) string {
-	return maskRegex.ReplaceAllStringFunc(input, func(s string) string {
-		res := make([]byte, len(s))
-		for i := 0; i < len(s); i++ {
-			if s[i] == '\n' {
-				res[i] = '\n'
-			} else {
-				res[i] = ' '
-			}
-		}
-		return string(res)
-	})
-}
-
 // OffsetToPosition converts a byte offset to a (line, column) coordinate.
 func OffsetToPosition(input string, offset int) (int, int) {
 	line := 0
@@ -228,4 +257,63 @@ func OffsetToPosition(input string, offset int) (int, int) {
 		}
 	}
 	return line, col
+}
+
+// stringLiteralRange represents the [start, end) byte range of a Go string literal.
+type stringLiteralRange struct {
+	start int
+	end   int
+}
+
+// findStringLiteralRanges returns all Go string literal ranges (backtick and double-quoted)
+// in the input. This is used to skip false-positive HTML tags found inside string literals.
+func findStringLiteralRanges(input string) []stringLiteralRange {
+	var ranges []stringLiteralRange
+	i := 0
+	for i < len(input) {
+		if input[i] == '`' {
+			start := i
+			i++ // skip opening `
+			for i < len(input) && input[i] != '`' {
+				i++
+			}
+			if i < len(input) {
+				i++ // skip closing `
+				ranges = append(ranges, stringLiteralRange{start, i})
+			}
+		} else if input[i] == '"' {
+			start := i
+			i++ // skip opening "
+			for i < len(input) {
+				if input[i] == '\\' {
+					i += 2 // skip escaped character
+				} else if input[i] == '"' {
+					break
+				} else {
+					i++
+				}
+			}
+			if i < len(input) {
+				i++ // skip closing "
+				ranges = append(ranges, stringLiteralRange{start, i})
+			}
+		} else {
+			i++
+		}
+	}
+	return ranges
+}
+
+// isInsideStringLiteral returns true if the given byte position falls within
+// any of the provided string literal ranges.
+func isInsideStringLiteral(pos int, ranges []stringLiteralRange) bool {
+	for _, r := range ranges {
+		if pos >= r.start && pos < r.end {
+			return true
+		}
+		if r.start > pos {
+			break // ranges are ordered, no need to check further
+		}
+	}
+	return false
 }

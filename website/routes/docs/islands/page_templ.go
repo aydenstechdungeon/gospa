@@ -37,14 +37,13 @@ func Page() templ.Component {
 		}
 		templ_7745c5c3_Err = components.CodeBlock(`<div data-gospa-island="Counter" 
      data-gospa-mode="visible"
-     data-gospa-priority="high"
-     data-gospa-props='{"initial": 10}'>
+     data-gospa-priority="high">
     <!-- Server-rendered content goes here -->
 </div>`, "html", "counter.templ").Render(ctx, templ_7745c5c3_Buffer)
 		if templ_7745c5c3_Err != nil {
 			return templ_7745c5c3_Err
 		}
-		templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 2, "</div><div><h2 class=\"text-2xl font-bold mb-4 border-b border-[var(--border)] pb-2 italic mono\">Priority Levels</h2><p class=\"text-[var(--text-secondary)] mb-4\">When multiple islands are scheduled, the PriorityScheduler ensures critical components load first.</p><div class=\"overflow-x-auto mb-6\"><table class=\"w-full text-sm text-left text-[var(--text-secondary)]\"><thead class=\"text-xs uppercase bg-[var(--surface)] text-[var(--text-primary)]\"><tr><th class=\"px-4 py-2\">Level</th><th class=\"px-4 py-2\">Value</th><th class=\"px-4 py-2\">Use Case</th></tr></thead> <tbody><tr class=\"border-b border-[var(--border)]\"><td class=\"px-4 py-2 font-mono\">critical</td><td class=\"px-4 py-2\">100</td><td class=\"px-4 py-2\">Navigation, search, purchase buttons.</td></tr><tr class=\"border-b border-[var(--border)]\"><td class=\"px-4 py-2 font-mono\">high</td><td class=\"px-4 py-2\">75</td><td class=\"px-4 py-2\">Above-the-fold interactive elements.</td></tr><tr class=\"border-b border-[var(--border)]\"><td class=\"px-4 py-2 font-mono\">normal</td><td class=\"px-4 py-2\">50</td><td class=\"px-4 py-2\">(Default) General interactive components.</td></tr><tr class=\"border-b border-[var(--border)]\"><td class=\"px-4 py-2 font-mono\">low</td><td class=\"px-4 py-2\">25</td><td class=\"px-4 py-2\">Below-the-fold or non-essential widgets.</td></tr><tr class=\"border-b border-[var(--border)]\"><td class=\"px-4 py-2 font-mono\">deferred</td><td class=\"px-4 py-2\">10</td><td class=\"px-4 py-2\">Heavy background tasks or non-scanned areas.</td></tr></tbody></table></div>")
+		templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 2, "<p class=\"text-sm text-[var(--text-secondary)] mt-4\">ℹ️ <strong>Note:</strong> Initial props and state are now served via a centralized <code class=\"bg-[var(--surface)] px-1 rounded\">window.__GOSPA_DATA__</code> registry to reduce DOM bloat and improve hydration speed.</p></div><div><h2 class=\"text-2xl font-bold mb-4 border-b border-[var(--border)] pb-2 italic mono\">Priority Levels</h2><p class=\"text-[var(--text-secondary)] mb-4\">When multiple islands are scheduled, the PriorityScheduler ensures critical components load first.</p><div class=\"overflow-x-auto mb-6\"><table class=\"w-full text-sm text-left text-[var(--text-secondary)]\"><thead class=\"text-xs uppercase bg-[var(--surface)] text-[var(--text-primary)]\"><tr><th class=\"px-4 py-2\">Level</th><th class=\"px-4 py-2\">Value</th><th class=\"px-4 py-2\">Use Case</th></tr></thead> <tbody><tr class=\"border-b border-[var(--border)]\"><td class=\"px-4 py-2 font-mono\">critical</td><td class=\"px-4 py-2\">100</td><td class=\"px-4 py-2\">Navigation, search, purchase buttons.</td></tr><tr class=\"border-b border-[var(--border)]\"><td class=\"px-4 py-2 font-mono\">high</td><td class=\"px-4 py-2\">75</td><td class=\"px-4 py-2\">Above-the-fold interactive elements.</td></tr><tr class=\"border-b border-[var(--border)]\"><td class=\"px-4 py-2 font-mono\">normal</td><td class=\"px-4 py-2\">50</td><td class=\"px-4 py-2\">(Default) General interactive components.</td></tr><tr class=\"border-b border-[var(--border)]\"><td class=\"px-4 py-2 font-mono\">low</td><td class=\"px-4 py-2\">25</td><td class=\"px-4 py-2\">Below-the-fold or non-essential widgets.</td></tr><tr class=\"border-b border-[var(--border)]\"><td class=\"px-4 py-2 font-mono\">deferred</td><td class=\"px-4 py-2\">10</td><td class=\"px-4 py-2\">Heavy background tasks or non-scanned areas.</td></tr></tbody></table></div>")
 		if templ_7745c5c3_Err != nil {
 			return templ_7745c5c3_Err
 		}
@@ -107,7 +106,7 @@ export default {
 		var templ_7745c5c3_Var2 string
 		templ_7745c5c3_Var2, templ_7745c5c3_Err = templ.JoinStringErrs("{name}")
 		if templ_7745c5c3_Err != nil {
-			return templ.Error{Err: templ_7745c5c3_Err, FileName: `routes/docs/islands/page.templ`, Line: 142, Col: 163}
+			return templ.Error{Err: templ_7745c5c3_Err, FileName: `routes/docs/islands/page.templ`, Line: 144, Col: 163}
 		}
 		_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ.EscapeString(templ_7745c5c3_Var2))
 		if templ_7745c5c3_Err != nil {

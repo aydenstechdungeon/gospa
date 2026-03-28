@@ -582,42 +582,55 @@ err := state.BatchError(func() error {
 
 ---
 
-## Auto-Batching (Client-Side)
+## Client-Side Reactivity (Islands)
 
-The client-side state system automatically batches rapid synchronous updates to minimize DOM reflows and improve performance. When multiple state changes occur within the same event loop tick, they are automatically coalesced into a single update.
+In GoSPA Islands, reactivity is powered by a high-performance signal-based system, similar to Svelte 5. The GoSPA compiler automatically transforms your Go reactive code into this system when generating the client-side TypeScript.
 
-### How It Works
+### Reactive Runes
 
-```javascript
-const count = new GoSPA.Rune(0);
+#### `$state(initialValue)`
 
-// These three updates will be batched into a single DOM update
-count.set(1);
-count.set(2);
-count.set(3);
-// DOM only updates once with the final value (3)
+Defines a reactive signal. In TypeScript, this is accessed via `state.$state()`.
+
+```go
+var count = $state(0)
+```
+Transforms to:
+```typescript
+let count = state.$state(0)
 ```
 
-### When Batching Occurs
+#### `$derived(expression)`
 
-Auto-batching triggers for:
-- Multiple `set()` calls in the same synchronous block
-- Rapid updates within event handlers
-- State changes during component initialization
+Defines a derived value that automatically recomputes when its dependencies change.
 
-### Disabling Batching
-
-For cases where immediate updates are required, you can flush the batch queue:
-
-```javascript
-// Force immediate sync
-GoSPA.flushBatch();
-
-// Or use the low-level API for synchronous updates
-GoSPA.scheduleUpdate(() => {
-    // This runs immediately, bypassing batch
-});
+```go
+var doubled = $derived(count * 2)
 ```
+Transforms to:
+```typescript
+var doubled = state.$derived(() => count * 2)
+```
+
+#### `$effect(func)`
+
+Runs a side effect whenever its dependencies change.
+
+```go
+$effect(func() {
+    fmt.Printf("Count is %d\n", count)
+})
+```
+Transforms to:
+```typescript
+state.$effect(() => {
+    console.log("Count is %d", count)
+})
+```
+
+### Auto-Batching
+
+The client-side state system automatically batches rapid synchronous updates to minimize DOM reflows.
 
 ### Performance Benefits
 
