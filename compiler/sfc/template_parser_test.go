@@ -72,3 +72,96 @@ func TestTemplateParser(t *testing.T) {
 		t.Error("img tag not found")
 	}
 }
+
+func TestTemplateParser_PreservesQuotedText(t *testing.T) {
+	input := "<div>\"hello\" and `code`</div>"
+	p := NewTemplateParser(input, 0, 0, 0)
+	nodes, err := p.Parse()
+	if err != nil {
+		t.Fatalf("Parse failed: %v", err)
+	}
+	if len(nodes) != 1 {
+		t.Fatalf("Expected 1 root node, got %d", len(nodes))
+	}
+	div, ok := nodes[0].(*ElementNode)
+	if !ok {
+		t.Fatalf("Expected ElementNode, got %T", nodes[0])
+	}
+	if len(div.Children) != 1 {
+		t.Fatalf("Expected 1 text child, got %d", len(div.Children))
+	}
+	text, ok := div.Children[0].(*TextNode)
+	if !ok {
+		t.Fatalf("Expected TextNode, got %T", div.Children[0])
+	}
+	if text.Content != "\"hello\" and `code`" {
+		t.Fatalf("Unexpected text content: %q", text.Content)
+	}
+}
+
+func TestTemplateParser_TreatsInvalidAtComponentAsText(t *testing.T) {
+	input := `@("oops")`
+	p := NewTemplateParser(input, 0, 0, 0)
+	nodes, err := p.Parse()
+	if err != nil {
+		t.Fatalf("Parse should keep invalid @ forms as text: %v", err)
+	}
+	if len(nodes) != 1 {
+		t.Fatalf("Expected 1 text node, got %d", len(nodes))
+	}
+	text, ok := nodes[0].(*TextNode)
+	if !ok {
+		t.Fatalf("Expected TextNode, got %T", nodes[0])
+	}
+	if text.Content != `@("oops")` {
+		t.Fatalf("Unexpected text content: %q", text.Content)
+	}
+}
+
+func TestTemplateParser_RejectsUnclosedAtComponentArgs(t *testing.T) {
+	input := `@components.CodeBlock("unterminated"`
+	p := NewTemplateParser(input, 0, 0, 0)
+	_, err := p.Parse()
+	if err == nil {
+		t.Fatal("Expected parse error for unterminated component arguments")
+	}
+}
+
+func TestTemplateParser_PreservesAtSymbolInText(t *testing.T) {
+	input := "<div>email me at user@example.com</div>"
+	p := NewTemplateParser(input, 0, 0, 0)
+	nodes, err := p.Parse()
+	if err != nil {
+		t.Fatalf("Parse failed: %v", err)
+	}
+	if len(nodes) != 1 {
+		t.Fatalf("Expected 1 root node, got %d", len(nodes))
+	}
+	div := nodes[0].(*ElementNode)
+	if len(div.Children) != 1 {
+		t.Fatalf("Expected one text child, got %d", len(div.Children))
+	}
+	text := div.Children[0].(*TextNode)
+	if text.Content != "email me at user@example.com" {
+		t.Fatalf("Unexpected text content: %q", text.Content)
+	}
+}
+
+func TestTemplateParser_RejectsAtComponentWithoutParens(t *testing.T) {
+	input := `@components.CodeBlock`
+	p := NewTemplateParser(input, 0, 0, 0)
+	nodes, err := p.Parse()
+	if err != nil {
+		t.Fatalf("Parse should treat bare @identifier as text, got error: %v", err)
+	}
+	if len(nodes) != 1 {
+		t.Fatalf("Expected 1 text node, got %d", len(nodes))
+	}
+	text, ok := nodes[0].(*TextNode)
+	if !ok {
+		t.Fatalf("Expected TextNode, got %T", nodes[0])
+	}
+	if text.Content != "@components.CodeBlock" {
+		t.Fatalf("Unexpected text content: %q", text.Content)
+	}
+}
