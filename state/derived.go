@@ -4,7 +4,9 @@ package state
 
 import (
 	"encoding/json"
+	"log"
 	"reflect"
+	"runtime/debug"
 	"sync"
 )
 
@@ -76,7 +78,14 @@ func (d *Derived[T]) recompute() {
 
 	if changed {
 		for _, sub := range subs {
-			sub.fn(newValue)
+			func(fn Subscriber[T]) {
+				defer func() {
+					if r := recover(); r != nil {
+						log.Printf("gospa: recovered panic in derived subscriber: %v\n%s", r, debug.Stack())
+					}
+				}()
+				fn(newValue)
+			}(sub.fn)
 		}
 	}
 }

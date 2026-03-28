@@ -234,7 +234,12 @@ func (r *Rune[T]) MarshalJSON() ([]byte, error) {
 //	})
 func (r *Rune[T]) Update(fn func(T) T) {
 	r.mu.Lock()
-	newValue := fn(r.value)
+	oldValue := r.value
+	r.mu.Unlock()
+
+	newValue := fn(oldValue)
+
+	r.mu.Lock()
 	if equal(r.value, newValue) {
 		r.mu.Unlock()
 		return
