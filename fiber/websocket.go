@@ -681,7 +681,7 @@ func (c *WSClient) ReadPump(hub *WSHub, onMessage func(*WSClient, WSMessage)) {
 
 		// Validate JSON nesting depth to prevent stack overflow attacks
 		if c.format != "msgpack" {
-			if err := validateJSONDepth(message, 64); err != nil {
+			if err := validateJSONDepth(message, maxJSONDepth); err != nil {
 				c.SendError("JSON nesting too deep")
 				continue
 			}

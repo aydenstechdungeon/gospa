@@ -202,6 +202,100 @@
         return string.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
     }
 
+    function initAsyncCSS() {
+        document.querySelectorAll('link[data-gospa-async-css]').forEach((preloadLink) => {
+            if (preloadLink.dataset.gospaAsyncBound === '1') return;
+            preloadLink.dataset.gospaAsyncBound = '1';
+            preloadLink.addEventListener('load', () => {
+                preloadLink.rel = 'stylesheet';
+                preloadLink.removeAttribute('as');
+            });
+        });
+    }
+
+    function initRuntime() {
+        const body = document.body;
+        const runtimePath = body?.dataset.gospaRuntimePath;
+        if (!runtimePath || window.GoSPA) return;
+
+        const wsUrl = body.dataset.gospaWsUrl || '';
+        const debug = body.dataset.gospaDebug === 'true';
+        const hydrationMode = body.dataset.gospaHydrationMode || 'lazy';
+        const hydrationTimeout = Number.parseInt(body.dataset.gospaHydrationTimeout || '3000', 10);
+        const serializationFormat = body.dataset.gospaSerializationFormat || 'json';
+
+        window.__GOSPA_CONFIG__ = {
+            navigationOptions: {
+                speculativePrefetching: {
+                    enabled: true,
+                    ttl: 45000,
+                    hoverDelay: 80,
+                    viewportMargin: 220,
+                },
+                serviceWorkerNavigationCaching: {
+                    enabled: true,
+                    cacheName: 'gospa-docs-navigation-cache',
+                    path: '/gospa-navigation-sw.js',
+                },
+            },
+        };
+
+        import(runtimePath).then((runtime) => {
+            window.GoSPA = runtime;
+            runtime.init({
+                wsUrl,
+                debug,
+                hydration: {
+                    mode: hydrationMode,
+                    timeout: hydrationTimeout,
+                },
+                serializationFormat,
+            });
+        }).catch((error) => {
+            console.error('Failed to initialize GoSPA runtime:', error);
+        });
+    }
+
+    function initGlobalActions() {
+        // eslint-disable-next-line no-unused-vars
+        window.switchLang = function switchLang(_btn, lang) {
+            const targetLang = lang || localStorage.getItem('gospa-pref-lang') || 'js';
+            localStorage.setItem('gospa-pref-lang', targetLang);
+
+            const activeClasses = ['bg-[var(--accent-primary)]', 'text-white'];
+            const inactiveClasses = ['bg-[var(--bg-primary)]', 'text-[var(--text-secondary)]', 'hover:text-[var(--text-primary)]'];
+
+            document.querySelectorAll('[data-dual-code-block]').forEach((container) => {
+                const jsBtn = container.querySelector('[data-lang="js"]');
+                const tsBtn = container.querySelector('[data-lang="ts"]');
+                const jsCode = container.querySelector('[data-code="js"]');
+                const tsCode = container.querySelector('[data-code="ts"]');
+
+                if (!jsBtn || !tsBtn || !jsCode || !tsCode) return;
+
+                if (targetLang === 'js') {
+                    activeClasses.forEach((c) => jsBtn.classList.add(c));
+                    inactiveClasses.forEach((c) => jsBtn.classList.remove(c));
+                    inactiveClasses.forEach((c) => tsBtn.classList.add(c));
+                    activeClasses.forEach((c) => tsBtn.classList.remove(c));
+                    jsCode.classList.remove('hidden');
+                    tsCode.classList.add('hidden');
+                } else {
+                    activeClasses.forEach((c) => tsBtn.classList.add(c));
+                    inactiveClasses.forEach((c) => tsBtn.classList.remove(c));
+                    inactiveClasses.forEach((c) => jsBtn.classList.add(c));
+                    activeClasses.forEach((c) => jsBtn.classList.remove(c));
+                    tsCode.classList.remove('hidden');
+                    jsCode.classList.add('hidden');
+                }
+            });
+        };
+
+        const initLang = () => window.switchLang(null);
+        initLang();
+        document.addEventListener('gospa:navigated', initLang);
+    }
+
     // Listen for GoSPA navigation
     document.addEventListener('gospa:navigated', () => {
         // Save sidebar scroll before DOM update
@@ -219,6 +313,9 @@
 
     // Also run on initial load
     window.addEventListener('load', () => {
+        initRuntime();
+        initGlobalActions();
+        initAsyncCSS();
         updateToC();
         updateSidebarActiveState();
     });
@@ -240,6 +337,40 @@
 
     // Global event delegation for search
     document.addEventListener('click', (e) => {
+        const actionTarget = e.target.closest('[data-action]');
+        if (actionTarget) {
+            const action = actionTarget.getAttribute('data-action');
+            switch (action) {
+                case 'copy-code': {
+                    const codeEl = actionTarget.parentElement?.querySelector('pre:not(.hidden) code') ||
+                        actionTarget.parentElement?.querySelector('code');
+                    if (codeEl) {
+                        navigator.clipboard.writeText(codeEl.innerText).then(() => {
+                            const span = actionTarget.querySelector('span');
+                            if (span) {
+                                const old = span.innerText;
+                                span.innerText = 'Copied!';
+                                setTimeout(() => {
+                                    span.innerText = old;
+                                }, 2000);
+                            }
+                        });
+                    }
+                    break;
+                }
+                case 'toggle-mobile-menu':
+                    document.getElementById('mobile-menu')?.classList.toggle('hidden');
+                    document.body.classList.toggle('overflow-hidden');
+                    break;
+                case 'close-mobile-menu':
+                    document.getElementById('mobile-menu')?.classList.add('hidden');
+                    document.body.classList.remove('overflow-hidden');
+                    break;
+                default:
+                    break;
+            }
+        }
+
         if (e.target.closest('[data-action="open-search"]')) {
             openSearch();
         }

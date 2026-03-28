@@ -1,0 +1,18 @@
+{
+  "@context": "https://schema.org",
+  "@type": "SoftwareSourceCode",
+  "name": "GoSPA",
+  "description": "A lightweight Go framework for building high-performance, reactive single-page applications with server-side rendering.",
+  "url": "https://gospa.onrender.com",
+  "codeRepository": "https://github.com/aydenstechdungeon/gospa",
+  "license": "https://opensource.org/licenses/MIT",
+  "programmingLanguage": {
+    "@type": "ComputerLanguage",
+    "name": "Go",
+    "url": "https://golang.org"
+  },
+  "author": {
+    "@type": "Organization",
+    "name": "GoSPA Contributors"
+  }
+}
