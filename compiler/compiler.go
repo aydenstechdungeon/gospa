@@ -223,14 +223,28 @@ func (c *GospaCompiler) codegenTemplate(nodes []sfc.Node, hash string) string {
 				if i > 0 {
 					sb.WriteString(", ")
 				}
-				sb.WriteString(attr.Name)
-				sb.WriteString(": ")
-				if attr.IsExpression {
-					sb.WriteString(attr.Value)
+				// For positional arguments (from @Component(...) syntax), don't output the name
+				if strings.HasPrefix(attr.Name, "_arg") {
+					if attr.IsExpression {
+						// Wrap in backticks for raw string literals in templ
+						sb.WriteString("`")
+						sb.WriteString(attr.Value)
+						sb.WriteString("`")
+					} else {
+						sb.WriteString("\"")
+						sb.WriteString(attr.Value)
+						sb.WriteString("\"")
+					}
 				} else {
-					sb.WriteString("\"")
-					sb.WriteString(attr.Value)
-					sb.WriteString("\"")
+					sb.WriteString(attr.Name)
+					sb.WriteString(": ")
+					if attr.IsExpression {
+						sb.WriteString(attr.Value)
+					} else {
+						sb.WriteString("\"")
+						sb.WriteString(attr.Value)
+						sb.WriteString("\"")
+					}
 				}
 			}
 			sb.WriteString(")")
@@ -289,10 +303,9 @@ func (c *GospaCompiler) transformDSL(script string) (string, []Prop) {
 	// Implicit reactive statements $: val = expr -> var val = expr
 	script = reactiveLabelRegex.ReplaceAllString(script, "var $1 = $2")
 
-	// For Go (SSR), $state(val) -> val, $derived(expr) -> expr
-	// For Go (SSR), $state(val) -> val, $derived(expr) -> expr
+	// For Go (SSR), var name = $state(val) -> var name = val, $derived(expr) -> expr
 	// We use the regexes from types.go (same package)
-	script = StateRegex.ReplaceAllString(script, "$1")
+	script = StateRegex.ReplaceAllString(script, "var $1 = $2")
 	script = DerivedRegex.ReplaceAllString(script, "$1")
 	script = EffectRegex.ReplaceAllString(script, "")
 
@@ -486,11 +499,11 @@ func (c *GospaCompiler) generateIslandTempl(name, islandID, template, script, ha
 	if !strings.Contains(extraImports, "github.com/aydenstechdungeon/gospa/state") {
 		switch {
 		case extraImports == "":
-			extraImports = "import \"github.com/aydenstechdungeon/gospa/state\"\nimport \"context\""
+			extraImports = "import \"github.com/aydenstechdungeon/gospa/state\""
 		case strings.HasPrefix(extraImports, "import ("):
-			extraImports = strings.Replace(extraImports, "import (", "import (\n\t\"github.com/aydenstechdungeon/gospa/state\"\n\t\"context\"", 1)
+			extraImports = strings.Replace(extraImports, "import (", "import (\n\t\"github.com/aydenstechdungeon/gospa/state\"", 1)
 		default:
-			extraImports = "import \"github.com/aydenstechdungeon/gospa/state\"\nimport \"context\"\n" + extraImports
+			extraImports = "import \"github.com/aydenstechdungeon/gospa/state\"\n" + extraImports
 		}
 	}
 

@@ -33,14 +33,14 @@ func (p *TemplateParser) Parse() ([]Node, error) {
 func (p *TemplateParser) parseNodes(closingTag string) ([]Node, error) {
 	var nodes []Node
 	for p.pos < len(p.input) {
-		if closingTag != "" && strings.HasPrefix(p.input[p.pos:], closingTag) {
-			break
-		}
-
-		// Skip Go string literals (backtick and double-quoted) to avoid
-		// parsing HTML-like content inside them as template tags
+		// Skip Go string literals (backtick and double-quoted) BEFORE checking
+		// for closing tags, to avoid false-positive matches inside strings
 		if p.skipStringLiteral() {
 			continue
+		}
+
+		if closingTag != "" && strings.HasPrefix(p.input[p.pos:], closingTag) {
+			break
 		}
 
 		switch char := p.input[p.pos]; char {
@@ -66,11 +66,116 @@ func (p *TemplateParser) parseNodes(closingTag string) ([]Node, error) {
 				return nil, err
 			}
 			nodes = append(nodes, node)
+		case '@':
+			// Handle @Component(...) syntax (templ-style component calls)
+			node, err := p.parseAtComponent()
+			if err != nil {
+				return nil, err
+			}
+			nodes = append(nodes, node)
 		default:
 			nodes = append(nodes, p.parseText())
 		}
 	}
 	return nodes, nil
+}
+
+// parseAtComponent parses @Component(...) syntax (templ-style component calls).
+func (p *TemplateParser) parseAtComponent() (Node, error) {
+	start := p.pos
+	p.pos++ // skip @
+
+	name := p.parseIdentifierWithDots()
+	attrs := p.parseParenArgs()
+
+	node := &ComponentNode{
+		Name:       name,
+		Attributes: attrs,
+	}
+	p.setPos(&node.BaseNode, start, p.pos)
+	return node, nil
+}
+
+// parseIdentifierWithDots parses an identifier that may contain dots (e.g., components.CodeBlock).
+func (p *TemplateParser) parseIdentifierWithDots() string {
+	start := p.pos
+	for p.pos < len(p.input) && (unicode.IsLetter(rune(p.input[p.pos])) || unicode.IsDigit(rune(p.input[p.pos])) || p.input[p.pos] == '-' || p.input[p.pos] == '_' || p.input[p.pos] == '.' || p.input[p.pos] == ':') {
+		p.pos++
+	}
+	return p.input[start:p.pos]
+}
+
+// parseParenArgs parses parenthesized arguments like (arg1, "arg2", `arg3`).
+// Returns attributes where each positional arg gets a generated name.
+func (p *TemplateParser) parseParenArgs() []Attribute {
+	if !p.consume("(") {
+		return nil
+	}
+
+	var attrs []Attribute
+	argIndex := 0
+
+	for {
+		p.skipWhitespace()
+		if p.pos >= len(p.input) || p.input[p.pos] == ')' {
+			break
+		}
+
+		// Handle comma separator
+		if argIndex > 0 {
+			if !p.consume(",") {
+				break
+			}
+			p.skipWhitespace()
+		}
+
+		// Parse the argument value
+		var attr Attribute
+		attr.Name = fmt.Sprintf("_arg%d", argIndex)
+
+		switch {
+		case p.pos < len(p.input) && p.input[p.pos] == '`':
+			// Backtick string
+			p.pos++ // skip opening `
+			start := p.pos
+			for p.pos < len(p.input) && p.input[p.pos] != '`' {
+				p.pos++
+			}
+			attr.Value = p.input[start:p.pos]
+			if p.pos < len(p.input) {
+				p.pos++ // skip closing `
+			}
+			attr.IsExpression = true // Mark as expression to preserve raw value
+		case p.pos < len(p.input) && p.input[p.pos] == '"':
+			// Double-quoted string
+			p.pos++ // skip opening "
+			attr.Value = p.consumeEscapedUntil("\"")
+			if p.pos < len(p.input) {
+				p.pos++ // skip closing "
+			}
+		case p.pos < len(p.input) && p.input[p.pos] == '{':
+			// Expression in braces
+			p.pos++ // skip {
+			attr.Value = p.consumeUntil("}")
+			attr.IsExpression = true
+			if p.pos < len(p.input) {
+				p.pos++ // skip }
+			}
+		default:
+			// Unquoted value (identifier, number, etc.)
+			start := p.pos
+			for p.pos < len(p.input) && p.input[p.pos] != ',' && p.input[p.pos] != ')' && !unicode.IsSpace(rune(p.input[p.pos])) {
+				p.pos++
+			}
+			attr.Value = p.input[start:p.pos]
+		}
+
+		attrs = append(attrs, attr)
+		argIndex++
+	}
+
+	p.consume(")")
+	return attrs
 }
 
 func (p *TemplateParser) parseTag() (Node, error) {
@@ -295,7 +400,7 @@ func (p *TemplateParser) parseText() Node {
 	start := p.pos
 	var sb strings.Builder
 	for p.pos < len(p.input) {
-		if p.input[p.pos] == '<' || p.input[p.pos] == '{' || p.input[p.pos] == '`' || p.input[p.pos] == '"' {
+		if p.input[p.pos] == '<' || p.input[p.pos] == '{' || p.input[p.pos] == '`' || p.input[p.pos] == '"' || p.input[p.pos] == '@' {
 			break
 		}
 		sb.WriteByte(p.input[p.pos])
@@ -328,11 +433,11 @@ func (p *TemplateParser) parseAttributes() []Attribute {
 				p.consume("}")
 				attrs = append(attrs, Attribute{Name: name, Value: val, IsExpression: true})
 			case p.consume("\""):
-				val := p.consumeUntil("\"")
+				val := p.consumeEscapedUntil("\"")
 				p.consume("\"")
 				attrs = append(attrs, Attribute{Name: name, Value: val})
 			case p.consume("'"):
-				val := p.consumeUntil("'")
+				val := p.consumeEscapedUntil("'")
 				p.consume("'")
 				attrs = append(attrs, Attribute{Name: name, Value: val})
 			default:
@@ -382,6 +487,28 @@ func (p *TemplateParser) consumeUntil(s string) string {
 	}
 	p.pos += idx
 	return p.input[start:p.pos]
+}
+
+// consumeEscapedUntil consumes characters until the delimiter is found,
+// handling backslash-escaped delimiters (e.g., \" inside a double-quoted string).
+// The escape sequences are preserved in the output.
+func (p *TemplateParser) consumeEscapedUntil(delimiter string) string {
+	var sb strings.Builder
+	for p.pos < len(p.input) {
+		if p.input[p.pos] == '\\' && p.pos+1 < len(p.input) {
+			// Preserve the escape sequence (keep both backslash and char)
+			sb.WriteByte(p.input[p.pos])
+			sb.WriteByte(p.input[p.pos+1])
+			p.pos += 2
+			continue
+		}
+		if strings.HasPrefix(p.input[p.pos:], delimiter) {
+			break
+		}
+		sb.WriteByte(p.input[p.pos])
+		p.pos++
+	}
+	return sb.String()
 }
 
 func (p *TemplateParser) setPos(base *BaseNode, start, end int) {

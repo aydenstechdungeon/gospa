@@ -13,10 +13,6 @@ package: gospasfc
 	println("Hello from Go!")
 </script>
 
-<script lang="ts">
-	console.log("Client-side hydration complete for: ", title.get())
-</script>
-
 <template>
 	<div class="space-y-12">
 		<header>
