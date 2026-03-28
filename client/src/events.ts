@@ -301,3 +301,37 @@ export const keys = {
   arrowLeft: "ArrowLeft",
   arrowRight: "ArrowRight",
 };
+
+/**
+ * Global event delegation for GoSPA.
+ * Handles events at the root level to reduce memory overhead and improve performance.
+ */
+export function setupEventDelegation(root: Element) {
+  const events = ["click", "input", "change", "submit", "focusin", "focusout", "mouseenter", "mouseleave"];
+
+  events.forEach((eventName) => {
+    root.addEventListener(eventName, (event) => {
+      let target = event.target as HTMLElement | null;
+      
+      while (target && target !== root) {
+        const attr = target.getAttribute("data-gospa-on");
+        if (attr) {
+          const [eventStr, handlerName] = attr.split(":");
+          if (eventStr === eventName || (eventStr === "focus" && eventName === "focusin") || (eventStr === "blur" && eventName === "focusout")) {
+            // Find the closest island to get its state/functions
+            const islandEl = target.closest("[data-gospa-island]");
+            if (islandEl) {
+              const islandId = islandEl.id;
+              // This assumes the island is already hydrated and its functions are available
+              const islandInstance = (window as any)[`__GOSPA_ISLAND_${islandId}__`];
+              if (islandInstance && islandInstance.handlers && islandInstance.handlers[handlerName]) {
+                islandInstance.handlers[handlerName](event);
+              }
+            }
+          }
+        }
+        target = target.parentElement;
+      }
+    }, { passive: eventName !== "submit" });
+  });
+}

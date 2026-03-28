@@ -6,7 +6,6 @@ import (
 	"encoding/json"
 	"fmt"
 	"regexp"
-	"sort"
 	"strings"
 
 	"github.com/aydenstechdungeon/gospa/compiler/sfc"
@@ -86,26 +85,37 @@ func (c *GospaCompiler) Compile(opts CompileOptions, input string) (templ, ts st
 		opts.Hydrate = true
 	}
 
-	// 1. Process Reactive DSL in Script and extract Props
-	processedScript, props := c.transformDSL(parsed.Script.Content)
+	// 1. Process Reactive DSL in Script and extract Props/State
+	scriptContent := parsed.Script.Content
+	props, states := ExtractTypes(scriptContent)
+	processedScript, _ := c.transformDSL(scriptContent)
 
 	// 2. Generate Unique Hash for Scoping
 	hash := c.generateHash(islandID)
 
-	// 3. Transform Template (Svelte-like syntax)
-	transformedTemplate := c.transformTemplate(parsed.Template.Content)
+	// 3. Transform Template (AST-based)
+	tp := sfc.NewTemplateParser(parsed.Template.Content, parsed.Template.ByteOffset, parsed.Template.Line, parsed.Template.Column)
+	nodes, err := tp.Parse()
+	if err != nil {
+		return "", "", err
+	}
+	transformedTemplate := c.codegenTemplate(nodes, hash)
 
 	// 4. Generate Templ with Scoped CSS
-	scopedTemplate := c.scopeTemplate(transformedTemplate, hash)
+	templTypes := GenerateGoStruct(name, props)
+	var templTypesSnippet string
+	if strings.TrimSpace(templTypes) != "" {
+		templTypesSnippet = templTypes
+	}
 	switch componentType {
 	case ComponentTypePage:
-		templ = c.generatePageTempl(name, scopedTemplate, processedScript, hash, opts.PkgName, props)
+		templ = c.generatePageTempl(name, transformedTemplate, processedScript, hash, opts.PkgName, props, templTypesSnippet)
 	case ComponentTypeLayout:
-		templ = c.generateLayoutTempl(name, scopedTemplate, processedScript, hash, opts.PkgName, props)
+		templ = c.generateLayoutTempl(name, transformedTemplate, processedScript, hash, opts.PkgName, props, templTypesSnippet)
 	case ComponentTypeStatic, ComponentTypeServer:
-		templ = c.generateStaticTempl(name, scopedTemplate, processedScript, hash, opts.PkgName, props)
+		templ = c.generateStaticTempl(name, transformedTemplate, processedScript, hash, opts.PkgName, props, templTypesSnippet)
 	default:
-		templ = c.generateIslandTempl(name, islandID, scopedTemplate, processedScript, hash, opts.PkgName, props)
+		templ = c.generateIslandTempl(name, islandID, transformedTemplate, processedScript, hash, opts.PkgName, props, templTypesSnippet)
 	}
 
 	// 5. Generate TypeScript Island
@@ -116,11 +126,126 @@ func (c *GospaCompiler) Compile(opts CompileOptions, input string) (templ, ts st
 			tsScript = parsed.ScriptTS.Content
 			tsFromGo = false
 		}
+		tsTypes := GenerateTSInterface(name, props, states)
 		ts = c.generateTS(islandID, tsScript, tsFromGo, parsed.Style.Content, hash)
+		ts = tsTypes + "\n" + ts
 		ts += c.generateScopedCSS(parsed.Style.Content, hash)
 	}
 
 	return templ, ts, nil
+}
+
+func (c *GospaCompiler) codegenTemplate(nodes []sfc.Node, hash string) string {
+	var sb strings.Builder
+	for _, node := range nodes {
+		switch n := node.(type) {
+		case *sfc.ElementNode:
+			sb.WriteString("<")
+			sb.WriteString(n.TagName)
+			// Add scoping hash
+			hasHash := false
+			for i, attr := range n.Attributes {
+				if attr.Name == "class" {
+					n.Attributes[i].Value += " " + hash
+					hasHash = true
+					break
+				}
+			}
+			if !hasHash {
+				n.Attributes = append(n.Attributes, sfc.Attribute{Name: "class", Value: hash})
+			}
+
+			for _, attr := range n.Attributes {
+				sb.WriteString(" ")
+				sb.WriteString(attr.Name)
+				if attr.Value != "" || attr.IsExpression {
+					sb.WriteString("=")
+					if attr.IsExpression {
+						sb.WriteString("{")
+					} else {
+						sb.WriteString("\"")
+					}
+					sb.WriteString(attr.Value)
+					if attr.IsExpression {
+						sb.WriteString("}")
+					} else {
+						sb.WriteString("\"")
+					}
+				}
+			}
+			if n.SelfClosing {
+				sb.WriteString(" />")
+			} else {
+				sb.WriteString(">")
+				sb.WriteString(c.codegenTemplate(n.Children, hash))
+				sb.WriteString("</")
+				sb.WriteString(n.TagName)
+				sb.WriteString(">")
+			}
+		case *sfc.TextNode:
+			sb.WriteString(n.Content)
+		case *sfc.ExpressionNode:
+			sb.WriteString("{ ")
+			sb.WriteString(n.Content)
+			sb.WriteString(" }")
+		case *sfc.IfNode:
+			sb.WriteString("if ")
+			sb.WriteString(n.Condition)
+			sb.WriteString(" {\n")
+			sb.WriteString(c.codegenTemplate(n.Then, hash))
+			for _, elseif := range n.ElseIfs {
+				sb.WriteString("\n} else if ")
+				sb.WriteString(elseif.Condition)
+				sb.WriteString(" {\n")
+				sb.WriteString(c.codegenTemplate(elseif.Then, hash))
+			}
+			if len(n.Else) > 0 {
+				sb.WriteString("\n} else {\n")
+				sb.WriteString(c.codegenTemplate(n.Else, hash))
+			}
+			sb.WriteString("\n}")
+		case *sfc.EachNode:
+			sb.WriteString("for _, ")
+			sb.WriteString(n.As)
+			sb.WriteString(" := range ")
+			sb.WriteString(n.Iteratee)
+			sb.WriteString(" {\n")
+			sb.WriteString(c.codegenTemplate(n.Children, hash))
+			sb.WriteString("\n}")
+		case *sfc.SnippetNode:
+			// Snippets are handled separately in generateTempl, but we can emit them as templ functions
+			// Actually, let's just emit them as definitions if they were inside the template
+		case *sfc.ComponentNode:
+			sb.WriteString("@")
+			sb.WriteString(n.Name)
+			sb.WriteString("(")
+			for i, attr := range n.Attributes {
+				if i > 0 {
+					sb.WriteString(", ")
+				}
+				sb.WriteString(attr.Name)
+				sb.WriteString(": ")
+				if attr.IsExpression {
+					sb.WriteString(attr.Value)
+				} else {
+					sb.WriteString("\"")
+					sb.WriteString(attr.Value)
+					sb.WriteString("\"")
+				}
+			}
+			sb.WriteString(")")
+			if len(n.Children) > 0 {
+				sb.WriteString(" {\n")
+				sb.WriteString(c.codegenTemplate(n.Children, hash))
+				sb.WriteString("\n}")
+			}
+		case *sfc.CommentNode:
+			sb.WriteString("<!-- ")
+			sb.WriteString(n.Content)
+			sb.WriteString(" -->")
+		}
+	}
+	return sb.String()
 }
 
 // CompileLegacy preserves the old island-only API.
@@ -134,60 +259,6 @@ func (c *GospaCompiler) CompileLegacy(goName, islandID, input, pkgName string) (
 	}, input)
 }
 
-func (c *GospaCompiler) scopeTemplate(template, hash string) string {
-	// 1. Protect strings/backticks
-	stringMap := make(map[string]string)
-	placeholderCounter := 0
-	strRegex := regexp.MustCompile("(?s)`[^`]*`|\"[^\"]*\"")
-
-	protected := strRegex.ReplaceAllStringFunc(template, func(s string) string {
-		if !strings.ContainsAny(s, "<>") {
-			return s
-		}
-		placeholder := fmt.Sprintf("__GOSPA_STR_ID_%d__", placeholderCounter)
-		stringMap[placeholder] = s
-		placeholderCounter++
-		return placeholder
-	})
-
-	// 2. Scope remaining tags
-	scoped := tagRegex.ReplaceAllStringFunc(protected, func(tag string) string {
-		if strings.HasPrefix(strings.ToLower(tag), "<script") || strings.HasPrefix(strings.ToLower(tag), "<style") {
-			return tag
-		}
-
-		// If it's a component call (e.g. @Component), don't scope it here as Templ handles it
-		if strings.HasPrefix(tag, "@") {
-			return tag
-		}
-
-		if classAttrRegex.MatchString(tag) {
-			return classAttrRegex.ReplaceAllString(tag, `class="$1 `+hash+`"`)
-		}
-		// If no class, insert it (but be careful with self-closing tags and components)
-		if strings.HasSuffix(tag, "/>") {
-			return strings.Replace(tag, "/>", ` class="`+hash+`" />`, 1)
-		}
-		return tagRegex.ReplaceAllString(tag, `<$1 class="`+hash+` "$2>`)
-	})
-
-	// 3. Restore strings
-	type mapping struct{ k, v string }
-	sorted := make([]mapping, 0, len(stringMap))
-	for k, v := range stringMap {
-		sorted = append(sorted, mapping{k, v})
-	}
-	sort.Slice(sorted, func(i, j int) bool {
-		return len(sorted[i].k) > len(sorted[j].k)
-	})
-
-	for _, m := range sorted {
-		scoped = strings.ReplaceAll(scoped, m.k, m.v)
-	}
-
-	return scoped
-}
-
 func (c *GospaCompiler) generateHash(name string) string {
 	normalized := strings.ToLower(strings.TrimSpace(name))
 	if normalized == "" {
@@ -198,30 +269,10 @@ func (c *GospaCompiler) generateHash(name string) string {
 }
 
 var (
-	stateRegex         = regexp.MustCompile(`\$state\((.*?)\)`)
-	derivedRegex       = regexp.MustCompile(`\$derived\((.*?)\)`)
-	effectRegex        = regexp.MustCompile(`(?s)\$effect\(func\(\)\s*\{(.*?)\}\)`)
-	tagRegex           = regexp.MustCompile(`(?i)<([a-z0-9-]+)([^>]*)>`) // Added dash for custom components
-	classAttrRegex     = regexp.MustCompile(`(?i)class="([^"]*)"`)
-	cssDotRegex        = regexp.MustCompile(`\.([a-zA-Z][a-zA-Z0-9-_]*)`)
-	cssElementRegex    = regexp.MustCompile(`(?m)^([a-z0-9]+)\s*\{`)
-	nameSafeRegex      = regexp.MustCompile(`[^a-zA-Z0-9]`)
-	propsRegex         = regexp.MustCompile(`(?m)var\s+\{\s*(.*?)\s*\}\s*=\s*\$props\(\)`)
-	ifRegex            = regexp.MustCompile(`\{#if\s+(.*?)\}`)
-	elseIfRegex        = regexp.MustCompile(`\{:else\s+if\s+(.*?)\}`)
-	elseRegex          = regexp.MustCompile(`\{:else\}`)
-	endIfRegex         = regexp.MustCompile(`\{/if\}`)
-	eachRegex          = regexp.MustCompile(`\{#each\s+(.*?)\s+as\s+(.*?)\}`)
-	endEachRegex       = regexp.MustCompile(`\{/each\}`)
-	shorthandRegex     = regexp.MustCompile(`\s\{([a-zA-Z0-9_]+)\}([\s/>])`) // Only match in attribute position
-	bindRegex          = regexp.MustCompile(`bind:([a-zA-Z0-9-]+)=\{([a-zA-Z0-9_.]+)\}`)
-	transitionRegex    = regexp.MustCompile(`transition:([a-zA-Z0-9-]+)(?:=\{([^}]*)\})?`)
-	componentTagRegex  = regexp.MustCompile(`<([A-Z][a-zA-Z0-9-_]*)([^>]*)>`) // Removed (?i)
-	endComponentRegex  = regexp.MustCompile(`</([A-Z][a-zA-Z0-9-_]*)>`)       // Removed (?i)
 	snippetRegex       = regexp.MustCompile(`\{#snippet\s+([a-zA-Z0-9_]+)\((.*?)\)\}`)
 	endSnippetRegex    = regexp.MustCompile(`\{/snippet\}`)
-	onRegex            = regexp.MustCompile(`\son:([a-zA-Z0-9:]+)=\{([a-zA-Z0-9_.]+)\}`)
 	reactiveLabelRegex = regexp.MustCompile(`\$:\s*([a-zA-Z0-9_]+)\s*=\s*([^;\n]+)`)
+	nameSafeRegex      = regexp.MustCompile(`[^a-zA-Z0-9]`)
 )
 
 func (c *GospaCompiler) sanitizeName(name string) string {
@@ -232,98 +283,20 @@ func (c *GospaCompiler) sanitizeName(name string) string {
 	return safe
 }
 
-func (c *GospaCompiler) transformDSL(script string) (string, []string) {
-	var props []string
-	if matches := propsRegex.FindStringSubmatch(script); len(matches) > 1 {
-		pList := strings.Split(matches[1], ",")
-		for _, p := range pList {
-			props = append(props, strings.TrimSpace(p))
-		}
-		script = propsRegex.ReplaceAllString(script, "")
-	}
+func (c *GospaCompiler) transformDSL(script string) (string, []Prop) {
+	props, _ := ExtractTypes(script)
 
 	// Implicit reactive statements $: val = expr -> var val = expr
 	script = reactiveLabelRegex.ReplaceAllString(script, "var $1 = $2")
 
 	// For Go (SSR), $state(val) -> val, $derived(expr) -> expr
-	script = stateRegex.ReplaceAllString(script, "$1")
-	script = derivedRegex.ReplaceAllString(script, "$1")
-	script = effectRegex.ReplaceAllString(script, "")
+	// For Go (SSR), $state(val) -> val, $derived(expr) -> expr
+	// We use the regexes from types.go (same package)
+	script = StateRegex.ReplaceAllString(script, "$1")
+	script = DerivedRegex.ReplaceAllString(script, "$1")
+	script = EffectRegex.ReplaceAllString(script, "")
 
 	return script, props
-}
-
-func (c *GospaCompiler) transformTemplate(template string) string {
-	// 0. Protect backtick strings
-	stringMap := make(map[string]string)
-	placeholderCounter := 0
-
-	backtickRegex := regexp.MustCompile("(?s)`[^`]*`")
-
-	s := backtickRegex.ReplaceAllStringFunc(template, func(match string) string {
-		placeholder := fmt.Sprintf("__GOSPA_PROTECTED_%d__", placeholderCounter)
-		stringMap[placeholder] = match
-		placeholderCounter++
-		return placeholder
-	})
-
-	// 1. Logic Blocks
-	s = ifRegex.ReplaceAllString(s, "if $1 {")
-	s = elseIfRegex.ReplaceAllString(s, "} else if $1 {")
-	s = elseRegex.ReplaceAllString(s, "} else {")
-	s = endIfRegex.ReplaceAllString(s, "}")
-	s = eachRegex.ReplaceAllString(s, "for _, $2 := range $1 {")
-	s = endEachRegex.ReplaceAllString(s, "}")
-
-	// 2. Snippets (Removed from here, will be extracted in generateTempl)
-
-	// 3. Components (PascalCase)
-	s = componentTagRegex.ReplaceAllStringFunc(s, func(match string) string {
-		parts := componentTagRegex.FindStringSubmatch(match)
-		name := parts[1]
-		attrs := parts[2]
-		if strings.HasSuffix(attrs, "/") {
-			return fmt.Sprintf("@%s(%s)", name, strings.TrimSuffix(attrs, "/"))
-		}
-		return fmt.Sprintf("@%s(%s) {", name, attrs)
-	})
-	s = endComponentRegex.ReplaceAllString(s, "}")
-
-	// 4. Bindings
-	s = bindRegex.ReplaceAllString(s, `data-gospa-bind="$1:$2"`)
-
-	// 4b. Events on:click={fn} -> data-gospa-on="click:fn"
-	s = onRegex.ReplaceAllString(s, ` data-gospa-on="$1:$2"`)
-
-	// 2. Snippet Calls {snippet(args)} -> @snippet(args)
-	// We look for {name(...)} where name is a snippet
-	// This is a bit broad, but snippets usually start with lowercase
-	snippetCallRegex := regexp.MustCompile(`\{([a-z][a-zA-Z0-9_]*)\((.*?)\)\}`)
-	s = snippetCallRegex.ReplaceAllString(s, "@$1($2)")
-
-	// 5. Transitions
-	s = transitionRegex.ReplaceAllStringFunc(s, func(match string) string {
-		parts := transitionRegex.FindStringSubmatch(match)
-		name := parts[1]
-		params := ""
-		if len(parts) > 2 {
-			params = parts[2]
-		}
-		res := fmt.Sprintf(`data-transition="%s"`, name)
-		if params != "" {
-			res += fmt.Sprintf(` data-transition-params='%s'`, params)
-		}
-		return res
-	})
-
-	s = shorthandRegex.ReplaceAllString(s, " $1={$1}$2")
-
-	// 7. Restore protected strings
-	for k, v := range stringMap {
-		s = strings.ReplaceAll(s, k, v)
-	}
-
-	return s
 }
 
 func inferPackage(t ComponentType) string {
@@ -339,7 +312,50 @@ func inferPackage(t ComponentType) string {
 	}
 }
 
-func (c *GospaCompiler) generateIslandTempl(name, islandID, template, script, hash, pkgName string, props []string) string {
+// extractStructDefs extracts type struct definitions from script content.
+// Struct definitions must be at the package level in templ, not inside {{ }} blocks.
+func extractStructDefs(script string) (structs string, remaining string) {
+	var sb strings.Builder
+	remaining = script
+
+	for {
+		typeIdx := strings.Index(remaining, "type ")
+		if typeIdx == -1 {
+			break
+		}
+
+		braceStart := strings.Index(remaining[typeIdx:], "{")
+		if braceStart == -1 {
+			break
+		}
+		braceStart += typeIdx
+
+		depth := 0
+		endIdx := -1
+		for i := braceStart; i < len(remaining); i++ {
+			if remaining[i] == '{' {
+				depth++
+			} else if remaining[i] == '}' {
+				depth--
+				if depth == 0 {
+					endIdx = i + 1
+					break
+				}
+			}
+		}
+		if endIdx == -1 {
+			break
+		}
+
+		sb.WriteString(remaining[typeIdx:endIdx])
+		sb.WriteString("\n")
+		remaining = remaining[:typeIdx] + remaining[endIdx:]
+	}
+
+	return sb.String(), remaining
+}
+
+func (c *GospaCompiler) generateIslandTempl(name, islandID, template, script, hash, pkgName string, props []Prop, templTypesSnippet string) string {
 	header := "// Code generated by GoSPA; DO NOT EDIT.\n\n"
 	if pkgName == "" {
 		pkgName = "islands"
@@ -397,6 +413,9 @@ func (c *GospaCompiler) generateIslandTempl(name, islandID, template, script, ha
 
 	cleanScript := importRegex.ReplaceAllString(script, "")
 
+	// Extract type struct definitions to package level (they can't be inside {{ }} blocks)
+	structDefs, cleanScript := extractStructDefs(cleanScript)
+
 	// Ensure fmt import if used
 	if strings.Contains(cleanScript, "fmt.") && !strings.Contains(extraImports, "\"fmt\"") {
 		switch {
@@ -433,7 +452,19 @@ func (c *GospaCompiler) generateIslandTempl(name, islandID, template, script, ha
 		return fmt.Sprintf("%s := func(%s) { %s }", fnName, fnArgs, flatBody)
 	})
 
-	extraSnippets := strings.Join(snippetDefs, "\n\n")
+	extraSnippets := strings.TrimSpace(structDefs)
+	if strings.TrimSpace(templTypesSnippet) != "" {
+		if extraSnippets != "" {
+			extraSnippets += "\n\n"
+		}
+		extraSnippets += strings.TrimSpace(templTypesSnippet)
+	}
+	if len(snippetDefs) > 0 {
+		if extraSnippets != "" {
+			extraSnippets += "\n\n"
+		}
+		extraSnippets += strings.Join(snippetDefs, "\n\n")
+	}
 
 	// Inject script initializations if non-empty, every line prefixed with @
 	// Skip function definitions in Templ (they are for client-side TS)
@@ -451,9 +482,34 @@ func (c *GospaCompiler) generateIslandTempl(name, islandID, template, script, ha
 		}
 	}
 
+	// Add state registry import if needed
+	if !strings.Contains(extraImports, "github.com/aydenstechdungeon/gospa/state") {
+		switch {
+		case extraImports == "":
+			extraImports = "import \"github.com/aydenstechdungeon/gospa/state\"\nimport \"context\""
+		case strings.HasPrefix(extraImports, "import ("):
+			extraImports = strings.Replace(extraImports, "import (", "import (\n\t\"github.com/aydenstechdungeon/gospa/state\"\n\t\"context\"", 1)
+		default:
+			extraImports = "import \"github.com/aydenstechdungeon/gospa/state\"\nimport \"context\"\n" + extraImports
+		}
+	}
+
 	// Signature generation
-	propArgs := typeArgs(strings.Join(props, ", "))
+	propNames := []string{}
+	for _, p := range props {
+		propNames = append(propNames, p.Name+" "+p.Type)
+	}
+	propArgs := typeArgs(strings.Join(propNames, ", "))
 	signature := name + "(" + propArgs + ")"
+
+	// Registration logic
+	registration := fmt.Sprintf(`
+	if r := state.FromContext(ctx); r != nil {
+		pMap := map[string]interface{}{
+			%s
+		}
+		r.Register("%s", pMap, nil)
+	}`, generatePropMap(props), islandID)
 
 	return header + fmt.Sprintf(`package %s
 
@@ -463,20 +519,29 @@ func (c *GospaCompiler) generateIslandTempl(name, islandID, template, script, ha
 
 templ %s {
 %s
+%s
 	<div data-gospa-island="%s" class="%s">
 		%s
 	</div>
 }
-`, pkgName, extraImports, extraSnippets, signature, scriptInjection, islandID, hash, cleanTemplate)
+`, pkgName, extraImports, extraSnippets, signature, scriptInjection, registration, islandID, hash, cleanTemplate)
 }
 
-func (c *GospaCompiler) generatePageTempl(name, template, script, hash, pkgName string, props []string) string {
-	templ := c.generateIslandTempl(name, "", template, script, hash, pkgName, props)
+func generatePropMap(props []Prop) string {
+	var sb strings.Builder
+	for _, p := range props {
+		fmt.Fprintf(&sb, "\"%s\": %s,\n", p.Name, p.Name)
+	}
+	return sb.String()
+}
+
+func (c *GospaCompiler) generatePageTempl(name, template, script, hash, pkgName string, props []Prop, templTypesSnippet string) string {
+	templ := c.generateIslandTempl(name, "", template, script, hash, pkgName, props, templTypesSnippet)
 	return strings.Replace(templ, "<div data-gospa-island=\"\" class=\""+hash+"\">", "<div class=\""+hash+"\">", 1)
 }
 
-func (c *GospaCompiler) generateLayoutTempl(name, template, script, hash, pkgName string, props []string) string {
-	templ := c.generateIslandTempl(name, "", template, script, hash, pkgName, props)
+func (c *GospaCompiler) generateLayoutTempl(name, template, script, hash, pkgName string, props []Prop, templTypesSnippet string) string {
+	templ := c.generateIslandTempl(name, "", template, script, hash, pkgName, props, templTypesSnippet)
 	templ = strings.Replace(templ, "<div data-gospa-island=\"\" class=\""+hash+"\">", "<div class=\""+hash+"\">", 1)
 	templ = strings.ReplaceAll(templ, "@children", "{ children }")
 	signatureNeedle := "templ " + name + "("
@@ -487,44 +552,33 @@ func (c *GospaCompiler) generateLayoutTempl(name, template, script, hash, pkgNam
 	return strings.Replace(templ, signatureNeedle, signatureReplace, 1)
 }
 
-func (c *GospaCompiler) generateStaticTempl(name, template, script, hash, pkgName string, props []string) string {
-	templ := c.generateIslandTempl(name, "", template, script, hash, pkgName, props)
+func (c *GospaCompiler) generateStaticTempl(name, template, script, hash, pkgName string, props []Prop, templTypesSnippet string) string {
+	templ := c.generateIslandTempl(name, "", template, script, hash, pkgName, props, templTypesSnippet)
 	templ = strings.Replace(templ, "\n\t<div data-gospa-island=\"\" class=\""+hash+"\">\n\t\t", "\n\t\t", 1)
 	return strings.Replace(templ, "\n\t</div>\n}\n", "\n}\n", 1)
 }
 
-func (c *GospaCompiler) generateTS(name, script string, fromGo bool, _ string, hash string) string {
+func (c *GospaCompiler) generateTS(islandID, script string, fromGo bool, _ string, hash string) string {
 	tsScript := script
 	funcNames := []string{}
 
 	if fromGo {
-		// 1. $props() -> destructuring (Strip types)
-		if matches := propsRegex.FindStringSubmatch(tsScript); len(matches) > 1 {
-			pList := strings.Split(matches[1], ",")
-			cleanProps := []string{}
-			for _, p := range pList {
-				trimmed := strings.TrimSpace(p)
-				parts := strings.Fields(trimmed)
-				if len(parts) > 0 {
-					cleanProps = append(cleanProps, parts[0])
-				}
-			}
-			tsScript = propsRegex.ReplaceAllString(tsScript, fmt.Sprintf("const { %s } = props", strings.Join(cleanProps, ", ")))
-		}
+		// 1. Basic conversion from Go reactive runes to TS
+		// We use state.$state etc to avoid collision and use our runtime
+		tsScript = PropsRegex.ReplaceAllString(tsScript, "let { $1 } = props")
+		tsScript = StateRegex.ReplaceAllString(tsScript, "let $1 = state.$$state($2)")
+		tsScript = DerivedRegex.ReplaceAllString(tsScript, "state.$$derived(() => $1)")
+		// Effects remain as state.$effect
+		tsScript = EffectRegex.ReplaceAllString(tsScript, "state.$$effect(() => {$1})")
 
-		// 2. Convert Go func to JS function
+		// Convert Go func to JS function
 		funcRegex := regexp.MustCompile(`(?m)^\s*func\s+([a-zA-Z0-9_]+)\((.*?)\)\s*\{`)
 		tsScript = funcRegex.ReplaceAllString(tsScript, "function $1($2) {")
 
-		// 3. Handle runes
-		tsScript = stateRegex.ReplaceAllString(tsScript, "state.$$state($1)")
-		tsScript = derivedRegex.ReplaceAllString(tsScript, "state.$$derived(() => $1)")
-		tsScript = effectRegex.ReplaceAllString(tsScript, "state.$$effect($1)")
+		// Reactive labels $: name = expr -> const name = state.$derived(() => expr)
+		tsScript = ReactiveLabelRegex.ReplaceAllString(tsScript, "const $1 = state.$derived(() => $2)")
 
-		// 4. Reactive labels $: name = expr -> const name = state.$$derived(() => expr)
-		tsScript = reactiveLabelRegex.ReplaceAllString(tsScript, "const $1 = state.$$derived(() => $2)")
-
-		// 5. Clean up Go-isms
+		// Clean up Go-isms
 		goForRangeRegex := regexp.MustCompile(`(?m)for\s+_,\s*([a-zA-Z0-9_]+)\s*:=\s*range\s*(.*?)\s*\{`)
 		tsScript = goForRangeRegex.ReplaceAllString(tsScript, "for (const $1 of $2) {")
 
@@ -542,24 +596,10 @@ func (c *GospaCompiler) generateTS(name, script string, fromGo bool, _ string, h
 	}
 
 	header := "/**\n * Code generated by GoSPA; DO NOT EDIT.\n */\n\n"
-
 	funcsObject := "{ " + strings.Join(funcNames, ", ") + " }"
 	if len(funcNames) == 0 {
 		funcsObject = "{}"
 	}
-
-	eventBindingLogic := fmt.Sprintf(`
-    // Event binding logic
-    const __GOSPA_FUNCS__ = %s;
-    element.querySelectorAll('[data-gospa-on]').forEach(el => {
-      const attr = el.getAttribute('data-gospa-on');
-      if (!attr) return;
-      const [eventStr, fnName] = attr.split(':');
-      const handler = (__GOSPA_FUNCS__ as any)[fnName];
-      if (handler) {
-        import('@gospa/runtime').then(m => m.on(el, eventStr, handler));
-      }
-    });`, funcsObject)
 
 	return header + fmt.Sprintf(`import { createIsland } from '@gospa/runtime';
 
@@ -568,13 +608,15 @@ export default createIsland({
   setup(element, { props, state }) {
 %s
 
-%s
+    // Event delegation registration
+    const __GOSPA_HANDLERS__ = %s;
+    (window as any)["__GOSPA_ISLAND_" + "%s" + "__"] = { handlers: __GOSPA_HANDLERS__ };
     
     // Scoped hydration selector
     const scope = (selector: string) => element.querySelector(selector + '.' + '%s');
   }
 });
-`, name, tsScript, eventBindingLogic, hash)
+`, islandID, tsScript, funcsObject, islandID, hash)
 }
 
 func (c *GospaCompiler) generateScopedCSS(style, hash string) string {
@@ -582,10 +624,10 @@ func (c *GospaCompiler) generateScopedCSS(style, hash string) string {
 		return ""
 	}
 	// Scoping:
-	// 1. .card -> .card.gospa-hash
-	scopedStyle := cssDotRegex.ReplaceAllString(style, ".$1."+hash)
+	// Scope all class selectors with the hash
+	scopedStyle := CSSDotRegex.ReplaceAllString(style, ".$1."+hash)
 	// 2. h1 -> h1.gospa-hash (simplified, works for elements too)
-	scopedStyle = cssElementRegex.ReplaceAllString(scopedStyle, "$1."+hash+" {")
+	scopedStyle = CSSElementRegex.ReplaceAllString(scopedStyle, "$1."+hash+" {")
 
 	encodedStyle, _ := json.Marshal(scopedStyle)
 	return fmt.Sprintf("\n\n/* Scoped CSS */\nif (!document.querySelector(`style[data-gospa-style=\"%s\"]`)) {\n\tconst style = document.createElement('style');\n\tstyle.setAttribute('data-gospa-style', '%s');\n\tstyle.textContent = %s;\n\tdocument.head.appendChild(style);\n}\n", hash, hash, string(encodedStyle))

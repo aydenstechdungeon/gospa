@@ -198,11 +198,12 @@ export {
 // Export types
 export type { NavigateOptions, NavigationOptions, StateMessage };
 
-// === New Runtime Enhancements ===
-
 // Signal-based reactivity (proxy-based auto-tracking)
 export {
   reactive,
+  $state,
+  $derived,
+  $effect,
   // derived is already exported from runtime-core above
   effect as signalEffect,
   watchProp,
