@@ -439,6 +439,8 @@ type WSHub struct {
 	mu               sync.RWMutex
 	pubsub           store.PubSub
 	stop             chan struct{}
+	// stopOnce ensures Close() is idempotent and never panics on double-call.
+	stopOnce sync.Once
 }
 
 // NewWSHub creates a new WebSocket hub.
@@ -553,8 +555,11 @@ func (h *WSHub) Run() {
 }
 
 // Close explicitly stops the WSHub loop.
+// It is safe to call Close multiple times.
 func (h *WSHub) Close() {
-	close(h.stop)
+	h.stopOnce.Do(func() {
+		close(h.stop)
+	})
 }
 
 // BroadcastTo broadcasts a message to specific clients.

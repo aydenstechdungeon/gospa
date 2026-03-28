@@ -51,7 +51,6 @@ const ALWAYS_DANGEROUS_ELEMENTS = new Set([
 ]);
 
 // Elements that can be optionally allowed (SVG/math - removed by default for security)
-const OPTIONALLY_DANGEROUS_ELEMENTS = new Set(["svg", "math"]);
 
 // Attributes that can contain URLs and need checking
 const URL_ATTRIBUTES = new Set([

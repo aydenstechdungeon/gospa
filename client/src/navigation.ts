@@ -727,12 +727,9 @@ function updateHead(headHtml: string): void {
 
   newLinkElements.forEach((newEl) => {
     const href = newEl.getAttribute("href");
-    const rel = newEl.getAttribute("rel");
 
     // Build a unique selector for tracking
-    const selector = href
-      ? `link[href="${escapeSelectorValue(href)}"]`
-      : null;
+    const selector = href ? `link[href="${escapeSelectorValue(href)}"]` : null;
     if (selector) neededSelectors.add(selector);
 
     // Check if this link already exists in the document
@@ -757,7 +754,8 @@ function updateHead(headHtml: string): void {
     // Build selector to find existing meta and for tracking
     let selector = "";
     if (name) selector = `meta[name="${escapeSelectorValue(name)}"]`;
-    else if (property) selector = `meta[property="${escapeSelectorValue(property)}"]`;
+    else if (property)
+      selector = `meta[property="${escapeSelectorValue(property)}"]`;
     else if (httpEquiv) {
       selector = `meta[http-equiv="${escapeSelectorValue(httpEquiv)}"]`;
     }
@@ -806,9 +804,7 @@ function updateHead(headHtml: string): void {
     neededSelectors.add(selector);
 
     const existingEl = src
-      ? document.head.querySelector(
-        `script[src="${escapeSelectorValue(src)}"]`,
-      )
+      ? document.head.querySelector(`script[src="${escapeSelectorValue(src)}"]`)
       : null;
 
     if (!existingEl) {
@@ -839,12 +835,18 @@ function updateHead(headHtml: string): void {
     // For link and meta elements, also check by attribute patterns
     if (el.matches("link[href]")) {
       const href = el.getAttribute("href");
-      if (href && neededSelectors.has(`link[href="${escapeSelectorValue(href)}"]`)) {
+      if (
+        href &&
+        neededSelectors.has(`link[href="${escapeSelectorValue(href)}"]`)
+      ) {
         shouldRemove = false;
       }
     } else if (el.matches("meta[name]")) {
       const name = el.getAttribute("name");
-      if (name && neededSelectors.has(`meta[name="${escapeSelectorValue(name)}"]`)) {
+      if (
+        name &&
+        neededSelectors.has(`meta[name="${escapeSelectorValue(name)}"]`)
+      ) {
         shouldRemove = false;
       }
     } else if (el.matches("meta[property]")) {
@@ -872,7 +874,10 @@ function updateHead(headHtml: string): void {
       }
     } else if (el.matches("script[data-gospa-head]")) {
       const src = el.getAttribute("src");
-      if (src && neededSelectors.has(`script[src="${escapeSelectorValue(src)}"]`)) {
+      if (
+        src &&
+        neededSelectors.has(`script[src="${escapeSelectorValue(src)}"]`)
+      ) {
         shouldRemove = false;
       }
     }
@@ -892,7 +897,8 @@ function executeScripts(container: Element | Document): void {
     if (
       navigationOptionsConfig.scriptExecution.executeMarkedOnly &&
       oldScript.getAttribute("data-gospa-exec") !== "true"
-    ) return;
+    )
+      return;
 
     const newScript = document.createElement("script");
     // Copy all attributes
@@ -1145,7 +1151,7 @@ export function isNavigating(): boolean {
 }
 
 // Handle popstate (back/forward button)
-function handlePopState(event: PopStateEvent): void {
+function handlePopState(_event: PopStateEvent): void {
   const path = window.location.pathname;
 
   // Notify before navigation

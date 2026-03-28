@@ -11,6 +11,7 @@ import (
 	"strconv"
 	"strings"
 	"sync"
+	"sync/atomic"
 )
 
 // batchContextKey is used to store batch state in context
@@ -31,6 +32,11 @@ type notifier interface {
 
 // activeBatches maps goroutine ID to *batchState
 var activeBatches sync.Map
+
+// activeSyncBatchCount tracks the number of currently active synchronous Batch()
+// calls across all goroutines. This allows getBatchState to skip the expensive
+// runtime.Stack / getGID() call when no synchronous batch is active.
+var activeSyncBatchCount atomic.Int64
 
 // activeContextBatches maps context identities to active batch states.
 // This allows BatchWithContext to work with the caller-provided ctx even when
@@ -60,7 +66,7 @@ func getGID() int64 {
 
 // getBatchState retrieves the batch state from context or goroutine-local storage.
 func getBatchState(ctx context.Context) *batchState {
-	// 1. Check context first (explicitly scoped)
+	// 1. Check context first (explicitly scoped) — this is always cheap.
 	if ctx != nil {
 		if bs, ok := ctx.Value(batchContextKey{}).(*batchState); ok {
 			return bs
@@ -70,7 +76,14 @@ func getBatchState(ctx context.Context) *batchState {
 		}
 	}
 
-	// 2. Fallback to goroutine-local storage
+	// PERF FIX: Skip the expensive runtime.Stack call (getGID) entirely when
+	// no synchronous Batch() is active. This is the common case for all state
+	// mutations that happen outside a Batch() call.
+	if activeSyncBatchCount.Load() == 0 {
+		return nil
+	}
+
+	// 2. Fallback to goroutine-local storage — only reached inside a Batch().
 	gid := getGID()
 	if bs, ok := activeBatches.Load(gid); ok {
 		return bs.(*batchState)
@@ -115,8 +128,12 @@ func Batch(fn func()) {
 		active: true,
 	}
 	gid := getGID()
+	activeSyncBatchCount.Add(1)
 	activeBatches.Store(gid, bs)
-	defer activeBatches.Delete(gid)
+	defer func() {
+		activeBatches.Delete(gid)
+		activeSyncBatchCount.Add(-1)
+	}()
 
 	fn()
 
@@ -147,8 +164,12 @@ func BatchWithContext(ctx context.Context, fn func() error) error {
 	// Goroutine-local fallback so that mutations in the same goroutine (without
 	// explicit context passing) are also captured.
 	gid := getGID()
+	activeSyncBatchCount.Add(1)
 	activeBatches.Store(gid, bs)
-	defer activeBatches.Delete(gid)
+	defer func() {
+		activeBatches.Delete(gid)
+		activeSyncBatchCount.Add(-1)
+	}()
 
 	if err := fn(); err != nil {
 		return err

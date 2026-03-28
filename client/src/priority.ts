@@ -240,7 +240,7 @@ export class PriorityScheduler {
     const events = ["click", "focus", "mouseenter", "touchstart"];
     const handlers: EventListener[] = [];
 
-    const hydrateOnInteraction = (event: Event) => {
+    const hydrateOnInteraction = (_event: Event) => {
       // Remove all listeners
       for (let i = 0; i < events.length; i++) {
         island.element!.removeEventListener(events[i], handlers[i]);

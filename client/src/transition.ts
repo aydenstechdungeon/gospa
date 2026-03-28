@@ -41,7 +41,7 @@ export const bounceOut = (t: number) => {
 // Built-in transitions
 export function fade(
   node: Element,
-  { delay = 0, duration = 400, easing = linear } = {},
+  { delay = 0, duration = 400, _easing = linear } = {},
 ): TransitionConfig {
   const o = +getComputedStyle(node).opacity;
   return {
@@ -57,7 +57,7 @@ export function fly(
   {
     delay = 0,
     duration = 400,
-    easing = cubicOut,
+    _easing = cubicOut,
     x = 0,
     y = 0,
     opacity = 0,
@@ -80,7 +80,7 @@ export function fly(
 
 export function slide(
   node: Element,
-  { delay = 0, duration = 400, easing = cubicOut } = {},
+  { delay = 0, duration = 400, _easing = cubicOut } = {},
 ): TransitionConfig {
   const style = getComputedStyle(node);
   const opacity = +style.opacity;
@@ -112,7 +112,13 @@ export function slide(
 
 export function scale(
   node: Element,
-  { delay = 0, duration = 400, easing = cubicOut, start = 0, opacity = 0 } = {},
+  {
+    delay = 0,
+    duration = 400,
+    _easing = cubicOut,
+    start = 0,
+    opacity = 0,
+  } = {},
 ): TransitionConfig {
   const style = getComputedStyle(node);
   const targetOpacity = +style.opacity;
@@ -135,7 +141,7 @@ export function blur(
   {
     delay = 0,
     duration = 400,
-    easing = cubicInOut,
+    _easing = cubicInOut,
     amount = 5,
     opacity = 0,
   } = {},
@@ -156,13 +162,13 @@ export function blur(
 
 export function crossfade(
   node: Element,
-  { delay = 0, duration = 400, easing = linear } = {},
+  { delay = 0, duration = 400, _easing = linear } = {},
 ): TransitionConfig {
   return {
     delay,
     duration,
     easing: "linear",
-    css: (t, u) => `
+    css: (t, _u) => `
             opacity: ${t};
             position: absolute;
         `,

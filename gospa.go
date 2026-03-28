@@ -44,7 +44,9 @@ type App struct {
 	ssgCache map[string]ssgEntry
 	// ssgCacheKeys tracks insertion order for FIFO eviction.
 	ssgCacheKeys []string
-	// ssgCacheMu protects ssgCache and ssgCacheKeys.
+	// ssgCacheIndex maps a key to its position in ssgCacheKeys for O(1) existence checks.
+	ssgCacheIndex map[string]struct{}
+	// ssgCacheMu protects ssgCache, ssgCacheKeys, and ssgCacheIndex.
 	ssgCacheMu sync.RWMutex
 	// isrRevalidating guards against duplicate background revalidations.
 	isrRevalidating sync.Map
@@ -56,7 +58,9 @@ type App struct {
 	pprShellCache map[string]pprEntry
 	// pprShellKeys tracks insertion order for PPR shell FIFO eviction.
 	pprShellKeys []string
-	// pprShellMu protects pprShellCache and pprShellKeys.
+	// pprShellIndex maps a key to its existence in pprShellKeys for O(1) checks.
+	pprShellIndex map[string]struct{}
+	// pprShellMu protects pprShellCache, pprShellKeys, and pprShellIndex.
 	pprShellMu sync.RWMutex
 	// pprShellBuilding guards against duplicate PPR shell builds under concurrent load.
 	pprShellBuilding sync.Map
@@ -129,8 +133,15 @@ func New(config Config) *App {
 	if config.WSConnBurst == 0 {
 		config.WSConnBurst = 15.0
 	}
+	// SECURITY FIX: GOSPA_WS_INSECURE must only be honoured in dev mode.
+	// In production, this env var is intentionally ignored to prevent accidental
+	// misconfiguration that would allow plaintext ws:// connections in production.
 	if !config.AllowInsecureWS && os.Getenv("GOSPA_WS_INSECURE") == "1" {
-		config.AllowInsecureWS = true
+		if config.DevMode {
+			config.AllowInsecureWS = true
+		} else {
+			config.Logger.Warn("GOSPA_WS_INSECURE=1 is set but is ignored because DevMode is false. This override only applies in development environments.")
+		}
 	}
 
 	fiber.SetConnectionRateLimiter(config.WSConnBurst, config.WSConnRateLimit)
@@ -169,8 +180,8 @@ func New(config Config) *App {
 		fiberConfig.ServerHeader = "GoSPA/" + Version
 	} else if config.PublicOrigin == "" {
 		// CRITICAL: Production enforcement of PublicOrigin unless AllowInsecureWS is set
-		if config.AllowInsecureWS {
-			config.Logger.Warn("Warning: PublicOrigin is not set in production mode. insecure WebSocket will be used because AllowInsecureWS is enabled.")
+		if config.AllowInsecureWS || len(config.AllowPortsWithInsecureWS) > 0 {
+			config.Logger.Warn("Warning: PublicOrigin is not set in production mode. insecure WebSocket will be used because AllowInsecureWS or AllowPortsWithInsecureWS is enabled.")
 		} else {
 			config.Logger.Error("CRITICAL: PublicOrigin must be set in production mode for secure WebSocket and absolute URL generation.")
 		}
@@ -198,12 +209,13 @@ func New(config Config) *App {
 		pluginTemplateFuncs: make(map[string]any),
 		ssgCache:            make(map[string]ssgEntry),
 		ssgCacheKeys:        make([]string, 0),
+		ssgCacheIndex:       make(map[string]struct{}),
 		pprShellCache:       make(map[string]pprEntry),
 		pprShellKeys:        make([]string, 0),
+		pprShellIndex:       make(map[string]struct{}),
 	}
 
 	app.setupMiddleware()
-	app.setupRoutes()
 
 	if defaultApp == nil {
 		defaultApp = app
@@ -486,6 +498,7 @@ func (a *App) Run(addr string) error {
 		a.Logger().Error("plugin BeforeServe hook failed", "err", err)
 	}
 	a.applyPluginMiddleware()
+	a.setupRoutes()
 	if err := a.RegisterRoutes(); err != nil {
 		return err
 	}
@@ -502,6 +515,7 @@ func (a *App) RunTLS(addr, certFile, keyFile string) error {
 		a.Logger().Error("plugin BeforeServe hook failed", "err", err)
 	}
 	a.applyPluginMiddleware()
+	a.setupRoutes()
 	if err := a.RegisterRoutes(); err != nil {
 		return err
 	}
