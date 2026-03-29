@@ -3,6 +3,7 @@
  * Handles island detection, hydration orchestration, and priority-based loading.
  */
 import { setupEventDelegation } from "./events";
+import { getSetup } from "./runtime-core";
 
 // Island hydration modes
 export type IslandHydrationMode =
@@ -352,6 +353,16 @@ export class IslandManager {
     this.log("Hydrating island:", island.name, island.id);
 
     try {
+      // First, check the bundled setup functions registry
+      const setupFn = getSetup(island.name);
+      if (setupFn) {
+        await setupFn(island.element, island.props ?? {}, island.state ?? {});
+        this.hydrated.add(island.id);
+        this.log("Hydrated island from registry:", island.name);
+        return { id: island.id, name: island.name, success: true };
+      }
+
+      // Fallback: try dynamic module loading
       const module = await this.moduleLoader(island.name);
       if (!module) {
         throw new Error(`Island module not found: ${island.name}`);

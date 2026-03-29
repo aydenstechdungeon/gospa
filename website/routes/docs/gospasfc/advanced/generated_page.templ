@@ -2,7 +2,6 @@
 
 package advanced
 
-import "github.com/aydenstechdungeon/gospa/state"
 import "github.com/aydenstechdungeon/gospa/website/components"
 
 type PageProps struct {
@@ -10,14 +9,7 @@ type PageProps struct {
 
 templ Page() {
 
-
-	if r := state.FromContext(ctx); r != nil {
-		pMap := map[string]interface{}{
-			
-		}
-		r.Register("routesdocsgospasfcadvancedpage", pMap, nil)
-	}
-	<div data-gospa-island="routesdocsgospasfcadvancedpage" class="gospa-fa6d">
+	<div data-gospa-page="routesdocsgospasfcadvancedpage" class="gospa-fa6d">
 		<div class="space-y-12 gospa-fa6d">
 		<header class="gospa-fa6d">
 			<div class="flex items-center gap-2 mb-4 gospa-fa6d">

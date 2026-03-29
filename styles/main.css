@@ -1,0 +1,34 @@
+/* Main CSS file for GoSPA */
+/* Processed by PostCSS with Tailwind CSS v4 */
+
+@import 'tailwindcss';
+
+/* Custom theme configuration */
+@theme {
+  /* Add your custom theme values here */
+  /* Example:
+  --font-display: 'Inter', sans-serif;
+  --color-primary-500: oklch(0.7 0.2 200);
+  */
+}
+
+/* Your custom styles below */
+
+
+/* Typography plugin enabled - use prose classes:
+   prose, prose-sm, prose-lg, prose-xl, prose-2xl
+   prose-headings, prose-lead, prose-img, etc.
+*/
+@plugin "@tailwindcss/typography";
+
+
+/* Forms plugin enabled - form elements styled automatically
+   Use form-input, form-textarea, form-select, form-checkbox, form-radio
+*/
+@plugin "@tailwindcss/forms";
+
+
+/* Aspect Ratio plugin enabled - use aspect-{ratio} classes
+   aspect-video, aspect-square, aspect-[4/3], etc.
+*/
+@plugin "@tailwindcss/aspect-ratio";

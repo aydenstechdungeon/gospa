@@ -11,11 +11,11 @@ import "github.com/aydenstechdungeon/gospa/website/components"
 			<div class="flex items-center gap-2 mb-4">
 				<span class="px-2 py-1 rounded bg-[var(--accent-primary)]/10 text-[var(--accent-primary)] text-xs font-bold uppercase tracking-wider">Features</span>
 				<span class="text-[var(--text-muted)] text-sm">/</span>
-				<span class="text-[var(--text-muted)] text-sm font-medium">Gospa SFC</span>
+				<span class="text-[var(--text-muted)] text-sm font-medium">[Alpha] Gospa SFC</span>
 			</div>
 			<h1 class="text-4xl font-bold tracking-tight mb-4 text-transparent bg-clip-text bg-gradient-to-r from-[var(--accent-primary)] to-[var(--accent-secondary)]">Getting Started with SFC</h1>
 			<p class="text-xl text-[var(--text-secondary)] leading-relaxed">
-				Everything you need to know about building reactive components using the .gospa format.
+				[Alpha] Everything you need to know about building reactive components using the .gospa format.
 			</p>
 		</header>
 

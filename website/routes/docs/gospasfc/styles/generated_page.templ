@@ -2,7 +2,6 @@
 
 package styles
 
-import "github.com/aydenstechdungeon/gospa/state"
 import "github.com/aydenstechdungeon/gospa/website/components"
 
 type PageProps struct {
@@ -10,14 +9,7 @@ type PageProps struct {
 
 templ Page() {
 
-
-	if r := state.FromContext(ctx); r != nil {
-		pMap := map[string]interface{}{
-			
-		}
-		r.Register("routesdocsgospasfcstylespage", pMap, nil)
-	}
-	<div data-gospa-island="routesdocsgospasfcstylespage" class="gospa-3184">
+	<div data-gospa-page="routesdocsgospasfcstylespage" class="gospa-3184">
 		<div class="space-y-12 gospa-3184">
 		<header class="gospa-3184">
 			<div class="flex items-center gap-2 mb-4 gospa-3184">

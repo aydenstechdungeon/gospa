@@ -136,6 +136,31 @@ export interface ComponentInstance {
 const components = new Map<string, ComponentInstance>();
 const globalState = new StateMap();
 
+// Island setup function registry - populated by bundled island modules
+type IslandSetupFn = (element: Element, props: Record<string, any>, state: any) => void;
+const setupFunctions = new Map<string, IslandSetupFn>();
+
+/**
+ * Register a setup function for an island component.
+ * Called by bundled island modules at load time.
+ */
+export function registerSetup(name: string, setup: IslandSetupFn): void {
+  setupFunctions.set(name, setup);
+}
+
+/**
+ * Get a registered setup function for an island.
+ */
+export function getSetup(name: string): IslandSetupFn | undefined {
+  const local = setupFunctions.get(name);
+  if (local) return local;
+  const globalSetups = (window as any).__GOSPA_SETUPS__;
+  if (globalSetups && typeof globalSetups[name] === "function") {
+    return globalSetups[name];
+  }
+  return undefined;
+}
+
 // Runtime state
 let isInitialized = false;
 let config: RuntimeConfig = {};
@@ -465,9 +490,10 @@ function handleServerMessage(message: StateMessage): void {
 }
 
 /**
- * Scan DOM for GoSPA components and initialize them.
+ * Scan DOM for GoSPA components and islands, initialize them.
  */
 export function autoInit(): void {
+  // Initialize components (data-gospa-component)
   const componentRoots = document.querySelectorAll("[data-gospa-component]");
   componentRoots.forEach((root) => {
     const el = root as HTMLElement;
@@ -490,6 +516,52 @@ export function autoInit(): void {
 
     // Bind elements
     autoBindIsland(id, el);
+  });
+
+  // Initialize islands (data-gospa-island) using registered setup functions
+  const islandRoots = document.querySelectorAll("[data-gospa-island]");
+  islandRoots.forEach((root) => {
+    const el = root as HTMLElement;
+    const name = el.getAttribute("data-gospa-island");
+    if (!name) return;
+
+    // Check module-scoped registry first, then global registry
+    let setup = setupFunctions.get(name);
+    if (!setup) {
+      const globalSetups = (window as any).__GOSPA_SETUPS__;
+      if (globalSetups && typeof globalSetups[name] === "function") {
+        setup = globalSetups[name];
+      }
+    }
+
+    if (setup) {
+      try {
+        // Parse initial state from data-gospa-state
+        let stateData: Record<string, any> = {};
+        const stateAttr = el.getAttribute("data-gospa-state");
+        if (stateAttr) {
+          try {
+            stateData = JSON.parse(stateAttr);
+          } catch { /* ignore */ }
+        }
+
+        // Parse initial props from data-gospa-props
+        let propsData: Record<string, any> = {};
+        const propsAttr = el.getAttribute("data-gospa-props");
+        if (propsAttr) {
+          try {
+            propsData = JSON.parse(propsAttr);
+          } catch { /* ignore */ }
+        }
+
+        setup(el, propsData, stateData);
+      } catch (e) {
+        if (config.debug)
+          console.error("Error initializing island", name, e);
+      }
+    } else if (config.debug) {
+      console.warn("No setup function registered for island:", name);
+    }
   });
 }
 

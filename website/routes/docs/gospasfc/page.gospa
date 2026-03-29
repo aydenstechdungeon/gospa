@@ -16,9 +16,9 @@ package: gospasfc
 <template>
 	<div class="space-y-12">
 		<header>
-			<h1 class="text-4xl font-bold tracking-tight mb-4 text-transparent bg-clip-text bg-gradient-to-r from-[var(--accent-primary)] to-[var(--accent-secondary)]">{title}</h1>
+			<h1 class="text-4xl font-bold tracking-tight mb-4 text-transparent bg-clip-text bg-gradient-to-r from-[var(--accent-primary)] to-[var(--accent-secondary)]">[Alpha] {title}</h1>
 			<p class="text-xl text-[var(--text-secondary)] leading-relaxed">
-				The ultimate way to build modern Go web applications. Combine logic, templates, and styles in a single, powerful <code>.gospa</code> file.
+				[Alpha] The ultimate way to build modern Go web applications. Combine logic, templates, and styles in a single, powerful <code>.gospa</code> file.
 			</p>
 		</header>
 

@@ -2,7 +2,6 @@
 
 package templates
 
-import "github.com/aydenstechdungeon/gospa/state"
 import "github.com/aydenstechdungeon/gospa/website/components"
 
 type PageProps struct {
@@ -10,14 +9,7 @@ type PageProps struct {
 
 templ Page() {
 
-
-	if r := state.FromContext(ctx); r != nil {
-		pMap := map[string]interface{}{
-			
-		}
-		r.Register("routesdocsgospasfctemplatespage", pMap, nil)
-	}
-	<div data-gospa-island="routesdocsgospasfctemplatespage" class="gospa-985f">
+	<div data-gospa-page="routesdocsgospasfctemplatespage" class="gospa-985f">
 		<div class="space-y-12 gospa-985f">
 		<header class="gospa-985f">
 			<div class="flex items-center gap-2 mb-4 gospa-985f">
