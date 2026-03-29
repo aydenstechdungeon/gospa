@@ -101,6 +101,13 @@ func BuildWithConfig(config *BuildConfig) (*BuildSummary, error) {
 	fmt.Println("Generating TypeScript types...")
 	runGenerate()
 
+	// Step 2.5: Build islands bundle (generated island modules)
+	fmt.Println("Building islands bundle...")
+	if err := buildIslands(config, summary); err != nil {
+		fmt.Fprintf(os.Stderr, "Warning: islands build failed: %v\n", err)
+		// Non-fatal — islands just won't have client-side hydration
+	}
+
 	// Step 3: Build client runtime
 	fmt.Println("Building client runtime...")
 	if err := buildClientRuntime(config, summary); err != nil {
@@ -199,6 +206,56 @@ func buildClientRuntime(config *BuildConfig, summary *BuildSummary) error {
 
 	summary.ClientRuntimeBuilt = true
 	summary.ClientRuntimePath = outputPath
+	return nil
+}
+
+func buildIslands(config *BuildConfig, summary *BuildSummary) error {
+	// Check if generated islands entry exists
+	islandsEntry := "generated/islands.ts"
+	if _, err := os.Stat(islandsEntry); os.IsNotExist(err) {
+		// No islands to build
+		return nil
+	}
+
+	// Check if bun is available
+	bunPath, err := exec.LookPath("bun")
+	if err != nil {
+		fmt.Println("Warning: bun not found, skipping islands build")
+		return nil
+	}
+	_ = bunPath // already recorded by buildClientRuntime
+
+	// Build to the project's static dir so it's served at /static/js/islands.js
+	outputDir := filepath.Join("static", "js")
+	if err := os.MkdirAll(outputDir, 0750); err != nil {
+		return err
+	}
+	outputPath := filepath.Join(outputDir, "islands.js")
+
+	// Run bun build with the islands entry
+	// Externalize @gospa/runtime since it's already loaded via script tag
+	args := []string{
+		"build", islandsEntry,
+		"--outfile", outputPath,
+		"--target", "browser",
+		"--format", "esm",
+		"--external", "@gospa/runtime",
+	}
+	if config.Minify {
+		args = append(args, "--minify")
+	}
+	// #nosec //nolint:gosec // bunPath is safe executable from LookPath
+	cmd := exec.Command(bunPath, args...)
+	cmd.Dir = "." // project root
+	cmd.Stdout = os.Stdout
+	cmd.Stderr = os.Stderr
+	cmd.Env = append(os.Environ(), "NODE_ENV="+config.Env)
+
+	if err := cmd.Run(); err != nil {
+		return fmt.Errorf("bun build islands failed: %w", err)
+	}
+
+	fmt.Printf("✓ Islands bundle built: %s\n", outputPath)
 	return nil
 }
 

@@ -103,6 +103,7 @@ func StateMiddleware(config Config) gofiber.Handler {
 		stateScript := `<script>window.__GOSPA_STATE__ = ` + escapedJSON + `;</script>`
 		if config.DevMode {
 			stateScript += `<script src="` + config.RuntimeScript + `" type="module"></script>`
+			stateScript += `<script src="/static/js/islands.js"></script>`
 		}
 
 		// Inject before </body>

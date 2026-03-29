@@ -290,6 +290,9 @@ runtime.init({
 });
 </script>`, toJS(runtimePath), toJS(a.Config.NavigationOptions), toJS(wsURL), a.Config.DevMode, a.Config.SimpleRuntimeSVGs, a.Config.DisableSanitization, wsRD, wsMR, wsHB, toJS(a.Config.HydrationMode), a.Config.HydrationTimeout)
 
+		// Islands bundle — loads and registers all island setup functions
+		_, _ = fmt.Fprint(w, `<script src="/static/js/islands.js"></script>`)
+
 		// Centralized State Registry
 		data, _ := json.Marshal(registry.GetData())
 		_, _ = fmt.Fprintf(w, `<script id="__GOSPA_DATA__" type="application/json">%s</script>`, string(data))

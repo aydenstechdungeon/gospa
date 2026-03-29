@@ -2,7 +2,6 @@
 
 package reactivity
 
-import "github.com/aydenstechdungeon/gospa/state"
 import "github.com/aydenstechdungeon/gospa/website/components"
 
 type PageProps struct {
@@ -10,14 +9,7 @@ type PageProps struct {
 
 templ Page() {
 
-
-	if r := state.FromContext(ctx); r != nil {
-		pMap := map[string]interface{}{
-			
-		}
-		r.Register("routesdocsgospasfcreactivitypage", pMap, nil)
-	}
-	<div data-gospa-island="routesdocsgospasfcreactivitypage" class="gospa-123a">
+	<div data-gospa-page="routesdocsgospasfcreactivitypage" class="gospa-123a">
 		<div class="space-y-12 gospa-123a">
 		<header class="gospa-123a">
 			<div class="flex items-center gap-2 mb-4 gospa-123a">

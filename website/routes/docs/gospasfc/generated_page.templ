@@ -10,21 +10,14 @@ type PageProps struct {
 templ Page() {
 {{ var title = "GoSPA Documentation" }}
 {{ println("Hello from Go!") }}
-{{ var _ = title }}
 
-
-	if r := state.FromContext(ctx); r != nil {
-		pMap := map[string]interface{}{
-			
-		}
-		r.Register("routesdocsgospasfcpage", pMap, nil)
-	}
+{{ if r := state.FromContext(ctx); r != nil { pMap := map[string]interface{}{}; r.Register("routesdocsgospasfcpage", pMap, nil) } }}
 	<div data-gospa-island="routesdocsgospasfcpage" class="gospa-9d0f">
 		<div class="space-y-12 gospa-9d0f">
 		<header class="gospa-9d0f">
-			<h1 class="text-4xl font-bold tracking-tight mb-4 text-transparent bg-clip-text bg-gradient-to-r from-[var(--accent-primary)] to-[var(--accent-secondary)] gospa-9d0f">{ title }</h1>
+			<h1 class="text-4xl font-bold tracking-tight mb-4 text-transparent bg-clip-text bg-gradient-to-r from-[var(--accent-primary)] to-[var(--accent-secondary)] gospa-9d0f">[Alpha] { title }</h1>
 			<p class="text-xl text-[var(--text-secondary)] leading-relaxed gospa-9d0f">
-				The ultimate way to build modern Go web applications. Combine logic, templates, and styles in a single, powerful <code class="gospa-9d0f">.gospa</code> file.
+				[Alpha] The ultimate way to build modern Go web applications. Combine logic, templates, and styles in a single, powerful <code class="gospa-9d0f">.gospa</code> file.
 			</p>
 		</header>
 

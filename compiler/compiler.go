@@ -70,6 +70,15 @@ func (c *GospaCompiler) Compile(opts CompileOptions, input string) (templ, ts st
 		}
 	}
 
+	// Infer type from component name if not explicitly set
+	// page.gospa -> page, layout.gospa -> layout, root_layout.gospa -> root_layout
+	if componentType == "" || componentType == ComponentTypeIsland {
+		inferredType := inferTypeFromName(opts.Name)
+		if inferredType != "" {
+			componentType = inferredType
+		}
+	}
+
 	if name == "" {
 		name = "Component"
 	}
@@ -107,9 +116,15 @@ func (c *GospaCompiler) Compile(opts CompileOptions, input string) (templ, ts st
 	if strings.TrimSpace(templTypes) != "" {
 		templTypesSnippet = templTypes
 	}
+
+	// Detect if component has client-side code (TypeScript or reactive Go)
+	hasScriptTS := parsed.ScriptTS.Content != ""
+	hasReactiveGo := parsed.Script.Content != "" && (strings.Contains(parsed.Script.Content, "$state") || strings.Contains(parsed.Script.Content, "$derived") || strings.Contains(parsed.Script.Content, "$effect"))
+	hasClientCode := hasScriptTS || hasReactiveGo
+
 	switch componentType {
 	case ComponentTypePage:
-		templ = c.generatePageTempl(name, transformedTemplate, processedScript, hash, opts.PkgName, props, templTypesSnippet)
+		templ = c.generatePageTempl(name, islandID, transformedTemplate, processedScript, hash, opts.PkgName, props, templTypesSnippet, hasClientCode)
 	case ComponentTypeLayout:
 		templ = c.generateLayoutTempl(name, transformedTemplate, processedScript, hash, opts.PkgName, props, templTypesSnippet)
 	case ComponentTypeStatic, ComponentTypeServer:
@@ -118,8 +133,20 @@ func (c *GospaCompiler) Compile(opts CompileOptions, input string) (templ, ts st
 		templ = c.generateIslandTempl(name, islandID, transformedTemplate, processedScript, hash, opts.PkgName, props, templTypesSnippet)
 	}
 
-	// 5. Generate TypeScript Island
-	if componentType == ComponentTypeIsland && opts.Hydrate && !opts.ServerOnly {
+	// 5. Generate TypeScript for client-side interactivity
+	// Pages with reactive Go code or explicit ts blocks get client-side hydration
+	// Islands always get client-side hydration if hydrate is enabled
+	// Generate TS only if there's actual client-side code needed:
+	// - Islands with hydration enabled, OR
+	// - Pages with reactive Go code (state/derived/effect), OR
+	// - Any component with explicit <script lang="ts">
+	shouldGenerateTS := false
+	if !opts.ServerOnly {
+		isHydratedIsland := componentType == ComponentTypeIsland && opts.Hydrate
+		shouldGenerateTS = isHydratedIsland || hasClientCode
+	}
+
+	if shouldGenerateTS {
 		tsScript := parsed.Script.Content
 		tsFromGo := true
 		if parsed.ScriptTS.Content != "" {
@@ -325,6 +352,44 @@ func inferPackage(t ComponentType) string {
 	}
 }
 
+// inferTypeFromName determines the component type based on the filename.
+// Special filenames like page, layout, root_layout get SSR types.
+// All others default to islands (with hydration).
+func inferTypeFromName(name string) ComponentType {
+	lower := strings.ToLower(name)
+
+	// Exact matches (case-insensitive)
+	switch lower {
+	case "page":
+		return ComponentTypePage
+	case "layout":
+		return ComponentTypeLayout
+	case "root_layout":
+		return ComponentTypeLayout
+	case "error":
+		return ComponentTypeStatic
+	case "loading":
+		return ComponentTypeStatic
+	}
+
+	// Prefix matches
+	if strings.HasPrefix(lower, "page") {
+		return ComponentTypePage
+	}
+	if strings.HasPrefix(lower, "layout") {
+		return ComponentTypeLayout
+	}
+	if strings.HasPrefix(lower, "error") {
+		return ComponentTypeStatic
+	}
+	if strings.HasPrefix(lower, "loading") || strings.HasPrefix(lower, "_loading") {
+		return ComponentTypeStatic
+	}
+
+	// Default to island (will get hydration)
+	return ""
+}
+
 // extractStructDefs extracts type struct definitions from script content.
 // Struct definitions must be at the package level in templ, not inside {{ }} blocks.
 func extractStructDefs(script string) (structs string, remaining string) {
@@ -479,19 +544,38 @@ func (c *GospaCompiler) generateIslandTempl(name, islandID, template, script, ha
 		extraSnippets += strings.Join(snippetDefs, "\n\n")
 	}
 
-	// Inject script initializations if non-empty, every line prefixed with @
-	// Skip function definitions in Templ (they are for client-side TS)
+	// Inject script initializations if non-empty
+	// All Go code must be inside {{ }} delimiters in templ
 	scriptInjection := ""
 	if strings.TrimSpace(cleanScript) != "" {
 		lines := strings.Split(strings.TrimSpace(cleanScript), "\n")
-		for _, line := range lines {
-			trimmed := strings.TrimSpace(line)
+		i := 0
+		for i < len(lines) {
+			trimmed := strings.TrimSpace(lines[i])
 			if trimmed == "" || strings.HasPrefix(trimmed, "//") || strings.Contains(trimmed, "func(") || strings.Contains(trimmed, "func ") {
+				i++
 				continue
 			}
-			// If it starts with var, keep it as is (with var) or convert to :=
-			// Templ handles both, but var is safer for blank identifiers
-			scriptInjection += "{{ " + trimmed + " }}\n"
+			if strings.Contains(trimmed, "var _ = ") {
+				i++
+				continue
+			}
+			// Detect multi-line blocks (if/for/switch with opening brace)
+			openBraces := strings.Count(trimmed, "{") - strings.Count(trimmed, "}")
+			if openBraces > 0 {
+				// Collect the entire block into a single {{ }} wrapper
+				block := trimmed
+				for openBraces > 0 && i+1 < len(lines) {
+					i++
+					nextLine := strings.TrimSpace(lines[i])
+					block += " " + nextLine
+					openBraces += strings.Count(nextLine, "{") - strings.Count(nextLine, "}")
+				}
+				scriptInjection += "{{ " + block + " }}\n"
+			} else {
+				scriptInjection += "{{ " + trimmed + " }}\n"
+			}
+			i++
 		}
 	}
 
@@ -548,9 +632,213 @@ func generatePropMap(props []Prop) string {
 	return sb.String()
 }
 
-func (c *GospaCompiler) generatePageTempl(name, template, script, hash, pkgName string, props []Prop, templTypesSnippet string) string {
-	templ := c.generateIslandTempl(name, "", template, script, hash, pkgName, props, templTypesSnippet)
-	return strings.Replace(templ, "<div data-gospa-island=\"\" class=\""+hash+"\">", "<div class=\""+hash+"\">", 1)
+func (c *GospaCompiler) generatePageTempl(name, islandID, template, script, hash, pkgName string, props []Prop, templTypesSnippet string, hasClientCode bool) string {
+	header := "// Code generated by GoSPA; DO NOT EDIT.\n\n"
+	if pkgName == "" {
+		pkgName = "pages"
+	}
+
+	// 1. Extract Snippets from template
+	snippetDefs := []string{}
+	cleanTemplate := template
+
+	// Helper to ensure args are typed (default to any)
+	typeArgs := func(args string) string {
+		if strings.TrimSpace(args) == "" {
+			return ""
+		}
+		parts := strings.Split(args, ",")
+		typedParts := []string{}
+		for _, p := range parts {
+			trimmed := strings.TrimSpace(p)
+			if trimmed == "" {
+				continue
+			}
+			if !strings.Contains(trimmed, " ") {
+				trimmed += " any"
+			}
+			typedParts = append(typedParts, trimmed)
+		}
+		return strings.Join(typedParts, ", ")
+	}
+
+	for {
+		startLoc := snippetRegex.FindStringSubmatchIndex(cleanTemplate)
+		if startLoc == nil {
+			break
+		}
+
+		snippetName := cleanTemplate[startLoc[2]:startLoc[3]]
+		snippetArgs := cleanTemplate[startLoc[4]:startLoc[5]]
+
+		remaining := cleanTemplate[startLoc[1]:]
+		endLoc := endSnippetRegex.FindStringIndex(remaining)
+		if endLoc == nil {
+			break
+		}
+
+		content := remaining[:endLoc[0]]
+		snippetDefs = append(snippetDefs, fmt.Sprintf("templ %s(%s) {\n\t%s\n}", snippetName, typeArgs(snippetArgs), strings.TrimSpace(content)))
+		cleanTemplate = cleanTemplate[:startLoc[0]] + cleanTemplate[startLoc[1]+endLoc[1]:]
+	}
+
+	// 2. Extract imports and transform script
+	importRegex := regexp.MustCompile(`(?m)^import\s+(?:"[^"]+"|\(.*\))`)
+
+	imports := importRegex.FindAllString(script, -1)
+	extraImports := strings.Join(imports, "\n")
+
+	cleanScript := importRegex.ReplaceAllString(script, "")
+
+	// Extract type struct definitions to package level (they can't be inside {{ }} blocks)
+	structDefs, cleanScript := extractStructDefs(cleanScript)
+
+	// Ensure fmt import if used
+	if strings.Contains(cleanScript, "fmt.") && !strings.Contains(extraImports, "\"fmt\"") {
+		switch {
+		case extraImports == "":
+			extraImports = "import \"fmt\""
+		case strings.HasPrefix(extraImports, "import ("):
+			extraImports = strings.Replace(extraImports, "import (", "import (\n\t\"fmt\"", 1)
+		default:
+			extraImports = "import \"fmt\"\n" + extraImports
+		}
+	}
+	if strings.Contains(extraImports, "\"fmt\"") {
+		cleanScript = "var _ = fmt.Sprint\n" + cleanScript
+	}
+
+	// Add dummy usage for all variables in cleanScript to avoid "declared and not used"
+	vRegex := regexp.MustCompile(`(?m)^(?:var\s+)?([a-zA-Z0-9_]+)\s*(?::=|=)`)
+	matches := vRegex.FindAllStringSubmatch(cleanScript, -1)
+	for _, m := range matches {
+		if m[1] != "_" {
+			cleanScript += fmt.Sprintf("\nvar _ = %s", m[1])
+		}
+	}
+
+	// Transform named functions to single-line anonymous functions to keep them in local scope
+	funcBlockRegex := regexp.MustCompile(`(?s)func\s+([a-zA-Z0-9_]+)\((.*?)\)\s*\{(.*?)\}`)
+	cleanScript = funcBlockRegex.ReplaceAllStringFunc(cleanScript, func(match string) string {
+		parts := funcBlockRegex.FindStringSubmatch(match)
+		fnName := parts[1]
+		fnArgs := parts[2]
+		fnBody := parts[3]
+		// Flatten body and replace newlines with ;
+		flatBody := strings.ReplaceAll(strings.TrimSpace(fnBody), "\n", "; ")
+		return fmt.Sprintf("%s := func(%s) { %s }", fnName, fnArgs, flatBody)
+	})
+
+	extraSnippets := strings.TrimSpace(structDefs)
+	if strings.TrimSpace(templTypesSnippet) != "" {
+		if extraSnippets != "" {
+			extraSnippets += "\n\n"
+		}
+		extraSnippets += strings.TrimSpace(templTypesSnippet)
+	}
+	if len(snippetDefs) > 0 {
+		if extraSnippets != "" {
+			extraSnippets += "\n\n"
+		}
+		extraSnippets += strings.Join(snippetDefs, "\n\n")
+	}
+
+	// Inject script initializations if non-empty
+	// All Go code must be inside {{ }} delimiters in templ
+	scriptInjection := ""
+	if strings.TrimSpace(cleanScript) != "" {
+		lines := strings.Split(strings.TrimSpace(cleanScript), "\n")
+		i := 0
+		for i < len(lines) {
+			trimmed := strings.TrimSpace(lines[i])
+			if trimmed == "" || strings.HasPrefix(trimmed, "//") || strings.Contains(trimmed, "func(") || strings.Contains(trimmed, "func ") {
+				i++
+				continue
+			}
+			if strings.Contains(trimmed, "var _ = ") {
+				i++
+				continue
+			}
+			// Detect multi-line blocks (if/for/switch with opening brace)
+			openBraces := strings.Count(trimmed, "{") - strings.Count(trimmed, "}")
+			if openBraces > 0 {
+				// Collect the entire block into a single {{ }} wrapper
+				block := trimmed
+				for openBraces > 0 && i+1 < len(lines) {
+					i++
+					nextLine := strings.TrimSpace(lines[i])
+					block += " " + nextLine
+					openBraces += strings.Count(nextLine, "{") - strings.Count(nextLine, "}")
+				}
+				scriptInjection += "{{ " + block + " }}\n"
+			} else {
+				scriptInjection += "{{ " + trimmed + " }}\n"
+			}
+			i++
+		}
+	}
+
+	// Check if this page needs client-side hydration
+	// It needs it if there's $state, $derived, or $effect in the script
+	needsRegistration := hasClientCode
+
+	// Signature generation
+	propNames := []string{}
+	for _, p := range props {
+		propNames = append(propNames, p.Name+" "+p.Type)
+	}
+	propArgs := typeArgs(strings.Join(propNames, ", "))
+	signature := name + "(" + propArgs + ")"
+
+	// Generate output with optional registration
+	var result string
+	if needsRegistration {
+		// Add state import and registration for pages that need hydration
+		if !strings.Contains(extraImports, "github.com/aydenstechdungeon/gospa/state") {
+			switch {
+			case extraImports == "":
+				extraImports = "import \"github.com/aydenstechdungeon/gospa/state\""
+			case strings.HasPrefix(extraImports, "import ("):
+				extraImports = strings.Replace(extraImports, "import (", "import (\n\t\"github.com/aydenstechdungeon/gospa/state\"", 1)
+			default:
+				extraImports = "import \"github.com/aydenstechdungeon/gospa/state\"\n" + extraImports
+			}
+		}
+
+		registration := fmt.Sprintf(`{{ if r := state.FromContext(ctx); r != nil { pMap := map[string]interface{}{}; r.Register("%s", pMap, nil) } }}`, islandID)
+
+		result = header + fmt.Sprintf(`package %s
+
+%s
+
+%s
+
+templ %s {
+%s
+%s
+	<div data-gospa-island="%s" class="%s">
+		%s
+	</div>
+}
+`, pkgName, extraImports, extraSnippets, signature, scriptInjection, registration, islandID, hash, cleanTemplate)
+	} else {
+		// No registration needed for pure SSR pages
+		result = header + fmt.Sprintf(`package %s
+
+%s
+
+%s
+
+templ %s {
+%s
+	<div data-gospa-page="%s" class="%s">
+		%s
+	</div>
+}
+`, pkgName, extraImports, extraSnippets, signature, scriptInjection, islandID, hash, cleanTemplate)
+	}
+
+	return result
 }
 
 func (c *GospaCompiler) generateLayoutTempl(name, template, script, hash, pkgName string, props []Prop, templTypesSnippet string) string {
@@ -614,11 +902,7 @@ func (c *GospaCompiler) generateTS(islandID, script string, fromGo bool, _ strin
 		funcsObject = "{}"
 	}
 
-	return header + fmt.Sprintf(`import { createIsland } from '@gospa/runtime';
-
-export default createIsland({
-  name: '%s',
-  setup(element, { props, state }) {
+	return header + fmt.Sprintf(`function __gospa_setup_%s(element: Element, { props, state }: { props: Record<string, any>; state: any }) {
 %s
 
     // Event delegation registration
@@ -627,9 +911,18 @@ export default createIsland({
     
     // Scoped hydration selector
     const scope = (selector: string) => element.querySelector(selector + '.' + '%s');
-  }
-});
-`, islandID, tsScript, funcsObject, islandID, hash)
+}
+
+export function mount(element: Element, props: Record<string, any>, state: any) {
+  __gospa_setup_%s(element, { props, state });
+}
+
+export function hydrate(element: Element, props: Record<string, any>, state: any) {
+  __gospa_setup_%s(element, { props, state });
+}
+
+export default { mount, hydrate };
+`, islandID, tsScript, funcsObject, islandID, hash, islandID, islandID)
 }
 
 func (c *GospaCompiler) generateScopedCSS(style, hash string) string {
