@@ -101,8 +101,17 @@ func StateMiddleware(config Config) gofiber.Handler {
 		// Encode appends a trailing newline; trim it for inline embedding.
 		escapedJSON := strings.TrimRight(buf.String(), "\n")
 		stateScript := `<script>window.__GOSPA_STATE__ = ` + escapedJSON + `;</script>`
-		if config.DevMode {
+
+		// Always inject the runtime script if not already present in the HTML.
+		// The runtime is required for island hydration — without it, client-side
+		// TypeScript in <script lang="ts"> blocks never executes.
+		bodyStr := string(body)
+		if config.RuntimeScript != "" && !strings.Contains(bodyStr, config.RuntimeScript) {
 			stateScript += `<script src="` + config.RuntimeScript + `" type="module"></script>`
+		}
+
+		// In dev mode, also inject islands.js if not already present
+		if config.DevMode && !strings.Contains(bodyStr, "/static/js/islands.js") {
 			stateScript += `<script src="/static/js/islands.js"></script>`
 		}
 
@@ -374,7 +383,7 @@ func PreloadHeadersMiddlewareMinimal(config PreloadConfig) gofiber.Handler {
 // Uses a nonce-compatible strict policy. Prefer StrictContentSecurityPolicy for apps
 // that don't require any inline scripts. For full compatibility with inline scripts,
 // use LegacyContentSecurityPolicy.
-const DefaultContentSecurityPolicy = "default-src 'self'; base-uri 'self'; frame-ancestors 'none'; object-src 'none'; script-src 'self'; style-src 'self' 'unsafe-inline'; img-src 'self' data: blob: https:; font-src 'self' data:; connect-src 'self' ws: wss:; form-action 'self'"
+const DefaultContentSecurityPolicy = "default-src 'self'; base-uri 'self'; frame-ancestors 'none'; object-src 'none'; script-src 'self' 'unsafe-inline'; style-src 'self' 'unsafe-inline'; img-src 'self' data: blob: https:; font-src 'self' data:; connect-src 'self' ws: wss:; form-action 'self'"
 
 // StrictContentSecurityPolicy is a hardened CSP preset for applications that do
 // not rely on inline scripts or inline styles.

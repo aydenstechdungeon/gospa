@@ -626,12 +626,12 @@ export async function hydrateIsland(
   return globalManager.hydrate(idOrName);
 }
 
-// Auto-initialize if data-gospa-islands script tag is present
+// Always initialize the IslandManager so it can re-discover and re-hydrate
+// islands after SPA navigation (when the DOM is swapped). Without this, only
+// the initial autoInit() from runtime-core.ts runs, and navigating away and
+// back leaves new island elements unhydrated.
 if (typeof document !== "undefined") {
-  const scriptTag = document.querySelector("[data-gospa-islands]");
-  if (scriptTag) {
-    initIslands();
-  }
+  initIslands();
 }
 
 // Export for window global

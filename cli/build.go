@@ -209,7 +209,7 @@ func buildClientRuntime(config *BuildConfig, summary *BuildSummary) error {
 	return nil
 }
 
-func buildIslands(config *BuildConfig, summary *BuildSummary) error {
+func buildIslands(config *BuildConfig, _ *BuildSummary) error {
 	// Check if generated islands entry exists
 	islandsEntry := "generated/islands.ts"
 	if _, err := os.Stat(islandsEntry); os.IsNotExist(err) {

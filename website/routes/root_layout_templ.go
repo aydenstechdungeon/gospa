@@ -9,11 +9,17 @@ import "github.com/a-h/templ"
 import templruntime "github.com/a-h/templ/runtime"
 
 import (
+	"encoding/json"
 	"fmt"
 	"github.com/aydenstechdungeon/gospa/plugin/postcss"
 	"github.com/aydenstechdungeon/gospa/website/components"
 	"strings"
 )
+
+func jsonQuote(s string) string {
+	b, _ := json.Marshal(s)
+	return string(b)
+}
 
 // SEO configuration for GoSPA website
 const (
@@ -97,7 +103,7 @@ func RootLayout(title string, children templ.Component, runtimePath string, path
 		var templ_7745c5c3_Var2 string
 		templ_7745c5c3_Var2, templ_7745c5c3_Err = templ.JoinStringErrs(title)
 		if templ_7745c5c3_Err != nil {
-			return templ.Error{Err: templ_7745c5c3_Err, FileName: `routes/root_layout.templ`, Line: 73, Col: 17}
+			return templ.Error{Err: templ_7745c5c3_Err, FileName: `routes/root_layout.templ`, Line: 79, Col: 17}
 		}
 		_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ.EscapeString(templ_7745c5c3_Var2))
 		if templ_7745c5c3_Err != nil {
@@ -110,7 +116,7 @@ func RootLayout(title string, children templ.Component, runtimePath string, path
 		var templ_7745c5c3_Var3 string
 		templ_7745c5c3_Var3, templ_7745c5c3_Err = templ.JoinStringErrs(title + " | GoSPA")
 		if templ_7745c5c3_Err != nil {
-			return templ.Error{Err: templ_7745c5c3_Err, FileName: `routes/root_layout.templ`, Line: 74, Col: 50}
+			return templ.Error{Err: templ_7745c5c3_Err, FileName: `routes/root_layout.templ`, Line: 80, Col: 50}
 		}
 		_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ.EscapeString(templ_7745c5c3_Var3))
 		if templ_7745c5c3_Err != nil {
@@ -123,7 +129,7 @@ func RootLayout(title string, children templ.Component, runtimePath string, path
 		var templ_7745c5c3_Var4 string
 		templ_7745c5c3_Var4, templ_7745c5c3_Err = templ.JoinStringErrs(getPageDescription(path))
 		if templ_7745c5c3_Err != nil {
-			return templ.Error{Err: templ_7745c5c3_Err, FileName: `routes/root_layout.templ`, Line: 75, Col: 62}
+			return templ.Error{Err: templ_7745c5c3_Err, FileName: `routes/root_layout.templ`, Line: 81, Col: 62}
 		}
 		_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ.EscapeString(templ_7745c5c3_Var4))
 		if templ_7745c5c3_Err != nil {
@@ -174,264 +180,295 @@ func RootLayout(title string, children templ.Component, runtimePath string, path
 				}
 			}
 		}
-		templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 9, "<script src=\"/static/js/islands.js\"></script><script src=\"/static/docs.js\" defer></script><!-- Canonical URL --><link rel=\"canonical\" href=\"")
+		templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 9, "<script src=\"/static/js/islands.js\"></script><script src=\"")
 		if templ_7745c5c3_Err != nil {
 			return templ_7745c5c3_Err
 		}
-		var templ_7745c5c3_Var5 templ.SafeURL
-		templ_7745c5c3_Var5, templ_7745c5c3_Err = templ.JoinURLErrs(siteURL + path)
+		var templ_7745c5c3_Var5 string
+		templ_7745c5c3_Var5, templ_7745c5c3_Err = templ.JoinStringErrs(runtimePath)
 		if templ_7745c5c3_Err != nil {
-			return templ.Error{Err: templ_7745c5c3_Err, FileName: `routes/root_layout.templ`, Line: 105, Col: 46}
+			return templ.Error{Err: templ_7745c5c3_Err, FileName: `routes/root_layout.templ`, Line: 108, Col: 28}
 		}
 		_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ.EscapeString(templ_7745c5c3_Var5))
 		if templ_7745c5c3_Err != nil {
 			return templ_7745c5c3_Err
 		}
-		templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 10, "\"><!-- Favicon --><link rel=\"icon\" type=\"image/x-icon\" href=\"/static/gospa1-64.ico\"><link rel=\"apple-touch-icon\" sizes=\"64x64\" href=\"/static/gospa1-64.webp\"><link rel=\"apple-touch-icon\" sizes=\"128x128\" href=\"/static/gospa1-128.webp\"><link rel=\"apple-touch-icon\" sizes=\"256x256\" href=\"/static/gospa1-256.webp\"><link rel=\"apple-touch-icon\" sizes=\"512x512\" href=\"/static/gospa1-512.webp\"><!-- Open Graph / Facebook --><meta property=\"og:type\" content=\"website\"><meta property=\"og:url\" content=\"")
+		templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 10, "\" type=\"module\"></script>")
 		if templ_7745c5c3_Err != nil {
 			return templ_7745c5c3_Err
 		}
-		var templ_7745c5c3_Var6 string
-		templ_7745c5c3_Var6, templ_7745c5c3_Err = templ.JoinStringErrs(siteURL + path)
+		templ_7745c5c3_Err = templ.Raw("<script type=\"module\">\n"+
+			"  import * as runtime from \""+runtimePath+"\";\n"+
+			"  runtime.init({\n"+
+			"    wsUrl: "+jsonQuote(wsUrl)+",\n"+
+			"    debug: "+fmt.Sprintf("%t", debug)+",\n"+
+			"    hydration: {\n"+
+			"      mode: "+jsonQuote(hydrationMode)+",\n"+
+			"      timeout: "+fmt.Sprintf("%d", hydrationTimeout)+"\n"+
+			"    }\n"+
+			"  });\n"+
+			"</script>").Render(ctx, templ_7745c5c3_Buffer)
 		if templ_7745c5c3_Err != nil {
-			return templ.Error{Err: templ_7745c5c3_Err, FileName: `routes/root_layout.templ`, Line: 116, Col: 51}
+			return templ_7745c5c3_Err
+		}
+		templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 11, "<script src=\"/static/docs.js\" defer></script><!-- Canonical URL --><link rel=\"canonical\" href=\"")
+		if templ_7745c5c3_Err != nil {
+			return templ_7745c5c3_Err
+		}
+		var templ_7745c5c3_Var6 templ.SafeURL
+		templ_7745c5c3_Var6, templ_7745c5c3_Err = templ.JoinURLErrs(siteURL + path)
+		if templ_7745c5c3_Err != nil {
+			return templ.Error{Err: templ_7745c5c3_Err, FileName: `routes/root_layout.templ`, Line: 123, Col: 46}
 		}
 		_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ.EscapeString(templ_7745c5c3_Var6))
 		if templ_7745c5c3_Err != nil {
 			return templ_7745c5c3_Err
 		}
-		templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 11, "\"><meta property=\"og:title\" content=\"")
+		templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 12, "\"><!-- Favicon --><link rel=\"icon\" type=\"image/x-icon\" href=\"/static/gospa1-64.ico\"><link rel=\"apple-touch-icon\" sizes=\"64x64\" href=\"/static/gospa1-64.webp\"><link rel=\"apple-touch-icon\" sizes=\"128x128\" href=\"/static/gospa1-128.webp\"><link rel=\"apple-touch-icon\" sizes=\"256x256\" href=\"/static/gospa1-256.webp\"><link rel=\"apple-touch-icon\" sizes=\"512x512\" href=\"/static/gospa1-512.webp\"><!-- Open Graph / Facebook --><meta property=\"og:type\" content=\"website\"><meta property=\"og:url\" content=\"")
 		if templ_7745c5c3_Err != nil {
 			return templ_7745c5c3_Err
 		}
 		var templ_7745c5c3_Var7 string
-		templ_7745c5c3_Var7, templ_7745c5c3_Err = templ.JoinStringErrs(title + " | GoSPA")
+		templ_7745c5c3_Var7, templ_7745c5c3_Err = templ.JoinStringErrs(siteURL + path)
 		if templ_7745c5c3_Err != nil {
-			return templ.Error{Err: templ_7745c5c3_Err, FileName: `routes/root_layout.templ`, Line: 117, Col: 57}
+			return templ.Error{Err: templ_7745c5c3_Err, FileName: `routes/root_layout.templ`, Line: 134, Col: 51}
 		}
 		_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ.EscapeString(templ_7745c5c3_Var7))
 		if templ_7745c5c3_Err != nil {
 			return templ_7745c5c3_Err
 		}
-		templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 12, "\"><meta property=\"og:description\" content=\"")
+		templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 13, "\"><meta property=\"og:title\" content=\"")
 		if templ_7745c5c3_Err != nil {
 			return templ_7745c5c3_Err
 		}
 		var templ_7745c5c3_Var8 string
-		templ_7745c5c3_Var8, templ_7745c5c3_Err = templ.JoinStringErrs(getPageDescription(path))
+		templ_7745c5c3_Var8, templ_7745c5c3_Err = templ.JoinStringErrs(title + " | GoSPA")
 		if templ_7745c5c3_Err != nil {
-			return templ.Error{Err: templ_7745c5c3_Err, FileName: `routes/root_layout.templ`, Line: 118, Col: 69}
+			return templ.Error{Err: templ_7745c5c3_Err, FileName: `routes/root_layout.templ`, Line: 135, Col: 57}
 		}
 		_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ.EscapeString(templ_7745c5c3_Var8))
 		if templ_7745c5c3_Err != nil {
 			return templ_7745c5c3_Err
 		}
-		templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 13, "\"><meta property=\"og:image\" content=\"")
+		templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 14, "\"><meta property=\"og:description\" content=\"")
 		if templ_7745c5c3_Err != nil {
 			return templ_7745c5c3_Err
 		}
 		var templ_7745c5c3_Var9 string
-		templ_7745c5c3_Var9, templ_7745c5c3_Err = templ.JoinStringErrs(defaultImage)
+		templ_7745c5c3_Var9, templ_7745c5c3_Err = templ.JoinStringErrs(getPageDescription(path))
 		if templ_7745c5c3_Err != nil {
-			return templ.Error{Err: templ_7745c5c3_Err, FileName: `routes/root_layout.templ`, Line: 119, Col: 51}
+			return templ.Error{Err: templ_7745c5c3_Err, FileName: `routes/root_layout.templ`, Line: 136, Col: 69}
 		}
 		_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ.EscapeString(templ_7745c5c3_Var9))
 		if templ_7745c5c3_Err != nil {
 			return templ_7745c5c3_Err
 		}
-		templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 14, "\"><meta property=\"og:image:width\" content=\"512\"><meta property=\"og:image:height\" content=\"512\"><meta property=\"og:site_name\" content=\"")
+		templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 15, "\"><meta property=\"og:image\" content=\"")
 		if templ_7745c5c3_Err != nil {
 			return templ_7745c5c3_Err
 		}
 		var templ_7745c5c3_Var10 string
-		templ_7745c5c3_Var10, templ_7745c5c3_Err = templ.JoinStringErrs(siteName)
+		templ_7745c5c3_Var10, templ_7745c5c3_Err = templ.JoinStringErrs(defaultImage)
 		if templ_7745c5c3_Err != nil {
-			return templ.Error{Err: templ_7745c5c3_Err, FileName: `routes/root_layout.templ`, Line: 122, Col: 51}
+			return templ.Error{Err: templ_7745c5c3_Err, FileName: `routes/root_layout.templ`, Line: 137, Col: 51}
 		}
 		_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ.EscapeString(templ_7745c5c3_Var10))
 		if templ_7745c5c3_Err != nil {
 			return templ_7745c5c3_Err
 		}
-		templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 15, "\"><meta property=\"og:locale\" content=\"en_US\"><!-- Twitter Card --><meta name=\"twitter:card\" content=\"summary_large_image\"><meta name=\"twitter:url\" content=\"")
+		templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 16, "\"><meta property=\"og:image:width\" content=\"512\"><meta property=\"og:image:height\" content=\"512\"><meta property=\"og:site_name\" content=\"")
 		if templ_7745c5c3_Err != nil {
 			return templ_7745c5c3_Err
 		}
 		var templ_7745c5c3_Var11 string
-		templ_7745c5c3_Var11, templ_7745c5c3_Err = templ.JoinStringErrs(siteURL + path)
+		templ_7745c5c3_Var11, templ_7745c5c3_Err = templ.JoinStringErrs(siteName)
 		if templ_7745c5c3_Err != nil {
-			return templ.Error{Err: templ_7745c5c3_Err, FileName: `routes/root_layout.templ`, Line: 127, Col: 52}
+			return templ.Error{Err: templ_7745c5c3_Err, FileName: `routes/root_layout.templ`, Line: 140, Col: 51}
 		}
 		_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ.EscapeString(templ_7745c5c3_Var11))
 		if templ_7745c5c3_Err != nil {
 			return templ_7745c5c3_Err
 		}
-		templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 16, "\"><meta name=\"twitter:title\" content=\"")
+		templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 17, "\"><meta property=\"og:locale\" content=\"en_US\"><!-- Twitter Card --><meta name=\"twitter:card\" content=\"summary_large_image\"><meta name=\"twitter:url\" content=\"")
 		if templ_7745c5c3_Err != nil {
 			return templ_7745c5c3_Err
 		}
 		var templ_7745c5c3_Var12 string
-		templ_7745c5c3_Var12, templ_7745c5c3_Err = templ.JoinStringErrs(title + " | GoSPA")
+		templ_7745c5c3_Var12, templ_7745c5c3_Err = templ.JoinStringErrs(siteURL + path)
 		if templ_7745c5c3_Err != nil {
-			return templ.Error{Err: templ_7745c5c3_Err, FileName: `routes/root_layout.templ`, Line: 128, Col: 58}
+			return templ.Error{Err: templ_7745c5c3_Err, FileName: `routes/root_layout.templ`, Line: 145, Col: 52}
 		}
 		_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ.EscapeString(templ_7745c5c3_Var12))
 		if templ_7745c5c3_Err != nil {
 			return templ_7745c5c3_Err
 		}
-		templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 17, "\"><meta name=\"twitter:description\" content=\"")
+		templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 18, "\"><meta name=\"twitter:title\" content=\"")
 		if templ_7745c5c3_Err != nil {
 			return templ_7745c5c3_Err
 		}
 		var templ_7745c5c3_Var13 string
-		templ_7745c5c3_Var13, templ_7745c5c3_Err = templ.JoinStringErrs(getPageDescription(path))
+		templ_7745c5c3_Var13, templ_7745c5c3_Err = templ.JoinStringErrs(title + " | GoSPA")
 		if templ_7745c5c3_Err != nil {
-			return templ.Error{Err: templ_7745c5c3_Err, FileName: `routes/root_layout.templ`, Line: 129, Col: 70}
+			return templ.Error{Err: templ_7745c5c3_Err, FileName: `routes/root_layout.templ`, Line: 146, Col: 58}
 		}
 		_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ.EscapeString(templ_7745c5c3_Var13))
 		if templ_7745c5c3_Err != nil {
 			return templ_7745c5c3_Err
 		}
-		templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 18, "\"><meta name=\"twitter:image\" content=\"")
+		templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 19, "\"><meta name=\"twitter:description\" content=\"")
 		if templ_7745c5c3_Err != nil {
 			return templ_7745c5c3_Err
 		}
 		var templ_7745c5c3_Var14 string
-		templ_7745c5c3_Var14, templ_7745c5c3_Err = templ.JoinStringErrs(defaultImage)
+		templ_7745c5c3_Var14, templ_7745c5c3_Err = templ.JoinStringErrs(getPageDescription(path))
 		if templ_7745c5c3_Err != nil {
-			return templ.Error{Err: templ_7745c5c3_Err, FileName: `routes/root_layout.templ`, Line: 130, Col: 52}
+			return templ.Error{Err: templ_7745c5c3_Err, FileName: `routes/root_layout.templ`, Line: 147, Col: 70}
 		}
 		_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ.EscapeString(templ_7745c5c3_Var14))
 		if templ_7745c5c3_Err != nil {
 			return templ_7745c5c3_Err
 		}
-		templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 19, "\"><meta name=\"google-site-verification\" content=\"Dn6cwasiI8rWfkU4SLKLrJwfSp8rh4QsZcsA4PSgmkw\"><meta name=\"keywords\" content=\"Go, Golang, SPA, Single Page Application, SSR, Server-Side Rendering, Reactive, Svelte-like, Framework, Web Development\"><link rel=\"alternate\" type=\"application/ld+json\" href=\"/static/structured-data.json\"></head><body class=\"min-h-screen flex flex-col font-sans selection:bg-cyan-500/30\" data-gospa-runtime-path=\"")
+		templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 20, "\"><meta name=\"twitter:image\" content=\"")
 		if templ_7745c5c3_Err != nil {
 			return templ_7745c5c3_Err
 		}
 		var templ_7745c5c3_Var15 string
-		templ_7745c5c3_Var15, templ_7745c5c3_Err = templ.JoinStringErrs(runtimePath)
+		templ_7745c5c3_Var15, templ_7745c5c3_Err = templ.JoinStringErrs(defaultImage)
 		if templ_7745c5c3_Err != nil {
-			return templ.Error{Err: templ_7745c5c3_Err, FileName: `routes/root_layout.templ`, Line: 139, Col: 40}
+			return templ.Error{Err: templ_7745c5c3_Err, FileName: `routes/root_layout.templ`, Line: 148, Col: 52}
 		}
 		_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ.EscapeString(templ_7745c5c3_Var15))
 		if templ_7745c5c3_Err != nil {
 			return templ_7745c5c3_Err
 		}
-		templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 20, "\" data-gospa-ws-url=\"")
+		templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 21, "\"><meta name=\"google-site-verification\" content=\"Dn6cwasiI8rWfkU4SLKLrJwfSp8rh4QsZcsA4PSgmkw\"><meta name=\"keywords\" content=\"Go, Golang, SPA, Single Page Application, SSR, Server-Side Rendering, Reactive, Svelte-like, Framework, Web Development\"><link rel=\"alternate\" type=\"application/ld+json\" href=\"/static/structured-data.json\"></head><body class=\"min-h-screen flex flex-col font-sans selection:bg-cyan-500/30\" data-gospa-runtime-path=\"")
 		if templ_7745c5c3_Err != nil {
 			return templ_7745c5c3_Err
 		}
 		var templ_7745c5c3_Var16 string
-		templ_7745c5c3_Var16, templ_7745c5c3_Err = templ.JoinStringErrs(wsUrl)
+		templ_7745c5c3_Var16, templ_7745c5c3_Err = templ.JoinStringErrs(runtimePath)
 		if templ_7745c5c3_Err != nil {
-			return templ.Error{Err: templ_7745c5c3_Err, FileName: `routes/root_layout.templ`, Line: 140, Col: 28}
+			return templ.Error{Err: templ_7745c5c3_Err, FileName: `routes/root_layout.templ`, Line: 157, Col: 40}
 		}
 		_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ.EscapeString(templ_7745c5c3_Var16))
 		if templ_7745c5c3_Err != nil {
 			return templ_7745c5c3_Err
 		}
-		templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 21, "\" data-gospa-debug=\"")
+		templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 22, "\" data-gospa-ws-url=\"")
 		if templ_7745c5c3_Err != nil {
 			return templ_7745c5c3_Err
 		}
 		var templ_7745c5c3_Var17 string
-		templ_7745c5c3_Var17, templ_7745c5c3_Err = templ.JoinStringErrs(fmt.Sprintf("%t", debug))
+		templ_7745c5c3_Var17, templ_7745c5c3_Err = templ.JoinStringErrs(wsUrl)
 		if templ_7745c5c3_Err != nil {
-			return templ.Error{Err: templ_7745c5c3_Err, FileName: `routes/root_layout.templ`, Line: 141, Col: 46}
+			return templ.Error{Err: templ_7745c5c3_Err, FileName: `routes/root_layout.templ`, Line: 158, Col: 28}
 		}
 		_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ.EscapeString(templ_7745c5c3_Var17))
 		if templ_7745c5c3_Err != nil {
 			return templ_7745c5c3_Err
 		}
-		templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 22, "\" data-gospa-hydration-mode=\"")
+		templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 23, "\" data-gospa-debug=\"")
 		if templ_7745c5c3_Err != nil {
 			return templ_7745c5c3_Err
 		}
 		var templ_7745c5c3_Var18 string
-		templ_7745c5c3_Var18, templ_7745c5c3_Err = templ.JoinStringErrs(hydrationMode)
+		templ_7745c5c3_Var18, templ_7745c5c3_Err = templ.JoinStringErrs(fmt.Sprintf("%t", debug))
 		if templ_7745c5c3_Err != nil {
-			return templ.Error{Err: templ_7745c5c3_Err, FileName: `routes/root_layout.templ`, Line: 142, Col: 44}
+			return templ.Error{Err: templ_7745c5c3_Err, FileName: `routes/root_layout.templ`, Line: 159, Col: 46}
 		}
 		_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ.EscapeString(templ_7745c5c3_Var18))
 		if templ_7745c5c3_Err != nil {
 			return templ_7745c5c3_Err
 		}
-		templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 23, "\" data-gospa-hydration-timeout=\"")
+		templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 24, "\" data-gospa-hydration-mode=\"")
 		if templ_7745c5c3_Err != nil {
 			return templ_7745c5c3_Err
 		}
 		var templ_7745c5c3_Var19 string
-		templ_7745c5c3_Var19, templ_7745c5c3_Err = templ.JoinStringErrs(hydrationTimeout)
+		templ_7745c5c3_Var19, templ_7745c5c3_Err = templ.JoinStringErrs(hydrationMode)
 		if templ_7745c5c3_Err != nil {
-			return templ.Error{Err: templ_7745c5c3_Err, FileName: `routes/root_layout.templ`, Line: 143, Col: 50}
+			return templ.Error{Err: templ_7745c5c3_Err, FileName: `routes/root_layout.templ`, Line: 160, Col: 44}
 		}
 		_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ.EscapeString(templ_7745c5c3_Var19))
 		if templ_7745c5c3_Err != nil {
 			return templ_7745c5c3_Err
 		}
-		templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 24, "\" data-gospa-serialization-format=\"")
+		templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 25, "\" data-gospa-hydration-timeout=\"")
 		if templ_7745c5c3_Err != nil {
 			return templ_7745c5c3_Err
 		}
 		var templ_7745c5c3_Var20 string
-		templ_7745c5c3_Var20, templ_7745c5c3_Err = templ.JoinStringErrs(serializationFormat)
+		templ_7745c5c3_Var20, templ_7745c5c3_Err = templ.JoinStringErrs(hydrationTimeout)
 		if templ_7745c5c3_Err != nil {
-			return templ.Error{Err: templ_7745c5c3_Err, FileName: `routes/root_layout.templ`, Line: 144, Col: 56}
+			return templ.Error{Err: templ_7745c5c3_Err, FileName: `routes/root_layout.templ`, Line: 161, Col: 50}
 		}
 		_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ.EscapeString(templ_7745c5c3_Var20))
 		if templ_7745c5c3_Err != nil {
 			return templ_7745c5c3_Err
 		}
-		templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 25, "\"><!-- Animated background elements --><div class=\"fixed inset-0 pointer-events-none z-0 overflow-hidden\"><div class=\"absolute -top-[10%] -left-[10%] w-[40%] h-[40%] bg-cyan-500/10 blur-[120px] rounded-full animate-float\"></div><div class=\"absolute top-[20%] -right-[5%] w-[30%] h-[30%] bg-purple-500/10 blur-[100px] rounded-full animate-pulse\"></div><div class=\"absolute inset-0 grid-bg\"></div></div><div id=\"app\" data-gospa-root class=\"flex flex-col min-h-screen relative z-10\"><header class=\"sticky top-0 z-50 glass border-b border-[var(--border)]\"><div class=\"max-w-7xl mx-auto px-4 h-16 flex items-center justify-between relative\"><div class=\"absolute inset-x-0 bottom-0 h-px bg-gradient-to-r from-transparent via-[var(--accent-primary)]/30 to-transparent\"></div><div class=\"flex items-center gap-10\"><a href=\"/\" class=\"flex items-center gap-3 group\"><div class=\"relative\"><div class=\"absolute inset-0 bg-[var(--accent-primary)] blur-md opacity-0 group-hover:opacity-40 transition-opacity\"></div><img src=\"/static/gospa1-64.webp\" alt=\"GoSPA\" class=\"w-9 h-9 relative z-10 rounded-xl shadow-2xl transition-transform group-hover:scale-110\" width=\"36\" height=\"36\" fetchpriority=\"high\"></div><span class=\"text-2xl font-display font-bold tracking-tight bg-clip-text text-transparent bg-gradient-to-br from-white via-zinc-200 to-zinc-500\">Go<span class=\"text-[var(--accent-primary)]\">SPA</span></span></a><nav class=\"hidden md:flex items-center gap-2\">")
+		templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 26, "\" data-gospa-serialization-format=\"")
 		if templ_7745c5c3_Err != nil {
 			return templ_7745c5c3_Err
 		}
-		var templ_7745c5c3_Var21 = []any{"px-4 py-1.5 rounded-full text-sm font-medium transition-all duration-300 ", templ.KV("text-[var(--accent-primary)] bg-[var(--accent-primary)]/10 border border-[var(--accent-primary)]/20", strings.HasPrefix(path, "/docs")), templ.KV("text-[var(--text-secondary)] hover:text-white hover:bg-white/5", !strings.HasPrefix(path, "/docs"))}
-		templ_7745c5c3_Err = templ.RenderCSSItems(ctx, templ_7745c5c3_Buffer, templ_7745c5c3_Var21...)
+		var templ_7745c5c3_Var21 string
+		templ_7745c5c3_Var21, templ_7745c5c3_Err = templ.JoinStringErrs(serializationFormat)
+		if templ_7745c5c3_Err != nil {
+			return templ.Error{Err: templ_7745c5c3_Err, FileName: `routes/root_layout.templ`, Line: 162, Col: 56}
+		}
+		_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ.EscapeString(templ_7745c5c3_Var21))
 		if templ_7745c5c3_Err != nil {
 			return templ_7745c5c3_Err
 		}
-		templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 26, "<a href=\"/docs\" class=\"")
+		templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 27, "\"><!-- Animated background elements --><div class=\"fixed inset-0 pointer-events-none z-0 overflow-hidden\"><div class=\"absolute -top-[10%] -left-[10%] w-[40%] h-[40%] bg-cyan-500/10 blur-[120px] rounded-full animate-float\"></div><div class=\"absolute top-[20%] -right-[5%] w-[30%] h-[30%] bg-purple-500/10 blur-[100px] rounded-full animate-pulse\"></div><div class=\"absolute inset-0 grid-bg\"></div></div><div id=\"app\" data-gospa-root class=\"flex flex-col min-h-screen relative z-10\"><header class=\"sticky top-0 z-50 glass border-b border-[var(--border)]\"><div class=\"max-w-7xl mx-auto px-4 h-16 flex items-center justify-between relative\"><div class=\"absolute inset-x-0 bottom-0 h-px bg-gradient-to-r from-transparent via-[var(--accent-primary)]/30 to-transparent\"></div><div class=\"flex items-center gap-10\"><a href=\"/\" class=\"flex items-center gap-3 group\"><div class=\"relative\"><div class=\"absolute inset-0 bg-[var(--accent-primary)] blur-md opacity-0 group-hover:opacity-40 transition-opacity\"></div><img src=\"/static/gospa1-64.webp\" alt=\"GoSPA\" class=\"w-9 h-9 relative z-10 rounded-xl shadow-2xl transition-transform group-hover:scale-110\" width=\"36\" height=\"36\" fetchpriority=\"high\"></div><span class=\"text-2xl font-display font-bold tracking-tight bg-clip-text text-transparent bg-gradient-to-br from-white via-zinc-200 to-zinc-500\">Go<span class=\"text-[var(--accent-primary)]\">SPA</span></span></a><nav class=\"hidden md:flex items-center gap-2\">")
 		if templ_7745c5c3_Err != nil {
 			return templ_7745c5c3_Err
 		}
-		var templ_7745c5c3_Var22 string
-		templ_7745c5c3_Var22, templ_7745c5c3_Err = templ.JoinStringErrs(templ.CSSClasses(templ_7745c5c3_Var21).String())
+		var templ_7745c5c3_Var22 = []any{"px-4 py-1.5 rounded-full text-sm font-medium transition-all duration-300 ", templ.KV("text-[var(--accent-primary)] bg-[var(--accent-primary)]/10 border border-[var(--accent-primary)]/20", strings.HasPrefix(path, "/docs")), templ.KV("text-[var(--text-secondary)] hover:text-white hover:bg-white/5", !strings.HasPrefix(path, "/docs"))}
+		templ_7745c5c3_Err = templ.RenderCSSItems(ctx, templ_7745c5c3_Buffer, templ_7745c5c3_Var22...)
+		if templ_7745c5c3_Err != nil {
+			return templ_7745c5c3_Err
+		}
+		templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 28, "<a href=\"/docs\" class=\"")
+		if templ_7745c5c3_Err != nil {
+			return templ_7745c5c3_Err
+		}
+		var templ_7745c5c3_Var23 string
+		templ_7745c5c3_Var23, templ_7745c5c3_Err = templ.JoinStringErrs(templ.CSSClasses(templ_7745c5c3_Var22).String())
 		if templ_7745c5c3_Err != nil {
 			return templ.Error{Err: templ_7745c5c3_Err, FileName: `routes/root_layout.templ`, Line: 1, Col: 0}
 		}
-		_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ.EscapeString(templ_7745c5c3_Var22))
+		_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ.EscapeString(templ_7745c5c3_Var23))
 		if templ_7745c5c3_Err != nil {
 			return templ_7745c5c3_Err
 		}
-		templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 27, "\">Documentation</a> ")
+		templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 29, "\">Documentation</a> ")
 		if templ_7745c5c3_Err != nil {
 			return templ_7745c5c3_Err
 		}
-		var templ_7745c5c3_Var23 = []any{"px-4 py-1.5 rounded-full text-sm font-medium transition-all duration-300 ", templ.KV("text-[var(--accent-primary)] bg-[var(--accent-primary)]/10 border border-[var(--accent-primary)]/20", path == "/docs/api"), templ.KV("text-[var(--text-secondary)] hover:text-white hover:bg-white/5", path != "/docs/api")}
-		templ_7745c5c3_Err = templ.RenderCSSItems(ctx, templ_7745c5c3_Buffer, templ_7745c5c3_Var23...)
+		var templ_7745c5c3_Var24 = []any{"px-4 py-1.5 rounded-full text-sm font-medium transition-all duration-300 ", templ.KV("text-[var(--accent-primary)] bg-[var(--accent-primary)]/10 border border-[var(--accent-primary)]/20", path == "/docs/api"), templ.KV("text-[var(--text-secondary)] hover:text-white hover:bg-white/5", path != "/docs/api")}
+		templ_7745c5c3_Err = templ.RenderCSSItems(ctx, templ_7745c5c3_Buffer, templ_7745c5c3_Var24...)
 		if templ_7745c5c3_Err != nil {
 			return templ_7745c5c3_Err
 		}
-		templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 28, "<a href=\"/docs/api\" class=\"")
+		templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 30, "<a href=\"/docs/api\" class=\"")
 		if templ_7745c5c3_Err != nil {
 			return templ_7745c5c3_Err
 		}
-		var templ_7745c5c3_Var24 string
-		templ_7745c5c3_Var24, templ_7745c5c3_Err = templ.JoinStringErrs(templ.CSSClasses(templ_7745c5c3_Var23).String())
+		var templ_7745c5c3_Var25 string
+		templ_7745c5c3_Var25, templ_7745c5c3_Err = templ.JoinStringErrs(templ.CSSClasses(templ_7745c5c3_Var24).String())
 		if templ_7745c5c3_Err != nil {
 			return templ.Error{Err: templ_7745c5c3_Err, FileName: `routes/root_layout.templ`, Line: 1, Col: 0}
 		}
-		_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ.EscapeString(templ_7745c5c3_Var24))
+		_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ.EscapeString(templ_7745c5c3_Var25))
 		if templ_7745c5c3_Err != nil {
 			return templ_7745c5c3_Err
 		}
-		templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 29, "\">API Reference</a></nav></div><div class=\"flex items-center gap-4\"><div class=\"hidden sm:flex items-center gap-2\"><a href=\"https://github.com/aydenstechdungeon/gospa\" target=\"_blank\" class=\"p-2 rounded-xl text-[var(--text-secondary)] hover:text-white hover:bg-white/5 transition-all\" title=\"GitHub\"><svg xmlns=\"http://www.w3.org/2000/svg\" width=\"20\" height=\"20\" viewBox=\"0 0 24 24\" fill=\"none\" stroke=\"currentColor\" stroke-width=\"2\" stroke-linecap=\"round\" stroke-linejoin=\"round\"><path d=\"M15 22v-4a4.8 4.8 0 0 0-1-3.5c3 0 6-2 6-5.5.08-1.25-.27-2.48-1-3.5.28-1.15.28-2.35 0-3.5 0 0-1 0-3 1.5-2.64-.5-5.36-.5-8 0C6 2 5 2 5 2c-.3 1.15-.3 2.35 0 3.5A5.403 5.403 0 0 0 4 9c0 3.5 3 5.5 6 5.5-.39.49-.68 1.05-.85 1.65-.17.6-.22 1.23-.15 1.85v4\"></path><path d=\"M9 18c-4.51 2-5-2-7-2\"></path></svg></a></div><div class=\"h-5 w-px bg-white/10 mx-1 hidden md:block\"></div><a href=\"/docs/getstarted/installation\" class=\"hidden md:flex px-5 py-2 btn-premium bg-[var(--accent-primary)] text-black text-xs font-bold rounded-full shadow-lg shadow-cyan-500/20 active:scale-95\">Get Started</a> <button class=\"md:hidden p-2 rounded-xl text-[var(--text-primary)] hover:bg-white/5 transition-all\" data-action=\"toggle-mobile-menu\"><svg xmlns=\"http://www.w3.org/2000/svg\" width=\"24\" height=\"24\" viewBox=\"0 0 24 24\" fill=\"none\" stroke=\"currentColor\" stroke-width=\"2\" stroke-linecap=\"round\" stroke-linejoin=\"round\"><line x1=\"4\" x2=\"20\" y1=\"12\" y2=\"12\"></line><line x1=\"4\" x2=\"20\" y1=\"6\" y2=\"6\"></line><line x1=\"4\" x2=\"20\" y1=\"18\" y2=\"18\"></line></svg></button></div></div><!-- Mobile Menu Overlay --><div id=\"mobile-menu\" class=\"fixed inset-0 z-[60] bg-[var(--bg-primary)] hidden md:hidden flex flex-col p-6 animate-in fade-in slide-in-from-top-4 duration-300\"><div class=\"flex items-center justify-between mb-10\"><span class=\"text-2xl font-display font-bold\">Go<span class=\"text-[var(--accent-primary)]\">SPA</span></span> <button class=\"p-2 rounded-xl hover:bg-white/5\" data-action=\"close-mobile-menu\"><svg xmlns=\"http://www.w3.org/2000/svg\" width=\"24\" height=\"24\" viewBox=\"0 0 24 24\" fill=\"none\" stroke=\"currentColor\" stroke-width=\"2\" stroke-linecap=\"round\" stroke-linejoin=\"round\"><line x1=\"18\" y1=\"6\" x2=\"6\" y2=\"18\"></line><line x1=\"6\" y1=\"6\" x2=\"18\" y2=\"18\"></line></svg></button></div><nav class=\"flex flex-col gap-2\"><a href=\"/\" data-action=\"close-mobile-menu\" class=\"p-4 rounded-2xl bg-white/5 border border-white/5 hover:border-[var(--accent-primary)]/30 transition-all font-medium\">Home</a> <a href=\"/docs\" data-action=\"close-mobile-menu\" class=\"p-4 rounded-2xl bg-white/5 border border-white/5 hover:border-[var(--accent-primary)]/30 transition-all font-medium\">Documentation</a> <a href=\"/docs/api\" data-action=\"close-mobile-menu\" class=\"p-4 rounded-2xl bg-white/5 border border-white/5 hover:border-[var(--accent-primary)]/30 transition-all font-medium\">API Reference</a></nav><div class=\"mt-auto\"><a href=\"/docs/getstarted/installation\" data-action=\"close-mobile-menu\" class=\"w-full py-4 bg-[var(--accent-primary)] text-black text-center font-bold rounded-2xl flex items-center justify-center gap-2 shadow-xl shadow-cyan-500/20\">Get Started <svg xmlns=\"http://www.w3.org/2000/svg\" width=\"20\" height=\"20\" viewBox=\"0 0 24 24\" fill=\"none\" stroke=\"currentColor\" stroke-width=\"2\" stroke-linecap=\"round\" stroke-linejoin=\"round\"><path d=\"M5 12h14\"></path><path d=\"m12 5 7 7-7 7\"></path></svg></a></div></div></header><!-- Search Modal --><div id=\"search-modal\" class=\"fixed inset-0 z-[100] bg-black/60 backdrop-blur-sm hidden flex items-start justify-center pt-[10vh] px-4\"><div class=\"bg-[var(--bg-secondary)] w-full max-w-2xl rounded-2xl border border-[var(--border)] shadow-2xl overflow-hidden animate-in zoom-in-95 duration-200\"><div class=\"p-4 border-b border-[var(--border)] flex items-center gap-3\"><svg xmlns=\"http://www.w3.org/2000/svg\" width=\"20\" height=\"20\" viewBox=\"0 0 24 24\" fill=\"none\" stroke=\"currentColor\" stroke-width=\"2\" stroke-linecap=\"round\" stroke-linejoin=\"round\" class=\"text-[var(--text-muted)]\"><circle cx=\"11\" cy=\"11\" r=\"8\"></circle><path d=\"m21 21-4.3-4.3\"></path></svg> <input id=\"search-input\" type=\"text\" placeholder=\"Search documentation... (Cmd+K)\" aria-label=\"Search documentation\" class=\"flex-grow bg-transparent border-none outline-none text-lg text-[var(--text-primary)] placeholder:text-[var(--text-muted)]\"> <button data-action=\"close-search\" class=\"p-1 rounded-md hover:bg-[var(--bg-tertiary)] text-[var(--text-muted)]\"><kbd class=\"text-[0.6rem] font-sans px-1.5 py-0.5 rounded border border-[var(--border)] bg-[var(--bg-primary)]\">ESC</kbd></button></div><div id=\"search-results\" class=\"max-h-[60vh] overflow-y-auto custom-scrollbar\"><div class=\"p-8 text-center text-[var(--text-muted)]\">Type to search...</div></div><div class=\"p-4 bg-[var(--bg-primary)] border-t border-[var(--border)] flex justify-between items-center text-[10px] text-[var(--text-muted)] uppercase tracking-widest font-bold\"><span>↑↓ to navigate</span> <span>↵ to select</span></div></div></div><!-- Main Content Area --><main class=\"flex-grow z-10 relative\" data-gospa-page-content>")
+		templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 31, "\">API Reference</a></nav></div><div class=\"flex items-center gap-4\"><div class=\"hidden sm:flex items-center gap-2\"><a href=\"https://github.com/aydenstechdungeon/gospa\" target=\"_blank\" class=\"p-2 rounded-xl text-[var(--text-secondary)] hover:text-white hover:bg-white/5 transition-all\" title=\"GitHub\"><svg xmlns=\"http://www.w3.org/2000/svg\" width=\"20\" height=\"20\" viewBox=\"0 0 24 24\" fill=\"none\" stroke=\"currentColor\" stroke-width=\"2\" stroke-linecap=\"round\" stroke-linejoin=\"round\"><path d=\"M15 22v-4a4.8 4.8 0 0 0-1-3.5c3 0 6-2 6-5.5.08-1.25-.27-2.48-1-3.5.28-1.15.28-2.35 0-3.5 0 0-1 0-3 1.5-2.64-.5-5.36-.5-8 0C6 2 5 2 5 2c-.3 1.15-.3 2.35 0 3.5A5.403 5.403 0 0 0 4 9c0 3.5 3 5.5 6 5.5-.39.49-.68 1.05-.85 1.65-.17.6-.22 1.23-.15 1.85v4\"></path><path d=\"M9 18c-4.51 2-5-2-7-2\"></path></svg></a></div><div class=\"h-5 w-px bg-white/10 mx-1 hidden md:block\"></div><a href=\"/docs/getstarted/installation\" class=\"hidden md:flex px-5 py-2 btn-premium bg-[var(--accent-primary)] text-black text-xs font-bold rounded-full shadow-lg shadow-cyan-500/20 active:scale-95\">Get Started</a> <button class=\"md:hidden p-2 rounded-xl text-[var(--text-primary)] hover:bg-white/5 transition-all\" data-action=\"toggle-mobile-menu\"><svg xmlns=\"http://www.w3.org/2000/svg\" width=\"24\" height=\"24\" viewBox=\"0 0 24 24\" fill=\"none\" stroke=\"currentColor\" stroke-width=\"2\" stroke-linecap=\"round\" stroke-linejoin=\"round\"><line x1=\"4\" x2=\"20\" y1=\"12\" y2=\"12\"></line><line x1=\"4\" x2=\"20\" y1=\"6\" y2=\"6\"></line><line x1=\"4\" x2=\"20\" y1=\"18\" y2=\"18\"></line></svg></button></div></div><!-- Mobile Menu Overlay --><div id=\"mobile-menu\" class=\"fixed inset-0 z-[60] bg-[var(--bg-primary)] hidden md:hidden flex flex-col p-6 animate-in fade-in slide-in-from-top-4 duration-300\"><div class=\"flex items-center justify-between mb-10\"><span class=\"text-2xl font-display font-bold\">Go<span class=\"text-[var(--accent-primary)]\">SPA</span></span> <button class=\"p-2 rounded-xl hover:bg-white/5\" data-action=\"close-mobile-menu\"><svg xmlns=\"http://www.w3.org/2000/svg\" width=\"24\" height=\"24\" viewBox=\"0 0 24 24\" fill=\"none\" stroke=\"currentColor\" stroke-width=\"2\" stroke-linecap=\"round\" stroke-linejoin=\"round\"><line x1=\"18\" y1=\"6\" x2=\"6\" y2=\"18\"></line><line x1=\"6\" y1=\"6\" x2=\"18\" y2=\"18\"></line></svg></button></div><nav class=\"flex flex-col gap-2\"><a href=\"/\" data-action=\"close-mobile-menu\" class=\"p-4 rounded-2xl bg-white/5 border border-white/5 hover:border-[var(--accent-primary)]/30 transition-all font-medium\">Home</a> <a href=\"/docs\" data-action=\"close-mobile-menu\" class=\"p-4 rounded-2xl bg-white/5 border border-white/5 hover:border-[var(--accent-primary)]/30 transition-all font-medium\">Documentation</a> <a href=\"/docs/api\" data-action=\"close-mobile-menu\" class=\"p-4 rounded-2xl bg-white/5 border border-white/5 hover:border-[var(--accent-primary)]/30 transition-all font-medium\">API Reference</a></nav><div class=\"mt-auto\"><a href=\"/docs/getstarted/installation\" data-action=\"close-mobile-menu\" class=\"w-full py-4 bg-[var(--accent-primary)] text-black text-center font-bold rounded-2xl flex items-center justify-center gap-2 shadow-xl shadow-cyan-500/20\">Get Started <svg xmlns=\"http://www.w3.org/2000/svg\" width=\"20\" height=\"20\" viewBox=\"0 0 24 24\" fill=\"none\" stroke=\"currentColor\" stroke-width=\"2\" stroke-linecap=\"round\" stroke-linejoin=\"round\"><path d=\"M5 12h14\"></path><path d=\"m12 5 7 7-7 7\"></path></svg></a></div></div></header><!-- Search Modal --><div id=\"search-modal\" class=\"fixed inset-0 z-[100] bg-black/60 backdrop-blur-sm hidden flex items-start justify-center pt-[10vh] px-4\"><div class=\"bg-[var(--bg-secondary)] w-full max-w-2xl rounded-2xl border border-[var(--border)] shadow-2xl overflow-hidden animate-in zoom-in-95 duration-200\"><div class=\"p-4 border-b border-[var(--border)] flex items-center gap-3\"><svg xmlns=\"http://www.w3.org/2000/svg\" width=\"20\" height=\"20\" viewBox=\"0 0 24 24\" fill=\"none\" stroke=\"currentColor\" stroke-width=\"2\" stroke-linecap=\"round\" stroke-linejoin=\"round\" class=\"text-[var(--text-muted)]\"><circle cx=\"11\" cy=\"11\" r=\"8\"></circle><path d=\"m21 21-4.3-4.3\"></path></svg> <input id=\"search-input\" type=\"text\" placeholder=\"Search documentation... (Cmd+K)\" aria-label=\"Search documentation\" class=\"flex-grow bg-transparent border-none outline-none text-lg text-[var(--text-primary)] placeholder:text-[var(--text-muted)]\"> <button data-action=\"close-search\" class=\"p-1 rounded-md hover:bg-[var(--bg-tertiary)] text-[var(--text-muted)]\"><kbd class=\"text-[0.6rem] font-sans px-1.5 py-0.5 rounded border border-[var(--border)] bg-[var(--bg-primary)]\">ESC</kbd></button></div><div id=\"search-results\" class=\"max-h-[60vh] overflow-y-auto custom-scrollbar\"><div class=\"p-8 text-center text-[var(--text-muted)]\">Type to search...</div></div><div class=\"p-4 bg-[var(--bg-primary)] border-t border-[var(--border)] flex justify-between items-center text-[10px] text-[var(--text-muted)] uppercase tracking-widest font-bold\"><span>↑↓ to navigate</span> <span>↵ to select</span></div></div></div><!-- Main Content Area --><main class=\"flex-grow z-10 relative\" data-gospa-page-content>")
 		if templ_7745c5c3_Err != nil {
 			return templ_7745c5c3_Err
 		}
 		if strings.HasPrefix(path, "/docs") {
-			templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 30, "<!-- Docs Layout: Persistent sidebar, swap only content --> <div class=\"max-w-7xl mx-auto px-4 flex gap-8\"><!-- Persistent Sidebar (outside swap area) --><div class=\"w-64 flex-shrink-0 hidden lg:block\" id=\"docs-sidebar\">")
+			templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 32, "<!-- Docs Layout: Persistent sidebar, swap only content --> <div class=\"max-w-7xl mx-auto px-4 flex gap-8\"><!-- Persistent Sidebar (outside swap area) --><div class=\"w-64 flex-shrink-0 hidden lg:block\" id=\"docs-sidebar\">")
 			if templ_7745c5c3_Err != nil {
 				return templ_7745c5c3_Err
 			}
@@ -439,46 +476,20 @@ func RootLayout(title string, children templ.Component, runtimePath string, path
 			if templ_7745c5c3_Err != nil {
 				return templ_7745c5c3_Err
 			}
-			templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 31, "</div><!-- Swappable Content Area --><div data-gospa-docs-content class=\"flex-grow min-w-0\"><div data-gospa-page=\"")
-			if templ_7745c5c3_Err != nil {
-				return templ_7745c5c3_Err
-			}
-			var templ_7745c5c3_Var25 string
-			templ_7745c5c3_Var25, templ_7745c5c3_Err = templ.JoinStringErrs(path)
-			if templ_7745c5c3_Err != nil {
-				return templ.Error{Err: templ_7745c5c3_Err, FileName: `routes/root_layout.templ`, Line: 255, Col: 34}
-			}
-			_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ.EscapeString(templ_7745c5c3_Var25))
-			if templ_7745c5c3_Err != nil {
-				return templ_7745c5c3_Err
-			}
-			templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 32, "\">")
-			if templ_7745c5c3_Err != nil {
-				return templ_7745c5c3_Err
-			}
-			templ_7745c5c3_Err = children.Render(ctx, templ_7745c5c3_Buffer)
-			if templ_7745c5c3_Err != nil {
-				return templ_7745c5c3_Err
-			}
-			templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 33, "</div></div><!-- Table of Contents (outside swap area) --><div class=\"hidden xl:block w-64 flex-shrink-0 pt-12\" id=\"docs-toc\"><div class=\"sticky top-28\"><h4 class=\"text-xs font-bold uppercase tracking-widest text-[var(--text-muted)] mb-4\">On this page</h4><nav id=\"toc\"><ul class=\"space-y-3 text-xs text-[var(--text-secondary)]\" data-gospa-permanent><!-- Populated by static/docs.js --></ul></nav></div></div></div>")
-			if templ_7745c5c3_Err != nil {
-				return templ_7745c5c3_Err
-			}
-		} else {
-			templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 34, "<!-- Non-Docs Layout: Full page swap --> <div data-gospa-page=\"")
+			templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 33, "</div><!-- Swappable Content Area --><div data-gospa-docs-content class=\"flex-grow min-w-0\"><div data-gospa-page=\"")
 			if templ_7745c5c3_Err != nil {
 				return templ_7745c5c3_Err
 			}
 			var templ_7745c5c3_Var26 string
 			templ_7745c5c3_Var26, templ_7745c5c3_Err = templ.JoinStringErrs(path)
 			if templ_7745c5c3_Err != nil {
-				return templ.Error{Err: templ_7745c5c3_Err, FileName: `routes/root_layout.templ`, Line: 274, Col: 32}
+				return templ.Error{Err: templ_7745c5c3_Err, FileName: `routes/root_layout.templ`, Line: 273, Col: 34}
 			}
 			_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ.EscapeString(templ_7745c5c3_Var26))
 			if templ_7745c5c3_Err != nil {
 				return templ_7745c5c3_Err
 			}
-			templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 35, "\">")
+			templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 34, "\">")
 			if templ_7745c5c3_Err != nil {
 				return templ_7745c5c3_Err
 			}
@@ -486,12 +497,38 @@ func RootLayout(title string, children templ.Component, runtimePath string, path
 			if templ_7745c5c3_Err != nil {
 				return templ_7745c5c3_Err
 			}
-			templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 36, "</div>")
+			templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 35, "</div></div><!-- Table of Contents (outside swap area) --><div class=\"hidden xl:block w-64 flex-shrink-0 pt-12\" id=\"docs-toc\"><div class=\"sticky top-28\"><h4 class=\"text-xs font-bold uppercase tracking-widest text-[var(--text-muted)] mb-4\">On this page</h4><nav id=\"toc\"><ul class=\"space-y-3 text-xs text-[var(--text-secondary)]\" data-gospa-permanent><!-- Populated by static/docs.js --></ul></nav></div></div></div>")
+			if templ_7745c5c3_Err != nil {
+				return templ_7745c5c3_Err
+			}
+		} else {
+			templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 36, "<!-- Non-Docs Layout: Full page swap --> <div data-gospa-page=\"")
+			if templ_7745c5c3_Err != nil {
+				return templ_7745c5c3_Err
+			}
+			var templ_7745c5c3_Var27 string
+			templ_7745c5c3_Var27, templ_7745c5c3_Err = templ.JoinStringErrs(path)
+			if templ_7745c5c3_Err != nil {
+				return templ.Error{Err: templ_7745c5c3_Err, FileName: `routes/root_layout.templ`, Line: 292, Col: 32}
+			}
+			_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ.EscapeString(templ_7745c5c3_Var27))
+			if templ_7745c5c3_Err != nil {
+				return templ_7745c5c3_Err
+			}
+			templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 37, "\">")
+			if templ_7745c5c3_Err != nil {
+				return templ_7745c5c3_Err
+			}
+			templ_7745c5c3_Err = children.Render(ctx, templ_7745c5c3_Buffer)
+			if templ_7745c5c3_Err != nil {
+				return templ_7745c5c3_Err
+			}
+			templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 38, "</div>")
 			if templ_7745c5c3_Err != nil {
 				return templ_7745c5c3_Err
 			}
 		}
-		templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 37, "</main><footer class=\"border-t border-[var(--border)] bg-[var(--bg-secondary)] py-12 z-10 relative\"><div class=\"max-w-7xl mx-auto px-4 grid md:grid-cols-4 gap-8\"><div class=\"col-span-2\"><div class=\"flex items-center gap-2 mb-4\"><span class=\"text-2xl font-bold tracking-tight\">Go<span class=\"text-[var(--accent-primary)]\">SPA</span></span></div><p class=\"text-[var(--text-secondary)] text-sm max-w-sm mb-6\">A lightweight Go framework for building high-performance, reactive single-page applications with server-side rendering.</p><p class=\"text-[var(--text-muted)] text-xs\">© 2026 GoSPA Contributors. Released under the Apache-2.0 License.</p></div><div><h4 class=\"font-semibold mb-4 text-sm\">Documentation</h4><ul class=\"space-y-2 text-sm text-[var(--text-secondary)]\"><li><a href=\"/docs/getstarted/installation\" class=\"hover:text-[var(--accent-primary)] transition-colors\">Getting Started</a></li><li><a href=\"/docs/api\" class=\"hover:text-[var(--accent-primary)] transition-colors\">Go API Reference</a></li><li><a href=\"/docs/client-runtime/overview\" class=\"hover:text-[var(--accent-primary)] transition-colors\">Client Runtime</a></li><li><a href=\"/llms.txt\" class=\"hover:text-[var(--accent-primary)] transition-colors\">llms.txt</a></li><li><a href=\"/llms-full.md\" class=\"hover:text-[var(--accent-primary)] transition-colors\">llms-full.md</a></li></ul></div><div><h4 class=\"font-semibold mb-4 text-sm\">Community</h4><ul class=\"space-y-2 text-sm text-[var(--text-secondary)]\"><li><a href=\"https://github.com/aydenstechdungeon/gospa\" class=\"hover:text-[var(--accent-primary)] transition-colors\">GitHub</a></li><li><a href=\"https://pkg.go.dev/github.com/aydenstechdungeon/gospa\" class=\"hover:text-[var(--accent-primary)] transition-colors\">Go.dev</a></li></ul></div></div></footer></div></body></html>")
+		templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 39, "</main><footer class=\"border-t border-[var(--border)] bg-[var(--bg-secondary)] py-12 z-10 relative\"><div class=\"max-w-7xl mx-auto px-4 grid md:grid-cols-4 gap-8\"><div class=\"col-span-2\"><div class=\"flex items-center gap-2 mb-4\"><span class=\"text-2xl font-bold tracking-tight\">Go<span class=\"text-[var(--accent-primary)]\">SPA</span></span></div><p class=\"text-[var(--text-secondary)] text-sm max-w-sm mb-6\">A lightweight Go framework for building high-performance, reactive single-page applications with server-side rendering.</p><p class=\"text-[var(--text-muted)] text-xs\">© 2026 GoSPA Contributors. Released under the Apache-2.0 License.</p></div><div><h4 class=\"font-semibold mb-4 text-sm\">Documentation</h4><ul class=\"space-y-2 text-sm text-[var(--text-secondary)]\"><li><a href=\"/docs/getstarted/installation\" class=\"hover:text-[var(--accent-primary)] transition-colors\">Getting Started</a></li><li><a href=\"/docs/api\" class=\"hover:text-[var(--accent-primary)] transition-colors\">Go API Reference</a></li><li><a href=\"/docs/client-runtime/overview\" class=\"hover:text-[var(--accent-primary)] transition-colors\">Client Runtime</a></li><li><a href=\"/llms.txt\" class=\"hover:text-[var(--accent-primary)] transition-colors\">llms.txt</a></li><li><a href=\"/llms-full.md\" class=\"hover:text-[var(--accent-primary)] transition-colors\">llms-full.md</a></li></ul></div><div><h4 class=\"font-semibold mb-4 text-sm\">Community</h4><ul class=\"space-y-2 text-sm text-[var(--text-secondary)]\"><li><a href=\"https://github.com/aydenstechdungeon/gospa\" class=\"hover:text-[var(--accent-primary)] transition-colors\">GitHub</a></li><li><a href=\"https://pkg.go.dev/github.com/aydenstechdungeon/gospa\" class=\"hover:text-[var(--accent-primary)] transition-colors\">Go.dev</a></li></ul></div></div></footer></div></body></html>")
 		if templ_7745c5c3_Err != nil {
 			return templ_7745c5c3_Err
 		}

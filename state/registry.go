@@ -2,6 +2,7 @@ package state
 
 import (
 	"context"
+	"encoding/json"
 	"sync"
 )
 
@@ -55,4 +56,22 @@ func FromContext(ctx context.Context) *Registry {
 		return r
 	}
 	return nil
+}
+
+// GetDataJSON returns the registered island data as a JSON string.
+func (r *Registry) GetDataJSON() string {
+	if r == nil {
+		return "[]"
+	}
+	data, err := json.Marshal(r.GetData())
+	if err != nil {
+		return "[]"
+	}
+	return string(data)
+}
+
+// GetRegistryDataJSON is a helper to get registry data from context as JSON.
+func GetRegistryDataJSON(ctx context.Context) string {
+	r := FromContext(ctx)
+	return r.GetDataJSON()
 }

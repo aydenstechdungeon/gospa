@@ -29,8 +29,17 @@ type SFC struct {
 	Style       Block
 }
 
+// maxSFCInputBytes is the hard ceiling on .gospa source files.
+// Inputs larger than this are rejected to prevent memory exhaustion during
+// compilation and to limit the attack surface for resource-abuse scenarios.
+const maxSFCInputBytes = 2 * 1024 * 1024 // 2 MB
+
 // Parse splits a .gospa file into its component blocks.
 func Parse(input string) (*SFC, error) {
+	if len(input) > maxSFCInputBytes {
+		return nil, fmt.Errorf("SFC input exceeds maximum allowed size of %d bytes", maxSFCInputBytes)
+	}
+
 	sfc := &SFC{}
 	var offset int
 

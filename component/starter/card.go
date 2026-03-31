@@ -85,11 +85,26 @@ func DefaultCardProps() CardProps {
 	}
 }
 
-// MergeCardProps merges provided props with defaults
-// For booleans, zero value (false) is treated as "use default"
+// MergeCardProps merges provided props with defaults.
+// Zero-value booleans are replaced with the default values from DefaultCardProps.
 func MergeCardProps(props CardProps) CardProps {
-	// For booleans, we treat zero values as "use default"
-	// This means if a boolean is false, it will use the default (true for most)
+	defaults := DefaultCardProps()
+
+	// Use non-zero values from props, fall back to defaults for zero-value bools
+	if !props.Padding && defaults.Padding {
+		props.Padding = defaults.Padding
+	}
+	if !props.Shadow && defaults.Shadow {
+		props.Shadow = defaults.Shadow
+	}
+	if !props.Border && defaults.Border {
+		props.Border = defaults.Border
+	}
+	if !props.Rounded && defaults.Rounded {
+		props.Rounded = defaults.Rounded
+	}
+	// Hover defaults to false so we don't force it
+
 	return props
 }
 

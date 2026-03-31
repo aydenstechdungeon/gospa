@@ -64,17 +64,21 @@ func DefaultPriorityConfig() PriorityConfig {
 }
 
 // PriorityQueue manages islands ordered by priority.
+// It maintains a cached sorted list that is invalidated on any write.
 type PriorityQueue struct {
-	mu      sync.RWMutex
-	islands []*PriorityIsland
-	config  PriorityConfig
+	mu          sync.RWMutex
+	islands     []*PriorityIsland
+	config      PriorityConfig
+	sorted      []*PriorityIsland
+	sortedDirty bool
 }
 
 // NewPriorityQueue creates a new priority queue.
 func NewPriorityQueue(config PriorityConfig) *PriorityQueue {
 	return &PriorityQueue{
-		islands: make([]*PriorityIsland, 0),
-		config:  config,
+		islands:     make([]*PriorityIsland, 0),
+		config:      config,
+		sortedDirty: true,
 	}
 }
 
@@ -87,24 +91,52 @@ func (pq *PriorityQueue) Register(island *PriorityIsland) {
 	for i, existing := range pq.islands {
 		if existing.ID == island.ID {
 			pq.islands[i] = island
+			pq.sortedDirty = true
 			return
 		}
 	}
 
 	pq.islands = append(pq.islands, island)
+	pq.sortedDirty = true
 }
 
 // RegisterBatch adds multiple islands at once.
 func (pq *PriorityQueue) RegisterBatch(islands []*PriorityIsland) {
+	pq.mu.Lock()
+	defer pq.mu.Unlock()
+
 	for _, island := range islands {
-		pq.Register(island)
+		// Inline the registration to avoid re-locking
+		found := false
+		for i, existing := range pq.islands {
+			if existing.ID == island.ID {
+				pq.islands[i] = island
+				found = true
+				break
+			}
+		}
+		if !found {
+			pq.islands = append(pq.islands, island)
+		}
 	}
+	pq.sortedDirty = true
 }
 
 // GetOrdered returns islands sorted by priority (highest first).
+// The sorted result is cached and only recomputed when the queue is modified.
 func (pq *PriorityQueue) GetOrdered() []*PriorityIsland {
 	pq.mu.RLock()
-	defer pq.mu.RUnlock()
+
+	if !pq.sortedDirty && pq.sorted != nil {
+		result := make([]*PriorityIsland, len(pq.sorted))
+		copy(result, pq.sorted)
+		pq.mu.RUnlock()
+		return result
+	}
+	pq.mu.RUnlock()
+
+	pq.mu.Lock()
+	defer pq.mu.Unlock()
 
 	// Copy slice
 	result := make([]*PriorityIsland, len(pq.islands))
@@ -117,6 +149,11 @@ func (pq *PriorityQueue) GetOrdered() []*PriorityIsland {
 		}
 		return result[i].Position < result[j].Position
 	})
+
+	// Cache the sorted result
+	pq.sorted = make([]*PriorityIsland, len(result))
+	copy(pq.sorted, result)
+	pq.sortedDirty = false
 
 	return result
 }
@@ -313,6 +350,8 @@ func (pq *PriorityQueue) Clear() {
 	pq.mu.Lock()
 	defer pq.mu.Unlock()
 	pq.islands = make([]*PriorityIsland, 0)
+	pq.sorted = nil
+	pq.sortedDirty = true
 }
 
 // Count returns the number of islands in the queue.
@@ -363,9 +402,23 @@ func PriorityIslandFromIsland(island *Island, position int) *PriorityIsland {
 // Global priority queue instance.
 var globalPriorityQueue = NewPriorityQueue(DefaultPriorityConfig())
 
+// globalPriorityQueueMu serializes all write access to the global priority queue
+// to prevent races when concurrent goroutines register islands.
+var globalPriorityQueueMu sync.Mutex
+
 // RegisterPriorityIsland registers an island in the global priority queue.
 func RegisterPriorityIsland(island *PriorityIsland) {
+	globalPriorityQueueMu.Lock()
+	defer globalPriorityQueueMu.Unlock()
 	globalPriorityQueue.Register(island)
+}
+
+// RegisterBatchIslands registers multiple islands in the global priority queue
+// under a single lock acquisition for efficiency.
+func RegisterBatchIslands(islands []*PriorityIsland) {
+	globalPriorityQueueMu.Lock()
+	defer globalPriorityQueueMu.Unlock()
+	globalPriorityQueue.RegisterBatch(islands)
 }
 
 // GetPriorityQueue returns the global priority queue.

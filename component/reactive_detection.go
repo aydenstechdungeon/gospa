@@ -39,6 +39,36 @@ const (
 	BoundaryTypeComputed BoundaryType = "computed"
 )
 
+// Pre-compiled patterns for reactive boundary detection.
+// These are compiled once at package init to avoid per-call compilation overhead.
+var (
+	reStatePatterns = []*regexp.Regexp{
+		regexp.MustCompile(`(?s)\$state\s*\(\s*([^)]+)\s*\)`),
+		regexp.MustCompile(`(?s)gospa\.State\s*\(\s*([^)]+)\s*\)`),
+	}
+	reDerivedPatterns = []*regexp.Regexp{
+		regexp.MustCompile(`(?s)\$derived\s*\(\s*([^)]+)\s*\)`),
+		regexp.MustCompile(`(?s)gospa\.Derived\s*\(\s*([^)]+)\s*\)`),
+	}
+	reEffectPatterns = []*regexp.Regexp{
+		regexp.MustCompile(`(?s)\$effect\s*\(\s*func\s*\(`),
+		regexp.MustCompile(`(?s)gospa\.Effect\s*\(`),
+	}
+	reEventPatterns = []*regexp.Regexp{
+		regexp.MustCompile(`(?s)on[a-z:]+\s*=\s*\{`),
+		regexp.MustCompile(`(?s)@\w+\s*=\s*\{`),
+	}
+	reComponentPatterns = []*regexp.Regexp{
+		regexp.MustCompile(`templ\.Component`),
+		regexp.MustCompile(`templ\.ComponentFunc`),
+		regexp.MustCompile(`func\s*\(\w+\)\s*Render\s*\(`),
+	}
+	reIslandPatterns = []*regexp.Regexp{
+		regexp.MustCompile(`gospa\.Island\s*\(\s*"([^"]+)"`),
+		regexp.MustCompile(`data-gospa-island`),
+	}
+)
+
 // ReactiveDetector detects reactive boundaries in templ components.
 type ReactiveDetector struct {
 	statePatterns     []*regexp.Regexp
@@ -50,39 +80,16 @@ type ReactiveDetector struct {
 }
 
 // NewReactiveDetector creates a new reactive boundary detector.
+// All patterns reference pre-compiled package-level regexps so there is
+// no per-instance compilation cost.
 func NewReactiveDetector() *ReactiveDetector {
 	return &ReactiveDetector{
-		statePatterns: []*regexp.Regexp{
-			regexp.MustCompile(`\$state\s*\(\s*([^)]+)\s*\)`),
-			regexp.MustCompile(`gospa\.State\s*\(\s*([^)]+)\s*\)`),
-			regexp.MustCompile(`NewState\s*\(\s*([^)]+)\s*\)`),
-		},
-		derivedPatterns: []*regexp.Regexp{
-			regexp.MustCompile(`\$derived\s*\(\s*([^)]+)\s*\)`),
-			regexp.MustCompile(`gospa\.Derived\s*\(\s*([^)]+)\s*\)`),
-			regexp.MustCompile(`NewDerived\s*\(\s*([^)]+)\s*\)`),
-		},
-		effectPatterns: []*regexp.Regexp{
-			regexp.MustCompile(`\$effect\s*\(\s*func\s*\(\)`),
-			regexp.MustCompile(`gospa\.Effect\s*\(`),
-			regexp.MustCompile(`NewEffect\s*\(`),
-		},
-		eventPatterns: []*regexp.Regexp{
-			regexp.MustCompile(`onclick\s*=\s*`),
-			regexp.MustCompile(`on:click\s*=\s*`),
-			regexp.MustCompile(`gospa\.On\s*\(\s*"([^"]+)"`),
-			regexp.MustCompile(`@click\s*=`),
-		},
-		componentPatterns: []*regexp.Regexp{
-			regexp.MustCompile(`templ\.Component`),
-			regexp.MustCompile(`templ\.ComponentFunc`),
-			regexp.MustCompile(`func\s*\(\w+\)\s*Render\s*\(`),
-		},
-		islandPatterns: []*regexp.Regexp{
-			regexp.MustCompile(`gospa\.Island\s*\(\s*"([^"]+)"`),
-			regexp.MustCompile(`@gospa:island\s+name="([^"]+)"`),
-			regexp.MustCompile(`data-gospa-island`),
-		},
+		statePatterns:     reStatePatterns,
+		derivedPatterns:   reDerivedPatterns,
+		effectPatterns:    reEffectPatterns,
+		eventPatterns:     reEventPatterns,
+		componentPatterns: reComponentPatterns,
+		islandPatterns:    reIslandPatterns,
 	}
 }
 
@@ -104,24 +111,20 @@ func (rd *ReactiveDetector) Detect(source, filePath string) *DetectionResult {
 		FilePath:   filePath,
 	}
 
-	lines := strings.Split(source, "\n")
+	// Detect state boundaries
+	rd.detectStateBoundaries(source, result)
 
-	for lineNum, line := range lines {
-		// Detect state boundaries
-		rd.detectStateBoundaries(line, lineNum+1, result)
+	// Detect derived boundaries
+	rd.detectDerivedBoundaries(source, result)
 
-		// Detect derived boundaries
-		rd.detectDerivedBoundaries(line, lineNum+1, result)
+	// Detect effect boundaries
+	rd.detectEffectBoundaries(source, result)
 
-		// Detect effect boundaries
-		rd.detectEffectBoundaries(line, lineNum+1, result)
+	// Detect event handlers
+	rd.detectEventBoundaries(source, result)
 
-		// Detect event handlers
-		rd.detectEventBoundaries(line, lineNum+1, result)
-
-		// Detect islands
-		rd.detectIslands(line, lineNum+1, result)
-	}
+	// Detect islands
+	rd.detectIslands(source, result)
 
 	// Update counts
 	for _, b := range result.Boundaries {
@@ -143,19 +146,31 @@ func (rd *ReactiveDetector) Detect(source, filePath string) *DetectionResult {
 }
 
 // detectStateBoundaries detects state declarations.
-func (rd *ReactiveDetector) detectStateBoundaries(line string, lineNum int, result *DetectionResult) {
+func (rd *ReactiveDetector) detectStateBoundaries(source string, result *DetectionResult) {
 	for _, pattern := range rd.statePatterns {
-		matches := pattern.FindAllStringSubmatch(line, -1)
+		matches := pattern.FindAllStringSubmatchIndex(source, -1)
 		for _, match := range matches {
-			varName := rd.extractVariableName(line)
+			lineBefore := source[:match[0]]
+			lineNum := strings.Count(lineBefore, "\n") + 1
+			
+			// Extract variable name from the context before the match
+			lastLineIdx := strings.LastIndex(lineBefore, "\n")
+			var context string
+			if lastLineIdx == -1 {
+				context = lineBefore
+			} else {
+				context = lineBefore[lastLineIdx:]
+			}
+			
+			varName := rd.extractVariableName(context)
 			boundary := ReactiveBoundary{
 				Name:       varName,
 				Type:       BoundaryTypeState,
 				LineNumber: lineNum,
 				StateVars:  []string{varName},
 			}
-			if len(match) > 1 {
-				boundary.Dependencies = []string{match[1]}
+			if len(match) >= 4 {
+				boundary.Dependencies = []string{source[match[2]:match[3]]}
 			}
 			result.Boundaries = append(result.Boundaries, boundary)
 		}
@@ -163,19 +178,31 @@ func (rd *ReactiveDetector) detectStateBoundaries(line string, lineNum int, resu
 }
 
 // detectDerivedBoundaries detects derived/computed values.
-func (rd *ReactiveDetector) detectDerivedBoundaries(line string, lineNum int, result *DetectionResult) {
+func (rd *ReactiveDetector) detectDerivedBoundaries(source string, result *DetectionResult) {
 	for _, pattern := range rd.derivedPatterns {
-		matches := pattern.FindAllStringSubmatch(line, -1)
+		matches := pattern.FindAllStringSubmatchIndex(source, -1)
 		for _, match := range matches {
-			varName := rd.extractVariableName(line)
+			lineBefore := source[:match[0]]
+			lineNum := strings.Count(lineBefore, "\n") + 1
+			
+			// Extract variable name from the context before the match
+			lastLineIdx := strings.LastIndex(lineBefore, "\n")
+			var context string
+			if lastLineIdx == -1 {
+				context = lineBefore
+			} else {
+				context = lineBefore[lastLineIdx:]
+			}
+			
+			varName := rd.extractVariableName(context)
 			boundary := ReactiveBoundary{
 				Name:       varName,
 				Type:       BoundaryTypeDerived,
 				LineNumber: lineNum,
 				StateVars:  []string{varName},
 			}
-			if len(match) > 1 {
-				boundary.Dependencies = rd.extractDependencies(match[1])
+			if len(match) >= 4 {
+				boundary.Dependencies = rd.extractDependencies(source[match[2]:match[3]])
 			}
 			result.Boundaries = append(result.Boundaries, boundary)
 		}
@@ -183,9 +210,11 @@ func (rd *ReactiveDetector) detectDerivedBoundaries(line string, lineNum int, re
 }
 
 // detectEffectBoundaries detects effect declarations.
-func (rd *ReactiveDetector) detectEffectBoundaries(line string, lineNum int, result *DetectionResult) {
+func (rd *ReactiveDetector) detectEffectBoundaries(source string, result *DetectionResult) {
 	for _, pattern := range rd.effectPatterns {
-		if pattern.MatchString(line) {
+		matches := pattern.FindAllStringIndex(source, -1)
+		for _, match := range matches {
+			lineNum := strings.Count(source[:match[0]], "\n") + 1
 			boundary := ReactiveBoundary{
 				Name:       fmt.Sprintf("effect_%d", lineNum),
 				Type:       BoundaryTypeEffect,
@@ -197,9 +226,11 @@ func (rd *ReactiveDetector) detectEffectBoundaries(line string, lineNum int, res
 }
 
 // detectEventBoundaries detects event handlers.
-func (rd *ReactiveDetector) detectEventBoundaries(line string, lineNum int, result *DetectionResult) {
+func (rd *ReactiveDetector) detectEventBoundaries(source string, result *DetectionResult) {
 	for _, pattern := range rd.eventPatterns {
-		if pattern.MatchString(line) {
+		matches := pattern.FindAllStringIndex(source, -1)
+		for _, match := range matches {
+			lineNum := strings.Count(source[:match[0]], "\n") + 1
 			boundary := ReactiveBoundary{
 				Name:       fmt.Sprintf("event_%d", lineNum),
 				Type:       BoundaryTypeEvent,
@@ -211,13 +242,14 @@ func (rd *ReactiveDetector) detectEventBoundaries(line string, lineNum int, resu
 }
 
 // detectIslands detects island declarations.
-func (rd *ReactiveDetector) detectIslands(line string, lineNum int, result *DetectionResult) {
+func (rd *ReactiveDetector) detectIslands(source string, result *DetectionResult) {
 	for _, pattern := range rd.islandPatterns {
-		matches := pattern.FindAllStringSubmatch(line, -1)
+		matches := pattern.FindAllStringSubmatchIndex(source, -1)
 		for _, match := range matches {
+			lineNum := strings.Count(source[:match[0]], "\n") + 1
 			name := "island"
-			if len(match) > 1 {
-				name = match[1]
+			if len(match) >= 4 {
+				name = source[match[2]:match[3]]
 			}
 			boundary := ReactiveBoundary{
 				Name:          name,

@@ -5,6 +5,9 @@ import (
 	"crypto/sha256"
 	"encoding/json"
 	"fmt"
+	"go/ast"
+	"go/parser"
+	"go/token"
 	"regexp"
 	"strings"
 
@@ -34,6 +37,130 @@ type CompileOptions struct {
 	PkgName    string
 	Hydrate    bool
 	ServerOnly bool
+	// SafeMode enables stricter validation of script content.
+	// When true, the compiler checks that Go scripts parse as valid Go and
+	// rejects dangerous patterns such as exec.Command, os/exec, unsafe, or
+	// syscall imports. Use this when compiling .gospa from sources you do
+	// not fully trust (e.g., CMS-generated SFCs).
+	SafeMode bool
+}
+
+// DangerousImportNames are packages whose presence indicates a trust
+// boundary violation when compiling SFCs from untrusted sources.
+var DangerousImportNames = []string{
+	"os/exec", "exec",
+	"os",
+	"unsafe",
+	"syscall",
+	"plugin",
+	"runtime/debug",
+	"runtime/pprof",
+	"reflect", // reflection-based code can bypass type safety
+}
+
+// DangerousCallPatterns are regex patterns for unsafe function calls that
+// should be rejected in SafeMode.
+var DangerousCallPatterns = []*regexp.Regexp{
+	regexp.MustCompile(`exec\.Command`),     // direct command execution
+	regexp.MustCompile(`os\.OpenFile`),      // filesystem writes
+	regexp.MustCompile(`os\.Create`),        // filesystem writes
+	regexp.MustCompile(`os\.Remove`),        // filesystem deletes
+	regexp.MustCompile(`os\.Rename`),        // filesystem moves
+	regexp.MustCompile(`os\.Mkdir`),         // filesystem operations
+	regexp.MustCompile(`os\.MkdirAll`),      // filesystem operations
+	regexp.MustCompile(`os\.WriteFile`),     // filesystem writes
+	regexp.MustCompile(`os\.RemoveAll`),     // recursive filesystem deletes
+	regexp.MustCompile(`os\.Symlink`),       // symlink creation
+	regexp.MustCompile(`os\.Setenv`),        // environment mutation
+	regexp.MustCompile(`os\.Getenv`),        // environment reads (information leak)
+	regexp.MustCompile(`system\s*\(`),       // system() call pattern
+	regexp.MustCompile(`syscall\.Exec`),     // exec syscall
+	regexp.MustCompile(`syscall\.ForkExec`), // fork/exec syscall
+	regexp.MustCompile(`unix\.Exec`),        // unix exec
+	regexp.MustCompile(`unix\.ForkExec`),    // unix fork/exec
+}
+
+// ValidateSafeScript validates that script content does not contain dangerous patterns.
+// Returns nil if the script is safe, or an error describing the dangerous pattern found.
+func ValidateSafeScript(script string) error {
+	if strings.TrimSpace(script) == "" {
+		return nil
+	}
+
+	// 1. Parse as Go to verify syntactic validity and perform AST inspection
+	fset := token.NewFileSet()
+	
+	// Determine if script is a full file or just a body
+	src := script
+	isBody := !strings.Contains(script, "package ")
+	if isBody {
+		src = "package p\n" + script
+	}
+
+	f, err := parser.ParseFile(fset, "", src, parser.ParseComments)
+	if err != nil {
+		if isBody {
+			// Try wrapping in a function if it's just statements
+			src = "package p\nfunc __check() {\n" + script + "\n}"
+			f, err = parser.ParseFile(fset, "", src, parser.ParseComments)
+		}
+		if err != nil {
+			return fmt.Errorf("script does not parse as valid Go: %w", err)
+		}
+	}
+
+	var validationErr error
+	blockedTypes := make(map[string]string) // alias -> package
+
+	ast.Inspect(f, func(n ast.Node) bool {
+		if validationErr != nil {
+			return false
+		}
+
+		switch x := n.(type) {
+		case *ast.ImportSpec:
+			path := strings.Trim(x.Path.Value, "\"")
+			for _, d := range DangerousImportNames {
+				if path == d || strings.HasSuffix(path, "/"+d) {
+					validationErr = fmt.Errorf("safe mode: script contains import of disallowed package %q", path)
+					return false
+				}
+			}
+			if x.Name != nil {
+				blockedTypes[x.Name.Name] = path
+			} else {
+				parts := strings.Split(path, "/")
+				blockedTypes[parts[len(parts)-1]] = path
+			}
+
+		case *ast.SelectorExpr:
+			// check for pkg.Function calls
+			if ident, ok := x.X.(*ast.Ident); ok {
+				if pkgPath, ok := blockedTypes[ident.Name]; ok {
+					fullCall := ident.Name + "." + x.Sel.Name
+					for _, re := range DangerousCallPatterns {
+						if re.MatchString(fullCall) || strings.Contains(fullCall, pkgPath) {
+							validationErr = fmt.Errorf("safe mode: script contains dangerous call: %s", fullCall)
+							return false
+						}
+					}
+				}
+			}
+		case *ast.CallExpr:
+			// Handle direct dangerous calls if they were dot-imported or are built-ins
+			if ident, ok := x.Fun.(*ast.Ident); ok {
+				for _, re := range DangerousCallPatterns {
+					if re.MatchString(ident.Name) {
+						validationErr = fmt.Errorf("safe mode: script contains dangerous call: %s", ident.Name)
+						return false
+					}
+				}
+			}
+		}
+		return true
+	})
+
+	return validationErr
 }
 
 // NewCompiler creates a new GospaCompiler.
@@ -42,6 +169,8 @@ func NewCompiler() *GospaCompiler {
 }
 
 // Compile compiles a .gospa component into Templ and TypeScript.
+// If opts.SafeMode is true, the script content is validated against a set of
+// dangerous patterns before compilation proceeds.
 func (c *GospaCompiler) Compile(opts CompileOptions, input string) (templ, ts string, err error) {
 	componentType := opts.Type
 	if componentType == "" {
@@ -96,6 +225,21 @@ func (c *GospaCompiler) Compile(opts CompileOptions, input string) (templ, ts st
 
 	// 1. Process Reactive DSL in Script and extract Props/State
 	scriptContent := parsed.Script.Content
+
+	// SafeMode: validate script content before processing
+	if opts.SafeMode {
+		// Validate Go script
+		if err := ValidateSafeScript(scriptContent); err != nil {
+			return "", "", fmt.Errorf("safe mode violation in Go script: %w", err)
+		}
+		// Validate TypeScript script if present
+		if parsed.ScriptTS.Content != "" {
+			if err := ValidateSafeScript(parsed.ScriptTS.Content); err != nil {
+				return "", "", fmt.Errorf("safe mode violation in TS script: %w", err)
+			}
+		}
+	}
+
 	props, states := ExtractTypes(scriptContent)
 	processedScript, _ := c.transformDSL(scriptContent)
 
@@ -929,12 +1073,201 @@ func (c *GospaCompiler) generateScopedCSS(style, hash string) string {
 	if style == "" {
 		return ""
 	}
-	// Scoping:
-	// Scope all class selectors with the hash
-	scopedStyle := CSSDotRegex.ReplaceAllString(style, ".$1."+hash)
-	// 2. h1 -> h1.gospa-hash (simplified, works for elements too)
-	scopedStyle = CSSElementRegex.ReplaceAllString(scopedStyle, "$1."+hash+" {")
+	// Scoping: use context-aware CSS scoping that avoids mutating selectors
+	// inside strings, URLs, and comments.
+	scopedStyle := scopeCSS(style, hash)
 
 	encodedStyle, _ := json.Marshal(scopedStyle)
 	return fmt.Sprintf("\n\n/* Scoped CSS */\nif (!document.querySelector(`style[data-gospa-style=\"%s\"]`)) {\n\tconst style = document.createElement('style');\n\tstyle.setAttribute('data-gospa-style', '%s');\n\tstyle.textContent = %s;\n\tdocument.head.appendChild(style);\n}\n", hash, hash, string(encodedStyle))
+}
+
+// cssContext tracks the state of the CSS parser as it walks through the input.
+type cssContext int
+
+const (
+	ctxNormal     cssContext = iota
+	ctxInString              // inside a string ("...") or ('...')
+	ctxInURL                 // inside a url(...) value
+	ctxInComment             // inside /* ... */
+	ctxInFunction            // inside a CSS function (e.g., content: "...") — no scoping
+)
+
+// scopeCSS applies the scoping hash to CSS class and element selectors while
+// avoiding false positives inside string literals, url() values, and comments.
+// This is a best-effort implementation that handles common CSS patterns.
+func scopeCSS(style, hash string) string {
+	var sb strings.Builder
+	i := 0
+	n := len(style)
+	ctx := ctxNormal
+	quoteChar := byte(0) // track which quote char opened a string
+
+	// Track the last non-whitespace character before a rule start to detect selectors.
+	lastNonWS := byte(0)
+	// Track brace depth to detect selectors vs values.
+	braceDepth := 0
+
+	for i < n {
+		ch := style[i]
+
+		// Handle comment context
+		if ctx == ctxInComment {
+			sb.WriteByte(ch)
+			if ch == '*' && i+1 < n && style[i+1] == '/' {
+				sb.WriteByte(style[i+1])
+				i += 2
+				ctx = ctxNormal
+				continue
+			}
+			i++
+			continue
+		}
+
+		// Handle string context
+		if ctx == ctxInString {
+			sb.WriteByte(ch)
+			if ch == '\\' && i+1 < n {
+				sb.WriteByte(style[i+1])
+				i += 2
+				continue
+			}
+			if ch == quoteChar {
+				ctx = ctxNormal
+			}
+			i++
+			continue
+		}
+
+		// Normal context
+		switch {
+		case ch == '/' && i+1 < n && style[i+1] == '*':
+			sb.WriteByte(ch)
+			sb.WriteByte(style[i+1])
+			ctx = ctxInComment
+			i += 2
+			continue
+
+		case ch == '"' || ch == '\'':
+			sb.WriteByte(ch)
+			quoteChar = ch
+			ctx = ctxInString
+			i++
+			continue
+
+		case ch == '{':
+			braceDepth++
+			sb.WriteByte(ch)
+			i++
+			continue
+
+		case ch == '}':
+			braceDepth--
+			sb.WriteByte(ch)
+			i++
+			continue
+
+		default:
+			// Detect class selectors (.) and element selectors at rule-start position
+			// A rule starts when braceDepth == 0 and we're about to see a selector
+			// (preceded by newline/whitespace/','/';' or at the start).
+			if braceDepth == 0 && (ch == '.' || isElementSelectorStart(style, i, n)) {
+				// Only scope if we're at the start of a rule
+				isRuleStart := (i == 0 || lastNonWS == 0 || lastNonWS == ',' || lastNonWS == '{' || lastNonWS == '}' || lastNonWS == ';')
+				if isRuleStart {
+					if ch == '.' {
+						// Class selector: scope it
+						sb.WriteByte('.')
+						i++
+						// Read the class name
+						for i < n && (isIdentChar(style[i])) {
+							sb.WriteByte(style[i])
+							i++
+						}
+						// Insert scoping class
+						sb.WriteByte('.')
+						sb.WriteString(hash)
+						continue
+					} else if isLetter(style[i]) {
+						// Element selector: read the tag name
+						start := i
+						for i < n && isIdentChar(style[i]) {
+							i++
+						}
+						tagName := style[start:i]
+						if isCSSElementTag(tagName) {
+							sb.WriteString(tagName)
+							sb.WriteByte('.')
+							sb.WriteString(hash)
+						} else {
+							sb.WriteString(tagName)
+						}
+						continue
+					}
+				}
+			}
+
+			sb.WriteByte(ch)
+			if !isWhitespace(ch) {
+				lastNonWS = ch
+			}
+			i++
+		}
+	}
+
+	return sb.String()
+}
+
+func isIdentChar(ch byte) bool {
+	return ch == '-' || ch == '_' || ch == '.' || ch == ':' ||
+		(ch >= 'a' && ch <= 'z') ||
+		(ch >= 'A' && ch <= 'Z') ||
+		(ch >= '0' && ch <= '9')
+}
+
+func isLetter(ch byte) bool {
+	return (ch >= 'a' && ch <= 'z') || (ch >= 'A' && ch <= 'Z')
+}
+
+func isWhitespace(ch byte) bool {
+	return ch == ' ' || ch == '\t' || ch == '\n' || ch == '\r'
+}
+
+// isElementSelectorStart checks if a character at position i could be the
+// start of an element selector (e.g., h1, div, button, etc.)
+func isElementSelectorStart(style string, i, _ int) bool {
+	ch := style[i]
+	if !isLetter(ch) {
+		return false
+	}
+	// Check context: element selectors appear at rule start
+	return true
+}
+
+// isCSSElementTag returns true for common CSS element selectors.
+func isCSSElementTag(tag string) bool {
+	elementTags := map[string]bool{
+		"a": true, "abbr": true, "address": true, "area": true, "article": true,
+		"aside": true, "audio": true, "b": true, "base": true, "bdi": true,
+		"bdo": true, "blockquote": true, "body": true, "br": true, "button": true,
+		"canvas": true, "caption": true, "cite": true, "code": true, "col": true,
+		"colgroup": true, "data": true, "datalist": true, "dd": true, "del": true,
+		"details": true, "dfn": true, "dialog": true, "div": true, "dl": true,
+		"dt": true, "em": true, "embed": true, "fieldset": true, "figcaption": true,
+		"figure": true, "footer": true, "form": true, "h1": true, "h2": true,
+		"h3": true, "h4": true, "h5": true, "h6": true, "head": true, "header": true,
+		"hgroup": true, "hr": true, "html": true, "i": true, "iframe": true,
+		"img": true, "input": true, "ins": true, "kbd": true, "label": true,
+		"legend": true, "li": true, "link": true, "main": true, "map": true,
+		"mark": true, "menu": true, "meta": true, "meter": true, "nav": true,
+		"noscript": true, "object": true, "ol": true, "optgroup": true,
+		"option": true, "output": true, "p": true, "param": true, "picture": true,
+		"pre": true, "progress": true, "q": true, "rp": true, "rt": true,
+		"ruby": true, "s": true, "samp": true, "script": true, "section": true,
+		"select": true, "small": true, "source": true, "span": true, "strong": true,
+		"style": true, "sub": true, "summary": true, "sup": true, "table": true,
+		"tbody": true, "td": true, "template": true, "textarea": true, "tfoot": true,
+		"th": true, "thead": true, "time": true, "title": true, "tr": true,
+		"track": true, "u": true, "ul": true, "var": true, "video": true, "wbr": true,
+	}
+	return elementTags[tag]
 }
