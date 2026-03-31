@@ -3,8 +3,10 @@
 package component
 
 import (
+	"crypto/rand"
 	"encoding/json"
 	"fmt"
+	"strings"
 	"sync"
 )
 
@@ -114,7 +116,6 @@ func (r *IslandRegistry) Create(name string, props map[string]any) (*Island, err
 	}
 
 	id := generateIslandID(name)
-
 	island := &Island{
 		ID:     id,
 		Config: config,
@@ -127,6 +128,13 @@ func (r *IslandRegistry) Create(name string, props map[string]any) (*Island, err
 	r.mu.Unlock()
 
 	return island, nil
+}
+
+// Clear removes all active island instances (but preserves configurations).
+func (r *IslandRegistry) Clear() {
+	r.mu.Lock()
+	defer r.mu.Unlock()
+	r.islands = make(map[string]*Island)
 }
 
 // Get retrieves an island by ID.
@@ -197,12 +205,28 @@ type IslandData struct {
 }
 
 // ToData converts an island to client-transferable data.
+// It filters out any props or state keys that start with an underscore (_),
+// which is the GoSPA convention for server-only/private data.
 func (i *Island) ToData() IslandData {
+	props := make(map[string]any)
+	for k, v := range i.Props {
+		if !strings.HasPrefix(k, "_") {
+			props[k] = v
+		}
+	}
+
+	state := make(map[string]any)
+	for k, v := range i.State {
+		if !strings.HasPrefix(k, "_") {
+			state[k] = v
+		}
+	}
+
 	return IslandData{
 		ID:       i.ID,
 		Name:     i.Config.Name,
-		Props:    i.Props,
-		State:    i.State,
+		Props:    props,
+		State:    state,
 		HTML:     i.Children,
 		Mode:     string(i.Config.HydrationMode),
 		Priority: string(i.Config.Priority),
@@ -214,9 +238,14 @@ func (i *Island) ToJSON() ([]byte, error) {
 	return json.Marshal(i.ToData())
 }
 
-// generateIslandID generates a unique ID for an island instance.
+// generateIslandID generates a unique ID for an island instance using
+// a combination of cryptographic randomness and a monotonic counter.
 func generateIslandID(name string) string {
-	return fmt.Sprintf("island-%s-%d", name, getNextID())
+	b := make([]byte, 4)
+	if _, err := rand.Read(b); err != nil {
+		b = []byte{0, 0, 0, 0}
+	}
+	return fmt.Sprintf("island-%s-%x-%d", name, b, getNextID())
 }
 
 var idCounter int64
@@ -232,13 +261,21 @@ func getNextID() int64 {
 // Global registry instance.
 var globalRegistry = NewIslandRegistry()
 
+// globalRegistryMu serializes all write access to the global registry to prevent
+// races when concurrent goroutines register or create islands.
+var globalRegistryMu sync.Mutex
+
 // RegisterIsland registers an island configuration globally.
 func RegisterIsland(config IslandConfig) error {
+	globalRegistryMu.Lock()
+	defer globalRegistryMu.Unlock()
 	return globalRegistry.Register(config)
 }
 
 // CreateIsland creates a new island instance in the global registry.
 func CreateIsland(name string, props map[string]any) (*Island, error) {
+	globalRegistryMu.Lock()
+	defer globalRegistryMu.Unlock()
 	return globalRegistry.Create(name, props)
 }
 
@@ -255,4 +292,12 @@ func GetAllIslands() []*Island {
 // GetIslandsByPriority returns islands grouped by priority.
 func GetIslandsByPriority() map[IslandPriority][]*Island {
 	return globalRegistry.GetByPriority()
+}
+
+// ClearIslands removes all island instances from the global registry.
+// This should be called at the end of a request cycle to prevent memory leaks.
+func ClearIslands() {
+	globalRegistryMu.Lock()
+	defer globalRegistryMu.Unlock()
+	globalRegistry.Clear()
 }

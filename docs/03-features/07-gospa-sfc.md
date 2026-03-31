@@ -197,3 +197,41 @@ The compiler performs basic regex-based translation for common Go patterns to th
 
 ### 4. Rune Synchronization
 Any variable marked with `$state()` is automatically synchronized with the server-side state map. The compiler generates the necessary WebSocket bridge code to ensure that updates on the server are reflected in the client's reactive runes.
+
+---
+
+## Security & Trust Boundary
+
+> **`.gospa` files are source code, not user content.**
+
+The `.gospa` compiler executes the contents of `<script lang="go">` and `<script lang="ts">` blocks directly into generated Go/Templ output. This means:
+
+- **Trusted source only.** Compile `.gospa` files only from sources you control. Never compile tenant-supplied or user-provided SFC content in a shared build pipeline, CI, or runtime context.
+- **Build pipeline isolation.** If you must process untrusted templates, run the compiler in an isolated sandboxed worker (e.g., a container with no network/filesystem access).
+- **SafeMode compiler option.** For semi-trusted sources (e.g., CMS-generated SFCs), enable `SafeMode` on `CompileOptions`:
+
+```go
+compiler := compiler.NewCompiler()
+templOut, tsOut, err := compiler.Compile(compiler.CompileOptions{
+    Name:     "UserWidget",
+    SafeMode: true,   // enables AST validation and dangerous-pattern detection
+}, userSFCInput)
+```
+
+In `SafeMode`, the compiler:
+1. Parses the Go script content with `go/parser` to ensure syntactic validity.
+2. Rejects scripts containing imports of disallowed packages (`os/exec`, `unsafe`, `syscall`, `os`, `plugin`, `reflect`).
+3. Rejects scripts matching known dangerous patterns (`exec.Command`, `os.WriteFile`, `syscall.Exec`, etc.).
+
+### SFC Parser Constraints
+
+The parser enforces these structural rules:
+
+| Constraint | Behavior |
+|---|---|
+| Exactly one `<template>` block | Rejected with error if duplicate |
+| At most one `<script lang="go">` | Rejected with error if duplicate |
+| At most one `<script lang="ts\|js">` | Rejected with error if duplicate |
+| At most one `<style>` block | Rejected with error if duplicate |
+| Maximum input size | 2 MB; rejected if exceeded |
+| Backtick strings with HTML tags inside | Skipped during parsing to avoid false-positive block extraction |

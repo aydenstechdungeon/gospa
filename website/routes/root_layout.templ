@@ -1,11 +1,17 @@
 package routes
 
 import (
+	"encoding/json"
 	"fmt"
 	"strings"
 	"github.com/aydenstechdungeon/gospa/website/components"
 	"github.com/aydenstechdungeon/gospa/plugin/postcss"
 )
+
+func jsonQuote(s string) string {
+	b, _ := json.Marshal(s)
+	return string(b)
+}
 
 // SEO configuration for GoSPA website
 const (
@@ -99,6 +105,18 @@ templ RootLayout(title string, children templ.Component, runtimePath string, pat
 				}
 			}
 			<script src="/static/js/islands.js"></script>
+			<script src={ runtimePath } type="module"></script>
+			@templ.Raw("<script type=\"module\">\n" +
+				"  import * as runtime from \"" + runtimePath + "\";\n" +
+				"  runtime.init({\n" +
+				"    wsUrl: " + jsonQuote(wsUrl) + ",\n" +
+				"    debug: " + fmt.Sprintf("%t", debug) + ",\n" +
+				"    hydration: {\n" +
+				"      mode: " + jsonQuote(hydrationMode) + ",\n" +
+				"      timeout: " + fmt.Sprintf("%d", hydrationTimeout) + "\n" +
+				"    }\n" +
+				"  });\n" +
+				"</script>")
 			<script src="/static/docs.js" defer></script>
 
 			<!-- Canonical URL -->

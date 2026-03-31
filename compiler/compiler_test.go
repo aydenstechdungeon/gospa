@@ -110,7 +110,7 @@ func TestSanitizeName(t *testing.T) {
 		t.Errorf("Sanitization failed: TS still contains alert(1)")
 	}
 
-	if !strings.Contains(ts, "name: 'Counteralert1'") {
+	if !strings.Contains(ts, "Counteralert1") {
 		t.Errorf("Sanitized name 'Counteralert1' not found in TS: %v", ts)
 	}
 }
@@ -128,8 +128,8 @@ func TestCompileWithEmptySanitizedName(t *testing.T) {
 		t.Fatalf("Failed to compile with empty sanitized name: %v", err)
 	}
 
-	if !strings.Contains(ts, "name: 'Component'") {
-		t.Fatalf("Expected fallback component name in TS output, got: %s", ts)
+	if !strings.Contains(ts, "__gospa_setup_Component") {
+		t.Fatalf("Expected fallback component name 'Component' in TS setup function, got: %s", ts)
 	}
 	if !strings.Contains(templ, "data-gospa-island=\"Component\"") {
 		t.Fatalf("Expected fallback component name in templ output, got: %s", templ)

@@ -18,11 +18,11 @@ func (p Props) Get(key string) interface{} {
 }
 
 // Set sets a prop value.
-func (p Props) Set(key string, value interface{}) {
-	if p == nil {
-		p = make(Props)
+func (p *Props) Set(key string, value interface{}) {
+	if *p == nil {
+		*p = make(Props)
 	}
-	p[key] = value
+	(*p)[key] = value
 }
 
 // GetDefault returns a prop value with a default.
@@ -295,7 +295,11 @@ func (s *PropSchema) DefineWithValidator(name string, kind reflect.Kind, default
 // Validate validates props against the schema.
 func (s *PropSchema) Validate(props Props) error {
 	for name, def := range s.definitions {
-		val, exists := props[name]
+		var val interface{}
+		exists := false
+		if props != nil {
+			val, exists = props[name]
+		}
 
 		// Check required
 		if def.Required && !exists {

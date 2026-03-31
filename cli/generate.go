@@ -242,15 +242,15 @@ func generateIslandsEntry(outputDir string, islandNames []string) error {
 ` + "\n")
 
 	for _, name := range islandNames {
-		sb.WriteString(fmt.Sprintf("import * as %s from './%s.ts';\n", name, name))
+		fmt.Fprintf(&sb, "import * as %s from './%s.ts';\n", name, name)
 	}
 
 	sb.WriteString("\n// Register all island setup functions\n")
 	for _, name := range islandNames {
-		sb.WriteString(fmt.Sprintf(
+		fmt.Fprintf(&sb,
 			"registerSetup('%s', (el, props, state) => { %s.mount(el, props, state); });\n",
 			name, name,
-		))
+		)
 	}
 
 	entryPath := filepath.Join(outputDir, "islands.ts")
