@@ -8,6 +8,7 @@ import (
 	stdjson "encoding/json"
 	"fmt"
 	"log/slog"
+	"os"
 	"strings"
 	"time"
 
@@ -110,9 +111,11 @@ func StateMiddleware(config Config) gofiber.Handler {
 			stateScript += `<script src="` + config.RuntimeScript + `" type="module"></script>`
 		}
 
-		// In dev mode, also inject islands.js if not already present
+		// In dev mode, also inject islands.js if not already present and the file exists
 		if config.DevMode && !strings.Contains(bodyStr, "/static/js/islands.js") {
-			stateScript += `<script src="/static/js/islands.js"></script>`
+			if _, err := os.Stat("static/js/islands.js"); err == nil {
+				stateScript += `<script src="/static/js/islands.js"></script>`
+			}
 		}
 
 		// Inject before </body>
