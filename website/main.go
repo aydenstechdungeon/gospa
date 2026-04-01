@@ -50,7 +50,7 @@ func main() {
 		WSHeartbeat:              30 * time.Second,
 		WSReconnectDelay:         1 * time.Second,
 		WSMaxReconnect:           5,
-		AllowInsecureWS:          true,
+		AllowInsecureWS:          devMode,
 		AllowPortsWithInsecureWS: []int{3000},
 		HydrationMode:            "idle",
 		NavigationOptions: gospa.NavigationOptions{
