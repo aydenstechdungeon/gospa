@@ -350,19 +350,37 @@ func (b *SSEBroker) SSESubscribeHandler() fiberpkg.Handler {
 		}
 
 		// Validate that the client exists and is currently connected.
-		// NOTE: This is an existence check, not an identity check.
-		// See security warning in the function comment above.
 		if !b.clientExists(req.ClientID) {
 			return c.Status(404).JSON(fiberpkg.Map{
 				"error": "client not found or not connected",
 			})
 		}
 
-		// SECURITY: Verify that the requester is authorized to subscribe this client
+		// SECURITY FIX: Verify that the requester is authorized to subscribe this client.
+		// Identity is verified by matching the requester's session client ID with the target client ID.
+		sessionToken := c.Cookies("gospa_session")
+		if sessionToken == "" {
+			if l, ok := c.Locals("gospa.session").(string); ok {
+				sessionToken = l
+			}
+		}
+
+		if sessionToken == "" {
+			return c.Status(401).JSON(fiberpkg.Map{"error": "authentication required"})
+		}
+
+		requesterID, ok := globalSessionStore.ValidateSession(sessionToken)
+		if !ok || requesterID != req.ClientID {
+			return c.Status(403).JSON(fiberpkg.Map{
+				"error": "unauthorized subscription request",
+			})
+		}
+
+		// Additional custom authorization if configured
 		if b.authorizeSubscribe != nil {
 			if !b.authorizeSubscribe(c, req.ClientID) {
 				return c.Status(403).JSON(fiberpkg.Map{
-					"error": "unauthorized subscription request",
+					"error": "custom authorization failed",
 				})
 			}
 		}

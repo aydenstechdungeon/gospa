@@ -78,6 +78,23 @@ templ Page() {
 		</section>
 
 		<section class="space-y-6">
+			<h2 class="text-2xl font-bold">Instant Navigation</h2>
+			<p class="text-[var(--text-secondary)] leading-relaxed">
+				GoSPA provides immediate feedback by updating the URL and active link states <strong>before</strong> the network request completes. This makes your app feel as fast as a local application.
+			</p>
+			<div class="p-6 rounded-2xl bg-[var(--bg-secondary)] border border-[var(--border)] space-y-4">
+				<h3 class="font-bold text-sm uppercase tracking-wider text-[var(--text-muted)]">Loading State Attribute</h3>
+				<p class="text-sm text-[var(--text-secondary)]">During background loads, the main container receives <code>data-gospa-loading="true"</code>. Use it to style loading indicators.</p>
+				@components.CodeBlock(`/* styles.css */
+[data-gospa-page-content][data-gospa-loading="true"] {
+	opacity: 0.6;
+	cursor: wait;
+	transition: opacity 0.2s;
+}`, "css", "loading.css")
+			</div>
+		</section>
+
+		<section class="space-y-6">
 			<h2 class="text-2xl font-bold">Route Params</h2>
 			@components.CodeBlock("import { useParams, useSearchParams } from '@gospa/client';\n\n// Route params\nconst params = useParams();\nconsole.log(params.slug);\n\n// Query params\nconst searchParams = useSearchParams();\nconsole.log(searchParams.page);\n\n// With defaults\nconst page = searchParams.get('page', '1');\n\n// Update query params\nsearchParams.set('page', '2');", "typescript", "params_ts.ts")
 		</section>

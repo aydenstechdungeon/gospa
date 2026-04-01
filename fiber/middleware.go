@@ -166,6 +166,7 @@ func CSRFSetTokenMiddleware() gofiber.Handler {
 
 		// Keep token stable across tabs/requests unless it doesn't exist.
 		if existing := c.Cookies("csrf_token"); existing != "" {
+			c.Locals("gospa.csrf_token", existing)
 			return c.Next()
 		}
 
@@ -176,11 +177,14 @@ func CSRFSetTokenMiddleware() gofiber.Handler {
 		c.Cookie(&gofiber.Cookie{
 			Name:     "csrf_token",
 			Value:    token,
-			HTTPOnly: false, // Must be readable by JS to set the X-CSRF-Token header
+			HTTPOnly: true, // SECURITY FIX: Protected from XSS extraction.
 			SameSite: "Strict",
 			Secure:   isHTTPS(c),
 			Path:     "/", // Protect global endpoints
 		})
+
+		// Set in Locals so the renderer can inject it into the page config.
+		c.Locals("gospa.csrf_token", token)
 
 		return c.Next()
 	}

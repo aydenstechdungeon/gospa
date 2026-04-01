@@ -1242,16 +1242,9 @@ func WebSocketHandler(config WebSocketConfig) fiberpkg.Handler {
 			}
 		}
 
-		// 2. Fallback: Session token provided in message (deprecated/less secure)
-		if sessionID == "" && initMsg.Type == "init" && initMsg.SessionToken != "" {
-			if prevSessionID, ok := globalSessionStore.ValidateSession(initMsg.SessionToken); ok {
-				if savedState, hasState := globalClientStateStore.Get(prevSessionID); hasState {
-					sessionID = prevSessionID
-					restoredState = savedState
-					sessionToken = initMsg.SessionToken
-				}
-			}
-		}
+		// 2. Fallback: Removed for security (token-in-body anti-pattern)
+		// To maintain backward compatibility, we still allow the sessionID to be empty
+		// here, and it will be generated below if cookieToken was missing.
 
 		// If no valid session, generate new session ID
 		if sessionID == "" {

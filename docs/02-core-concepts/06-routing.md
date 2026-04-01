@@ -524,6 +524,50 @@ func Search(c *fiber.Ctx) error {
 4. **URL encode**: Let PathBuilder handle URL encoding
 5. **Clone when modifying**: Clone params before modification if original needed
 6. **Use wildcards sparingly**: Wildcards are greedy, use specific patterns when possible
+7. **Optimize generation**: Run `gospa generate` after any route changes to keep your type-safe helpers and matching caches up to date.
+
+---
+
+## Instant Navigation
+
+GoSPA implements an "instant" navigation pattern by default. When a user clicks a `data-gospa-link`, the following happens immediately:
+
+1.  **URL Update**: The browser's URL bar is updated via `pushState` or `replaceState` before any network request is made. This provides immediate visual feedback.
+2.  **Active State Transformation**: All links with `data-gospa-active` are updated immediately to reflect their new state (active vs. inactive).
+3.  **Loading Indicator**: The main page container (marked with `data-gospa-page-content`) automatically receives a `data-gospa-loading="true"` attribute.
+
+### Styling Loading States
+
+You can use CSS to provide visual feedback during background loads:
+
+```css
+[data-gospa-page-content][data-gospa-loading="true"] {
+    opacity: 0.7;
+    filter: blur(1px);
+    transition: opacity 0.2s ease;
+    cursor: wait;
+}
+
+/* Or show a top progress bar or spinner */
+.main-loader {
+    display: none;
+}
+
+[data-gospa-loading="true"] ~ .main-loader {
+    display: block;
+}
+```
+
+---
+
+## Performance: Route Matching Cache
+
+The routing generator automatically injects a `Map`-based caching layer into your `generated/routes.ts` file. 
+
+- **`matchRoute` Cache**: Caches the result of pattern-to-path matching to avoid redundant string splitting and iterations on repeat navigations.
+- **`findRoute` Cache**: Caches exact path lookups for O(1) performance after the first visit.
+
+This ensures that even with hundreds of routes, navigation remains snappy and overhead-free.
 
 ---
 

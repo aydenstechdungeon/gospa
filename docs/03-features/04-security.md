@@ -190,14 +190,11 @@ When using Prefork mode (`Prefork: true`), each worker process has **isolated me
 
 ### Client-Side Integration
 
-Fetch the CSRF token from the cookie and include it in requests:
+Fetch the CSRF token from the global configuration and include it in requests:
 
 ```javascript
-// Get token from cookie
-const csrfToken = document.cookie
-  .split('; ')
-  .find(row => row.startsWith('csrf_token='))
-  ?.split('=')[1];
+// Get token from global config (recommended as the cookie is HttpOnly)
+const csrfToken = window.__GOSPA_CONFIG__?.csrfToken;
 
 // Include in request headers
 fetch('/api/action', {
@@ -210,17 +207,29 @@ fetch('/api/action', {
 });
 ```
 
-## Configuration Hardening Guidelines
+## Production Hardening Checklist
 
-For production environments:
+Use this checklist to ensure your GoSPA application is secure before deployment:
 
-- Start from `gospa.DefaultConfig()` and harden from there.
-- Set `DevMode: false`. Development mode leaks stack traces.
-- Configure `AllowedOrigins` for CORS. Avoid wildcard `*` domains.
-- Never place session identifiers in URL query parameters.
-- Rate-limit Action routes.
-- Use HTTPS in production with HSTS headers.
-- Implement a strict CSP (see examples above).
+1.  **Transport Security**
+    - [ ] Serve exclusively over **HTTPS/TLS**.
+    - [ ] Set `PublicOrigin` to your absolute production URL.
+    - [ ] Enable HSTS headers via middleware.
+2.  **Authentication & Sessions**
+    - [ ] Set `JWT_SECRET` as a secure environment variable.
+    - [ ] Use a production-grade `Storage` backend (e.g., Redis) for sessions.
+    - [ ] Ensure `DevMode` is set to `false` to prevent stack trace leakage.
+3.  **CSRF & CORS**
+    - [ ] Keep `EnableCSRF` set to `true`.
+    - [ ] Restrict `AllowedOrigins` to specific domains; avoid wildcard `*`.
+    - [ ] Verify `RemoteActionMiddleware` is protecting all sensitive server functions.
+4.  **XSS Defense**
+    - [ ] Use the default `gospa` runtime unless user-generated HTML is required.
+    - [ ] Implement a strict **Content Security Policy (CSP)**.
+    - [ ] Ensure all dynamic data is rendered via Templ (which auto-escapes).
+5.  **Audit & Monitoring**
+    - [ ] Run `govulncheck ./...` in your CI pipeline.
+    - [ ] Monitor logs for `CRITICAL SECURITY RISK` warnings from the GoSPA startup guards.
 
 ## Migration from v1.x
 

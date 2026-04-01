@@ -476,13 +476,24 @@ export function docsWebsocketRoute(): string {
 // ============================================
 
 /**
+ * Route matching cache to avoid redundant iterations.
+ */
+const routeMatchCache = new Map<string, boolean>();
+
+/**
  * Check if a path matches a route pattern.
  */
 export function matchRoute(pattern: string, path: string): boolean {
+  const cacheKey = `${pattern}:${path}`;
+  if (routeMatchCache.has(cacheKey)) {
+    return routeMatchCache.get(cacheKey)!;
+  }
+
   const patternParts = pattern.split('/').filter(Boolean);
   const pathParts = path.split('/').filter(Boolean);
   
   if (patternParts.length !== pathParts.length) {
+    routeMatchCache.set(cacheKey, false);
     return false;
   }
   
@@ -491,10 +502,12 @@ export function matchRoute(pattern: string, path: string): boolean {
     const pathPart = pathParts[i];
     
     if (!patternPart.startsWith(':') && patternPart !== pathPart) {
+      routeMatchCache.set(cacheKey, false);
       return false;
     }
   }
   
+  routeMatchCache.set(cacheKey, true);
   return true;
 }
 
@@ -1006,10 +1019,22 @@ export const routes: RouteMeta[] = [
 ];
 
 /**
+ * Route metadata cache for exact path lookups.
+ */
+const routeLookupCache = new Map<string, RouteMeta>();
+
+/**
  * Find a route by path.
  */
 export function findRoute(path: string): RouteMeta | undefined {
-  return routes.find(r => r.path === path);
+  if (routeLookupCache.has(path)) {
+    return routeLookupCache.get(path)!;
+  }
+  const matched = routes.find(r => r.path === path);
+  if (matched) {
+    routeLookupCache.set(path, matched);
+  }
+  return matched;
 }
 
 /**
