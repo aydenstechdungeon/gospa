@@ -251,6 +251,18 @@ func (a *App) setupRoutes() {
 		FS: embed.RuntimeFS(),
 	}))
 
+	// Serve dynamically compiled island modules with proper MIME type
+	a.Fiber.Use("/islands/", func(c fiberpkg.Ctx) error {
+		c.Set("Content-Type", "application/javascript")
+		return c.Next()
+	})
+	// Try to serve islands from static/islands or generated/ directory
+	if _, err := os.Stat("static/islands"); err == nil {
+		a.Fiber.Use("/islands/", static.New("static/islands"))
+	} else if _, err := os.Stat("generated"); err == nil {
+		a.Fiber.Use("/islands/", static.New("generated"))
+	}
+
 	if a.Hub != nil {
 		handlers := []fiberpkg.Handler{
 			fiber.SessionMiddleware(),
@@ -391,10 +403,18 @@ func (a *App) handleRemoteAction(c fiberpkg.Ctx) error {
 	result, err := fn(c.Context(), rc, input)
 	if err != nil {
 		a.Logger().Error("remote action error", "action", name, "err", err)
-		return c.Status(fiberpkg.StatusInternalServerError).JSON(fiberpkg.Map{
+
+		response := fiberpkg.Map{
 			"error": "Internal server error",
 			"code":  "ACTION_FAILED",
-		})
+		}
+
+		// Include debug info in DevMode
+		if a.Config.DevMode {
+			response["debug"] = err.Error()
+		}
+
+		return c.Status(fiberpkg.StatusInternalServerError).JSON(response)
 	}
 
 	return c.JSON(fiberpkg.Map{

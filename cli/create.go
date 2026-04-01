@@ -18,6 +18,7 @@ type ProjectConfig struct {
 	OutputDir  string
 	WithGit    bool
 	WithDocker bool
+	Template   string
 }
 
 var (
@@ -25,18 +26,49 @@ var (
 	modulePathPattern  = regexp.MustCompile(`^[a-zA-Z0-9._~/-]+$`)
 )
 
+// Valid templates
+var validTemplates = map[string]bool{
+	"default":  true,
+	"minimal":  true,
+	"api":      true,
+	"realtime": true,
+}
+
 // CreateProject creates a new GoSPA project with the given name.
 func CreateProject(name string) {
+	CreateProjectWithOptions(name, "")
+}
+
+// CreateProjectWithTemplate creates a new GoSPA project with the specified template.
+func CreateProjectWithTemplate(name string, template string) {
+	CreateProjectWithOptions(name, template)
+}
+
+// CreateProjectWithOptions creates a new GoSPA project with custom options.
+func CreateProjectWithOptions(name string, template string) {
 	if err := ValidateProjectName(name); err != nil {
 		fmt.Fprintf(os.Stderr, "Error: invalid project name %q: %v\n", name, err)
 		os.Exit(1)
 	}
 
+	// Validate template
+	if template == "" {
+		template = "default"
+	}
+	if !validTemplates[template] {
+		fmt.Fprintf(os.Stderr, "Error: invalid template %q. Valid templates: default, minimal, api, realtime\n", template)
+		os.Exit(1)
+	}
+
+	// Prompt for module path if not provided via env or interactive
+	module := askForModule(name)
+
 	config := &ProjectConfig{
 		Name:      name,
-		Module:    fmt.Sprintf("github.com/%s/%s", getGitUsername(), name),
-		OutputDir: name, // Create in current directory
+		Module:    module,
+		OutputDir: name,
 		WithGit:   true,
+		Template:  template,
 	}
 
 	if err := createProject(config); err != nil {
@@ -44,7 +76,7 @@ func CreateProject(name string) {
 		os.Exit(1)
 	}
 
-	fmt.Printf("✓ Created GoSPA project '%s'\n", name)
+	fmt.Printf("✓ Created GoSPA project '%s' (template: %s)\n", name, template)
 	fmt.Println("\nNext steps:")
 	fmt.Printf("  cd %s\n", config.OutputDir)
 	fmt.Println("  go mod tidy")
@@ -117,6 +149,26 @@ func createProject(config *ProjectConfig) error {
 
 	// Create routes/layout.templ
 	if err := createLayout(config); err != nil {
+		return err
+	}
+
+	// Create routes/root_layout.templ
+	if err := createRootLayout(config); err != nil {
+		return err
+	}
+
+	// Create routes/_error.templ
+	if err := createErrorPage(config); err != nil {
+		return err
+	}
+
+	// Create routes/_middleware.go
+	if err := createMiddleware(config); err != nil {
+		return err
+	}
+
+	// Create package.json
+	if err := createPackageJSON(config); err != nil {
 		return err
 	}
 
@@ -233,30 +285,101 @@ func createLayout(config *ProjectConfig) error {
 	content := `package routes
 
 templ Layout(title string) {
+	<div class="layout-wrapper">
+		<header>
+			<nav>
+				<a href="/">Home</a>
+			</nav>
+		</header>
+		<div class="content">
+			{ children... }
+		</div>
+	</div>
+}
+`
+
+	path := filepath.Join(config.OutputDir, "routes", "layout.templ")
+	return os.WriteFile(path, []byte(content), 0600)
+}
+
+func createRootLayout(config *ProjectConfig) error {
+	content := `package routes
+
+templ RootLayout(title string) {
 	<!DOCTYPE html>
 	<html lang="en" data-gospa-auto>
 	<head>
 		<meta charset="UTF-8"/>
 		<meta name="viewport" content="width=device-width, initial-scale=1.0"/>
 		<meta name="description" content="A GoSPA application"/>
-		<meta name="theme-color" content="#667eea"/>
 		<title>{ title }</title>
 		
-		<!-- Preconnect to improve performance on navigation -->
 		<link rel="preconnect" href="/"/>
-
 		<link rel="stylesheet" href="/static/css/style.css"/>
 	</head>
 	<body>
-		<main>
-			{ children... }
-		</main>
+		{ children... }
+		<script src="/_gospa/runtime.js"></script>
+		<script data-gospa-islands></script>
 	</body>
 	</html>
 }
 `
 
-	path := filepath.Join(config.OutputDir, "routes", "layout.templ")
+	path := filepath.Join(config.OutputDir, "routes", "root_layout.templ")
+	return os.WriteFile(path, []byte(content), 0600)
+}
+
+func createErrorPage(config *ProjectConfig) error {
+	content := `package routes
+
+templ Error(err string, code string) {
+	<div class="error-container" style="text-align: center; padding: 50px;">
+		<h1>Error { code }</h1>
+		<p>{ err }</p>
+		<a href="/" style="display: inline-block; margin-top: 20px;">Return Home</a>
+	</div>
+}
+`
+
+	path := filepath.Join(config.OutputDir, "routes", "_error.templ")
+	return os.WriteFile(path, []byte(content), 0600)
+}
+
+func createMiddleware(config *ProjectConfig) error {
+	content := `package routes
+
+import (
+	"github.com/gofiber/fiber/v3"
+)
+
+// Middleware applies to all routes in this directory and below
+func Middleware(c fiber.Ctx) error {
+	// Add your custom middleware logic here (e.g., Auth checking)
+	return c.Next()
+}
+`
+
+	path := filepath.Join(config.OutputDir, "routes", "_middleware.go")
+	return os.WriteFile(path, []byte(content), 0600)
+}
+
+func createPackageJSON(config *ProjectConfig) error {
+	content := `{
+	"name": "` + config.Name + `",
+	"type": "module",
+	"scripts": {
+		"build": "bun run build:css",
+		"build:css": "tailwindcss -i ./static/css/style.css -o ./static/css/main.css"
+	},
+	"devDependencies": {
+		"tailwindcss": "^4.0.0",
+		"@tailwindcss/cli": "^4.0.0"
+	}
+}
+`
+
+	path := filepath.Join(config.OutputDir, "package.json")
 	return os.WriteFile(path, []byte(content), 0600)
 }
 
@@ -461,6 +584,21 @@ func getGitUsername() string {
 
 	// Fallback to default
 	return "yourusername"
+}
+
+func askForModule(projectName string) string {
+	// First, try to get git username properly
+	username := getGitUsername()
+	if username == "yourusername" {
+		// Prompt user for their GitHub username
+		fmt.Print("Enter your GitHub username or organization: ")
+		_, _ = fmt.Scanln(&username)
+		if username == "" {
+			username = "yourusername"
+		}
+	}
+
+	return fmt.Sprintf("github.com/%s/%s", username, projectName)
 }
 
 // ValidateProjectName checks if a project name is valid.

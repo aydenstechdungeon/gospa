@@ -2,6 +2,8 @@ package cli
 
 import (
 	"compress/gzip"
+	"crypto/sha256"
+	"encoding/json"
 	"fmt"
 	"io"
 	"io/fs"
@@ -26,6 +28,8 @@ type BuildConfig struct {
 	Minify       bool
 	Compress     bool
 	Env          string
+	SourceMap    bool
+	NoSourceMap  bool
 }
 
 // BuildSummary captures the important outputs from a production build.
@@ -151,6 +155,12 @@ func BuildWithConfig(config *BuildConfig) (*BuildSummary, error) {
 		summary.CompressedFiles = count
 	}
 
+	// Step 7: Generate build manifest
+	fmt.Println("Generating build manifest...")
+	if err := generateBuildManifest(config); err != nil {
+		fmt.Fprintf(os.Stderr, "Warning: failed to generate manifest: %v\n", err)
+	}
+
 	return summary, nil
 }
 
@@ -192,6 +202,9 @@ func buildClientRuntime(config *BuildConfig, summary *BuildSummary) error {
 	args := []string{"build", entryPoint, "--outfile", outputPath}
 	if config.Minify {
 		args = append(args, "--minify")
+	}
+	if config.SourceMap && !config.NoSourceMap {
+		args = append(args, "--source-map")
 	}
 	// #nosec //nolint:gosec // bunPath is safe executable from LookPath
 	cmd := exec.Command(bunPath, args...)
@@ -440,6 +453,54 @@ func compressFileGzip(path string) error {
 
 	_, err = io.Copy(writer, input)
 	return err
+}
+
+func generateBuildManifest(config *BuildConfig) error {
+	manifest := make(map[string]string)
+
+	// Walk through output directory and create file hashes
+	destDir := config.OutputDir
+	if _, err := os.Stat(destDir); os.IsNotExist(err) {
+		return nil
+	}
+
+	err := filepath.Walk(destDir, func(path string, info os.FileInfo, err error) error {
+		if err != nil {
+			return err
+		}
+		if info.IsDir() {
+			return nil
+		}
+
+		// Skip the binary itself
+		if path == filepath.Join(destDir, "server") || path == filepath.Join(destDir, "server.exe") {
+			return nil
+		}
+
+		relPath, err := filepath.Rel(destDir, path)
+		if err != nil {
+			return err
+		}
+
+		data, err := os.ReadFile(path) //nolint:gosec // G304/G122: walking our own build output
+		if err != nil {
+			return err
+		}
+
+		hash := fmt.Sprintf("%x", sha256.Sum256(data))
+		manifest[relPath] = hash
+		return nil
+	})
+	if err != nil {
+		return err
+	}
+
+	manifestJSON, err := json.Marshal(manifest)
+	if err != nil {
+		return err
+	}
+
+	return os.WriteFile(filepath.Join(destDir, "manifest.json"), manifestJSON, 0600)
 }
 
 // BuildAll builds for all platforms.

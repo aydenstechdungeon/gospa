@@ -7,12 +7,14 @@ import (
 	"os/exec"
 	"os/signal"
 	"path/filepath"
+	"runtime"
 	"strings"
 	"sync"
 	"syscall"
 	"time"
 
 	"github.com/aydenstechdungeon/gospa/plugin"
+	"github.com/fsnotify/fsnotify"
 )
 
 const templVersion = "v0.3.1001"
@@ -62,6 +64,9 @@ type DevConfig struct {
 	Host       string
 	RoutesDir  string
 	WatchPaths []string // extra directories to watch in addition to RoutesDir
+	Open       bool     // open browser automatically
+	Verbose    bool     // verbose logging
+	NoRestart  bool     // disable automatic server restart on file changes
 }
 
 // DevWithConfig starts the development server with custom configuration.
@@ -138,7 +143,7 @@ func startDevWithConfig(config *DevConfig) error {
 			case <-ctx.Done():
 				return
 			case event := <-watcher.Events:
-				handleFileChange(ctx, event, restartCh)
+				handleFileChange(ctx, event, restartCh, config.NoRestart)
 			case err := <-watcher.Errors:
 				fmt.Fprintf(os.Stderr, "Watcher error: %v\n", err)
 			}
@@ -161,6 +166,9 @@ func startDevWithConfig(config *DevConfig) error {
 func startServerProcess(ctx context.Context, config *DevConfig) *exec.Cmd {
 	// Build and run the server
 	args := []string{"run", "."}
+	if config.Verbose {
+		args = append(args, "-v")
+	}
 	cmd := exec.CommandContext(ctx, "go", args...)
 	cmd.Stdout = os.Stdout
 	cmd.Stderr = os.Stderr
@@ -177,6 +185,11 @@ func startServerProcess(ctx context.Context, config *DevConfig) *exec.Cmd {
 	}
 
 	fmt.Printf("Server running at http://%s:%d\n", config.Host, config.Port)
+
+	// Open browser if requested
+	if config.Open {
+		openBrowser(fmt.Sprintf("http://%s:%d", config.Host, config.Port))
+	}
 
 	return cmd
 }
@@ -210,6 +223,7 @@ type DevWatcher struct {
 	stop      chan struct{}
 	interval  time.Duration
 	fileTimes map[string]time.Time
+	debounce  time.Duration
 }
 
 // NewDevWatcher creates a new file watcher.
@@ -221,7 +235,25 @@ func NewDevWatcher(dirs ...string) *DevWatcher {
 		stop:      make(chan struct{}),
 		interval:  500 * time.Millisecond,
 		fileTimes: make(map[string]time.Time),
+		debounce:  100 * time.Millisecond,
 	}
+}
+
+// NewFSDevWatcher creates a new fsnotify-based file watcher.
+func NewFSDevWatcher(dirs ...string) (*fsnotify.Watcher, error) {
+	watcher, err := fsnotify.NewWatcher()
+	if err != nil {
+		return nil, err
+	}
+
+	for _, dir := range dirs {
+		if err := watcher.Add(dir); err != nil {
+			_ = watcher.Close()
+			return nil, err
+		}
+	}
+
+	return watcher, nil
 }
 
 // Start starts the file watcher.
@@ -361,7 +393,7 @@ func (w *DevWatcher) checkDir(dir string) {
 	}
 }
 
-func handleFileChange(_ context.Context, event FileEvent, restartCh chan struct{}) {
+func handleFileChange(_ context.Context, event FileEvent, restartCh chan struct{}, noRestart bool) {
 	ext := filepath.Ext(event.File)
 
 	switch ext {
@@ -373,19 +405,23 @@ func handleFileChange(_ context.Context, event FileEvent, restartCh chan struct{
 		}
 		fmt.Printf("✓ %s regenerated\n", ext)
 
-		// Restart server
-		select {
-		case restartCh <- struct{}{}:
-		default:
+		// Restart server (unless disabled)
+		if !noRestart {
+			select {
+			case restartCh <- struct{}{}:
+			default:
+			}
 		}
 
 	case ".go":
 		fmt.Println("Go file changed, restarting server...")
 
-		// Restart server
-		select {
-		case restartCh <- struct{}{}:
-		default:
+		// Restart server (unless disabled)
+		if !noRestart {
+			select {
+			case restartCh <- struct{}{}:
+			default:
+			}
 		}
 
 	case ".css", ".js":
@@ -405,6 +441,21 @@ func regenerateTempl() error {
 	cmd.Stdout = os.Stdout
 	cmd.Stderr = os.Stderr
 	return cmd.Run()
+}
+
+func openBrowser(url string) {
+	var cmd *exec.Cmd
+	switch runtime.GOOS {
+	case "windows":
+		cmd = exec.Command("cmd", "/c", "start", url) //nolint:gosec // G204: standard browser open
+	case "darwin":
+		cmd = exec.Command("open", url) //nolint:gosec // G204: standard browser open
+	default:
+		cmd = exec.Command("xdg-open", url) //nolint:gosec // G204: standard browser open
+	}
+	if err := cmd.Start(); err != nil {
+		fmt.Fprintf(os.Stderr, "Warning: could not open browser: %v\n", err)
+	}
 }
 
 func runGenerate() {

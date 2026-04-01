@@ -7,6 +7,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"html"
+	"os"
 	"sync"
 	"time"
 
@@ -293,7 +294,14 @@ runtime.init({
 </script>`, toJS(runtimePath), toJS(a.Config.NavigationOptions), toJS(c.Locals("gospa.csrf_token")), toJS(wsURL), toJS(string(a.Config.SerializationFormat)), a.Config.DevMode, a.Config.SimpleRuntimeSVGs, a.Config.DisableSanitization, wsRD, wsMR, wsHB, toJS(a.Config.HydrationMode), a.Config.HydrationTimeout)
 
 		// Islands bundle — loads and registers all island setup functions
-		_, _ = fmt.Fprint(w, `<script src="/static/js/islands.js"></script>`)
+		// Only include if the file exists (islands are optional)
+		islandsPath := a.Config.IslandsBundlePath
+		if islandsPath == "" {
+			islandsPath = "static/js/islands.js"
+		}
+		if _, err := os.Stat(islandsPath); err == nil {
+			_, _ = fmt.Fprintf(w, `<script src="/%s"></script>`, islandsPath)
+		}
 
 		// Centralized State Registry
 		data, _ := json.Marshal(registry.GetData())
