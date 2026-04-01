@@ -20,16 +20,16 @@ export type MessageType =
 
 export interface StateMessage {
   type:
-    | string
-    | "init"
-    | "update"
-    | "sync"
-    | "error"
-    | "ping"
-    | "pong"
-    | "action"
-    | "patch"
-    | "compressed";
+  | string
+  | "init"
+  | "update"
+  | "sync"
+  | "error"
+  | "ping"
+  | "pong"
+  | "action"
+  | "patch"
+  | "compressed";
   componentId?: string;
   action?: string;
   data?: any;
@@ -194,11 +194,11 @@ export class WSClient {
       reconnectInterval: 1000,
       maxReconnectAttempts: 10,
       heartbeatInterval: 30000,
-      onOpen: () => {},
-      onClose: () => {},
-      onError: () => {},
-      onConnectionFailed: () => {},
-      onMessage: () => {},
+      onOpen: () => { },
+      onClose: () => { },
+      onError: () => { },
+      onConnectionFailed: () => { },
+      onMessage: () => { },
       serializationFormat: "json",
       persistSession: false,
       persistQueueOnUnload: true,
@@ -246,10 +246,31 @@ export class WSClient {
     return this.connectionState.get() === "connected";
   }
 
+  private stableConnectionTimer: ReturnType<typeof setTimeout> | null = null;
+  private reconnectTimer: ReturnType<typeof setTimeout> | null = null;
+
   connect(): Promise<void> {
     return new Promise((resolve, reject) => {
-      if (this.ws?.readyState === WebSocket.OPEN) {
-        resolve();
+      // If already connected or connecting, don't start another one
+      if (
+        this.ws &&
+        (this.ws.readyState === WebSocket.OPEN ||
+          this.ws.readyState === WebSocket.CONNECTING)
+      ) {
+        if (this.ws.readyState === WebSocket.OPEN) {
+          resolve();
+        } else {
+          // Wait for the existing attempt
+          const check = setInterval(() => {
+            if (this.ws?.readyState === WebSocket.OPEN) {
+              clearInterval(check);
+              resolve();
+            } else if (!this.ws || this.ws.readyState === WebSocket.CLOSED) {
+              clearInterval(check);
+              reject(new Error("Connection failed"));
+            }
+          }, 100);
+        }
         return;
       }
 
@@ -270,7 +291,15 @@ export class WSClient {
 
       this.ws.onopen = () => {
         this.connectionState.set("connected");
-        this.reconnectAttempts = 0;
+
+        // Only reset attempts after the connection has been stable for a while.
+        // This prevents immediate failures from resetting the backoff.
+        if (this.stableConnectionTimer) clearTimeout(this.stableConnectionTimer);
+        this.stableConnectionTimer = setTimeout(() => {
+          this.reconnectAttempts = 0;
+          console.debug("[GoSPA] WebSocket connection stable, resetting backoff.");
+        }, 5000);
+
         this.startHeartbeat();
 
         // SECURITY: Send session token as first message (not in URL)
@@ -303,6 +332,10 @@ export class WSClient {
       this.ws.onclose = (event) => {
         this.connectionState.set("disconnected");
         this.stopHeartbeat();
+        if (this.stableConnectionTimer) {
+          clearTimeout(this.stableConnectionTimer);
+          this.stableConnectionTimer = null;
+        }
         this.config.onClose(event);
 
         if (
@@ -310,7 +343,7 @@ export class WSClient {
           this.reconnectAttempts < this.config.maxReconnectAttempts
         ) {
           this.scheduleReconnect();
-        } else {
+        } else if (this.reconnectAttempts >= this.config.maxReconnectAttempts) {
           this.config.onConnectionFailed(
             new Error("Max reconnect attempts reached"),
           );
@@ -331,6 +364,10 @@ export class WSClient {
   }
 
   disconnect(): void {
+    if (this.reconnectTimer) {
+      clearTimeout(this.reconnectTimer);
+      this.reconnectTimer = null;
+    }
     if (this.ws) {
       this.connectionState.set("disconnecting");
       this.stopHeartbeat();
@@ -345,15 +382,24 @@ export class WSClient {
   }
 
   private scheduleReconnect(): void {
-    this.reconnectAttempts++;
-    // Cap the delay at 5x the interval for fast initial retries,
-    // even though total attempts may be much higher.
-    const delay =
-      this.config.reconnectInterval * Math.min(this.reconnectAttempts, 5);
+    if (this.reconnectTimer) return; // Already scheduled
 
-    setTimeout(() => {
+    this.reconnectAttempts++;
+
+    // Exponential backoff: base * 2^(attempts-1) with jitter
+    // Min 1s, Max 30s
+    const baseDelay = this.config.reconnectInterval;
+    const expDelay = Math.min(baseDelay * Math.pow(2, this.reconnectAttempts - 1), 30000);
+    // Add jitter (±20%)
+    const jitter = expDelay * 0.2 * (Math.random() * 2 - 1);
+    const delay = Math.max(1000, expDelay + jitter);
+
+    console.warn(`[GoSPA] WebSocket disconnected. Reconnecting in ${Math.round(delay)}ms (attempt ${this.reconnectAttempts})...`);
+
+    this.reconnectTimer = setTimeout(() => {
+      this.reconnectTimer = null;
       if (this.connectionState.get() === "disconnected") {
-        this.connect().catch(() => {});
+        this.connect().catch(() => { });
       }
     }, delay);
   }

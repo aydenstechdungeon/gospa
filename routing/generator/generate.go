@@ -2,7 +2,12 @@
 package generator
 
 import (
+	"bytes"
 	"fmt"
+	"go/ast"
+	"go/parser"
+	"go/printer"
+	"go/token"
 	"os"
 	"path/filepath"
 	"regexp"
@@ -11,10 +16,8 @@ import (
 )
 
 var (
-	rePkgName         = regexp.MustCompile(`[^a-zA-Z0-9]+`)
-	reDynamicParam    = regexp.MustCompile(`:([a-zA-Z]+)`)
-	reTemplFunc       = regexp.MustCompile(`func\s+([A-Z][a-zA-Z0-9]*)\s*\(([^)]*)\)\s*(?:\([^)]*templ\.Component[^)]*\)|templ\.Component)`)
-	reTemplFuncSimple = regexp.MustCompile(`func\s+([A-Z][a-zA-Z0-9]*)\s*\(([^)]*)\)\s*templ\.Component`)
+	rePkgName      = regexp.MustCompile(`[^a-zA-Z0-9]+`)
+	reDynamicParam = regexp.MustCompile(`:([a-zA-Z]+)`)
 )
 
 // RouteInfo holds information about a discovered route.
@@ -209,93 +212,76 @@ func parseRoute(relPath, routesDir string) RouteInfo {
 	return route
 }
 
-// parseTemplGoFile parses a _templ.go file to extract the component function name and parameters.
+// parseTemplGoFile parses a _templ.go file to extract the component function name and parameters using go/parser.
 func parseTemplGoFile(path string) (string, []FuncParam) {
-	content, err := os.ReadFile(filepath.Clean(path))
+	fset := token.NewFileSet()
+	node, err := parser.ParseFile(fset, filepath.Clean(path), nil, parser.ParseComments)
 	if err != nil {
 		return "", nil
 	}
 
-	contentStr := string(content)
+	// Iterate through declarations to find the first exported function returning templ.Component
+	for _, decl := range node.Decls {
+		fnDecl, ok := decl.(*ast.FuncDecl)
+		if !ok || fnDecl.Name == nil {
+			continue
+		}
 
-	// Look for the main component function - it returns templ.Component
-	// Pattern: func FunctionName(...) templ.Component {
-	// or: func FunctionName(...) (templ.Component, error) {
+		// Must be exported (starts with capital letter)
+		if !fnDecl.Name.IsExported() {
+			continue
+		}
 
-	// First try to find function with templ.Component return type
-	matches := reTemplFunc.FindStringSubmatch(contentStr)
-	if len(matches) < 2 {
-		// Try simpler pattern for functions returning templ.Component directly
-		matches = reTemplFuncSimple.FindStringSubmatch(contentStr)
-	}
+		// Check return types for templ.Component
+		if fnDecl.Type.Results == nil {
+			continue
+		}
 
-	if len(matches) >= 2 {
-		fnName := matches[1]
-		paramsStr := matches[2]
-		params := parseFunctionParams(paramsStr)
+		hasTemplComponent := false
+		for _, retField := range fnDecl.Type.Results.List {
+			switch t := retField.Type.(type) {
+			case *ast.SelectorExpr:
+				if ident, ok := t.X.(*ast.Ident); ok && ident.Name == "templ" && t.Sel.Name == "Component" {
+					hasTemplComponent = true
+					break
+				}
+			}
+			if hasTemplComponent {
+				break
+			}
+		}
+
+		if !hasTemplComponent {
+			continue
+		}
+
+		fnName := fnDecl.Name.Name
+		var params []FuncParam
+
+		// Extract parameters
+		if fnDecl.Type.Params != nil {
+			for _, field := range fnDecl.Type.Params.List {
+				var typeBuf bytes.Buffer
+				if err := printer.Fprint(&typeBuf, fset, field.Type); err != nil {
+					continue
+				}
+				typeStr := typeBuf.String()
+
+				if len(field.Names) == 0 {
+					// Anonymous parameter
+					params = append(params, FuncParam{Name: "", Type: typeStr})
+				} else {
+					for _, name := range field.Names {
+						params = append(params, FuncParam{Name: name.Name, Type: typeStr})
+					}
+				}
+			}
+		}
+
 		return fnName, params
 	}
 
 	return "", nil
-}
-
-// parseFunctionParams parses function parameter string into FuncParam slice.
-func parseFunctionParams(paramsStr string) []FuncParam {
-	if paramsStr == "" {
-		return nil
-	}
-
-	// Split by comma, but handle nested types like "map[string]interface{}"
-	depth := 0
-	current := ""
-	parts := []string{}
-
-	for _, ch := range paramsStr {
-		switch ch {
-		case '(', '[', '{':
-			depth++
-			current += string(ch)
-		case ')', ']', '}':
-			depth--
-			current += string(ch)
-		case ',':
-			if depth == 0 {
-				parts = append(parts, strings.TrimSpace(current))
-				current = ""
-			} else {
-				current += string(ch)
-			}
-		default:
-			current += string(ch)
-		}
-	}
-	if strings.TrimSpace(current) != "" {
-		parts = append(parts, strings.TrimSpace(current))
-	}
-
-	// Parse each param: "name type" or "name1, name2 type"
-	var results []FuncParam
-	var currentType string
-
-	// Process parts from right to left to propagate types correctly
-	for i := len(parts) - 1; i >= 0; i-- {
-		part := strings.TrimSpace(parts[i])
-		fields := strings.Fields(part)
-		if len(fields) == 0 {
-			continue
-		}
-
-		if len(fields) >= 2 {
-			// e.g. "lastName string" -> name: lastName, type: string
-			currentType = strings.Join(fields[1:], " ")
-			results = append([]FuncParam{{Name: fields[0], Type: currentType}}, results...)
-		} else {
-			// e.g. "firstName" (sharing type from right)
-			results = append([]FuncParam{{Name: fields[0], Type: currentType}}, results...)
-		}
-	}
-
-	return results
 }
 
 // filePathToURLPath converts a file path to a URL path.

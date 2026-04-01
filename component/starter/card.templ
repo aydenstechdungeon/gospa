@@ -5,6 +5,9 @@ templ Card(props CardProps) {
 	<div
 		id={ props.ID }
 		class={ CardClasses(props) }
+		if props.Attributes != nil {
+			{ props.Attributes... }
+		}
 	>
 		if props.Title != "" {
 			<div class="px-6 py-4 border-b border-gray-200">
