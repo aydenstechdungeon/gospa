@@ -51,6 +51,7 @@ func main() {
 		WSReconnectDelay:         1 * time.Second,
 		WSMaxReconnect:           5,
 		AllowInsecureWS:          devMode,
+		PublicOrigin:             "https://gospa.onrender.com",
 		AllowPortsWithInsecureWS: []int{3000},
 		HydrationMode:            "idle",
 		NavigationOptions: gospa.NavigationOptions{
