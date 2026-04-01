@@ -152,7 +152,7 @@ func (rd *ReactiveDetector) detectStateBoundaries(source string, result *Detecti
 		for _, match := range matches {
 			lineBefore := source[:match[0]]
 			lineNum := strings.Count(lineBefore, "\n") + 1
-			
+
 			// Extract variable name from the context before the match
 			lastLineIdx := strings.LastIndex(lineBefore, "\n")
 			var context string
@@ -161,7 +161,7 @@ func (rd *ReactiveDetector) detectStateBoundaries(source string, result *Detecti
 			} else {
 				context = lineBefore[lastLineIdx:]
 			}
-			
+
 			varName := rd.extractVariableName(context)
 			boundary := ReactiveBoundary{
 				Name:       varName,
@@ -184,7 +184,7 @@ func (rd *ReactiveDetector) detectDerivedBoundaries(source string, result *Detec
 		for _, match := range matches {
 			lineBefore := source[:match[0]]
 			lineNum := strings.Count(lineBefore, "\n") + 1
-			
+
 			// Extract variable name from the context before the match
 			lastLineIdx := strings.LastIndex(lineBefore, "\n")
 			var context string
@@ -193,7 +193,7 @@ func (rd *ReactiveDetector) detectDerivedBoundaries(source string, result *Detec
 			} else {
 				context = lineBefore[lastLineIdx:]
 			}
-			
+
 			varName := rd.extractVariableName(context)
 			boundary := ReactiveBoundary{
 				Name:       varName,

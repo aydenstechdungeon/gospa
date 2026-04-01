@@ -44,11 +44,11 @@ func captureStdout(f func()) string {
 
 	f()
 
-	w.Close()
+	_ = w.Close()
 	os.Stdout = old
 
 	var buf bytes.Buffer
-	io.Copy(&buf, r)
+	_, _ = io.Copy(&buf, r)
 	return buf.String()
 }
 
@@ -82,7 +82,7 @@ func TestColorPrinter_OutputMethods(t *testing.T) {
 	if !strings.Contains(out, "[1/4] Doing something") {
 		t.Errorf("Step method failed, got %q", out)
 	}
-	
+
 	out = captureStdout(func() {
 		p.Title("Hello")
 	})
@@ -101,7 +101,7 @@ func TestColorPrinter_OutputMethods(t *testing.T) {
 func TestSpinner(t *testing.T) {
 	p := &ColorPrinter{useColor: false}
 	s := NewSpinner(p, "spinning")
-	
+
 	out := captureStdout(func() {
 		s.Tick()
 	})

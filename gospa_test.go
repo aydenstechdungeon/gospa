@@ -7,15 +7,11 @@ import (
 
 // ─── DefaultConfig ────────────────────────────────────────────────────────────
 
-
 // ─── New / config defaults ────────────────────────────────────────────────────
 
 func TestNew_AppliesDefaults(t *testing.T) {
 	// Passing empty config should fill in all defaults
 	app := New(Config{})
-	if app == nil {
-		t.Fatal("New() should not return nil")
-	}
 
 	if app.Config.RoutesDir != "./routes" {
 		t.Errorf("RoutesDir default not applied, got %q", app.Config.RoutesDir)

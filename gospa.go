@@ -70,79 +70,8 @@ var defaultApp *App
 
 // New creates a new GoSPA application with the given configuration.
 func New(config Config) *App {
-	if config.AppName == "" {
-		config.AppName = "GoSPA Application"
-	}
-	if !config.EnableWebSocket && config.WebSocketPath == "" {
-		config.EnableWebSocket = true
-	}
-	if config.RoutesDir == "" {
-		config.RoutesDir = "./routes"
-	}
-	if config.RuntimeScript == "" {
-		config.RuntimeScript = "/_gospa/runtime.js"
-	}
-	if config.StaticDir == "" {
-		config.StaticDir = "./static"
-	}
-	if config.StaticPrefix == "" {
-		config.StaticPrefix = "/static"
-	}
-	if config.DefaultState == nil {
-		config.DefaultState = make(map[string]interface{})
-	}
-	if config.WebSocketPath == "" {
-		config.WebSocketPath = "/_gospa/ws"
-	}
-	if config.RemotePrefix == "" {
-		config.RemotePrefix = "/_gospa/remote"
-	}
-	if config.MaxRequestBodySize == 0 {
-		config.MaxRequestBodySize = 4 * 1024 * 1024
-	}
-
-	switch {
-	case config.SSGCacheMaxEntries == 0:
-		config.SSGCacheMaxEntries = 500
-	case config.SSGCacheMaxEntries < 0:
-		config.SSGCacheMaxEntries = -1
-	case config.SSGCacheMaxEntries > 10000:
-		config.SSGCacheMaxEntries = 10000
-	}
-
-	if config.HydrationMode == "" {
-		config.HydrationMode = "immediate"
-	}
-	// HydrationTimeout validation: must be within 0-10s to prevent hanging or UI jank
-	if config.HydrationTimeout < 0 {
-		config.HydrationTimeout = 0
-	} else if config.HydrationTimeout > 10000 {
-		config.Logger.Warn("HydrationTimeout is too high (>10s). Capping to 10 seconds for UX safety.", "value", config.HydrationTimeout)
-		config.HydrationTimeout = 10000
-	}
-
-	if config.WSMaxMessageSize == 0 {
-		config.WSMaxMessageSize = 64 * 1024
-	}
-	if config.WSConnRateLimit == 0 {
-		config.WSConnRateLimit = 1.5
-	}
-	if config.Logger == nil {
-		config.Logger = slog.Default()
-	}
-	if config.WSConnBurst == 0 {
-		config.WSConnBurst = 15.0
-	}
-	// SECURITY FIX: GOSPA_WS_INSECURE must only be honoured in dev mode.
-	// In production, this env var is intentionally ignored to prevent accidental
-	// misconfiguration that would allow plaintext ws:// connections in production.
-	if !config.AllowInsecureWS && os.Getenv("GOSPA_WS_INSECURE") == "1" {
-		if config.DevMode {
-			config.AllowInsecureWS = true
-		} else {
-			config.Logger.Warn("GOSPA_WS_INSECURE=1 is set but is ignored because DevMode is false. This override only applies in development environments.")
-		}
-	}
+	applyDefaultConfig(&config)
+	validateAndLogConfig(&config)
 
 	fiber.SetConnectionRateLimiter(config.WSConnBurst, config.WSConnRateLimit)
 	state.SetNotificationQueueSize(config.NotificationBufferSize)
@@ -222,6 +151,87 @@ func New(config Config) *App {
 	}
 
 	return app
+}
+
+func applyDefaultConfig(config *Config) {
+	if config.AppName == "" {
+		config.AppName = "GoSPA Application"
+	}
+	if !config.EnableWebSocket && config.WebSocketPath == "" {
+		config.EnableWebSocket = true
+	}
+	if config.RoutesDir == "" {
+		config.RoutesDir = "./routes"
+	}
+	if config.RuntimeScript == "" {
+		config.RuntimeScript = "/_gospa/runtime.js"
+	}
+	if config.StaticDir == "" {
+		config.StaticDir = "./static"
+	}
+	if config.StaticPrefix == "" {
+		config.StaticPrefix = "/static"
+	}
+	if config.DefaultState == nil {
+		config.DefaultState = make(map[string]interface{})
+	}
+	if config.WebSocketPath == "" {
+		config.WebSocketPath = "/_gospa/ws"
+	}
+	if config.RemotePrefix == "" {
+		config.RemotePrefix = "/_gospa/remote"
+	}
+	if config.MaxRequestBodySize == 0 {
+		config.MaxRequestBodySize = 4 * 1024 * 1024
+	}
+
+	switch {
+	case config.SSGCacheMaxEntries == 0:
+		config.SSGCacheMaxEntries = 500
+	case config.SSGCacheMaxEntries < 0:
+		config.SSGCacheMaxEntries = -1
+	case config.SSGCacheMaxEntries > 10000:
+		config.SSGCacheMaxEntries = 10000
+	}
+
+	if config.HydrationMode == "" {
+		config.HydrationMode = "immediate"
+	}
+
+	if config.WSMaxMessageSize == 0 {
+		config.WSMaxMessageSize = 64 * 1024
+	}
+	if config.WSConnRateLimit == 0 {
+		config.WSConnRateLimit = 1.5
+	}
+	if config.WSConnBurst == 0 {
+		config.WSConnBurst = 15.0
+	}
+}
+
+func validateAndLogConfig(config *Config) {
+	if config.Logger == nil {
+		config.Logger = slog.Default()
+	}
+
+	// Validation: HydrationTimeout must be within 0-10s to prevent hanging or UI jank
+	if config.HydrationTimeout < 0 {
+		config.HydrationTimeout = 0
+	} else if config.HydrationTimeout > 10000 {
+		config.Logger.Warn("HydrationTimeout is too high (>10s). Capping to 10 seconds for UX safety.", "value", config.HydrationTimeout)
+		config.HydrationTimeout = 10000
+	}
+
+	// SECURITY FIX: GOSPA_WS_INSECURE must only be honoured in dev mode.
+	// In production, this env var is intentionally ignored to prevent accidental
+	// misconfiguration that would allow plaintext ws:// connections in production.
+	if !config.AllowInsecureWS && os.Getenv("GOSPA_WS_INSECURE") == "1" {
+		if config.DevMode {
+			config.AllowInsecureWS = true
+		} else {
+			config.Logger.Warn("GOSPA_WS_INSECURE=1 is set but is ignored because DevMode is false. This override only applies in development environments.")
+		}
+	}
 }
 
 // setupRoutes configures core internal routes.
@@ -550,43 +560,46 @@ func (a *App) RegisterRoutes() error {
 		return err
 	}
 	for _, route := range a.Router.GetPages() {
-		r := route
-		opts := routing.GetRouteOptions(r.Path)
-		var handlers []any
-		if opts.RateLimit != nil {
-			rl := fiber.NewConnectionRateLimiter(a.Config.Storage)
-			windowSecs := opts.RateLimit.Window.Seconds()
-			if windowSecs <= 0 {
-				windowSecs = 1
-			}
-			rl.SetLimits(float64(opts.RateLimit.MaxRequests), float64(opts.RateLimit.MaxRequests)/windowSecs)
-			msg := opts.RateLimit.Message
-			if msg == "" {
-				msg = "Too many requests"
-			}
-			handlers = append(handlers, func(c fiberpkg.Ctx) error {
-				if !rl.Allow(c.IP()) {
-					return c.Status(fiberpkg.StatusTooManyRequests).SendString(msg)
-				}
-				return c.Next()
-			})
-		}
-		mws := a.Router.ResolveMiddlewareChain(r)
-		for _, mwRoute := range mws {
-			if fn := routing.GetMiddleware(mwRoute.Path); fn != nil {
-				if mwHandler, ok := fn.(func(fiberpkg.Ctx) error); ok {
-					handlers = append(handlers, mwHandler)
-				} else if mwHandler, ok := fn.(fiberpkg.Handler); ok {
-					handlers = append(handlers, mwHandler)
-				}
-			}
-		}
-		handlers = append(handlers, func(c fiberpkg.Ctx) error {
-			return a.renderRoute(c, r)
-		})
-		a.Fiber.Get(r.Path, handlers[0], handlers[1:]...)
+		a.registerPageRoute(route)
 	}
 	return nil
+}
+
+func (a *App) registerPageRoute(r *routing.Route) {
+	opts := routing.GetRouteOptions(r.Path)
+	var handlers []any
+	if opts.RateLimit != nil {
+		rl := fiber.NewConnectionRateLimiter(a.Config.Storage)
+		windowSecs := opts.RateLimit.Window.Seconds()
+		if windowSecs <= 0 {
+			windowSecs = 1
+		}
+		rl.SetLimits(float64(opts.RateLimit.MaxRequests), float64(opts.RateLimit.MaxRequests)/windowSecs)
+		msg := opts.RateLimit.Message
+		if msg == "" {
+			msg = "Too many requests"
+		}
+		handlers = append(handlers, func(c fiberpkg.Ctx) error {
+			if !rl.Allow(c.IP()) {
+				return c.Status(fiberpkg.StatusTooManyRequests).SendString(msg)
+			}
+			return c.Next()
+		})
+	}
+	mws := a.Router.ResolveMiddlewareChain(r)
+	for _, mwRoute := range mws {
+		if fn := routing.GetMiddleware(mwRoute.Path); fn != nil {
+			if mwHandler, ok := fn.(func(fiberpkg.Ctx) error); ok {
+				handlers = append(handlers, mwHandler)
+			} else if mwHandler, ok := fn.(fiberpkg.Handler); ok {
+				handlers = append(handlers, mwHandler)
+			}
+		}
+	}
+	handlers = append(handlers, func(c fiberpkg.Ctx) error {
+		return a.renderRoute(c, r)
+	})
+	a.Fiber.Get(r.Path, handlers[0], handlers[1:]...)
 }
 
 // Get registers a GET route with the specified path and handlers.

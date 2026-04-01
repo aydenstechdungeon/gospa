@@ -224,6 +224,7 @@ func TestRouterScan_DynamicRoutes(t *testing.T) {
 	}
 	if blogRoute == nil || blogIDRoute == nil {
 		t.Fatalf("could not find expected routes; pages: %v", pages)
+		return
 	}
 	if blogRoute.Priority >= blogIDRoute.Priority {
 		t.Errorf("static /blog/ should have higher priority than /blog/:id/")
@@ -335,6 +336,7 @@ func TestRouterMatch_StaticPrecedesOverDynamic(t *testing.T) {
 	route, _ := r.Match("/blog/new/")
 	if route == nil {
 		t.Fatal("expected match for /blog/new/, got nil")
+		return
 	}
 	// Should match static /blog/new/ not /blog/:id/
 	if route.IsDynamic {

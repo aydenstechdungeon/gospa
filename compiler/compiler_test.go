@@ -357,7 +357,7 @@ func TestValidateSafeScript(t *testing.T) {
 func TestCompileLegacy(t *testing.T) {
 	c := NewCompiler()
 	templ, ts, err := c.CompileLegacy("MyLegacyIsland", "legacy-id", "<template><div>Legacy</div></template>", "legacy_pkg")
-	
+
 	if err != nil {
 		t.Fatalf("CompileLegacy failed: %v", err)
 	}
@@ -365,7 +365,7 @@ func TestCompileLegacy(t *testing.T) {
 	if !strings.Contains(templ, "package legacy_pkg") {
 		t.Errorf("Expected package legacy_pkg, got %s", templ)
 	}
-	
+
 	if !strings.Contains(templ, "MyLegacyIsland()") {
 		t.Errorf("Expected signature MyLegacyIsland(), got %s", templ)
 	}
@@ -378,4 +378,3 @@ func TestCompileLegacy(t *testing.T) {
 		t.Error("CompileLegacy should produce TS for an island by default")
 	}
 }
-

@@ -423,12 +423,56 @@ export function bindTwoWay<T extends string | number | boolean>(
 }
 
 // Query selector helper with reactive updates
-export function querySelector(selector: string): Element | null {
-  return document.querySelector(selector);
-}
-
 export function querySelectorAll(selector: string): NodeListOf<Element> {
   return document.querySelectorAll(selector);
+}
+
+// === DOM Utilities ===
+
+export function find(selector: string): HTMLElement | null {
+  return document.querySelector(selector) as HTMLElement | null;
+}
+
+export function findAll(selector: string): HTMLElement[] {
+  return Array.from(document.querySelectorAll(selector)) as HTMLElement[];
+}
+
+export function addClass(el: Element, ...classes: string[]): void {
+  el.classList.add(...classes);
+}
+
+export function removeClass(el: Element, ...classes: string[]): void {
+  el.classList.remove(...classes);
+}
+
+export function hasClass(el: Element, cls: string): boolean {
+  return el.classList.contains(cls);
+}
+
+export function attr(el: Element, name: string): string | null;
+export function attr(el: Element, name: string, value: string): void;
+export function attr(
+  el: Element,
+  name: string,
+  value?: string,
+): string | null | void {
+  if (value === undefined) {
+    return el.getAttribute(name);
+  }
+  el.setAttribute(name, value);
+}
+
+export function data(el: HTMLElement, name: string): string | undefined;
+export function data(el: HTMLElement, name: string, value: string): void;
+export function data(
+  el: HTMLElement,
+  name: string,
+  value?: string,
+): string | undefined | void {
+  if (value === undefined) {
+    return el.dataset[name];
+  }
+  el.dataset[name] = value;
 }
 
 // Create element with bindings

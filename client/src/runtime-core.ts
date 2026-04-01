@@ -137,7 +137,11 @@ const components = new Map<string, ComponentInstance>();
 const globalState = new StateMap();
 
 // Island setup function registry - populated by bundled island modules
-type IslandSetupFn = (element: Element, props: Record<string, any>, state: any) => void;
+type IslandSetupFn = (
+  element: Element,
+  props: Record<string, any>,
+  state: any,
+) => void;
 const setupFunctions = new Map<string, IslandSetupFn>();
 
 /**
@@ -542,7 +546,9 @@ export function autoInit(): void {
         if (stateAttr) {
           try {
             stateData = JSON.parse(stateAttr);
-          } catch { /* ignore */ }
+          } catch {
+            /* ignore */
+          }
         }
 
         // Parse initial props from data-gospa-props
@@ -551,13 +557,14 @@ export function autoInit(): void {
         if (propsAttr) {
           try {
             propsData = JSON.parse(propsAttr);
-          } catch { /* ignore */ }
+          } catch {
+            /* ignore */
+          }
         }
 
         setup(el, propsData, stateData);
       } catch (e) {
-        if (config.debug)
-          console.error("Error initializing island", name, e);
+        if (config.debug) console.error("Error initializing island", name, e);
       }
     } else if (config.debug) {
       console.warn("No setup function registered for island:", name);

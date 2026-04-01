@@ -89,7 +89,7 @@ func ValidateSafeScript(script string) error {
 
 	// 1. Parse as Go to verify syntactic validity and perform AST inspection
 	fset := token.NewFileSet()
-	
+
 	// Determine if script is a full file or just a body
 	src := script
 	isBody := !strings.Contains(script, "package ")
