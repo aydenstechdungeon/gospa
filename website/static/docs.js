@@ -206,10 +206,26 @@
         document.querySelectorAll('link[data-gospa-async-css]').forEach((preloadLink) => {
             if (preloadLink.dataset.gospaAsyncBound === '1') return;
             preloadLink.dataset.gospaAsyncBound = '1';
-            preloadLink.addEventListener('load', () => {
-                preloadLink.rel = 'stylesheet';
-                preloadLink.removeAttribute('as');
-            });
+
+            const activate = () => {
+                if (preloadLink.rel !== 'stylesheet') {
+                    preloadLink.rel = 'stylesheet';
+                    preloadLink.removeAttribute('as');
+                }
+            };
+
+            // Add listener for future load
+            preloadLink.addEventListener('load', activate);
+
+            // If already loaded (e.g. from cache) or if we're run late, activate now
+            if (document.readyState === 'complete' || (preloadLink.isSVG && preloadLink.getAttribute('rel') === 'stylesheet')) {
+                activate();
+            } else if (window.performance && window.performance.getEntriesByName) {
+                // Check performance timeline to see if it already finished
+                if (window.performance.getEntriesByName(preloadLink.href).length > 0) {
+                    activate();
+                }
+            }
         });
     }
 
@@ -304,6 +320,7 @@
         // Update docs-specific content
         updateToC();
         updateSidebarActiveState();
+        initAsyncCSS();
 
         // Restore sidebar scroll after a brief delay to allow DOM to settle
         setTimeout(() => {

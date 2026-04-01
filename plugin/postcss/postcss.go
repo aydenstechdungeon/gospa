@@ -736,42 +736,8 @@ func (p *PostCSSPlugin) criticalCommand(args []string) error {
 		return fmt.Errorf("failed to create non-critical CSS directory: %w", err)
 	}
 
-	// CSS-safe extraction: find the last complete CSS rule before the cutoff
-	criticalSize := p.config.CriticalCSS.InlineMaxSize
-	if len(fullCSS) < criticalSize {
-		criticalSize = len(fullCSS) / 2
-	}
-
-	// Safely split at brace depth 0 to avoid breaking media queries
-	splitPoint := -1
-	braceDepth := 0
-	inComment := false
-	for i := 0; i < len(fullCSS); i++ {
-		if i > 0 && fullCSS[i-1] == '/' && fullCSS[i] == '*' {
-			inComment = true
-		}
-		if i > 0 && fullCSS[i-1] == '*' && fullCSS[i] == '/' {
-			inComment = false
-		}
-		if !inComment {
-			if fullCSS[i] == '{' {
-				braceDepth++
-			} else if fullCSS[i] == '}' {
-				braceDepth--
-				if braceDepth == 0 && i >= criticalSize {
-					splitPoint = i + 1
-					break
-				}
-			}
-		}
-	}
-
-	if splitPoint == -1 || splitPoint > len(fullCSS) {
-		splitPoint = len(fullCSS)
-	}
-
-	criticalCSS := fullCSS[:splitPoint]
-	nonCriticalCSS := fullCSS[splitPoint:]
+	// Use shared splitting logic
+	criticalCSS, nonCriticalCSS := splitCSS(fullCSS, p.config.CriticalCSS.InlineMaxSize)
 
 	// Use cleaned path to prevent path traversal
 	criticalOutputPath := filepath.Clean(p.config.CriticalCSS.CriticalOutput)
@@ -939,23 +905,9 @@ func (p *PostCSSPlugin) extractCriticalForBundle(projectDir string, bundle Bundl
 		return fmt.Errorf("failed to create non-critical CSS directory: %w", err)
 	}
 
-	// CSS-safe extraction: find the last complete CSS rule before the cutoff
+	// Use shared safe splitting logic
 	criticalSize := bundle.CriticalCSS.InlineMaxSize
-	if criticalSize == 0 {
-		criticalSize = 14336 // 14KB default
-	}
-	if len(fullCSS) < criticalSize {
-		criticalSize = len(fullCSS) / 2
-	}
-
-	// Find the last closing brace before or at the cutoff point to ensure
-	// we don't split in the middle of a CSS rule
-	for criticalSize > 0 && criticalSize < len(fullCSS) && fullCSS[criticalSize-1] != '}' {
-		criticalSize--
-	}
-
-	criticalCSS := fullCSS[:criticalSize]
-	nonCriticalCSS := fullCSS[criticalSize:]
+	criticalCSS, nonCriticalCSS := splitCSS(fullCSS, criticalSize)
 
 	// Write critical CSS
 	if err := os.WriteFile(cleanCriticalOutput, criticalCSS, 0600); err != nil { // #nosec //nolint:gosec // path validated above
@@ -987,7 +939,7 @@ func GenerateCriticalCSSHelper(projectDir, criticalCSSPath string) (string, erro
 
 // GenerateAsyncCSSScript generates the HTML for async loading non-critical CSS.
 func GenerateAsyncCSSScript(cssPath string) string {
-	return fmt.Sprintf(`<link rel="preload" href="%s" as="style" data-gospa-async-css="1">
+	return fmt.Sprintf(`<link rel="preload" href="%s" as="style" onload="this.onload=null;this.rel='stylesheet'" data-gospa-async-css="1">
 <noscript><link rel="stylesheet" href="%s"></noscript>`, cssPath, cssPath)
 }
 
@@ -1023,6 +975,56 @@ func CriticalCSSWithFallback(path, fallback string) string {
 		return fallback
 	}
 	return string(css)
+}
+
+// splitCSS safely splits CSS into critical and non-critical parts at a safe boundary.
+// It ensures we don't split in the middle of a rule or media query by tracking brace depth.
+func splitCSS(fullCSS []byte, maxSize int) ([]byte, []byte) {
+	if maxSize <= 0 {
+		maxSize = 14336 // 14KB default
+	}
+
+	// If the entire CSS is smaller than the target size, no split needed
+	if len(fullCSS) <= maxSize {
+		return fullCSS, []byte{}
+	}
+
+	splitPoint := -1
+	braceDepth := 0
+	inComment := false
+
+	// Find the first safe split point AFTER the maxSize
+	// This ensures critical CSS is at least maxSize, but stays relative to that size.
+	// We split at the first '}' that returns braceDepth to 0.
+	for i := 0; i < len(fullCSS); i++ {
+		// Basic comment tracking
+		if i > 0 && fullCSS[i-1] == '/' && fullCSS[i] == '*' {
+			inComment = true
+		}
+		if i > 0 && fullCSS[i-1] == '*' && fullCSS[i] == '/' {
+			inComment = false
+		}
+
+		if !inComment {
+			if fullCSS[i] == '{' {
+				braceDepth++
+			} else if fullCSS[i] == '}' {
+				braceDepth--
+				// If we are back at root level AND we've passed our target size, split here
+				if braceDepth == 0 && i >= maxSize {
+					splitPoint = i + 1
+					break
+				}
+			}
+		}
+	}
+
+	// If no safe split point found, or it's at the end
+	if splitPoint == -1 || splitPoint >= len(fullCSS) {
+		return fullCSS, []byte{}
+	}
+
+	return fullCSS[:splitPoint], fullCSS[splitPoint:]
 }
 
 // isPathSafe checks if the given path is within the project directory.

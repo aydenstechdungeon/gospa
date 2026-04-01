@@ -37,23 +37,22 @@ func main() {
 	devMode := getEnvBool("GOSPA_DEV", false)
 
 	app := gospa.New(gospa.Config{
-		RoutesDir:                "./routes",
-		DevMode:                  devMode,
-		AppName:                  "GoSPA Documentation",
-		CacheTemplates:           !devMode,            // Enable template caching in production
-		DefaultRenderStrategy:    routing.StrategySSG, // Make the entire docs site static by default
-		SSGCacheMaxEntries:       -1,                  // Cache all pages without eviction
-		CompressState:            true,                // Compress WebSocket messages
-		StateDiffing:             true,                // Only send state diffs
-		EnableWebSocket:          true,
-		SerializationFormat:      gospa.SerializationMsgPack,
-		WSHeartbeat:              30 * time.Second,
-		WSReconnectDelay:         1 * time.Second,
-		WSMaxReconnect:           5,
-		AllowInsecureWS:          devMode,
-		PublicOrigin:             "https://gospa.onrender.com",
-		AllowPortsWithInsecureWS: []int{3000},
-		HydrationMode:            "idle",
+		RoutesDir:             "./routes",
+		DevMode:               devMode,
+		AppName:               "GoSPA Documentation",
+		CacheTemplates:        !devMode,            // Enable template caching in production
+		DefaultRenderStrategy: routing.StrategySSG, // Make the entire docs site static by default
+		SSGCacheMaxEntries:    -1,                  // Cache all pages without eviction
+		CompressState:         true,                // Compress WebSocket messages
+		StateDiffing:          true,                // Only send state diffs
+		EnableWebSocket:       true,
+		SerializationFormat:   gospa.SerializationMsgPack,
+		WSHeartbeat:           30 * time.Second,
+		WSReconnectDelay:      1 * time.Second,
+		WSMaxReconnect:        5,
+		AllowInsecureWS:       devMode,
+		PublicOrigin:          "https://gospa.onrender.com",
+		HydrationMode:         "idle",
 		NavigationOptions: gospa.NavigationOptions{
 			IdleCallbackBatchUpdates: &gospa.NavigationIdleCallbackBatchUpdatesConfig{
 				Enabled: boolPtr(true),
