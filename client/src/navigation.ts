@@ -551,7 +551,7 @@ function patchNode(currentNode: Node, incomingNode: Node): void {
     (currentNode.id && currentNode.id !== incomingNode.id) ||
     (incomingNode.id && currentNode.id !== incomingNode.id) ||
     currentNode.getAttribute("data-gospa-page") !==
-      incomingNode.getAttribute("data-gospa-page")
+    incomingNode.getAttribute("data-gospa-page")
   ) {
     currentNode.parentNode?.replaceChild(
       incomingNode.cloneNode(true),
@@ -624,6 +624,10 @@ async function updateDOM(data: PageData, pageContent: string): Promise<void> {
   const rootEl = document.querySelector("[data-gospa-root]");
   const contentEl = document.querySelector("[data-gospa-page-content]");
   const mainEl = document.querySelector("main");
+
+  // Remove loading state before DOM update to prevent visual glitches during transitions
+  const container = rootEl || contentEl || mainEl || document.body;
+  container.removeAttribute("data-gospa-loading");
 
   if (rootEl) {
     patchInnerHTML(rootEl, pageContent);
@@ -894,11 +898,11 @@ function executeScripts(container: Element | Document): void {
   scripts.forEach((oldScript) => {
     // Skip scripts marked as permanent or already processed
     if (oldScript.closest("[data-gospa-permanent]")) return;
-    if (
-      navigationOptionsConfig.scriptExecution.executeMarkedOnly &&
-      oldScript.getAttribute("data-gospa-exec") !== "true"
-    )
+    // SECURITY FIX: Only execute scripts that are explicitly marked for execution.
+    // This prevents re-execution of untrusted scripts during navigation/morphing.
+    if (oldScript.getAttribute("data-gospa-exec") !== "true") {
       return;
+    }
 
     const newScript = document.createElement("script");
     // Copy all attributes
@@ -1072,24 +1076,39 @@ export async function navigate(
     state.abortController = new AbortController();
 
     try {
-      // Save current scroll position before leaving
-      scrollPositions.set(state.currentPath, window.scrollY);
-
-      progressBar.start();
-      const data = await getPageData(path, state.abortController.signal);
-
-      if (!data) {
-        progressBar.finish();
-        window.location.href = path;
-        return false;
-      }
-
+      // 1. Instant Feedback Phase
+      // Update URL immediately so user sees their target in the address bar
       if (options.replace) {
         window.history.replaceState({ path }, "", path);
       } else {
         window.history.pushState({ path }, "", path);
       }
 
+      // Update active links immediately for instant visual feedback on menus
+      updateActiveLinks();
+
+      // Set loading state on container
+      const container =
+        document.querySelector("[data-gospa-page-content], [data-gospa-root]") ||
+        document.body;
+      container.setAttribute("data-gospa-loading", "true");
+
+      // Store scroll position of the OLD path (before we update state.currentPath)
+      scrollPositions.set(state.currentPath, window.scrollY);
+
+      // 2. Fetch Phase
+      progressBar.start();
+      const data = await getPageData(path, state.abortController.signal);
+
+      if (!data) {
+        // Fallback: If SPA navigation fails (e.g. 500 or non-HTML), force a full reload
+        progressBar.finish();
+        container.removeAttribute("data-gospa-loading");
+        window.location.href = path;
+        return false;
+      }
+
+      // 3. Update Phase
       state.currentPath = path;
       await performDOMUpdateWithTransitions(data, options);
 
@@ -1102,11 +1121,14 @@ export async function navigate(
       return true;
     } catch (error) {
       progressBar.finish();
+      const container =
+        document.querySelector("[data-gospa-page-content], [data-gospa-root]") ||
+        document.body;
+      container.removeAttribute("data-gospa-loading");
+
       if ((error as Error).name === "AbortError") {
         return false;
       }
-      // BUG FIX: Ensure navigation state is cleared on error
-      // Otherwise isNavigating flag gets stuck, blocking future navigations
       console.error("[GoSPA] Navigation error:", error);
       state.isNavigating = false;
       state.pendingNavigation = null;
@@ -1154,32 +1176,53 @@ export function isNavigating(): boolean {
 function handlePopState(_event: PopStateEvent): void {
   const path = window.location.pathname;
 
+  // Instant Visual Feedback
+  updateActiveLinks();
+  const container =
+    document.querySelector("[data-gospa-page-content], [data-gospa-root]") ||
+    document.body;
+  container.setAttribute("data-gospa-loading", "true");
+
   // Notify before navigation
   beforeNavCallbacks.forEach((cb) => cb(path));
 
+  // Cancel previous fetch if any (Fix for race conditions on back/forward spam)
+  if (state.abortController) {
+    state.abortController.abort();
+  }
+  state.abortController = new AbortController();
+
   // Fetch and update
   progressBar.start();
-  getPageData(path).then((data) => {
-    if (data) {
-      state.currentPath = path;
-      performDOMUpdateWithTransitions(data, { scrollToTop: false }).then(() => {
+  getPageData(path, state.abortController.signal)
+    .then((data) => {
+      if (data) {
+        state.currentPath = path;
+        performDOMUpdateWithTransitions(data, { scrollToTop: false }).then(() => {
+          progressBar.finish();
+          // Restore scroll position for historical paths
+          const savedPos = scrollPositions.get(path);
+          if (savedPos !== undefined) {
+            window.scrollTo(0, savedPos);
+          }
+          afterNavCallbacks.forEach((cb) => cb(path));
+          document.dispatchEvent(
+            new CustomEvent("gospa:navigated", { detail: { path } }),
+          );
+        });
+      } else {
         progressBar.finish();
-        // Restore scroll position for historical paths
-        const savedPos = scrollPositions.get(path);
-        if (savedPos !== undefined) {
-          window.scrollTo(0, savedPos);
-        }
-        afterNavCallbacks.forEach((cb) => cb(path));
-        document.dispatchEvent(
-          new CustomEvent("gospa:navigated", { detail: { path } }),
-        );
-      });
-    } else {
+        container.removeAttribute("data-gospa-loading");
+        // Fallback to reload
+        window.location.reload();
+      }
+    })
+    .catch((error) => {
+      if (error.name === "AbortError") return;
       progressBar.finish();
-      // Fallback to reload
-      window.location.reload();
-    }
-  });
+      container.removeAttribute("data-gospa-loading");
+      console.error("[GoSPA] Popstate navigation error:", error);
+    });
 }
 
 function getAnchorFromPath(path: EventTarget[]): HTMLAnchorElement | null {

@@ -274,6 +274,7 @@ func (a *App) renderRoute(c gofiber.Ctx, route *routing.Route) error {
 import * as runtime from %s;
 window.__GOSPA_CONFIG__ = {
 	navigationOptions: %s,
+	csrfToken: %s,
 };
 runtime.init({
 	wsUrl: %s,
@@ -289,7 +290,7 @@ runtime.init({
 		timeout: %d
 	}
 });
-</script>`, toJS(runtimePath), toJS(a.Config.NavigationOptions), toJS(wsURL), toJS(string(a.Config.SerializationFormat)), a.Config.DevMode, a.Config.SimpleRuntimeSVGs, a.Config.DisableSanitization, wsRD, wsMR, wsHB, toJS(a.Config.HydrationMode), a.Config.HydrationTimeout)
+</script>`, toJS(runtimePath), toJS(a.Config.NavigationOptions), toJS(c.Locals("gospa.csrf_token")), toJS(wsURL), toJS(string(a.Config.SerializationFormat)), a.Config.DevMode, a.Config.SimpleRuntimeSVGs, a.Config.DisableSanitization, wsRD, wsMR, wsHB, toJS(a.Config.HydrationMode), a.Config.HydrationTimeout)
 
 		// Islands bundle — loads and registers all island setup functions
 		_, _ = fmt.Fprint(w, `<script src="/static/js/islands.js"></script>`)

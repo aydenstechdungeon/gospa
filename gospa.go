@@ -232,6 +232,11 @@ func validateAndLogConfig(config *Config) {
 			config.Logger.Warn("GOSPA_WS_INSECURE=1 is set but is ignored because DevMode is false. This override only applies in development environments.")
 		}
 	}
+
+	// SECURITY FIX: Ensure RemoteActionMiddleware is set in production
+	if !config.DevMode && config.RemoteActionMiddleware == nil && !config.AllowUnauthenticatedRemoteActions {
+		config.Logger.Error("CRITICAL SECURITY RISK: RemoteActionMiddleware must be set in production mode. Remote actions are currently disabled or insecurely exposed.")
+	}
 }
 
 // setupRoutes configures core internal routes.

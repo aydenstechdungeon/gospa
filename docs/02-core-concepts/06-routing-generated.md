@@ -24,8 +24,9 @@ This file contains the client-side equivalent of your route registry.
 
 ### What it does:
 - Exports a `routes` array containing metadata for all paths (params, file locations, dynamic segments).
-- Provides the `getRoute(path)` helper for finding route metadata by URL.
-- Provides the `buildPath(route, params)` helper for constructing type-safe URLs.
+- Provides the `findRoute(path)` helper for finding route metadata by URL (with an $O(1)$ lookup cache).
+- Provides the `matchRoute(pattern, path)` helper for pattern matching (with an internal matching cache).
+- Provides the `buildRoute(path, params)` helper for constructing type-safe URLs.
 
 ### Example Usage:
 ```typescript
