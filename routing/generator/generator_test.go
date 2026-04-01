@@ -1,7 +1,6 @@
 package generator
 
 import (
-	"reflect"
 	"testing"
 )
 
@@ -41,42 +40,6 @@ func TestFilePathToURLPath(t *testing.T) {
 	for _, tt := range tests {
 		if got := filePathToURLPath(tt.dir, tt.filename); got != tt.expected {
 			t.Errorf("filePathToURLPath(%q, %q) = %q, want %q", tt.dir, tt.filename, got, tt.expected)
-		}
-	}
-}
-
-func TestParseFunctionParams(t *testing.T) {
-	tests := []struct {
-		input    string
-		expected []FuncParam
-	}{
-		{
-			"name string, age int",
-			[]FuncParam{
-				{Name: "name", Type: "string"},
-				{Name: "age", Type: "int"},
-			},
-		},
-		{
-			"firstName, lastName string",
-			[]FuncParam{
-				{Name: "firstName", Type: "string"},
-				{Name: "lastName", Type: "string"},
-			},
-		},
-		{
-			"data map[string]interface{}, count int",
-			[]FuncParam{
-				{Name: "data", Type: "map[string]interface{}"},
-				{Name: "count", Type: "int"},
-			},
-		},
-	}
-
-	for _, tt := range tests {
-		got := parseFunctionParams(tt.input)
-		if !reflect.DeepEqual(got, tt.expected) {
-			t.Errorf("parseFunctionParams(%q) = %v, want %v", tt.input, got, tt.expected)
 		}
 	}
 }

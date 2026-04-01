@@ -679,6 +679,9 @@ func (c *WSClient) ReadPump(hub *WSHub, onMessage func(*WSClient, WSMessage)) {
 			break
 		}
 
+		// Reset read deadline on every message received to keep the connection alive
+		_ = c.Conn.SetReadDeadline(time.Now().Add(pongWait))
+
 		// Validate JSON nesting depth to prevent stack overflow attacks
 		if c.format != "msgpack" {
 			if err := validateJSONDepth(message, maxJSONDepth); err != nil {
@@ -1204,14 +1207,17 @@ func WebSocketHandler(config WebSocketConfig) fiberpkg.Handler {
 		// Wait for first message (should be init with session token)
 		_, firstMsg, err := c.ReadMessage()
 		if err != nil {
-			slog.Default().Warn("failed to read initial ws message", "err", err)
+			slog.Default().Warn("failed to read initial ws message", "client", connID, "err", err)
+			config.Hub.Unregister <- client
 			_ = c.Close()
 			return
 		}
 
 		var initMsg WSMessage
 		if err := client.Unmarshal(firstMsg, &initMsg); err != nil {
+			slog.Default().Warn("invalid initial ws message format", "client", connID, "err", err)
 			client.SendError("Invalid initial message format")
+			config.Hub.Unregister <- client
 			_ = c.Close()
 			return
 		}
@@ -1327,6 +1333,9 @@ func WebSocketHandler(config WebSocketConfig) fiberpkg.Handler {
 		if onMessage == nil {
 			onMessage = DefaultMessageHandler
 		}
+
+		// Call init function with the first message received (so it's not lost)
+		onMessage(client, initMsg)
 
 		// Start write pump
 		go client.WritePump()
