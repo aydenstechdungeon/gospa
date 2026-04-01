@@ -6,5 +6,8 @@ export default {
     '@tailwindcss/postcss': {},
     'postcss-nested': {},
     'autoprefixer': {},
+    'cssnano': {
+      preset: ['default', { discardComments: { removeAll: true } }]
+    },
   }
 };

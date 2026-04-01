@@ -10,6 +10,8 @@ plugins:
     output: static/css/main.css
     # Enable watching in development
     watch: true
+    # Enable minification for production
+    minify: true
     bundles:
       - name: website
         input: styles/website.css
