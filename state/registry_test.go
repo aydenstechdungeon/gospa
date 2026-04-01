@@ -34,7 +34,7 @@ func TestRegistry_Registration(t *testing.T) {
 
 func TestRegistry_FromContext(t *testing.T) {
 	ctx := context.Background()
-	
+
 	// Should return nil when not present
 	if r := FromContext(ctx); r != nil {
 		t.Errorf("expected nil registry initially, got %v", r)
@@ -54,7 +54,7 @@ func TestRegistry_GetDataJSON(t *testing.T) {
 	r.Register("island2", nil, map[string]interface{}{"state": 2})
 
 	jsonStr := r.GetDataJSON()
-	
+
 	if !strings.Contains(jsonStr, `"id":"island1"`) {
 		t.Errorf("expected island1 in JSON: %s", jsonStr)
 	}

@@ -189,7 +189,9 @@ export class IslandManager {
     const registry = (window as any).__GOSPA_DATA__;
     if (Array.isArray(registry)) {
       // Find island by ID or by name (if ID is auto-generated)
-      const islandData = registry.find((d: any) => d.id === id || d.id === name);
+      const islandData = registry.find(
+        (d: any) => d.id === id || d.id === name,
+      );
       if (islandData) {
         props = islandData.props;
         state = islandData.state;

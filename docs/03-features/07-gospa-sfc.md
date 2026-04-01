@@ -1,4 +1,4 @@
-# .gospa Single File Components (SFC)
+# .gospa Single File Components (SFC - ALPHA)
 
 The `.gospa` file format is a modern, single-file component system for the GoSPA framework. It allows you to define server-rendered HTML (Go/Templ), optional client-side reactivity (TypeScript), and component styles in a single file, following a syntax familiar to Svelte developers.
 

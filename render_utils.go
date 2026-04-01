@@ -277,7 +277,7 @@ func (a *App) getWSUrl(c gofiber.Ctx) string {
 	// If PublicOrigin is missing in production, fail safe to loopback and log a
 	// hard-error so operators see it immediately.
 	a.Logger().Error("CRITICAL: PublicOrigin is not set in production. WebSocket connections will fail. Set PublicOrigin (e.g. https://yourapp.com) to fix this.")
-	
+
 	// Try to include port in the fallback if we're on a non-standard port
 	if portStr != "" {
 		return protocol + "127.0.0.1:" + portStr + a.Config.WebSocketPath

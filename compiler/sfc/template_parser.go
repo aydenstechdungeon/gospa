@@ -154,7 +154,7 @@ func (p *TemplateParser) parseParenArgs(required bool) ([]Attribute, error) {
 				return nil, p.error("unterminated backtick string argument")
 			}
 			attr.Value = p.input[start:p.pos]
-			p.pos++ // skip closing `
+			p.pos++                  // skip closing `
 			attr.IsExpression = true // Mark as expression to preserve raw value
 		case p.pos < len(p.input) && p.input[p.pos] == '"':
 			// Double-quoted string

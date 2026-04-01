@@ -14,7 +14,7 @@ func TestQueryParamsExtended(t *testing.T) {
 	if qp.Get("a") != "1" {
 		t.Errorf("expected a=1, got %s", qp.Get("a"))
 	}
-	
+
 	vals := qp.GetAll("b")
 	if !reflect.DeepEqual(vals, []string{"2", "3"}) {
 		t.Errorf("expected b=[2, 3], got %v", vals)

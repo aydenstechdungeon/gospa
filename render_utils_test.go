@@ -5,8 +5,8 @@ import (
 	"testing"
 	"time"
 
-	"github.com/valyala/fasthttp"
 	gofiber "github.com/gofiber/fiber/v3"
+	"github.com/valyala/fasthttp"
 )
 
 func TestValidatePublicHost(t *testing.T) {
@@ -108,7 +108,7 @@ func TestToJS(t *testing.T) {
 
 func TestGetWSUrl(t *testing.T) {
 	app := New(Config{
-		PublicOrigin: "https://example.com:8443",
+		PublicOrigin:  "https://example.com:8443",
 		WebSocketPath: "/wsx",
 	})
 	defer func() { _ = app.Fiber.Shutdown() }()
@@ -126,7 +126,7 @@ func TestGetWSUrl(t *testing.T) {
 
 func TestGetWSUrl_DevFallback(t *testing.T) {
 	app := New(Config{
-		DevMode: true,
+		DevMode:       true,
 		WebSocketPath: "/wsx",
 	})
 	defer func() { _ = app.Fiber.Shutdown() }()

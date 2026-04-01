@@ -8,8 +8,8 @@ import (
 
 func TestDefaultConfig(t *testing.T) {
 	// Set environment variable to ensure consistent test results
-	os.Setenv("GOSPA_WS_INSECURE", "1")
-	defer os.Unsetenv("GOSPA_WS_INSECURE")
+	_ = os.Setenv("GOSPA_WS_INSECURE", "1")
+	defer func() { _ = os.Unsetenv("GOSPA_WS_INSECURE") }()
 
 	config := DefaultConfig()
 

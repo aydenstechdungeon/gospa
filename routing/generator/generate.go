@@ -245,8 +245,6 @@ func parseFunctionParams(paramsStr string) []FuncParam {
 		return nil
 	}
 
-	var params []FuncParam
-
 	// Split by comma, but handle nested types like "map[string]interface{}"
 	depth := 0
 	current := ""
@@ -276,37 +274,28 @@ func parseFunctionParams(paramsStr string) []FuncParam {
 	}
 
 	// Parse each param: "name type" or "name1, name2 type"
-	for _, part := range parts {
-		// Split into name and type
-		fields := strings.Fields(part)
-		if len(fields) >= 2 {
-			// Last field(s) is the type, rest are names
-			typeStart := len(fields) - 1
-			for i := len(fields) - 2; i >= 0; i-- {
-				// Check if this looks like part of a type (e.g., "templ.Component", "[]string", "map[string]interface{}")
-				if strings.HasPrefix(fields[i], "*") ||
-					strings.HasPrefix(fields[i], "[]") ||
-					strings.HasPrefix(fields[i], "map[") ||
-					strings.Contains(fields[i], ".") ||
-					fields[i] == "chan" ||
-					fields[i] == "func" {
-					typeStart = i
-				} else {
-					break
-				}
-			}
+	var results []FuncParam
+	var currentType string
 
-			paramType := strings.Join(fields[typeStart:], " ")
-			for i := 0; i < typeStart; i++ {
-				params = append(params, FuncParam{
-					Name: fields[i],
-					Type: paramType,
-				})
-			}
+	// Process parts from right to left to propagate types correctly
+	for i := len(parts) - 1; i >= 0; i-- {
+		part := strings.TrimSpace(parts[i])
+		fields := strings.Fields(part)
+		if len(fields) == 0 {
+			continue
+		}
+
+		if len(fields) >= 2 {
+			// e.g. "lastName string" -> name: lastName, type: string
+			currentType = strings.Join(fields[1:], " ")
+			results = append([]FuncParam{{Name: fields[0], Type: currentType}}, results...)
+		} else {
+			// e.g. "firstName" (sharing type from right)
+			results = append([]FuncParam{{Name: fields[0], Type: currentType}}, results...)
 		}
 	}
 
-	return params
+	return results
 }
 
 // filePathToURLPath converts a file path to a URL path.
