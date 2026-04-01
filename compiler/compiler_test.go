@@ -328,3 +328,54 @@ func TestCompileDefaultsToIslandWithoutFrontMatter(t *testing.T) {
 		t.Fatalf("default island compile should generate TS output")
 	}
 }
+
+func TestValidateSafeScript(t *testing.T) {
+	tests := []struct {
+		name    string
+		script  string
+		wantErr bool
+	}{
+		{"empty script", "", false},
+		{"safe script", "var x = 1\nfmt.Println(x)", false},
+		{"unsafe import", "import \"os/exec\"\nfunc main() {}", true},
+		{"unsafe import rename", "import e \"os/exec\"\nfunc main() {}", true},
+		{"unsafe call direct", "import \"os/exec\"\nexec.Command(\"ls\")", true},
+		{"unsafe os writeFile", "import \"os\"\nos.WriteFile(\"test\", nil, 0644)", true},
+		{"invalid go script", "var x = ", true}, // Should fail go parsing
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			err := ValidateSafeScript(tt.script)
+			if (err != nil) != tt.wantErr {
+				t.Errorf("ValidateSafeScript() error = %v, wantErr %v", err, tt.wantErr)
+			}
+		})
+	}
+}
+
+func TestCompileLegacy(t *testing.T) {
+	c := NewCompiler()
+	templ, ts, err := c.CompileLegacy("MyLegacyIsland", "legacy-id", "<template><div>Legacy</div></template>", "legacy_pkg")
+	
+	if err != nil {
+		t.Fatalf("CompileLegacy failed: %v", err)
+	}
+
+	if !strings.Contains(templ, "package legacy_pkg") {
+		t.Errorf("Expected package legacy_pkg, got %s", templ)
+	}
+	
+	if !strings.Contains(templ, "MyLegacyIsland()") {
+		t.Errorf("Expected signature MyLegacyIsland(), got %s", templ)
+	}
+
+	if !strings.Contains(templ, "data-gospa-island=\"legacyid\"") {
+		t.Errorf("Expected sanitized island-id legacyid, got %s", templ)
+	}
+
+	if ts == "" {
+		t.Error("CompileLegacy should produce TS for an island by default")
+	}
+}
+
