@@ -415,22 +415,33 @@ type DeferredIsland struct {
 // Deferred renders a deferred island with a placeholder.
 func Deferred(name string, placeholder templ.Component, _ func() (templ.Component, error)) templ.Component {
 	return templ.ComponentFunc(func(ctx context.Context, w io.Writer) error {
-		// Render placeholder
+		// Render placeholder with data attribute for CSS transitions
 		if placeholder != nil {
 			if err := placeholder.Render(ctx, w); err != nil {
 				return err
 			}
 		}
 
-		// Add deferred loading marker
-		_, _ = fmt.Fprintf(w, `<script data-gospa-deferred="%s"></script>`, name)
+		// Add deferred loading marker with transition support
+		_, _ = fmt.Fprintf(w, `<div data-gospa-deferred="%s" data-gospa-deferred-loading="true"></div>`, name)
 
 		return nil
 	})
 }
 
+// SuspenseOptions holds options for Suspense component
+type SuspenseOptions struct {
+	ErrorFallback func(err error) templ.Component
+	Retry         bool
+}
+
 // Suspense renders content with a fallback while loading.
 func Suspense(loader func() (templ.Component, error), fallback templ.Component) templ.Component {
+	return SuspenseWithOptions(loader, fallback, nil)
+}
+
+// SuspenseWithOptions renders content with a fallback while loading, with custom options.
+func SuspenseWithOptions(loader func() (templ.Component, error), fallback templ.Component, opts *SuspenseOptions) templ.Component {
 	return templ.ComponentFunc(func(ctx context.Context, w io.Writer) error {
 		// Generate unique ID for this suspense boundary
 		id := fmt.Sprintf("suspense-%d", time.Now().UnixNano())
@@ -444,12 +455,34 @@ func Suspense(loader func() (templ.Component, error), fallback templ.Component) 
 		}
 		_, _ = w.Write([]byte(`</div>`))
 
+		// Add error container (hidden by default)
+		_, _ = fmt.Fprintf(w, `<div id="%s-error" data-gospa-suspense-error style="display:none"></div>`, id)
+
+		// Add retry button container if enabled
+		if opts != nil && opts.Retry {
+			_, _ = fmt.Fprintf(w, `<div id="%s-retry" style="display:none"><button data-gospa-suspense-retry="%s">Retry</button></div>`, id, id)
+		}
+
 		// Start async loading
 		go func() {
 			content, err := loader()
 			if err != nil {
 				// Stream error - ESCAPE for JS string context to prevent XSS
 				escapedErr := escapeJavaScriptString(err.Error())
+
+				// If error fallback is provided, render it
+				if opts != nil && opts.ErrorFallback != nil {
+					errComponent := opts.ErrorFallback(err)
+					var buf strings.Builder
+					if err := errComponent.Render(ctx, &buf); err != nil {
+						_, _ = fmt.Fprintf(w, `<script>__GOSPA_STREAM__({type:'error',id:'%s',content:'%s'})</script>`, id, escapedErr)
+						return
+					}
+					escapedContent := escapeJavaScriptString(buf.String())
+					_, _ = fmt.Fprintf(w, `<script>__GOSPA_STREAM__({type:'error',id:'%s',content:'%s'})</script>`, id, escapedContent)
+					return
+				}
+
 				_, _ = fmt.Fprintf(w, `<script>__GOSPA_STREAM__({type:'error',id:'%s',content:'%s'})</script>`, id, escapedErr)
 				return
 			}

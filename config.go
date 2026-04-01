@@ -192,10 +192,16 @@ type Config struct {
 	ISRSemaphoreLimit int
 	// ISRTimeout sets the maximum time for a background ISR revalidation.
 	ISRTimeout time.Duration
+
+	// IslandsBundlePath is the path to the islands bundle script.
+	IslandsBundlePath string
 }
 
 // DefaultConfig returns the default configuration.
 func DefaultConfig() Config {
+	enabled := true
+	color := "#667eea"
+	height := "3px"
 	return Config{
 		RoutesDir:                "./routes",
 		DevMode:                  false,
@@ -216,6 +222,14 @@ func DefaultConfig() Config {
 		NotificationBufferSize:   1024,
 		AllowInsecureWS:          os.Getenv("GOSPA_WS_INSECURE") == "1",
 		AllowPortsWithInsecureWS: []int{3000},
+		IslandsBundlePath:        "static/js/islands.js",
+		NavigationOptions: NavigationOptions{
+			ProgressBar: &NavigationProgressBarConfig{
+				Enabled: &enabled,
+				Color:   &color,
+				Height:  &height,
+			},
+		},
 	}
 }
 
@@ -241,4 +255,78 @@ func MinimalConfig() Config {
 	config.WSMaxReconnect = 0
 	config.WSHeartbeat = 0
 	return config
+}
+
+// ConfigOption is a functional option for configuring the app.
+type ConfigOption func(*Config)
+
+// WithAppName sets the application name.
+func WithAppName(name string) ConfigOption {
+	return func(c *Config) {
+		c.AppName = name
+	}
+}
+
+// WithDevMode enables development mode.
+func WithDevMode(enabled bool) ConfigOption {
+	return func(c *Config) {
+		c.DevMode = enabled
+	}
+}
+
+// WithPort sets the server port.
+func WithPort(port string) ConfigOption {
+	return func(_ *Config) {
+		// This is typically used with Run(), so we handle it there
+		_ = port
+	}
+}
+
+// WithWebSocket enables or disables WebSocket support.
+func WithWebSocket(enabled bool) ConfigOption {
+	return func(c *Config) {
+		c.EnableWebSocket = enabled
+	}
+}
+
+// WithWebSocketPath sets the WebSocket endpoint path.
+func WithWebSocketPath(path string) ConfigOption {
+	return func(c *Config) {
+		c.WebSocketPath = path
+	}
+}
+
+// WithRoutesDir sets the routes directory.
+func WithRoutesDir(dir string) ConfigOption {
+	return func(c *Config) {
+		c.RoutesDir = dir
+	}
+}
+
+// WithStaticDir sets the static files directory.
+func WithStaticDir(dir string) ConfigOption {
+	return func(c *Config) {
+		c.StaticDir = dir
+	}
+}
+
+// WithStaticPrefix sets the URL prefix for static files.
+func WithStaticPrefix(prefix string) ConfigOption {
+	return func(c *Config) {
+		c.StaticPrefix = prefix
+	}
+}
+
+// WithCacheTemplates enables template caching for SSG/ISR.
+func WithCacheTemplates(enabled bool) ConfigOption {
+	return func(c *Config) {
+		c.CacheTemplates = enabled
+	}
+}
+
+// WithLogger sets the logger.
+func WithLogger(logger *slog.Logger) ConfigOption {
+	return func(c *Config) {
+		c.Logger = logger
+	}
 }

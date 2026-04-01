@@ -1,6 +1,7 @@
 package cli
 
 import (
+	"encoding/json"
 	"fmt"
 	"os"
 	"os/exec"
@@ -37,6 +38,9 @@ func Doctor(config *DoctorConfig) {
 		checkAnyFile(".", []string{"package.json", "client/package.json"}, false, "Bun package manifest"),
 		checkLibrary("libwebp", false),
 		checkLibrary("libheif", false),
+		checkTemplVersion(),
+		checkBunVersion(),
+		checkIslandsBundle(),
 	}
 
 	hasFailure := false
@@ -156,4 +160,97 @@ func commandLabel(name string) string {
 		return "Command"
 	}
 	return strings.ToUpper(name[:1]) + name[1:]
+}
+
+func checkTemplVersion() doctorCheck {
+	cmd := exec.Command("go", "list", "-m", "-json", "github.com/a-h/templ")
+	output, err := cmd.Output()
+	if err != nil {
+		return doctorCheck{
+			Name:     "templ version",
+			Required: false,
+			Err:      fmt.Errorf("cannot check templ version: %v", err),
+		}
+	}
+
+	var mod struct {
+		Version string `json:"Version"`
+	}
+	if err := json.Unmarshal(output, &mod); err != nil {
+		return doctorCheck{
+			Name:     "templ version",
+			Required: false,
+			Err:      fmt.Errorf("cannot parse templ version: %v", err),
+		}
+	}
+
+	expectedVersion := "v0.3.1001"
+	if mod.Version != expectedVersion {
+		return doctorCheck{
+			Name:     "templ version",
+			Required: false,
+			Detail:   fmt.Sprintf("found %s (expected %s)", mod.Version, expectedVersion),
+		}
+	}
+
+	return doctorCheck{
+		Name:     "templ version",
+		Required: false,
+		Detail:   mod.Version,
+	}
+}
+
+func checkBunVersion() doctorCheck {
+	path, err := exec.LookPath("bun")
+	if err != nil {
+		return doctorCheck{
+			Name:     "Bun version",
+			Required: false,
+			Err:      fmt.Errorf("bun not found"),
+		}
+	}
+
+	cmd := exec.Command("bun", "--version")
+	output, err := cmd.Output()
+	if err != nil {
+		return doctorCheck{
+			Name:     "Bun version",
+			Required: false,
+			Err:      fmt.Errorf("cannot check bun version: %v", err),
+		}
+	}
+
+	version := strings.TrimSpace(string(output))
+	return doctorCheck{
+		Name:     "Bun version",
+		Required: false,
+		Detail:   fmt.Sprintf("%s at %s", version, path),
+	}
+}
+
+func checkIslandsBundle() doctorCheck {
+	islandsEntry := "generated/islands.ts"
+	islandsOutput := "static/js/islands.js"
+
+	if _, err := os.Stat(islandsEntry); os.IsNotExist(err) {
+		return doctorCheck{
+			Name:     "islands bundle",
+			Required: false,
+			Detail:   "no islands entry (optional)",
+		}
+	}
+
+	if _, err := os.Stat(islandsOutput); os.IsNotExist(err) {
+		return doctorCheck{
+			Name:     "islands bundle",
+			Required: false,
+			Err:      fmt.Errorf("islands entry exists but %s not built", islandsOutput),
+		}
+	}
+
+	return doctorCheck{
+		Name:     "islands bundle",
+		Required: false,
+		Detail:   islandsOutput,
+	}
 }
