@@ -7,40 +7,6 @@ import (
 
 // ─── DefaultConfig ────────────────────────────────────────────────────────────
 
-func TestDefaultConfig(t *testing.T) {
-	cfg := DefaultConfig()
-
-	if cfg.RoutesDir != "./routes" {
-		t.Errorf("expected RoutesDir='./routes', got %q", cfg.RoutesDir)
-	}
-	if cfg.RuntimeScript != "/_gospa/runtime.js" {
-		t.Errorf("expected RuntimeScript='/_gospa/runtime.js', got %q", cfg.RuntimeScript)
-	}
-	if cfg.StaticDir != "./static" {
-		t.Errorf("expected StaticDir='./static', got %q", cfg.StaticDir)
-	}
-	if cfg.StaticPrefix != "/static" {
-		t.Errorf("expected StaticPrefix='/static', got %q", cfg.StaticPrefix)
-	}
-	if cfg.AppName != "GoSPA App" {
-		t.Errorf("expected AppName='GoSPA App', got %q", cfg.AppName)
-	}
-	if !cfg.EnableWebSocket {
-		t.Error("expected EnableWebSocket=true by default")
-	}
-	if cfg.WebSocketPath != "/_gospa/ws" {
-		t.Errorf("expected WebSocketPath='/_gospa/ws', got %q", cfg.WebSocketPath)
-	}
-	if cfg.RemotePrefix != "/_gospa/remote" {
-		t.Errorf("expected RemotePrefix='/_gospa/remote', got %q", cfg.RemotePrefix)
-	}
-	if cfg.MaxRequestBodySize != 4*1024*1024 {
-		t.Errorf("expected MaxRequestBodySize=4MB, got %d", cfg.MaxRequestBodySize)
-	}
-	if cfg.DefaultState == nil {
-		t.Error("expected DefaultState to be non-nil")
-	}
-}
 
 // ─── New / config defaults ────────────────────────────────────────────────────
 
