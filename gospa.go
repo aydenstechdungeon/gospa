@@ -310,7 +310,21 @@ func (a *App) setupRoutes() {
 	a.Fiber.Post(a.Config.RemotePrefix+"/:name", rhAny[0], rhAny[1:]...)
 
 	if _, err := os.Stat(a.Config.StaticDir); err == nil {
-		a.Fiber.Use(a.Config.StaticPrefix, static.New(a.Config.StaticDir))
+		a.Fiber.Use(a.Config.StaticPrefix, static.New(a.Config.StaticDir, static.Config{
+			ModifyResponse: func(c fiberpkg.Ctx) error {
+				path := c.Path()
+				if strings.HasSuffix(path, ".js") || strings.HasSuffix(path, ".mjs") {
+					c.Set("Content-Type", "application/javascript")
+				} else if strings.HasSuffix(path, ".css") {
+					c.Set("Content-Type", "text/css")
+				} else if strings.HasSuffix(path, ".json") {
+					c.Set("Content-Type", "application/json")
+				} else if strings.HasSuffix(path, ".svg") {
+					c.Set("Content-Type", "image/svg+xml")
+				}
+				return nil
+			},
+		}))
 		a.Fiber.Get("/favicon.ico", func(c fiberpkg.Ctx) error {
 			favPath := a.Config.StaticDir + "/favicon.ico"
 			if _, err := os.Stat(favPath); err == nil {
