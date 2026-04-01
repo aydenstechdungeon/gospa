@@ -178,6 +178,7 @@ func loadConfigFromYaml(cfg *Config) {
 	cfg.Watch = pcfg.Watch
 	cfg.Minify = pcfg.Minify
 	cfg.SourceMap = pcfg.SourceMap
+	cfg.Plugins = pcfg.Plugins
 
 	// Merge critical CSS config
 	if pcfg.CriticalCSS.Enabled {
@@ -248,7 +249,7 @@ func (p *PostCSSPlugin) Dependencies() []plugin.Dependency {
 			Type: plugin.DepBun, Name: "autoprefixer", Version: "latest",
 		})
 	}
-	if p.config.Plugins.CSSNano {
+	if p.config.Plugins.CSSNano || p.config.Minify {
 		deps = append(deps, plugin.Dependency{
 			Type: plugin.DepBun, Name: "cssnano", Version: "latest",
 		})
@@ -625,7 +626,7 @@ export default {
 	}
 
 	// CSSNano for minification
-	if p.config.Plugins.CSSNano {
+	if p.config.Plugins.CSSNano || p.config.Minify {
 		content += `    'cssnano': {
       preset: ['default', { discardComments: { removeAll: true } }]
     },
