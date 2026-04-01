@@ -20,6 +20,10 @@ jobs:
         run: |
           sudo apt-get update
           sudo apt-get install -y libwebp-dev libheif-dev
+          go install github.com/a-h/templ/cmd/templ@latest
+
+      - name: Generate templ files
+        run: templ generate ./...
 
       - name: Go test
         run: |

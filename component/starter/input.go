@@ -1,5 +1,7 @@
 package starter
 
+import "github.com/a-h/templ"
+
 // InputType defines the type of input field
 type InputType string
 
@@ -73,7 +75,7 @@ type InputProps struct {
 	// Class is additional CSS classes
 	Class string
 	// Attributes are additional HTML attributes
-	Attributes map[string]string
+	Attributes templ.Attributes
 	// Min is the minimum value (for number/date inputs)
 	Min string
 	// Max is the maximum value (for number/date inputs)
@@ -145,6 +147,46 @@ func MergeInputProps(props InputProps) InputProps {
 		props.Size = defaults.Size
 	}
 	return props
+}
+
+// Input renders a text input with label and helper text
+func Input(props InputProps) templ.Component {
+	return inputTemplate(MergeInputProps(props))
+}
+
+// EmailInput is a convenience component for email inputs
+func EmailInput(props InputProps) templ.Component {
+	props.Type = InputEmail
+	return Input(props)
+}
+
+// PasswordInput is a convenience component for password inputs
+func PasswordInput(props InputProps) templ.Component {
+	props.Type = InputPassword
+	return Input(props)
+}
+
+// SearchInput is a convenience component for search inputs
+func SearchInput(props InputProps) templ.Component {
+	props.Type = InputSearch
+	return Input(props)
+}
+
+// NumberInput is a convenience component for number inputs
+func NumberInput(props InputProps) templ.Component {
+	props.Type = InputNumber
+	return Input(props)
+}
+
+// DateInput is a convenience component for date inputs
+func DateInput(props InputProps) templ.Component {
+	props.Type = InputDate
+	return Input(props)
+}
+
+// TextArea renders a multi-line text input
+func TextArea(props InputProps) templ.Component {
+	return textAreaTemplate(MergeInputProps(props))
 }
 
 // LabelClasses returns CSS classes for input labels

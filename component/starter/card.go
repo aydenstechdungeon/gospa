@@ -1,5 +1,7 @@
 package starter
 
+import "github.com/a-h/templ"
+
 // CardProps defines the properties for a card component
 type CardProps struct {
 	// ID is the unique identifier
@@ -21,7 +23,7 @@ type CardProps struct {
 	// Hover enables hover effects
 	Hover bool
 	// Attributes are additional HTML attributes
-	Attributes map[string]string
+	Attributes templ.Attributes
 }
 
 // CardHeaderProps defines properties for a card header

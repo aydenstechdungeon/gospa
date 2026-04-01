@@ -137,3 +137,52 @@ func MergeButtonProps(props ButtonProps) ButtonProps {
 	}
 	return props
 }
+
+// Button renders a button component
+func Button(props ButtonProps) templ.Component {
+	props = MergeButtonProps(props)
+	if props.Onclick != "" {
+		if props.Attributes == nil {
+			props.Attributes = make(templ.Attributes)
+		}
+		props.Attributes["onclick"] = props.Onclick
+	}
+	return buttonTemplate(props)
+}
+
+// PrimaryButton renders a primary button
+func PrimaryButton(props ButtonProps) templ.Component {
+	props.Variant = ButtonPrimary
+	return Button(props)
+}
+
+// SecondaryButton renders a secondary button
+func SecondaryButton(props ButtonProps) templ.Component {
+	props.Variant = ButtonSecondary
+	return Button(props)
+}
+
+// OutlineButton renders an outline button
+func OutlineButton(props ButtonProps) templ.Component {
+	props.Variant = ButtonOutline
+	return Button(props)
+}
+
+// GhostButton renders a ghost button
+func GhostButton(props ButtonProps) templ.Component {
+	props.Variant = ButtonGhost
+	return Button(props)
+}
+
+// DangerButton renders a danger button
+func DangerButton(props ButtonProps) templ.Component {
+	props.Variant = ButtonDanger
+	return Button(props)
+}
+
+// IconButton renders a button with only an icon
+func IconButton(props ButtonProps) templ.Component {
+	props = MergeButtonProps(props)
+	props.Class = "p-2 " + props.Class
+	return Button(props)
+}
