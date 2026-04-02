@@ -24,6 +24,8 @@ type Subscriber[T any] func(T)
 type Observable interface {
 	SubscribeAny(func(any)) Unsubscribe
 	GetAny() any
+	Version() uint64
+	ID() string
 }
 
 // Settable extends Observable for types that can be updated.
@@ -48,6 +50,7 @@ type Rune[T any] struct {
 	// dirty marks if the rune has uncommitted changes in batch mode
 	dirty     bool
 	nextSubID uint64
+	version   uint64
 }
 
 // runeIDCounter is used to generate unique IDs for runes
@@ -89,6 +92,14 @@ func (r *Rune[T]) GetAny() any {
 	return r.Get()
 }
 
+// Version returns the current version of the rune.
+// This is used for glitch-free derived recomputation.
+func (r *Rune[T]) Version() uint64 {
+	r.mu.RLock()
+	defer r.mu.RUnlock()
+	return r.version
+}
+
 // Set updates the rune's value and notifies all subscribers.
 // If the value is being batched, notification is deferred until the batch completes.
 // This is thread-safe and can be called concurrently.
@@ -101,6 +112,7 @@ func (r *Rune[T]) Set(value T) {
 	}
 	r.value = value
 	r.dirty = true
+	r.version++
 
 	// If we're in a batch, don't notify yet
 	if inBatch() {
@@ -243,6 +255,7 @@ func (r *Rune[T]) Update(fn func(T) T) {
 	}
 	r.value = newValue
 	r.dirty = true
+	r.version++
 
 	if inBatch() {
 		addToBatch(r)
