@@ -294,7 +294,17 @@ export class HMRClient {
 
     // Call custom update handler
     try {
-      await this.config.onUpdate(msg);
+      if (this.config.onUpdate) {
+        await this.config.onUpdate(msg);
+      }
+
+      // Default island HMR handling
+      if (
+        moduleId &&
+        (moduleId.startsWith("islands/") || moduleId.includes(".gospa"))
+      ) {
+        await this.handleIslandUpdate(moduleId);
+      }
 
       // Update version counter on success
       if (currentModule) {
@@ -347,6 +357,32 @@ export class HMRClient {
         }
       } else {
         module.exports[key] = value;
+      }
+    }
+  }
+
+  /**
+   * Handle hot update for an island component
+   */
+  private async handleIslandUpdate(moduleId: string): Promise<void> {
+    const islandName = moduleId.split("/").pop()?.replace(".gospa", "") || "";
+    if (!islandName) return;
+
+    console.log(`[HMR] Re-hydrating island instances: ${islandName}`);
+
+    // Access global island manager
+    const manager = (window as any).__GOSPA_ISLAND_MANAGER__;
+    if (manager && manager.get()) {
+      const gManager = manager.get();
+      const islands = gManager
+        .getIslands()
+        .filter((i: any) => i.name === islandName);
+
+      for (const island of islands) {
+        // Force re-hydration by clearing hydrated status
+        gManager.hydrated.delete(island.id);
+        gManager.pending.delete(island.id);
+        await gManager.hydrateIsland(island);
       }
     }
   }

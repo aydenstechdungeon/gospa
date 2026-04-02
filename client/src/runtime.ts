@@ -64,123 +64,98 @@ export {
 } from "./runtime-core.ts";
 
 // Export types
+import { registerBinding, unregisterBinding } from "./dom.ts";
+import { getFrameworkFeatures } from "./runtime-core.ts";
+import type { NavigateOptions, NavigationOptions } from "./navigation.ts";
+import type { StateMessage } from "./websocket.ts";
+
+// Lazy-loaded wrappers for feature-rich modules
+// This allows the standard runtime bundle to stay tiny while loading
+// heavier functionality only when used ("on demand").
+
+// Re-export types (static imports are fine for types as they are erased)
 export type {
   ComponentDefinition,
   ComponentInstance,
   RuntimeConfig,
 } from "./runtime-core.ts";
+export type { NavigateOptions, NavigationOptions };
+export type { StateMessage };
 export type { Unsubscribe } from "./state.ts";
 export type { RemoteOptions, RemoteResult } from "./remote.ts";
 
-import { registerBinding, unregisterBinding } from "./dom.ts";
-import {
-  on,
-  offAll,
-  debounce,
-  throttle,
-  delegate,
-  onKey,
-  keys,
-  transformers,
-} from "./events.ts";
-import {
-  WSClient,
-  initWebSocket,
-  getWebSocketClient,
-  sendAction,
-  syncedRune,
-  applyStateUpdate,
-  type StateMessage,
-} from "./websocket.ts";
-import { initIslands, getIslandManager, hydrateIsland } from "./island.ts";
-import { getPriorityScheduler, initPriorityHydration } from "./priority.ts";
-import { initStreaming, getStreamingManager } from "./streaming.ts";
-import { Resource, resourceReactive } from "./resource.ts";
-import {
-  navigate,
-  back,
-  forward,
-  go,
-  prefetch,
-  getCurrentPath,
-  isNavigating,
-  onBeforeNavigate,
-  onAfterNavigate,
-  initNavigation,
-  destroyNavigation,
-  createNavigationState,
-  setNavigationOptions,
-  type NavigateOptions,
-  type NavigationOptions,
-} from "./navigation.ts";
-import {
-  setupTransitions,
-  fade,
-  fly,
-  slide,
-  scale,
-  blur,
-  crossfade,
-} from "./transition.ts";
+// WebSocket
+export async function initWebSocket(config: any) {
+  const mod = await getFrameworkFeatures();
+  return mod.initWebSocket(config);
+}
 
-// Re-export DOM bindings
-export { registerBinding, unregisterBinding };
+export async function getWebSocketClient() {
+  const mod = await getFrameworkFeatures();
+  return mod.getWebSocketClient();
+}
 
-// Re-export events
-export { on, offAll, debounce, throttle, delegate, onKey, keys, transformers };
+export async function sendAction(name: string, payload?: any) {
+  const mod = await getFrameworkFeatures();
+  return mod.sendAction(name, payload);
+}
 
-// Re-export Core Functionality for library users
-export {
-  // WebSocket
-  WSClient,
-  initWebSocket,
-  getWebSocketClient,
-  sendAction,
-  syncedRune,
-  applyStateUpdate,
+// Navigation
+export async function navigate(to: string, options?: any) {
+  const mod = await getFrameworkFeatures();
+  return mod.navigate(to, options);
+}
 
-  // Transitions
-  fade,
-  fly,
-  slide,
-  scale,
-  blur,
-  crossfade,
-  setupTransitions,
+export async function back() {
+  const mod = await getFrameworkFeatures();
+  return mod.back();
+}
 
-  // Islands & Priority
-  initIslands,
-  getIslandManager,
-  hydrateIsland,
-  getPriorityScheduler,
-  initPriorityHydration,
+export async function prefetch(path: string) {
+  const mod = await getFrameworkFeatures();
+  return mod.prefetch(path);
+}
 
-  // Streaming
-  initStreaming,
-  getStreamingManager,
+// Islands & Priority
+export async function initIslands(config?: any) {
+  const mod = await getFrameworkFeatures();
+  return mod.initIslands(config);
+}
 
-  // Resources
-  Resource,
-  resourceReactive,
+export async function getIslandManager() {
+  const mod = await getFrameworkFeatures();
+  return mod.getIslandManager();
+}
 
-  // Navigation
-  navigate,
-  back,
-  forward,
-  go,
-  prefetch,
-  getCurrentPath,
-  isNavigating,
-  onBeforeNavigate,
-  onAfterNavigate,
-  initNavigation,
-  destroyNavigation,
-  createNavigationState,
-  setNavigationOptions,
-};
+export async function hydrateIsland(idOrName: string) {
+  const mod = await getFrameworkFeatures();
+  return mod.hydrateIsland(idOrName);
+}
 
-// Export types
-export type { NavigateOptions, NavigationOptions, StateMessage };
+// Streaming
+export async function initStreaming(config?: any) {
+  const mod = await getFrameworkFeatures();
+  return mod.initStreaming(config);
+}
+
+// Transitions
+export async function setupTransitions(root?: Element) {
+  const mod = await getFrameworkFeatures();
+  return mod.setupTransitions(root);
+}
+
+export const fade = async (el: Element, params?: any) =>
+  (await getFrameworkFeatures()).fade(el, params);
+export const fly = async (el: Element, params?: any) =>
+  (await getFrameworkFeatures()).fly(el, params);
+export const slide = async (el: Element, params?: any) =>
+  (await getFrameworkFeatures()).slide(el, params);
+export const scale = async (el: Element, params?: any) =>
+  (await getFrameworkFeatures()).scale(el, params);
+export const blur = async (el: Element, params?: any) =>
+  (await getFrameworkFeatures()).blur(el, params);
+export const crossfade = async (el: Element, params?: any) =>
+  (await getFrameworkFeatures()).crossfade(el, params);
 
 // Signal-based reactivity (proxy-based auto-tracking)
 export {
@@ -224,38 +199,28 @@ export {
 } from "./debug.ts";
 
 // WebSocket tab sharing (BroadcastChannel)
-export {
-  WSTabSync,
-  createTabSync,
-  getTabSync,
-  destroyTabSync,
-} from "./ws-tab-sync.ts";
+export async function createTabSync(config?: any) {
+  const mod = await getFrameworkFeatures();
+  return mod.createTabSync(config);
+}
 
 // IndexedDB persistence
-export {
-  IndexedDBPersistence,
-  createIndexedDBPersistence,
-  getIndexedDBPersistence,
-  destroyIndexedDBPersistence,
-} from "./indexeddb.ts";
+export async function createIndexedDBPersistence(config?: any) {
+  const mod = await getFrameworkFeatures();
+  return mod.createIndexedDBPersistence(config);
+}
 
 // Accessibility enhancements
-export {
-  ScreenReaderAnnouncer,
-  createAnnouncer,
-  getAnnouncer,
-  destroyAnnouncer,
-  announce,
-  aria,
-  focus,
-} from "./a11y.ts";
+export async function announce(
+  message: string,
+  politeness?: "polite" | "assertive",
+) {
+  const mod = await getFrameworkFeatures();
+  return mod.announce(message, politeness);
+}
 
 // Performance monitoring
-export {
-  PerformanceMonitor,
-  createPerformanceMonitor,
-  getPerformanceMonitor,
-  destroyPerformanceMonitor,
-  measure,
-  measureAsync,
-} from "./performance.ts";
+export async function measure(name: string, fn: any, metadata?: any) {
+  const mod = await getFrameworkFeatures();
+  return mod.measure(name, fn, metadata);
+}
