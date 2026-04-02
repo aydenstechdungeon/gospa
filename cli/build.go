@@ -223,6 +223,7 @@ func buildClientRuntime(config *BuildConfig, summary *BuildSummary) error {
 	return nil
 }
 
+// BuildIslands builds the islands TypeScript bundle into a single JavaScript file.
 func BuildIslands(config *BuildConfig, _ *BuildSummary) error {
 	// Check if generated islands entry exists
 	islandsEntry := "generated/islands.ts"
