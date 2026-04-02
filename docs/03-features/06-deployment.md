@@ -1,68 +1,82 @@
 # Deployment Guide
 
-Deploying a GoSPA application to production is very simple because GoSPA compiles your backend and HTML generators directly into a single lightweight Go executable. 
-
-This guide details best practices to run securely at scale.
+Deploying a GoSPA application to production is simple because GoSPA compiles your backend and HTML generators into a single lightweight Go executable.
 
 ## 1. Building the Application
 
-GoSPA incorporates a CLI pipeline to handle both your frontend typescript compilation and your backend templ/go files.
+GoSPA incorporates a CLI pipeline to handle both your frontend TypeScript compilation and your backend `templ`/Go files.
 
-To prepare a production build, run:
+To prepare a production build:
 ```bash
 gospa build
 ```
 
-For the recommended baseline, start from `gospa.DefaultConfig()`, set `DevMode = false`, make `AllowedOrigins` explicit, and keep CSRF protection enabled.
+This compiles `templ` outputs, executes client build tasks, and constructs a standalone Go binary usually located at `bin/app`.
 
-This compiles `templ` outputs, executes client build tasks, outputs it inside your binary (if opted using `go:embed`), and constructs a standalone Go binary usually ending up at `bin/app`.
+## 2. Environment Configuration
 
-## 2. Environment Considerations
+GoSPA uses environment variables to drive production behavior:
 
-Always ensure `/bin/app` executes with explicit Production variables. A standard production context limits detailed error overlays. 
+- `GOSPA_ENV=production`: Enables production optimizations (template caching, minification).
+- `JWT_SECRET`: (If using Auth plugin) A secure, random string (min 32 chars).
+- `PUBLIC_ORIGIN`: Your public URL (e.g., `https://myapp.com`). Required for secure WebSockets.
 
-Ensure you enable HSTS flags and run your application exclusively over TLS / HTTPS.
+## 3. Security Hardening
 
-## 3. Production Deployment with Docker
+- **HTTPS Only**: Always serve early over TLS.
+- **CSRF Protection**: Enabled by default; the `csrf_token` cookie is `HttpOnly`.
+- **Content Security Policy**: Use `fiber.StrictContentSecurityPolicy()`.
+- **Allowed Origins**: Be explicit in production configs.
 
-Most apps running GoSPA thrive via Docker. Below is an optimal lightweight multi-stage `Dockerfile`:
+## 4. Containerization (Docker)
+
+Optimal lightweight multi-stage `Dockerfile`:
 
 ```dockerfile
 # Stage 1: Build
-FROM golang:1.24-alpine AS builder
+FROM golang:1.25-alpine AS builder
+RUN apk add --no-cache nodejs npm
+RUN npm install -g bun
 
 WORKDIR /app
 COPY go.mod go.sum ./
 RUN go mod download
 
 COPY . .
-# We assume gospa build has run, or you can integrate it locally
+RUN bun install
+RUN gospa build
 RUN go build -o main .
 
-# Stage 2: Prod 
+# Stage 2: Prod
 FROM alpine:latest
 WORKDIR /root/
-COPY --from=builder /app/main . 
-EXPOSE 3000
+COPY --from=builder /app/main .
+COPY --from=builder /app/static ./static
+COPY --from=builder /app/routes ./routes
 
+EXPOSE 3000
 CMD ["./main"]
 ```
 
-## 4. Production WebSockets and CDN Handling
+## 5. Scaling & Reverse Proxies
 
-When hooking GoSPA behind Nginx, standard cloud balancing setups (AWS/GCP), or an edge CDN (Cloudflare), remember to proxy WebSocket upgrades continuously.
+For multi-instance deployments (Kubernetes, Prefork), use external storage:
 
-Additionally, handle rate limits. GoSPA will natively enforce per-IP WebSocket and action limits, but large ingress networks spoof IPs unless you actively forward using `X-Forwarded-For`.
-
-
-## 5. Pre-Release Validation
-
-Before tagging a release, run:
-
-```bash
-bun check
-go test ./...
-./scripts/validate-examples.sh
+```go
+config := gospa.ProductionConfig()
+config.Storage = redisStore.New(...)
+config.PubSub = redisPubSub.New(...)
 ```
 
-This catches runtime drift, stale examples, and Go/Bun integration issues before deployment.
+### Nginx Configuration
+Ensure you handle WebSocket upgrades:
+
+```nginx
+location /_gospa/ws {
+    proxy_pass http://app:3000;
+    proxy_http_version 1.1;
+    proxy_set_header Upgrade $http_upgrade;
+    proxy_set_header Connection "Upgrade";
+    proxy_set_header Host $host;
+}
+```

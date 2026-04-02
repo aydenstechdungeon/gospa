@@ -42,7 +42,7 @@ type subEntry[T any] struct {
 type Rune[T any] struct {
 	mu          sync.RWMutex
 	value       T
-	subscribers []subEntry[T]
+	subscribers map[uint64]subEntry[T]
 	// ID uniquely identifies this rune for client-side synchronization
 	id string
 	// dirty marks if the rune has uncommitted changes in batch mode
@@ -69,7 +69,7 @@ func generateRuneID() string {
 func NewRune[T any](initial T) *Rune[T] {
 	return &Rune[T]{
 		value:       initial,
-		subscribers: make([]subEntry[T], 0),
+		subscribers: make(map[uint64]subEntry[T]),
 		id:          generateRuneID(),
 		nextSubID:   1,
 	}
@@ -110,8 +110,10 @@ func (r *Rune[T]) Set(value T) {
 	}
 
 	// Copy subscribers to avoid holding lock during callbacks
-	subs := make([]subEntry[T], len(r.subscribers))
-	copy(subs, r.subscribers)
+	subs := make([]subEntry[T], 0, len(r.subscribers))
+	for _, sub := range r.subscribers {
+		subs = append(subs, sub)
+	}
 	r.dirty = false
 	r.mu.Unlock()
 
@@ -155,18 +157,13 @@ func (r *Rune[T]) Subscribe(fn Subscriber[T]) Unsubscribe {
 	id := r.nextSubID
 	r.nextSubID++
 
-	r.subscribers = append(r.subscribers, subEntry[T]{id: id, fn: fn})
+	r.subscribers[id] = subEntry[T]{id: id, fn: fn}
 
 	// Return unsubscribe function
 	return func() {
 		r.mu.Lock()
 		defer r.mu.Unlock()
-		for i, sub := range r.subscribers {
-			if sub.id == id {
-				r.subscribers = append(r.subscribers[:i], r.subscribers[i+1:]...)
-				break
-			}
-		}
+		delete(r.subscribers, id)
 	}
 }
 
@@ -201,8 +198,10 @@ func (r *Rune[T]) notifySubscribers() {
 		return
 	}
 	value := r.value
-	subs := make([]subEntry[T], len(r.subscribers))
-	copy(subs, r.subscribers)
+	subs := make([]subEntry[T], 0, len(r.subscribers))
+	for _, sub := range r.subscribers {
+		subs = append(subs, sub)
+	}
 	r.dirty = false
 	r.mu.Unlock()
 
@@ -234,14 +233,12 @@ func (r *Rune[T]) MarshalJSON() ([]byte, error) {
 //	})
 func (r *Rune[T]) Update(fn func(T) T) {
 	r.mu.Lock()
-	oldValue := r.value
-	r.mu.Unlock()
+	defer r.mu.Unlock()
 
+	oldValue := r.value
 	newValue := fn(oldValue)
 
-	r.mu.Lock()
 	if equal(r.value, newValue) {
-		r.mu.Unlock()
 		return
 	}
 	r.value = newValue
@@ -249,16 +246,22 @@ func (r *Rune[T]) Update(fn func(T) T) {
 
 	if inBatch() {
 		addToBatch(r)
-		r.mu.Unlock()
 		return
 	}
 
-	subs := make([]subEntry[T], len(r.subscribers))
-	copy(subs, r.subscribers)
+	subs := make([]func(T), 0, len(r.subscribers))
+	for _, s := range r.subscribers {
+		subs = append(subs, s.fn)
+	}
 	r.dirty = false
-	r.mu.Unlock()
 
-	r.notify(subs, newValue)
+	// We must release the lock before calling subscribers to avoid deadlocks
+	// but the value update is now atomic relative to other Updates.
+	r.mu.Unlock()
+	for _, fn := range subs {
+		fn(newValue)
+	}
+	r.mu.Lock() // Relock for defer Unlock
 }
 
 // equal compares two values of any type for equality using reflection.

@@ -20,6 +20,7 @@ import (
 	"time"
 
 	"github.com/aydenstechdungeon/gospa/plugin"
+	"github.com/aydenstechdungeon/gospa/store"
 	json "github.com/goccy/go-json"
 	"github.com/gofiber/fiber/v3"
 	"github.com/golang-jwt/jwt/v5"
@@ -41,7 +42,13 @@ func (p *AuthPlugin) VerifyTOTP() fiber.Handler { return p.VerifyOTPHandler() }
 //
 //nolint:revive // changing name would break API
 type AuthPlugin struct {
-	config *Config
+	config  *Config
+	storage store.Storage
+}
+
+// SetStorage sets the storage backend for the plugin.
+func (p *AuthPlugin) SetStorage(s store.Storage) {
+	p.storage = s
 }
 
 // Config holds auth plugin configuration.
@@ -353,7 +360,26 @@ func (p *AuthPlugin) VerifyOTPHandler() fiber.Handler {
 			return c.Status(fiber.StatusBadRequest).JSON(fiber.Map{"error": "invalid request"})
 		}
 
-		if p.VerifyOTP(req.Secret, req.Code) {
+		// RATE LIMITING PROTECTION: Add basic per-user rate limit for OTP attempts.
+		// Identity is verified by matching the requester's session user ID with the target client ID.
+		if u, ok := c.Locals("user").(*User); ok && p.storage != nil {
+			limitKey := "gospa:auth:otp_limit:" + u.ID
+			var count int
+			if b, err := p.storage.Get(limitKey); err == nil {
+				count, _ = strconv.Atoi(string(b))
+			}
+			if count >= 5 {
+				return c.Status(429).JSON(fiber.Map{"error": "too many attempts. please wait."})
+			}
+			// Verification check
+			if p.VerifyOTP(req.Secret, req.Code) {
+				_ = p.storage.Delete(limitKey)
+				return c.JSON(fiber.Map{"success": true})
+			}
+			// Increment count
+			count++
+			_ = p.storage.Set(limitKey, []byte(strconv.Itoa(count)), 5*time.Minute)
+		} else if p.VerifyOTP(req.Secret, req.Code) {
 			return c.JSON(fiber.Map{"success": true})
 		}
 		return c.Status(fiber.StatusUnauthorized).JSON(fiber.Map{"success": false, "error": "invalid OTP code"})
@@ -382,6 +408,11 @@ func DefaultConfig() *Config {
 		panic("JWT_SECRET environment variable is not set. " +
 			"Generate a secure secret with: openssl rand -hex 32 " +
 			"and set it in your environment before starting the application in production.")
+	}
+
+	if jwtSecret != "" && len(jwtSecret) < 32 {
+		panic("JWT_SECRET must be at least 32 characters for HS256 security. " +
+			"Generate a secure secret with: openssl rand -hex 32")
 	}
 
 	// Use provided secret or generate one for development only
@@ -601,6 +632,9 @@ func getJWTSecret() []byte {
 		panic("JWT_SECRET environment variable is not set. " +
 			"Generate a secure secret with: openssl rand -hex 32 " +
 			"and set it in your environment before starting the application.")
+	}
+	if len(secret) < 32 {
+		panic("JWT_SECRET must be at least 32 characters for HS256 security.")
 	}
 	return []byte(secret)
 }

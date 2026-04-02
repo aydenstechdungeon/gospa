@@ -49,7 +49,7 @@ func startStateNotificationDispatcher() {
 			workerCount = 2
 		}
 		stateNotificationQueue = make(chan stateNotification, notificationQueueSize)
-		for range workerCount {
+		for i := 0; i < workerCount; i++ {
 			go func() {
 				for notification := range stateNotificationQueue {
 					safelyRunStateNotification(notification)
@@ -57,6 +57,16 @@ func startStateNotificationDispatcher() {
 			}()
 		}
 	})
+}
+
+// ShutdownStateNotificationDispatcher stops the notification dispatcher and waits for
+// pending notifications to be processed (best effort).
+func ShutdownStateNotificationDispatcher() {
+	if stateNotificationQueue != nil {
+		close(stateNotificationQueue)
+		stateNotificationQueue = nil
+		stateDispatchOnce = sync.Once{} // Allow restart for tests
+	}
 }
 
 func safelyRunStateNotification(notification stateNotification) {

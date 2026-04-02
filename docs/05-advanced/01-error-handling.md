@@ -86,7 +86,7 @@ The main error type for application errors.
 ### Creating Errors
 
 ```go
-import "github.com/gospa/gospa/fiber"
+import "github.com/aydenstechdungeon/gospa/fiber"
 
 // Basic error
 err := fiber.NewAppError(fiber.ErrorCodeNotFound, "User not found")

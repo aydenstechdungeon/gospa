@@ -17,7 +17,7 @@ type Derived[T any] struct {
 	mu          sync.RWMutex
 	value       T
 	compute     func() T
-	subscribers []subEntry[T]
+	subscribers map[uint64]subEntry[T]
 	// deps tracks the observables this derived value depends on
 	deps []dependency
 	// dirty marks if dependencies have changed and value needs recomputation
@@ -45,7 +45,7 @@ type dependency struct {
 func NewDerived[T any](compute func() T) *Derived[T] {
 	d := &Derived[T]{
 		compute:     compute,
-		subscribers: make([]subEntry[T], 0),
+		subscribers: make(map[uint64]subEntry[T]),
 		deps:        make([]dependency, 0),
 		id:          generateRuneID(),
 		dirty:       true,
@@ -69,8 +69,10 @@ func (d *Derived[T]) recompute() {
 		d.value = newValue
 		changed = true
 		if len(d.subscribers) > 0 {
-			subs = make([]subEntry[T], len(d.subscribers))
-			copy(subs, d.subscribers)
+			subs = make([]subEntry[T], 0, len(d.subscribers))
+			for _, sub := range d.subscribers {
+				subs = append(subs, sub)
+			}
 		}
 	}
 	d.dirty = false
@@ -123,17 +125,12 @@ func (d *Derived[T]) Subscribe(fn Subscriber[T]) Unsubscribe {
 	id := d.nextSubID
 	d.nextSubID++
 
-	d.subscribers = append(d.subscribers, subEntry[T]{id: id, fn: fn})
+	d.subscribers[id] = subEntry[T]{id: id, fn: fn}
 
 	return func() {
 		d.mu.Lock()
 		defer d.mu.Unlock()
-		for i, sub := range d.subscribers {
-			if sub.id == id {
-				d.subscribers = append(d.subscribers[:i], d.subscribers[i+1:]...)
-				break
-			}
-		}
+		delete(d.subscribers, id)
 	}
 }
 
@@ -192,6 +189,14 @@ func sameObservable(a, b Observable) bool {
 // changes. recompute() is invoked without holding d.mu (it acquires it
 // internally) to avoid a deadlock with the caller's subscription goroutine.
 func (d *Derived[T]) markDirty() {
+	d.mu.Lock()
+	if d.dirty {
+		d.mu.Unlock()
+		return
+	}
+	d.dirty = true
+	d.mu.Unlock()
+
 	// Recompute immediately — this sets dirty=false, computes the new value,
 	// takes a snapshot of current subscribers, and fires notify() in a goroutine.
 	d.recompute()

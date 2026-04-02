@@ -2195,7 +2195,7 @@ The `BaseComponent` is the foundation for all GoSPA components.
 ### Creating a Component
 
 ```go
-import "github.com/gospa/gospa/component"
+import "github.com/aydenstechdungeon/gospa/component"
 
 // Create a basic component
 comp := component.NewBaseComponent("my-component")
@@ -2676,8 +2676,8 @@ import (
     "context"
     "fmt"
 
-    "github.com/gospa/gospa/component"
-    "github.com/gospa/gospa/state"
+    "github.com/aydenstechdungeon/gospa/component"
+    "github.com/aydenstechdungeon/gospa/state"
 )
 
 // Custom component
@@ -10263,7 +10263,7 @@ The main error type for application errors.
 ### Creating Errors
 
 ```go
-import "github.com/gospa/gospa/fiber"
+import "github.com/aydenstechdungeon/gospa/fiber"
 
 // Basic error
 err := fiber.NewAppError(fiber.ErrorCodeNotFound, "User not found")
