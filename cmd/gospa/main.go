@@ -50,8 +50,9 @@ func main() {
 		arch := fs.String("arch", "", "Target GOARCH")
 		minify := fs.Bool("minify", true, "Minify client assets")
 		compress := fs.Bool("compress", true, "Precompress static assets")
+		cgo := fs.Bool("cgo", false, "Enable CGO for the Go binary build")
 		_ = fs.Parse(os.Args[2:])
-		cfg := &cli.BuildConfig{OutputDir: *out, Minify: *minify, Compress: *compress}
+		cfg := &cli.BuildConfig{OutputDir: *out, Minify: *minify, Compress: *compress, CGO: *cgo}
 		if *platform != "" {
 			cfg.Platform = *platform
 		}
