@@ -225,11 +225,17 @@ func buildClientRuntime(config *BuildConfig, summary *BuildSummary) error {
 
 // BuildIslands builds the islands TypeScript bundle into a single JavaScript file.
 func BuildIslands(config *BuildConfig, _ *BuildSummary) error {
-	// Check if generated islands entry exists
 	islandsEntry := "generated/islands.ts"
+	outputDir := filepath.Join("static", "js")
+	outputPath := filepath.Join(outputDir, "islands.js")
+
 	if _, err := os.Stat(islandsEntry); os.IsNotExist(err) {
-		// No islands to build
-		return nil
+		// Ensure the directory exists
+		if err := os.MkdirAll(outputDir, 0750); err != nil {
+			return err
+		}
+		// Write a minimal no-op file to avoid 404 in layouts
+		return os.WriteFile(outputPath, []byte("// No islands registered\nexport {};\n"), 0600)
 	}
 
 	// Check if bun is available
@@ -241,11 +247,11 @@ func BuildIslands(config *BuildConfig, _ *BuildSummary) error {
 	_ = bunPath // already recorded by buildClientRuntime
 
 	// Build to the project's static dir so it's served at /static/js/islands.js
-	outputDir := filepath.Join("static", "js")
+	outputDir = filepath.Join("static", "js")
 	if err := os.MkdirAll(outputDir, 0750); err != nil {
 		return err
 	}
-	outputPath := filepath.Join(outputDir, "islands.js")
+	outputPath = filepath.Join(outputDir, "islands.js")
 
 	// Run bun build with the islands entry
 	// Externalize @gospa/runtime since it's already loaded via script tag

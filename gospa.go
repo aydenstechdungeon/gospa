@@ -214,6 +214,9 @@ func applyDefaultConfig(config *Config) {
 	if config.WSConnBurst == 0 {
 		config.WSConnBurst = 15.0
 	}
+	if config.IslandsBundlePath == "" {
+		config.IslandsBundlePath = "static/js/islands.js"
+	}
 }
 
 func validateAndLogConfig(config *Config) {
