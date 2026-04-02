@@ -540,6 +540,7 @@ func (a *App) setupMiddleware() {
 	}
 	preloadConfig := fiber.DefaultPreloadConfig()
 	preloadConfig.RuntimeScript = a.getRuntimePath()
+	preloadConfig.CSSLinks = a.Config.PreloadCSS
 	a.Fiber.Use(fiber.PreloadHeadersMiddleware(preloadConfig))
 
 	spaConfig := fiber.DefaultConfig()

@@ -265,7 +265,9 @@ type PreloadConfig struct {
 	WebSocketScript  string
 	CoreScript       string
 	MicroScript      string
-	Enabled          bool
+	// CSSLinks contains stylesheets to preload with high priority
+	CSSLinks []string
+	Enabled  bool
 }
 
 // DefaultPreloadConfig returns the default preload configuration.
@@ -295,48 +297,39 @@ func PreloadHeadersMiddleware(config PreloadConfig) gofiber.Handler {
 		}
 
 		var links []string
-		// Preload explicit core files only if they are set and not empty
+		// 1. Prioritize CSS preloads with high fetchpriority
+		for _, css := range config.CSSLinks {
+			links = append(links, fmt.Sprintf("<%s>; rel=preload; as=style", css))
+		}
+
+		// 2. Preload explicit core files
 		if config.CoreScript != "" {
 			links = append(links, fmt.Sprintf("<%s>; rel=modulepreload", config.CoreScript))
 		}
 		if config.RuntimeScript != "" {
 			links = append(links, fmt.Sprintf("<%s>; rel=modulepreload", config.RuntimeScript))
 		}
-		if config.NavigationScript != "" {
-			links = append(links, fmt.Sprintf("<%s>; rel=modulepreload", config.NavigationScript))
-		}
-		if config.WebSocketScript != "" {
-			links = append(links, fmt.Sprintf("<%s>; rel=modulepreload", config.WebSocketScript))
-		}
 
-		// Automatically discover and preload GoSPA internal runtime chunks if they aren't already included.
-		// We filter these to avoid preloading large optional assets like DOMPurify or unused
-		// runtime variants (e.g. not preloading runtime-simple if using the full runtime).
+		// 3. Automatically discover and preload GoSPA internal runtime chunks
+		// We limit this to a small number of chunks to avoid saturating HTTP/1.1 connections
+		count := 0
 		for _, chunk := range embed.RuntimeChunks() {
+			if count >= 2 { // Cap at 2 additional chunks for performance
+				break
+			}
 			chunkPath := fmt.Sprintf("/_gospa/%s", chunk)
 
-			// Skip purification chunks by default - they are large and usually lazy-loaded
-			// by runtime-secure only when actually needed (often during idle time).
-			if strings.HasPrefix(chunk, "purify") {
+			// Skip heavy/optional chunks
+			if strings.HasPrefix(chunk, "purify") || strings.HasPrefix(chunk, "runtime-micro") {
 				continue
 			}
 
-			// Skip other runtime entry points that aren't the one currently configured.
-			// This prevents preloading runtime-simple when using the full runtime, etc.
-			// We keep runtime-core and shared helper chunks (sm, qx).
-			if (strings.HasPrefix(chunk, "runtime-") || chunk == "runtime.js") &&
-				chunk != "runtime-core.js" &&
-				!strings.HasPrefix(chunk, "runtime-sm") &&
-				!strings.HasPrefix(chunk, "runtime-qx") {
-
-				base := strings.TrimSuffix(chunk, ".js")
-				if !strings.Contains(config.RuntimeScript, "/"+base+".") &&
-					!strings.HasSuffix(config.RuntimeScript, "/"+chunk) {
-					continue
-				}
+			// Preload core-related chunks only
+			if !strings.HasPrefix(chunk, "runtime-core") && !strings.HasPrefix(chunk, "runtime-sm") && !strings.HasPrefix(chunk, "runtime-qx") {
+				continue
 			}
 
-			// Skip if we already added it explicitly (prevents duplicates)
+			// Skip if already added
 			alreadyAdded := false
 			for _, link := range links {
 				if strings.Contains(link, chunkPath) {
@@ -346,13 +339,14 @@ func PreloadHeadersMiddleware(config PreloadConfig) gofiber.Handler {
 			}
 			if !alreadyAdded {
 				links = append(links, fmt.Sprintf("<%s>; rel=modulepreload", chunkPath))
+				count++
 			}
 		}
 
 		if len(links) > 0 {
-			// Limit the number of links to prevent oversized headers (capped at 12 for safety)
-			if len(links) > 12 {
-				links = links[:12]
+			// Hard cap of 6 links to fit within standard browser connection limits per host
+			if len(links) > 6 {
+				links = links[:6]
 			}
 			c.Set("Link", strings.Join(links, ", "))
 		}
