@@ -106,17 +106,10 @@ func BuildWithConfig(config *BuildConfig) (*BuildSummary, error) {
 	fmt.Println("Generating TypeScript types...")
 	runGenerate()
 
-	// Step 2.5: Build islands bundle (generated island modules)
-	fmt.Println("Building islands bundle...")
-	if err := BuildIslands(config, summary); err != nil {
-		fmt.Fprintf(os.Stderr, "Warning: islands build failed: %v\n", err)
-		// Non-fatal — islands just won't have client-side hydration
-	}
-
-	// Step 3: Build client runtime
-	fmt.Println("Building client runtime...")
-	if err := buildClientRuntime(config, summary); err != nil {
-		return nil, fmt.Errorf("failed to build client runtime: %w", err)
+	// Step 3: Unified Bun Build (Runtime + Islands)
+	fmt.Println("Building client assets (Runtime & Islands)...")
+	if err := unifiedClientBuild(config, summary); err != nil {
+		fmt.Fprintf(os.Stderr, "Warning: Unified client build failed: %v\n", err)
 	}
 
 	// Step 3.5: Ensure dependencies are tidied after generation
@@ -165,10 +158,37 @@ func BuildWithConfig(config *BuildConfig) (*BuildSummary, error) {
 	return summary, nil
 }
 
-func buildClientRuntime(config *BuildConfig, summary *BuildSummary) error {
+func unifiedClientBuild(config *BuildConfig, summary *BuildSummary) error {
 	clientDir := "client"
-	if _, err := os.Stat(clientDir); os.IsNotExist(err) {
-		// No client directory, skip
+	islandsEntry := "generated/islands.ts"
+	outputDir := filepath.Join(config.OutputDir, "static", "js")
+
+	// Collect entry points
+	entries := []string{}
+
+	// 1. Runtime Entry
+	runtimeEntry := ""
+	for _, candidate := range []string{"src/runtime.ts", "src/index.ts", "src/main.ts"} {
+		if _, err := os.Stat(filepath.Join(clientDir, candidate)); err == nil {
+			runtimeEntry = filepath.Join(clientDir, candidate)
+			entries = append(entries, runtimeEntry)
+			break
+		}
+	}
+
+	// 2. Secure Runtime Entry
+	if _, err := os.Stat(filepath.Join(clientDir, "src/runtime-secure.ts")); err == nil {
+		entries = append(entries, filepath.Join(clientDir, "src/runtime-secure.ts"))
+	}
+
+	// 3. Islands Entry
+	isIslandsExist := false
+	if _, err := os.Stat(islandsEntry); err == nil {
+		entries = append(entries, islandsEntry)
+		isIslandsExist = true
+	}
+
+	if len(entries) == 0 {
 		return nil
 	}
 
@@ -180,36 +200,32 @@ func buildClientRuntime(config *BuildConfig, summary *BuildSummary) error {
 	}
 	summary.BunPath = bunPath
 
-	// Locate the entry point — prefer src/runtime.ts, fall back to src/index.ts
-	entryPoint := ""
-	for _, candidate := range []string{"src/runtime.ts", "src/index.ts", "src/main.ts"} {
-		if _, err := os.Stat(filepath.Join(clientDir, candidate)); err == nil {
-			entryPoint = candidate
-			break
-		}
-	}
-	if entryPoint == "" {
-		fmt.Println("Warning: no client entry point found (src/runtime.ts, src/index.ts, src/main.ts), skipping client build")
-		return nil
-	}
-
-	// Build the client runtime
-	outputPath := filepath.Join(config.OutputDir, "static", "js", "runtime.js")
-	if err := os.MkdirAll(filepath.Dir(outputPath), 0750); err != nil {
+	// Prepare output directory
+	if err := os.MkdirAll(outputDir, 0750); err != nil {
 		return err
 	}
 
-	// Run bun build
-	args := []string{"build", entryPoint, "--outfile", outputPath}
+	// Run unified bun build
+	args := []string{
+		"build",
+	}
+	args = append(args, entries...)
+	args = append(args,
+		"--outdir", outputDir,
+		"--target", "browser",
+		"--format", "esm",
+		"--splitting",
+	)
+
 	if config.Minify {
 		args = append(args, "--minify")
 	}
 	if config.SourceMap && !config.NoSourceMap {
 		args = append(args, "--source-map")
 	}
+
 	// #nosec //nolint:gosec // bunPath is safe executable from LookPath
 	cmd := exec.Command(bunPath, args...)
-	cmd.Dir = clientDir
 	cmd.Stdout = os.Stdout
 	cmd.Stderr = os.Stderr
 	cmd.Env = append(os.Environ(), "NODE_ENV="+config.Env)
@@ -219,65 +235,28 @@ func buildClientRuntime(config *BuildConfig, summary *BuildSummary) error {
 	}
 
 	summary.ClientRuntimeBuilt = true
-	summary.ClientRuntimePath = outputPath
+	summary.ClientRuntimePath = filepath.Join(outputDir, "runtime.js")
+	if isIslandsExist {
+		fmt.Printf("✓ Client assets and Islands bundle built in %s\n", outputDir)
+	} else {
+		fmt.Printf("✓ Client runtime built in %s\n", outputDir)
+	}
+
 	return nil
 }
 
 // BuildIslands builds the islands TypeScript bundle into a single JavaScript file.
-func BuildIslands(config *BuildConfig, _ *BuildSummary) error {
-	islandsEntry := "generated/islands.ts"
-	outputDir := filepath.Join("static", "js")
-	outputPath := filepath.Join(outputDir, "islands.js")
-
-	if _, err := os.Stat(islandsEntry); os.IsNotExist(err) {
-		// Ensure the directory exists
-		if err := os.MkdirAll(outputDir, 0750); err != nil {
-			return err
+func BuildIslands(config *BuildConfig, summary *BuildSummary) error {
+	if config == nil {
+		config = &BuildConfig{
+			OutputDir: ".",
+			Env:       "development",
 		}
-		// Write a minimal no-op file to avoid 404 in layouts
-		return os.WriteFile(outputPath, []byte("// No islands registered\nexport {};\n"), 0600)
 	}
-
-	// Check if bun is available
-	bunPath, err := exec.LookPath("bun")
-	if err != nil {
-		fmt.Println("Warning: bun not found, skipping islands build")
-		return nil
+	if summary == nil {
+		summary = &BuildSummary{}
 	}
-	_ = bunPath // already recorded by buildClientRuntime
-
-	// Build to the project's static dir so it's served at /static/js/islands.js
-	outputDir = filepath.Join("static", "js")
-	if err := os.MkdirAll(outputDir, 0750); err != nil {
-		return err
-	}
-	outputPath = filepath.Join(outputDir, "islands.js")
-
-	// Run bun build with the islands entry
-	// Externalize @gospa/runtime since it's already loaded via script tag
-	args := []string{
-		"build", islandsEntry,
-		"--outfile", outputPath,
-		"--target", "browser",
-		"--format", "esm",
-		"--external", "@gospa/runtime",
-	}
-	if config.Minify {
-		args = append(args, "--minify")
-	}
-	// #nosec //nolint:gosec // bunPath is safe executable from LookPath
-	cmd := exec.Command(bunPath, args...)
-	cmd.Dir = "." // project root
-	cmd.Stdout = os.Stdout
-	cmd.Stderr = os.Stderr
-	cmd.Env = append(os.Environ(), "NODE_ENV="+config.Env)
-
-	if err := cmd.Run(); err != nil {
-		return fmt.Errorf("bun build islands failed: %w", err)
-	}
-
-	fmt.Printf("✓ Islands bundle built: %s\n", outputPath)
-	return nil
+	return unifiedClientBuild(config, summary)
 }
 
 func buildGoBinary(config *BuildConfig) (string, error) {

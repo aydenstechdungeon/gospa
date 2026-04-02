@@ -274,7 +274,6 @@ type PreloadConfig struct {
 func DefaultPreloadConfig() PreloadConfig {
 	return PreloadConfig{
 		RuntimeScript: "/_gospa/runtime.js",
-		CoreScript:    "/_gospa/runtime-core.js",
 		Enabled:       true,
 	}
 }
@@ -324,8 +323,8 @@ func PreloadHeadersMiddleware(config PreloadConfig) gofiber.Handler {
 				continue
 			}
 
-			// Preload core-related chunks only
-			if !strings.HasPrefix(chunk, "runtime-core") && !strings.HasPrefix(chunk, "runtime-sm") && !strings.HasPrefix(chunk, "runtime-qx") {
+			// Preload core-related chunks only (hashed chunks like runtime-[hash].js)
+			if !strings.HasPrefix(chunk, "runtime-") || strings.HasPrefix(chunk, "runtime-secure") {
 				continue
 			}
 

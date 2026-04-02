@@ -169,10 +169,9 @@ export function getSetup(name: string): IslandSetupFn | undefined {
 let isInitialized = false;
 let config: RuntimeConfig = {};
 
-// Lazy-loaded modules
-let wsModule: Promise<typeof import("./websocket.ts")> | null = null;
-let navModule: Promise<typeof import("./navigation.ts")> | null = null;
-let transitionModule: Promise<typeof import("./transition.ts")> | null = null;
+// Lazy-loaded aggregate features bundle
+let featuresModule: Promise<typeof import("./framework-features.ts")> | null =
+  null;
 
 /**
  * Initialize the GoSPA runtime.
@@ -189,9 +188,9 @@ export function init(userConfig: Partial<RuntimeConfig> = {}): void {
   isInitialized = true;
   config = { ...config, ...userConfig };
 
-  // Initialize WebSocket if URL provided (lazy load)
+  // Initialize WebSocket if URL provided (lazy load via aggregate)
   if (config.wsUrl) {
-    wsModule = import("./websocket.ts").then((mod) => {
+    featuresModule = import("./framework-features.ts").then((mod) => {
       const ws = mod.initWebSocket({
         url: config.wsUrl!,
         onMessage: handleServerMessage,
@@ -572,20 +571,22 @@ export function autoInit(): void {
   });
 }
 
-// Lazy module loaders
+// Lazy module loaders using the aggregate bundle
+export async function getFrameworkFeatures() {
+  if (!featuresModule) featuresModule = import("./framework-features.ts");
+  return featuresModule;
+}
+
 export async function getWebSocket() {
-  if (!wsModule) wsModule = import("./websocket.ts");
-  return wsModule;
+  return getFrameworkFeatures();
 }
 
 export async function getNavigation() {
-  if (!navModule) navModule = import("./navigation.ts");
-  return navModule;
+  return getFrameworkFeatures();
 }
 
 export async function getTransitions() {
-  if (!transitionModule) transitionModule = import("./transition.ts");
-  return transitionModule;
+  return getFrameworkFeatures();
 }
 
 // Auto-initialize on DOM ready
@@ -603,9 +604,10 @@ if (typeof document !== "undefined") {
 function registerNavigationCleanup(): void {
   if (typeof window === "undefined") return;
 
-  Promise.all([import("./navigation.ts"), import("./island.ts")])
-    .then(([nav, island]) => {
-      nav.onBeforeNavigate(() => {
+  // Lazy load framework features for navigation cleanup
+  getFrameworkFeatures()
+    .then((mod) => {
+      mod.onBeforeNavigate(() => {
         // Cleanup component instances
         for (const [id] of components) {
           destroyComponent(id);
@@ -613,12 +615,12 @@ function registerNavigationCleanup(): void {
         globalState.clear();
 
         // Cleanup island manager resources
-        island.getIslandManager()?.destroy();
+        mod.getIslandManager()?.destroy();
       });
 
       // Re-discover islands after navigation completed
       document.addEventListener("gospa:navigated", () => {
-        island.getIslandManager()?.discoverIslands();
+        mod.getIslandManager()?.discoverIslands();
       });
     })
     .catch(() => {

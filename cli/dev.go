@@ -35,11 +35,13 @@ func Dev(config *DevConfig) {
 	}
 
 	// Initial generation
-	fmt.Println("Generating files...")
+	fmt.Println("Generating files (Development Mode)...")
 	if err := regenerateTempl(); err != nil {
 		fmt.Fprintf(os.Stderr, "Warning: templ regeneration failed: %v\n", err)
 	}
-	runGenerate()
+	Generate(&GenerateConfig{
+		DevMode: true,
+	})
 	_ = BuildIslands(nil, nil)
 
 	// Use defaults if config is nil
@@ -431,7 +433,10 @@ func handleFileChange(_ context.Context, event FileEvent, restartCh chan struct{
 
 	// Generate types
 	if strings.HasSuffix(event.File, ".go") || strings.HasSuffix(event.File, ".templ") || strings.HasSuffix(event.File, ".gospa") {
-		runGenerate()
+		// Run generate in development mode to enable HMR cache-busting
+		Generate(&GenerateConfig{
+			DevMode: true,
+		})
 		_ = BuildIslands(nil, nil)
 	}
 }
