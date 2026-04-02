@@ -374,7 +374,7 @@ export class SSEClient {
     this.reconnectAttempts++;
     const delay = Math.min(
       this.config.reconnectDelay *
-      Math.pow(this.config.backoffMultiplier, this.reconnectAttempts - 1),
+        Math.pow(this.config.backoffMultiplier, this.reconnectAttempts - 1),
       this.config.maxReconnectDelay,
     );
 

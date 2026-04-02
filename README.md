@@ -99,6 +99,7 @@ For prefork deployments, add external `Storage` and `PubSub` backends so state a
 - **Authoritative Markdown:** [`docs/README.md`](docs/README.md) (table of contents for the `docs/` tree)
 - **Config & API:** [`docs/04-api-reference/02-configuration.md`](docs/04-api-reference/02-configuration.md), [`docs/04-api-reference/01-core-api.md`](docs/04-api-reference/01-core-api.md)
 - **Production:** [Production checklist](docs/03-features/08-production-checklist.md), [Security](docs/03-features/04-security.md)
+- **Examples & Benchmarks:** [GospaSvKitBenchmark](https://github.com/aydenstechdungeon/GospaSvKitBenchmark) [not complete]
 
 ## Community & Support
 
