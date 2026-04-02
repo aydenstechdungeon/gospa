@@ -13,7 +13,7 @@ import (
 )
 
 // Version is the current version of GoSPA.
-const Version = "0.1.33"
+const Version = "0.1.34"
 
 // Serialization formats
 const (

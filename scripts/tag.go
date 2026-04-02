@@ -2,6 +2,7 @@
 package main
 
 import (
+	"flag"
 	"fmt"
 	"io/fs"
 	"os"
@@ -12,11 +13,15 @@ import (
 )
 
 func main() {
-	if len(os.Args) < 2 {
-		fmt.Println("Usage: go run scripts/tag.go <tag>")
+	var skipTag bool
+	flag.BoolVar(&skipTag, "skip-tag", false, "only update version in code, skip git commit, tag and push")
+	flag.Parse()
+
+	if len(flag.Args()) < 1 {
+		fmt.Println("Usage: go run scripts/tag.go [-skip-tag] <tag>")
 		os.Exit(1)
 	}
-	newTag := os.Args[1]
+	newTag := flag.Arg(0)
 	if !strings.HasPrefix(newTag, "v") {
 		fmt.Println("Error: tag must start with 'v' (e.g. v0.1.0)")
 		os.Exit(1)
@@ -25,7 +30,7 @@ func main() {
 
 	// Check if git is clean
 	cleanOut, _ := exec.Command("git", "status", "--porcelain").Output()
-	if len(cleanOut) > 0 {
+	if !skipTag && len(cleanOut) > 0 {
 		fmt.Println("Error: git working directory is not clean. Please commit or stash changes before tagging.")
 		os.Exit(1)
 	}
@@ -113,6 +118,11 @@ func main() {
 			fmt.Println("Warning: go mod tidy failed:", err)
 		}
 
+		if skipTag {
+			fmt.Println("\nSkipping git commit/tag/push as requested (-skip-tag).")
+			return
+		}
+
 		// Commit
 		if err := exec.Command("git", "add", "-A").Run(); err != nil {
 			fmt.Println("Error: git add failed:", err)
@@ -129,6 +139,10 @@ func main() {
 		}
 	} else if oldTag == newTag {
 		fmt.Println("Tag", newTag, "is already the latest tag.")
+	}
+
+	if skipTag {
+		return
 	}
 
 	branchOut, _ := exec.Command("git", "rev-parse", "--abbrev-ref", "HEAD").Output()
