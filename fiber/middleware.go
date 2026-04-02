@@ -114,7 +114,7 @@ func StateMiddleware(config Config) gofiber.Handler {
 		// In dev mode, also inject islands.js if not already present and the file exists
 		if config.DevMode && !strings.Contains(bodyStr, "/static/js/islands.js") {
 			if _, err := os.Stat("static/js/islands.js"); err == nil {
-				stateScript += `<script src="/static/js/islands.js"></script>`
+				stateScript += `<script src="/static/js/islands.js" type="module"></script>`
 			}
 		}
 
