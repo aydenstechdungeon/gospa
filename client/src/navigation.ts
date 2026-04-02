@@ -154,6 +154,7 @@ interface CachedURL {
 const parsedURLCache = new Map<string, CachedURL>();
 const hoverPrefetchTimers = new Map<string, number>();
 let prefetchObserver: IntersectionObserver | null = null;
+const pendingRequests = new Map<string, Promise<PageData | null>>();
 let clickDelegateContainer: Element | Document = document;
 
 export function setNavigationOptions(config: NavigationOptions): void {
@@ -389,66 +390,71 @@ async function fetchPageFromServer(
   path: string,
   signal?: AbortSignal,
 ): Promise<PageData | null> {
-  try {
-    const response = await fetch(path, {
-      signal,
-      headers: {
-        "X-Requested-With": "GoSPA-Navigate",
-        Accept: "text/html",
-      },
-    });
-
-    if (!response.ok) {
-      console.error("[GoSPA] Navigation failed:", response.status);
-      return null;
-    }
-
-    // Security & Robustness Phase: Validate Content-Type
-    // If the server unexpectedly returned JSON, an image, or binary data, abort SPA navigation.
-    // This prevents attempting to parse non-HTML data, which causes fatal JS errors.
-    const contentType = response.headers.get("content-type");
-    if (contentType && !contentType.includes("text/html")) {
-      console.warn(
-        `[GoSPA] Intercepted non-HTML response (${contentType}) for path ${path}. Falling back to standard navigation.`,
-      );
-      return null;
-    }
-
-    const html = await response.text();
-
-    // Parse the HTML response
-    const parser = new DOMParser();
-    const doc = parser.parseFromString(html, "text/html");
-
-    // Extract content
-    let content: string;
-
-    const rootEl = doc.querySelector("[data-gospa-root]");
-    const pageContentEl = doc.querySelector("[data-gospa-page-content]");
-    const mainEl = doc.querySelector("main");
-
-    if (rootEl) {
-      content = rootEl.innerHTML;
-    } else if (pageContentEl) {
-      content = pageContentEl.innerHTML;
-    } else if (mainEl) {
-      content = mainEl.innerHTML;
-    } else {
-      content = doc.body.innerHTML;
-    }
-
-    // Extract title
-    const title = doc.querySelector("title")?.textContent || "";
-
-    // Extract head elements (for head management)
-    const headEl = doc.querySelector("head");
-    const head = headEl ? headEl.innerHTML : "";
-
-    return { content, title, head };
-  } catch (error) {
-    console.error("[GoSPA] Navigation error:", error);
-    return null;
+  const existing = pendingRequests.get(path);
+  if (existing) {
+    return existing;
   }
+
+  const request = (async () => {
+    try {
+      const response = await fetch(path, {
+        signal,
+        headers: {
+          "X-Requested-With": "GoSPA-Navigate",
+          Accept: "text/html",
+        },
+      });
+
+      if (!response.ok) {
+        console.error("[GoSPA] Navigation failed:", response.status);
+        return null;
+      }
+
+      const contentType = response.headers.get("content-type");
+      if (contentType && !contentType.includes("text/html")) {
+        console.warn(
+          `[GoSPA] Intercepted non-HTML response (${contentType}) for path ${path}. Falling back to standard navigation.`,
+        );
+        return null;
+      }
+
+      const html = await response.text();
+
+      const parser = new DOMParser();
+      const doc = parser.parseFromString(html, "text/html");
+
+      let content: string;
+
+      const rootEl = doc.querySelector("[data-gospa-root]");
+      const pageContentEl = doc.querySelector("[data-gospa-page-content]");
+      const mainEl = doc.querySelector("main");
+
+      if (rootEl) {
+        content = rootEl.innerHTML;
+      } else if (pageContentEl) {
+        content = pageContentEl.innerHTML;
+      } else if (mainEl) {
+        content = mainEl.innerHTML;
+      } else {
+        content = doc.body.innerHTML;
+      }
+
+      const title = doc.querySelector("title")?.textContent || "";
+
+      const headEl = doc.querySelector("head");
+      const head = headEl ? headEl.innerHTML : "";
+
+      return { content, title, head };
+    } catch (error) {
+      console.error("[GoSPA] Navigation error:", error);
+      return null;
+    } finally {
+      pendingRequests.delete(path);
+    }
+  })();
+
+  pendingRequests.set(path, request);
+  return request;
 }
 
 // Get page data (from cache or server)
@@ -551,7 +557,7 @@ function patchNode(currentNode: Node, incomingNode: Node): void {
     (currentNode.id && currentNode.id !== incomingNode.id) ||
     (incomingNode.id && currentNode.id !== incomingNode.id) ||
     currentNode.getAttribute("data-gospa-page") !==
-    incomingNode.getAttribute("data-gospa-page")
+      incomingNode.getAttribute("data-gospa-page")
   ) {
     currentNode.parentNode?.replaceChild(
       incomingNode.cloneNode(true),
@@ -646,8 +652,10 @@ async function updateDOM(data: PageData, pageContent: string): Promise<void> {
   const targetEl = rootEl || contentEl || mainEl || document.body;
   await initNewContent(targetEl);
 
-  // Update active links
-  updateActiveLinks();
+  // Defer non-critical updates to idle time to reduce INP
+  runOnIdle(() => {
+    updateActiveLinks();
+  });
 
   // Focus management for accessibility
   const focusTarget = document.querySelector(
@@ -1089,8 +1097,9 @@ export async function navigate(
 
       // Set loading state on container
       const container =
-        document.querySelector("[data-gospa-page-content], [data-gospa-root]") ||
-        document.body;
+        document.querySelector(
+          "[data-gospa-page-content], [data-gospa-root]",
+        ) || document.body;
       container.setAttribute("data-gospa-loading", "true");
 
       // Store scroll position of the OLD path (before we update state.currentPath)
@@ -1122,8 +1131,9 @@ export async function navigate(
     } catch (error) {
       progressBar.finish();
       const container =
-        document.querySelector("[data-gospa-page-content], [data-gospa-root]") ||
-        document.body;
+        document.querySelector(
+          "[data-gospa-page-content], [data-gospa-root]",
+        ) || document.body;
       container.removeAttribute("data-gospa-loading");
 
       if ((error as Error).name === "AbortError") {
@@ -1198,18 +1208,20 @@ function handlePopState(_event: PopStateEvent): void {
     .then((data) => {
       if (data) {
         state.currentPath = path;
-        performDOMUpdateWithTransitions(data, { scrollToTop: false }).then(() => {
-          progressBar.finish();
-          // Restore scroll position for historical paths
-          const savedPos = scrollPositions.get(path);
-          if (savedPos !== undefined) {
-            window.scrollTo(0, savedPos);
-          }
-          afterNavCallbacks.forEach((cb) => cb(path));
-          document.dispatchEvent(
-            new CustomEvent("gospa:navigated", { detail: { path } }),
-          );
-        });
+        performDOMUpdateWithTransitions(data, { scrollToTop: false }).then(
+          () => {
+            progressBar.finish();
+            // Restore scroll position for historical paths
+            const savedPos = scrollPositions.get(path);
+            if (savedPos !== undefined) {
+              window.scrollTo(0, savedPos);
+            }
+            afterNavCallbacks.forEach((cb) => cb(path));
+            document.dispatchEvent(
+              new CustomEvent("gospa:navigated", { detail: { path } }),
+            );
+          },
+        );
       } else {
         progressBar.finish();
         container.removeAttribute("data-gospa-loading");
@@ -1262,9 +1274,22 @@ function handleLinkClick(event: MouseEvent): void {
   void navigate(href);
 }
 
+function shouldPrefetch(): boolean {
+  const connection = (navigator as any).connection;
+  if (!connection) return true;
+  if (connection.saveData) return false;
+  if (
+    connection.effectiveType === "slow-2g" ||
+    connection.effectiveType === "2g"
+  ) {
+    return false;
+  }
+  return true;
+}
+
 function setupSpeculativePrefetching(): void {
   const cfg = navigationOptionsConfig.speculativePrefetching;
-  if (!cfg.enabled) return;
+  if (!cfg.enabled || !shouldPrefetch()) return;
 
   if ("IntersectionObserver" in window) {
     prefetchObserver?.disconnect();

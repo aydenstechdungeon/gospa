@@ -244,9 +244,9 @@
             navigationOptions: {
                 speculativePrefetching: {
                     enabled: true,
-                    ttl: 45000,
-                    hoverDelay: 80,
-                    viewportMargin: 220,
+                    ttl: 60000,
+                    hoverDelay: 50,
+                    viewportMargin: 400,
                 },
                 serviceWorkerNavigationCaching: {
                     enabled: true,
