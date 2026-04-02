@@ -1,10 +1,5 @@
 import { describe, expect, it, mock, beforeEach, afterEach } from "bun:test";
-import {
-  SSEClient,
-  SSEManager,
-  getSSEManager,
-  createSSEClient,
-} from "./sse";
+import { SSEClient, SSEManager, getSSEManager, createSSEClient } from "./sse";
 
 // Mock EventSource globally
 class MockEventSource {
@@ -76,7 +71,7 @@ describe("SSEClient", () => {
 
     originalWindow = (globalThis as any).window;
     (globalThis as any).window = {
-      location: { origin: "http://localhost" }
+      location: { origin: "http://localhost" },
     };
 
     MockEventSource.lastInstance = null;
