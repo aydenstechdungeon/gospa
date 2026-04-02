@@ -25,6 +25,9 @@ type Derived[T any] struct {
 	// id uniquely identifies this derived value
 	id        string
 	nextSubID uint64
+	version   uint64
+	// lastDepVersions stores the version of each dependency when last computed
+	lastDepVersions map[string]uint64
 }
 
 // dependency represents a dependency on an observable
@@ -44,12 +47,13 @@ type dependency struct {
 //	})
 func NewDerived[T any](compute func() T) *Derived[T] {
 	d := &Derived[T]{
-		compute:     compute,
-		subscribers: make(map[uint64]subEntry[T]),
-		deps:        make([]dependency, 0),
-		id:          generateRuneID(),
-		dirty:       true,
-		nextSubID:   1,
+		compute:         compute,
+		subscribers:     make(map[uint64]subEntry[T]),
+		deps:            make([]dependency, 0),
+		id:              generateRuneID(),
+		dirty:           true,
+		nextSubID:       1,
+		lastDepVersions: make(map[string]uint64),
 	}
 	// Compute initial value
 	d.recompute()
@@ -68,6 +72,7 @@ func (d *Derived[T]) recompute() {
 	if !equal(d.value, newValue) {
 		d.value = newValue
 		changed = true
+		d.version++ // Increment version on change
 		if len(d.subscribers) > 0 {
 			subs = make([]subEntry[T], 0, len(d.subscribers))
 			for _, sub := range d.subscribers {
@@ -75,6 +80,12 @@ func (d *Derived[T]) recompute() {
 			}
 		}
 	}
+
+	// Update snapshot of dependency versions
+	for _, dep := range d.deps {
+		d.lastDepVersions[dep.observable.ID()] = dep.observable.Version()
+	}
+
 	d.dirty = false
 	d.mu.Unlock()
 
@@ -96,18 +107,34 @@ func (d *Derived[T]) recompute() {
 // If dependencies have changed, it recomputes first.
 func (d *Derived[T]) Get() T {
 	d.mu.RLock()
-	if !d.dirty {
-		defer d.mu.RUnlock()
-		return d.value
+	stale := d.dirty
+	if !stale {
+		for _, dep := range d.deps {
+			if dep.observable.Version() > d.lastDepVersions[dep.observable.ID()] {
+				stale = true
+				break
+			}
+		}
 	}
 	d.mu.RUnlock()
 
-	// Need to recompute
-	d.recompute()
+	if stale {
+		d.recompute()
+	}
 
 	d.mu.RLock()
 	defer d.mu.RUnlock()
 	return d.value
+}
+
+// Version returns the current version of the derived value.
+func (d *Derived[T]) Version() uint64 {
+	d.mu.RLock()
+	// During a Version call, we might want to check if we are stale too?
+	// But usually Version is used for dependency checking.
+	// We can trust the last version if we are not being recomputed.
+	defer d.mu.RUnlock()
+	return d.version
 }
 
 // GetAny returns the current value of the derivative as an interface{}.
