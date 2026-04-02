@@ -51,12 +51,12 @@ func TestDefaultConfig_PanicsWithoutJWTWhenProduction(t *testing.T) {
 }
 
 func TestDefaultConfig_GOEnvProductionUsesJWTSecret(t *testing.T) {
-	t.Setenv("JWT_SECRET", "unit-test-jwt-secret")
+	t.Setenv("JWT_SECRET", "unit-test-jwt-secret-at-least-32-characters")
 	t.Setenv("GO_ENV", "production")
 	t.Setenv("GOSPA_ENV", "")
 
 	cfg := DefaultConfig()
-	if cfg.JWTSecret != "unit-test-jwt-secret" {
+	if cfg.JWTSecret != "unit-test-jwt-secret-at-least-32-characters" {
 		t.Fatalf("expected JWT from env, got %q", cfg.JWTSecret)
 	}
 }
