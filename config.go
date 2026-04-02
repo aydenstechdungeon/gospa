@@ -195,6 +195,8 @@ type Config struct {
 
 	// IslandsBundlePath is the path to the islands bundle script.
 	IslandsBundlePath string
+	// PreloadCSS contains paths to CSS files that should be preloaded with high priority.
+	PreloadCSS []string
 }
 
 // DefaultConfig returns the default configuration.
