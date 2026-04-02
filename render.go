@@ -300,7 +300,7 @@ runtime.init({
 			islandsPath = "static/js/islands.js"
 		}
 		if _, err := os.Stat(islandsPath); err == nil {
-			_, _ = fmt.Fprintf(w, `<script src="/%s"></script>`, islandsPath)
+			_, _ = fmt.Fprintf(w, `<script src="/%s"></script>`, html.EscapeString(islandsPath))
 		}
 
 		// Centralized State Registry

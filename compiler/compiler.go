@@ -252,6 +252,12 @@ func (c *GospaCompiler) Compile(opts CompileOptions, input string) (templ, ts st
 	if err != nil {
 		return "", "", err
 	}
+
+	if opts.SafeMode {
+		if err := c.validateTemplateNodes(nodes); err != nil {
+			return "", "", fmt.Errorf("safe mode violation in template: %w", err)
+		}
+	}
 	transformedTemplate := c.codegenTemplate(nodes, hash)
 
 	// 4. Generate Templ with Scoped CSS
@@ -1001,6 +1007,59 @@ func (c *GospaCompiler) generateStaticTempl(name, template, script, hash, pkgNam
 	templ := c.generateIslandTempl(name, "", template, script, hash, pkgName, props, templTypesSnippet)
 	templ = strings.Replace(templ, "\n\t<div data-gospa-island=\"\" class=\""+hash+"\">\n\t\t", "\n\t\t", 1)
 	return strings.Replace(templ, "\n\t</div>\n}\n", "\n}\n", 1)
+}
+
+func (c *GospaCompiler) validateTemplateNodes(nodes []sfc.Node) error {
+	for _, node := range nodes {
+		var err error
+		switch n := node.(type) {
+		case *sfc.ElementNode:
+			for _, attr := range n.Attributes {
+				if attr.IsExpression {
+					if err = ValidateSafeScript(attr.Value); err != nil {
+						return fmt.Errorf("attribute %q: %w", attr.Name, err)
+					}
+				}
+			}
+			err = c.validateTemplateNodes(n.Children)
+		case *sfc.ExpressionNode:
+			err = ValidateSafeScript(n.Content)
+		case *sfc.IfNode:
+			if err = ValidateSafeScript(n.Condition); err != nil {
+				return err
+			}
+			if err = c.validateTemplateNodes(n.Then); err != nil {
+				return err
+			}
+			for _, elseif := range n.ElseIfs {
+				if err = ValidateSafeScript(elseif.Condition); err != nil {
+					return err
+				}
+				if err = c.validateTemplateNodes(elseif.Then); err != nil {
+					return err
+				}
+			}
+			err = c.validateTemplateNodes(n.Else)
+		case *sfc.EachNode:
+			if err = ValidateSafeScript(n.Iteratee); err != nil {
+				return err
+			}
+			err = c.validateTemplateNodes(n.Children)
+		case *sfc.ComponentNode:
+			for _, attr := range n.Attributes {
+				if attr.IsExpression {
+					if err = ValidateSafeScript(attr.Value); err != nil {
+						return fmt.Errorf("component attribute %q: %w", attr.Name, err)
+					}
+				}
+			}
+			err = c.validateTemplateNodes(n.Children)
+		}
+		if err != nil {
+			return err
+		}
+	}
+	return nil
 }
 
 func (c *GospaCompiler) generateTS(islandID, script string, fromGo bool, _ string, hash string) string {

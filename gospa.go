@@ -146,9 +146,12 @@ func New(config Config) *App {
 
 	app.setupMiddleware()
 
-	if defaultApp == nil {
-		defaultApp = app
-	}
+	var defaultOnce sync.Once
+	defaultOnce.Do(func() {
+		if defaultApp == nil {
+			defaultApp = app
+		}
+	})
 
 	return app
 }
@@ -157,7 +160,10 @@ func applyDefaultConfig(config *Config) {
 	if config.AppName == "" {
 		config.AppName = "GoSPA Application"
 	}
-	if !config.EnableWebSocket && config.WebSocketPath == "" {
+	if !config.EnableWebSocket && config.WebSocketPath == "" && config.DefaultState == nil {
+		// Only re-enable if it looks like a zero-value Config was passed,
+		// but don't override explicit disabling in MinimalConfig().
+		// If it's already false and path is empty, we set defaults but keep it disabled.
 		config.EnableWebSocket = true
 	}
 	if config.RoutesDir == "" {
@@ -313,13 +319,14 @@ func (a *App) setupRoutes() {
 		a.Fiber.Use(a.Config.StaticPrefix, static.New(a.Config.StaticDir, static.Config{
 			ModifyResponse: func(c fiberpkg.Ctx) error {
 				path := c.Path()
-				if strings.HasSuffix(path, ".js") || strings.HasSuffix(path, ".mjs") {
+				switch {
+				case strings.HasSuffix(path, ".js"), strings.HasSuffix(path, ".mjs"):
 					c.Set("Content-Type", "application/javascript")
-				} else if strings.HasSuffix(path, ".css") {
+				case strings.HasSuffix(path, ".css"):
 					c.Set("Content-Type", "text/css")
-				} else if strings.HasSuffix(path, ".json") {
+				case strings.HasSuffix(path, ".json"):
 					c.Set("Content-Type", "application/json")
-				} else if strings.HasSuffix(path, ".svg") {
+				case strings.HasSuffix(path, ".svg"):
 					c.Set("Content-Type", "image/svg+xml")
 				}
 				return nil

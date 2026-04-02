@@ -21,6 +21,10 @@ plugins:
           criticalOutput: static/css/website.critical.css
           nonCriticalOutput: static/css/website.non-critical.css
           inlineMaxSize: 40960
+          criticalContent:
+            - routes/root_layout.templ
+            - routes/page.templ
+            - components/hero.templ
       - name: docs
         input: styles/docs.css
         output: static/css/docs.css
@@ -29,3 +33,7 @@ plugins:
           criticalOutput: static/css/docs.critical.css
           nonCriticalOutput: static/css/docs.non-critical.css
           inlineMaxSize: 40960
+          criticalContent:
+            - routes/root_layout.templ
+            - routes/docs/layout.templ
+            - routes/docs/page.templ

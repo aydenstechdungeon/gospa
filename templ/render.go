@@ -5,6 +5,7 @@ import (
 	"context"
 	"fmt"
 	"io"
+	"sort"
 	"strings"
 
 	"github.com/a-h/templ"
@@ -689,13 +690,9 @@ func (h *HeadManager) Render() templ.Component {
 	// Sort by priority (higher first)
 	sorted := make([]HeadElement, len(h.elements))
 	copy(sorted, h.elements)
-	for i := 0; i < len(sorted)-1; i++ {
-		for j := i + 1; j < len(sorted); j++ {
-			if sorted[j].Priority > sorted[i].Priority {
-				sorted[i], sorted[j] = sorted[j], sorted[i]
-			}
-		}
-	}
+	sort.Slice(sorted, func(i, j int) bool {
+		return sorted[i].Priority > sorted[j].Priority
+	})
 
 	return templ.ComponentFunc(func(_ context.Context, w io.Writer) error {
 		for _, el := range sorted {

@@ -20,11 +20,11 @@ func (a *App) storePprShell(key string, shell []byte) {
 	defer a.pprShellMu.Unlock()
 
 	maxEntries := a.Config.SSGCacheMaxEntries
-	if maxEntries <= 0 {
+	if maxEntries == 0 {
 		maxEntries = 500
 	}
 
-	if len(a.pprShellCache) >= maxEntries && len(a.pprShellKeys) > 0 {
+	if maxEntries > 0 && len(a.pprShellCache) >= maxEntries && len(a.pprShellKeys) > 0 {
 		evictCount := maxEntries / 10
 		if evictCount < 1 {
 			evictCount = 1

@@ -3,11 +3,13 @@
 package postcss
 
 import (
+	"bytes"
 	"context"
 	"fmt"
 	"os"
 	"os/exec"
 	"path/filepath"
+	"regexp"
 	"strings"
 	"sync"
 
@@ -60,6 +62,10 @@ type CriticalCSSConfig struct {
 	// InlineMaxSize is the max size (in bytes) for inlining critical CSS.
 	// Default: 14KB (gzip) for single round-trip.
 	InlineMaxSize int `yaml:"inlineMaxSize" json:"inlineMaxSize"`
+	// CriticalContent lists template file paths/globs (e.g., "../routes/*.templ")
+	// whose classes are above-the-fold and should be prioritized in critical CSS.
+	// When empty, falls back to byte-size-only splitting.
+	CriticalContent []string `yaml:"criticalContent" json:"criticalContent"`
 }
 
 // Dimension defines a viewport size for critical CSS extraction.
@@ -738,7 +744,8 @@ func (p *PostCSSPlugin) criticalCommand(args []string) error {
 	}
 
 	// Use shared splitting logic
-	criticalCSS, nonCriticalCSS := splitCSS(fullCSS, p.config.CriticalCSS.InlineMaxSize)
+	criticalClasses := extractClassesFromTempl(projectDir, p.config.CriticalCSS.CriticalContent)
+	criticalCSS, nonCriticalCSS := splitCSS(fullCSS, p.config.CriticalCSS.InlineMaxSize, criticalClasses)
 
 	// Use cleaned path to prevent path traversal
 	criticalOutputPath := filepath.Clean(p.config.CriticalCSS.CriticalOutput)
@@ -908,7 +915,8 @@ func (p *PostCSSPlugin) extractCriticalForBundle(projectDir string, bundle Bundl
 
 	// Use shared safe splitting logic
 	criticalSize := bundle.CriticalCSS.InlineMaxSize
-	criticalCSS, nonCriticalCSS := splitCSS(fullCSS, criticalSize)
+	criticalClasses := extractClassesFromTempl(projectDir, bundle.CriticalCSS.CriticalContent)
+	criticalCSS, nonCriticalCSS := splitCSS(fullCSS, criticalSize, criticalClasses)
 
 	// Write critical CSS
 	if err := os.WriteFile(cleanCriticalOutput, criticalCSS, 0600); err != nil { // #nosec //nolint:gosec // path validated above
@@ -978,9 +986,67 @@ func CriticalCSSWithFallback(path, fallback string) string {
 	return string(css)
 }
 
+// classRegex matches class="..." with literal string values in templ files.
+var classRegex = regexp.MustCompile(`class="([^"]*)"`)
+
+// extractClassesFromTempl extracts CSS class names from templ template files
+// matching the provided glob patterns. It parses class="string" attributes
+// and returns a set of individual class names.
+func extractClassesFromTempl(projectDir string, globs []string) map[string]bool {
+	classes := make(map[string]bool)
+
+	for _, pattern := range globs {
+		if !filepath.IsAbs(pattern) {
+			pattern = filepath.Join(projectDir, pattern)
+		}
+
+		matches, err := filepath.Glob(pattern)
+		if err != nil {
+			continue
+		}
+
+		for _, path := range matches {
+			data, err := os.ReadFile(filepath.Clean(path)) // #nosec //nolint:gosec // glob from config
+			if err != nil {
+				continue
+			}
+
+			for _, match := range classRegex.FindAllSubmatch(data, -1) {
+				raw := string(match[1])
+				for _, cls := range strings.Fields(raw) {
+					if cls != "" {
+						classes[cls] = true
+					}
+				}
+			}
+		}
+	}
+
+	return classes
+}
+
+// classToEscapedSelector converts a class name to its Tailwind CSS selector form.
+// Tailwind v4 escapes special characters: / → \/, [ → \[, ] → \], : → \:, etc.
+func classToEscapedSelector(className string) string {
+	var b strings.Builder
+	b.WriteByte('.')
+	for _, ch := range className {
+		switch ch {
+		case '/', '[', ']', '(', ')', ':', '.', '#', '%', ',', ';', '=', '!', '*', '~', '$', '^', '{', '}':
+			b.WriteByte('\\')
+			b.WriteRune(ch)
+		default:
+			b.WriteRune(ch)
+		}
+	}
+	return b.String()
+}
+
 // splitCSS safely splits CSS into critical and non-critical parts at a safe boundary.
 // It ensures we don't split in the middle of a rule or media query by tracking brace depth.
-func splitCSS(fullCSS []byte, maxSize int) ([]byte, []byte) {
+// When criticalClasses is non-empty, rules matching those classes are prioritized
+// in the critical portion by reordering before non-matching rules.
+func splitCSS(fullCSS []byte, maxSize int, criticalClasses map[string]bool) ([]byte, []byte) {
 	if maxSize <= 0 {
 		maxSize = 14336 // 14KB default
 	}
@@ -990,15 +1056,94 @@ func splitCSS(fullCSS []byte, maxSize int) ([]byte, []byte) {
 		return fullCSS, []byte{}
 	}
 
+	// When no critical classes provided, fall back to byte-size-only splitting
+	if len(criticalClasses) == 0 {
+		return splitCSSBySize(fullCSS, maxSize)
+	}
+
+	// Build set of escaped selectors from critical classes
+	criticalSelectors := make(map[string]bool, len(criticalClasses))
+	for cls := range criticalClasses {
+		criticalSelectors[classToEscapedSelector(cls)] = true
+	}
+
+	// Find the @layer utilities block boundaries
+	utilStart, utilEnd := findUtilitiesLayer(fullCSS)
+	if utilStart == -1 {
+		// No utilities layer found, fall back to size-only split
+		return splitCSSBySize(fullCSS, maxSize)
+	}
+
+	// Split CSS into: before, @layer utilities{ wrapper, inner rules, closing }, after
+	utilPrefix := []byte("@layer utilities{")
+	innerStart := utilStart + len(utilPrefix)
+	innerEnd := utilEnd - 1 // position of closing }
+
+	before := fullCSS[:utilStart]
+	innerContent := fullCSS[innerStart:innerEnd]
+	after := fullCSS[utilEnd:]
+
+	// Parse individual rules within the inner utilities content
+	rules := parseRules(innerContent)
+
+	// Partition rules into critical-matching and the rest
+	var matched, unmatched [][]byte
+	for _, rule := range rules {
+		if matchesAnySelector(rule, criticalSelectors) {
+			matched = append(matched, rule)
+		} else {
+			unmatched = append(unmatched, rule)
+		}
+	}
+
+	// Reorder: matched rules first, then unmatched
+	reordered := make([]byte, 0, len(innerContent))
+	for _, r := range matched {
+		reordered = append(reordered, r...)
+	}
+	for _, r := range unmatched {
+		reordered = append(reordered, r...)
+	}
+
+	// Calculate how much space is available for inner utility rules in critical CSS
+	// Account for: before content, "@layer utilities{", and closing "}"
+	overhead := len(before) + len(utilPrefix) + 1 // +1 for closing }
+	innerMaxSize := maxSize - overhead
+	if innerMaxSize < 0 {
+		innerMaxSize = 0
+	}
+
+	// Split the reordered inner rules at the byte boundary
+	criticalInner, nonCriticalInner := splitCSSBySize(reordered, innerMaxSize)
+
+	// Build critical CSS: before + @layer utilities{ + criticalInnerRules + }
+	critical := make([]byte, 0, len(before)+len(utilPrefix)+len(criticalInner)+1)
+	critical = append(critical, before...)
+	critical = append(critical, utilPrefix...)
+	critical = append(critical, criticalInner...)
+	critical = append(critical, '}')
+
+	// Build non-critical CSS: @layer utilities{ + nonCriticalInnerRules + } + after
+	var nonCritical []byte
+	if len(nonCriticalInner) > 0 {
+		nonCritical = make([]byte, 0, len(utilPrefix)+len(nonCriticalInner)+1+len(after))
+		nonCritical = append(nonCritical, utilPrefix...)
+		nonCritical = append(nonCritical, nonCriticalInner...)
+		nonCritical = append(nonCritical, '}')
+		nonCritical = append(nonCritical, after...)
+	}
+
+	return critical, nonCritical
+}
+
+// splitCSSBySize splits CSS at a byte boundary, finding the first safe brace-depth-0
+// position after maxSize. This is the original splitting behavior.
+func splitCSSBySize(fullCSS []byte, maxSize int) ([]byte, []byte) {
 	splitPoint := -1
 	braceDepth := 0
 	inComment := false
 
-	// Find the first safe split point AFTER the maxSize
-	// This ensures critical CSS is at least maxSize, but stays relative to that size.
-	// We split at the first '}' that returns braceDepth to 0.
 	for i := 0; i < len(fullCSS); i++ {
-		// Basic comment tracking
 		if i > 0 && fullCSS[i-1] == '/' && fullCSS[i] == '*' {
 			inComment = true
 		}
@@ -1011,7 +1156,6 @@ func splitCSS(fullCSS []byte, maxSize int) ([]byte, []byte) {
 				braceDepth++
 			} else if fullCSS[i] == '}' {
 				braceDepth--
-				// If we are back at root level AND we've passed our target size, split here
 				if braceDepth == 0 && i >= maxSize {
 					splitPoint = i + 1
 					break
@@ -1020,12 +1164,108 @@ func splitCSS(fullCSS []byte, maxSize int) ([]byte, []byte) {
 		}
 	}
 
-	// If no safe split point found, or it's at the end
 	if splitPoint == -1 || splitPoint >= len(fullCSS) {
 		return fullCSS, []byte{}
 	}
 
 	return fullCSS[:splitPoint], fullCSS[splitPoint:]
+}
+
+// findUtilitiesLayer locates the @layer utilities{...} block in minified CSS.
+// Returns the start and end byte offsets of the utilities block content
+// (including the @layer prefix).
+func findUtilitiesLayer(css []byte) (int, int) {
+	prefix := []byte("@layer utilities{")
+	start := bytes.Index(css, prefix)
+	if start == -1 {
+		return -1, -1
+	}
+
+	// Find matching closing brace
+	braceDepth := 0
+	inComment := false
+	contentStart := start + len(prefix) - 1 // position of '{'
+
+	for i := contentStart; i < len(css); i++ {
+		if i > 0 && css[i-1] == '/' && css[i] == '*' {
+			inComment = true
+		}
+		if i > 0 && css[i-1] == '*' && css[i] == '/' {
+			inComment = false
+		}
+
+		if !inComment {
+			switch css[i] {
+			case '{':
+				braceDepth++
+			case '}':
+				braceDepth--
+				if braceDepth == 0 {
+					return start, i + 1
+				}
+			}
+		}
+	}
+
+	return -1, -1
+}
+
+// parseRules splits minified CSS rule content into individual rules at braceDepth==0 boundaries.
+// The input should be the inner utilities content (without the @layer utilities{ wrapper).
+// Each returned element is a complete CSS rule (selector + body), potentially with nested
+// @supports or @media blocks.
+func parseRules(css []byte) [][]byte {
+	var rules [][]byte
+	start := -1
+	braceDepth := 0
+	inComment := false
+
+	for i := 0; i < len(css); i++ {
+		if i > 0 && css[i-1] == '/' && css[i] == '*' {
+			inComment = true
+		}
+		if i > 0 && css[i-1] == '*' && css[i] == '/' {
+			inComment = false
+		}
+
+		if !inComment {
+			switch css[i] {
+			case '{':
+				if braceDepth == 0 && start == -1 {
+					start = i
+				}
+				braceDepth++
+			case '}':
+				braceDepth--
+				if braceDepth == 0 && start != -1 {
+					rules = append(rules, css[start:i+1])
+					start = -1
+				}
+			default:
+				if braceDepth == 0 && start == -1 {
+					start = i
+				}
+			}
+		}
+	}
+
+	return rules
+}
+
+// matchesAnySelector checks if any critical selector appears in the rule's selector portion.
+func matchesAnySelector(rule []byte, selectors map[string]bool) bool {
+	// Get just the selector part (before first '{')
+	idx := bytes.IndexByte(rule, '{')
+	if idx == -1 {
+		return false
+	}
+	selector := string(rule[:idx])
+	for sel := range selectors {
+		if strings.Contains(selector, sel) {
+			return true
+		}
+	}
+	return false
 }
 
 // isPathSafe checks if the given path is within the project directory.
