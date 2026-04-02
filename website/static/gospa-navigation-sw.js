@@ -21,18 +21,15 @@ self.addEventListener('fetch', (event) => {
 
 	event.respondWith((async () => {
 		const cache = await caches.open(CACHE_NAME);
-		try {
-			const networkResponse = await fetch(request);
-			if (networkResponse.ok) {
-				await cache.put(request, networkResponse.clone());
+		const cachedResponse = await cache.match(request);
+
+		const networkPromise = fetch(request).then((response) => {
+			if (response.ok) {
+				cache.put(request, response.clone());
 			}
-			return networkResponse;
-		} catch {
-			const cachedResponse = await cache.match(request);
-			if (cachedResponse) {
-				return cachedResponse;
-			}
-			throw new Error('Navigation request failed and no cached response was available.');
-		}
+			return response;
+		}).catch(() => null);
+
+		return cachedResponse || networkPromise;
 	})());
 });

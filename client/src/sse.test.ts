@@ -4,7 +4,6 @@ import {
   SSEManager,
   getSSEManager,
   createSSEClient,
-  connectSSE,
 } from "./sse";
 
 // Mock EventSource globally
@@ -76,11 +75,9 @@ describe("SSEClient", () => {
     (globalThis as any).EventSource = MockEventSource;
 
     originalWindow = (globalThis as any).window;
-    if (!(globalThis as any).window) {
-      (globalThis as any).window = {
-        location: { origin: "http://localhost" },
-      };
-    }
+    (globalThis as any).window = {
+      location: { origin: "http://localhost" }
+    };
 
     MockEventSource.lastInstance = null;
   });
@@ -155,7 +152,7 @@ describe("SSEClient", () => {
       maxRetries: 2,
       reconnectDelay: 50,
     });
-    const errHandler = mock((e, attempt) => null);
+    const errHandler = mock((_e, _attempt) => null);
     client.onError(errHandler);
 
     client.connect();
@@ -173,7 +170,7 @@ describe("SSEManager", () => {
     expect(manager.has("test")).toBeFalse();
 
     manager.setDefaultConfig({ reconnectDelay: 100 });
-    const client = manager.client("test", { url: "/events" });
+    manager.client("test", { url: "/events" });
     expect(manager.has("test")).toBeTrue();
     expect(manager.getClientNames()).toContain("test");
 
