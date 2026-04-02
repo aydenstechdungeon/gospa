@@ -319,7 +319,7 @@ templ RootLayout(title string) {
 	</head>
 	<body>
 		{ children... }
-		<script src="/_gospa/runtime.js"></script>
+		<script src="/_gospa/runtime.js" type="module"></script>
 		<script data-gospa-islands></script>
 	</body>
 	</html>

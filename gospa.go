@@ -7,6 +7,7 @@ import (
 	"fmt"
 	"log/slog"
 	"os"
+	"path/filepath"
 	"strings"
 	"sync"
 
@@ -251,6 +252,9 @@ func (a *App) setupRoutes() {
 
 	a.Fiber.Use("/_gospa/", func(c fiberpkg.Ctx) error {
 		c.Set("Cache-Control", "public, max-age=31536000, immutable")
+		if strings.HasSuffix(c.Path(), ".js") {
+			c.Set("Content-Type", "application/javascript")
+		}
 		return c.Next()
 	})
 	a.Fiber.Use("/_gospa/", static.New("", static.Config{
@@ -259,7 +263,16 @@ func (a *App) setupRoutes() {
 
 	// Serve dynamically compiled island modules with proper MIME type
 	a.Fiber.Use("/islands/", func(c fiberpkg.Ctx) error {
-		c.Set("Content-Type", "application/javascript")
+		path := c.Path()
+		if strings.HasSuffix(path, ".js") {
+			c.Set("Content-Type", "application/javascript")
+			// Strip prefix and check if .ts counterpart exists in generated/
+			relPath := strings.TrimPrefix(path, "/islands/")
+			tsPath := filepath.Join("generated", strings.TrimSuffix(relPath, ".js")+".ts")
+			if _, err := os.Stat(tsPath); err == nil {
+				return c.SendFile(tsPath)
+			}
+		}
 		return c.Next()
 	})
 	// Try to serve islands from static/islands or generated/ directory
