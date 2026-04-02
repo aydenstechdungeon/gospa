@@ -30,6 +30,7 @@ type BuildConfig struct {
 	Env          string
 	SourceMap    bool
 	NoSourceMap  bool
+	CGO          bool
 }
 
 // BuildSummary captures the important outputs from a production build.
@@ -107,7 +108,7 @@ func BuildWithConfig(config *BuildConfig) (*BuildSummary, error) {
 
 	// Step 2.5: Build islands bundle (generated island modules)
 	fmt.Println("Building islands bundle...")
-	if err := buildIslands(config, summary); err != nil {
+	if err := BuildIslands(config, summary); err != nil {
 		fmt.Fprintf(os.Stderr, "Warning: islands build failed: %v\n", err)
 		// Non-fatal — islands just won't have client-side hydration
 	}
@@ -222,7 +223,7 @@ func buildClientRuntime(config *BuildConfig, summary *BuildSummary) error {
 	return nil
 }
 
-func buildIslands(config *BuildConfig, _ *BuildSummary) error {
+func BuildIslands(config *BuildConfig, _ *BuildSummary) error {
 	// Check if generated islands entry exists
 	islandsEntry := "generated/islands.ts"
 	if _, err := os.Stat(islandsEntry); os.IsNotExist(err) {
@@ -296,7 +297,11 @@ func buildGoBinary(config *BuildConfig) (string, error) {
 
 	// Set environment for cross-compilation
 	env := os.Environ()
-	env = append(env, "CGO_ENABLED=0")
+	cgo := "0"
+	if config.CGO {
+		cgo = "1"
+	}
+	env = append(env, "CGO_ENABLED="+cgo)
 	env = append(env, "GOOS="+config.Platform)
 	env = append(env, "GOARCH="+config.Arch)
 	env = append(env, "GOSPA_ENV="+config.Env)

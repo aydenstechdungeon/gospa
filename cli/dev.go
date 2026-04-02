@@ -40,6 +40,7 @@ func Dev(config *DevConfig) {
 		fmt.Fprintf(os.Stderr, "Warning: templ regeneration failed: %v\n", err)
 	}
 	runGenerate()
+	_ = BuildIslands(nil, nil)
 
 	// Use defaults if config is nil
 	if config == nil {
@@ -424,14 +425,14 @@ func handleFileChange(_ context.Context, event FileEvent, restartCh chan struct{
 			}
 		}
 
-	case ".css", ".js":
-		// Static files don't need server restart
 		fmt.Println("Static file changed, browser will reload")
+		_ = BuildIslands(nil, nil)
 	}
 
 	// Generate types
 	if strings.HasSuffix(event.File, ".go") || strings.HasSuffix(event.File, ".templ") || strings.HasSuffix(event.File, ".gospa") {
 		runGenerate()
+		_ = BuildIslands(nil, nil)
 	}
 }
 
