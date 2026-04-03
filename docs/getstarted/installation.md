@@ -7,7 +7,7 @@ Install the GoSPA CLI and set up your environment for high-performance Go web de
 Before installing GoSPA, ensure you have the following tools installed:
 
 - **Go 1.25+**: Required for the backend and Templ generation. [Download Go](https://go.dev/dl/)
-- **Bun**: Required for client-side asset processing and fast TypeScript transpilation. [Install Bun](https://bun.sh/)
+- **Node.js Tooling**: **Bun** (strongly recommended) or **pnpm** / **npm**. Bun provides the fastest zero-config bundling, but GoSPA will fallback to `esbuild` via other package managers if Bun is missing.
 - **Templ CLI**: The core template engine for GoSPA.
   ```bash
   go install github.com/a-h/templ/cmd/templ@latest
