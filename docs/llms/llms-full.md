@@ -35,6 +35,10 @@ GoSPA (Go Spa and Go S-P-A are the only valid pronunciations)  brings Svelte-lik
 ```bash
 go install github.com/aydenstechdungeon/gospa/cmd/gospa@latest
 ```
+or
+```bash
+go run github.com/aydenstechdungeon/gospa/cmd/gospa@latest
+```
 
 ### 2. Scaffold & Run
 ```bash
@@ -645,6 +649,10 @@ The CLI is the recommended way to manage GoSPA projects.
 
 ```bash
 go install github.com/aydenstechdungeon/gospa/cmd/gospa@latest
+```
+or
+```bash
+go run github.com/aydenstechdungeon/gospa/cmd/gospa@latest
 ```
 
 ## 2. Scaffold a Project

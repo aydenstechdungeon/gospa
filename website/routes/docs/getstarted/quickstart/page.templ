@@ -59,6 +59,10 @@ templ Page() {
 				<div class="pl-0 md:pl-[4.5rem] space-y-4">
 					<p class="text-[var(--text-secondary)] text-lg leading-relaxed font-medium">The GoSPA CLI is the central hub for your project lifecycle, from scaffolding to production builds.</p>
 					@components.CodeBlock("go install github.com/aydenstechdungeon/gospa/cmd/gospa@latest", "bash", "Terminal")
+					<p class="text-[var(--text-secondary)] mb-4">
+						Or
+					</p>
+					@components.CodeBlock("go run github.com/aydenstechdungeon/gospa/cmd/gospa@latest", "bash", "Terminal")
 				</div>
 			</section>
 
@@ -71,6 +75,12 @@ templ Page() {
 				<div class="pl-0 md:pl-[4.5rem] space-y-4">
 					<p class="text-[var(--text-secondary)] text-lg leading-relaxed font-medium">Create a new workspace with all the recommended batteries included.</p>
 					@components.CodeBlock(`gospa create my-app
+cd my-app
+go mod tidy`, "bash", "Terminal")
+					<p class="text-[var(--text-secondary)] mb-4">
+						Or
+					</p>
+					@components.CodeBlock(`go run github.com/aydenstechdungeon/gospa/cmd/gospa@latest create my-app
 cd my-app
 go mod tidy`, "bash", "Terminal")
 				</div>

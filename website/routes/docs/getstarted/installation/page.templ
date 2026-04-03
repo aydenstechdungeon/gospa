@@ -24,12 +24,20 @@ templ Page() {
 				The GoSPA CLI is the recommended way to manage your project. It handles code generation, development servers, and production builds.
 			</p>
 			@components.CodeBlock("go install github.com/aydenstechdungeon/gospa/cmd/gospa@latest", "bash", "Terminal")
+			<p class="text-[var(--text-secondary)] mb-4">
+				Or
+			</p>
+			@components.CodeBlock("go run github.com/aydenstechdungeon/gospa/cmd/gospa@latest", "bash", "Terminal")
 		</section>
 
 		<section>
 			<h2 id="verify-installation" class="text-2xl font-bold mb-4">Verify Installation</h2>
 			<p class="text-[var(--text-secondary)] mb-4">Check if the CLI is correctly installed:</p>
 			@components.CodeBlock("gospa version", "bash", "Terminal")
+			<p class="text-[var(--text-secondary)] mb-4">
+				Or
+			</p>
+			@components.CodeBlock("go run github.com/aydenstechdungeon/gospa/cmd/gospa@latest version", "bash", "Terminal")
 		</section>
 
 		<div class="flex justify-between mt-16">
