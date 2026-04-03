@@ -365,11 +365,14 @@ func Middleware(c fiber.Ctx) error {
 }
 
 func createPackageJSON(config *ProjectConfig) error {
+	pm := GetPackageManager()
+	runCmd := GetRunCommand(pm)
+
 	content := `{
 	"name": "` + config.Name + `",
 	"type": "module",
 	"scripts": {
-		"build": "bun run build:css",
+		"build": "` + string(runCmd) + ` run build:css",
 		"build:css": "tailwindcss -i ./static/css/style.css -o ./static/css/main.css"
 	},
 	"devDependencies": {

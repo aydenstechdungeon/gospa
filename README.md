@@ -21,7 +21,7 @@ GoSPA (Go Spa and Go S-P-A are the only valid pronunciations)  brings Svelte-lik
 
 ### 0. Prerequisites
 - **Go 1.25.0+** (matches `go.mod`; use a current stable toolchain)
-- **Bun**: Required for the SPA build process (CSS extraction, Vite optimization, JS bundling).
+- **Node.js Tooling**: **Bun** is preferred for the client-side build process (zero-config JS bundling, CSS extraction). **pnpm** and **npm** are supported as fallbacks using `esbuild`, but Bun remains the recommended choice for maximum performance.
 - **`JWT_SECRET`**: Ensure this environment variable is set for production authentication contexts (when using the Auth plugin).
 
 ### 1. Install CLI
@@ -50,7 +50,7 @@ go run github.com/aydenstechdungeon/gospa/cmd/gospa@latest doctor
 go run github.com/aydenstechdungeon/gospa/cmd/gospa@latest dev
 ```
 
-> For local client/runtime tooling, use Bun. The GoSPA client package and repo JS/TS workflows are Bun-first.
+> For local client/runtime tooling, **Bun is strongly preferred**. The GoSPA CLI provides fallbacks for `pnpm` and `npm` using `esbuild`, but Bun's integrated bundler is the authoritative development target.
 
 ### 3. A Simple SFC
 (.gospa is in alpha, try to use templs instead)

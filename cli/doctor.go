@@ -26,20 +26,20 @@ func Doctor(config *DoctorConfig) {
 	}
 
 	printer.Title("GoSPA Doctor")
-	printer.Subtitle("Checking Go, Bun, project layout, and runtime entrypoints...")
+	printer.Subtitle("Checking Go, Node.js tooling, project layout, and runtime entrypoints...")
 
 	checks := []doctorCheck{
 		checkBinary("go", true),
-		checkBinary("bun", false),
+		checkNodeTooling(),
 		checkProjectFile("go.mod", true, "Go module"),
 		checkProjectFile("main.go", false, "application entrypoint"),
 		checkProjectDir(config.RoutesDir, false, "routes directory"),
 		checkAnyFile("client", []string{"src/runtime.ts", "src/index.ts", "src/main.ts"}, false, "client runtime entrypoint"),
-		checkAnyFile(".", []string{"package.json", "client/package.json"}, false, "Bun package manifest"),
+		checkAnyFile(".", []string{"package.json", "client/package.json"}, false, "Node.js package manifest"),
 		checkLibrary("libwebp", false),
 		checkLibrary("libheif", false),
 		checkTemplVersion(),
-		checkBunVersion(),
+		checkNodeToolingVersion(),
 		checkIslandsBundle(),
 	}
 
@@ -200,31 +200,50 @@ func checkTemplVersion() doctorCheck {
 	}
 }
 
-func checkBunVersion() doctorCheck {
-	path, err := exec.LookPath("bun")
-	if err != nil {
+func checkNodeToolingVersion() doctorCheck {
+	pm := GetPackageManager()
+	if pm == NonePM {
 		return doctorCheck{
-			Name:     "Bun version",
+			Name:     "Node tooling version",
 			Required: false,
-			Err:      fmt.Errorf("bun not found"),
+			Err:      fmt.Errorf("bun, pnpm, and npm not found"),
 		}
 	}
 
-	cmd := exec.Command("bun", "--version")
+	// #nosec G204
+	cmd := exec.Command(string(pm), "--version")
 	output, err := cmd.Output()
 	if err != nil {
 		return doctorCheck{
-			Name:     "Bun version",
+			Name:     fmt.Sprintf("%s version", string(pm)),
 			Required: false,
-			Err:      fmt.Errorf("cannot check bun version: %v", err),
+			Err:      fmt.Errorf("cannot check %s version: %v", string(pm), err),
 		}
 	}
 
 	version := strings.TrimSpace(string(output))
+	path, _ := exec.LookPath(string(pm))
 	return doctorCheck{
-		Name:     "Bun version",
+		Name:     fmt.Sprintf("%s version", strings.ToUpper(string(pm[:1]))+string(pm[1:])),
 		Required: false,
 		Detail:   fmt.Sprintf("%s at %s", version, path),
+	}
+}
+
+func checkNodeTooling() doctorCheck {
+	if path, err := exec.LookPath("bun"); err == nil {
+		return doctorCheck{Name: "Bun found", Detail: path, Required: false}
+	}
+	if path, err := exec.LookPath("pnpm"); err == nil {
+		return doctorCheck{Name: "Bun(preferred) not found; Pnpm found", Detail: path, Required: false}
+	}
+	if path, err := exec.LookPath("npm"); err == nil {
+		return doctorCheck{Name: "Bun(preferred), Pnpm not found; Npm found", Detail: path, Required: false}
+	}
+	return doctorCheck{
+		Name:     "Node Tooling",
+		Required: false,
+		Err:      fmt.Errorf("Bun(preferred), pnpm or npm weren't found"),
 	}
 }
 

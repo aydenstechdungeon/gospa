@@ -192,40 +192,58 @@ func unifiedClientBuild(config *BuildConfig, summary *BuildSummary) error {
 		return nil
 	}
 
-	// Check if bun is available
-	bunPath, err := exec.LookPath("bun")
-	if err != nil {
-		fmt.Println("Warning: bun not found, skipping client build")
+	// Detect package manager
+	pm := GetPackageManager()
+	if pm == NonePM {
+		fmt.Println("Warning: No package manager (bun, pnpm, npm) found, skipping client build")
 		return nil
 	}
-	summary.BunPath = bunPath
 
 	// Prepare output directory
 	if err := os.MkdirAll(outputDir, 0750); err != nil {
 		return err
 	}
 
-	// Run unified bun build
-	args := []string{
-		"build",
-	}
-	args = append(args, entries...)
-	args = append(args,
-		"--outdir", outputDir,
-		"--target", "browser",
-		"--format", "esm",
-		"--splitting",
-	)
+	var cmd *exec.Cmd
+	if pm == BunPM {
+		bunPath, _ := exec.LookPath("bun")
+		summary.BunPath = bunPath
 
-	if config.Minify {
-		args = append(args, "--minify")
-	}
-	if config.SourceMap && !config.NoSourceMap {
-		args = append(args, "--source-map")
+		args := []string{"build"}
+		args = append(args, entries...)
+		args = append(args, "--outdir", outputDir, "--target", "browser", "--format", "esm", "--splitting")
+		if config.Minify {
+			args = append(args, "--minify")
+		}
+		if config.SourceMap && !config.NoSourceMap {
+			args = append(args, "--source-map")
+		}
+
+		// #nosec //nolint:gosec
+		cmd = exec.Command(bunPath, args...)
+	} else {
+		// Fallback to esbuild via npx/pnpm dlx
+		executeCmd := GetExecuteCommand(pm)
+		parts := strings.Fields(executeCmd)
+
+		args := append([]string{}, parts[1:]...)
+		args = append(args, "esbuild")
+		args = append(args, entries...)
+		args = append(args, "--outdir="+outputDir, "--target=browser", "--format=esm", "--splitting", "--bundle")
+
+		if config.Minify {
+			args = append(args, "--minify")
+		}
+		if config.SourceMap && !config.NoSourceMap {
+			args = append(args, "--sourcemap")
+		}
+
+		// #nosec //nolint:gosec
+		cmd = exec.Command(parts[0], args...)
+		fmt.Printf("Warning: Bun not found. Using %s esbuild for bundling (slower & not preferred)\n", pm)
 	}
 
-	// #nosec //nolint:gosec // bunPath is safe executable from LookPath
-	cmd := exec.Command(bunPath, args...)
+	summary.BunPath = pm.String() // Track which PM was used
 	cmd.Stdout = os.Stdout
 	cmd.Stderr = os.Stderr
 	cmd.Env = append(os.Environ(), "NODE_ENV="+config.Env)
