@@ -45,7 +45,7 @@ issues:
         - revive
       text: "var-naming"
     # Nolint directives for gosec path traversal - paths come from trusted config
-    - path: (plugin/postcss/postcss\.go|gospa\.go|cli/build\.go|scripts/tag\.go|state/pruning\.go)
+    - path: (plugin/postcss/postcss\.go|gospa\.go|cli/build\.go|scripts/tag/main\.go|state/pruning\.go)
       linters:
         - nolintlint
       text: "directive.*is unused"

@@ -1,0 +1,22 @@
+scripts/check-docs-sync/main.go:18:18: Error return value of `filepath.WalkDir` is not checked (errcheck)
+	filepath.WalkDir(websiteDocsDir, func(path string, d fs.DirEntry, err error) error {
+	                ^
+scripts/check-docs-sync/main.go:34:18: Error return value of `filepath.WalkDir` is not checked (errcheck)
+	filepath.WalkDir(docsDir, func(path string, d fs.DirEntry, err error) error {
+	                ^
+scripts/fix-docs-links/main.go:52:19: G304: Potential file inclusion via variable (gosec)
+		content, err := os.ReadFile(path)
+		                ^
+scripts/fix-docs-links/main.go:81:23: G122: Filesystem operation in filepath.Walk/WalkDir callback uses race-prone path; consider root-scoped APIs (e.g. os.Root) to prevent symlink TOCTOU traversal (gosec)
+			return os.WriteFile(path, []byte(newContent), info.Mode())
+			                   ^
+scripts/check-docs-sync/main.go:1:1: package-comments: should have a package comment (revive)
+package main
+^
+scripts/fix-docs-links/main.go:1:1: package-comments: should have a package comment (revive)
+package main
+^
+6 issues:
+* errcheck: 2
+* gosec: 2
+* revive: 2
