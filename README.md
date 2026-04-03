@@ -28,6 +28,10 @@ GoSPA (Go Spa and Go S-P-A are the only valid pronunciations)  brings Svelte-lik
 ```bash
 go install github.com/aydenstechdungeon/gospa/cmd/gospa@latest
 ```
+or
+```bash
+go run github.com/aydenstechdungeon/gospa/cmd/gospa@latest
+```
 
 ### 2. Scaffold & Run
 ```bash
@@ -36,6 +40,14 @@ cd myapp
 go mod tidy
 gospa doctor
 gospa dev
+```
+or
+```bash
+go run github.com/aydenstechdungeon/gospa/cmd/gospa@latest create myapp
+cd myapp
+go mod tidy
+go run github.com/aydenstechdungeon/gospa/cmd/gospa@latest doctor
+go run github.com/aydenstechdungeon/gospa/cmd/gospa@latest dev
 ```
 
 > For local client/runtime tooling, use Bun. The GoSPA client package and repo JS/TS workflows are Bun-first.
