@@ -343,13 +343,20 @@ func copyStaticAssets(config *BuildConfig) (int, error) {
 
 		// Copy file
 		// #nosec //nolint:gosec
-		data, err := os.ReadFile(path)
+		src, err := os.Open(path)
 		if err != nil {
 			return err
 		}
-
 		// #nosec //nolint:gosec // path validated above with strings.HasPrefix check
-		if err := os.WriteFile(cleanDestPath, data, info.Mode()); err != nil {
+		dst, err := os.Create(cleanDestPath)
+		if err != nil {
+			_ = src.Close()
+			return err
+		}
+		_, err = io.Copy(dst, src)
+		_ = src.Close()
+		_ = dst.Close()
+		if err != nil {
 			return err
 		}
 		copied++
@@ -436,7 +443,7 @@ func compressFileGzip(path string) error {
 	}
 	defer func() { _ = output.Close() }()
 
-	writer, err := gzip.NewWriterLevel(output, gzip.BestCompression)
+	writer, err := gzip.NewWriterLevel(output, gzip.DefaultCompression)
 	if err != nil {
 		return err
 	}

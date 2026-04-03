@@ -157,19 +157,26 @@ func BatchWithContext(ctx context.Context, fn func() error) error {
 	// Embed the batch state into the context so that downstream callers that
 	// receive this context can participate in the batch via getBatchState(ctx).
 	batchCtx := context.WithValue(ctx, batchContextKey{}, bs)
-	activeContextBatches.Store(contextKey(ctx), bs)
-	activeContextBatches.Store(contextKey(batchCtx), bs)
-	defer activeContextBatches.Delete(contextKey(ctx))
-	defer activeContextBatches.Delete(contextKey(batchCtx))
-	// Goroutine-local fallback so that mutations in the same goroutine (without
-	// explicit context passing) are also captured.
+
+	// Register cleanup BEFORE any stores so that a panic between store calls
+	// cannot leak entries in the sync maps.
 	gid := getGID()
-	activeSyncBatchCount.Add(1)
-	activeBatches.Store(gid, bs)
 	defer func() {
+		activeContextBatches.Delete(contextKey(ctx))
+		activeContextBatches.Delete(contextKey(batchCtx))
 		activeBatches.Delete(gid)
 		activeSyncBatchCount.Add(-1)
 	}()
+
+	activeContextBatches.Store(contextKey(ctx), bs)
+	activeContextBatches.Store(contextKey(batchCtx), bs)
+	activeSyncBatchCount.Add(1)
+	activeBatches.Store(gid, bs)
+
+	activeContextBatches.Store(contextKey(ctx), bs)
+	activeContextBatches.Store(contextKey(batchCtx), bs)
+	activeSyncBatchCount.Add(1)
+	activeBatches.Store(gid, bs)
 
 	if err := fn(); err != nil {
 		return err

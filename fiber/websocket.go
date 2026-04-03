@@ -7,6 +7,7 @@ import (
 	"encoding/base64"
 	"encoding/hex"
 	"fmt"
+	"io"
 	"log/slog"
 	"reflect"
 	"strings"
@@ -640,26 +641,33 @@ const maxJSONDepth = 64
 
 // validateJSONDepth checks that JSON data doesn't exceed the maximum nesting depth.
 func validateJSONDepth(data []byte, maxDepth int) error {
+	decoder := json.NewDecoder(bytes.NewReader(data))
 	depth := 0
-	for _, b := range data {
-		switch b {
-		case '{', '[':
+	for {
+		token, err := decoder.Token()
+		if err != nil {
+			if err == io.EOF {
+				return nil
+			}
+			return fmt.Errorf("invalid JSON: %w", err)
+		}
+		switch token {
+		case json.Delim('{'), json.Delim('['):
 			depth++
 			if depth > maxDepth {
 				return fmt.Errorf("JSON nesting depth exceeds %d", maxDepth)
 			}
-		case '}', ']':
+		case json.Delim('}'), json.Delim(']'):
 			depth--
 		}
 	}
-	return nil
 }
 
 // ReadPump pumps messages from the WebSocket connection to the hub.
 func (c *WSClient) ReadPump(hub *WSHub, onMessage func(*WSClient, WSMessage)) {
 	defer func() {
 		hub.Unregister <- c
-		_ = c.Conn.Close()
+		c.Close()
 	}()
 
 	// Limit inbound message size to prevent DoS attacks
@@ -711,7 +719,7 @@ func (c *WSClient) WritePump() {
 	ticker := time.NewTicker(pingPeriod)
 	defer func() {
 		ticker.Stop()
-		_ = c.Conn.Close()
+		c.Close()
 	}()
 
 	for {
@@ -1108,6 +1116,7 @@ func (c *WSClient) Close() {
 	if !c.closed {
 		c.closed = true
 		close(c.Send)
+		_ = c.Conn.Close()
 	}
 }
 
@@ -1266,6 +1275,18 @@ func WebSocketHandler(config WebSocketConfig) fiberpkg.Handler {
 		// This ensures we don't miss the first state change for new sessions
 		var saveMutex sync.Mutex
 		var saveTimer *time.Timer
+
+		// Clean up saveTimer and OnChange on disconnect to prevent
+		// the callback from firing after the client is gone
+		defer func() {
+			saveMutex.Lock()
+			if saveTimer != nil {
+				saveTimer.Stop()
+			}
+			saveMutex.Unlock()
+			client.State.OnChange = nil
+		}()
+
 		client.State.OnChange = func(key string, value any) {
 			// Save state to persistent store safely, debounced
 			saveMutex.Lock()

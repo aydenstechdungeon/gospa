@@ -7,7 +7,7 @@ This directory is the **authoritative** Markdown documentation for GoSPA. The [d
 1. **Start:** [Quick start](01-getting-started/01-quick-start.md) → [Tutorial](01-getting-started/02-tutorial.md)
 2. **Configure:** [Configuration reference](04-api-reference/02-configuration.md) (all `gospa.Config` fields)
 3. **API surface:** [Core API](04-api-reference/01-core-api.md) (packages) + [CLI](04-api-reference/03-cli.md) + [Plugins](04-api-reference/04-plugins.md)
-10. **Ship:** [Production checklist](03-features/08-production-checklist.md), [Deployment](03-features/06-deployment.md), [Security](03-features/04-security.md)
+4. **Ship:** [Production checklist](03-features/08-production-checklist.md), [Deployment](03-features/06-deployment.md), [Security](03-features/04-security.md)
 5. **Debug:** [Troubleshooting](07-troubleshooting/) (runtime, WebSocket, remote actions, build)
 
 ## Structure

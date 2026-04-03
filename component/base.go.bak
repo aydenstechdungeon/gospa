@@ -18,6 +18,15 @@ func detachedContext(ctx context.Context) context.Context {
 	return context.WithoutCancel(ctx)
 }
 
+// detachedContext returns a context detached from the original's lifecycle.
+// If ctx is nil, returns context.Background().
+func detachedContext(ctx context.Context) context.Context {
+	if ctx == nil {
+		return context.Background()
+	}
+	return context.WithoutCancel(ctx)
+}
+
 // ComponentID is a unique identifier for a component.
 //
 //nolint:revive // changing name would break API
@@ -146,9 +155,6 @@ func (c *BaseComponent) RemoveChild(id ComponentID) {
 	for i, child := range c.children {
 		if child.ID() == id {
 			c.children = append(c.children[:i], c.children[i+1:]...)
-			if bc, ok := child.(*BaseComponent); ok {
-				bc.parent = nil
-			}
 			break
 		}
 	}
@@ -199,7 +205,7 @@ func (c *BaseComponent) Clone() Component {
 		props:    c.props.Clone(),
 		children: make([]Component, len(c.children)),
 		slots:    make(map[string]Slot),
-		ctx:      detachedContext(c.ctx),
+		ctx:      c.ctx,
 	}
 
 	for i, child := range c.children {

@@ -68,6 +68,7 @@ type App struct {
 }
 
 var defaultApp *App
+var defaultOnce sync.Once
 
 // New creates a new GoSPA application with the given configuration.
 func New(config Config) *App {
@@ -147,7 +148,6 @@ func New(config Config) *App {
 
 	app.setupMiddleware()
 
-	var defaultOnce sync.Once
 	defaultOnce.Do(func() {
 		if defaultApp == nil {
 			defaultApp = app

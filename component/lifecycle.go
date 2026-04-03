@@ -317,14 +317,14 @@ func DestroyComponent(c Component) {
 		return
 	}
 
-	// Destroy self first
-	if lc, ok := c.(LifecycleAware); ok {
-		lc.Lifecycle().Destroy()
-	}
-
-	// Destroy children
+	// Destroy children first
 	for _, child := range c.Children() {
 		DestroyComponent(child)
+	}
+
+	// Destroy self
+	if lc, ok := c.(LifecycleAware); ok {
+		lc.Lifecycle().Destroy()
 	}
 }
 

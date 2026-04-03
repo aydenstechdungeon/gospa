@@ -42,7 +42,8 @@ node_modules/
 
 # Environment
 .env
-.env.*
+.env.local
+.env.*.local
 !.env.example
 
 # Generated files (project-specific)
@@ -63,3 +64,12 @@ __debug_bin*
 # Logs
 *.log
 logs/
+
+# Secrets & credentials
+*.pem
+*.key
+*.crt
+id_rsa
+id_ed25519
+credentials.json
+service-account*.json

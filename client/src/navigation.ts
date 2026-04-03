@@ -1186,41 +1186,49 @@ export function isNavigating(): boolean {
 function handlePopState(_event: PopStateEvent): void {
   const path = window.location.pathname;
 
-  // Instant Visual Feedback
-  updateActiveLinks();
-  const container =
-    document.querySelector("[data-gospa-page-content], [data-gospa-root]") ||
-    document.body;
-  container.setAttribute("data-gospa-loading", "true");
+  // Serialize onto any pending navigation to avoid race conditions
+  // when the user clicks back/forward while a navigate() is in progress.
+  const previous = state.pendingNavigation ?? Promise.resolve(true);
 
-  // Notify before navigation
-  beforeNavCallbacks.forEach((cb) => cb(path));
+  const current: Promise<void> = previous.then(async () => {
+    // Re-check after waiting — the pending navigation may have already
+    // navigated to this path, making this popstate redundant.
+    if (path === state.currentPath) {
+      return;
+    }
 
-  // Cancel previous fetch if any (Fix for race conditions on back/forward spam)
-  if (state.abortController) {
-    state.abortController.abort();
-  }
-  state.abortController = new AbortController();
+    // Instant Visual Feedback
+    updateActiveLinks();
+    const container =
+      document.querySelector("[data-gospa-page-content], [data-gospa-root]") ||
+      document.body;
+    container.setAttribute("data-gospa-loading", "true");
 
-  // Fetch and update
-  progressBar.start();
-  getPageData(path, state.abortController.signal)
-    .then((data) => {
+    // Notify before navigation
+    beforeNavCallbacks.forEach((cb) => cb(path));
+
+    // Cancel previous fetch if any (Fix for race conditions on back/forward spam)
+    if (state.abortController) {
+      state.abortController.abort();
+    }
+    state.abortController = new AbortController();
+
+    // Fetch and update
+    progressBar.start();
+    try {
+      const data = await getPageData(path, state.abortController.signal);
       if (data) {
         state.currentPath = path;
-        performDOMUpdateWithTransitions(data, { scrollToTop: false }).then(
-          () => {
-            progressBar.finish();
-            // Restore scroll position for historical paths
-            const savedPos = scrollPositions.get(path);
-            if (savedPos !== undefined) {
-              window.scrollTo(0, savedPos);
-            }
-            afterNavCallbacks.forEach((cb) => cb(path));
-            document.dispatchEvent(
-              new CustomEvent("gospa:navigated", { detail: { path } }),
-            );
-          },
+        await performDOMUpdateWithTransitions(data, { scrollToTop: false });
+        progressBar.finish();
+        // Restore scroll position for historical paths
+        const savedPos = scrollPositions.get(path);
+        if (savedPos !== undefined) {
+          window.scrollTo(0, savedPos);
+        }
+        afterNavCallbacks.forEach((cb) => cb(path));
+        document.dispatchEvent(
+          new CustomEvent("gospa:navigated", { detail: { path } }),
         );
       } else {
         progressBar.finish();
@@ -1228,13 +1236,19 @@ function handlePopState(_event: PopStateEvent): void {
         // Fallback to reload
         window.location.reload();
       }
-    })
-    .catch((error) => {
-      if (error.name === "AbortError") return;
+    } catch (error) {
+      if ((error as Error).name === "AbortError") return;
       progressBar.finish();
       container.removeAttribute("data-gospa-loading");
       console.error("[GoSPA] Popstate navigation error:", error);
-    });
+    }
+  });
+
+  // Chain onto pendingNavigation so subsequent navigations wait for this one
+  state.pendingNavigation = current.then(
+    () => true,
+    () => false,
+  );
 }
 
 function getAnchorFromPath(path: EventTarget[]): HTMLAnchorElement | null {

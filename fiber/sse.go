@@ -422,7 +422,7 @@ func (b *SSEBroker) SSEUnsubscribeHandler() fiberpkg.Handler {
 			})
 		}
 
-		// SECURITY FIX: Verify that the requester is authorized to unsubscribe this client.
+		// SECURITY FIX: Require authentication for unsubscribe operations.
 		// Identity is verified by matching the requester's session client ID with the target client ID.
 		sessionToken := c.Cookies("gospa_session")
 		if sessionToken == "" {
@@ -431,13 +431,18 @@ func (b *SSEBroker) SSEUnsubscribeHandler() fiberpkg.Handler {
 			}
 		}
 
-		if sessionToken != "" {
-			requesterID, ok := globalSessionStore.ValidateSession(sessionToken)
-			if ok && requesterID != req.ClientID {
-				return c.Status(403).JSON(fiberpkg.Map{
-					"error": "unauthorized unsubscription request",
-				})
-			}
+		if sessionToken == "" {
+			return c.Status(401).JSON(fiberpkg.Map{"error": "authentication required"})
+		}
+
+		requesterID, ok := globalSessionStore.ValidateSession(sessionToken)
+		if !ok {
+			return c.Status(401).JSON(fiberpkg.Map{"error": "invalid session"})
+		}
+		if requesterID != req.ClientID {
+			return c.Status(403).JSON(fiberpkg.Map{
+				"error": "unauthorized unsubscription request",
+			})
 		}
 
 		// Additional custom authorization if configured
