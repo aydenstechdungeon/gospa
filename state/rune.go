@@ -245,12 +245,12 @@ func (r *Rune[T]) MarshalJSON() ([]byte, error) {
 //	})
 func (r *Rune[T]) Update(fn func(T) T) {
 	r.mu.Lock()
-	defer r.mu.Unlock()
 
 	oldValue := r.value
 	newValue := fn(oldValue)
 
 	if equal(r.value, newValue) {
+		r.mu.Unlock()
 		return
 	}
 	r.value = newValue
@@ -259,6 +259,7 @@ func (r *Rune[T]) Update(fn func(T) T) {
 
 	if inBatch() {
 		addToBatch(r)
+		r.mu.Unlock()
 		return
 	}
 
@@ -267,14 +268,11 @@ func (r *Rune[T]) Update(fn func(T) T) {
 		subs = append(subs, s.fn)
 	}
 	r.dirty = false
-
-	// We must release the lock before calling subscribers to avoid deadlocks
-	// but the value update is now atomic relative to other Updates.
 	r.mu.Unlock()
+
 	for _, fn := range subs {
 		fn(newValue)
 	}
-	r.mu.Lock() // Relock for defer Unlock
 }
 
 // equal compares two values of any type for equality using reflection.

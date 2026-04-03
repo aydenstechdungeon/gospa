@@ -2,6 +2,7 @@
 package compiler
 
 import (
+	"bytes"
 	"crypto/sha256"
 	"encoding/json"
 	"fmt"
@@ -544,15 +545,15 @@ func inferTypeFromName(name string) ComponentType {
 // Struct definitions must be at the package level in templ, not inside {{ }} blocks.
 func extractStructDefs(script string) (structs string, remaining string) {
 	var sb strings.Builder
-	remaining = script
+	buf := []byte(script)
 
 	for {
-		typeIdx := strings.Index(remaining, "type ")
+		typeIdx := bytes.Index(buf, []byte("type "))
 		if typeIdx == -1 {
 			break
 		}
 
-		braceStart := strings.Index(remaining[typeIdx:], "{")
+		braceStart := bytes.Index(buf[typeIdx:], []byte("{"))
 		if braceStart == -1 {
 			break
 		}
@@ -560,10 +561,10 @@ func extractStructDefs(script string) (structs string, remaining string) {
 
 		depth := 0
 		endIdx := -1
-		for i := braceStart; i < len(remaining); i++ {
-			if remaining[i] == '{' {
+		for i := braceStart; i < len(buf); i++ {
+			if buf[i] == '{' {
 				depth++
-			} else if remaining[i] == '}' {
+			} else if buf[i] == '}' {
 				depth--
 				if depth == 0 {
 					endIdx = i + 1
@@ -575,12 +576,12 @@ func extractStructDefs(script string) (structs string, remaining string) {
 			break
 		}
 
-		sb.WriteString(remaining[typeIdx:endIdx])
+		sb.Write(buf[typeIdx:endIdx])
 		sb.WriteString("\n")
-		remaining = remaining[:typeIdx] + remaining[endIdx:]
+		buf = append(buf[:typeIdx], buf[endIdx:]...)
 	}
 
-	return sb.String(), remaining
+	return sb.String(), string(buf)
 }
 
 func (c *GospaCompiler) generateIslandTempl(name, islandID, template, script, hash, pkgName string, props []Prop, templTypesSnippet string) string {

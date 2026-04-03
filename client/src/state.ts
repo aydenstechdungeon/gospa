@@ -431,12 +431,11 @@ export class Derived<T> implements Notifier {
   }
 
   notify(): void {
-    const prevValue = this._dirty ? undefined : this._value;
+    const oldValue = this._value;
     if (this._dirty) {
       this._recompute();
     }
-    const value = this._value;
-    this._subscribers.forEach((fn) => fn(value, prevValue ?? value));
+    this._subscribers.forEach((fn) => fn(this._value, oldValue));
   }
 
   private trackDependency(): void {

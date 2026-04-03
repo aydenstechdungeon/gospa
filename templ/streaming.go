@@ -117,8 +117,8 @@ func (sw *StreamWriter) Flush() error {
 
 // Close closes the stream writer.
 func (sw *StreamWriter) Close() error {
-	close(sw.done)
 	close(sw.chunks)
+	close(sw.done)
 	return sw.Flush()
 }
 

@@ -375,7 +375,8 @@ func (p *Plugin) stringToValibot(field FieldSchema) string {
 		parts = append(parts, fmt.Sprintf("v.maxLength(%d)", int(maxVal)))
 	}
 	if field.Pattern != "" {
-		parts = append(parts, fmt.Sprintf("v.regex(/%s/)", field.Pattern))
+		escaped := strings.ReplaceAll(field.Pattern, "/", "\\/")
+		parts = append(parts, fmt.Sprintf("v.regex(/%s/)", escaped))
 	}
 
 	if len(parts) == 1 {

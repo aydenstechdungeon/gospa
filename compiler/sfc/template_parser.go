@@ -459,9 +459,31 @@ func (p *TemplateParser) consume(s string) bool {
 	return false
 }
 
-func (p *TemplateParser) consumeUntil(s string) string {
+func (p *TemplateParser) consumeUntil(delimiter string) string {
 	start := p.pos
-	idx := strings.Index(p.input[p.pos:], s)
+
+	if delimiter == "}" || delimiter == ")" {
+		open := delimiter[0] ^ 1
+		depth := 0
+
+		for p.pos < len(p.input) {
+			ch := p.input[p.pos]
+			switch ch {
+			case open:
+				depth++
+			case delimiter[0]:
+				if depth == 0 {
+					return p.input[start:p.pos]
+				}
+				depth--
+			}
+			p.pos++
+		}
+		return p.input[start:]
+	}
+
+	// Non-brace delimiter: original behavior
+	idx := strings.Index(p.input[p.pos:], delimiter)
 	if idx == -1 {
 		p.pos = len(p.input)
 		return p.input[start:]

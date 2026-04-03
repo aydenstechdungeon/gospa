@@ -106,13 +106,12 @@ func StateMiddleware(config Config) gofiber.Handler {
 		// Always inject the runtime script if not already present in the HTML.
 		// The runtime is required for island hydration — without it, client-side
 		// TypeScript in <script lang="ts"> blocks never executes.
-		bodyStr := string(body)
-		if config.RuntimeScript != "" && !strings.Contains(bodyStr, config.RuntimeScript) {
+		if config.RuntimeScript != "" && !bytes.Contains(body, []byte(config.RuntimeScript)) {
 			stateScript += `<script src="` + config.RuntimeScript + `" type="module"></script>`
 		}
 
 		// In dev mode, also inject islands.js if not already present and the file exists
-		if config.DevMode && !strings.Contains(bodyStr, "/static/js/islands.js") {
+		if config.DevMode && !bytes.Contains(body, []byte("/static/js/islands.js")) {
 			if _, err := os.Stat("static/js/islands.js"); err == nil {
 				stateScript += `<script src="/static/js/islands.js" type="module"></script>`
 			}

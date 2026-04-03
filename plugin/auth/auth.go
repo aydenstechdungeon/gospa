@@ -17,6 +17,8 @@ import (
 	"path/filepath"
 	"strconv"
 	"strings"
+	"sync"
+	"sync/atomic"
 	"time"
 
 	"github.com/aydenstechdungeon/gospa/plugin"
@@ -38,12 +40,19 @@ func (p *AuthPlugin) EnableTOTP() fiber.Handler { return p.EnableOTPHandler() }
 // VerifyTOTP is an alias for VerifyOTPHandler for backward compatibility.
 func (p *AuthPlugin) VerifyTOTP() fiber.Handler { return p.VerifyOTPHandler() }
 
+// otpRateEntry tracks in-memory OTP attempt counts with expiry.
+type otpRateEntry struct {
+	count     int32
+	expiresAt int64 // unix timestamp
+}
+
 // AuthPlugin provides authentication capabilities.
 //
 //nolint:revive // changing name would break API
 type AuthPlugin struct {
-	config  *Config
-	storage store.Storage
+	config     *Config
+	storage    store.Storage
+	otpLimiter sync.Map // map[string]*otpRateEntry
 }
 
 // SetStorage sets the storage backend for the plugin.
@@ -360,30 +369,61 @@ func (p *AuthPlugin) VerifyOTPHandler() fiber.Handler {
 			return c.Status(fiber.StatusBadRequest).JSON(fiber.Map{"error": "invalid request"})
 		}
 
-		// RATE LIMITING PROTECTION: Add basic per-user rate limit for OTP attempts.
-		// Identity is verified by matching the requester's session user ID with the target client ID.
-		if u, ok := c.Locals("user").(*User); ok && p.storage != nil {
-			limitKey := "gospa:auth:otp_limit:" + u.ID
-			var count int
-			if b, err := p.storage.Get(limitKey); err == nil {
-				count, _ = strconv.Atoi(string(b))
-			}
-			if count >= 5 {
+		rateKey := c.IP()
+		if u, ok := c.Locals("user").(*User); ok {
+			rateKey = "user:" + u.ID
+		}
+
+		if p.storage != nil {
+			return p.verifyOTPWithStorage(c, rateKey, req.Secret, req.Code)
+		}
+		return p.verifyOTPInMemory(c, rateKey, req.Secret, req.Code)
+	}
+}
+
+func (p *AuthPlugin) verifyOTPWithStorage(c fiber.Ctx, limitKey, secret, code string) error {
+	var count int
+	if b, err := p.storage.Get(limitKey); err == nil {
+		count, _ = strconv.Atoi(string(b))
+	}
+	if count >= 5 {
+		return c.Status(429).JSON(fiber.Map{"error": "too many attempts. please wait."})
+	}
+	if p.VerifyOTP(secret, code) {
+		_ = p.storage.Delete(limitKey)
+		return c.JSON(fiber.Map{"success": true})
+	}
+	count++
+	_ = p.storage.Set(limitKey, []byte(strconv.Itoa(count)), 5*time.Minute)
+	return c.Status(fiber.StatusUnauthorized).JSON(fiber.Map{"success": false, "error": "invalid OTP code"})
+}
+
+func (p *AuthPlugin) verifyOTPInMemory(c fiber.Ctx, rateKey, secret, code string) error {
+	now := time.Now().Unix()
+
+	val, loaded := p.otpLimiter.Load(rateKey)
+	if !loaded {
+		entry := &otpRateEntry{count: 1, expiresAt: now + 300}
+		p.otpLimiter.Store(rateKey, entry)
+	} else {
+		entry := val.(*otpRateEntry)
+		expires := atomic.LoadInt64(&entry.expiresAt)
+		if now > expires {
+			atomic.StoreInt32(&entry.count, 1)
+			atomic.StoreInt64(&entry.expiresAt, now+300)
+		} else {
+			if atomic.LoadInt32(&entry.count) >= 5 {
 				return c.Status(429).JSON(fiber.Map{"error": "too many attempts. please wait."})
 			}
-			// Verification check
-			if p.VerifyOTP(req.Secret, req.Code) {
-				_ = p.storage.Delete(limitKey)
-				return c.JSON(fiber.Map{"success": true})
-			}
-			// Increment count
-			count++
-			_ = p.storage.Set(limitKey, []byte(strconv.Itoa(count)), 5*time.Minute)
-		} else if p.VerifyOTP(req.Secret, req.Code) {
-			return c.JSON(fiber.Map{"success": true})
+			atomic.AddInt32(&entry.count, 1)
 		}
-		return c.Status(fiber.StatusUnauthorized).JSON(fiber.Map{"success": false, "error": "invalid OTP code"})
 	}
+
+	if p.VerifyOTP(secret, code) {
+		p.otpLimiter.Delete(rateKey)
+		return c.JSON(fiber.Map{"success": true})
+	}
+	return c.Status(fiber.StatusUnauthorized).JSON(fiber.Map{"success": false, "error": "invalid OTP code"})
 }
 
 // getProvider returns provider by name.
@@ -1479,6 +1519,26 @@ func HashBackupCode(code string) string {
 	mac := hmac.New(sha256.New, salt)
 	mac.Write([]byte(code))
 	return hex.EncodeToString(salt) + ":" + hex.EncodeToString(mac.Sum(nil))
+}
+
+// VerifyBackupCode checks whether a plaintext code matches a stored salt:hash.
+func VerifyBackupCode(code, storedHash string) bool {
+	parts := strings.SplitN(storedHash, ":", 2)
+	if len(parts) != 2 {
+		return false
+	}
+	salt, err := hex.DecodeString(parts[0])
+	if err != nil {
+		return false
+	}
+	expectedHash, err := hex.DecodeString(parts[1])
+	if err != nil {
+		return false
+	}
+	code = strings.ReplaceAll(code, "-", "")
+	mac := hmac.New(sha256.New, salt)
+	mac.Write([]byte(code))
+	return hmac.Equal(mac.Sum(nil), expectedHash)
 }
 
 // GetConfig returns the current configuration.

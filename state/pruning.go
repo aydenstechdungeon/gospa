@@ -10,6 +10,7 @@ import (
 	"go/token"
 	"os"
 	"path/filepath"
+	"reflect"
 	"regexp"
 	"strings"
 )
@@ -444,14 +445,17 @@ func BuildStateTree(state map[string]any) *StateTree {
 		Children: make(map[string]*StateTree),
 	}
 
+	seen := make(map[uintptr]bool)
+	seen[reflect.ValueOf(state).Pointer()] = true
+
 	for key, value := range state {
-		root.Children[key] = buildStateTreeRecursive(key, value, "")
+		root.Children[key] = buildStateTreeRecursive(key, value, "", seen)
 	}
 
 	return root
 }
 
-func buildStateTreeRecursive(name string, value any, path string) *StateTree {
+func buildStateTreeRecursive(name string, value any, path string, seen map[uintptr]bool) *StateTree {
 	node := &StateTree{
 		Name: name,
 		Path: path + "." + name,
@@ -459,14 +463,17 @@ func buildStateTreeRecursive(name string, value any, path string) *StateTree {
 
 	switch v := value.(type) {
 	case map[string]any:
+		ptr := reflect.ValueOf(v).Pointer()
+		if seen[ptr] {
+			node.Type = "object"
+			node.Children = make(map[string]*StateTree)
+			return node
+		}
+		seen[ptr] = true
 		node.Type = "object"
 		node.Children = make(map[string]*StateTree)
 		for key, val := range v {
-			// Guard against self-referencing maps that would cause infinite recursion
-			if val == value {
-				continue
-			}
-			node.Children[key] = buildStateTreeRecursive(key, val, node.Path)
+			node.Children[key] = buildStateTreeRecursive(key, val, node.Path, seen)
 		}
 	case []any:
 		node.Type = "array"
