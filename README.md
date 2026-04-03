@@ -41,6 +41,7 @@ gospa dev
 > For local client/runtime tooling, use Bun. The GoSPA client package and repo JS/TS workflows are Bun-first.
 
 ### 3. A Simple SFC
+(.gospa is in alpha, try to use templs instead)
 ```svelte
 // islands/Counter.gospa
 <script lang="go">
