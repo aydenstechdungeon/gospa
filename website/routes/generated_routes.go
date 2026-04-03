@@ -73,6 +73,15 @@ import (
 
 func init() {
 	// Register pages
+	routing.RegisterPage("/", func(props map[string]interface{}) templ.Component {
+		return Page()
+	})
+	routing.RegisterPage("/docs", func(props map[string]interface{}) templ.Component {
+		return docs.Page()
+	})
+	routing.RegisterPage("/docs/api", func(props map[string]interface{}) templ.Component {
+		return docsapi.Page()
+	})
 	routing.RegisterPage("/docs/api/client", func(props map[string]interface{}) templ.Component {
 		return docsapiclient.Page()
 	})
@@ -81,9 +90,6 @@ func init() {
 	})
 	routing.RegisterPage("/docs/api/fiber", func(props map[string]interface{}) templ.Component {
 		return docsapifiber.Page()
-	})
-	routing.RegisterPage("/docs/api", func(props map[string]interface{}) templ.Component {
-		return docsapi.Page()
 	})
 	routing.RegisterPage("/docs/api/routing", func(props map[string]interface{}) templ.Component {
 		return docsapirouting.Page()
@@ -112,11 +118,11 @@ func init() {
 	routing.RegisterPage("/docs/components", func(props map[string]interface{}) templ.Component {
 		return docscomponents.Page()
 	})
-	routing.RegisterPage("/docs/configuration/basic", func(props map[string]interface{}) templ.Component {
-		return docsconfigurationbasic.Page()
-	})
 	routing.RegisterPage("/docs/configuration", func(props map[string]interface{}) templ.Component {
 		return docsconfiguration.Page()
+	})
+	routing.RegisterPage("/docs/configuration/basic", func(props map[string]interface{}) templ.Component {
+		return docsconfigurationbasic.Page()
 	})
 	routing.RegisterPage("/docs/configuration/scaling", func(props map[string]interface{}) templ.Component {
 		return docsconfigurationscaling.Page()
@@ -142,14 +148,14 @@ func init() {
 	routing.RegisterPage("/docs/getstarted/structure", func(props map[string]interface{}) templ.Component {
 		return docsgetstartedstructure.Page()
 	})
+	routing.RegisterPage("/docs/gospasfc", func(props map[string]interface{}) templ.Component {
+		return docsgospasfc.Page()
+	})
 	routing.RegisterPage("/docs/gospasfc/advanced", func(props map[string]interface{}) templ.Component {
 		return docsgospasfcadvanced.Page()
 	})
 	routing.RegisterPage("/docs/gospasfc/examples", func(props map[string]interface{}) templ.Component {
 		return docsgospasfcexamples.Page()
-	})
-	routing.RegisterPage("/docs/gospasfc", func(props map[string]interface{}) templ.Component {
-		return docsgospasfc.Page()
 	})
 	routing.RegisterPage("/docs/gospasfc/getting-started", func(props map[string]interface{}) templ.Component {
 		return docsgospasfcgettingstarted.Page()
@@ -172,20 +178,17 @@ func init() {
 	routing.RegisterPage("/docs/islands", func(props map[string]interface{}) templ.Component {
 		return docsislands.Page()
 	})
-	routing.RegisterPage("/docs", func(props map[string]interface{}) templ.Component {
-		return docs.Page()
-	})
 	routing.RegisterPage("/docs/params", func(props map[string]interface{}) templ.Component {
 		return docsparams.Page()
+	})
+	routing.RegisterPage("/docs/plugins", func(props map[string]interface{}) templ.Component {
+		return docsplugins.Page()
 	})
 	routing.RegisterPage("/docs/plugins/auth", func(props map[string]interface{}) templ.Component {
 		return docspluginsauth.Page()
 	})
 	routing.RegisterPage("/docs/plugins/image", func(props map[string]interface{}) templ.Component {
 		return docspluginsimage.Page()
-	})
-	routing.RegisterPage("/docs/plugins", func(props map[string]interface{}) templ.Component {
-		return docsplugins.Page()
 	})
 	routing.RegisterPage("/docs/plugins/postcss", func(props map[string]interface{}) templ.Component {
 		return docspluginspostcss.Page()
@@ -202,6 +205,9 @@ func init() {
 	routing.RegisterPage("/docs/plugins/validation", func(props map[string]interface{}) templ.Component {
 		return docspluginsvalidation.Page()
 	})
+	routing.RegisterPage("/docs/reactive-primitives", func(props map[string]interface{}) templ.Component {
+		return docsreactiveprimitives.Page()
+	})
 	routing.RegisterPage("/docs/reactive-primitives/advanced", func(props map[string]interface{}) templ.Component {
 		return docsreactiveprimitivesadvanced.Page()
 	})
@@ -211,14 +217,14 @@ func init() {
 	routing.RegisterPage("/docs/reactive-primitives/js", func(props map[string]interface{}) templ.Component {
 		return docsreactiveprimitivesjs.Page()
 	})
-	routing.RegisterPage("/docs/reactive-primitives", func(props map[string]interface{}) templ.Component {
-		return docsreactiveprimitives.Page()
-	})
 	routing.RegisterPage("/docs/remote-actions", func(props map[string]interface{}) templ.Component {
 		return docsremoteactions.Page()
 	})
 	routing.RegisterPage("/docs/rendering", func(props map[string]interface{}) templ.Component {
 		return docsrendering.Page()
+	})
+	routing.RegisterPage("/docs/routing", func(props map[string]interface{}) templ.Component {
+		return docsrouting.Page()
 	})
 	routing.RegisterPage("/docs/routing/api", func(props map[string]interface{}) templ.Component {
 		return docsroutingapi.Page()
@@ -232,20 +238,17 @@ func init() {
 	routing.RegisterPage("/docs/routing/navigation", func(props map[string]interface{}) templ.Component {
 		return docsroutingnavigation.Page()
 	})
-	routing.RegisterPage("/docs/routing", func(props map[string]interface{}) templ.Component {
-		return docsrouting.Page()
-	})
 	routing.RegisterPage("/docs/runtime", func(props map[string]interface{}) templ.Component {
 		return docsruntime.Page()
 	})
 	routing.RegisterPage("/docs/sse", func(props map[string]interface{}) templ.Component {
 		return docssse.Page()
 	})
-	routing.RegisterPage("/docs/state-management/client", func(props map[string]interface{}) templ.Component {
-		return docsstatemanagementclient.Page()
-	})
 	routing.RegisterPage("/docs/state-management", func(props map[string]interface{}) templ.Component {
 		return docsstatemanagement.Page()
+	})
+	routing.RegisterPage("/docs/state-management/client", func(props map[string]interface{}) templ.Component {
+		return docsstatemanagementclient.Page()
 	})
 	routing.RegisterPage("/docs/state-management/patterns", func(props map[string]interface{}) templ.Component {
 		return docsstatemanagementpatterns.Page()
@@ -262,19 +265,8 @@ func init() {
 	routing.RegisterPage("/docs/websocket", func(props map[string]interface{}) templ.Component {
 		return docswebsocket.Page()
 	})
-	routing.RegisterPage("/", func(props map[string]interface{}) templ.Component {
-		return Page()
-	})
 
 	// Register layouts
-	routing.RegisterLayout("/docs", func(children templ.Component, props map[string]interface{}) templ.Component {
-		return docs.DocsLayout(children, func() string {
-		if v, ok := props["path"].(string); ok {
-			return v
-		}
-		return ""
-	}())
-	})
 	routing.RegisterRootLayout(func(children templ.Component, props map[string]interface{}) templ.Component {
 		return RootLayout(func() string {
 		if v, ok := props["title"].(string); ok {
@@ -313,6 +305,14 @@ func init() {
 		return 0
 	}(), func() string {
 		if v, ok := props["serializationFormat"].(string); ok {
+			return v
+		}
+		return ""
+	}())
+	})
+	routing.RegisterLayout("/docs", func(children templ.Component, props map[string]interface{}) templ.Component {
+		return docs.DocsLayout(children, func() string {
+		if v, ok := props["path"].(string); ok {
 			return v
 		}
 		return ""

@@ -518,6 +518,11 @@ func (a *App) applyPluginMiddleware() {
 }
 
 func (a *App) setupMiddleware() {
+	// 1. Global Hooks (SvelteKit hooks.server.go style)
+	for _, hook := range routing.GetHooks() {
+		a.Fiber.Use(hook)
+	}
+
 	a.Fiber.Use(recovermw.New(recovermw.Config{
 		EnableStackTrace: true,
 	}))
@@ -663,6 +668,60 @@ func (a *App) registerPageRoute(r *routing.Route) {
 		return a.renderRoute(c, r)
 	})
 	a.Fiber.Get(r.Path, handlers[0], handlers[1:]...)
+
+	// Register POST handler for form actions
+	postHandlers := append([]any{}, handlers[:len(handlers)-1]...)
+	postHandlers = append(postHandlers, func(c fiberpkg.Ctx) error {
+		return a.handleFormAction(c, r)
+	})
+	if len(postHandlers) > 0 {
+		a.Fiber.Post(r.Path, postHandlers[0], postHandlers[1:]...)
+	}
+}
+
+func (a *App) handleFormAction(c fiberpkg.Ctx, r *routing.Route) error {
+	actionName := c.Query("/_action")
+	if actionName == "" {
+		actionName = "default"
+	}
+
+	action := routing.GetAction(r.Path, actionName)
+	if action == nil {
+		// If no specific action found, try "default" if it wasn't already checked
+		if actionName != "default" {
+			action = routing.GetAction(r.Path, "default")
+		}
+	}
+
+	if action == nil {
+		return c.Status(fiberpkg.StatusNotFound).SendString("Action not found")
+	}
+
+	lc := &fiberLoadContext{c: c}
+	result, err := action(lc)
+
+	// Check if AJAX (progressive enhancement)
+	if c.Get("X-Gospa-Enhance") != "" {
+		if err != nil {
+			return c.Status(fiberpkg.StatusInternalServerError).JSON(fiberpkg.Map{
+				"error": err.Error(),
+				"code":  "ACTION_FAILED",
+			})
+		}
+		return c.JSON(fiberpkg.Map{
+			"data": result,
+			"code": "SUCCESS",
+		})
+	}
+
+	// Standard form submission: redirect back to the page
+	// TODO: Integrate flash messages for errors/results in session
+	if err != nil {
+		// For now just logged, but should be flashed
+		a.Logger().Error("Form action error", "path", r.Path, "action", actionName, "err", err)
+	}
+
+	return c.Redirect().Status(fiberpkg.StatusSeeOther).To(c.Path())
 }
 
 // Get registers a GET route with the specified path and handlers.
@@ -772,4 +831,28 @@ func Broadcast(message interface{}) error {
 	}
 	defaultApp.Hub.Broadcast <- b
 	return nil
+}
+
+type fiberLoadContext struct {
+	c fiberpkg.Ctx
+}
+
+func (f *fiberLoadContext) Param(key string) string {
+	return f.c.Params(key)
+}
+
+func (f *fiberLoadContext) Query(key string, defaultValue ...string) string {
+	return f.c.Query(key, defaultValue...)
+}
+
+func (f *fiberLoadContext) Header(key string) string {
+	return f.c.Get(key)
+}
+
+func (f *fiberLoadContext) Cookie(key string) string {
+	return f.c.Cookies(key)
+}
+
+func (f *fiberLoadContext) Path() string {
+	return f.c.Path()
 }

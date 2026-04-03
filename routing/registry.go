@@ -6,6 +6,7 @@ import (
 	"time"
 
 	"github.com/a-h/templ"
+	fiberpkg "github.com/gofiber/fiber/v3"
 )
 
 // ComponentFunc is a function that returns a templ.Component.
@@ -65,16 +66,38 @@ type RateLimitOptions struct {
 // SlotFunc returns a templ.Component for a named PPR dynamic slot.
 type SlotFunc func(props map[string]interface{}) templ.Component
 
+// LoadContext provides access to request data for server-side Load functions.
+type LoadContext interface {
+	Param(key string) string
+	Query(key string, defaultValue ...string) string
+	Header(key string) string
+	Cookie(key string) string
+	Path() string
+}
+
+// LoadFunc is a function that returns data for a page or layout.
+type LoadFunc func(c LoadContext) (map[string]interface{}, error)
+
+// ActionFunc is a function that handles a form action.
+type ActionFunc func(c LoadContext) (interface{}, error)
+
+// HookFunc is a function that handles a server-side hook (middleware).
+type HookFunc func(c fiberpkg.Ctx) error
+
 // Registry holds registered page and layout components.
 type Registry struct {
-	mu          sync.RWMutex
-	pages       map[string]ComponentFunc
-	pageOptions map[string]RouteOptions
-	layouts     map[string]LayoutFunc
-	errors      map[string]ComponentFunc
-	middlewares map[string]MiddlewareFunc
-	loadings    map[string]ComponentFunc
-	rootLayout  LayoutFunc
+	mu           sync.RWMutex
+	pages        map[string]ComponentFunc
+	pageOptions  map[string]RouteOptions
+	layouts      map[string]LayoutFunc
+	errors       map[string]ComponentFunc
+	middlewares  map[string]MiddlewareFunc
+	loadings     map[string]ComponentFunc
+	rootLayout   LayoutFunc
+	loadFuncs    map[string]LoadFunc
+	layoutLoader map[string]LoadFunc
+	actions      map[string]map[string]ActionFunc
+	hooks        []HookFunc
 	// slots maps pagePath → slotName → SlotFunc for PPR.
 	slots map[string]map[string]SlotFunc
 }
@@ -85,14 +108,116 @@ var globalRegistry = NewRegistry()
 // NewRegistry creates a new component registry.
 func NewRegistry() *Registry {
 	return &Registry{
-		pages:       make(map[string]ComponentFunc),
-		pageOptions: make(map[string]RouteOptions),
-		layouts:     make(map[string]LayoutFunc),
-		errors:      make(map[string]ComponentFunc),
-		middlewares: make(map[string]MiddlewareFunc),
-		loadings:    make(map[string]ComponentFunc),
-		slots:       make(map[string]map[string]SlotFunc),
+		pages:        make(map[string]ComponentFunc),
+		pageOptions:  make(map[string]RouteOptions),
+		layouts:      make(map[string]LayoutFunc),
+		errors:       make(map[string]ComponentFunc),
+		middlewares:  make(map[string]MiddlewareFunc),
+		loadings:     make(map[string]ComponentFunc),
+		loadFuncs:    make(map[string]LoadFunc),
+		layoutLoader: make(map[string]LoadFunc),
+		actions:      make(map[string]map[string]ActionFunc),
+		hooks:        make([]HookFunc, 0),
+		slots:        make(map[string]map[string]SlotFunc),
 	}
+}
+
+// RegisterAction registers an action for a page path.
+func (r *Registry) RegisterAction(pagePath, actionName string, fn ActionFunc) {
+	r.mu.Lock()
+	defer r.mu.Unlock()
+	if r.actions[pagePath] == nil {
+		r.actions[pagePath] = make(map[string]ActionFunc)
+	}
+	r.actions[pagePath][actionName] = fn
+}
+
+// GetActions returns all actions for a page path.
+func (r *Registry) GetActions(pagePath string) map[string]ActionFunc {
+	r.mu.RLock()
+	defer r.mu.RUnlock()
+	return r.actions[pagePath]
+}
+
+// GetAction returns a specific action for a page path.
+func (r *Registry) GetAction(pagePath, actionName string) ActionFunc {
+	r.mu.RLock()
+	defer r.mu.RUnlock()
+	if actions, ok := r.actions[pagePath]; ok {
+		return actions[actionName]
+	}
+	return nil
+}
+
+// Global registration functions
+
+// RegisterAction registers a page action in the global registry.
+func RegisterAction(pagePath, actionName string, fn ActionFunc) {
+	globalRegistry.RegisterAction(pagePath, actionName, fn)
+}
+
+// GetActions returns all actions for a page path from the global registry.
+func GetActions(pagePath string) map[string]ActionFunc {
+	return globalRegistry.GetActions(pagePath)
+}
+
+// GetAction returns a specific action for a page path from the global registry.
+func GetAction(pagePath, actionName string) ActionFunc {
+	return globalRegistry.GetAction(pagePath, actionName)
+}
+
+// RegisterHook registers a global server-side hook (middleware).
+func (r *Registry) RegisterHook(fn HookFunc) {
+	r.mu.Lock()
+	defer r.mu.Unlock()
+	r.hooks = append(r.hooks, fn)
+}
+
+// GetHooks returns all registered global hooks.
+func (r *Registry) GetHooks() []HookFunc {
+	r.mu.RLock()
+	defer r.mu.RUnlock()
+	return r.hooks
+}
+
+// Global registration functions
+
+// RegisterHook registers a global server-side hook in the global registry.
+func RegisterHook(fn HookFunc) {
+	globalRegistry.RegisterHook(fn)
+}
+
+// GetHooks returns all registered global hooks from the global registry.
+func GetHooks() []HookFunc {
+	return globalRegistry.GetHooks()
+}
+
+// RegisterLoad registers a load function for a route path.
+func (r *Registry) RegisterLoad(path string, fn LoadFunc) {
+	r.mu.Lock()
+	defer r.mu.Unlock()
+	r.loadFuncs[path] = fn
+}
+
+// GetLoad returns the load function for a path.
+func (r *Registry) GetLoad(path string) LoadFunc {
+	r.mu.RLock()
+	defer r.mu.RUnlock()
+	return r.loadFuncs[path]
+}
+
+// RegisterLayoutLoad registers a load function for a layout path.
+func (r *Registry) RegisterLayoutLoad(path string, fn LoadFunc) {
+	r.mu.Lock()
+	defer r.mu.Unlock()
+	r.layoutLoader[path] = fn
+}
+
+// GetLayoutLoad returns the load function for a layout path.
+func (r *Registry) GetLayoutLoad(path string) LoadFunc {
+	r.mu.RLock()
+	defer r.mu.RUnlock()
+	return r.layoutLoader[path]
 }
 
 // RegisterPage registers a page component for a route path (default to SSR).
@@ -321,6 +446,26 @@ func RegisterSlot(pagePath, slotName string, fn SlotFunc) {
 // GetSlot returns a PPR slot from the global registry.
 func GetSlot(pagePath, slotName string) SlotFunc {
 	return globalRegistry.GetSlot(pagePath, slotName)
+}
+
+// RegisterLoad registers a load function in the global registry.
+func RegisterLoad(path string, fn LoadFunc) {
+	globalRegistry.RegisterLoad(path, fn)
+}
+
+// GetLoad returns a load function from the global registry.
+func GetLoad(path string) LoadFunc {
+	return globalRegistry.GetLoad(path)
+}
+
+// RegisterLayoutLoad registers a layout load function in the global registry.
+func RegisterLayoutLoad(path string, fn LoadFunc) {
+	globalRegistry.RegisterLayoutLoad(path, fn)
+}
+
+// GetLayoutLoad returns a layout load function from the global registry.
+func GetLayoutLoad(path string) LoadFunc {
+	return globalRegistry.GetLayoutLoad(path)
 }
 
 // GetGlobalRegistry returns the global registry.

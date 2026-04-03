@@ -128,19 +128,44 @@ func (a *App) renderRoute(c gofiber.Ctx, route *routing.Route) error {
 	}
 
 	layouts := a.Router.ResolveLayoutChain(route)
-	_, params := a.Router.Match(c.Path())
+	_, routeParams := a.Router.Match(c.Path())
+
+	// Convert map[string]string to map[string]interface{}
+	params := make(map[string]interface{}, len(routeParams))
+	for k, v := range routeParams {
+		params[k] = v
+	}
+
+	// Resolve data load chain
+	loadedProps, err := a.resolveLoadChain(c, route, layouts)
+	if err != nil {
+		a.Logger().Error("Load error", "err", err)
+		return a.renderError(c, gofiber.StatusInternalServerError, err)
+	}
+
+	// Merge with route params (route params take precedence for ID fields etc)
+	for k, v := range params {
+		loadedProps[k] = v
+	}
+
 	ctx := c.Context()
 	registry := state.NewRegistry()
 	ctx = context.WithValue(ctx, state.RegistryContextKey, registry)
 
-	content := a.buildPageContent(route, params, c.Path())
-	content = a.wrapWithLayouts(content, layouts, params, c.Path())
+	content := a.buildPageContent(route, loadedProps, c.Path())
+	content = a.wrapWithLayouts(content, layouts, loadedProps, c.Path())
 
 	c.Set("Content-Type", "text/html")
 
 	rootLayoutFunc := routing.GetRootLayout()
 	if rootLayoutFunc != nil {
 		rootProps := a.buildRootLayoutProps(c, params)
+		// Merge loaded props into root props if they don't conflict
+		for k, v := range loadedProps {
+			if _, ok := rootProps[k]; !ok {
+				rootProps[k] = v
+			}
+		}
 		wrappedContent := rootLayoutFunc(content, rootProps)
 
 		if a.Config.CacheTemplates && effStrategy == routing.StrategySSG {
@@ -185,8 +210,14 @@ func (a *App) renderRoute(c gofiber.Ctx, route *routing.Route) error {
 				shellContent := wrappedContent
 				if loadingFn := routing.GetLoading(route.Path); loadingFn != nil {
 					ld := loadingFn(map[string]interface{}{})
-					ld = a.wrapWithLayouts(ld, layouts, params, c.Path())
-					rootProps := a.buildRootLayoutProps(c, params)
+					ld = a.wrapWithLayouts(ld, layouts, loadedProps, c.Path())
+					rootProps := a.buildRootLayoutProps(c, loadedProps)
+					// Merge loaded props into root props if they don't conflict
+					for k, v := range loadedProps {
+						if _, ok := rootProps[k]; !ok {
+							rootProps[k] = v
+						}
+					}
 					shellContent = rootLayoutFunc(ld, rootProps)
 				}
 
@@ -327,7 +358,7 @@ runtime.init({
 }
 
 // renderAndStreamDeferredSlot renders a slot in the background and streams it immediately as a replacement chunk.
-func (a *App) renderAndStreamDeferredSlot(mu *sync.Mutex, w *bufio.Writer, route *routing.Route, slotName string, params map[string]string, path string) {
+func (a *App) renderAndStreamDeferredSlot(mu *sync.Mutex, w *bufio.Writer, route *routing.Route, slotName string, params map[string]interface{}, path string) {
 	slotFn := routing.GetSlot(route.Path, slotName)
 	if slotFn == nil {
 		return
@@ -352,4 +383,47 @@ func (a *App) renderAndStreamDeferredSlot(mu *sync.Mutex, w *bufio.Writer, route
 	_, _ = fmt.Fprintf(w, `<template id="gospa-deferred-content-%s">%s</template>`, safeSlotName, buf.String())
 	_, _ = fmt.Fprintf(w, `<script>if(window.__GOSPA_STREAM__){__GOSPA_STREAM__({type:'html', id:'gospa-deferred-%s', content: document.getElementById('gospa-deferred-content-%s').innerHTML})}</script>`, safeSlotName, safeSlotName)
 	_ = w.Flush()
+}
+
+// resolveLoadChain executes the load functions for a route and its layout chain.
+func (a *App) resolveLoadChain(c gofiber.Ctx, route *routing.Route, layouts []*routing.Route) (map[string]interface{}, error) {
+	props := make(map[string]interface{})
+	lc := &fiberLoadContext{c: c}
+
+	// 1. Root Layout Loader
+	if loader := routing.GetLayoutLoad(""); loader != nil {
+		data, err := loader(lc)
+		if err != nil {
+			return nil, err
+		}
+		for k, v := range data {
+			props[k] = v
+		}
+	}
+
+	// 2. Nested Layout Loaders
+	for _, layout := range layouts {
+		if loader := routing.GetLayoutLoad(layout.Path); loader != nil {
+			data, err := loader(lc)
+			if err != nil {
+				return nil, err
+			}
+			for k, v := range data {
+				props[k] = v
+			}
+		}
+	}
+
+	// 3. Page Loader
+	if loader := routing.GetLoad(route.Path); loader != nil {
+		data, err := loader(lc)
+		if err != nil {
+			return nil, err
+		}
+		for k, v := range data {
+			props[k] = v
+		}
+	}
+
+	return props, nil
 }

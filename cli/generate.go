@@ -169,7 +169,8 @@ func compileSFCs(config *GenerateConfig) error {
 		selectedType := compiler.ComponentType(config.ComponentType)
 
 		// Determine type from filename if not explicitly set
-		switch baseName {
+		cleanBaseName := strings.TrimPrefix(baseName, "+")
+		switch cleanBaseName {
 		case "page.gospa":
 			goName = "Page"
 			selectedType = compiler.ComponentTypePage
