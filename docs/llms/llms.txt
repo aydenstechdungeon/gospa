@@ -9,115 +9,232 @@
 
 ### Getting Started
 
-[01-quick-start](docs/01-getting-started/01-quick-start.md)
-  - Size: 11488 bytes
+[tutorial](docs/getstarted/tutorial.md)
+  - Size: 8321 bytes
 
-[02-tutorial](docs/01-getting-started/02-tutorial.md)
-  - Size: 8241 bytes
+[structure](docs/getstarted/structure.md)
+  - Size: 3430 bytes
 
+[quickstart](docs/getstarted/quickstart.md)
+  - Size: 2429 bytes
 
-### Core Concepts
-
-[02-rendering](docs/02-core-concepts/02-rendering.md)
-  - Size: 10323 bytes
-
-[03-state](docs/02-core-concepts/03-state.md)
-  - Size: 17260 bytes
-
-[04-components](docs/02-core-concepts/04-components.md)
-  - Size: 12728 bytes
-
-[05-islands](docs/02-core-concepts/05-islands.md)
-  - Size: 7147 bytes
-
-[06-routing](docs/02-core-concepts/06-routing.md)
-  - Size: 18357 bytes
+[installation](docs/getstarted/installation.md)
+  - Size: 1108 bytes
 
 
-### Features
+### SFC Components
 
-[01-client-runtime](docs/03-features/01-client-runtime.md)
-  - Size: 6666 bytes
+[gospasfc](docs/gospasfc.md)
+  - Size: 199 bytes
 
-[02-runtime-api](docs/03-features/02-runtime-api.md)
-  - Size: 41498 bytes
+[examples](docs/gospasfc/examples.md)
+  - Size: 678 bytes
 
-[03-realtime](docs/03-features/03-realtime.md)
-  - Size: 7029 bytes
+[advanced](docs/gospasfc/advanced.md)
+  - Size: 914 bytes
 
-[04-security](docs/03-features/04-security.md)
-  - Size: 8628 bytes
+[getting-started](docs/gospasfc/getting-started.md)
+  - Size: 1645 bytes
 
-[05-dev-tools](docs/03-features/05-dev-tools.md)
-  - Size: 4925 bytes
+[reactivity](docs/gospasfc/reactivity.md)
+  - Size: 893 bytes
 
-[06-deployment](docs/03-features/06-deployment.md)
-  - Size: 1776 bytes
+[styles](docs/gospasfc/styles.md)
+  - Size: 661 bytes
+
+[templates](docs/gospasfc/templates.md)
+  - Size: 914 bytes
+
+[typescript](docs/gospasfc/typescript.md)
+  - Size: 759 bytes
+
+
+### Routing
+
+[routing](docs/routing.md)
+  - Size: 155 bytes
+
+[dynamic](docs/routing/dynamic.md)
+  - Size: 1184 bytes
+
+[api](docs/routing/api.md)
+  - Size: 1054 bytes
+
+[layouts](docs/routing/layouts.md)
+  - Size: 2131 bytes
+
+[navigation](docs/routing/navigation.md)
+  - Size: 1406 bytes
+
+
+### State Management
+
+[client](docs/state-management/client.md)
+  - Size: 985 bytes
+
+[state-management](docs/state-management.md)
+  - Size: 211 bytes
+
+[sync](docs/state-management/sync.md)
+  - Size: 1205 bytes
+
+[server](docs/state-management/server.md)
+  - Size: 1297 bytes
+
+[patterns](docs/state-management/patterns.md)
+  - Size: 1154 bytes
+
+
+### Client Runtime
+
+[websocket](docs/client-runtime/websocket.md)
+  - Size: 1514 bytes
+
+[dom-bindings](docs/client-runtime/dom-bindings.md)
+  - Size: 3828 bytes
+
+[navigation-events](docs/client-runtime/navigation-events.md)
+  - Size: 3227 bytes
+
+[overview](docs/client-runtime/overview.md)
+  - Size: 2760 bytes
+
+[transitions](docs/client-runtime/transitions.md)
+  - Size: 2045 bytes
+
+
+### Configuration
+
+[websocket](docs/configuration/websocket.md)
+  - Size: 1894 bytes
+
+[basic](docs/configuration/basic.md)
+  - Size: 1695 bytes
+
+[scaling](docs/configuration/scaling.md)
+  - Size: 2112 bytes
+
+[configuration](docs/configuration.md)
+  - Size: 287 bytes
+
+
+### Plugins
+
+[qrcode](docs/plugins/qrcode.md)
+  - Size: 386 bytes
+
+[plugins](docs/plugins.md)
+  - Size: 261 bytes
+
+[validation](docs/plugins/validation.md)
+  - Size: 513 bytes
+
+[tailwind](docs/plugins/tailwind.md)
+  - Size: 842 bytes
+
+[seo](docs/plugins/seo.md)
+  - Size: 541 bytes
+
+[auth](docs/plugins/auth.md)
+  - Size: 527 bytes
+
+[image](docs/plugins/image.md)
+  - Size: 654 bytes
+
+[postcss](docs/plugins/postcss.md)
+  - Size: 1034 bytes
+
+
+### Reactive Primitives
+
+[js](docs/reactive-primitives/js.md)
+  - Size: 1099 bytes
+
+[advanced](docs/reactive-primitives/advanced.md)
+  - Size: 1248 bytes
+
+[go](docs/reactive-primitives/go.md)
+  - Size: 1065 bytes
+
+[reactive-primitives](docs/reactive-primitives.md)
+  - Size: 221 bytes
 
 
 ### API Reference
 
-[01-core-api](docs/04-api-reference/01-core-api.md)
-  - Size: 34794 bytes
+[api](docs/api.md)
+  - Size: 123 bytes
 
-[02-configuration](docs/04-api-reference/02-configuration.md)
-  - Size: 18744 bytes
+[client](docs/api/client.md)
+  - Size: 21 bytes
 
-[03-cli](docs/04-api-reference/03-cli.md)
-  - Size: 16352 bytes
+[core](docs/api/core.md)
+  - Size: 34082 bytes
 
-[04-plugins](docs/04-api-reference/04-plugins.md)
-  - Size: 24496 bytes
+[fiber](docs/api/fiber.md)
+  - Size: 24 bytes
 
+[routing](docs/api/routing.md)
+  - Size: 1054 bytes
 
-### Advanced
-
-[01-error-handling](docs/05-advanced/01-error-handling.md)
-  - Size: 11500 bytes
-
-[02-state-pruning](docs/05-advanced/02-state-pruning.md)
-  - Size: 2901 bytes
-
-
-### Migration
-
-[01-v1-to-v2](docs/06-migration/01-v1-to-v2.md)
-  - Size: 4829 bytes
+[state](docs/api/state.md)
+  - Size: 23 bytes
 
 
 ### Troubleshooting
 
-[01-runtime-initialization](docs/07-troubleshooting/01-runtime-initialization.md)
-  - Size: 4933 bytes
-
-[02-remote-actions](docs/07-troubleshooting/02-remote-actions.md)
-  - Size: 9253 bytes
-
-[03-websocket-connections](docs/07-troubleshooting/03-websocket-connections.md)
-  - Size: 8654 bytes
-
-[04-hmr-dev-server](docs/07-troubleshooting/04-hmr-dev-server.md)
-  - Size: 8314 bytes
-
-[05-island-hydration](docs/07-troubleshooting/05-island-hydration.md)
-  - Size: 9947 bytes
-
-[06-state-synchronization](docs/07-troubleshooting/06-state-synchronization.md)
-  - Size: 10488 bytes
-
-[07-build-deployment](docs/07-troubleshooting/07-build-deployment.md)
-  - Size: 10467 bytes
+[troubleshooting](docs/troubleshooting.md)
+  - Size: 64708 bytes
 
 
 ### Other
 
-[2026-03-12-security-performance-audit](docs/08-audits/2026-03-12-security-performance-audit.md)
-  - Size: 6595 bytes
+[faq](docs/faq.md)
+  - Size: 6 bytes
+
+[sse](docs/sse.md)
+  - Size: 21 bytes
+
+[errors](docs/errors.md)
+  - Size: 17 bytes
+
+[components](docs/components.md)
+  - Size: 12764 bytes
+
+[cli](docs/cli.md)
+  - Size: 18983 bytes
+
+[root](docs/root.md)
+  - Size: 21 bytes
+
+[runtime](docs/runtime.md)
+  - Size: 15 bytes
+
+[devtools](docs/devtools.md)
+  - Size: 23 bytes
+
+[rendering](docs/rendering.md)
+  - Size: 12488 bytes
+
+[remote-actions](docs/remote-actions.md)
+  - Size: 17 bytes
+
+[params](docs/params.md)
+  - Size: 17 bytes
 
 [README](docs/README.md)
-  - Size: 2829 bytes
+  - Size: 2899 bytes
+
+[hmr](docs/hmr.md)
+  - Size: 25 bytes
+
+[islands](docs/islands.md)
+  - Size: 7749 bytes
+
+[websocket](docs/websocket.md)
+  - Size: 28 bytes
 
 
 ## File Summary
 
-Total documentation files: 29
+Total documentation files: 65

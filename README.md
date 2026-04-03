@@ -90,16 +90,16 @@ For prefork deployments, add external `Storage` and `PubSub` backends so state a
 ## Security
 
 - **Vulnerability scanning (Go):** run `govulncheck ./...` regularly; the repo's GitHub Actions workflow runs tests and govulncheck. For a full local gate, use `./scripts/quality-check.sh`.
-- **Auth plugin:** set `JWT_SECRET` in production. Production is inferred from `GOSPA_ENV`, `ENV` / `APP_ENV` / `GO_ENV`, or legacy `GIN_MODE`—see [Security](docs/03-features/04-security.md#auth-plugin-jwt-and-production-detection).
+- **Auth plugin:** set `JWT_SECRET` in production. Production is inferred from `GOSPA_ENV`, `ENV` / `APP_ENV` / `GO_ENV`, or legacy `GIN_MODE`—see [Security](docs/configuration/scaling.md#auth-plugin-jwt-and-production-detection).
 - **CSP:** the compatibility default (`fiber.DefaultContentSecurityPolicy`) allows inline scripts and styles for typical GoSPA output. For tighter deployments, start from `fiber.StrictContentSecurityPolicy` and set `ContentSecurityPolicy` explicitly.
-- **SFC trust boundary:** `.gospa` files are *source code*, not user content. The compiler embeds `<script>` blocks directly into generated Go source. **Never compile untrusted tenant-provided SFCs in a shared CI or runtime.** For semi-trusted sources, enable `SafeMode` on `CompileOptions`—see [SFC docs](docs/03-features/07-gospa-sfc.md#security--trust-boundary).
+- **SFC trust boundary:** `.gospa` files are *source code*, not user content. The compiler embeds `<script>` blocks directly into generated Go source. **Never compile untrusted tenant-provided SFCs in a shared CI or runtime.** For semi-trusted sources, enable `SafeMode` on `CompileOptions`—see [SFC docs](docs/gospasfc/getting-started.md#security--trust-boundary).
 
 ## Documentation
 
 - **Browse:** [gospa.onrender.com/docs](https://gospa.onrender.com/docs) (website)
 - **Authoritative Markdown:** [`docs/README.md`](docs/README.md) (table of contents for the `docs/` tree)
-- **Config & API:** [`docs/04-api-reference/02-configuration.md`](docs/04-api-reference/02-configuration.md), [`docs/04-api-reference/01-core-api.md`](docs/04-api-reference/01-core-api.md)
-- **Production:** [Production checklist](docs/03-features/08-production-checklist.md), [Security](docs/03-features/04-security.md)
+- **Config & API:** [`docs/configuration.md`](docs/configuration.md), [`docs/api/core.md`](docs/api/core.md)
+- **Production:** [Production checklist](docs/troubleshooting.md), [Security](docs/configuration/scaling.md)
 - **Examples & Benchmarks:** [GospaSvKitBenchmark](https://github.com/aydenstechdungeon/GospaSvKitBenchmark) [not complete]
 
 ## Community & Support

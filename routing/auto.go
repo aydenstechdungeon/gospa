@@ -97,6 +97,12 @@ func (r *Router) Scan() error {
 	// Reset previously discovered routes so repeated Scan calls are idempotent.
 	r.routes = r.routes[:0]
 
+	type routeKey struct {
+		path  string
+		rType RouteType
+	}
+	bestRoutes := make(map[routeKey]*Route)
+
 	// Walk the routes filesystem
 	err := fs.WalkDir(r.fs, ".", func(path string, d fs.DirEntry, err error) error {
 		if err != nil {
@@ -108,8 +114,10 @@ func (r *Router) Scan() error {
 			return nil
 		}
 
-		// Only process .templ, .gospa files and _middleware.go
-		if !strings.HasSuffix(path, ".templ") && !strings.HasSuffix(path, ".gospa") && filepath.Base(path) != "_middleware.go" {
+		// Only process .templ, .gospa files, _middleware.go and +middleware.go
+		base := filepath.Base(path)
+		if !strings.HasSuffix(path, ".templ") && !strings.HasSuffix(path, ".gospa") &&
+			base != "_middleware.go" && base != "+middleware.go" && base != "+server.go" {
 			return nil
 		}
 
@@ -119,12 +127,34 @@ func (r *Router) Scan() error {
 			return fmt.Errorf("failed to parse route %s: %w", path, err)
 		}
 
-		r.routes = append(r.routes, route)
+		key := routeKey{path: route.Path, rType: route.Type}
+		existing, ok := bestRoutes[key]
+		if !ok {
+			bestRoutes[key] = route
+			return nil
+		}
+
+		// Prioritization logic: + prefix wins
+		currentBase := filepath.Base(route.File)
+		existingBase := filepath.Base(existing.File)
+
+		currentIsPlus := strings.HasPrefix(currentBase, "+")
+		existingIsPlus := strings.HasPrefix(existingBase, "+")
+
+		if currentIsPlus && !existingIsPlus {
+			bestRoutes[key] = route
+		}
+		// If both are plus or both are not plus, we keep the first one found (usually not an issue if follow naming)
 		return nil
 	})
 
 	if err != nil {
 		return fmt.Errorf("failed to scan routes: %w", err)
+	}
+
+	// Collect best routes
+	for _, route := range bestRoutes {
+		r.routes = append(r.routes, route)
 	}
 
 	// Sort routes by priority
@@ -147,17 +177,18 @@ func (r *Router) parseRoute(relPath string) (*Route, error) {
 	// Determine route type
 	routeType := RouteTypePage
 	fileName := filepath.Base(relPath)
+	cleanFileName := strings.TrimPrefix(fileName, "+")
 
 	switch {
-	case fileName == "page.templ" || fileName == "page.gospa":
+	case cleanFileName == "page.templ" || cleanFileName == "page.gospa":
 		routeType = RouteTypePage
-	case fileName == "layout.templ" || fileName == "layout.gospa":
+	case cleanFileName == "layout.templ" || cleanFileName == "layout.gospa":
 		routeType = RouteTypeLayout
-	case fileName == "error.templ" || fileName == "error.gospa":
+	case cleanFileName == "error.templ" || cleanFileName == "error.gospa":
 		routeType = RouteTypeError
-	case fileName == "_middleware.go":
+	case fileName == "_middleware.go" || fileName == "+middleware.go":
 		routeType = RouteTypeMiddleware
-	case fileName == "_loading.templ" || fileName == "loading.templ" || fileName == "_loading.gospa" || fileName == "loading.gospa":
+	case cleanFileName == "_loading.templ" || cleanFileName == "loading.templ" || cleanFileName == "_loading.gospa" || cleanFileName == "loading.gospa":
 		routeType = RouteTypeLoading
 	case strings.HasSuffix(fileName, "+server.go"):
 		routeType = RouteTypeAPI
@@ -191,41 +222,49 @@ func (r *Router) filePathToURLPath(relPath string, _ RouteType) string {
 
 	// Handle different route types
 	// Check for exact matches (root level) and path suffixes
+	fileName := filepath.Base(path)
+	cleanFileName := strings.TrimPrefix(fileName, "+")
+	dirPath := filepath.Dir(path)
+
 	switch {
-	case path == "page" || strings.HasSuffix(path, "/page"):
-		// Root page.templ -> /, nested page.templ -> parent path
-		if path == "page" {
+	case cleanFileName == "page":
+		// Root +page.templ -> /, nested +page.templ -> parent path
+		if dirPath == "." {
 			path = ""
 		} else {
-			path = strings.TrimSuffix(path, "page")
+			path = dirPath
 		}
-	case path == "layout" || strings.HasSuffix(path, "/layout"):
-		if path == "layout" {
+	case cleanFileName == "layout":
+		if dirPath == "." {
 			path = ""
 		} else {
-			path = strings.TrimSuffix(path, "layout")
+			path = dirPath
 		}
-	case path == "error" || strings.HasSuffix(path, "/error"):
-		if path == "error" {
+	case cleanFileName == "error":
+		if dirPath == "." {
 			path = ""
 		} else {
-			path = strings.TrimSuffix(path, "error")
+			path = dirPath
 		}
-	case path == "_middleware" || strings.HasSuffix(path, "/_middleware"):
-		if path == "_middleware" {
+	case fileName == "_middleware" || fileName == "+middleware":
+		if dirPath == "." {
 			path = ""
 		} else {
-			path = strings.TrimSuffix(path, "_middleware")
+			path = dirPath
 		}
-	case path == "_loading" || strings.HasSuffix(path, "/_loading") || path == "loading" || strings.HasSuffix(path, "/loading"):
-		if path == "_loading" || path == "loading" {
+	case cleanFileName == "_loading" || cleanFileName == "loading":
+		if dirPath == "." {
 			path = ""
 		} else {
-			path = strings.TrimSuffix(strings.TrimSuffix(path, "_loading"), "loading")
+			path = dirPath
 		}
-	case strings.Contains(path, "+server"):
+	case strings.HasSuffix(fileName, "+server"):
 		// API route: remove +server suffix
-		path = strings.TrimSuffix(path, "+server")
+		if dirPath == "." {
+			path = ""
+		} else {
+			path = dirPath
+		}
 	}
 
 	// Clean the path

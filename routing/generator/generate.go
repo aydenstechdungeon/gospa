@@ -32,6 +32,9 @@ type RouteInfo struct {
 	RouteParams  []string    // Dynamic route parameters extracted from URL path (e.g., ["id"] from /blog/:id)
 	PackageName  string      // Package name for this route (e.g., "routes" or "blog")
 	ImportPath   string      // Import path for subdirectory packages
+	HasLoader    bool        // True if this route has a server-side Load function
+	HasActions   bool        // True if this route has server-side form actions
+	Actions      []string    // List of action names discovered in Actions map
 }
 
 // FuncParam represents a function parameter.
@@ -51,8 +54,17 @@ func Generate(routesDir string) error {
 		return fmt.Errorf("scanning routes: %w", err)
 	}
 
+	// Check for hooks.server.go
+	hasHooks := false
+	hooksPath := filepath.Join(routesDir, "hooks.server.go")
+	if _, err := os.Stat(hooksPath); err == nil {
+		if hasHandleFunction(hooksPath) {
+			hasHooks = true
+		}
+	}
+
 	// Generate code
-	code, err := generateCode(routes, routesDir)
+	code, err := generateCode(routes, routesDir, hasHooks)
 	if err != nil {
 		return fmt.Errorf("generating code: %w", err)
 	}
@@ -95,7 +107,11 @@ func Generate(routesDir string) error {
 
 // scanRoutes scans the routes directory for .templ files.
 func scanRoutes(routesDir string) ([]RouteInfo, error) {
-	var routes []RouteInfo
+	type routeKey struct {
+		urlPath  string
+		isLayout bool
+	}
+	bestRoutes := make(map[routeKey]RouteInfo)
 
 	err := filepath.Walk(routesDir, func(path string, info os.FileInfo, err error) error {
 		if err != nil {
@@ -121,18 +137,72 @@ func scanRoutes(routesDir string) ([]RouteInfo, error) {
 		}
 
 		// Skip generated files
-		if strings.HasPrefix(relPath, "_") {
+		if strings.HasPrefix(filepath.Base(relPath), "_") {
 			return nil
 		}
 
 		route := parseRoute(relPath, routesDir)
 		route.FilePath = relPath
-		routes = append(routes, route)
+
+		// Check for corresponding loader file
+		dir := filepath.Dir(path)
+		cleanBase := strings.TrimPrefix(filepath.Base(path), "+")
+		loaderFile := ""
+		if strings.HasPrefix(cleanBase, "page") {
+			loaderFile = filepath.Join(dir, "+page.server.go")
+		} else if strings.HasPrefix(cleanBase, "layout") {
+			loaderFile = filepath.Join(dir, "+layout.server.go")
+		}
+		if loaderFile != "" {
+			if _, err := os.Stat(loaderFile); err == nil {
+				// Verify it has a Load function
+				if hasLoadFunction(loaderFile) {
+					route.HasLoader = true
+				}
+				// Discover actions in +page.server.go
+				if strings.HasSuffix(loaderFile, "+page.server.go") {
+					actions := getActions(loaderFile)
+					if len(actions) > 0 {
+						route.HasActions = true
+						route.Actions = actions
+					}
+				}
+			}
+		}
+
+		key := routeKey{urlPath: route.URLPath, isLayout: route.IsLayout}
+		existing, ok := bestRoutes[key]
+		if !ok {
+			bestRoutes[key] = route
+			return nil
+		}
+
+		// Prioritize + prefix
+		if strings.HasPrefix(filepath.Base(route.FilePath), "+") && !strings.HasPrefix(filepath.Base(existing.FilePath), "+") {
+			bestRoutes[key] = route
+		}
 
 		return nil
 	})
 
-	return routes, err
+	if err != nil {
+		return nil, err
+	}
+
+	var routes []RouteInfo
+	for _, route := range bestRoutes {
+		routes = append(routes, route)
+	}
+
+	// Sort routes for deterministic output
+	sort.Slice(routes, func(i, j int) bool {
+		if routes[i].URLPath != routes[j].URLPath {
+			return routes[i].URLPath < routes[j].URLPath
+		}
+		return routes[i].IsLayout && !routes[j].IsLayout
+	})
+
+	return routes, nil
 }
 
 // parseRoute converts a file path to route information.
@@ -142,9 +212,11 @@ func parseRoute(relPath, routesDir string) RouteInfo {
 	// Get directory and filename
 	dir := filepath.Dir(relPath)
 	filename := filepath.Base(relPath)
+	cleanFilename := strings.TrimPrefix(filename, "+")
 
 	// Check if it's a layout
-	route.IsLayout = filename == "layout.templ" || filename == "root_layout.templ" || filename == "generated_layout.templ" || filename == "generated_root_layout.templ"
+	route.IsLayout = cleanFilename == "layout.templ" || cleanFilename == "root_layout.templ" ||
+		cleanFilename == "generated_layout.templ" || cleanFilename == "generated_root_layout.templ"
 
 	// Determine package name and import path based on directory
 	// For subdirectory routes like blog/page.templ, the package should be "blog"
@@ -189,7 +261,7 @@ func parseRoute(relPath, routesDir string) RouteInfo {
 		route.Params = params
 	} else {
 		// Fallback to guessing from filename
-		baseName := strings.TrimSuffix(filename, ".templ")
+		baseName := strings.TrimSuffix(cleanFilename, ".templ")
 		route.ComponentFn = toPascalCase(baseName)
 	}
 
@@ -287,9 +359,14 @@ func parseTemplGoFile(path string) (string, []FuncParam) {
 // filePathToURLPath converts a file path to a URL path.
 // Route groups (name) are stripped from the URL path entirely.
 func filePathToURLPath(dir, filename string) string {
+	cleanFilename := strings.TrimPrefix(filename, "+")
+
 	// Handle root page
-	if dir == "." && (filename == "page.templ" || filename == "generated_page.templ") {
-		return "/"
+	if dir == "." {
+		base := strings.TrimPrefix(cleanFilename, "generated_")
+		if base == "page.templ" {
+			return "/"
+		}
 	}
 
 	// Build path from directory
@@ -316,13 +393,10 @@ func filePathToURLPath(dir, filename string) string {
 	}
 
 	// Add the page name if it's not an index page
-	if filename != "page.templ" && filename != "generated_page.templ" {
-		// For non-page files, use the filename
-		name := strings.TrimSuffix(filename, ".templ")
-		name = strings.TrimPrefix(name, "generated_") // Strip prefix if it exists
-		if name != "layout" && name != "root_layout" {
-			urlParts = append(urlParts, name)
-		}
+	base := strings.TrimSuffix(cleanFilename, ".templ")
+	base = strings.TrimPrefix(base, "generated_")
+	if base != "page" && base != "layout" && base != "root_layout" {
+		urlParts = append(urlParts, base)
 	}
 
 	if len(urlParts) == 0 {
@@ -330,6 +404,92 @@ func filePathToURLPath(dir, filename string) string {
 	}
 
 	return "/" + strings.Join(urlParts, "/")
+}
+
+// hasLoadFunction checks if a .go file contains a Load function.
+func hasLoadFunction(path string) bool {
+	fset := token.NewFileSet()
+	node, err := parser.ParseFile(fset, path, nil, parser.ParseComments)
+	if err != nil {
+		return false
+	}
+
+	for _, decl := range node.Decls {
+		fn, ok := decl.(*ast.FuncDecl)
+		if !ok || fn.Name == nil {
+			continue
+		}
+
+		if fn.Name.Name == "Load" && fn.Name.IsExported() {
+			return true
+		}
+	}
+
+	return false
+}
+
+// getActions extracts action names from an exported Actions map in a .go file.
+func getActions(path string) []string {
+	fset := token.NewFileSet()
+	node, err := parser.ParseFile(fset, path, nil, parser.ParseComments)
+	if err != nil {
+		return nil
+	}
+
+	var actions []string
+	for _, decl := range node.Decls {
+		genDecl, ok := decl.(*ast.GenDecl)
+		if !ok || genDecl.Tok != token.VAR {
+			continue
+		}
+
+		for _, spec := range genDecl.Specs {
+			vSpec, ok := spec.(*ast.ValueSpec)
+			if !ok {
+				continue
+			}
+
+			for i, name := range vSpec.Names {
+				if name.Name == "Actions" && name.IsExported() {
+					// Found Actions map, extract keys
+					if i < len(vSpec.Values) {
+						if compLit, ok := vSpec.Values[i].(*ast.CompositeLit); ok {
+							for _, elt := range compLit.Elts {
+								if kv, ok := elt.(*ast.KeyValueExpr); ok {
+									if lit, ok := kv.Key.(*ast.BasicLit); ok && lit.Kind == token.STRING {
+										actions = append(actions, strings.Trim(lit.Value, "\"`"))
+									}
+								}
+							}
+						}
+					}
+				}
+			}
+		}
+	}
+	return actions
+}
+
+// hasHandleFunction checks if a .go file contains a Handle function compatible with HookFunc.
+func hasHandleFunction(path string) bool {
+	fset := token.NewFileSet()
+	node, err := parser.ParseFile(fset, path, nil, parser.ParseComments)
+	if err != nil {
+		return false
+	}
+
+	for _, decl := range node.Decls {
+		fn, ok := decl.(*ast.FuncDecl)
+		if !ok || fn.Name == nil {
+			continue
+		}
+
+		if fn.Name.Name == "Handle" && fn.Name.IsExported() {
+			return true
+		}
+	}
+
+	return false
 }
 
 // toPascalCase converts a string to PascalCase.
@@ -353,7 +513,7 @@ func toPascalCase(s string) string {
 	return result.String()
 }
 
-func generateCode(routes []RouteInfo, routesDir string) (string, error) {
+func generateCode(routes []RouteInfo, routesDir string, hasHooks bool) (string, error) {
 	var sb strings.Builder
 
 	// Package declaration
@@ -466,6 +626,11 @@ func generateCode(routes []RouteInfo, routesDir string) (string, error) {
 	// init function
 	sb.WriteString("func init() {\n")
 
+	if hasHooks {
+		sb.WriteString("\t// Register global hooks\n")
+		sb.WriteString("\trouting.RegisterHook(Handle)\n\n")
+	}
+
 	// pages and layouts already grouped above
 
 	_ = pages   // Use the pages variable
@@ -478,6 +643,24 @@ func generateCode(routes []RouteInfo, routesDir string) (string, error) {
 			fmt.Fprintf(&sb, "\trouting.RegisterPage(%q, func(props map[string]interface{}) templ.Component {\n", route.URLPath)
 			fmt.Fprintf(&sb, "\t\treturn %s\n", generatePageCallWithPackage(route))
 			sb.WriteString("\t})\n")
+
+			if route.HasLoader {
+				pkgPrefix := ""
+				if route.PackageName != "routes" && route.ImportPath != "" {
+					pkgPrefix = route.PackageName + "."
+				}
+				fmt.Fprintf(&sb, "\trouting.RegisterLoad(%q, %sLoad)\n", route.URLPath, pkgPrefix)
+			}
+
+			if route.HasActions {
+				pkgPrefix := ""
+				if route.PackageName != "routes" && route.ImportPath != "" {
+					pkgPrefix = route.PackageName + "."
+				}
+				for _, actionName := range route.Actions {
+					fmt.Fprintf(&sb, "\trouting.RegisterAction(%q, %q, %sActions[%q])\n", route.URLPath, actionName, pkgPrefix, actionName)
+				}
+			}
 		}
 	}
 
@@ -485,7 +668,8 @@ func generateCode(routes []RouteInfo, routesDir string) (string, error) {
 	if len(layouts) > 0 {
 		sb.WriteString("\n\t// Register layouts\n")
 		for _, route := range layouts {
-			if filepath.Base(route.FilePath) == "root_layout.templ" {
+			isRoot := filepath.Base(route.FilePath) == "root_layout.templ" || filepath.Base(route.FilePath) == "+root_layout.templ"
+			if isRoot {
 				fmt.Fprintf(&sb, "\trouting.RegisterRootLayout(func(children templ.Component, props map[string]interface{}) templ.Component {\n")
 			} else {
 				fmt.Fprintf(&sb, "\trouting.RegisterLayout(%q, func(children templ.Component, props map[string]interface{}) templ.Component {\n", route.URLPath)
@@ -511,6 +695,18 @@ func generateCode(routes []RouteInfo, routesDir string) (string, error) {
 				fmt.Fprintf(&sb, "\t\treturn %s\n", callArgs)
 			}
 			sb.WriteString("\t})\n")
+
+			if route.HasLoader {
+				pkgPrefix := ""
+				if route.PackageName != "routes" && route.ImportPath != "" {
+					pkgPrefix = route.PackageName + "."
+				}
+				if isRoot {
+					fmt.Fprintf(&sb, "\trouting.RegisterLayoutLoad(\"\", %sLoad)\n", pkgPrefix)
+				} else {
+					fmt.Fprintf(&sb, "\trouting.RegisterLayoutLoad(%q, %sLoad)\n", route.URLPath, pkgPrefix)
+				}
+			}
 		}
 	}
 

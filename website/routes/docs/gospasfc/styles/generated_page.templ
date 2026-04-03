@@ -9,25 +9,25 @@ type PageProps struct {
 
 templ Page() {
 
-	<div data-gospa-page="routesdocsgospasfcstylespage" class="gospa-3184">
-		<div class="space-y-12 gospa-3184">
-		<header class="gospa-3184">
-			<div class="flex items-center gap-2 mb-4 gospa-3184">
-				<span class="px-2 py-1 rounded bg-[var(--accent-primary)]/10 text-[var(--accent-primary)] text-xs font-bold uppercase tracking-wider gospa-3184">Features</span>
-				<span class="text-[var(--text-muted)] text-sm gospa-3184">/</span>
-				<span class="text-[var(--text-muted)] text-sm font-medium gospa-3184">Gospa SFC</span>
+	<div data-gospa-page="docsgospasfcstylespage" class="gospa-26a7">
+		<div class="space-y-12 gospa-26a7">
+		<header class="gospa-26a7">
+			<div class="flex items-center gap-2 mb-4 gospa-26a7">
+				<span class="px-2 py-1 rounded bg-[var(--accent-primary)]/10 text-[var(--accent-primary)] text-xs font-bold uppercase tracking-wider gospa-26a7">Features</span>
+				<span class="text-[var(--text-muted)] text-sm gospa-26a7">/</span>
+				<span class="text-[var(--text-muted)] text-sm font-medium gospa-26a7">Gospa SFC</span>
 			</div>
-			<h1 class="text-4xl font-bold tracking-tight mb-4 text-transparent bg-clip-text bg-gradient-to-r from-[var(--accent-primary)] to-[var(--accent-secondary)] gospa-3184">Scoped CSS</h1>
-			<p class="text-xl text-[var(--text-secondary)] leading-relaxed gospa-3184">
+			<h1 class="text-4xl font-bold tracking-tight mb-4 text-transparent bg-clip-text bg-gradient-to-r from-[var(--accent-primary)] to-[var(--accent-secondary)] gospa-26a7">Scoped CSS</h1>
+			<p class="text-xl text-[var(--text-secondary)] leading-relaxed gospa-26a7">
 				Keep your visual styles organized and isolated without the fear of global leakage.
 			</p>
 		</header>
 
-		<section class="space-y-8 gospa-3184">
-			<div class="gospa-3184">
-				<h2 class="text-2xl font-bold mb-4 border-b border-[var(--border)] pb-2 italic mono gospa-3184">The &lt;style&gt; Block</h2>
-				<p class="text-[var(--text-secondary)] mb-6 gospa-3184">
-					Styles defined within a <code class="gospa-3184">.gospa</code> file are automatically scoped to that file by default. A unique hash is generated and appended to your selectors during the build process.
+		<section class="space-y-8 gospa-26a7">
+			<div class="gospa-26a7">
+				<h2 class="text-2xl font-bold mb-4 border-b border-[var(--border)] pb-2 italic mono gospa-26a7">The &lt;style&gt; Block</h2>
+				<p class="text-[var(--text-secondary)] mb-6 gospa-26a7">
+					Styles defined within a <code class="gospa-26a7">.gospa</code> file are automatically scoped to that file by default. A unique hash is generated and appended to your selectors during the build process.
 				</p>
 				@components.CodeBlock(`<style>
   .btn {
@@ -42,10 +42,10 @@ templ Page() {
 </template>`, "svelte", "Button.gospa")
 			</div>
 
-			<div class="gospa-3184">
-				<h2 class="text-2xl font-bold mb-4 border-b border-[var(--border)] pb-2 italic mono gospa-3184">Global Styles</h2>
-				<p class="text-[var(--text-secondary)] mb-6 gospa-3184">
-					If you need to define styles that affect elements globally, use the <code class="gospa-3184">:global()</code> selector. This will prevent the compiler from hashing the selector.
+			<div class="gospa-26a7">
+				<h2 class="text-2xl font-bold mb-4 border-b border-[var(--border)] pb-2 italic mono gospa-26a7">Global Styles</h2>
+				<p class="text-[var(--text-secondary)] mb-6 gospa-26a7">
+					If you need to define styles that affect elements globally, use the <code class="gospa-26a7">:global()</code> selector. This will prevent the compiler from hashing the selector.
 				</p>
 				@components.CodeBlock(`<style>
   :global(body) {
@@ -59,9 +59,9 @@ templ Page() {
 </style>`, "svelte", "Global.gospa")
 			</div>
 
-			<div class="gospa-3184">
-				<h2 class="text-2xl font-bold mb-4 border-b border-[var(--border)] pb-2 italic mono gospa-3184">Integration with Utility Frameworks</h2>
-				<p class="text-[var(--text-secondary)] mb-6 gospa-3184">
+			<div class="gospa-26a7">
+				<h2 class="text-2xl font-bold mb-4 border-b border-[var(--border)] pb-2 italic mono gospa-26a7">Integration with Utility Frameworks</h2>
+				<p class="text-[var(--text-secondary)] mb-6 gospa-26a7">
 					GoSPA works perfectly with **Tailwind CSS**. You can use Tailwind's utility classes directly within your templates alongside scoped styles for specific custom design elements.
 				</p>
 				@components.CodeBlock(`<template>
@@ -81,14 +81,14 @@ templ Page() {
 </style>`, "svelte", "TailwindIntegration.gospa")
 			</div>
 
-			<div class="flex justify-between items-center pt-8 gospa-3184">
-				<a href="/docs/gospasfc/templates" class="flex flex-col items-start gap-1 p-4 rounded-xl border border-[var(--border)] hover:bg-[var(--bg-secondary)] transition-all gospa-3184">
-					<span class="text-xs text-[var(--text-muted)] font-bold uppercase tracking-widest gospa-3184">Previous</span>
-					<span class="font-bold text-[var(--accent-primary)] gospa-3184">Template Syntax</span>
+			<div class="flex justify-between items-center pt-8 gospa-26a7">
+				<a href="/docs/gospasfc/templates" class="flex flex-col items-start gap-1 p-4 rounded-xl border border-[var(--border)] hover:bg-[var(--bg-secondary)] transition-all gospa-26a7">
+					<span class="text-xs text-[var(--text-muted)] font-bold uppercase tracking-widest gospa-26a7">Previous</span>
+					<span class="font-bold text-[var(--accent-primary)] gospa-26a7">Template Syntax</span>
 				</a>
-				<a href="/docs/gospasfc/advanced" class="flex flex-col items-end gap-1 p-4 rounded-xl border border-[var(--border)] hover:bg-[var(--bg-secondary)] transition-all gospa-3184">
-					<span class="text-xs text-[var(--text-muted)] font-bold uppercase tracking-widest gospa-3184">Next</span>
-					<span class="font-bold text-[var(--accent-primary)] gospa-3184">Advanced Usage</span>
+				<a href="/docs/gospasfc/advanced" class="flex flex-col items-end gap-1 p-4 rounded-xl border border-[var(--border)] hover:bg-[var(--bg-secondary)] transition-all gospa-26a7">
+					<span class="text-xs text-[var(--text-muted)] font-bold uppercase tracking-widest gospa-26a7">Next</span>
+					<span class="font-bold text-[var(--accent-primary)] gospa-26a7">Advanced Usage</span>
 				</a>
 			</div>
 		</section>

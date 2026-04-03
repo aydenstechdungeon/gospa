@@ -81,7 +81,7 @@ func (a *App) renderError(c gofiber.Ctx, statusCode int, errToDisplay error) err
 	}
 
 	content := errCompFn(props)
-	params := make(map[string]string)
+	params := make(map[string]interface{})
 
 	layouts := a.Router.ResolveLayoutChain(errRoute)
 	content = a.wrapWithLayouts(content, layouts, params, path)
@@ -105,7 +105,7 @@ func (a *App) renderError(c gofiber.Ctx, statusCode int, errToDisplay error) err
 	return c.Status(statusCode).Send(buf.Bytes())
 }
 
-func (a *App) buildPageContent(route *routing.Route, params map[string]string, path string) templ.Component {
+func (a *App) buildPageContent(route *routing.Route, params map[string]interface{}, path string) templ.Component {
 	pageFunc := routing.GetPage(route.Path)
 	if pageFunc != nil {
 		props := map[string]interface{}{"path": path}
@@ -120,7 +120,7 @@ func (a *App) buildPageContent(route *routing.Route, params map[string]string, p
 	})
 }
 
-func (a *App) wrapWithLayouts(content templ.Component, layouts []*routing.Route, params map[string]string, path string) templ.Component {
+func (a *App) wrapWithLayouts(content templ.Component, layouts []*routing.Route, params map[string]interface{}, path string) templ.Component {
 	for i := len(layouts) - 1; i >= 0; i-- {
 		layout := layouts[i]
 		layoutFunc := routing.GetLayout(layout.Path)
@@ -146,7 +146,7 @@ func (a *App) wrapWithLayouts(content templ.Component, layouts []*routing.Route,
 	return content
 }
 
-func (a *App) buildRootLayoutProps(c gofiber.Ctx, params map[string]string) map[string]interface{} {
+func (a *App) buildRootLayoutProps(c gofiber.Ctx, params map[string]interface{}) map[string]interface{} {
 	wsRD, wsMR, wsHB := a.normalizeWSConfig()
 	props := map[string]interface{}{
 		"appName":             a.Config.AppName,
@@ -169,10 +169,10 @@ func (a *App) buildRootLayoutProps(c gofiber.Ctx, params map[string]string) map[
 	return props
 }
 
-func (a *App) buildPageHTML(ctx context.Context, route *routing.Route, params map[string]string) ([]byte, error) {
+func (a *App) buildPageHTML(ctx context.Context, route *routing.Route, params map[string]interface{}) ([]byte, error) {
 	layouts := a.Router.ResolveLayoutChain(route)
 	if params == nil {
-		params = map[string]string{}
+		params = map[string]interface{}{}
 	}
 	path := route.Path
 	content := a.buildPageContent(route, params, path)
