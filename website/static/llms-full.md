@@ -35,6 +35,10 @@ GoSPA (Go Spa and Go S-P-A are the only valid pronunciations)  brings Svelte-lik
 ```bash
 go install github.com/aydenstechdungeon/gospa/cmd/gospa@latest
 ```
+or
+```bash
+go run github.com/aydenstechdungeon/gospa/cmd/gospa@latest
+```
 
 ### 2. Scaffold & Run
 ```bash
@@ -403,12 +407,12 @@ In your Templ template, use `data-gospa-state` to set initial state:
 
 ```go
 templ TodoPage() {
-	<div 
-		data-gospa-component="todo-app"
-		data-gospa-state='{"todos":[],"filter":"all","inputValue":""}'
-	>
-		<!-- Component content -->
-	</div>
+    <div 
+        data-gospa-component="todo-app"
+        data-gospa-state='{"todos":[],"filter":"all","inputValue":""}'
+    >
+        <!-- Component content -->
+    </div>
 }
 ```
 
@@ -547,28 +551,28 @@ The core server file initializes GoSPA with the file-based router.
 package main
 
 import (
-	"log"
-	"os"
+    "log"
+    "os"
 
-	_ "yourmodule/routes" // Import routes to trigger init()
-	"github.com/aydenstechdungeon/gospa"
+    _ "yourmodule/routes" // Import routes to trigger init()
+    "github.com/aydenstechdungeon/gospa"
 )
 
 func main() {
-	port := os.Getenv("PORT")
-	if port == "" {
-		port = "3000"
-	}
+    port := os.Getenv("PORT")
+    if port == "" {
+        port = "3000"
+    }
 
-	config := gospa.DefaultConfig()
-	config.RoutesDir = "./routes"
-	config.DevMode = true
-	config.AppName = "My GoSPA App"
+    config := gospa.DefaultConfig()
+    config.RoutesDir = "./routes"
+    config.DevMode = true
+    config.AppName = "My GoSPA App"
 
-	app := gospa.New(config)
-	if err := app.Run(":" + port); err != nil {
-		log.Fatal(err)
-	}
+    app := gospa.New(config)
+    if err := app.Run(":" + port); err != nil {
+        log.Fatal(err)
+    }
 }
 ```
 
@@ -581,23 +585,23 @@ This file is critically important. It defines the `<html>` wrapper for your appl
 package routes
 
 templ RootLayout(title string) {
-	<!DOCTYPE html>
-	<html lang="en" data-gospa-auto>
-	<head>
-		<meta charset="UTF-8"/>
-		<meta name="viewport" content="width=device-width, initial-scale=1.0"/>
-		<title>{ title }</title>
-		<link rel="stylesheet" href="/static/css/style.css"/>
-	</head>
-	<body>
-		{ children... }
+    <!DOCTYPE html>
+    <html lang="en" data-gospa-auto>
+    <head>
+        <meta charset="UTF-8"/>
+        <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+        <title>{ title }</title>
+        <link rel="stylesheet" href="/static/css/style.css"/>
+    </head>
+    <body>
+        { children... }
 
-		<!-- GoSPA core engine -->
-		<script src="/_gospa/runtime.js"></script>
-		<!-- Island hydration hook -->
-		<script data-gospa-islands></script>
-	</body>
-	</html>
+        <!-- GoSPA core engine -->
+        <script src="/_gospa/runtime.js"></script>
+        <!-- Island hydration hook -->
+        <script data-gospa-islands></script>
+    </body>
+    </html>
 }
 ```
 **Important:** If these tags are missing, your application will only render as raw HTML. Reactivity (*islands*) will fail to mount.
@@ -608,16 +612,16 @@ To compile TypeScript and CSS locally, you need a bundler. Bun is our native rec
 
 ```json
 {
-	"name": "myapp",
-	"type": "module",
-	"scripts": {
-		"build": "bun run build:css",
-		"build:css": "tailwindcss -i ./static/css/style.css -o ./static/css/main.css"
-	},
-	"devDependencies": {
-		"tailwindcss": "^4.0.0",
-		"@tailwindcss/cli": "^4.0.0"
-	}
+    "name": "myapp",
+    "type": "module",
+    "scripts": {
+        "build": "bun run build:css",
+        "build:css": "tailwindcss -i ./static/css/style.css -o ./static/css/main.css"
+    },
+    "devDependencies": {
+        "tailwindcss": "^4.0.0",
+        "@tailwindcss/cli": "^4.0.0"
+    }
 }
 ```
 
@@ -645,6 +649,10 @@ The CLI is the recommended way to manage GoSPA projects.
 
 ```bash
 go install github.com/aydenstechdungeon/gospa/cmd/gospa@latest
+```
+or
+```bash
+go run github.com/aydenstechdungeon/gospa/cmd/gospa@latest
 ```
 
 ## 2. Scaffold a Project

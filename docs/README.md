@@ -29,6 +29,7 @@ docs/
 ## Quick navigation
 
 ### Getting started
+- [Installation](getstarted/installation)
 - [Quick start](getstarted/quickstart)
 - [Tutorial](getstarted/tutorial)
 

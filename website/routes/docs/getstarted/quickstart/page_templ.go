@@ -39,7 +39,15 @@ func Page() templ.Component {
 		if templ_7745c5c3_Err != nil {
 			return templ_7745c5c3_Err
 		}
-		templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 2, "</div></section><!-- Step 2: Scaffold --><section class=\"space-y-6\"><div class=\"flex items-center gap-6\"><div class=\"w-12 h-12 rounded-2xl bg-[var(--text-primary)] text-[var(--bg-primary)] flex items-center justify-center font-black text-xl shadow-xl shadow-white/10\">2</div><h2 id=\"scaffold\" class=\"text-3xl font-display font-black tracking-tight\">Scaffold a Project</h2></div><div class=\"pl-0 md:pl-[4.5rem] space-y-4\"><p class=\"text-[var(--text-secondary)] text-lg leading-relaxed font-medium\">Create a new workspace with all the recommended batteries included.</p>")
+		templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 2, "<p class=\"text-[var(--text-secondary)] mb-4\">Or</p>")
+		if templ_7745c5c3_Err != nil {
+			return templ_7745c5c3_Err
+		}
+		templ_7745c5c3_Err = components.CodeBlock("go run github.com/aydenstechdungeon/gospa/cmd/gospa@latest", "bash", "Terminal").Render(ctx, templ_7745c5c3_Buffer)
+		if templ_7745c5c3_Err != nil {
+			return templ_7745c5c3_Err
+		}
+		templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 3, "</div></section><!-- Step 2: Scaffold --><section class=\"space-y-6\"><div class=\"flex items-center gap-6\"><div class=\"w-12 h-12 rounded-2xl bg-[var(--text-primary)] text-[var(--bg-primary)] flex items-center justify-center font-black text-xl shadow-xl shadow-white/10\">2</div><h2 id=\"scaffold\" class=\"text-3xl font-display font-black tracking-tight\">Scaffold a Project</h2></div><div class=\"pl-0 md:pl-[4.5rem] space-y-4\"><p class=\"text-[var(--text-secondary)] text-lg leading-relaxed font-medium\">Create a new workspace with all the recommended batteries included.</p>")
 		if templ_7745c5c3_Err != nil {
 			return templ_7745c5c3_Err
 		}
@@ -49,7 +57,17 @@ go mod tidy`, "bash", "Terminal").Render(ctx, templ_7745c5c3_Buffer)
 		if templ_7745c5c3_Err != nil {
 			return templ_7745c5c3_Err
 		}
-		templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 3, "</div></section><!-- Step 3: Dev Server --><section class=\"space-y-6\"><div class=\"flex items-center gap-6\"><div class=\"w-12 h-12 rounded-2xl bg-[var(--text-primary)] text-[var(--bg-primary)] flex items-center justify-center font-black text-xl shadow-xl shadow-white/10\">3</div><h2 id=\"dev\" class=\"text-3xl font-display font-black tracking-tight\">Enter Dev Mode</h2></div><div class=\"pl-0 md:pl-[4.5rem] space-y-4\"><p class=\"text-[var(--text-secondary)] text-lg leading-relaxed font-medium\">Launch the development environment to start building with hot reloading and automatic generation.</p>")
+		templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 4, "<p class=\"text-[var(--text-secondary)] mb-4\">Or</p>")
+		if templ_7745c5c3_Err != nil {
+			return templ_7745c5c3_Err
+		}
+		templ_7745c5c3_Err = components.CodeBlock(`go run github.com/aydenstechdungeon/gospa/cmd/gospa@latest create my-app
+cd my-app
+go mod tidy`, "bash", "Terminal").Render(ctx, templ_7745c5c3_Buffer)
+		if templ_7745c5c3_Err != nil {
+			return templ_7745c5c3_Err
+		}
+		templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 5, "</div></section><!-- Step 3: Dev Server --><section class=\"space-y-6\"><div class=\"flex items-center gap-6\"><div class=\"w-12 h-12 rounded-2xl bg-[var(--text-primary)] text-[var(--bg-primary)] flex items-center justify-center font-black text-xl shadow-xl shadow-white/10\">3</div><h2 id=\"dev\" class=\"text-3xl font-display font-black tracking-tight\">Enter Dev Mode</h2></div><div class=\"pl-0 md:pl-[4.5rem] space-y-4\"><p class=\"text-[var(--text-secondary)] text-lg leading-relaxed font-medium\">Launch the development environment to start building with hot reloading and automatic generation.</p>")
 		if templ_7745c5c3_Err != nil {
 			return templ_7745c5c3_Err
 		}
@@ -57,7 +75,7 @@ go mod tidy`, "bash", "Terminal").Render(ctx, templ_7745c5c3_Buffer)
 		if templ_7745c5c3_Err != nil {
 			return templ_7745c5c3_Err
 		}
-		templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 4, "<div class=\"mt-4 px-6 py-4 rounded-2xl bg-cyan-500/5 border border-cyan-500/10 text-sm font-medium text-[var(--text-secondary)] italic flex items-center gap-3\"><svg xmlns=\"http://www.w3.org/2000/svg\" width=\"16\" height=\"16\" viewBox=\"0 0 24 24\" fill=\"none\" stroke=\"currentColor\" stroke-width=\"2.5\" stroke-linecap=\"round\" stroke-linejoin=\"round\" class=\"text-cyan-500\"><circle cx=\"12\" cy=\"12\" r=\"10\"></circle><path d=\"M12 16v-4\"></path><path d=\"M12 8h.01\"></path></svg> \"Your app is now live at http://localhost:3000\"</div></div></section><!-- Step 4: Add a Single File Component --><section class=\"space-y-6\"><div class=\"flex items-center gap-6\"><div class=\"w-12 h-12 rounded-2xl bg-[var(--text-primary)] text-[var(--bg-primary)] flex items-center justify-center font-black text-xl shadow-xl shadow-white/10\">4</div><h2 id=\"reactive-route\" class=\"text-3xl font-display font-black tracking-tight\">Create an SFC</h2></div><div class=\"pl-0 md:pl-[4.5rem] space-y-4\"><p class=\"text-[var(--text-secondary)] text-lg leading-relaxed font-medium\">Single File Components allow you to co-locate logic, template, and styles. Create <code class=\"bg-[var(--bg-tertiary)] px-1.5 py-0.5 rounded text-[var(--accent-primary)] font-bold font-mono\">islands/Counter.gospa</code>:</p>")
+		templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 6, "<div class=\"mt-4 px-6 py-4 rounded-2xl bg-cyan-500/5 border border-cyan-500/10 text-sm font-medium text-[var(--text-secondary)] italic flex items-center gap-3\"><svg xmlns=\"http://www.w3.org/2000/svg\" width=\"16\" height=\"16\" viewBox=\"0 0 24 24\" fill=\"none\" stroke=\"currentColor\" stroke-width=\"2.5\" stroke-linecap=\"round\" stroke-linejoin=\"round\" class=\"text-cyan-500\"><circle cx=\"12\" cy=\"12\" r=\"10\"></circle><path d=\"M12 16v-4\"></path><path d=\"M12 8h.01\"></path></svg> \"Your app is now live at http://localhost:3000\"</div></div></section><!-- Step 4: Add a Single File Component --><section class=\"space-y-6\"><div class=\"flex items-center gap-6\"><div class=\"w-12 h-12 rounded-2xl bg-[var(--text-primary)] text-[var(--bg-primary)] flex items-center justify-center font-black text-xl shadow-xl shadow-white/10\">4</div><h2 id=\"reactive-route\" class=\"text-3xl font-display font-black tracking-tight\">Create an SFC</h2></div><div class=\"pl-0 md:pl-[4.5rem] space-y-4\"><p class=\"text-[var(--text-secondary)] text-lg leading-relaxed font-medium\">Single File Components allow you to co-locate logic, template, and styles. Create <code class=\"bg-[var(--bg-tertiary)] px-1.5 py-0.5 rounded text-[var(--accent-primary)] font-bold font-mono\">islands/Counter.gospa</code>:</p>")
 		if templ_7745c5c3_Err != nil {
 			return templ_7745c5c3_Err
 		}
@@ -82,7 +100,7 @@ go mod tidy`, "bash", "Terminal").Render(ctx, templ_7745c5c3_Buffer)
 		if templ_7745c5c3_Err != nil {
 			return templ_7745c5c3_Err
 		}
-		templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 5, "</div></section></div><div class=\"flex justify-between items-center mt-20 pt-10 border-t border-[var(--border)]\"><a href=\"/docs\" class=\"group flex items-center gap-4 px-6 py-4 rounded-2xl border border-[var(--border)] bg-[var(--bg-secondary)] hover:border-[var(--text-primary)]/30 transition-all\"><svg xmlns=\"http://www.w3.org/2000/svg\" width=\"20\" height=\"20\" viewBox=\"0 0 24 24\" fill=\"none\" stroke=\"currentColor\" stroke-width=\"3\" stroke-linecap=\"round\" stroke-linejoin=\"round\" class=\"translate-x-0 group-hover:-translate-x-1 transition-transform opacity-50\"><path d=\"m11 17-5-5 5-5\"></path><path d=\"M18 17V7\"></path></svg><div class=\"text-left\"><div class=\"text-[10px] uppercase tracking-widest font-black opacity-40 mb-1\">Previous</div><div class=\"font-bold\">Introduction</div></div></a> <a href=\"/docs/getstarted/structure\" class=\"group flex items-center gap-4 px-6 py-4 rounded-2xl bg-[var(--text-primary)] text-[var(--bg-primary)] hover:scale-[1.02] transition-all\"><div class=\"text-right\"><div class=\"text-[10px] uppercase tracking-widest font-black opacity-30 mb-1\">Up Next</div><div class=\"font-bold\">Project Structure</div></div><svg xmlns=\"http://www.w3.org/2000/svg\" width=\"20\" height=\"20\" viewBox=\"0 0 24 24\" fill=\"none\" stroke=\"currentColor\" stroke-width=\"3\" stroke-linecap=\"round\" stroke-linejoin=\"round\" class=\"translate-x-0 group-hover:translate-x-1 transition-transform\"><path d=\"M5 12h14\"></path><path d=\"m12 5 7 7-7 7\"></path></svg></a></div></div>")
+		templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 7, "</div></section></div><div class=\"flex justify-between items-center mt-20 pt-10 border-t border-[var(--border)]\"><a href=\"/docs\" class=\"group flex items-center gap-4 px-6 py-4 rounded-2xl border border-[var(--border)] bg-[var(--bg-secondary)] hover:border-[var(--text-primary)]/30 transition-all\"><svg xmlns=\"http://www.w3.org/2000/svg\" width=\"20\" height=\"20\" viewBox=\"0 0 24 24\" fill=\"none\" stroke=\"currentColor\" stroke-width=\"3\" stroke-linecap=\"round\" stroke-linejoin=\"round\" class=\"translate-x-0 group-hover:-translate-x-1 transition-transform opacity-50\"><path d=\"m11 17-5-5 5-5\"></path><path d=\"M18 17V7\"></path></svg><div class=\"text-left\"><div class=\"text-[10px] uppercase tracking-widest font-black opacity-40 mb-1\">Previous</div><div class=\"font-bold\">Introduction</div></div></a> <a href=\"/docs/getstarted/structure\" class=\"group flex items-center gap-4 px-6 py-4 rounded-2xl bg-[var(--text-primary)] text-[var(--bg-primary)] hover:scale-[1.02] transition-all\"><div class=\"text-right\"><div class=\"text-[10px] uppercase tracking-widest font-black opacity-30 mb-1\">Up Next</div><div class=\"font-bold\">Project Structure</div></div><svg xmlns=\"http://www.w3.org/2000/svg\" width=\"20\" height=\"20\" viewBox=\"0 0 24 24\" fill=\"none\" stroke=\"currentColor\" stroke-width=\"3\" stroke-linecap=\"round\" stroke-linejoin=\"round\" class=\"translate-x-0 group-hover:translate-x-1 transition-transform\"><path d=\"M5 12h14\"></path><path d=\"m12 5 7 7-7 7\"></path></svg></a></div></div>")
 		if templ_7745c5c3_Err != nil {
 			return templ_7745c5c3_Err
 		}

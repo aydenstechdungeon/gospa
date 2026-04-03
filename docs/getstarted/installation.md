@@ -20,6 +20,10 @@ The GoSPA CLI is the central hub for your project lifecycle, from scaffolding to
 ```bash
 go install github.com/aydenstechdungeon/gospa/cmd/gospa@latest
 ```
+or
+```bash
+go run github.com/aydenstechdungeon/gospa/cmd/gospa@latest
+```
 
 ## 2. Verify Installation
 
@@ -27,6 +31,10 @@ Check if the CLI is correctly installed by running:
 
 ```bash
 gospa version
+```
+or
+```bash
+go run github.com/aydenstechdungeon/gospa/cmd/gospa@latest version
 ```
 
 ## 3. Next Steps

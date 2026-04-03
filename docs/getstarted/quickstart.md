@@ -15,6 +15,10 @@ The CLI is the recommended way to manage GoSPA projects.
 ```bash
 go install github.com/aydenstechdungeon/gospa/cmd/gospa@latest
 ```
+or
+```bash
+go run github.com/aydenstechdungeon/gospa/cmd/gospa@latest
+```
 
 ## 2. Scaffold a Project
 
@@ -22,6 +26,12 @@ Create a new project using the `create` command. This sets up the directory stru
 
 ```bash
 gospa create my-app
+cd my-app
+go mod tidy
+```
+or
+```bash
+go run github.com/aydenstechdungeon/gospa/cmd/gospa@latest create my-app
 cd my-app
 go mod tidy
 ```
