@@ -660,3 +660,21 @@ func SetSessionState(c gofiber.Ctx, config Config, key string, value interface{}
 	r := state.NewRune(value)
 	stateMap.Add(key, r)
 }
+
+// SetFlash sets a flash message in the current session.
+func SetFlash(c gofiber.Ctx, key string, value interface{}) {
+	token, ok := c.Locals("gospa.session").(string)
+	if !ok || token == "" {
+		return
+	}
+	_ = globalSessionStore.SetFlash(token, key, value)
+}
+
+// GetFlashes retrieves and clears all flash messages from the current session.
+func GetFlashes(c gofiber.Ctx) map[string]interface{} {
+	token, ok := c.Locals("gospa.session").(string)
+	if !ok || token == "" {
+		return nil
+	}
+	return globalSessionStore.GetFlashes(token)
+}

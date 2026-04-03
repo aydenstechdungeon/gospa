@@ -730,10 +730,9 @@ func (a *App) handleFormAction(c fiberpkg.Ctx, r *routing.Route) error {
 	}
 
 	// Standard form submission: redirect back to the page
-	// TODO: Integrate flash messages for errors/results in session
 	if err != nil {
-		// For now just logged, but should be flashed
 		a.Logger().Error("Form action error", "path", r.Path, "action", actionName, "err", err)
+		fiber.SetFlash(c, "error", err.Error())
 	}
 
 	return c.Redirect().Status(fiberpkg.StatusSeeOther).To(c.Path())

@@ -14,6 +14,7 @@ import (
 	"github.com/aydenstechdungeon/gospa/routing"
 	"github.com/aydenstechdungeon/gospa/state"
 	templpkg "github.com/aydenstechdungeon/gospa/templ"
+	gospafiber "github.com/aydenstechdungeon/gospa/fiber"
 	gofiber "github.com/gofiber/fiber/v3"
 	"github.com/valyala/fasthttp"
 )
@@ -145,6 +146,11 @@ func (a *App) renderRoute(c gofiber.Ctx, route *routing.Route) error {
 
 	// Merge with route params (route params take precedence for ID fields etc)
 	for k, v := range params {
+		loadedProps[k] = v
+	}
+
+	// 4. Inject Flash messages into the component state
+	for k, v := range gospafiber.GetFlashes(c) {
 		loadedProps[k] = v
 	}
 

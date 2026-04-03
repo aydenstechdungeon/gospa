@@ -71,3 +71,54 @@ func TestPreloadHeadersMiddleware(t *testing.T) {
 		t.Errorf("expected at most 6 preloads, got %d: %q", len(chunks), link)
 	}
 }
+
+func TestFlashMessages(t *testing.T) {
+	app := gofiber.New()
+	// Mock session middleware
+	app.Use(func(c gofiber.Ctx) error {
+		c.Locals("gospa.session", "test-token")
+		return c.Next()
+	})
+
+	app.Get("/set", func(c gofiber.Ctx) error {
+		SetFlash(c, "success", "Hello")
+		return c.SendStatus(gofiber.StatusOK)
+	})
+
+	app.Get("/get", func(c gofiber.Ctx) error {
+		flashes := GetFlashes(c)
+		if val, ok := flashes["success"].(string); ok && val == "Hello" {
+			return c.SendStatus(gofiber.StatusOK)
+		}
+		return c.Status(gofiber.StatusBadRequest).SendString("Flash not found or incorrect")
+	})
+
+	app.Get("/get-again", func(c gofiber.Ctx) error {
+		flashes := GetFlashes(c)
+		if len(flashes) == 0 {
+			return c.SendStatus(gofiber.StatusOK)
+		}
+		return c.Status(gofiber.StatusBadRequest).SendString("Flash was not cleared")
+	})
+
+	// 1. Set flash
+	req1 := httptest.NewRequest("GET", "/set", nil)
+	resp1, err := app.Test(req1)
+	if err != nil || resp1.StatusCode != gofiber.StatusOK {
+		t.Fatalf("failed to set flash: %v", err)
+	}
+
+	// 2. Get flash (should succeed and clear)
+	req2 := httptest.NewRequest("GET", "/get", nil)
+	resp2, err := app.Test(req2)
+	if err != nil || resp2.StatusCode != gofiber.StatusOK {
+		t.Fatalf("failed to get flash: %v", err)
+	}
+
+	// 3. Get flash again (should be empty)
+	req3 := httptest.NewRequest("GET", "/get-again", nil)
+	resp3, err := app.Test(req3)
+	if err != nil || resp3.StatusCode != gofiber.StatusOK {
+		t.Fatalf("flash was not cleared after reading: %v", err)
+	}
+}
