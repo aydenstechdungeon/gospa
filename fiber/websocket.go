@@ -304,6 +304,56 @@ func (s *SessionStore) ValidateSession(token string) (string, bool) {
 	return entry.ClientID, true
 }
 
+// SetFlash sets a flash message for a session.
+func (s *SessionStore) SetFlash(token, key string, value interface{}) error {
+	if token == "" {
+		return fmt.Errorf("empty session token")
+	}
+	fKey := "flash:" + token
+
+	// Read existing flashes
+	var flashes map[string]interface{}
+	data, err := s.storage.Get(fKey)
+	if err == nil {
+		_ = json.Unmarshal(data, &flashes)
+	}
+	if flashes == nil {
+		flashes = make(map[string]interface{})
+	}
+
+	flashes[key] = value
+
+	newData, err := json.Marshal(flashes)
+	if err != nil {
+		return err
+	}
+
+	// 10 minute TTL is sufficient for Post-Redirect-Get.
+	return s.storage.Set(fKey, newData, 10*time.Minute)
+}
+
+// GetFlashes retrieves and removes all flash messages for a session.
+func (s *SessionStore) GetFlashes(token string) map[string]interface{} {
+	if token == "" {
+		return nil
+	}
+	fKey := "flash:" + token
+
+	data, err := s.storage.Get(fKey)
+	if err != nil {
+		return nil
+	}
+
+	// Delete immediately (read-once semantics)
+	_ = s.storage.Delete(fKey)
+
+	var flashes map[string]interface{}
+	if err := json.Unmarshal(data, &flashes); err != nil {
+		return nil
+	}
+	return flashes
+}
+
 // RemoveSession removes a session token.
 func (s *SessionStore) RemoveSession(token string) {
 	_ = s.storage.Delete(token)
