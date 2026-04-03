@@ -4,6 +4,8 @@ import (
 	"bytes"
 	"compress/gzip"
 	"io"
+	"os"
+	"path/filepath"
 	"strings"
 	"sync"
 
@@ -124,7 +126,31 @@ func BrotliGzipMiddleware(config CompressionConfig) gofiber.Handler {
 			return c.Next()
 		}
 
-		// Continue with request
+		// Check for pre-compressed files on disk if this looks like a static asset
+		// This is a fast-path for assets built with 'gospa build'
+		if strings.HasSuffix(path, ".js") || strings.HasSuffix(path, ".css") || strings.HasSuffix(path, ".html") || strings.HasSuffix(path, ".svg") {
+			// We try to find the file in common static locations
+			for _, prefix := range []string{"static", "dist/static", "."} {
+				fullPath := filepath.Join(prefix, strings.TrimPrefix(path, "/static"))
+				if useBrotli {
+					if _, err := os.Stat(fullPath + ".br"); err == nil {
+						c.Set("Content-Encoding", "br")
+						c.Set("Vary", "Accept-Encoding")
+						// Set content type based on extension
+						return c.SendFile(fullPath + ".br")
+					}
+				}
+				if useGzip {
+					if _, err := os.Stat(fullPath + ".gz"); err == nil {
+						c.Set("Content-Encoding", "gzip")
+						c.Set("Vary", "Accept-Encoding")
+						return c.SendFile(fullPath + ".gz")
+					}
+				}
+			}
+		}
+
+		// Continue with request for on-the-fly compression
 		err := c.Next()
 		if err != nil {
 			return err

@@ -78,6 +78,19 @@ func New(config Config) *App {
 	fiber.SetConnectionRateLimiter(config.WSConnBurst, config.WSConnRateLimit)
 	state.SetNotificationQueueSize(config.NotificationBufferSize)
 
+	// Load build manifest if available
+	if len(config.BuildManifest) == 0 && config.ManifestPath != "" {
+		if _, err := os.Stat(config.ManifestPath); err == nil {
+			if data, err := os.ReadFile(config.ManifestPath); err == nil {
+				var manifest map[string]string
+				if err := json.Unmarshal(data, &manifest); err == nil {
+					config.BuildManifest = manifest
+					config.Logger.Info("Loaded build manifest", "path", config.ManifestPath, "entries", len(manifest))
+				}
+			}
+		}
+	}
+
 	if config.Storage == nil {
 		if config.Prefork {
 			config.Logger.Warn("Prefork enabled with in-memory Storage: sessions will NOT be shared between processes")
@@ -546,11 +559,13 @@ func (a *App) setupMiddleware() {
 	preloadConfig := fiber.DefaultPreloadConfig()
 	preloadConfig.RuntimeScript = a.getRuntimePath()
 	preloadConfig.CSSLinks = a.Config.PreloadCSS
+	preloadConfig.BuildManifest = a.Config.BuildManifest
 	a.Fiber.Use(fiber.PreloadHeadersMiddleware(preloadConfig))
 
 	spaConfig := fiber.DefaultConfig()
 	spaConfig.DevMode = a.Config.DevMode
 	spaConfig.RuntimeScript = a.Config.RuntimeScript
+	spaConfig.BuildManifest = a.Config.BuildManifest
 	a.Fiber.Use(fiber.SPAMiddleware(spaConfig))
 }
 

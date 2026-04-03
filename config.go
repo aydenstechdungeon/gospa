@@ -197,6 +197,11 @@ type Config struct {
 	IslandsBundlePath string
 	// PreloadCSS contains paths to CSS files that should be preloaded with high priority.
 	PreloadCSS []string
+
+	// BuildManifest is the loaded manifest.json (optional).
+	BuildManifest map[string]string
+	// ManifestPath is the path to manifest.json (default: "./manifest.json").
+	ManifestPath string
 }
 
 // DefaultConfig returns the default configuration.
@@ -225,6 +230,7 @@ func DefaultConfig() Config {
 		AllowInsecureWS:          os.Getenv("GOSPA_WS_INSECURE") == "1",
 		AllowPortsWithInsecureWS: []int{3000},
 		IslandsBundlePath:        "static/js/islands.js",
+		ManifestPath:             "./manifest.json",
 		NavigationOptions: NavigationOptions{
 			ProgressBar: &NavigationProgressBarConfig{
 				Enabled: &enabled,

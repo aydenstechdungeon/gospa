@@ -16,6 +16,7 @@ import (
 	"sync"
 	"syscall"
 
+	"github.com/andybalholm/brotli"
 	"github.com/aydenstechdungeon/gospa/plugin"
 )
 
@@ -215,6 +216,9 @@ func unifiedClientBuild(config *BuildConfig, summary *BuildSummary) error {
 		if config.Minify {
 			args = append(args, "--minify")
 		}
+		if config.Env == "production" {
+			args = append(args, "--drop:console", "--drop:debugger")
+		}
 		if config.SourceMap && !config.NoSourceMap {
 			args = append(args, "--source-map")
 		}
@@ -233,6 +237,9 @@ func unifiedClientBuild(config *BuildConfig, summary *BuildSummary) error {
 
 		if config.Minify {
 			args = append(args, "--minify")
+		}
+		if config.Env == "production" {
+			args = append(args, "--drop:console", "--drop:debugger")
 		}
 		if config.SourceMap && !config.NoSourceMap {
 			args = append(args, "--sourcemap")
@@ -289,6 +296,7 @@ func buildGoBinary(config *BuildConfig) (string, error) {
 	// Build command
 	args := []string{
 		"build",
+		"-trimpath",
 		"-ldflags", "-s -w", // Strip debug info
 		"-o", outputPath,
 		".",
@@ -329,58 +337,82 @@ func copyStaticAssets(config *BuildConfig) (int, error) {
 		return 0, err
 	}
 
-	copied := 0
-	err := filepath.Walk(staticDir, func(path string, info os.FileInfo, err error) error {
+	var files []string
+	err := filepath.WalkDir(staticDir, func(path string, d fs.DirEntry, err error) error {
 		if err != nil {
 			return err
 		}
-
-		// Skip directories
-		if info.IsDir() {
-			return nil
+		if !d.IsDir() {
+			files = append(files, path)
 		}
-
-		// Calculate relative path
-		relPath, err := filepath.Rel(staticDir, path)
-		if err != nil {
-			return err
-		}
-
-		// Create destination path
-		destPath := filepath.Join(destDir, relPath)
-		// Validate path is within expected directory to prevent traversal
-		cleanDestPath := filepath.Clean(destPath)
-		cleanDestDir := filepath.Clean(destDir)
-		rel, err := filepath.Rel(cleanDestDir, cleanDestPath)
-		if err != nil || strings.HasPrefix(rel, "..") || filepath.IsAbs(rel) {
-			return fmt.Errorf("invalid destination path: %s", destPath)
-		}
-		if err := os.MkdirAll(filepath.Dir(cleanDestPath), 0750); err != nil {
-			return err
-		}
-
-		// Copy file
-		// #nosec //nolint:gosec
-		src, err := os.Open(path)
-		if err != nil {
-			return err
-		}
-		// #nosec //nolint:gosec // path validated above with strings.HasPrefix check
-		dst, err := os.Create(cleanDestPath)
-		if err != nil {
-			_ = src.Close()
-			return err
-		}
-		_, err = io.Copy(dst, src)
-		_ = src.Close()
-		_ = dst.Close()
-		if err != nil {
-			return err
-		}
-		copied++
 		return nil
 	})
-	return copied, err
+	if err != nil {
+		return 0, err
+	}
+
+	var copied struct {
+		sync.Mutex
+		count int
+	}
+	var firstErr error
+	var errOnce sync.Once
+	var wg sync.WaitGroup
+	sem := make(chan struct{}, 20) // Concurrency limit for copying
+
+	for _, file := range files {
+		wg.Add(1)
+		sem <- struct{}{}
+		go func(srcPath string) {
+			defer wg.Done()
+			defer func() { <-sem }()
+
+			relPath, err := filepath.Rel(staticDir, srcPath)
+			if err != nil {
+				errOnce.Do(func() { firstErr = err })
+				return
+			}
+
+			destPath := filepath.Join(destDir, relPath)
+			cleanDestPath := filepath.Clean(destPath)
+
+			if err := os.MkdirAll(filepath.Dir(cleanDestPath), 0750); err != nil {
+				errOnce.Do(func() { firstErr = err })
+				return
+			}
+
+			if err := copyFile(srcPath, cleanDestPath); err != nil {
+				errOnce.Do(func() { firstErr = err })
+				return
+			}
+
+			copied.Lock()
+			copied.count++
+			copied.Unlock()
+		}(file)
+	}
+	wg.Wait()
+
+	return copied.count, firstErr
+}
+
+func copyFile(src, dst string) error {
+	// #nosec //nolint:gosec // G304: copying project files during build
+	s, err := os.Open(src)
+	if err != nil {
+		return err
+	}
+	defer func() { _ = s.Close() }()
+
+	// #nosec //nolint:gosec // G304: creating project files during build
+	d, err := os.Create(dst)
+	if err != nil {
+		return err
+	}
+	defer func() { _ = d.Close() }()
+
+	_, err = io.Copy(d, s)
+	return err
 }
 
 func compressStaticAssets(config *BuildConfig) (int, error) {
@@ -390,12 +422,12 @@ func compressStaticAssets(config *BuildConfig) (int, error) {
 	}
 
 	var files []string
-	err := filepath.Walk(destDir, func(path string, info os.FileInfo, err error) error {
+	err := filepath.WalkDir(destDir, func(path string, d fs.DirEntry, err error) error {
 		if err != nil {
 			return err
 		}
 
-		if info.IsDir() {
+		if d.IsDir() {
 			return nil
 		}
 
@@ -424,15 +456,31 @@ func compressStaticAssets(config *BuildConfig) (int, error) {
 	var firstErr error
 	var errOnce sync.Once
 	var wg sync.WaitGroup
-	sem := make(chan struct{}, 10) // Concurrency limit of 10
+	sem := make(chan struct{}, 10) // Concurrency limit
 
 	for _, file := range files {
+		// Parallel Gzip
 		wg.Add(1)
 		sem <- struct{}{}
 		go func(path string) {
 			defer wg.Done()
 			defer func() { <-sem }()
 			if err := compressFileGzip(path); err != nil {
+				errOnce.Do(func() { firstErr = err })
+				return
+			}
+			compressed.Lock()
+			compressed.count++
+			compressed.Unlock()
+		}(file)
+
+		// Parallel Brotli
+		wg.Add(1)
+		sem <- struct{}{}
+		go func(path string) {
+			defer wg.Done()
+			defer func() { <-sem }()
+			if err := compressFileBrotli(path); err != nil {
 				errOnce.Do(func() { firstErr = err })
 				return
 			}
@@ -447,14 +495,14 @@ func compressStaticAssets(config *BuildConfig) (int, error) {
 }
 
 func compressFileGzip(path string) error {
-	// #nosec //nolint:gosec
+	// #nosec //nolint:gosec // G304: compressing project files during build
 	input, err := os.Open(path)
 	if err != nil {
 		return err
 	}
 	defer func() { _ = input.Close() }()
 
-	// #nosec //nolint:gosec
+	// #nosec //nolint:gosec // G304: creating compressed project files during build
 	output, err := os.Create(path + ".gz")
 	if err != nil {
 		return err
@@ -471,6 +519,28 @@ func compressFileGzip(path string) error {
 	return err
 }
 
+func compressFileBrotli(path string) error {
+	// #nosec //nolint:gosec // G304: compressing project files during build
+	input, err := os.Open(path)
+	if err != nil {
+		return err
+	}
+	defer func() { _ = input.Close() }()
+
+	// #nosec //nolint:gosec // G304: creating compressed project files during build
+	output, err := os.Create(path + ".br")
+	if err != nil {
+		return err
+	}
+	defer func() { _ = output.Close() }()
+
+	writer := brotli.NewWriterLevel(output, 4) // Level 4 is a good default
+	defer func() { _ = writer.Close() }()
+
+	_, err = io.Copy(writer, input)
+	return err
+}
+
 func generateBuildManifest(config *BuildConfig) error {
 	manifest := make(map[string]string)
 
@@ -480,11 +550,11 @@ func generateBuildManifest(config *BuildConfig) error {
 		return nil
 	}
 
-	err := filepath.Walk(destDir, func(path string, info os.FileInfo, err error) error {
+	err := filepath.WalkDir(destDir, func(path string, d fs.DirEntry, err error) error {
 		if err != nil {
 			return err
 		}
-		if info.IsDir() {
+		if d.IsDir() {
 			return nil
 		}
 

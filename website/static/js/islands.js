@@ -1,20 +1,17 @@
-// generated/routesdocsgospasfcpage.ts
-function __gospa_setup_routesdocsgospasfcpage(element, { props, state }) {
-  console.log("Gospa SFC Documentation loaded");
-  console.log("Hello from TypeScript!");
-  const __GOSPA_HANDLERS__ = {};
-  window["__GOSPA_ISLAND_" + "routesdocsgospasfcpage" + "__"] = { handlers: __GOSPA_HANDLERS__ };
-  const scope = (selector) => element.querySelector(selector + "." + "gospa-9d0f");
-}
-function mount(element, props, state) {
-  __gospa_setup_routesdocsgospasfcpage(element, { props, state });
-}
+import {
+  __require,
+  __toESM
+} from "./islands-3hqyeswk.js";
 
 // generated/islands.ts
-function registerSetup(name, setup) {
+function registerLazySetup(name, loader) {
   window.__GOSPA_SETUPS__ = window.__GOSPA_SETUPS__ || {};
-  window.__GOSPA_SETUPS__[name] = setup;
+  window.__GOSPA_SETUPS__[name] = async (el, props, state) => {
+    const mod = await loader();
+    const hydrateFn = mod.hydrate || mod.default?.hydrate || mod.mount || mod.default?.mount;
+    if (hydrateFn) {
+      return hydrateFn(el, props, state);
+    }
+  };
 }
-registerSetup("routesdocsgospasfcpage", (el, props, state) => {
-  mount(el, props, state);
-});
+registerLazySetup("routesdocsgospasfcpage", () => import("./routesdocsgospasfcpage-aj2av0zx.js"));

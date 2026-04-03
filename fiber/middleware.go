@@ -34,6 +34,8 @@ type Config struct {
 	DefaultState map[string]interface{}
 	// Logger is the structured logger. Defaults to slog.Default().
 	Logger *slog.Logger
+	// BuildManifest is the loaded manifest.json (optional)
+	BuildManifest map[string]string
 }
 
 // DefaultConfig returns the default configuration.
@@ -267,6 +269,8 @@ type PreloadConfig struct {
 	// CSSLinks contains stylesheets to preload with high priority
 	CSSLinks []string
 	Enabled  bool
+	// BuildManifest is the loaded manifest.json (optional)
+	BuildManifest map[string]string
 }
 
 // DefaultPreloadConfig returns the default preload configuration.
@@ -308,11 +312,43 @@ func PreloadHeadersMiddleware(config PreloadConfig) gofiber.Handler {
 			links = append(links, fmt.Sprintf("<%s>; rel=modulepreload", config.RuntimeScript))
 		}
 
-		// 3. Automatically discover and preload GoSPA internal runtime chunks
-		// We limit this to a small number of chunks to avoid saturating HTTP/1.1 connections
+		// 3. Automatically discover and preload GoSPA internal runtime chunks or manifest entries
+		// We limit this based on the protocol to avoid saturating connections.
+		// HTTP/1.1 usually has a 6-connection limit per host, while H2/H3 handle many more.
+		limit := 6
+		if isHTTPS(c) {
+			limit = 12 // Safe increase for H2/H3
+		}
+
+		alreadyAdded := func(link string) bool {
+			for _, l := range links {
+				if strings.Contains(l, link) {
+					return true
+				}
+			}
+			return false
+		}
+
+		// Discovery from manifest (prioritize hashed assets)
 		count := 0
+		if config.BuildManifest != nil {
+			for relPath := range config.BuildManifest {
+				if len(links) >= limit {
+					break
+				}
+				// Preload JS/CSS from manifest that looks like core runtime or islands
+				if (strings.HasPrefix(relPath, "static/js/runtime-") || strings.HasPrefix(relPath, "static/js/islands-")) && strings.HasSuffix(relPath, ".js") {
+					linkPath := "/" + relPath
+					if !alreadyAdded(linkPath) {
+						links = append(links, fmt.Sprintf("<%s>; rel=modulepreload", linkPath))
+					}
+				}
+			}
+		}
+
+		// Fallback to embedded runtime chunks if manifest discovery didn't fill the limit
 		for _, chunk := range embed.RuntimeChunks() {
-			if count >= 2 { // Cap at 2 additional chunks for performance
+			if len(links) >= limit || count >= 2 {
 				break
 			}
 			chunkPath := fmt.Sprintf("/_gospa/%s", chunk)
@@ -322,29 +358,20 @@ func PreloadHeadersMiddleware(config PreloadConfig) gofiber.Handler {
 				continue
 			}
 
-			// Preload core-related chunks only (hashed chunks like runtime-[hash].js)
+			// Preload core-related chunks only
 			if !strings.HasPrefix(chunk, "runtime-") || strings.HasPrefix(chunk, "runtime-secure") {
 				continue
 			}
 
-			// Skip if already added
-			alreadyAdded := false
-			for _, link := range links {
-				if strings.Contains(link, chunkPath) {
-					alreadyAdded = true
-					break
-				}
-			}
-			if !alreadyAdded {
+			if !alreadyAdded(chunkPath) {
 				links = append(links, fmt.Sprintf("<%s>; rel=modulepreload", chunkPath))
 				count++
 			}
 		}
 
 		if len(links) > 0 {
-			// Hard cap of 6 links to fit within standard browser connection limits per host
-			if len(links) > 6 {
-				links = links[:6]
+			if len(links) > limit {
+				links = links[:limit]
 			}
 			c.Set("Link", strings.Join(links, ", "))
 		}
