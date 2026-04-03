@@ -1,6 +1,7 @@
 package gospa
 
 import (
+	"os"
 	"testing"
 	"time"
 )
@@ -145,6 +146,29 @@ func TestNew_CustomConfig(t *testing.T) {
 	}
 	if app.Config.AppName != "MyApp" {
 		t.Errorf("expected AppName='MyApp', got %q", app.Config.AppName)
+	}
+}
+
+func TestNew_LoadsManifest(t *testing.T) {
+	// Create a temporary manifest file
+	manifestPath := "test_manifest.json"
+	content := `{"main.js": "main.1234.js", "style.css": "style.5678.css"}`
+	err := os.WriteFile(manifestPath, []byte(content), 0600)
+	if err != nil {
+		t.Fatalf("failed to create test manifest: %v", err)
+	}
+	defer func() { _ = os.Remove(manifestPath) }()
+
+	app := New(Config{
+		ManifestPath: manifestPath,
+	})
+	defer func() { _ = app.Fiber.Shutdown() }()
+
+	if len(app.Config.BuildManifest) != 2 {
+		t.Errorf("expected 2 manifest entries, got %d", len(app.Config.BuildManifest))
+	}
+	if app.Config.BuildManifest["main.js"] != "main.1234.js" {
+		t.Errorf("expected main.js to be main.1234.js, got %q", app.Config.BuildManifest["main.js"])
 	}
 }
 

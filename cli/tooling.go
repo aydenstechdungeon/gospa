@@ -2,6 +2,7 @@ package cli
 
 import (
 	"os/exec"
+	"sync"
 )
 
 // PackageManager represents a Node.js package manager.
@@ -22,18 +23,29 @@ func (pm PackageManager) String() string {
 	return string(pm)
 }
 
+var (
+	detectedPM PackageManager
+	pmOnce     sync.Once
+)
+
 // GetPackageManager returns the best available package manager in priority order: bun, pnpm, npm.
 func GetPackageManager() PackageManager {
-	if _, err := exec.LookPath("bun"); err == nil {
-		return BunPM
-	}
-	if _, err := exec.LookPath("pnpm"); err == nil {
-		return PnpmPM
-	}
-	if _, err := exec.LookPath("npm"); err == nil {
-		return NpmPM
-	}
-	return NonePM
+	pmOnce.Do(func() {
+		if _, err := exec.LookPath("bun"); err == nil {
+			detectedPM = BunPM
+			return
+		}
+		if _, err := exec.LookPath("pnpm"); err == nil {
+			detectedPM = PnpmPM
+			return
+		}
+		if _, err := exec.LookPath("npm"); err == nil {
+			detectedPM = NpmPM
+			return
+		}
+		detectedPM = NonePM
+	})
+	return detectedPM
 }
 
 // GetBundlerCommand returns the command to use for client-side bundling.
