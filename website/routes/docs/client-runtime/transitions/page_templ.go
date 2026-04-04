@@ -35,7 +35,7 @@ func Page() templ.Component {
 		if templ_7745c5c3_Err != nil {
 			return templ_7745c5c3_Err
 		}
-		templ_7745c5c3_Err = components.CodeBlock(`fade(element, { delay: 0, duration: 400 });`, "typescript", "fade.ts").Render(ctx, templ_7745c5c3_Buffer)
+		templ_7745c5c3_Err = components.CodeBlock(`fade(element, { delay: 0, duration: 400 });`, "typescript", " fade.ts").Render(ctx, templ_7745c5c3_Buffer)
 		if templ_7745c5c3_Err != nil {
 			return templ_7745c5c3_Err
 		}
@@ -43,7 +43,7 @@ func Page() templ.Component {
 		if templ_7745c5c3_Err != nil {
 			return templ_7745c5c3_Err
 		}
-		templ_7745c5c3_Err = components.CodeBlock(`fly(element, { x: 100, y: 0, opacity: 0, duration: 400 });`, "typescript", "fly.ts").Render(ctx, templ_7745c5c3_Buffer)
+		templ_7745c5c3_Err = components.CodeBlock(`fly(element, { x: 100, y: 0, opacity: 0, duration: 400 });`, "typescript", " fly.ts").Render(ctx, templ_7745c5c3_Buffer)
 		if templ_7745c5c3_Err != nil {
 			return templ_7745c5c3_Err
 		}
@@ -51,7 +51,7 @@ func Page() templ.Component {
 		if templ_7745c5c3_Err != nil {
 			return templ_7745c5c3_Err
 		}
-		templ_7745c5c3_Err = components.CodeBlock(`slide(element, { duration: 400 });`, "typescript", "slide.ts").Render(ctx, templ_7745c5c3_Buffer)
+		templ_7745c5c3_Err = components.CodeBlock(`slide(element, { duration: 400 });`, "typescript", " slide.ts").Render(ctx, templ_7745c5c3_Buffer)
 		if templ_7745c5c3_Err != nil {
 			return templ_7745c5c3_Err
 		}
@@ -59,7 +59,7 @@ func Page() templ.Component {
 		if templ_7745c5c3_Err != nil {
 			return templ_7745c5c3_Err
 		}
-		templ_7745c5c3_Err = components.CodeBlock(`scale(element, { start: 0, opacity: 0, duration: 400 });`, "typescript", "scale.ts").Render(ctx, templ_7745c5c3_Buffer)
+		templ_7745c5c3_Err = components.CodeBlock(`scale(element, { start: 0, opacity: 0, duration: 400 });`, "typescript", " scale.ts").Render(ctx, templ_7745c5c3_Buffer)
 		if templ_7745c5c3_Err != nil {
 			return templ_7745c5c3_Err
 		}
@@ -67,7 +67,7 @@ func Page() templ.Component {
 		if templ_7745c5c3_Err != nil {
 			return templ_7745c5c3_Err
 		}
-		templ_7745c5c3_Err = components.CodeBlock(`blur(element, { amount: 5, opacity: 0, duration: 400 });`, "typescript", "blur.ts").Render(ctx, templ_7745c5c3_Buffer)
+		templ_7745c5c3_Err = components.CodeBlock(`blur(element, { amount: 5, opacity: 0, duration: 400 });`, "typescript", " blur.ts").Render(ctx, templ_7745c5c3_Buffer)
 		if templ_7745c5c3_Err != nil {
 			return templ_7745c5c3_Err
 		}
@@ -75,7 +75,7 @@ func Page() templ.Component {
 		if templ_7745c5c3_Err != nil {
 			return templ_7745c5c3_Err
 		}
-		templ_7745c5c3_Err = components.CodeBlock(`crossfade(element, { duration: 400 });`, "typescript", "crossfade.ts").Render(ctx, templ_7745c5c3_Buffer)
+		templ_7745c5c3_Err = components.CodeBlock(`crossfade(element, { duration: 400 });`, "typescript", " crossfade.ts").Render(ctx, templ_7745c5c3_Buffer)
 		if templ_7745c5c3_Err != nil {
 			return templ_7745c5c3_Err
 		}
@@ -89,7 +89,7 @@ func Page() templ.Component {
 GoSPA.fly(element, { 
   duration: 400, 
   easing: GoSPA.cubicOut 
-});`, "typescript", "easing.ts").Render(ctx, templ_7745c5c3_Buffer)
+});`, "typescript", " easing.ts").Render(ctx, templ_7745c5c3_Buffer)
 		if templ_7745c5c3_Err != nil {
 			return templ_7745c5c3_Err
 		}
@@ -108,7 +108,7 @@ GoSPA.fly(element, {
 
 <!-- Different in/out transitions -->
 <div 
-  data-transition-in="fade" 
+  data-transition-in="fade"
   data-transition-out="slide"
 >
   I fade in and slide out
@@ -116,19 +116,19 @@ GoSPA.fly(element, {
 
 <!-- With parameters -->
 <div 
-  data-transition="fly" 
-  data-transition-params='{"x": 100, "duration": 500}'
+  data-transition="fly"
+  data-transition-params='{"x": 100, " duration": 500}'
 >
   I fly from the right
 </div>
 
 <!-- With easing -->
 <div 
-  data-transition="scale" 
-  data-transition-params='{"start": 0.5, "easing": "elasticOut"}'
+  data-transition="scale"
+  data-transition-params='{"start": 0.5, " easing": " elasticOut"}'
 >
   I scale with elastic easing
-</div>`, "html", "transitions.html").Render(ctx, templ_7745c5c3_Buffer)
+</div>`, "html", " transitions.html").Render(ctx, templ_7745c5c3_Buffer)
 		if templ_7745c5c3_Err != nil {
 			return templ_7745c5c3_Err
 		}
@@ -144,7 +144,7 @@ GoSPA.transitionIn(element, GoSPA.fade, { duration: 300 });
 // Exit transition with callback
 GoSPA.transitionOut(element, GoSPA.fly, { x: -100, duration: 300 }, () => {
   element.remove();
-});`, "typescript", "programmatic.ts").Render(ctx, templ_7745c5c3_Buffer)
+});`, "typescript", " programmatic.ts").Render(ctx, templ_7745c5c3_Buffer)
 		if templ_7745c5c3_Err != nil {
 			return templ_7745c5c3_Err
 		}
@@ -158,7 +158,7 @@ GoSPA.transitionOut(element, GoSPA.fly, { x: -100, duration: 300 }, () => {
 GoSPA.setupTransitions();
 
 // Setup on specific root
-GoSPA.setupTransitions(document.getElementById('app'));`, "typescript", "setup.ts").Render(ctx, templ_7745c5c3_Buffer)
+GoSPA.setupTransitions(document.getElementById('app'));`, "typescript", " setup.ts").Render(ctx, templ_7745c5c3_Buffer)
 		if templ_7745c5c3_Err != nil {
 			return templ_7745c5c3_Err
 		}
@@ -180,11 +180,11 @@ function wiggle(element, { duration = 400, intensity = 10 }) {
 }
 
 // Use custom transition
-transitionIn(element, wiggle, { intensity: 20 });`, "typescript", "custom.ts").Render(ctx, templ_7745c5c3_Buffer)
+transitionIn(element, wiggle, { intensity: 20 });`, "typescript", " custom.ts").Render(ctx, templ_7745c5c3_Buffer)
 		if templ_7745c5c3_Err != nil {
 			return templ_7745c5c3_Err
 		}
-		templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 12, "</section><div class=\"flex justify-between mt-16\"><a href=\"/docs/client-runtime/websocket\" class=\"group flex items-center gap-3 px-6 py-3 rounded-xl border border-[var(--border)] bg-[var(--bg-secondary)] hover:border-[var(--accent-primary)]/50 transition-all\"><svg xmlns=\"http://www.w3.org/2000/svg\" width=\"20\" height=\"20\" viewBox=\"0 0 24 24\" fill=\"none\" stroke=\"currentColor\" stroke-width=\"2\" stroke-linecap=\"round\" stroke-linejoin=\"round\" class=\"text-[var(--text-muted)] group-hover:text-[var(--accent-primary)] transition-colors\"><path d=\"M19 12H5\"></path><path d=\"m12 19-7-7 7-7\"></path></svg><div><div class=\"text-[var(--text-muted)] text-xs uppercase tracking-widest font-bold mb-1\">Previous</div><div class=\"font-bold group-hover:text-[var(--accent-primary)] transition-colors\">WebSocket</div></div></a> <a href=\"/docs/api\" class=\"group flex items-center gap-3 px-6 py-3 rounded-xl border border-[var(--border)] bg-[var(--bg-secondary)] hover:border-[var(--accent-primary)]/50 transition-all text-right\"><div><div class=\"text-[var(--text-muted)] text-xs uppercase tracking-widest font-bold mb-1\">Next</div><div class=\"font-bold group-hover:text-[var(--accent-primary)] transition-colors\">Go API</div></div><svg xmlns=\"http://www.w3.org/2000/svg\" width=\"20\" height=\"20\" viewBox=\"0 0 24 24\" fill=\"none\" stroke=\"currentColor\" stroke-width=\"2\" stroke-linecap=\"round\" stroke-linejoin=\"round\" class=\"text-[var(--text-muted)] group-hover:text-[var(--accent-primary)] transition-colors\"><path d=\"M5 12h14\"></path><path d=\"m12 5 7 7-7 7\"></path></svg></a></div></div>")
+		templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 12, "</section><div class=\"flex justify-between mt-16\"><a href=\"/docs/client-runtime/websocket\" class=\"group flex items-center gap-3 px-6 py-3 rounded-xl border border-[var(--border)] bg-[var(--bg-secondary)] hover:border-[var(--accent-primary)]/50 transition-all\"><svg xmlns=\"http://www.w3.org/2000/svg\" width=\"20\" height=\"20\" viewBox=\"0 0 24 24\" fill=\"none\" stroke=\"currentColor\" stroke-width=\"2\" stroke-linecap=\"round\" stroke-linejoin=\"round\" class=\"text-[var(--text-muted)] group-hover:text-[var(--accent-primary)] transition-colors\"><path d=\" M19 12H5\"></path><path d=\" m12 19-7-7 7-7\"></path></svg><div><div class=\"text-[var(--text-muted)] text-xs uppercase tracking-widest font-bold mb-1\">Previous</div><div class=\"font-bold group-hover:text-[var(--accent-primary)] transition-colors\">WebSocket</div></div></a> <a href=\"/docs/api\" class=\"group flex items-center gap-3 px-6 py-3 rounded-xl border border-[var(--border)] bg-[var(--bg-secondary)] hover:border-[var(--accent-primary)]/50 transition-all text-right\"><div><div class=\"text-[var(--text-muted)] text-xs uppercase tracking-widest font-bold mb-1\">Next</div><div class=\"font-bold group-hover:text-[var(--accent-primary)] transition-colors\">Go API</div></div><svg xmlns=\"http://www.w3.org/2000/svg\" width=\"20\" height=\"20\" viewBox=\"0 0 24 24\" fill=\"none\" stroke=\"currentColor\" stroke-width=\"2\" stroke-linecap=\"round\" stroke-linejoin=\"round\" class=\"text-[var(--text-muted)] group-hover:text-[var(--accent-primary)] transition-colors\"><path d=\" M5 12h14\"></path><path d=\" m12 5 7 7-7 7\"></path></svg></a></div></div>")
 		if templ_7745c5c3_Err != nil {
 			return templ_7745c5c3_Err
 		}

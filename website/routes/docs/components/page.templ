@@ -23,7 +23,7 @@ templ Page() {
     Children []*BaseComponent
     Parent   *BaseComponent
     Context  map[string]any
-}`, "go", "component/base.go")
+}`, "go", " component/base.go")
 				<div class="mt-4 rounded-xl border border-[var(--border)] overflow-hidden">
 					<table class="w-full text-left text-sm">
 						<thead class="bg-[var(--bg-secondary)] text-[var(--text-muted)] uppercase tracking-wider">
@@ -101,7 +101,7 @@ found := tree.Find("component-id")
 // Find all matching components
 matches := tree.FindAll(func(c *BaseComponent) bool {
     return c.GetName() == "Button"
-})`, "go", "example.go")
+})`, "go", " example.go")
 				<div class="mt-4 rounded-xl border border-[var(--border)] overflow-hidden">
 					<table class="w-full text-left text-sm">
 						<thead class="bg-[var(--bg-secondary)] text-[var(--text-muted)] uppercase tracking-wider">
@@ -157,7 +157,7 @@ component.OnUpdate(func(c *BaseComponent, oldProps, newProps *Props) {
 
 component.OnDestroy(func(c *BaseComponent) {
     // Cleanup resources
-})`, "go", "lifecycle.go")
+})`, "go", " lifecycle.go")
 				<div class="mt-4 rounded-xl border border-[var(--border)] overflow-hidden">
 					<table class="w-full text-left text-sm">
 						<thead class="bg-[var(--bg-secondary)] text-[var(--text-muted)] uppercase tracking-wider">
@@ -212,19 +212,19 @@ component.OnDestroy(func(c *BaseComponent) {
 				<h2 class="text-2xl font-bold mb-4 border-b border-[var(--border)] pb-2 italic mono">Props</h2>
 				<p class="text-[var(--text-secondary)] mb-4">Type-safe property access with validation and default values.</p>
 				@components.CodeBlock(`props := component.NewProps()
-props.Set("title", "Hello")
+props.Set("title", " Hello")
 props.Set("count", 42)
 
-title := props.GetString("title")     // "Hello"
+title := props.GetString("title")     // " Hello"
 count := props.GetInt("count")        // 42
 enabled := props.GetBool("enabled", false) // false (default)
 
 // With schema validation
 schema := component.PropSchema{
-    "title": {Type: "string", Required: true},
-    "count": {Type: "int", Default: 0},
+    "title": {Type: " string", Required: true},
+    "count": {Type: " int", Default: 0},
 }
-props := component.NewPropsWithSchema(schema)`, "go", "props.go")
+props := component.NewPropsWithSchema(schema)`, "go", " props.go")
 				<div class="mt-4 rounded-xl border border-[var(--border)] overflow-hidden">
 					<table class="w-full text-left text-sm">
 						<thead class="bg-[var(--bg-secondary)] text-[var(--text-muted)] uppercase tracking-wider">
@@ -300,7 +300,7 @@ name.OnChange(func(newVal string) {
 name.Set("GoSPA")
 
 // Get current value
-current := name.Get() // "GoSPA"`, "go", "bindable.go")
+current := name.Get() // "GoSPA"`, " go", " bindable.go")
 			</div>
 		</section>
 	</div>

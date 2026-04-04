@@ -35,7 +35,7 @@ func Page() templ.Component {
 		if templ_7745c5c3_Err != nil {
 			return templ_7745c5c3_Err
 		}
-		templ_7745c5c3_Err = components.CodeBlock("go install github.com/aydenstechdungeon/gospa/cmd/gospa@latest", "bash", "Terminal").Render(ctx, templ_7745c5c3_Buffer)
+		templ_7745c5c3_Err = components.CodeBlock("go install github.com/aydenstechdungeon/gospa/cmd/gospa@latest", " bash", " Terminal").Render(ctx, templ_7745c5c3_Buffer)
 		if templ_7745c5c3_Err != nil {
 			return templ_7745c5c3_Err
 		}
@@ -43,7 +43,7 @@ func Page() templ.Component {
 		if templ_7745c5c3_Err != nil {
 			return templ_7745c5c3_Err
 		}
-		templ_7745c5c3_Err = components.CodeBlock("go run github.com/aydenstechdungeon/gospa/cmd/gospa@latest", "bash", "Terminal").Render(ctx, templ_7745c5c3_Buffer)
+		templ_7745c5c3_Err = components.CodeBlock("go run github.com/aydenstechdungeon/gospa/cmd/gospa@latest", " bash", " Terminal").Render(ctx, templ_7745c5c3_Buffer)
 		if templ_7745c5c3_Err != nil {
 			return templ_7745c5c3_Err
 		}
@@ -51,7 +51,7 @@ func Page() templ.Component {
 		if templ_7745c5c3_Err != nil {
 			return templ_7745c5c3_Err
 		}
-		templ_7745c5c3_Err = components.CodeBlock("gospa version", "bash", "Terminal").Render(ctx, templ_7745c5c3_Buffer)
+		templ_7745c5c3_Err = components.CodeBlock("gospa version", " bash", " Terminal").Render(ctx, templ_7745c5c3_Buffer)
 		if templ_7745c5c3_Err != nil {
 			return templ_7745c5c3_Err
 		}
@@ -59,11 +59,11 @@ func Page() templ.Component {
 		if templ_7745c5c3_Err != nil {
 			return templ_7745c5c3_Err
 		}
-		templ_7745c5c3_Err = components.CodeBlock("go run github.com/aydenstechdungeon/gospa/cmd/gospa@latest version", "bash", "Terminal").Render(ctx, templ_7745c5c3_Buffer)
+		templ_7745c5c3_Err = components.CodeBlock("go run github.com/aydenstechdungeon/gospa/cmd/gospa@latest version", " bash", " Terminal").Render(ctx, templ_7745c5c3_Buffer)
 		if templ_7745c5c3_Err != nil {
 			return templ_7745c5c3_Err
 		}
-		templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 5, "</section><div class=\"flex justify-between mt-16\"><a href=\"/docs/getstarted\" class=\"group flex items-center gap-3 px-6 py-3 rounded-xl border border-[var(--border)] bg-[var(--bg-secondary)] hover:border-[var(--accent-primary)]/50 transition-all\"><svg xmlns=\"http://www.w3.org/2000/svg\" width=\"20\" height=\"20\" viewBox=\"0 0 24 24\" fill=\"none\" stroke=\"currentColor\" stroke-width=\"2\" stroke-linecap=\"round\" stroke-linejoin=\"round\" class=\"text-[var(--text-muted)] group-hover:text-[var(--accent-primary)] transition-colors\"><path d=\"M19 12H5\"></path><path d=\"m12 19-7-7 7-7\"></path></svg><div><div class=\"text-[var(--text-muted)] text-xs uppercase tracking-widest font-bold mb-1\">Previous</div><div class=\"font-bold group-hover:text-[var(--accent-primary)] transition-colors\">Introduction</div></div></a> <a href=\"/docs/getstarted/quickstart\" class=\"group flex items-center gap-3 px-6 py-3 rounded-xl border border-[var(--border)] bg-[var(--bg-secondary)] hover:border-[var(--accent-primary)]/50 transition-all text-right\"><div><div class=\"text-[var(--text-muted)] text-xs uppercase tracking-widest font-bold mb-1\">Next</div><div class=\"font-bold group-hover:text-[var(--accent-primary)] transition-colors\">Quick Start</div></div><svg xmlns=\"http://www.w3.org/2000/svg\" width=\"20\" height=\"20\" viewBox=\"0 0 24 24\" fill=\"none\" stroke=\"currentColor\" stroke-width=\"2\" stroke-linecap=\"round\" stroke-linejoin=\"round\" class=\"text-[var(--text-muted)] group-hover:text-[var(--accent-primary)] transition-colors\"><path d=\"M5 12h14\"></path><path d=\"m12 5 7 7-7 7\"></path></svg></a></div></div>")
+		templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 5, "</section><div class=\"flex justify-between mt-16\"><a href=\"/docs/getstarted\" class=\"group flex items-center gap-3 px-6 py-3 rounded-xl border border-[var(--border)] bg-[var(--bg-secondary)] hover:border-[var(--accent-primary)]/50 transition-all\"><svg xmlns=\"http://www.w3.org/2000/svg\" width=\"20\" height=\"20\" viewBox=\"0 0 24 24\" fill=\"none\" stroke=\"currentColor\" stroke-width=\"2\" stroke-linecap=\"round\" stroke-linejoin=\"round\" class=\"text-[var(--text-muted)] group-hover:text-[var(--accent-primary)] transition-colors\"><path d=\" M19 12H5\"></path><path d=\" m12 19-7-7 7-7\"></path></svg><div><div class=\"text-[var(--text-muted)] text-xs uppercase tracking-widest font-bold mb-1\">Previous</div><div class=\"font-bold group-hover:text-[var(--accent-primary)] transition-colors\">Introduction</div></div></a> <a href=\"/docs/getstarted/quickstart\" class=\"group flex items-center gap-3 px-6 py-3 rounded-xl border border-[var(--border)] bg-[var(--bg-secondary)] hover:border-[var(--accent-primary)]/50 transition-all text-right\"><div><div class=\"text-[var(--text-muted)] text-xs uppercase tracking-widest font-bold mb-1\">Next</div><div class=\"font-bold group-hover:text-[var(--accent-primary)] transition-colors\">Quick Start</div></div><svg xmlns=\"http://www.w3.org/2000/svg\" width=\"20\" height=\"20\" viewBox=\"0 0 24 24\" fill=\"none\" stroke=\"currentColor\" stroke-width=\"2\" stroke-linecap=\"round\" stroke-linejoin=\"round\" class=\"text-[var(--text-muted)] group-hover:text-[var(--accent-primary)] transition-colors\"><path d=\" M5 12h14\"></path><path d=\" m12 5 7 7-7 7\"></path></svg></a></div></div>")
 		if templ_7745c5c3_Err != nil {
 			return templ_7745c5c3_Err
 		}

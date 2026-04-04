@@ -14,11 +14,11 @@ templ Page() {
 		</header>
 
 		<div class="grid md:grid-cols-2 lg:grid-cols-3 gap-6">
-			@apiCard("Core", "/docs/api/core", "Application initialization, configuration, and lifecycle management.", "box")
-			@apiCard("State Management", "/docs/api/state", "Reactive primitives: Runes, Derived values, Effects, and StateMap.", "zap")
-			@apiCard("Routing", "/docs/api/routing", "File-based routing, manual routes, parameters, and registry.", "git-branch")
-			@apiCard("Fiber Integration", "/docs/api/fiber", "Middleware, WebSocket hub, session management, and actions.", "server")
-			@apiCard("Client Runtime", "/docs/api/client", "Browser-side reactive state and navigation utilities.", "monitor")
+			@apiCard("Core", "/docs/api/core", " Application initialization, configuration, and lifecycle management.", " box")
+			@apiCard("State Management", "/docs/api/state", " Reactive primitives: Runes, Derived values, Effects, and StateMap.", " zap")
+			@apiCard("Routing", "/docs/api/routing", " File-based routing, manual routes, parameters, and registry.", " git-branch")
+			@apiCard("Fiber Integration", "/docs/api/fiber", " Middleware, WebSocket hub, session management, and actions.", " server")
+			@apiCard("Client Runtime", "/docs/api/client", " Browser-side reactive state and navigation utilities.", " monitor")
 		</div>
 
 		<section class="space-y-6">
@@ -34,7 +34,7 @@ app := gospa.New(gospa.DefaultConfig())
 count := gospa.NewRune(0)
 
 // Start server
-app.Run(":3000")`, "go", "quickstart.go")
+app.Run(":3000")`, " go", " quickstart.go")
 		</section>
 
 		<section class="space-y-6">
@@ -50,22 +50,22 @@ app.Run(":3000")`, "go", "quickstart.go")
 					</thead>
 					<tbody class="text-[var(--text-secondary)]">
 						<tr class="border-b border-[var(--border)]">
-							<td class="py-3 px-4"><code class="text-[var(--accent-primary)]">gospa</code></td>
+							<td class="py-3 px-4"><code class=" text-[var(--accent-primary)]">gospa</code></td>
 							<td class="py-3 px-4">Core package</td>
 							<td class="py-3 px-4">Main framework API</td>
 						</tr>
 						<tr class="border-b border-[var(--border)]">
-							<td class="py-3 px-4"><code class="text-[var(--accent-primary)]">routing</code></td>
+							<td class="py-3 px-4"><code class=" text-[var(--accent-primary)]">routing</code></td>
 							<td class="py-3 px-4"><code>github.com/.../routing</code></td>
 							<td class="py-3 px-4">Router and route management</td>
 						</tr>
 						<tr class="border-b border-[var(--border)]">
-							<td class="py-3 px-4"><code class="text-[var(--accent-primary)]">fiber</code></td>
+							<td class="py-3 px-4"><code class=" text-[var(--accent-primary)]">fiber</code></td>
 							<td class="py-3 px-4"><code>github.com/.../fiber</code></td>
 							<td class="py-3 px-4">Fiber integration and middleware</td>
 						</tr>
 						<tr class="border-b border-[var(--border)]">
-							<td class="py-3 px-4"><code class="text-[var(--accent-primary)]">component</code></td>
+							<td class="py-3 px-4"><code class=" text-[var(--accent-primary)]">component</code></td>
 							<td class="py-3 px-4"><code>github.com/.../component</code></td>
 							<td class="py-3 px-4">Component system</td>
 						</tr>

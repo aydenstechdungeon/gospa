@@ -34,7 +34,7 @@ func main() {
 
     // 2. Setup SSE routes
     fiber.SetupSSE(app, broker, "/_sse", nil)
-}`, "go", "main.go")
+}`, "go", " main.go")
 			</div>
 
 			<div>
@@ -48,13 +48,13 @@ func main() {
 							</tr>
 						</thead>
 						<tbody>
-							<tr class="border-b border-[var(--border)]"><td class="px-4 py-2 font-mono">NewSSEBroker(config)</td><td class="px-4 py-2">Creates a new broker instance.</td></tr>
-							<tr class="border-b border-[var(--border)]"><td class="px-4 py-2 font-mono">Connect(clientID, metadata)</td><td class="px-4 py-2">Manually registers a client.</td></tr>
-							<tr class="border-b border-[var(--border)]"><td class="px-4 py-2 font-mono">Disconnect(clientID)</td><td class="px-4 py-2">Removes a client.</td></tr>
-							<tr class="border-b border-[var(--border)]"><td class="px-4 py-2 font-mono">Subscribe(clientID, topics...)</td><td class="px-4 py-2">Adds a client to specific topics.</td></tr>
-							<tr class="border-b border-[var(--border)]"><td class="px-4 py-2 font-mono">Send(clientID, event)</td><td class="px-4 py-2">Sends an event to a specific client.</td></tr>
-							<tr class="border-b border-[var(--border)]"><td class="px-4 py-2 font-mono">Broadcast(event)</td><td class="px-4 py-2">Sends an event to all connected clients.</td></tr>
-							<tr class="border-b border-[var(--border)]"><td class="px-4 py-2 font-mono">BroadcastToTopic(topic, event)</td><td class="px-4 py-2">Sends an event to clients in a topic.</td></tr>
+							<tr class="border-b border-[var(--border)]"><td class=" px-4 py-2 font-mono">NewSSEBroker(config)</td><td class=" px-4 py-2">Creates a new broker instance.</td></tr>
+							<tr class="border-b border-[var(--border)]"><td class=" px-4 py-2 font-mono">Connect(clientID, metadata)</td><td class=" px-4 py-2">Manually registers a client.</td></tr>
+							<tr class="border-b border-[var(--border)]"><td class=" px-4 py-2 font-mono">Disconnect(clientID)</td><td class=" px-4 py-2">Removes a client.</td></tr>
+							<tr class="border-b border-[var(--border)]"><td class=" px-4 py-2 font-mono">Subscribe(clientID, topics...)</td><td class=" px-4 py-2">Adds a client to specific topics.</td></tr>
+							<tr class="border-b border-[var(--border)]"><td class=" px-4 py-2 font-mono">Send(clientID, event)</td><td class=" px-4 py-2">Sends an event to a specific client.</td></tr>
+							<tr class="border-b border-[var(--border)]"><td class=" px-4 py-2 font-mono">Broadcast(event)</td><td class=" px-4 py-2">Sends an event to all connected clients.</td></tr>
+							<tr class="border-b border-[var(--border)]"><td class=" px-4 py-2 font-mono">BroadcastToTopic(topic, event)</td><td class=" px-4 py-2">Sends an event to clients in a topic.</td></tr>
 						</tbody>
 					</table>
 				</div>
@@ -66,7 +66,7 @@ func main() {
 				@components.CodeBlock(`helper := fiber.NewSSEHelper(broker)
 
 // Send a basic notification
-helper.Notify(clientID, map[string]string{"message": "Hello!"})
+helper.Notify(clientID, map[string]string{"message": " Hello!"})
 
 // Broadcast to everyone
 helper.NotifyAll("System maintenance in 5 minutes")
@@ -75,10 +75,10 @@ helper.NotifyAll("System maintenance in 5 minutes")
 helper.Update(clientID, "count", 42)
 
 // Send an alert
-helper.Alert(clientID, "warning", "Low disk space")
+helper.Alert(clientID, "warning", " Low disk space")
 
 // Report progress
-helper.Progress(clientID, 75, "Uploading...")`, "go", "handlers.go")
+helper.Progress(clientID, 75, "Uploading...")`, " go", " handlers.go")
 			</div>
 
 			<div>
@@ -90,7 +90,7 @@ const sse = connectSSE('notifications', {
   url: '/_sse/connect',
   autoReconnect: true,
   debug: true
-});`, "typescript", "app.ts")
+});`, "typescript", " app.ts")
 			</div>
 
 			<div>
@@ -108,12 +108,12 @@ sse.on('notification', (ev) => {
 // Listen for state updates
 sse.on('update', (ev) => {
   const { key, value } = ev.data;
-  console.log(` + "`" + `Update ${key} to ${value}` + "`" + `);
+  console.log(` + "`"+ `Update ${key} to ${value}` + "`"+ `);
 });
 
 // Unsubscribe
 const unsub = sse.on('alert', handleAlert);
-unsub(); // Stop listening`, "typescript", "events.ts")
+unsub(); // Stop listening`, "typescript", " events.ts")
 			</div>
 
 			<div>
@@ -124,7 +124,7 @@ unsub(); // Stop listening`, "typescript", "events.ts")
 });
 
 sse.disconnect();
-sse.connect();`, "typescript", "connection.ts")
+sse.connect();`, "typescript", " connection.ts")
 			</div>
 
 			<div>
@@ -139,12 +139,12 @@ sse.connect();`, "typescript", "connection.ts")
 							</tr>
 						</thead>
 						<tbody>
-							<tr class="border-b border-[var(--border)]"><td class="px-4 py-2 font-mono">url</td><td class="px-4 py-2">-</td><td class="px-4 py-2">The SSE endpoint URL.</td></tr>
-							<tr class="border-b border-[var(--border)]"><td class="px-4 py-2 font-mono">autoReconnect</td><td class="px-4 py-2">true</td><td class="px-4 py-2">Automatically reconnect on failure.</td></tr>
-							<tr class="border-b border-[var(--border)]"><td class="px-4 py-2 font-mono">maxRetries</td><td class="px-4 py-2">5</td><td class="px-4 py-2">Maximum reconnection attempts.</td></tr>
-							<tr class="border-b border-[var(--border)]"><td class="px-4 py-2 font-mono">reconnectDelay</td><td class="px-4 py-2">1000</td><td class="px-4 py-2">Initial delay before reconnecting (ms).</td></tr>
-							<tr class="border-b border-[var(--border)]"><td class="px-4 py-2 font-mono">heartbeatInterval</td><td class="px-4 py-2">30000</td><td class="px-4 py-2">Expected heartbeat interval from server.</td></tr>
-							<tr class="border-b border-[var(--border)]"><td class="px-4 py-2 font-mono">debug</td><td class="px-4 py-2">false</td><td class="px-4 py-2">Enable verbose logging.</td></tr>
+							<tr class="border-b border-[var(--border)]"><td class=" px-4 py-2 font-mono">url</td><td class=" px-4 py-2">-</td><td class=" px-4 py-2">The SSE endpoint URL.</td></tr>
+							<tr class="border-b border-[var(--border)]"><td class=" px-4 py-2 font-mono">autoReconnect</td><td class=" px-4 py-2">true</td><td class=" px-4 py-2">Automatically reconnect on failure.</td></tr>
+							<tr class="border-b border-[var(--border)]"><td class=" px-4 py-2 font-mono">maxRetries</td><td class=" px-4 py-2">5</td><td class=" px-4 py-2">Maximum reconnection attempts.</td></tr>
+							<tr class="border-b border-[var(--border)]"><td class=" px-4 py-2 font-mono">reconnectDelay</td><td class=" px-4 py-2">1000</td><td class=" px-4 py-2">Initial delay before reconnecting (ms).</td></tr>
+							<tr class="border-b border-[var(--border)]"><td class=" px-4 py-2 font-mono">heartbeatInterval</td><td class=" px-4 py-2">30000</td><td class=" px-4 py-2">Expected heartbeat interval from server.</td></tr>
+							<tr class="border-b border-[var(--border)]"><td class=" px-4 py-2 font-mono">debug</td><td class=" px-4 py-2">false</td><td class=" px-4 py-2">Enable verbose logging.</td></tr>
 						</tbody>
 					</table>
 				</div>
@@ -159,7 +159,7 @@ const manager = getSSEManager();
 manager.setDefaultConfig({ autoReconnect: true });
 
 const main = manager.client('main', { url: '/_sse/main' });
-const logs = manager.client('logs', { url: '/_sse/logs' });`, "typescript", "manager.ts")
+const logs = manager.client('logs', { url: '/_sse/logs' });`, "typescript", " manager.ts")
 			</div>
 		</section>
 	</div>

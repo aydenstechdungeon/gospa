@@ -28,11 +28,11 @@ templ Page() {
 						</tr>
 					</thead>
 					<tbody class="divide-y divide-[var(--border)]">
-						<tr><td class="px-4 py-2 font-mono text-[var(--accent-primary)]">Prefork</td><td class="px-4 py-2">bool</td><td class="px-4 py-2">false</td><td class="px-4 py-2">Enables Fiber Prefork</td></tr>
-						<tr><td class="px-4 py-2 font-mono text-[var(--accent-primary)]">Storage</td><td class="px-4 py-2">store.Storage</td><td class="px-4 py-2">memory</td><td class="px-4 py-2">External Key-Value store (e.g. Redis) for Sessions/State</td></tr>
-						<tr><td class="px-4 py-2 font-mono text-[var(--accent-primary)]">PubSub</td><td class="px-4 py-2">store.PubSub</td><td class="px-4 py-2">memory</td><td class="px-4 py-2">External broker (e.g. Redis PubSub) for broadcasts</td></tr>
-						<tr><td class="px-4 py-2 font-mono text-[var(--accent-primary)]">SSGCacheTTL</td><td class="px-4 py-2">time.Duration</td><td class="px-4 py-2">0</td><td class="px-4 py-2">TTL for SSG cache (0 = forever)</td></tr>
-						<tr><td class="px-4 py-2 font-mono text-[var(--accent-primary)]">SSGCacheMaxEntries</td><td class="px-4 py-2">int</td><td class="px-4 py-2">500</td><td class="px-4 py-2">Max SSG cache entries (FIFO)</td></tr>
+						<tr><td class="px-4 py-2 font-mono text-[var(--accent-primary)]">Prefork</td><td class=" px-4 py-2">bool</td><td class=" px-4 py-2">false</td><td class=" px-4 py-2">Enables Fiber Prefork</td></tr>
+						<tr><td class="px-4 py-2 font-mono text-[var(--accent-primary)]">Storage</td><td class=" px-4 py-2">store.Storage</td><td class=" px-4 py-2">memory</td><td class=" px-4 py-2">External Key-Value store (e.g. Redis) for Sessions/State</td></tr>
+						<tr><td class="px-4 py-2 font-mono text-[var(--accent-primary)]">PubSub</td><td class=" px-4 py-2">store.PubSub</td><td class=" px-4 py-2">memory</td><td class=" px-4 py-2">External broker (e.g. Redis PubSub) for broadcasts</td></tr>
+						<tr><td class="px-4 py-2 font-mono text-[var(--accent-primary)]">SSGCacheTTL</td><td class=" px-4 py-2">time.Duration</td><td class=" px-4 py-2">0</td><td class=" px-4 py-2">TTL for SSG cache (0 = forever)</td></tr>
+						<tr><td class="px-4 py-2 font-mono text-[var(--accent-primary)]">SSGCacheMaxEntries</td><td class=" px-4 py-2">int</td><td class=" px-4 py-2">500</td><td class=" px-4 py-2">Max SSG cache entries (FIFO)</td></tr>
 					</tbody>
 				</table>
 			</div>
@@ -52,9 +52,9 @@ templ Page() {
 						</tr>
 					</thead>
 					<tbody class="divide-y divide-[var(--border)]">
-						<tr><td class="px-4 py-2 font-mono text-[var(--accent-primary)]">DefaultRevalidateAfter</td><td class="px-4 py-2">time.Duration</td><td class="px-4 py-2">0</td><td class="px-4 py-2">Global ISR TTL fallback</td></tr>
-						<tr><td class="px-4 py-2 font-mono text-[var(--accent-primary)]">ISRSemaphoreLimit</td><td class="px-4 py-2">int</td><td class="px-4 py-2">10</td><td class="px-4 py-2">Max concurrent background ISR renders</td></tr>
-						<tr><td class="px-4 py-2 font-mono text-[var(--accent-primary)]">ISRTimeout</td><td class="px-4 py-2">time.Duration</td><td class="px-4 py-2">60s</td><td class="px-4 py-2">Max time for a background ISR render</td></tr>
+						<tr><td class="px-4 py-2 font-mono text-[var(--accent-primary)]">DefaultRevalidateAfter</td><td class=" px-4 py-2">time.Duration</td><td class=" px-4 py-2">0</td><td class=" px-4 py-2">Global ISR TTL fallback</td></tr>
+						<tr><td class="px-4 py-2 font-mono text-[var(--accent-primary)]">ISRSemaphoreLimit</td><td class=" px-4 py-2">int</td><td class=" px-4 py-2">10</td><td class=" px-4 py-2">Max concurrent background ISR renders</td></tr>
+						<tr><td class="px-4 py-2 font-mono text-[var(--accent-primary)]">ISRTimeout</td><td class=" px-4 py-2">time.Duration</td><td class=" px-4 py-2">60s</td><td class=" px-4 py-2">Max time for a background ISR render</td></tr>
 					</tbody>
 				</table>
 			</div>
@@ -73,11 +73,11 @@ templ Page() {
 						</tr>
 					</thead>
 					<tbody class="divide-y divide-[var(--border)]">
-						<tr><td class="px-4 py-2 font-mono text-[var(--accent-primary)]">AllowedOrigins</td><td class="px-4 py-2">[]string</td><td class="px-4 py-2">[]</td><td class="px-4 py-2">Allowed CORS origins</td></tr>
-						<tr><td class="px-4 py-2 font-mono text-[var(--accent-primary)]">EnableCSRF</td><td class="px-4 py-2">bool</td><td class="px-4 py-2">false</td><td class="px-4 py-2">Enable automatic CSRF protection</td></tr>
-						<tr><td class="px-4 py-2 font-mono text-[var(--accent-primary)]">RemoteActionMiddleware</td><td class="px-4 py-2">fiber.Handler</td><td class="px-4 py-2">nil</td><td class="px-4 py-2">Optional global middleware for remote action auth/policy checks</td></tr>
-						<tr><td class="px-4 py-2 font-mono text-[var(--accent-primary)]">AllowInsecureWS</td><td class="px-4 py-2">bool</td><td class="px-4 py-2">false</td><td class="px-4 py-2">Allow insecure WS even on HTTPS (e.g. for proxies)</td></tr>
-						<tr><td class="px-4 py-2 font-mono text-[var(--accent-primary)]">AllowPortsWithInsecureWS</td><td class="px-4 py-2">[]int</td><td class="px-4 py-2">[3000]</td><td class="px-4 py-2">Ports permitted to use insecure WS on HTTPS</td></tr>
+						<tr><td class="px-4 py-2 font-mono text-[var(--accent-primary)]">AllowedOrigins</td><td class=" px-4 py-2">[]string</td><td class=" px-4 py-2">[]</td><td class=" px-4 py-2">Allowed CORS origins</td></tr>
+						<tr><td class="px-4 py-2 font-mono text-[var(--accent-primary)]">EnableCSRF</td><td class=" px-4 py-2">bool</td><td class=" px-4 py-2">false</td><td class=" px-4 py-2">Enable automatic CSRF protection</td></tr>
+						<tr><td class="px-4 py-2 font-mono text-[var(--accent-primary)]">RemoteActionMiddleware</td><td class=" px-4 py-2">fiber.Handler</td><td class=" px-4 py-2">nil</td><td class=" px-4 py-2">Optional global middleware for remote action auth/policy checks</td></tr>
+						<tr><td class="px-4 py-2 font-mono text-[var(--accent-primary)]">AllowInsecureWS</td><td class=" px-4 py-2">bool</td><td class=" px-4 py-2">false</td><td class=" px-4 py-2">Allow insecure WS even on HTTPS (e.g. for proxies)</td></tr>
+						<tr><td class="px-4 py-2 font-mono text-[var(--accent-primary)]">AllowPortsWithInsecureWS</td><td class=" px-4 py-2">[]int</td><td class=" px-4 py-2">[3000]</td><td class=" px-4 py-2">Ports permitted to use insecure WS on HTTPS</td></tr>
 					</tbody>
 				</table>
 			</div>
@@ -96,8 +96,8 @@ templ Page() {
 						</tr>
 					</thead>
 					<tbody class="divide-y divide-[var(--border)]">
-						<tr><td class="px-4 py-2 font-mono text-[var(--accent-primary)]">HydrationMode</td><td class="px-4 py-2">string</td><td class="px-4 py-2">""</td><td class="px-4 py-2">Hydration strategy: "immediate", "lazy", "visible", "idle"</td></tr>
-						<tr><td class="px-4 py-2 font-mono text-[var(--accent-primary)]">HydrationTimeout</td><td class="px-4 py-2">int</td><td class="px-4 py-2">0</td><td class="px-4 py-2">Milliseconds before force hydrate</td></tr>
+						<tr><td class="px-4 py-2 font-mono text-[var(--accent-primary)]">HydrationMode</td><td class=" px-4 py-2">string</td><td class=" px-4 py-2">""</td><td class=" px-4 py-2">Hydration strategy: " immediate", " lazy", " visible", " idle"</td></tr>
+						<tr><td class="px-4 py-2 font-mono text-[var(--accent-primary)]">HydrationTimeout</td><td class=" px-4 py-2">int</td><td class=" px-4 py-2">0</td><td class=" px-4 py-2">Milliseconds before force hydrate</td></tr>
 					</tbody>
 				</table>
 			</div>
@@ -106,9 +106,9 @@ templ Page() {
 		<section class="space-y-6">
 			<h2 class="text-2xl font-bold border-b border-[var(--border)] pb-2">Prefork Best Practices</h2>
 			<div class="space-y-4">
-				<p class="text-[var(--text-secondary)]">Prefork mode maximizes performance by spawning a worker process { "for" } each CPU core. To ensure consistency across workers, follow these rules:</p>
+				<p class="text-[var(--text-secondary)]">Prefork mode maximizes performance by spawning a worker process { " for"} each CPU core. To ensure consistency across workers, follow these rules:</p>
 				<ul class="space-y-3 text-sm text-[var(--text-secondary)] list-disc list-inside ml-4">
-					<li><strong>External Storage:</strong> You MUST use an external storage backend like Redis { "for" } session and client state. In-memory state is isolated per process.</li>
+					<li><strong>External Storage:</strong> You MUST use an external storage backend like Redis { "for"} session and client state. In-memory state is isolated per process.</li>
 					<li><strong>External PubSub:</strong> WebSocket broadcasting requires a shared broker (e.g. Redis PubSub) to reach clients connected to different worker processes.</li>
 					<li><strong>Avoid Global Variables:</strong> Mutable global variables are the primary source of bugs in Prefork mode. Each process has its own copy. Move shared logic to external databases or coordinated state.</li>
 					<li><strong>Port Sharing:</strong> Fiber handles SO_REUSEPORT automatically, but ensure your OS allows multiple processes to bind to the same port.</li>
@@ -120,7 +120,7 @@ templ Page() {
 			<h2 class="text-2xl font-bold">Examples</h2>
 			
 			<h3 class="text-xl font-semibold">High-Performance (Cluster Mode via Prefork)</h3>
-			@components.CodeBlock("import \"github.com/aydenstechdungeon/gospa/store/redis\"\n\napp := gospa.New(gospa.Config{\n    Prefork:         true,\n    Storage:         redis.NewStore(rdb),\n    PubSub:          redis.NewPubSub(rdb),\n    SimpleRuntime:   true,\n    CompressState:   true,\n    StateDiffing:    true,\n    CacheTemplates:  true,\n    HydrationMode:   \"lazy\",\n})", "go", "main.go")
+			@components.CodeBlock("import \" github.com/aydenstechdungeon/gospa/store/redis\"\n\napp := gospa.New(gospa.Config{\n    Prefork:         true,\n    Storage:         redis.NewStore(rdb),\n    PubSub:          redis.NewPubSub(rdb),\n    SimpleRuntime:   true,\n    CompressState:   true,\n    StateDiffing:    true,\n    CacheTemplates:  true,\n    HydrationMode:   \" lazy\",\n})", " go", " main.go")
 		</section>
 
 		@prevNext("/docs/configuration/websocket", "")
@@ -129,18 +129,18 @@ templ Page() {
 
 templ prevNext(prev, next string) {
 	<div class="flex justify-between pt-8 border-t border-[var(--border)] mt-12">
-		if prev != "" {
+		if prev != ""{
 			<a href={ templ.SafeURL(prev) } class="flex items-center gap-2 text-sm text-[var(--text-secondary)] hover:text-[var(--accent-primary)] transition-colors">
-				<svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="m15 18-6-6 6-6"/></svg>
+				<svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d=" m15 18-6-6 6-6"/></svg>
 				<span>Previous</span>
 			</a>
 		} else {
 			<div></div>
 		}
-		if next != "" {
+		if next != ""{
 			<a href={ templ.SafeURL(next) } class="flex items-center gap-2 text-sm text-[var(--text-secondary)] hover:text-[var(--accent-primary)] transition-colors">
 				<span>Next</span>
-				<svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="m9 18 6-6-6-6"/></svg>
+				<svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d=" m9 18 6-6-6-6"/></svg>
 			</a>
 		} else {
 			<div></div>

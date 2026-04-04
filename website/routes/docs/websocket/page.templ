@@ -41,20 +41,20 @@ templ Page() {
 			<div>
 				<h3 class="text-xl font-bold mb-4 mono italic">app.Broadcast(message)</h3>
 				<p class="text-[var(--text-secondary)] mb-4">Sends a raw message to all connected clients.</p>
-				@components.CodeBlock(`app.Broadcast([]byte("reload"))`, "go", "main.go")
+				@components.CodeBlock(`app.Broadcast([]byte("reload"))`, " go", " main.go")
 			</div>
 
 			<div>
 				<h3 class="text-xl font-bold mb-4 mono italic">app.BroadcastState(key, value)</h3>
 				<p class="text-[var(--text-secondary)] mb-4">Broadcasts a specific state update. This is the preferred way to sync data.</p>
-				@components.CodeBlock(`app.BroadcastState("online_count", 42)`, "go", "main.go")
+				@components.CodeBlock(`app.BroadcastState("online_count", 42)`, " go", " main.go")
 			</div>
 
 			<div>
 				<h3 class="text-xl font-bold mb-4 mono italic">app.GetHub()</h3>
 				<p class="text-[var(--text-secondary)] mb-4">Returns the underlying WebSocket hub for advanced Room/Client management.</p>
 				@components.CodeBlock(`hub := app.GetHub()
-hub.SendTo("client-123", []byte("direct_message"))`, "go", "main.go")
+hub.SendTo("client-123", []byte(" direct_message"))`, " go", " main.go")
 			</div>
 		</section>
 
@@ -73,7 +73,7 @@ const count = syncedRune('count', 0, ws);
 count.update(n => n + 1);
 
 // Updates from server will update locally and trigger UI refreshes
-count.subscribe(v => console.log('Synced value:', v));`, "typescript", "state.ts")
+count.subscribe(v => console.log('Synced value:', v));`, "typescript", " state.ts")
 			</div>
 
 			<div>
@@ -83,13 +83,13 @@ count.subscribe(v => console.log('Synced value:', v));`, "typescript", "state.ts
     url: 'ws://localhost:3000/_gospa/ws',
     onConnect: () => console.log('Connected!'),
     onMessage: (msg) => console.log('Message:', msg)
-});`, "typescript", "websocket.ts")
+});`, "typescript", " websocket.ts")
 			</div>
 		</section>
 
 		<section id="configuration" class="space-y-6">
 			<h2 class="text-2xl font-bold border-b border-[var(--border)] pb-2">Configuration</h2>
-			<p class="text-[var(--text-secondary)]">Fine-tune WebSocket behavior in <code class="mono">gospa.Config</code>.</p>
+			<p class="text-[var(--text-secondary)]">Fine-tune WebSocket behavior in <code class=" mono">gospa.Config</code>.</p>
 			
 			<div class="rounded-xl border border-[var(--border)] overflow-hidden">
 				<table class="w-full text-left text-sm">

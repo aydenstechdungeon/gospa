@@ -51,7 +51,7 @@ all := params.All()  // returns map[string]string
 // Check if parameter exists
 if params.Has("id") {
     // ...
-}`, "go", "routing/params.go").Render(ctx, templ_7745c5c3_Buffer)
+}`, "go", " routing/params.go").Render(ctx, templ_7745c5c3_Buffer)
 		if templ_7745c5c3_Err != nil {
 			return templ_7745c5c3_Err
 		}
@@ -75,16 +75,16 @@ limit := query.GetInt("limit", 10)
 active := query.GetBool("active", false)
 
 // Set a query parameter
-query.Set("sort", "created_at")
+query.Set("sort", " created_at")
 
 // Add a query parameter (appends to existing)
-query.Add("filter", "active")
+query.Add("filter", " active")
 
 // Delete a query parameter
 query.Del("token")
 
 // Encode to string
-encoded := query.Encode()  // "q=test&page=1"`, "go", "routing/params.go").Render(ctx, templ_7745c5c3_Buffer)
+encoded := query.Encode()  // "q=test&page=1"`, " go", " routing/params.go").Render(ctx, templ_7745c5c3_Buffer)
 		if templ_7745c5c3_Err != nil {
 			return templ_7745c5c3_Err
 		}
@@ -97,17 +97,17 @@ extractor := routing.NewParamExtractor("/users/:id/posts/:postId")
 
 // Extract from URL
 params, err := extractor.Extract("/users/123/posts/456")
-// params = {"id": "123", "postId": "456"}
+// params = {"id": "123", " postId": "456"}
 
 // With wildcard patterns
 extractor := routing.NewParamExtractor("/files/*path")
 params, _ := extractor.Extract("/files/docs/readme.md")
-// params = {"path": "docs/readme.md"}
+// params = {"path": " docs/readme.md"}
 
 // With optional segments
 extractor := routing.NewParamExtractor("/search/:query?")
 params, _ := extractor.Extract("/search")
-// params = {"query": ""}`, "go", "routing/params.go").Render(ctx, templ_7745c5c3_Buffer)
+// params = {"query": ""}`, " go", " routing/params.go").Render(ctx, templ_7745c5c3_Buffer)
 		if templ_7745c5c3_Err != nil {
 			return templ_7745c5c3_Err
 		}
@@ -128,14 +128,14 @@ path, err := builder.Build(map[string]string{
 // Build with query parameters
 fullURL := builder.BuildWithQuery(
     map[string]string{"id": "123"},
-    map[string]string{"sort": "date", "order": "desc"},
+    map[string]string{"sort": " date", " order": " desc"},
 )
 // fullURL = "/users/123?sort=date&order=desc"
 
 // Validate parameters before building
 if err := builder.Validate(map[string]string{"id": "123"}); err != nil {
     // Missing required parameter: postId
-}`, "go", "routing/params.go").Render(ctx, templ_7745c5c3_Buffer)
+}`, "go", " routing/params.go").Render(ctx, templ_7745c5c3_Buffer)
 		if templ_7745c5c3_Err != nil {
 			return templ_7745c5c3_Err
 		}
@@ -161,7 +161,7 @@ console.log(params.id);  // "123"
 
 // Get query parameters
 const query = getQueryParams();
-console.log(query.sort);  // "date"`, "typescript", "client/navigation.ts").Render(ctx, templ_7745c5c3_Buffer)
+console.log(query.sort);  // "date"`, " typescript", " client/navigation.ts").Render(ctx, templ_7745c5c3_Buffer)
 		if templ_7745c5c3_Err != nil {
 			return templ_7745c5c3_Err
 		}

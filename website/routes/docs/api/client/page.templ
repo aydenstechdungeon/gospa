@@ -15,7 +15,7 @@ templ Page() {
 			<h2 class="text-2xl font-bold border-b border-[var(--border)] pb-2">Runtime Imports</h2>
 			<p class="text-[var(--text-secondary)]">
 				GoSPA provides multiple runtime variants. The default runtime trusts server-rendered HTML.
-				Use <code class="mono">gospa/secure</code> { "for" } applications displaying user-generated content.
+				Use <code class="mono">gospa/secure</code> { " for"} applications displaying user-generated content.
 			</p>
 			@components.CodeBlock(`// Default runtime - trusts server, ~15KB
 import { init } from 'gospa';
@@ -23,7 +23,7 @@ init();
 
 // Secure runtime - with DOMPurify, ~35KB
 import { init } from 'gospa/secure';
-init();`, "typescript", "runtime.ts")
+init();`, "typescript", " runtime.ts")
 		</section>
 
 		<section id="reactive-state" class="space-y-8">
@@ -32,7 +32,7 @@ init();`, "typescript", "runtime.ts")
 
 const count = new Rune(0);
 count.set(5);
-count.subscribe((v) => console.log(v));`, "typescript", "rune.ts")
+count.subscribe((v) => console.log(v));`, "typescript", " rune.ts")
 		</section>
 
 		<section id="navigation" class="space-y-8">
@@ -40,7 +40,7 @@ count.subscribe((v) => console.log(v));`, "typescript", "rune.ts")
 			@components.CodeBlock(`import { navigate, prefetch } from 'gospa';
 
 navigate('/about');
-prefetch('/dashboard');`, "typescript", "nav.ts")
+prefetch('/dashboard');`, "typescript", " nav.ts")
 		</section>
 
 		<section id="navigation-config" class="space-y-8">
@@ -56,7 +56,7 @@ setNavigationOptions({
         color: '#22d3ee',
         height: '3px'
     }
-});`, "typescript", "config.ts")
+});`, "typescript", " config.ts")
 		</section>
 
 		<div class="flex justify-between mt-16 pt-8 border-t border-[var(--border)]">

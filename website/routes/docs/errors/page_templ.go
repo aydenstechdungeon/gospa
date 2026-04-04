@@ -49,7 +49,7 @@ err := fiber.NewAppError(fiber.ErrNotFound, "Resource not found")
 err.Details["resource_id"] = "123"
 
 // With cause
-err := fiber.WrapError(originalErr, fiber.ErrInternal, "Operation failed")`, "go", "fiber/errors.go").Render(ctx, templ_7745c5c3_Buffer)
+err := fiber.WrapError(originalErr, fiber.ErrInternal, "Operation failed")`, " go", " fiber/errors.go").Render(ctx, templ_7745c5c3_Buffer)
 		if templ_7745c5c3_Err != nil {
 			return templ_7745c5c3_Err
 		}
@@ -69,11 +69,11 @@ app.Use(handler.Handle)
 
 // Custom error response format
 type ErrorResponse struct {
-    Code      string         `+"`"+`json:"code"`+"`"+`
-    Message   string         `+"`"+`json:"message"`+"`"+`
-    Details   map[string]any `+"`"+`json:"details,omitempty"`+"`"+`
-    RequestID string         `+"`"+`json:"request_id"`+"`"+`
-}`, "go", "fiber/middleware.go").Render(ctx, templ_7745c5c3_Buffer)
+    Code      string         `+"`"+`json:" code"`+"`"+`
+    Message   string         `+"`"+`json:" message"`+"`"+`
+    Details   map[string]any `+"`"+`json:" details,omitempty"`+"`"+`
+    RequestID string         `+"`"+`json:" request_id"`+"`"+`
+}`, "go", " fiber/middleware.go").Render(ctx, templ_7745c5c3_Buffer)
 		if templ_7745c5c3_Err != nil {
 			return templ_7745c5c3_Err
 		}
@@ -90,7 +90,7 @@ app.Use(fiber.RecoveryWithConfig(fiber.RecoveryConfig{
     StackTrace:       true,
     StackTraceAll:    false,
     DefaultErrorCode: fiber.ErrInternal,
-}))`, "go", "fiber/middleware.go").Render(ctx, templ_7745c5c3_Buffer)
+}))`, "go", " fiber/middleware.go").Render(ctx, templ_7745c5c3_Buffer)
 		if templ_7745c5c3_Err != nil {
 			return templ_7745c5c3_Err
 		}
@@ -114,9 +114,9 @@ status := fiber.GetStatusFromError(err)
 
 // Error chaining
 err := fiber.NewAppError(fiber.ErrValidation, "Invalid input").
-    WithDetail("field", "email").
-    WithDetail("reason", "invalid format").
-    WithCause(originalErr)`, "go", "fiber/errors.go").Render(ctx, templ_7745c5c3_Buffer)
+    WithDetail("field", " email").
+    WithDetail("reason", " invalid format").
+    WithCause(originalErr)`, "go", " fiber/errors.go").Render(ctx, templ_7745c5c3_Buffer)
 		if templ_7745c5c3_Err != nil {
 			return templ_7745c5c3_Err
 		}
@@ -141,7 +141,7 @@ try {
         showToast: true,
         logToServer: true 
     });
-}`, "typescript", "client/runtime.ts").Render(ctx, templ_7745c5c3_Buffer)
+}`, "typescript", " client/runtime.ts").Render(ctx, templ_7745c5c3_Buffer)
 		if templ_7745c5c3_Err != nil {
 			return templ_7745c5c3_Err
 		}

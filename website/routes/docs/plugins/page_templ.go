@@ -35,31 +35,31 @@ func Page() templ.Component {
 		if templ_7745c5c3_Err != nil {
 			return templ_7745c5c3_Err
 		}
-		templ_7745c5c3_Err = pluginCard("Tailwind CSS", "/docs/plugins/tailwind", "CSS framework with v4 support, CSS-first configuration, and JIT compilation.").Render(ctx, templ_7745c5c3_Buffer)
+		templ_7745c5c3_Err = pluginCard("Tailwind CSS", "/docs/plugins/tailwind", " CSS framework with v4 support, CSS-first configuration, and JIT compilation.").Render(ctx, templ_7745c5c3_Buffer)
 		if templ_7745c5c3_Err != nil {
 			return templ_7745c5c3_Err
 		}
-		templ_7745c5c3_Err = pluginCard("PostCSS", "/docs/plugins/postcss", "Advanced CSS processing with autoprefixer, nesting, and Tailwind extensions.").Render(ctx, templ_7745c5c3_Buffer)
+		templ_7745c5c3_Err = pluginCard("PostCSS", "/docs/plugins/postcss", " Advanced CSS processing with autoprefixer, nesting, and Tailwind extensions.").Render(ctx, templ_7745c5c3_Buffer)
 		if templ_7745c5c3_Err != nil {
 			return templ_7745c5c3_Err
 		}
-		templ_7745c5c3_Err = pluginCard("Image Optimization", "/docs/plugins/image", "Responsive images with WebP conversion, lazy loading, and srcset generation.").Render(ctx, templ_7745c5c3_Buffer)
+		templ_7745c5c3_Err = pluginCard("Image Optimization", "/docs/plugins/image", " Responsive images with WebP conversion, lazy loading, and srcset generation.").Render(ctx, templ_7745c5c3_Buffer)
 		if templ_7745c5c3_Err != nil {
 			return templ_7745c5c3_Err
 		}
-		templ_7745c5c3_Err = pluginCard("Form Validation", "/docs/plugins/validation", "Client-side Valibot + server-side Go validator with TypeScript type generation.").Render(ctx, templ_7745c5c3_Buffer)
+		templ_7745c5c3_Err = pluginCard("Form Validation", "/docs/plugins/validation", " Client-side Valibot + server-side Go validator with TypeScript type generation.").Render(ctx, templ_7745c5c3_Buffer)
 		if templ_7745c5c3_Err != nil {
 			return templ_7745c5c3_Err
 		}
-		templ_7745c5c3_Err = pluginCard("SEO", "/docs/plugins/seo", "Sitemaps, robots.txt, meta tags, Open Graph, and JSON-LD structured data.").Render(ctx, templ_7745c5c3_Buffer)
+		templ_7745c5c3_Err = pluginCard("SEO", "/docs/plugins/seo", " Sitemaps, robots.txt, meta tags, Open Graph, and JSON-LD structured data.").Render(ctx, templ_7745c5c3_Buffer)
 		if templ_7745c5c3_Err != nil {
 			return templ_7745c5c3_Err
 		}
-		templ_7745c5c3_Err = pluginCard("Authentication", "/docs/plugins/auth", "OAuth2 providers, JWT sessions, TOTP/OTP, and backup codes.").Render(ctx, templ_7745c5c3_Buffer)
+		templ_7745c5c3_Err = pluginCard("Authentication", "/docs/plugins/auth", " OAuth2 providers, JWT sessions, TOTP/OTP, and backup codes.").Render(ctx, templ_7745c5c3_Buffer)
 		if templ_7745c5c3_Err != nil {
 			return templ_7745c5c3_Err
 		}
-		templ_7745c5c3_Err = pluginCard("QR Code", "/docs/plugins/qrcode", "A QR Code generator.").Render(ctx, templ_7745c5c3_Buffer)
+		templ_7745c5c3_Err = pluginCard("QR Code", "/docs/plugins/qrcode", " A QR Code generator.").Render(ctx, templ_7745c5c3_Buffer)
 		if templ_7745c5c3_Err != nil {
 			return templ_7745c5c3_Err
 		}
@@ -90,7 +90,7 @@ func Page() templ.Component {
   auth:
     enabled: true
     jwtSecret: "${JWT_SECRET}"
-    providers: [google, github]`, "yaml", "gospa.yaml").Render(ctx, templ_7745c5c3_Buffer)
+    providers: [google, github]`, "yaml", " gospa.yaml").Render(ctx, templ_7745c5c3_Buffer)
 		if templ_7745c5c3_Err != nil {
 			return templ_7745c5c3_Err
 		}
@@ -128,7 +128,7 @@ func main() {
     }
 
     app.Run(":3000")
-}`, "go", "main.go").Render(ctx, templ_7745c5c3_Buffer)
+}`, "go", " main.go").Render(ctx, templ_7745c5c3_Buffer)
 		if templ_7745c5c3_Err != nil {
 			return templ_7745c5c3_Err
 		}
@@ -148,8 +148,8 @@ type MyPlugin struct {
 }
 
 type Config struct {
-    Option1 string `+"`yaml:\"option1\"`"+`
-    Option2 bool   `+"`yaml:\"option2\"`"+`
+    Option1 string `+"`yaml:\" option1\"`"+`
+    Option2 bool   `+"`yaml:\" option2\"`"+`
 }
 
 func New(config Config) *MyPlugin {
@@ -166,10 +166,10 @@ func (p *MyPlugin) Init() error {
 
 func (p *MyPlugin) Dependencies() []plugin.Dependency {
     return []plugin.Dependency{
-        {Type: plugin.DepGo, Name: "github.com/example/pkg", Version: "v1.0.0"},
+        {Type: plugin.DepGo, Name: "github.com/example/pkg", Version: " v1.0.0"},
         {Type: plugin.DepBun, Name: "some-npm-package", Version: "^2.0.0"},
     }
-}`, "go", "myplugin.go").Render(ctx, templ_7745c5c3_Buffer)
+}`, "go", " myplugin.go").Render(ctx, templ_7745c5c3_Buffer)
 		if templ_7745c5c3_Err != nil {
 			return templ_7745c5c3_Err
 		}
@@ -214,7 +214,7 @@ func (p *MyPlugin) Commands() []plugin.Command {
             },
         },
     }
-}`, "go", "myplugin_hooks.go").Render(ctx, templ_7745c5c3_Buffer)
+}`, "go", " myplugin_hooks.go").Render(ctx, templ_7745c5c3_Buffer)
 		if templ_7745c5c3_Err != nil {
 			return templ_7745c5c3_Err
 		}
@@ -254,7 +254,7 @@ func (p *MyPlugin) TemplateFuncs() map[string]interface{} {
             return "formatted"
         },
     }
-}`, "go", "myplugin_runtime.go").Render(ctx, templ_7745c5c3_Buffer)
+}`, "go", " myplugin_runtime.go").Render(ctx, templ_7745c5c3_Buffer)
 		if templ_7745c5c3_Err != nil {
 			return templ_7745c5c3_Err
 		}
@@ -272,7 +272,7 @@ plugin.Disable("myplugin")
 info, ok := plugin.GetPluginInfo("myplugin")
 if ok && info.State == plugin.StateEnabled {
     // Plugin is active
-}`, "go", "plugin_state.go").Render(ctx, templ_7745c5c3_Buffer)
+}`, "go", " plugin_state.go").Render(ctx, templ_7745c5c3_Buffer)
 		if templ_7745c5c3_Err != nil {
 			return templ_7745c5c3_Err
 		}
@@ -302,7 +302,7 @@ entries, err := plugin.ListInstalledPlugins()
 entries, err := plugin.DiscoverPlugins()
 
 // Search plugins
-results, err := plugin.SearchPlugins("tailwind")`, "go", "external_plugins.go").Render(ctx, templ_7745c5c3_Buffer)
+results, err := plugin.SearchPlugins("tailwind")`, " go", " external_plugins.go").Render(ctx, templ_7745c5c3_Buffer)
 		if templ_7745c5c3_Err != nil {
 			return templ_7745c5c3_Err
 		}
@@ -339,7 +339,7 @@ gospa auth:otp            # Generate TOTP secret (alias: ao)
 gospa auth:backup         # Generate backup codes (alias: ab)
 gospa auth:verify         # Verify OTP code (alias: av)
 
-# QR Code (programmatic API only - no CLI commands)`, "bash", "terminal").Render(ctx, templ_7745c5c3_Buffer)
+# QR Code (programmatic API only - no CLI commands)`, "bash", " terminal").Render(ctx, templ_7745c5c3_Buffer)
 		if templ_7745c5c3_Err != nil {
 			return templ_7745c5c3_Err
 		}

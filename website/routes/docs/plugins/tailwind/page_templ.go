@@ -35,7 +35,7 @@ func Page() templ.Component {
 		if templ_7745c5c3_Err != nil {
 			return templ_7745c5c3_Err
 		}
-		templ_7745c5c3_Err = components.CodeBlock(`gospa add:tailwind`, "bash", "terminal").Render(ctx, templ_7745c5c3_Buffer)
+		templ_7745c5c3_Err = components.CodeBlock(`gospa add:tailwind`, "bash", " terminal").Render(ctx, templ_7745c5c3_Buffer)
 		if templ_7745c5c3_Err != nil {
 			return templ_7745c5c3_Err
 		}
@@ -51,7 +51,7 @@ func Page() templ.Component {
       - ./routes/**/*.templ
       - ./components/**/*.templ
       - ./views/**/*.go
-    minify: true                  # Minify in production (default: true)`, "yaml", "gospa.yaml").Render(ctx, templ_7745c5c3_Buffer)
+    minify: true                  # Minify in production (default: true)`, "yaml", " gospa.yaml").Render(ctx, templ_7745c5c3_Buffer)
 		if templ_7745c5c3_Err != nil {
 			return templ_7745c5c3_Err
 		}
@@ -59,15 +59,15 @@ func Page() templ.Component {
 		if templ_7745c5c3_Err != nil {
 			return templ_7745c5c3_Err
 		}
-		templ_7745c5c3_Err = hookCard("BeforeDev", "Starts Tailwind CLI in watch mode").Render(ctx, templ_7745c5c3_Buffer)
+		templ_7745c5c3_Err = hookCard("BeforeDev", " Starts Tailwind CLI in watch mode").Render(ctx, templ_7745c5c3_Buffer)
 		if templ_7745c5c3_Err != nil {
 			return templ_7745c5c3_Err
 		}
-		templ_7745c5c3_Err = hookCard("BeforeBuild", "Builds minified CSS for production").Render(ctx, templ_7745c5c3_Buffer)
+		templ_7745c5c3_Err = hookCard("BeforeBuild", " Builds minified CSS for production").Render(ctx, templ_7745c5c3_Buffer)
 		if templ_7745c5c3_Err != nil {
 			return templ_7745c5c3_Err
 		}
-		templ_7745c5c3_Err = hookCard("AfterDev", "Stops the watch process gracefully").Render(ctx, templ_7745c5c3_Buffer)
+		templ_7745c5c3_Err = hookCard("AfterDev", " Stops the watch process gracefully").Render(ctx, templ_7745c5c3_Buffer)
 		if templ_7745c5c3_Err != nil {
 			return templ_7745c5c3_Err
 		}
@@ -75,7 +75,7 @@ func Page() templ.Component {
 		if templ_7745c5c3_Err != nil {
 			return templ_7745c5c3_Err
 		}
-		templ_7745c5c3_Err = components.CodeBlock("@import 'tailwindcss';\n\n@theme {\n  --font-display: 'Satoshi', 'sans-serif';\n  --breakpoint-3xl: 1920px;\n  --color-brand-500: oklch(0.84 0.18 117.33);\n  --ease-bounce: cubic-bezier(0.68, -0.55, 0.265, 1.55);\n}", "css", "styles.css").Render(ctx, templ_7745c5c3_Buffer)
+		templ_7745c5c3_Err = components.CodeBlock("@import 'tailwindcss';\n\n@theme {\n  --font-display: 'Satoshi', 'sans-serif';\n  --breakpoint-3xl: 1920px;\n  --color-brand-500: oklch(0.84 0.18 117.33);\n  --ease-bounce: cubic-bezier(0.68, -0.55, 0.265, 1.55);\n}", " css", " styles.css").Render(ctx, templ_7745c5c3_Buffer)
 		if templ_7745c5c3_Err != nil {
 			return templ_7745c5c3_Err
 		}
@@ -83,27 +83,27 @@ func Page() templ.Component {
 		if templ_7745c5c3_Err != nil {
 			return templ_7745c5c3_Err
 		}
-		templ_7745c5c3_Err = featureCard("JIT Compilation", "On-demand utility generation for smaller bundle sizes.").Render(ctx, templ_7745c5c3_Buffer)
+		templ_7745c5c3_Err = featureCard("JIT Compilation", " On-demand utility generation for smaller bundle sizes.").Render(ctx, templ_7745c5c3_Buffer)
 		if templ_7745c5c3_Err != nil {
 			return templ_7745c5c3_Err
 		}
-		templ_7745c5c3_Err = featureCard("CSS-First Config", "Configure themes directly in CSS with @theme directive.").Render(ctx, templ_7745c5c3_Buffer)
+		templ_7745c5c3_Err = featureCard("CSS-First Config", " Configure themes directly in CSS with @theme directive.").Render(ctx, templ_7745c5c3_Buffer)
 		if templ_7745c5c3_Err != nil {
 			return templ_7745c5c3_Err
 		}
-		templ_7745c5c3_Err = featureCard("Container Queries", "Built-in support for @container queries.").Render(ctx, templ_7745c5c3_Buffer)
+		templ_7745c5c3_Err = featureCard("Container Queries", " Built-in support for @container queries.").Render(ctx, templ_7745c5c3_Buffer)
 		if templ_7745c5c3_Err != nil {
 			return templ_7745c5c3_Err
 		}
-		templ_7745c5c3_Err = featureCard("3D Transforms", "rotate-x-*, translate-z-*, perspective-* utilities.").Render(ctx, templ_7745c5c3_Buffer)
+		templ_7745c5c3_Err = featureCard("3D Transforms", " rotate-x-*, translate-z-*, perspective-* utilities.").Render(ctx, templ_7745c5c3_Buffer)
 		if templ_7745c5c3_Err != nil {
 			return templ_7745c5c3_Err
 		}
-		templ_7745c5c3_Err = featureCard("Content Scanning", "Scans .templ and .go files for class names.").Render(ctx, templ_7745c5c3_Buffer)
+		templ_7745c5c3_Err = featureCard("Content Scanning", " Scans .templ and .go files for class names.").Render(ctx, templ_7745c5c3_Buffer)
 		if templ_7745c5c3_Err != nil {
 			return templ_7745c5c3_Err
 		}
-		templ_7745c5c3_Err = featureCard("Watch Mode", "Automatic rebuild during development.").Render(ctx, templ_7745c5c3_Buffer)
+		templ_7745c5c3_Err = featureCard("Watch Mode", " Automatic rebuild during development.").Render(ctx, templ_7745c5c3_Buffer)
 		if templ_7745c5c3_Err != nil {
 			return templ_7745c5c3_Err
 		}
@@ -121,7 +121,7 @@ templ MyComponent() {
       Click me
     </button>
   </div>
-}`, "templ", "component.templ").Render(ctx, templ_7745c5c3_Buffer)
+}`, "templ", " component.templ").Render(ctx, templ_7745c5c3_Buffer)
 		if templ_7745c5c3_Err != nil {
 			return templ_7745c5c3_Err
 		}

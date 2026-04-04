@@ -35,15 +35,15 @@ func Page() templ.Component {
 		if templ_7745c5c3_Err != nil {
 			return templ_7745c5c3_Err
 		}
-		templ_7745c5c3_Err = statCard("~1.5KB", "Gzipped bundle size").Render(ctx, templ_7745c5c3_Buffer)
+		templ_7745c5c3_Err = statCard("~1.5KB", " Gzipped bundle size").Render(ctx, templ_7745c5c3_Buffer)
 		if templ_7745c5c3_Err != nil {
 			return templ_7745c5c3_Err
 		}
-		templ_7745c5c3_Err = statCard("Tree-shakeable", "Only import what you use").Render(ctx, templ_7745c5c3_Buffer)
+		templ_7745c5c3_Err = statCard("Tree-shakeable", " Only import what you use").Render(ctx, templ_7745c5c3_Buffer)
 		if templ_7745c5c3_Err != nil {
 			return templ_7745c5c3_Err
 		}
-		templ_7745c5c3_Err = statCard("Standard Schema", "Compatible with any library").Render(ctx, templ_7745c5c3_Buffer)
+		templ_7745c5c3_Err = statCard("Standard Schema", " Compatible with any library").Render(ctx, templ_7745c5c3_Buffer)
 		if templ_7745c5c3_Err != nil {
 			return templ_7745c5c3_Err
 		}
@@ -57,7 +57,7 @@ func Page() templ.Component {
     schemas_dir: schemas
     output_dir: generated
     generate_types: true
-    generate_go: true`, "yaml", "gospa.yaml").Render(ctx, templ_7745c5c3_Buffer)
+    generate_go: true`, "yaml", " gospa.yaml").Render(ctx, templ_7745c5c3_Buffer)
 		if templ_7745c5c3_Err != nil {
 			return templ_7745c5c3_Err
 		}
@@ -66,28 +66,28 @@ func Page() templ.Component {
 			return templ_7745c5c3_Err
 		}
 		templ_7745c5c3_Err = components.CodeBlock(`{
-  "$schema": "https://json-schema.org/draft/2020-12/schema",
-  "type": "object",
+  "$schema": " https://json-schema.org/draft/2020-12/schema",
+  "type": " object",
   "properties": {
     "email": {
-      "type": "string",
-      "format": "email",
+      "type": " string",
+      "format": " email",
       "minLength": 5,
       "maxLength": 255
     },
     "password": {
-      "type": "string",
+      "type": " string",
       "minLength": 8,
       "maxLength": 100
     },
     "age": {
-      "type": "integer",
+      "type": " integer",
       "minimum": 18,
       "maximum": 120
     }
   },
-  "required": ["email", "password"]
-}`, "json", "schemas/user.json").Render(ctx, templ_7745c5c3_Buffer)
+  "required": [" email", " password"]
+}`, "json", " schemas/user.json").Render(ctx, templ_7745c5c3_Buffer)
 		if templ_7745c5c3_Err != nil {
 			return templ_7745c5c3_Err
 		}
@@ -99,7 +99,7 @@ func Page() templ.Component {
   email: string;
   password: string;
   age?: number;
-}`, "typescript", "generated/types.ts").Render(ctx, templ_7745c5c3_Buffer)
+}`, "typescript", " generated/types.ts").Render(ctx, templ_7745c5c3_Buffer)
 		if templ_7745c5c3_Err != nil {
 			return templ_7745c5c3_Err
 		}
@@ -113,7 +113,7 @@ export const UserSchema = v.object({
   email: v.pipe(v.string(), v.email(), v.minLength(5), v.maxLength(255)),
   password: v.pipe(v.string(), v.minLength(8), v.maxLength(100)),
   age: v.optional(v.pipe(v.number(), v.minValue(18), v.maxValue(120)))
-});`, "typescript", "generated/schemas.ts").Render(ctx, templ_7745c5c3_Buffer)
+});`, "typescript", " generated/schemas.ts").Render(ctx, templ_7745c5c3_Buffer)
 		if templ_7745c5c3_Err != nil {
 			return templ_7745c5c3_Err
 		}
@@ -122,14 +122,14 @@ export const UserSchema = v.object({
 			return templ_7745c5c3_Err
 		}
 		templ_7745c5c3_Err = components.CodeBlock(`type User struct {
-    Email    string `+"`"+`validate:"required,email,min=5,max=255"`+"`"+`
-    Password string `+"`"+`validate:"required,min=8,max=100"`+"`"+`
-    Age      int    `+"`"+`validate:"omitempty,min=18,max=120"`+"`"+`
+    Email    string `+"`"+`validate:" required,email,min=5,max=255"`+"`"+`
+    Password string `+"`"+`validate:" required,min=8,max=100"`+"`"+`
+    Age      int    `+"`"+`validate:" omitempty,min=18,max=120"`+"`"+`
 }
 
 func ValidateUser(user User) error {
     return validator.New().Struct(user)
-}`, "go", "generated/user.go").Render(ctx, templ_7745c5c3_Buffer)
+}`, "go", " generated/user.go").Render(ctx, templ_7745c5c3_Buffer)
 		if templ_7745c5c3_Err != nil {
 			return templ_7745c5c3_Err
 		}

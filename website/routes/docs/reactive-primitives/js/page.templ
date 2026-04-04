@@ -36,7 +36,7 @@ templ Page() {
 <!-- Or use the simple runtime for smaller bundle (~6KB less) -->
 <script type="module">
 	import * as GoSPA from "/_gospa/runtime.js?simple=1";
-</script>`, "html", "setup.html")
+</script>`, "html", " setup.html")
 		</section>
 
 		<section class="space-y-6">
@@ -114,7 +114,7 @@ const fullName = new GoSPA.Derived(() => {
 console.log(fullName.get()) // "John Doe"
 
 firstName.set('Jane')
-console.log(fullName.get()) // "Jane Doe" — automatically updated`,
+console.log(fullName.get()) // "Jane Doe"— automatically updated`,
 				`// TypeScript
 import { Rune, Derived, derived } from '@gospa/client';
 

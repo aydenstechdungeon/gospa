@@ -35,23 +35,23 @@ func Page() templ.Component {
 		if templ_7745c5c3_Err != nil {
 			return templ_7745c5c3_Err
 		}
-		templ_7745c5c3_Err = apiCard("Core", "/docs/api/core", "Application initialization, configuration, and lifecycle management.", "box").Render(ctx, templ_7745c5c3_Buffer)
+		templ_7745c5c3_Err = apiCard("Core", "/docs/api/core", " Application initialization, configuration, and lifecycle management.", " box").Render(ctx, templ_7745c5c3_Buffer)
 		if templ_7745c5c3_Err != nil {
 			return templ_7745c5c3_Err
 		}
-		templ_7745c5c3_Err = apiCard("State Management", "/docs/api/state", "Reactive primitives: Runes, Derived values, Effects, and StateMap.", "zap").Render(ctx, templ_7745c5c3_Buffer)
+		templ_7745c5c3_Err = apiCard("State Management", "/docs/api/state", " Reactive primitives: Runes, Derived values, Effects, and StateMap.", " zap").Render(ctx, templ_7745c5c3_Buffer)
 		if templ_7745c5c3_Err != nil {
 			return templ_7745c5c3_Err
 		}
-		templ_7745c5c3_Err = apiCard("Routing", "/docs/api/routing", "File-based routing, manual routes, parameters, and registry.", "git-branch").Render(ctx, templ_7745c5c3_Buffer)
+		templ_7745c5c3_Err = apiCard("Routing", "/docs/api/routing", " File-based routing, manual routes, parameters, and registry.", " git-branch").Render(ctx, templ_7745c5c3_Buffer)
 		if templ_7745c5c3_Err != nil {
 			return templ_7745c5c3_Err
 		}
-		templ_7745c5c3_Err = apiCard("Fiber Integration", "/docs/api/fiber", "Middleware, WebSocket hub, session management, and actions.", "server").Render(ctx, templ_7745c5c3_Buffer)
+		templ_7745c5c3_Err = apiCard("Fiber Integration", "/docs/api/fiber", " Middleware, WebSocket hub, session management, and actions.", " server").Render(ctx, templ_7745c5c3_Buffer)
 		if templ_7745c5c3_Err != nil {
 			return templ_7745c5c3_Err
 		}
-		templ_7745c5c3_Err = apiCard("Client Runtime", "/docs/api/client", "Browser-side reactive state and navigation utilities.", "monitor").Render(ctx, templ_7745c5c3_Buffer)
+		templ_7745c5c3_Err = apiCard("Client Runtime", "/docs/api/client", " Browser-side reactive state and navigation utilities.", " monitor").Render(ctx, templ_7745c5c3_Buffer)
 		if templ_7745c5c3_Err != nil {
 			return templ_7745c5c3_Err
 		}
@@ -66,7 +66,7 @@ app := gospa.New(gospa.DefaultConfig())
 count := gospa.NewRune(0)
 
 // Start server
-app.Run(":3000")`, "go", "quickstart.go").Render(ctx, templ_7745c5c3_Buffer)
+app.Run(":3000")`, " go", " quickstart.go").Render(ctx, templ_7745c5c3_Buffer)
 		if templ_7745c5c3_Err != nil {
 			return templ_7745c5c3_Err
 		}

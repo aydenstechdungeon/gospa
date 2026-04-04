@@ -35,7 +35,7 @@ func Page() templ.Component {
 		if templ_7745c5c3_Err != nil {
 			return templ_7745c5c3_Err
 		}
-		templ_7745c5c3_Err = components.CodeBlock(`app.Broadcast([]byte("reload"))`, "go", "main.go").Render(ctx, templ_7745c5c3_Buffer)
+		templ_7745c5c3_Err = components.CodeBlock(`app.Broadcast([]byte("reload"))`, " go", " main.go").Render(ctx, templ_7745c5c3_Buffer)
 		if templ_7745c5c3_Err != nil {
 			return templ_7745c5c3_Err
 		}
@@ -43,7 +43,7 @@ func Page() templ.Component {
 		if templ_7745c5c3_Err != nil {
 			return templ_7745c5c3_Err
 		}
-		templ_7745c5c3_Err = components.CodeBlock(`app.BroadcastState("online_count", 42)`, "go", "main.go").Render(ctx, templ_7745c5c3_Buffer)
+		templ_7745c5c3_Err = components.CodeBlock(`app.BroadcastState("online_count", 42)`, " go", " main.go").Render(ctx, templ_7745c5c3_Buffer)
 		if templ_7745c5c3_Err != nil {
 			return templ_7745c5c3_Err
 		}
@@ -52,7 +52,7 @@ func Page() templ.Component {
 			return templ_7745c5c3_Err
 		}
 		templ_7745c5c3_Err = components.CodeBlock(`hub := app.GetHub()
-hub.SendTo("client-123", []byte("direct_message"))`, "go", "main.go").Render(ctx, templ_7745c5c3_Buffer)
+hub.SendTo("client-123", []byte(" direct_message"))`, " go", " main.go").Render(ctx, templ_7745c5c3_Buffer)
 		if templ_7745c5c3_Err != nil {
 			return templ_7745c5c3_Err
 		}
@@ -69,7 +69,7 @@ const count = syncedRune('count', 0, ws);
 count.update(n => n + 1);
 
 // Updates from server will update locally and trigger UI refreshes
-count.subscribe(v => console.log('Synced value:', v));`, "typescript", "state.ts").Render(ctx, templ_7745c5c3_Buffer)
+count.subscribe(v => console.log('Synced value:', v));`, "typescript", " state.ts").Render(ctx, templ_7745c5c3_Buffer)
 		if templ_7745c5c3_Err != nil {
 			return templ_7745c5c3_Err
 		}
@@ -81,7 +81,7 @@ count.subscribe(v => console.log('Synced value:', v));`, "typescript", "state.ts
     url: 'ws://localhost:3000/_gospa/ws',
     onConnect: () => console.log('Connected!'),
     onMessage: (msg) => console.log('Message:', msg)
-});`, "typescript", "websocket.ts").Render(ctx, templ_7745c5c3_Buffer)
+});`, "typescript", " websocket.ts").Render(ctx, templ_7745c5c3_Buffer)
 		if templ_7745c5c3_Err != nil {
 			return templ_7745c5c3_Err
 		}

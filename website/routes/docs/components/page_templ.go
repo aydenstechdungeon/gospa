@@ -43,7 +43,7 @@ func Page() templ.Component {
     Children []*BaseComponent
     Parent   *BaseComponent
     Context  map[string]any
-}`, "go", "component/base.go").Render(ctx, templ_7745c5c3_Buffer)
+}`, "go", " component/base.go").Render(ctx, templ_7745c5c3_Buffer)
 		if templ_7745c5c3_Err != nil {
 			return templ_7745c5c3_Err
 		}
@@ -65,7 +65,7 @@ found := tree.Find("component-id")
 // Find all matching components
 matches := tree.FindAll(func(c *BaseComponent) bool {
     return c.GetName() == "Button"
-})`, "go", "example.go").Render(ctx, templ_7745c5c3_Buffer)
+})`, "go", " example.go").Render(ctx, templ_7745c5c3_Buffer)
 		if templ_7745c5c3_Err != nil {
 			return templ_7745c5c3_Err
 		}
@@ -83,7 +83,7 @@ component.OnUpdate(func(c *BaseComponent, oldProps, newProps *Props) {
 
 component.OnDestroy(func(c *BaseComponent) {
     // Cleanup resources
-})`, "go", "lifecycle.go").Render(ctx, templ_7745c5c3_Buffer)
+})`, "go", " lifecycle.go").Render(ctx, templ_7745c5c3_Buffer)
 		if templ_7745c5c3_Err != nil {
 			return templ_7745c5c3_Err
 		}
@@ -92,19 +92,19 @@ component.OnDestroy(func(c *BaseComponent) {
 			return templ_7745c5c3_Err
 		}
 		templ_7745c5c3_Err = components.CodeBlock(`props := component.NewProps()
-props.Set("title", "Hello")
+props.Set("title", " Hello")
 props.Set("count", 42)
 
-title := props.GetString("title")     // "Hello"
+title := props.GetString("title")     // " Hello"
 count := props.GetInt("count")        // 42
 enabled := props.GetBool("enabled", false) // false (default)
 
 // With schema validation
 schema := component.PropSchema{
-    "title": {Type: "string", Required: true},
-    "count": {Type: "int", Default: 0},
+    "title": {Type: " string", Required: true},
+    "count": {Type: " int", Default: 0},
 }
-props := component.NewPropsWithSchema(schema)`, "go", "props.go").Render(ctx, templ_7745c5c3_Buffer)
+props := component.NewPropsWithSchema(schema)`, "go", " props.go").Render(ctx, templ_7745c5c3_Buffer)
 		if templ_7745c5c3_Err != nil {
 			return templ_7745c5c3_Err
 		}
@@ -124,7 +124,7 @@ name.OnChange(func(newVal string) {
 name.Set("GoSPA")
 
 // Get current value
-current := name.Get() // "GoSPA"`, "go", "bindable.go").Render(ctx, templ_7745c5c3_Buffer)
+current := name.Get() // "GoSPA"`, " go", " bindable.go").Render(ctx, templ_7745c5c3_Buffer)
 		if templ_7745c5c3_Err != nil {
 			return templ_7745c5c3_Err
 		}

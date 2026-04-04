@@ -21,7 +21,7 @@ templ Page() {
     RoutesDir: "./routes",
     DevMode:   true,
     AppName:   "My App",
-})`, "go", "main.go")
+})`, "go", " main.go")
 		</section>
 
 		<section class="space-y-6">
@@ -51,7 +51,7 @@ templ Page() {
     AppName:     "My App (Dev)",
     RoutesDir:   "./routes",
     SimpleRuntime: false,
-})`, "go", "main.go")
+})`, "go", " main.go")
 
 			<h3 class="text-xl font-semibold mt-6">Production</h3>
 			@components.CodeBlock(`app := gospa.New(gospa.Config{
@@ -64,7 +64,7 @@ templ Page() {
     EnableCSRF:      true,
     AllowedOrigins:  []string{"https://myapp.com"},
     WSHeartbeat:     30 * time.Second,
-})`, "go", "main.go")
+})`, "go", " main.go")
 		</section>
 
 		<section class="space-y-4">
@@ -83,7 +83,7 @@ func main() {
         DevMode:   true,
         
         DefaultState: map[string]interface{}{
-            "theme": "dark",
+            "theme": " dark",
             "user":  nil,
         },
         
@@ -107,7 +107,7 @@ func main() {
     if err := app.Run(":3000"); err != nil {
         panic(err)
     }
-}`, "go", "main.go")
+}`, "go", " main.go")
 		</section>
 	</div>
 }

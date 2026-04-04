@@ -46,7 +46,7 @@ hmr := fiber.InitHMR(config)
 hmr.Start()
 
 // Register the WebSocket endpoint
-app.Get("/__hmr", hmr.HMREndpoint())`, "go", "main.go").Render(ctx, templ_7745c5c3_Buffer)
+app.Get("/__hmr", hmr.HMREndpoint())`, " go", " main.go").Render(ctx, templ_7745c5c3_Buffer)
 		if templ_7745c5c3_Err != nil {
 			return templ_7745c5c3_Err
 		}
@@ -63,7 +63,7 @@ const hmr = initHMR({
 
 hmr.onUpdate((msg) => {
     console.log('Module updated:', msg.moduleId);
-});`, "typescript", "app.ts").Render(ctx, templ_7745c5c3_Buffer)
+});`, "typescript", " app.ts").Render(ctx, templ_7745c5c3_Buffer)
 		if templ_7745c5c3_Err != nil {
 			return templ_7745c5c3_Err
 		}
@@ -74,7 +74,7 @@ hmr.onUpdate((msg) => {
 		templ_7745c5c3_Err = components.CodeBlock(`import { registerHMRModule, acceptHMR } from '@gospa/client';
 
 registerHMRModule('my-module', exports);
-acceptHMR('my-module');`, "typescript", "module.ts").Render(ctx, templ_7745c5c3_Buffer)
+acceptHMR('my-module');`, "typescript", " module.ts").Render(ctx, templ_7745c5c3_Buffer)
 		if templ_7745c5c3_Err != nil {
 			return templ_7745c5c3_Err
 		}
@@ -88,7 +88,7 @@ acceptHMR('my-module');`, "typescript", "module.ts").Render(ctx, templ_7745c5c3_
 
 window.__gospaSetState = (id, state) => {
     window.scrollTo(0, state.scrollY);
-};`, "typescript", "app.ts").Render(ctx, templ_7745c5c3_Buffer)
+};`, "typescript", " app.ts").Render(ctx, templ_7745c5c3_Buffer)
 		if templ_7745c5c3_Err != nil {
 			return templ_7745c5c3_Err
 		}
@@ -99,11 +99,11 @@ window.__gospaSetState = (id, state) => {
 		templ_7745c5c3_Err = components.CodeBlock(`import { CSSHMR } from '@gospa/client';
 
 // Automatically handled by HMRClient for registered styles
-CSSHMR.updateStyle('/static/css/main.css');`, "typescript", "styles.ts").Render(ctx, templ_7745c5c3_Buffer)
+CSSHMR.updateStyle('/static/css/main.css');`, "typescript", " styles.ts").Render(ctx, templ_7745c5c3_Buffer)
 		if templ_7745c5c3_Err != nil {
 			return templ_7745c5c3_Err
 		}
-		templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 6, "</div><div><h2 class=\"text-2xl font-bold mb-4 border-b border-[var(--border)] pb-2 italic mono\">Troubleshooting</h2><ul class=\"list-disc list-inside space-y-3 text-[var(--text-secondary)]\"><li><strong class=\"text-[var(--text-primary)]\">Full Page Reload</strong>: If a module cannot be hot-swapped (e.g., changes to internal Go logic or complex dependency graphs), HMR falls back to a full page reload.</li><li><strong class=\"text-[var(--text-primary)]\">Connection Lost</strong>: The client will attempt to reconnect with exponential backoff. If the server is restarted, the client refreshes the page to ensure synchronization.</li><li><strong class=\"text-[var(--text-primary)]\">Console Logs</strong>: Enable ` + \"`\" + `debug: true` + \"`\" + ` in HMRClientConfig to see the internal HMR event log in the browser console.</li></ul></div></section></div>")
+		templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 6, "</div><div><h2 class=\"text-2xl font-bold mb-4 border-b border-[var(--border)] pb-2 italic mono\">Troubleshooting</h2><ul class=\"list-disc list-inside space-y-3 text-[var(--text-secondary)]\"><li><strong class=\"text-[var(--text-primary)]\">Full Page Reload</strong>: If a module cannot be hot-swapped (e.g., changes to internal Go logic or complex dependency graphs), HMR falls back to a full page reload.</li><li><strong class=\"text-[var(--text-primary)]\">Connection Lost</strong>: The client will attempt to reconnect with exponential backoff. If the server is restarted, the client refreshes the page to ensure synchronization.</li><li><strong class=\"text-[var(--text-primary)]\">Console Logs</strong>: Enable ` + \"`\"+ `debug: true` + \"`\"+ ` in HMRClientConfig to see the internal HMR event log in the browser console.</li></ul></div></section></div>")
 		if templ_7745c5c3_Err != nil {
 			return templ_7745c5c3_Err
 		}

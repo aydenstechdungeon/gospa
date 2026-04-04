@@ -44,7 +44,7 @@ templ Layout(children gospa.Children) {
 			@gospa.Scripts()
 		</body>
 	</html>
-}`, "go", "layout.templ")
+}`, "go", " layout.templ")
 		</section>
 
 		<section class="space-y-6">
@@ -70,7 +70,7 @@ templ Layout(children gospa.Children) {
 			@gospa.RenderChildren(children)
 		</article>
 	</div>
-}`, "go", "blog_layout.templ")
+}`, "go", " blog_layout.templ")
 		</section>
 
 		<section class="space-y-6">
@@ -87,7 +87,7 @@ templ Error(err error) {
 		<p>{ err.Error() }</p>
 		<a href="/">Go Home</a>
 	</div>
-}`, "go", "error.templ")
+}`, "go", " error.templ")
 		</section>
 
 		<section class="space-y-6">
@@ -108,18 +108,18 @@ templ Error(err error) {
 
 templ prevNext(prev, next string) {
 	<div class="flex justify-between pt-8 border-t border-[var(--border)] mt-12">
-		if prev != "" {
+		if prev != ""{
 			<a href={ templ.SafeURL(prev) } class="flex items-center gap-2 text-sm text-[var(--text-secondary)] hover:text-[var(--accent-primary)] transition-colors">
-				<svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="m15 18-6-6 6-6"/></svg>
+				<svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d=" m15 18-6-6 6-6"/></svg>
 				<span>Previous</span>
 			</a>
 		} else {
 			<div></div>
 		}
-		if next != "" {
+		if next != ""{
 			<a href={ templ.SafeURL(next) } class="flex items-center gap-2 text-sm text-[var(--text-secondary)] hover:text-[var(--accent-primary)] transition-colors">
 				<span>Next</span>
-				<svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="m9 18 6-6-6-6"/></svg>
+				<svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d=" m9 18 6-6-6-6"/></svg>
 			</a>
 		} else {
 			<div></div>

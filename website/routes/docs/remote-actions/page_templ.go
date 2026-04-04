@@ -40,9 +40,9 @@ func Page() templ.Component {
 func init() {
     routing.RegisterRemoteAction("greet", func(ctx context.Context, rc routing.RemoteContext, input any) (any, error) {
         name := input.(string)
-        return "Hello, " + name, nil
+        return "Hello, "+ name, nil
     })
-}`, "go", "actions.go").Render(ctx, templ_7745c5c3_Buffer)
+}`, "go", " actions.go").Render(ctx, templ_7745c5c3_Buffer)
 		if templ_7745c5c3_Err != nil {
 			return templ_7745c5c3_Err
 		}
@@ -51,18 +51,18 @@ func init() {
 			return templ_7745c5c3_Err
 		}
 		templ_7745c5c3_Err = components.CodeBlock(`type CreateUser struct {
-    Username string `+"`"+`json:"username"`+"`"+`
-    Email    string `+"`"+`json:"email"`+"`"+`
+    Username string `+"`"+`json:" username"`+"`"+`
+    Email    string `+"`"+`json:" email"`+"`"+`
 }
 
 routing.RegisterRemoteAction("createUser", func(ctx context.Context, rc routing.RemoteContext, input any) (any, error) {
     var data CreateUser
     // Map input to struct...
-    if data.Username == "" {
+    if data.Username == ""{
         return nil, errors.New("username required")
     }
-    return "User " + data.Username + " created", nil
-})`, "go", "user.go").Render(ctx, templ_7745c5c3_Buffer)
+    return "User "+ data.Username + " created", nil
+})`, "go", " user.go").Render(ctx, templ_7745c5c3_Buffer)
 		if templ_7745c5c3_Err != nil {
 			return templ_7745c5c3_Err
 		}
@@ -84,7 +84,7 @@ async function handleGreet() {
         console.log(result.data);
     }
 }
-</script>`, "templ", "page.templ").Render(ctx, templ_7745c5c3_Buffer)
+</script>`, "templ", " page.templ").Render(ctx, templ_7745c5c3_Buffer)
 		if templ_7745c5c3_Err != nil {
 			return templ_7745c5c3_Err
 		}
@@ -116,7 +116,7 @@ async function handleSignup() {
 
 // Using the typed remoteAction helper
 const createUser = GoSPA.remoteAction('createUser');
-const result = await createUser({ username: 'ayden', email: 'ayden@example.com' });`, "javascript", "signup.js").Render(ctx, templ_7745c5c3_Buffer)
+const result = await createUser({ username: 'ayden', email: 'ayden@example.com' });`, "javascript", " signup.js").Render(ctx, templ_7745c5c3_Buffer)
 		if templ_7745c5c3_Err != nil {
 			return templ_7745c5c3_Err
 		}
@@ -140,7 +140,7 @@ async function handleSignup() {
 }
 
 const createUser = remoteAction<{ username: string; email: string }, { id: string }>('createUser');
-const result = await createUser({ username: 'ayden', email: 'ayden@example.com' });`, "typescript", "signup.ts").Render(ctx, templ_7745c5c3_Buffer)
+const result = await createUser({ username: 'ayden', email: 'ayden@example.com' });`, "typescript", " signup.ts").Render(ctx, templ_7745c5c3_Buffer)
 		if templ_7745c5c3_Err != nil {
 			return templ_7745c5c3_Err
 		}
@@ -156,7 +156,7 @@ export interface RemoteActions {
 
 export function remoteAction<T extends keyof RemoteActions>(name: T, input: any): Promise<any> {
     return window.GoSPA.remoteAction(name, input);
-}`, "typescript", "actions.ts").Render(ctx, templ_7745c5c3_Buffer)
+}`, "typescript", " actions.ts").Render(ctx, templ_7745c5c3_Buffer)
 		if templ_7745c5c3_Err != nil {
 			return templ_7745c5c3_Err
 		}
@@ -166,7 +166,7 @@ export function remoteAction<T extends keyof RemoteActions>(name: T, input: any)
 		}
 		templ_7745c5c3_Err = components.CodeBlock(`app := gospa.New(gospa.Config{
     EnableCSRF: true,
-})`, "go", "main.go").Render(ctx, templ_7745c5c3_Buffer)
+})`, "go", " main.go").Render(ctx, templ_7745c5c3_Buffer)
 		if templ_7745c5c3_Err != nil {
 			return templ_7745c5c3_Err
 		}
@@ -177,11 +177,11 @@ export function remoteAction<T extends keyof RemoteActions>(name: T, input: any)
 		templ_7745c5c3_Err = components.CodeBlock(`app := gospa.New(gospa.Config{
     RemoteActionMiddleware: func(c *fiber.Ctx) error {
         if c.Locals("user") == nil {
-            return c.Status(fiber.StatusUnauthorized).JSON(fiber.Map{"error": "unauthorized"})
+            return c.Status(fiber.StatusUnauthorized).JSON(fiber.Map{"error": " unauthorized"})
         }
         return c.Next()
     },
-})`, "go", "main.go").Render(ctx, templ_7745c5c3_Buffer)
+})`, "go", " main.go").Render(ctx, templ_7745c5c3_Buffer)
 		if templ_7745c5c3_Err != nil {
 			return templ_7745c5c3_Err
 		}

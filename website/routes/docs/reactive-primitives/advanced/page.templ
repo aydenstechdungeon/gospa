@@ -36,7 +36,7 @@ console.log(userResource.data);       // T | undefined
 console.log(userResource.error);      // Error | undefined
 
 // Refetch
-await userResource.refetch();`, "typescript", "resource.ts")
+await userResource.refetch();`, "typescript", " resource.ts")
 		</section>
 
 		<section class="space-y-6">
@@ -53,7 +53,7 @@ const person = new RuneRaw({ name: 'Zeno', nested: { age: 30 } });
 person.value.nested.age = 31;
 
 // This DOES trigger updates (top-level reassignment)
-person.value = { ...person.value, name: 'New Name' };`, "typescript", "runeraw.ts")
+person.value = { ...person.value, name: 'New Name' };`, "typescript", " runeraw.ts")
 		</section>
 
 		<section class="space-y-6">
@@ -68,7 +68,7 @@ const preEffect = new PreEffect(() => {
   // Read scroll position before DOM changes
   const scrollY = window.scrollY;
   console.log('Scroll position:', scrollY);
-});`, "typescript", "preeffect.ts")
+});`, "typescript", " preeffect.ts")
 		</section>
 
 		<section class="space-y-6">
@@ -92,7 +92,7 @@ const cleanup = EffectRoot(() => {
 });
 
 // Manual cleanup
-cleanup();`, "typescript", "effectroot.ts")
+cleanup();`, "typescript", " effectroot.ts")
 		</section>
 
 		<section class="space-y-6">
@@ -110,22 +110,22 @@ cleanup();`, "typescript", "effectroot.ts")
 					</thead>
 					<tbody class="text-[var(--text-secondary)]">
 						<tr class="border-b border-[var(--border)]">
-							<td class="py-3 px-4"><code class="text-[var(--accent-primary)]">Get()</code></td>
+							<td class="py-3 px-4"><code class=" text-[var(--accent-primary)]">Get()</code></td>
 							<td class="py-3 px-4"><code>T</code></td>
 							<td class="py-3 px-4">Get current value (thread-safe)</td>
 						</tr>
 						<tr class="border-b border-[var(--border)]">
-							<td class="py-3 px-4"><code class="text-[var(--accent-primary)]">Set()</code></td>
+							<td class="py-3 px-4"><code class=" text-[var(--accent-primary)]">Set()</code></td>
 							<td class="py-3 px-4"><code>func(T)</code></td>
 							<td class="py-3 px-4">Set new value and notify subscribers</td>
 						</tr>
 						<tr class="border-b border-[var(--border)]">
-							<td class="py-3 px-4"><code class="text-[var(--accent-primary)]">Update()</code></td>
+							<td class="py-3 px-4"><code class=" text-[var(--accent-primary)]">Update()</code></td>
 							<td class="py-3 px-4"><code>func(func(T) T)</code></td>
 							<td class="py-3 px-4">Update using function</td>
 						</tr>
 						<tr class="border-b border-[var(--border)]">
-							<td class="py-3 px-4"><code class="text-[var(--accent-primary)]">Subscribe()</code></td>
+							<td class="py-3 px-4"><code class=" text-[var(--accent-primary)]">Subscribe()</code></td>
 							<td class="py-3 px-4"><code>func(func(T, T)) func()</code></td>
 							<td class="py-3 px-4">Subscribe to changes, returns unsubscribe</td>
 						</tr>
@@ -145,27 +145,27 @@ cleanup();`, "typescript", "effectroot.ts")
 					</thead>
 					<tbody class="text-[var(--text-secondary)]">
 						<tr class="border-b border-[var(--border)]">
-							<td class="py-3 px-4"><code class="text-[var(--accent-primary)]">value</code></td>
+							<td class="py-3 px-4"><code class=" text-[var(--accent-primary)]">value</code></td>
 							<td class="py-3 px-4"><code>T</code></td>
 							<td class="py-3 px-4">Get/set value directly</td>
 						</tr>
 						<tr class="border-b border-[var(--border)]">
-							<td class="py-3 px-4"><code class="text-[var(--accent-primary)]">get()</code></td>
+							<td class="py-3 px-4"><code class=" text-[var(--accent-primary)]">get()</code></td>
 							<td class="py-3 px-4"><code>() ={}> T</code></td>
 							<td class="py-3 px-4">Get value (tracks dependencies)</td>
 						</tr>
 						<tr class="border-b border-[var(--border)]">
-							<td class="py-3 px-4"><code class="text-[var(--accent-primary)]">set()</code></td>
+							<td class="py-3 px-4"><code class=" text-[var(--accent-primary)]">set()</code></td>
 							<td class="py-3 px-4"><code>(v: T) ={}> void</code></td>
 							<td class="py-3 px-4">Set new value</td>
 						</tr>
 						<tr class="border-b border-[var(--border)]">
-							<td class="py-3 px-4"><code class="text-[var(--accent-primary)]">update()</code></td>
+							<td class="py-3 px-4"><code class=" text-[var(--accent-primary)]">update()</code></td>
 							<td class="py-3 px-4"><code>(fn: (v: T) ={}> T) ={}> void</code></td>
 							<td class="py-3 px-4">Update using function</td>
 						</tr>
 						<tr class="border-b border-[var(--border)]">
-							<td class="py-3 px-4"><code class="text-[var(--accent-primary)]">subscribe()</code></td>
+							<td class="py-3 px-4"><code class=" text-[var(--accent-primary)]">subscribe()</code></td>
 							<td class="py-3 px-4"><code>(fn: Subscriber) ={}> Unsubscribe</code></td>
 							<td class="py-3 px-4">Subscribe to changes</td>
 						</tr>
@@ -175,7 +175,7 @@ cleanup();`, "typescript", "effectroot.ts")
 		</section>
 
 		<div class="bg-gradient-to-r from-[var(--bg-secondary)] to-[var(--bg-tertiary)] p-8 rounded-3xl border border-[var(--border)] shadow-inner">
-			<h3 class="text-lg font-bold mb-4">Why "Runes"?</h3>
+			<h3 class="text-lg font-bold mb-4">Why " Runes"?</h3>
 			<p class="text-sm text-[var(--text-secondary)] leading-relaxed">
 				Inspired by Svelte 5's terminology, Runes in GoSPA represent magical symbols that imbue your data with reactive properties. They are the building blocks of an interactive UI that responds naturally to user input and server events. The name reflects their power to transform ordinary values into reactive state.
 			</p>

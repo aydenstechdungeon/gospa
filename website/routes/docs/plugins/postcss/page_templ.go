@@ -35,7 +35,7 @@ func Page() templ.Component {
 		if templ_7745c5c3_Err != nil {
 			return templ_7745c5c3_Err
 		}
-		templ_7745c5c3_Err = components.CodeBlock(`gospa add:postcss`, "bash", "terminal").Render(ctx, templ_7745c5c3_Buffer)
+		templ_7745c5c3_Err = components.CodeBlock(`gospa add:postcss`, "bash", " terminal").Render(ctx, templ_7745c5c3_Buffer)
 		if templ_7745c5c3_Err != nil {
 			return templ_7745c5c3_Err
 		}
@@ -87,7 +87,7 @@ func Page() templ.Component {
         input: ./styles/dashboard.css
         output: ./static/css/dashboard.css
         content:
-          - ./routes/dashboard/**/*.templ`, "yaml", "gospa.yaml").Render(ctx, templ_7745c5c3_Buffer)
+          - ./routes/dashboard/**/*.templ`, "yaml", " gospa.yaml").Render(ctx, templ_7745c5c3_Buffer)
 		if templ_7745c5c3_Err != nil {
 			return templ_7745c5c3_Err
 		}
@@ -95,15 +95,15 @@ func Page() templ.Component {
 		if templ_7745c5c3_Err != nil {
 			return templ_7745c5c3_Err
 		}
-		templ_7745c5c3_Err = hookCard("BeforeDev", "Starts PostCSS in watch mode").Render(ctx, templ_7745c5c3_Buffer)
+		templ_7745c5c3_Err = hookCard("BeforeDev", " Starts PostCSS in watch mode").Render(ctx, templ_7745c5c3_Buffer)
 		if templ_7745c5c3_Err != nil {
 			return templ_7745c5c3_Err
 		}
-		templ_7745c5c3_Err = hookCard("BeforeBuild", "Builds minified CSS for production").Render(ctx, templ_7745c5c3_Buffer)
+		templ_7745c5c3_Err = hookCard("BeforeBuild", " Builds minified CSS for production").Render(ctx, templ_7745c5c3_Buffer)
 		if templ_7745c5c3_Err != nil {
 			return templ_7745c5c3_Err
 		}
-		templ_7745c5c3_Err = hookCard("AfterDev", "Stops the watch process gracefully").Render(ctx, templ_7745c5c3_Buffer)
+		templ_7745c5c3_Err = hookCard("AfterDev", " Stops the watch process gracefully").Render(ctx, templ_7745c5c3_Buffer)
 		if templ_7745c5c3_Err != nil {
 			return templ_7745c5c3_Err
 		}
@@ -124,7 +124,7 @@ func Page() templ.Component {
           name: desktop
         - width: 500
           height: 900
-          name: mobile`, "yaml", "gospa.yaml").Render(ctx, templ_7745c5c3_Buffer)
+          name: mobile`, "yaml", " gospa.yaml").Render(ctx, templ_7745c5c3_Buffer)
 		if templ_7745c5c3_Err != nil {
 			return templ_7745c5c3_Err
 		}
@@ -132,7 +132,7 @@ func Page() templ.Component {
 		if templ_7745c5c3_Err != nil {
 			return templ_7745c5c3_Err
 		}
-		templ_7745c5c3_Err = components.CodeBlock(`gospa postcss:critical`, "bash", "terminal").Render(ctx, templ_7745c5c3_Buffer)
+		templ_7745c5c3_Err = components.CodeBlock(`gospa postcss:critical`, "bash", " terminal").Render(ctx, templ_7745c5c3_Buffer)
 		if templ_7745c5c3_Err != nil {
 			return templ_7745c5c3_Err
 		}
@@ -143,7 +143,7 @@ func Page() templ.Component {
 		templ_7745c5c3_Err = components.CodeBlock(`import (
 	"github.com/aydenstechdungeon/gospa/plugin/postcss"
 	// ... other imports
-)`, "go", "layout.templ").Render(ctx, templ_7745c5c3_Buffer)
+)`, "go", " layout.templ").Render(ctx, templ_7745c5c3_Buffer)
 		if templ_7745c5c3_Err != nil {
 			return templ_7745c5c3_Err
 		}
@@ -152,14 +152,14 @@ func Page() templ.Component {
 			return templ_7745c5c3_Err
 		}
 		templ_7745c5c3_Err = components.CodeBlock(`<!-- Inlined Critical CSS (render-blocking, single round-trip) -->
-@templ.Raw("<style>" + postcss.CriticalCSS("./static/css/critical.css") + "</style>")
+@templ.Raw("<style>"+ postcss.CriticalCSS("./static/css/critical.css") + "</style>")
 
 <!-- Note: Path is relative to your app's working directory -->
-<!-- For apps running from root: "./website/static/css/critical.css" -->
-<!-- For apps running from website dir: "./static/css/critical.css" -->
+<!-- For apps running from root: "./website/static/css/critical.css"-->
+<!-- For apps running from website dir: "./static/css/critical.css"-->
 
 <!-- Async load non-critical CSS (non-blocking) -->
-@templ.Raw(postcss.AsyncCSS("/static/css/non-critical.css"))`, "templ", "root_layout.templ").Render(ctx, templ_7745c5c3_Buffer)
+@templ.Raw(postcss.AsyncCSS("/static/css/non-critical.css"))`, " templ", " root_layout.templ").Render(ctx, templ_7745c5c3_Buffer)
 		if templ_7745c5c3_Err != nil {
 			return templ_7745c5c3_Err
 		}
@@ -181,7 +181,7 @@ func Page() templ.Component {
         content:
           - ./routes/dashboard/**/*.templ
         criticalCSS:
-          enabled: true`, "yaml", "gospa.yaml").Render(ctx, templ_7745c5c3_Buffer)
+          enabled: true`, "yaml", " gospa.yaml").Render(ctx, templ_7745c5c3_Buffer)
 		if templ_7745c5c3_Err != nil {
 			return templ_7745c5c3_Err
 		}
@@ -189,7 +189,7 @@ func Page() templ.Component {
 		if templ_7745c5c3_Err != nil {
 			return templ_7745c5c3_Err
 		}
-		templ_7745c5c3_Err = components.CodeBlock(`gospa postcss:bundles`, "bash", "terminal").Render(ctx, templ_7745c5c3_Buffer)
+		templ_7745c5c3_Err = components.CodeBlock(`gospa postcss:bundles`, "bash", " terminal").Render(ctx, templ_7745c5c3_Buffer)
 		if templ_7745c5c3_Err != nil {
 			return templ_7745c5c3_Err
 		}
@@ -197,27 +197,27 @@ func Page() templ.Component {
 		if templ_7745c5c3_Err != nil {
 			return templ_7745c5c3_Err
 		}
-		templ_7745c5c3_Err = extensionCard("Typography", "tailwindcss/typography", "Beautiful typographic defaults with prose classes.").Render(ctx, templ_7745c5c3_Buffer)
+		templ_7745c5c3_Err = extensionCard("Typography", " tailwindcss/typography", " Beautiful typographic defaults with prose classes.").Render(ctx, templ_7745c5c3_Buffer)
 		if templ_7745c5c3_Err != nil {
 			return templ_7745c5c3_Err
 		}
-		templ_7745c5c3_Err = extensionCard("Forms", "tailwindcss/forms", "Form element styling and normalization.").Render(ctx, templ_7745c5c3_Buffer)
+		templ_7745c5c3_Err = extensionCard("Forms", " tailwindcss/forms", " Form element styling and normalization.").Render(ctx, templ_7745c5c3_Buffer)
 		if templ_7745c5c3_Err != nil {
 			return templ_7745c5c3_Err
 		}
-		templ_7745c5c3_Err = extensionCard("Aspect Ratio", "tailwindcss/aspect-ratio", "Aspect ratio utilities for responsive media.").Render(ctx, templ_7745c5c3_Buffer)
+		templ_7745c5c3_Err = extensionCard("Aspect Ratio", " tailwindcss/aspect-ratio", " Aspect ratio utilities for responsive media.").Render(ctx, templ_7745c5c3_Buffer)
 		if templ_7745c5c3_Err != nil {
 			return templ_7745c5c3_Err
 		}
-		templ_7745c5c3_Err = extensionCard("Autoprefixer", "autoprefixer", "Add vendor prefixes for browser compatibility.").Render(ctx, templ_7745c5c3_Buffer)
+		templ_7745c5c3_Err = extensionCard("Autoprefixer", " autoprefixer", " Add vendor prefixes for browser compatibility.").Render(ctx, templ_7745c5c3_Buffer)
 		if templ_7745c5c3_Err != nil {
 			return templ_7745c5c3_Err
 		}
-		templ_7745c5c3_Err = extensionCard("CSSNano", "cssnano", "Advanced CSS minification.").Render(ctx, templ_7745c5c3_Buffer)
+		templ_7745c5c3_Err = extensionCard("CSSNano", " cssnano", " Advanced CSS minification.").Render(ctx, templ_7745c5c3_Buffer)
 		if templ_7745c5c3_Err != nil {
 			return templ_7745c5c3_Err
 		}
-		templ_7745c5c3_Err = extensionCard("PostCSS Nested", "postcss-nested", "Support for nested CSS syntax.").Render(ctx, templ_7745c5c3_Buffer)
+		templ_7745c5c3_Err = extensionCard("PostCSS Nested", " postcss-nested", " Support for nested CSS syntax.").Render(ctx, templ_7745c5c3_Buffer)
 		if templ_7745c5c3_Err != nil {
 			return templ_7745c5c3_Err
 		}
@@ -229,7 +229,7 @@ func Page() templ.Component {
   plugins: {
     '@tailwindcss/postcss': {},
   },
-}`, "javascript", "postcss.config.js").Render(ctx, templ_7745c5c3_Buffer)
+}`, "javascript", " postcss.config.js").Render(ctx, templ_7745c5c3_Buffer)
 		if templ_7745c5c3_Err != nil {
 			return templ_7745c5c3_Err
 		}
@@ -262,7 +262,7 @@ func Page() templ.Component {
 /* Aspect ratio is built into Tailwind v4 */
 .video-container {
   @apply aspect-video w-full;
-}`, "css", "styles.css").Render(ctx, templ_7745c5c3_Buffer)
+}`, "css", " styles.css").Render(ctx, templ_7745c5c3_Buffer)
 		if templ_7745c5c3_Err != nil {
 			return templ_7745c5c3_Err
 		}

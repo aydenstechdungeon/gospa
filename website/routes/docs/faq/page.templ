@@ -95,7 +95,7 @@ const count = syncedRune('counter', 0, wsClient)`,
 })
 
 // In browser console
-GoSPA.setLogLevel('debug')`, "javascript", "debug.js")
+GoSPA.setLogLevel('debug')`, "javascript", " debug.js")
 		</section>
 
 		<section id="performance" class="space-y-6">
@@ -106,7 +106,7 @@ GoSPA.setLogLevel('debug')`, "javascript", "debug.js")
 			`)
 			@components.CodeBlock(`app := gospa.New(gospa.Config{
     SimpleRuntime: true,
-})`, "go", "config.go")
+})`, "go", " config.go")
 			
 			@faqItem("Why is my app slow on mobile?", `
 				• Enable lazy hydration: HydrationMode: "visible" or "idle"
@@ -132,15 +132,15 @@ GoSPA.setLogLevel('debug')`, "javascript", "debug.js")
     port = 80
     
   [[services.ports]]
-    handlers = ["tls", "http"]
-    port = 443`, "toml", "fly.toml")
+    handlers = ["tls", " http"]
+    port = 443`, "toml", " fly.toml")
 			
 			@faqItem("Docker build fails", `
 				Ensure your Dockerfile includes the Templ generation step:
 			`)
 			@components.CodeBlock(`RUN go install github.com/a-h/templ/cmd/templ@latest
 RUN templ generate
-RUN go build -o app .`, "dockerfile", "Dockerfile")
+RUN go build -o app .`, "dockerfile", " Dockerfile")
 		</section>
 
 		<div class="bg-[var(--bg-secondary)] border border-[var(--border)] p-6 rounded-2xl mt-12">

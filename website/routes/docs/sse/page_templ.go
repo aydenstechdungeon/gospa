@@ -54,7 +54,7 @@ func main() {
 
     // 2. Setup SSE routes
     fiber.SetupSSE(app, broker, "/_sse", nil)
-}`, "go", "main.go").Render(ctx, templ_7745c5c3_Buffer)
+}`, "go", " main.go").Render(ctx, templ_7745c5c3_Buffer)
 		if templ_7745c5c3_Err != nil {
 			return templ_7745c5c3_Err
 		}
@@ -65,7 +65,7 @@ func main() {
 		templ_7745c5c3_Err = components.CodeBlock(`helper := fiber.NewSSEHelper(broker)
 
 // Send a basic notification
-helper.Notify(clientID, map[string]string{"message": "Hello!"})
+helper.Notify(clientID, map[string]string{"message": " Hello!"})
 
 // Broadcast to everyone
 helper.NotifyAll("System maintenance in 5 minutes")
@@ -74,10 +74,10 @@ helper.NotifyAll("System maintenance in 5 minutes")
 helper.Update(clientID, "count", 42)
 
 // Send an alert
-helper.Alert(clientID, "warning", "Low disk space")
+helper.Alert(clientID, "warning", " Low disk space")
 
 // Report progress
-helper.Progress(clientID, 75, "Uploading...")`, "go", "handlers.go").Render(ctx, templ_7745c5c3_Buffer)
+helper.Progress(clientID, 75, "Uploading...")`, " go", " handlers.go").Render(ctx, templ_7745c5c3_Buffer)
 		if templ_7745c5c3_Err != nil {
 			return templ_7745c5c3_Err
 		}
@@ -91,7 +91,7 @@ const sse = connectSSE('notifications', {
   url: '/_sse/connect',
   autoReconnect: true,
   debug: true
-});`, "typescript", "app.ts").Render(ctx, templ_7745c5c3_Buffer)
+});`, "typescript", " app.ts").Render(ctx, templ_7745c5c3_Buffer)
 		if templ_7745c5c3_Err != nil {
 			return templ_7745c5c3_Err
 		}
@@ -117,7 +117,7 @@ sse.on('update', (ev) => {
 
 // Unsubscribe
 const unsub = sse.on('alert', handleAlert);
-unsub(); // Stop listening`, "typescript", "events.ts").Render(ctx, templ_7745c5c3_Buffer)
+unsub(); // Stop listening`, "typescript", " events.ts").Render(ctx, templ_7745c5c3_Buffer)
 		if templ_7745c5c3_Err != nil {
 			return templ_7745c5c3_Err
 		}
@@ -131,7 +131,7 @@ unsub(); // Stop listening`, "typescript", "events.ts").Render(ctx, templ_7745c5
 });
 
 sse.disconnect();
-sse.connect();`, "typescript", "connection.ts").Render(ctx, templ_7745c5c3_Buffer)
+sse.connect();`, "typescript", " connection.ts").Render(ctx, templ_7745c5c3_Buffer)
 		if templ_7745c5c3_Err != nil {
 			return templ_7745c5c3_Err
 		}
@@ -145,7 +145,7 @@ const manager = getSSEManager();
 manager.setDefaultConfig({ autoReconnect: true });
 
 const main = manager.client('main', { url: '/_sse/main' });
-const logs = manager.client('logs', { url: '/_sse/logs' });`, "typescript", "manager.ts").Render(ctx, templ_7745c5c3_Buffer)
+const logs = manager.client('logs', { url: '/_sse/logs' });`, "typescript", " manager.ts").Render(ctx, templ_7745c5c3_Buffer)
 		if templ_7745c5c3_Err != nil {
 			return templ_7745c5c3_Err
 		}

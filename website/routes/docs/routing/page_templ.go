@@ -57,7 +57,7 @@ func Page() templ.Component {
 └── generated/
     ├── routes.go             # Generated route registry
     ├── routes.ts             # Client-side routes
-    └── types.ts              # TypeScript types`, "plaintext", "structure.txt").Render(ctx, templ_7745c5c3_Buffer)
+    └── types.ts              # TypeScript types`, "plaintext", " structure.txt").Render(ctx, templ_7745c5c3_Buffer)
 		if templ_7745c5c3_Err != nil {
 			return templ_7745c5c3_Err
 		}

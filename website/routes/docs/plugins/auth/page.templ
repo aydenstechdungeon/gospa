@@ -32,7 +32,7 @@ templ Page() {
       issuer: "MyApp"
       digits: 6
       period: 30
-      backup_codes: 10`, "yaml", "gospa.yaml")
+      backup_codes: 10`, "yaml", " gospa.yaml")
 		</section>
 
 		<section class="space-y-6">
@@ -80,13 +80,13 @@ templ Page() {
 		<section class="space-y-6">
 			<h2 class="text-2xl font-bold border-b border-[var(--border)] pb-2">OAuth2 Providers</h2>
 			<div class="grid gap-4 md:grid-cols-3">
-				@providerCard("Google", "OAuth2 with profile/email scopes")
-				@providerCard("GitHub", "OAuth2 with user:email scope")
-				@providerCard("Facebook", "OAuth2 with public_profile scope")
-				@providerCard("Microsoft", "OAuth2 with Azure AD")
-				@providerCard("Discord", "OAuth2 with identify scope")
-				@providerCard("Telegram", "Login Widget with hash verification")
-				@providerCard("Twitter/X", "OAuth2 with PKCE flow")
+				@providerCard("Google", " OAuth2 with profile/email scopes")
+				@providerCard("GitHub", " OAuth2 with user:email scope")
+				@providerCard("Facebook", " OAuth2 with public_profile scope")
+				@providerCard("Microsoft", " OAuth2 with Azure AD")
+				@providerCard("Discord", " OAuth2 with identify scope")
+				@providerCard("Telegram", " Login Widget with hash verification")
+				@providerCard("Twitter/X", " OAuth2 with PKCE flow")
 			</div>
 		</section>
 
@@ -124,7 +124,7 @@ templ Page() {
         client_secret: "xxx"
         redirect_url: "http://localhost:3000/auth/callback/twitter"
     # Telegram uses Login Widget (different from OAuth2)
-    telegram_bot_token: "123456789:ABCdefGHIjklMNOpqrsTUVwxyz"`, "yaml", "gospa.yaml")
+    telegram_bot_token: "123456789:ABCdefGHIjklMNOpqrsTUVwxyz"`, " yaml", " gospa.yaml")
 		</section>
 
 		<section class="space-y-6">
@@ -149,7 +149,7 @@ function onTelegramAuth(user) {
   }).then(res => res.json())
     .then(data => console.log('Auth success:', data));
 }
-</script>`, "html", "telegram_widget.html")
+</script>`, "html", " telegram_widget.html")
 			<p class="text-[var(--text-muted)] text-sm mt-4">
 				The backend verifies the hash using your bot token. No redirect URL needed.
 			</p>
@@ -158,12 +158,12 @@ function onTelegramAuth(user) {
 		<section class="space-y-6">
 			<h2 class="text-2xl font-bold border-b border-[var(--border)] pb-2">Features</h2>
 			<div class="grid gap-4 md:grid-cols-2">
-				@featureCard("JWT Sessions", "Stateless authentication with configurable expiry.")
-				@featureCard("OAuth2 Flow", "Complete authorization code flow with PKCE support.")
-				@featureCard("OTP", "Time-based One-Time Password (RFC 6238).")
-				@featureCard("QR Codes", "Generate QR code URLs for authenticator apps.")
-				@featureCard("Backup Codes", "One-time recovery codes for 2FA bypass.")
-				@featureCard("Session Management", "Login, logout, refresh token rotation.")
+				@featureCard("JWT Sessions", " Stateless authentication with configurable expiry.")
+				@featureCard("OAuth2 Flow", " Complete authorization code flow with PKCE support.")
+				@featureCard("OTP", " Time-based One-Time Password (RFC 6238).")
+				@featureCard("QR Codes", " Generate QR code URLs for authenticator apps.")
+				@featureCard("Backup Codes", " One-time recovery codes for 2FA bypass.")
+				@featureCard("Session Management", " Login, logout, refresh token rotation.")
 			</div>
 		</section>
 
@@ -186,8 +186,8 @@ func main() {
     })
     
     // OAuth routes
-    app.Get("/auth/google", authPlugin.OAuthRedirect("google"))
-    app.Get("/auth/callback/google", authPlugin.OAuthCallback("google")) // returns {"success": true} after exchange
+    app.Get("/auth/google", authPlugin.OAuthRedirect(" google"))
+    app.Get("/auth/callback/google", authPlugin.OAuthCallback(" google")) // returns {" success": true} after exchange
     
     // Protected route
     app.Get("/protected", authPlugin.RequireAuth(), func(c *fiber.Ctx) error {
@@ -200,7 +200,7 @@ func main() {
     app.Post("/auth/2fa/verify", authPlugin.VerifyOTPHandler())
     
     app.Listen(":3000")
-}`, "go", "main.go")
+}`, "go", " main.go")
 		</section>
 
 		<section class="space-y-6">
@@ -235,7 +235,7 @@ POST /auth/refresh             - Refresh JWT token
 POST /auth/2fa/enable          - Enable OTP for user
 POST /auth/2fa/verify          - Verify OTP code
 POST /auth/2fa/backup          - Use backup code for recovery
-POST /auth/2fa/disable         - Disable 2FA`, "text", "routes")
+POST /auth/2fa/disable         - Disable 2FA`, "text", " routes")
 		</section>
 
 		<section class="space-y-6">

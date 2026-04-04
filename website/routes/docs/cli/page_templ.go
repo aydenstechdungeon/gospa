@@ -39,7 +39,7 @@ func Page() templ.Component {
 cd myapp
 go mod tidy
 gospa doctor
-gospa dev`, "bash", "terminal").Render(ctx, templ_7745c5c3_Buffer)
+gospa dev`, "bash", " terminal").Render(ctx, templ_7745c5c3_Buffer)
 		if templ_7745c5c3_Err != nil {
 			return templ_7745c5c3_Err
 		}
@@ -47,7 +47,7 @@ gospa dev`, "bash", "terminal").Render(ctx, templ_7745c5c3_Buffer)
 		if templ_7745c5c3_Err != nil {
 			return templ_7745c5c3_Err
 		}
-		templ_7745c5c3_Err = components.CodeBlock(`gospa create myapp`, "bash", "terminal").Render(ctx, templ_7745c5c3_Buffer)
+		templ_7745c5c3_Err = components.CodeBlock(`gospa create myapp`, "bash", " terminal").Render(ctx, templ_7745c5c3_Buffer)
 		if templ_7745c5c3_Err != nil {
 			return templ_7745c5c3_Err
 		}
@@ -56,7 +56,7 @@ gospa dev`, "bash", "terminal").Render(ctx, templ_7745c5c3_Buffer)
 			return templ_7745c5c3_Err
 		}
 		templ_7745c5c3_Err = components.CodeBlock(`gospa doctor
-gospa doctor --routes-dir ./routes`, "bash", "terminal").Render(ctx, templ_7745c5c3_Buffer)
+gospa doctor --routes-dir ./routes`, "bash", " terminal").Render(ctx, templ_7745c5c3_Buffer)
 		if templ_7745c5c3_Err != nil {
 			return templ_7745c5c3_Err
 		}
@@ -66,7 +66,7 @@ gospa doctor --routes-dir ./routes`, "bash", "terminal").Render(ctx, templ_7745c
 		}
 		templ_7745c5c3_Err = components.CodeBlock(`gospa dev
 gospa dev --port 8080 --host 0.0.0.0
-gospa dev --routes-dir ./routes`, "bash", "terminal").Render(ctx, templ_7745c5c3_Buffer)
+gospa dev --routes-dir ./routes`, "bash", " terminal").Render(ctx, templ_7745c5c3_Buffer)
 		if templ_7745c5c3_Err != nil {
 			return templ_7745c5c3_Err
 		}
@@ -76,7 +76,7 @@ gospa dev --routes-dir ./routes`, "bash", "terminal").Render(ctx, templ_7745c5c3
 		}
 		templ_7745c5c3_Err = components.CodeBlock(`gospa build
 gospa build -o ./dist --platform linux --arch amd64
-gospa build --minify=false --compress=false`, "bash", "terminal").Render(ctx, templ_7745c5c3_Buffer)
+gospa build --minify=false --compress=false`, "bash", " terminal").Render(ctx, templ_7745c5c3_Buffer)
 		if templ_7745c5c3_Err != nil {
 			return templ_7745c5c3_Err
 		}
@@ -86,7 +86,7 @@ gospa build --minify=false --compress=false`, "bash", "terminal").Render(ctx, te
 		}
 		templ_7745c5c3_Err = components.CodeBlock(`gospa generate
 gospa generate -o ./generated --input-dir .
-gospa generate --type page`, "bash", "terminal").Render(ctx, templ_7745c5c3_Buffer)
+gospa generate --type page`, "bash", " terminal").Render(ctx, templ_7745c5c3_Buffer)
 		if templ_7745c5c3_Err != nil {
 			return templ_7745c5c3_Err
 		}
@@ -94,7 +94,7 @@ gospa generate --type page`, "bash", "terminal").Render(ctx, templ_7745c5c3_Buff
 		if templ_7745c5c3_Err != nil {
 			return templ_7745c5c3_Err
 		}
-		templ_7745c5c3_Err = components.CodeBlock(`gospa clean`, "bash", "terminal").Render(ctx, templ_7745c5c3_Buffer)
+		templ_7745c5c3_Err = components.CodeBlock(`gospa clean`, "bash", " terminal").Render(ctx, templ_7745c5c3_Buffer)
 		if templ_7745c5c3_Err != nil {
 			return templ_7745c5c3_Err
 		}
@@ -102,7 +102,7 @@ gospa generate --type page`, "bash", "terminal").Render(ctx, templ_7745c5c3_Buff
 		if templ_7745c5c3_Err != nil {
 			return templ_7745c5c3_Err
 		}
-		templ_7745c5c3_Err = components.CodeBlock(`gospa version`, "bash", "terminal").Render(ctx, templ_7745c5c3_Buffer)
+		templ_7745c5c3_Err = components.CodeBlock(`gospa version`, "bash", " terminal").Render(ctx, templ_7745c5c3_Buffer)
 		if templ_7745c5c3_Err != nil {
 			return templ_7745c5c3_Err
 		}

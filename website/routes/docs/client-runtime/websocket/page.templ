@@ -54,7 +54,7 @@ ws.sendAction('increment', { amount: 1 });
 ws.disconnect();
 
 // Get singleton instance
-const client = getWebSocketClient();`, "typescript", "wsclient.ts")
+const client = getWebSocketClient();`, "typescript", " wsclient.ts")
 		</section>
 
 		<section class="space-y-6">
@@ -145,7 +145,7 @@ const count = syncedRune(0, {
 count.set(5);
 
 // Server will be notified
-// If server rejects, value rolls back`, "typescript", "synced-rune.ts")
+// If server rejects, value rolls back`, "typescript", " synced-rune.ts")
 		</section>
 
 		<section class="space-y-6">
@@ -160,7 +160,7 @@ const states = {
 };
 
 // Sync all states under a component ID
-syncBatch('user-form', states);`, "typescript", "sync-batch.ts")
+syncBatch('user-form', states);`, "typescript", " sync-batch.ts")
 		</section>
 
 		<section class="space-y-6">
@@ -178,7 +178,7 @@ const states = {
 applyStateUpdate(states, {
   count: 10,
   name: 'Updated'
-});`, "typescript", "apply-state.ts")
+});`, "typescript", " apply-state.ts")
 		</section>
 
 		<section class="space-y-6">
@@ -198,12 +198,12 @@ console.log('Current state:', ws.state);
 // Listen for state changes
 ws.onStateChange((newState) => {
   console.log('State changed to:', newState);
-});`, "typescript", "connection-state.ts")
+});`, "typescript", " connection-state.ts")
 		</section>
 
 		<div class="flex justify-between mt-16">
 			<a href="/docs/client-runtime/navigation-events" class="group flex items-center gap-3 px-6 py-3 rounded-xl border border-[var(--border)] bg-[var(--bg-secondary)] hover:border-[var(--accent-primary)]/50 transition-all">
-				<svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="text-[var(--text-muted)] group-hover:text-[var(--accent-primary)] transition-colors"><path d="M19 12H5"></path><path d="m12 19-7-7 7-7"></path></svg>
+				<svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="text-[var(--text-muted)] group-hover:text-[var(--accent-primary)] transition-colors"><path d=" M19 12H5"></path><path d=" m12 19-7-7 7-7"></path></svg>
 				<div>
 					<div class="text-[var(--text-muted)] text-xs uppercase tracking-widest font-bold mb-1">Previous</div>
 					<div class="font-bold group-hover:text-[var(--accent-primary)] transition-colors">Navigation & Events</div>
@@ -214,7 +214,7 @@ ws.onStateChange((newState) => {
 					<div class="text-[var(--text-muted)] text-xs uppercase tracking-widest font-bold mb-1">Next</div>
 					<div class="font-bold group-hover:text-[var(--accent-primary)] transition-colors">Transitions</div>
 				</div>
-				<svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="text-[var(--text-muted)] group-hover:text-[var(--accent-primary)] transition-colors"><path d="M5 12h14"></path><path d="m12 5 7 7-7 7"></path></svg>
+				<svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="text-[var(--text-muted)] group-hover:text-[var(--accent-primary)] transition-colors"><path d=" M5 12h14"></path><path d=" m12 5 7 7-7 7"></path></svg>
 			</a>
 		</div>
 	</div>

@@ -39,7 +39,7 @@ func Page() templ.Component {
     RoutesDir: "./routes",
     DevMode:   true,
     AppName:   "My App",
-})`, "go", "main.go").Render(ctx, templ_7745c5c3_Buffer)
+})`, "go", " main.go").Render(ctx, templ_7745c5c3_Buffer)
 		if templ_7745c5c3_Err != nil {
 			return templ_7745c5c3_Err
 		}
@@ -52,7 +52,7 @@ func Page() templ.Component {
     AppName:     "My App (Dev)",
     RoutesDir:   "./routes",
     SimpleRuntime: false,
-})`, "go", "main.go").Render(ctx, templ_7745c5c3_Buffer)
+})`, "go", " main.go").Render(ctx, templ_7745c5c3_Buffer)
 		if templ_7745c5c3_Err != nil {
 			return templ_7745c5c3_Err
 		}
@@ -70,7 +70,7 @@ func Page() templ.Component {
     EnableCSRF:      true,
     AllowedOrigins:  []string{"https://myapp.com"},
     WSHeartbeat:     30 * time.Second,
-})`, "go", "main.go").Render(ctx, templ_7745c5c3_Buffer)
+})`, "go", " main.go").Render(ctx, templ_7745c5c3_Buffer)
 		if templ_7745c5c3_Err != nil {
 			return templ_7745c5c3_Err
 		}
@@ -92,7 +92,7 @@ func main() {
         DevMode:   true,
         
         DefaultState: map[string]interface{}{
-            "theme": "dark",
+            "theme": " dark",
             "user":  nil,
         },
         
@@ -116,7 +116,7 @@ func main() {
     if err := app.Run(":3000"); err != nil {
         panic(err)
     }
-}`, "go", "main.go").Render(ctx, templ_7745c5c3_Buffer)
+}`, "go", " main.go").Render(ctx, templ_7745c5c3_Buffer)
 		if templ_7745c5c3_Err != nil {
 			return templ_7745c5c3_Err
 		}

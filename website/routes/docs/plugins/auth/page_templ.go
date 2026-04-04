@@ -54,7 +54,7 @@ func Page() templ.Component {
       issuer: "MyApp"
       digits: 6
       period: 30
-      backup_codes: 10`, "yaml", "gospa.yaml").Render(ctx, templ_7745c5c3_Buffer)
+      backup_codes: 10`, "yaml", " gospa.yaml").Render(ctx, templ_7745c5c3_Buffer)
 		if templ_7745c5c3_Err != nil {
 			return templ_7745c5c3_Err
 		}
@@ -62,31 +62,31 @@ func Page() templ.Component {
 		if templ_7745c5c3_Err != nil {
 			return templ_7745c5c3_Err
 		}
-		templ_7745c5c3_Err = providerCard("Google", "OAuth2 with profile/email scopes").Render(ctx, templ_7745c5c3_Buffer)
+		templ_7745c5c3_Err = providerCard("Google", " OAuth2 with profile/email scopes").Render(ctx, templ_7745c5c3_Buffer)
 		if templ_7745c5c3_Err != nil {
 			return templ_7745c5c3_Err
 		}
-		templ_7745c5c3_Err = providerCard("GitHub", "OAuth2 with user:email scope").Render(ctx, templ_7745c5c3_Buffer)
+		templ_7745c5c3_Err = providerCard("GitHub", " OAuth2 with user:email scope").Render(ctx, templ_7745c5c3_Buffer)
 		if templ_7745c5c3_Err != nil {
 			return templ_7745c5c3_Err
 		}
-		templ_7745c5c3_Err = providerCard("Facebook", "OAuth2 with public_profile scope").Render(ctx, templ_7745c5c3_Buffer)
+		templ_7745c5c3_Err = providerCard("Facebook", " OAuth2 with public_profile scope").Render(ctx, templ_7745c5c3_Buffer)
 		if templ_7745c5c3_Err != nil {
 			return templ_7745c5c3_Err
 		}
-		templ_7745c5c3_Err = providerCard("Microsoft", "OAuth2 with Azure AD").Render(ctx, templ_7745c5c3_Buffer)
+		templ_7745c5c3_Err = providerCard("Microsoft", " OAuth2 with Azure AD").Render(ctx, templ_7745c5c3_Buffer)
 		if templ_7745c5c3_Err != nil {
 			return templ_7745c5c3_Err
 		}
-		templ_7745c5c3_Err = providerCard("Discord", "OAuth2 with identify scope").Render(ctx, templ_7745c5c3_Buffer)
+		templ_7745c5c3_Err = providerCard("Discord", " OAuth2 with identify scope").Render(ctx, templ_7745c5c3_Buffer)
 		if templ_7745c5c3_Err != nil {
 			return templ_7745c5c3_Err
 		}
-		templ_7745c5c3_Err = providerCard("Telegram", "Login Widget with hash verification").Render(ctx, templ_7745c5c3_Buffer)
+		templ_7745c5c3_Err = providerCard("Telegram", " Login Widget with hash verification").Render(ctx, templ_7745c5c3_Buffer)
 		if templ_7745c5c3_Err != nil {
 			return templ_7745c5c3_Err
 		}
-		templ_7745c5c3_Err = providerCard("Twitter/X", "OAuth2 with PKCE flow").Render(ctx, templ_7745c5c3_Buffer)
+		templ_7745c5c3_Err = providerCard("Twitter/X", " OAuth2 with PKCE flow").Render(ctx, templ_7745c5c3_Buffer)
 		if templ_7745c5c3_Err != nil {
 			return templ_7745c5c3_Err
 		}
@@ -126,7 +126,7 @@ func Page() templ.Component {
         client_secret: "xxx"
         redirect_url: "http://localhost:3000/auth/callback/twitter"
     # Telegram uses Login Widget (different from OAuth2)
-    telegram_bot_token: "123456789:ABCdefGHIjklMNOpqrsTUVwxyz"`, "yaml", "gospa.yaml").Render(ctx, templ_7745c5c3_Buffer)
+    telegram_bot_token: "123456789:ABCdefGHIjklMNOpqrsTUVwxyz"`, " yaml", " gospa.yaml").Render(ctx, templ_7745c5c3_Buffer)
 		if templ_7745c5c3_Err != nil {
 			return templ_7745c5c3_Err
 		}
@@ -153,7 +153,7 @@ function onTelegramAuth(user) {
   }).then(res => res.json())
     .then(data => console.log('Auth success:', data));
 }
-</script>`, "html", "telegram_widget.html").Render(ctx, templ_7745c5c3_Buffer)
+</script>`, "html", " telegram_widget.html").Render(ctx, templ_7745c5c3_Buffer)
 		if templ_7745c5c3_Err != nil {
 			return templ_7745c5c3_Err
 		}
@@ -161,27 +161,27 @@ function onTelegramAuth(user) {
 		if templ_7745c5c3_Err != nil {
 			return templ_7745c5c3_Err
 		}
-		templ_7745c5c3_Err = featureCard("JWT Sessions", "Stateless authentication with configurable expiry.").Render(ctx, templ_7745c5c3_Buffer)
+		templ_7745c5c3_Err = featureCard("JWT Sessions", " Stateless authentication with configurable expiry.").Render(ctx, templ_7745c5c3_Buffer)
 		if templ_7745c5c3_Err != nil {
 			return templ_7745c5c3_Err
 		}
-		templ_7745c5c3_Err = featureCard("OAuth2 Flow", "Complete authorization code flow with PKCE support.").Render(ctx, templ_7745c5c3_Buffer)
+		templ_7745c5c3_Err = featureCard("OAuth2 Flow", " Complete authorization code flow with PKCE support.").Render(ctx, templ_7745c5c3_Buffer)
 		if templ_7745c5c3_Err != nil {
 			return templ_7745c5c3_Err
 		}
-		templ_7745c5c3_Err = featureCard("OTP", "Time-based One-Time Password (RFC 6238).").Render(ctx, templ_7745c5c3_Buffer)
+		templ_7745c5c3_Err = featureCard("OTP", " Time-based One-Time Password (RFC 6238).").Render(ctx, templ_7745c5c3_Buffer)
 		if templ_7745c5c3_Err != nil {
 			return templ_7745c5c3_Err
 		}
-		templ_7745c5c3_Err = featureCard("QR Codes", "Generate QR code URLs for authenticator apps.").Render(ctx, templ_7745c5c3_Buffer)
+		templ_7745c5c3_Err = featureCard("QR Codes", " Generate QR code URLs for authenticator apps.").Render(ctx, templ_7745c5c3_Buffer)
 		if templ_7745c5c3_Err != nil {
 			return templ_7745c5c3_Err
 		}
-		templ_7745c5c3_Err = featureCard("Backup Codes", "One-time recovery codes for 2FA bypass.").Render(ctx, templ_7745c5c3_Buffer)
+		templ_7745c5c3_Err = featureCard("Backup Codes", " One-time recovery codes for 2FA bypass.").Render(ctx, templ_7745c5c3_Buffer)
 		if templ_7745c5c3_Err != nil {
 			return templ_7745c5c3_Err
 		}
-		templ_7745c5c3_Err = featureCard("Session Management", "Login, logout, refresh token rotation.").Render(ctx, templ_7745c5c3_Buffer)
+		templ_7745c5c3_Err = featureCard("Session Management", " Login, logout, refresh token rotation.").Render(ctx, templ_7745c5c3_Buffer)
 		if templ_7745c5c3_Err != nil {
 			return templ_7745c5c3_Err
 		}
@@ -206,8 +206,8 @@ func main() {
     })
     
     // OAuth routes
-    app.Get("/auth/google", authPlugin.OAuthRedirect("google"))
-    app.Get("/auth/callback/google", authPlugin.OAuthCallback("google")) // returns {"success": true} after exchange
+    app.Get("/auth/google", authPlugin.OAuthRedirect(" google"))
+    app.Get("/auth/callback/google", authPlugin.OAuthCallback(" google")) // returns {" success": true} after exchange
     
     // Protected route
     app.Get("/protected", authPlugin.RequireAuth(), func(c *fiber.Ctx) error {
@@ -220,7 +220,7 @@ func main() {
     app.Post("/auth/2fa/verify", authPlugin.VerifyOTPHandler())
     
     app.Listen(":3000")
-}`, "go", "main.go").Render(ctx, templ_7745c5c3_Buffer)
+}`, "go", " main.go").Render(ctx, templ_7745c5c3_Buffer)
 		if templ_7745c5c3_Err != nil {
 			return templ_7745c5c3_Err
 		}
@@ -261,7 +261,7 @@ POST /auth/refresh             - Refresh JWT token
 POST /auth/2fa/enable          - Enable OTP for user
 POST /auth/2fa/verify          - Verify OTP code
 POST /auth/2fa/backup          - Use backup code for recovery
-POST /auth/2fa/disable         - Disable 2FA`, "text", "routes").Render(ctx, templ_7745c5c3_Buffer)
+POST /auth/2fa/disable         - Disable 2FA`, "text", " routes").Render(ctx, templ_7745c5c3_Buffer)
 		if templ_7745c5c3_Err != nil {
 			return templ_7745c5c3_Err
 		}

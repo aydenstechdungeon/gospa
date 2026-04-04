@@ -22,9 +22,9 @@ templ Page() {
 states := gospa.NewStateMap()
 
 // Set values
-states.Set("user", User{ID: 1, Name: "Alice"})
+states.Set("user", User{ID: 1, Name: " Alice"})
 states.Set("count", 42)
-states.Set("items", []string{"a", "b", "c"})
+states.Set("items", []string{" a", " b", " c"})
 
 // Get values (returns *Rune[any])
 rune := states.Get("user")
@@ -43,11 +43,11 @@ exists := states.Has("user")
 keys := states.Keys()
 
 // Clear all
-states.Clear()`, "go", "statemap.go")
+states.Clear()`, "go", " statemap.go")
 
 			<div class="p-4 mt-4 rounded-xl border border-[var(--accent-primary)]/20 bg-[var(--accent-primary)]/5 text-sm text-[var(--text-secondary)]">
 				<strong class="text-[var(--accent-primary)] font-bold block mb-1">ℹ️ Concurrency Safe</strong>
-				The <code class="font-mono text-[var(--accent-primary)]">OnChange</code> callback runs as a background goroutine isolated from the state maps mutex locks. It is completely safe to call <code class="font-mono text-[var(--accent-primary)]">Set()</code>, <code class="font-mono text-[var(--accent-primary)]">Delete()</code>, or <code class="font-mono text-[var(--accent-primary)]">Clear()</code> on the same StateMap backwards!
+				The <code class="font-mono text-[var(--accent-primary)]">OnChange</code> callback runs as a background goroutine isolated from the state maps mutex locks. It is completely safe to call <code class=" font-mono text-[var(--accent-primary)]">Set()</code>, <code class=" font-mono text-[var(--accent-primary)]">Delete()</code>, or <code class=" font-mono text-[var(--accent-primary)]">Clear()</code> on the same StateMap backwards!
 			</div>
 		</section>
 
@@ -58,13 +58,13 @@ states.Clear()`, "go", "statemap.go")
 			</p>
 			@components.CodeBlock(`// Serialize to JSON
 json := states.ToJSON()
-// Output: {"user":{"ID":1,"Name":"Alice"},"count":42}
+// Output: {"user":{" ID":1," Name":" Alice"}," count":42}
 
 // Deserialize from JSON
 err := states.FromJSON(jsonBytes)
 
 // Serialize specific keys
-partialJSON := states.ToJSONKeys("user", "count")`, "go", "serialize.go")
+partialJSON := states.ToJSONKeys("user", " count")`, " go", " serialize.go")
 		</section>
 
 		<section class="space-y-6">
@@ -83,7 +83,7 @@ gospa.Batch(func() {
     a.Set(10)
     b.Set(20)
 })
-// Subscribers to a and b notified once after batch completes`, "go", "batch.go")
+// Subscribers to a and b notified once after batch completes`, "go", " batch.go")
 		</section>
 
 		<section class="space-y-6">
@@ -94,13 +94,13 @@ gospa.Batch(func() {
 			@components.CodeBlock(`// Add a value and a computed derivation
 states.Set("count", 10)
 
-states.AddComputed("doubled", []string{"count"}, func(vals map[string]any) any {
+states.AddComputed("doubled", []string{" count"}, func(vals map[string]any) any {
     count := vals["count"].(int)
     return count * 2
 })
 
 // 'doubled' is now 20.
-// When 'count' is set to 50, 'doubled' automatically updates to 100.`, "go", "computed.go")
+// When 'count' is set to 50, 'doubled' automatically updates to 100.`, "go", " computed.go")
 		</section>
 
 		<div class="flex justify-between pt-6 border-t border-[var(--border)]">

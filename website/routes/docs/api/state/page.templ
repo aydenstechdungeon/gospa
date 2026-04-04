@@ -23,7 +23,7 @@ templ Page() {
 			<p class="text-[var(--text-secondary)]">Reactive state container that notifies subscribers on change.</p>
 			@components.CodeBlock(`count := gospa.NewRune(0)
 count.Set(5)
-value := count.Get()`, "go", "rune.go")
+value := count.Get()`, "go", " rune.go")
 		</section>
 
 		<section id="derived" class="space-y-8">
@@ -31,7 +31,7 @@ value := count.Get()`, "go", "rune.go")
 			<p class="text-[var(--text-secondary)]">Computed values that auto-update when dependencies change.</p>
 			@components.CodeBlock(`doubled := gospa.Derived(count, func(v int) int {
     return v * 2
-})`, "go", "derived.go")
+})`, "go", " derived.go")
 		</section>
 
 		<div class="flex justify-between mt-16 pt-8 border-t border-[var(--border)]">

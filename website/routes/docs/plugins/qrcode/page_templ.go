@@ -38,7 +38,7 @@ func Page() templ.Component {
 		templ_7745c5c3_Err = components.CodeBlock(`plugins:
   qrcode:
     default_size: 256        # Default QR code size in pixels
-    default_level: medium    # Error correction: low, medium, quartile, high`, "yaml", "gospa.yaml").Render(ctx, templ_7745c5c3_Buffer)
+    default_level: medium    # Error correction: low, medium, quartile, high`, "yaml", " gospa.yaml").Render(ctx, templ_7745c5c3_Buffer)
 		if templ_7745c5c3_Err != nil {
 			return templ_7745c5c3_Err
 		}
@@ -68,7 +68,7 @@ func main() {
         panic(err)
     }
     // Save to file or send as HTTP response
-}`, "go", "main.go").Render(ctx, templ_7745c5c3_Buffer)
+}`, "go", " main.go").Render(ctx, templ_7745c5c3_Buffer)
 		if templ_7745c5c3_Err != nil {
 			return templ_7745c5c3_Err
 		}
@@ -108,7 +108,7 @@ func main() {
             color.RGBA{R: 240, G: 244, B: 248, A: 255}, // Background
         ),
     )
-}`, "go", "main.go").Render(ctx, templ_7745c5c3_Buffer)
+}`, "go", " main.go").Render(ctx, templ_7745c5c3_Buffer)
 		if templ_7745c5c3_Err != nil {
 			return templ_7745c5c3_Err
 		}
@@ -128,7 +128,7 @@ func main() {
     // Build the otpauth:// URL
     issuer := "MyApp"
     account := "user@example.com"
-    secret := "JBSWY3DPEHPK3PXP" // Base32 encoded secret
+    secret := "JBSWY3DPEHPK3PXP"// Base32 encoded secret
     
     otpURL := fmt.Sprintf(
         "otpauth://totp/%s:%s?secret=%s&issuer=%s&algorithm=SHA1&digits=6&period=30",
@@ -146,7 +146,7 @@ func main() {
     
     // Use in HTML template
     fmt.Printf("<img src=\"%s\" alt=\"Scan with authenticator app\">", dataURL)
-}`, "go", "main.go").Render(ctx, templ_7745c5c3_Buffer)
+}`, "go", " main.go").Render(ctx, templ_7745c5c3_Buffer)
 		if templ_7745c5c3_Err != nil {
 			return templ_7745c5c3_Err
 		}
@@ -176,8 +176,8 @@ func main() {
             return c.Status(500).SendString("Failed to generate QR code")
         }
         
-        c.Set("Content-Type", "image/png")
-        c.Set("Cache-Control", "public, max-age=86400") // Cache for 24 hours
+        c.Set("Content-Type", " image/png")
+        c.Set("Cache-Control", " public, max-age=86400") // Cache for 24 hours
         return c.Send(pngBytes)
     })
     
@@ -188,7 +188,7 @@ func main() {
         dataURL, err := qrcode.GenerateDataURL(content)
         if err != nil {
             return c.Status(500).JSON(fiber.Map{
-                "error": "Failed to generate QR code",
+                "error": " Failed to generate QR code",
             })
         }
         
@@ -198,7 +198,7 @@ func main() {
     })
     
     app.Listen(":3000")
-}`, "go", "main.go").Render(ctx, templ_7745c5c3_Buffer)
+}`, "go", " main.go").Render(ctx, templ_7745c5c3_Buffer)
 		if templ_7745c5c3_Err != nil {
 			return templ_7745c5c3_Err
 		}
@@ -206,23 +206,23 @@ func main() {
 		if templ_7745c5c3_Err != nil {
 			return templ_7745c5c3_Err
 		}
-		templ_7745c5c3_Err = apiRef("func Generate(content string, opts ...Option) (image.Image, error)", "Generates a QR code as an image.Image.").Render(ctx, templ_7745c5c3_Buffer)
+		templ_7745c5c3_Err = apiRef("func Generate(content string, opts ...Option) (image.Image, error)", " Generates a QR code as an image.Image.").Render(ctx, templ_7745c5c3_Buffer)
 		if templ_7745c5c3_Err != nil {
 			return templ_7745c5c3_Err
 		}
-		templ_7745c5c3_Err = apiRef("func GeneratePNG(content string, opts ...Option) ([]byte, error)", "Generates a QR code as PNG-encoded bytes.").Render(ctx, templ_7745c5c3_Buffer)
+		templ_7745c5c3_Err = apiRef("func GeneratePNG(content string, opts ...Option) ([]byte, error)", " Generates a QR code as PNG-encoded bytes.").Render(ctx, templ_7745c5c3_Buffer)
 		if templ_7745c5c3_Err != nil {
 			return templ_7745c5c3_Err
 		}
-		templ_7745c5c3_Err = apiRef("func GenerateBase64(content string, opts ...Option) (string, error)", "Generates a QR code as a base64-encoded PNG string.").Render(ctx, templ_7745c5c3_Buffer)
+		templ_7745c5c3_Err = apiRef("func GenerateBase64(content string, opts ...Option) (string, error)", " Generates a QR code as a base64-encoded PNG string.").Render(ctx, templ_7745c5c3_Buffer)
 		if templ_7745c5c3_Err != nil {
 			return templ_7745c5c3_Err
 		}
-		templ_7745c5c3_Err = apiRef("func GenerateDataURL(content string, opts ...Option) (string, error)", "Generates a QR code as a data URL (ready for img src).").Render(ctx, templ_7745c5c3_Buffer)
+		templ_7745c5c3_Err = apiRef("func GenerateDataURL(content string, opts ...Option) (string, error)", " Generates a QR code as a data URL (ready for img src).").Render(ctx, templ_7745c5c3_Buffer)
 		if templ_7745c5c3_Err != nil {
 			return templ_7745c5c3_Err
 		}
-		templ_7745c5c3_Err = apiRef("func ForOTP(otpURL string, opts ...Option) (string, error)", "Generates a QR code for OTP/TOTP setup (300px default size).").Render(ctx, templ_7745c5c3_Buffer)
+		templ_7745c5c3_Err = apiRef("func ForOTP(otpURL string, opts ...Option) (string, error)", " Generates a QR code for OTP/TOTP setup (300px default size).").Render(ctx, templ_7745c5c3_Buffer)
 		if templ_7745c5c3_Err != nil {
 			return templ_7745c5c3_Err
 		}
@@ -230,15 +230,15 @@ func main() {
 		if templ_7745c5c3_Err != nil {
 			return templ_7745c5c3_Err
 		}
-		templ_7745c5c3_Err = apiRef("func WithSize(size int) Option", "Sets the QR code size in pixels (default: 256).").Render(ctx, templ_7745c5c3_Buffer)
+		templ_7745c5c3_Err = apiRef("func WithSize(size int) Option", " Sets the QR code size in pixels (default: 256).").Render(ctx, templ_7745c5c3_Buffer)
 		if templ_7745c5c3_Err != nil {
 			return templ_7745c5c3_Err
 		}
-		templ_7745c5c3_Err = apiRef("func WithLevel(level Level) Option", "Sets the error correction level (default: LevelMedium).").Render(ctx, templ_7745c5c3_Buffer)
+		templ_7745c5c3_Err = apiRef("func WithLevel(level Level) Option", " Sets the error correction level (default: LevelMedium).").Render(ctx, templ_7745c5c3_Buffer)
 		if templ_7745c5c3_Err != nil {
 			return templ_7745c5c3_Err
 		}
-		templ_7745c5c3_Err = apiRef("func WithColors(foreground, background color.Color) Option", "Sets the foreground and background colors.").Render(ctx, templ_7745c5c3_Buffer)
+		templ_7745c5c3_Err = apiRef("func WithColors(foreground, background color.Color) Option", " Sets the foreground and background colors.").Render(ctx, templ_7745c5c3_Buffer)
 		if templ_7745c5c3_Err != nil {
 			return templ_7745c5c3_Err
 		}

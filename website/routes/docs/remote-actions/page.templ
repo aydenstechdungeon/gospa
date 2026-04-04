@@ -30,29 +30,29 @@ templ Page() {
 func init() {
     routing.RegisterRemoteAction("greet", func(ctx context.Context, rc routing.RemoteContext, input any) (any, error) {
         name := input.(string)
-        return "Hello, " + name, nil
+        return "Hello, "+ name, nil
     })
-}`, "go", "actions.go")
+}`, "go", " actions.go")
 		</section>
 
 		<section id="complex-input" class="space-y-6">
 			<h2 class="text-2xl font-bold border-b border-[var(--border)] pb-2">Complex Inputs & Validation</h2>
 			<p class="text-[var(--text-secondary)]">
-				Since inputs are passed as <code class="mono">any</code>, you should use type assertions or a library like <code class="mono">mitchellh/mapstructure</code> to map to your structs.
+				Since inputs are passed as <code class="mono">any</code>, you should use type assertions or a library like <code class=" mono">mitchellh/mapstructure</code> to map to your structs.
 			</p>
 			@components.CodeBlock(`type CreateUser struct {
-    Username string `+"`"+`json:"username"`+"`"+`
-    Email    string `+"`"+`json:"email"`+"`"+`
+    Username string `+"`"+`json:" username"`+"`"+`
+    Email    string `+"`"+`json:" email"`+"`"+`
 }
 
 routing.RegisterRemoteAction("createUser", func(ctx context.Context, rc routing.RemoteContext, input any) (any, error) {
     var data CreateUser
     // Map input to struct...
-    if data.Username == "" {
+    if data.Username == ""{
         return nil, errors.New("username required")
     }
-    return "User " + data.Username + " created", nil
-})`, "go", "user.go")
+    return "User "+ data.Username + " created", nil
+})`, "go", " user.go")
 		</section>
 
 		<section id="calling-template" class="space-y-6">
@@ -74,7 +74,7 @@ async function handleGreet() {
         console.log(result.data);
     }
 }
-</script>`, "templ", "page.templ")
+</script>`, "templ", " page.templ")
 		</section>
 
 		<section class="space-y-6">
@@ -104,7 +104,7 @@ async function handleSignup() {
 
 // Using the typed remoteAction helper
 const createUser = GoSPA.remoteAction('createUser');
-const result = await createUser({ username: 'ayden', email: 'ayden@example.com' });`, "javascript", "signup.js")
+const result = await createUser({ username: 'ayden', email: 'ayden@example.com' });`, "javascript", " signup.js")
 
 			<h3 class="text-lg font-semibold mt-6 mb-3">TypeScript (with imports)</h3>
 			@components.CodeBlock(`import { remote, remoteAction } from '@gospa/client';
@@ -123,11 +123,11 @@ async function handleSignup() {
 }
 
 const createUser = remoteAction<{ username: string; email: string }, { id: string }>('createUser');
-const result = await createUser({ username: 'ayden', email: 'ayden@example.com' });`, "typescript", "signup.ts")
+const result = await createUser({ username: 'ayden', email: 'ayden@example.com' });`, "typescript", " signup.ts")
 
 			<h3 class="text-lg font-semibold mt-6 mb-3">Type-Safe Bridge (Generated)</h3>
 			<p class="text-[var(--text-secondary)]">
-				Instead of manually specifying types, you can use the <strong>GoSPA Type-Safe Bridge</strong>. By running <code class="mono text-[var(--accent-primary)]">gospa generate</code>, the framework scans your Go code for <code class="mono">RegisterRemoteAction</code> calls and generates a TypeScript file with all your action definitions.
+				Instead of manually specifying types, you can use the <strong>GoSPA Type-Safe Bridge</strong>. By running <code class="mono text-[var(--accent-primary)]">gospa generate</code>, the framework scans your Go code for <code class=" mono">RegisterRemoteAction</code> calls and generates a TypeScript file with all your action definitions.
 			</p>
 			@components.CodeBlock(`// generated/actions.ts (Auto-generated)
 export interface RemoteActions {
@@ -137,7 +137,7 @@ export interface RemoteActions {
 
 export function remoteAction<T extends keyof RemoteActions>(name: T, input: any): Promise<any> {
     return window.GoSPA.remoteAction(name, input);
-}`, "typescript", "actions.ts")
+}`, "typescript", " actions.ts")
 			<p class="text-[var(--text-secondary)]">
 				This provides full autocomplete and compile-time checking for your remote action names and inputs.
 			</p>
@@ -150,9 +150,9 @@ export function remoteAction<T extends keyof RemoteActions>(name: T, input: any)
 			</p>
 			@components.CodeBlock(`app := gospa.New(gospa.Config{
     EnableCSRF: true,
-})`, "go", "main.go")
+})`, "go", " main.go")
 			<p class="text-[var(--text-secondary)]">
-				The client reads the <code class="mono">csrf_token</code> cookie and sends <code class="mono">X-CSRF-Token</code> automatically with <code class="mono">GoSPA.remote()</code> requests.
+				The client reads the <code class="mono">csrf_token</code> cookie and sends <code class=" mono">X-CSRF-Token</code> automatically with <code class=" mono">GoSPA.remote()</code> requests.
 			</p>
 		</section>
 
@@ -164,11 +164,11 @@ export function remoteAction<T extends keyof RemoteActions>(name: T, input: any)
 			@components.CodeBlock(`app := gospa.New(gospa.Config{
     RemoteActionMiddleware: func(c *fiber.Ctx) error {
         if c.Locals("user") == nil {
-            return c.Status(fiber.StatusUnauthorized).JSON(fiber.Map{"error": "unauthorized"})
+            return c.Status(fiber.StatusUnauthorized).JSON(fiber.Map{"error": " unauthorized"})
         }
         return c.Next()
     },
-})`, "go", "main.go")
+})`, "go", " main.go")
 		</section>
 
 		<div class="bg-amber-500/5 border border-amber-500/20 p-6 rounded-2xl">
@@ -182,6 +182,6 @@ export function remoteAction<T extends keyof RemoteActions>(name: T, input: any)
 
 templ warningContent() {
 	<p class="text-sm">
-		Before using <code class="mono">GoSPA.remote()</code>, ensure the GoSPA runtime is initialized. Add <code class="mono">data-gospa-auto</code> to your HTML tag for auto-initialization, or call <code class="mono">init()</code> manually. See the <a href="/docs/troubleshooting" class="text-[var(--accent-primary)] hover:underline">Troubleshooting</a> page for details.
+		Before using <code class="mono">GoSPA.remote()</code>, ensure the GoSPA runtime is initialized. Add <code class=" mono">data-gospa-auto</code> to your HTML tag for auto-initialization, or call <code class=" mono">init()</code> manually. See the <a href="/docs/troubleshooting" class="text-[var(--accent-primary)] hover:underline">Troubleshooting</a> page for details.
 	</p>
 }

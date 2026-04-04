@@ -28,7 +28,7 @@ templ Page() {
     RoutesDir: "./routes",
     AppName:   "GoSPA App",
     DevMode:   true,
-})`, "go", "main.go")
+})`, "go", " main.go")
 			</div>
 
 			<div>
@@ -36,21 +36,21 @@ templ Page() {
 				<p class="text-[var(--text-secondary)] mb-4">Returns a Config object with default values (CSRF on, default CSP when empty, etc.).</p>
 				@components.CodeBlock(`config := gospa.DefaultConfig()
 config.AppName = "My Custom App"
-app := gospa.New(config)`, "go", "main.go")
+app := gospa.New(config)`, "go", " main.go")
 			</div>
 
 			<div>
 				<h3 class="text-xl font-bold mb-4 mono italic">gospa.ProductionConfig()</h3>
-				<p class="text-[var(--text-secondary)] mb-4">Opinionated baseline for production: template caching, WebSocket reconnect defaults, SSG cache cap. Start here and add <code class="mono">AllowedOrigins</code>, <code class="mono">RemoteActionMiddleware</code>, etc.</p>
+				<p class="text-[var(--text-secondary)] mb-4">Opinionated baseline for production: template caching, WebSocket reconnect defaults, SSG cache cap. Start here and add <code class=" mono">AllowedOrigins</code>, <code class=" mono">RemoteActionMiddleware</code>, etc.</p>
 				@components.CodeBlock(`config := gospa.ProductionConfig()
 config.AllowedOrigins = []string{"https://example.com"}
-app := gospa.New(config)`, "go", "main.go")
+app := gospa.New(config)`, "go", " main.go")
 			</div>
 
 			<div>
 				<h3 class="text-xl font-bold mb-4 mono italic">gospa.MinimalConfig()</h3>
 				<p class="text-[var(--text-secondary)] mb-4">Disables WebSocket and compression-oriented features for simple SSR-style apps.</p>
-				@components.CodeBlock(`app := gospa.New(gospa.MinimalConfig())`, "go", "main.go")
+				@components.CodeBlock(`app := gospa.New(gospa.MinimalConfig())`, "go", " main.go")
 			</div>
 
 			<p class="text-sm text-[var(--text-muted)]">
@@ -67,13 +67,13 @@ app := gospa.New(config)`, "go", "main.go")
 			<div>
 				<h3 class="text-xl font-bold mb-4 mono italic">app.Run(addr)</h3>
 				<p class="text-[var(--text-secondary)] mb-4">Starts the HTTP server on the specified address.</p>
-				@components.CodeBlock(`app.Run(":3000")`, "go", "main.go")
+				@components.CodeBlock(`app.Run(":3000")`, " go", " main.go")
 			</div>
 
 			<div>
 				<h3 class="text-xl font-bold mb-4 mono italic">app.RunTLS(addr, cert, key)</h3>
 				<p class="text-[var(--text-secondary)] mb-4">Starts the HTTPS server with the provided certificate and key files.</p>
-				@components.CodeBlock(`app.RunTLS(":443", "cert.pem", "key.pem")`, "go", "main.go")
+				@components.CodeBlock(`app.RunTLS(":443", " cert.pem", " key.pem")`, " go", " main.go")
 			</div>
 
 			<div>
@@ -81,7 +81,7 @@ app := gospa.New(config)`, "go", "main.go")
 				<p class="text-[var(--text-secondary)] mb-4">Gracefully shuts down the server.</p>
 				@components.CodeBlock(`if err := app.Shutdown(); err != nil {
     log.Printf("Shutdown error: %v", err)
-}`, "go", "main.go")
+}`, "go", " main.go")
 			</div>
 		</section>
 
@@ -90,10 +90,10 @@ app := gospa.New(config)`, "go", "main.go")
 
 			<div>
 				<h3 class="text-xl font-bold mb-4 mono italic">app.Scan()</h3>
-				<p class="text-[var(--text-secondary)] mb-4">Scans the routes directory or filesystem for <code class="mono">.templ</code> files.</p>
+				<p class="text-[var(--text-secondary)] mb-4">Scans the routes directory or filesystem for <code class=" mono">.templ</code> files.</p>
 				@components.CodeBlock(`if err := app.Scan(); err != nil {
     log.Fatal(err)
-}`, "go", "main.go")
+}`, "go", " main.go")
 			</div>
 
 			<div>
@@ -101,7 +101,7 @@ app := gospa.New(config)`, "go", "main.go")
 				<p class="text-[var(--text-secondary)] mb-4">Registers all discovered file-based routes with the Fiber application.</p>
 				@components.CodeBlock(`if err := app.RegisterRoutes(); err != nil {
     log.Fatal(err)
-}`, "go", "main.go")
+}`, "go", " main.go")
 			</div>
 
 			<div>
@@ -110,7 +110,7 @@ app := gospa.New(config)`, "go", "main.go")
 				@components.CodeBlock(`app.Use(func(c *fiber.Ctx) error {
     log.Println("Request path:", c.Path())
     return c.Next()
-})`, "go", "main.go")
+})`, "go", " main.go")
 			</div>
 
 			<div>
@@ -118,13 +118,13 @@ app := gospa.New(config)`, "go", "main.go")
 				<p class="text-[var(--text-secondary)] mb-4">Registers a manual GET route (bypassing file-based routing).</p>
 				@components.CodeBlock(`app.Get("/health", func(c *fiber.Ctx) error {
     return c.SendString("OK")
-})`, "go", "main.go")
+})`, "go", " main.go")
 			</div>
 
 			<div>
 				<h3 class="text-xl font-bold mb-4 mono italic">app.HandleSSE(path, broker)</h3>
 				<p class="text-[var(--text-secondary)] mb-4">Registers a Server-Sent Events handler with the provided broker.</p>
-				@components.CodeBlock(`app.HandleSSE("/notifications", broker)`, "go", "main.go")
+				@components.CodeBlock(`app.HandleSSE("/notifications", broker)`, " go", " main.go")
 			</div>
 
 			<div>
@@ -132,13 +132,13 @@ app := gospa.New(config)`, "go", "main.go")
 				<p class="text-[var(--text-secondary)] mb-4">Registers a WebSocket handler with specific configuration.</p>
 				@components.CodeBlock(`app.HandleWS("/ws", fiber.WSConfig{
     OnConnect: func(c *fiber.WSClient) { ... }
-})`, "go", "main.go")
+})`, "go", " main.go")
 			</div>
 
 			<div>
 				<h3 class="text-xl font-bold mb-4 mono italic">app.Static(prefix, root)</h3>
 				<p class="text-[var(--text-secondary)] mb-4">Registers a static file server.</p>
-				@components.CodeBlock(`app.Static("/assets", "./assets")`, "go", "main.go")
+				@components.CodeBlock(`app.Static("/assets", "./assets")`, " go", " main.go")
 			</div>
 		</section>
 
@@ -148,13 +148,13 @@ app := gospa.New(config)`, "go", "main.go")
 			<div>
 				<h3 class="text-xl font-bold mb-4 mono italic">app.Broadcast(message)</h3>
 				<p class="text-[var(--text-secondary)] mb-4">Sends a raw byte message to all connected clients.</p>
-				@components.CodeBlock(`app.Broadcast([]byte("system_update"))`, "go", "main.go")
+				@components.CodeBlock(`app.Broadcast([]byte("system_update"))`, " go", " main.go")
 			</div>
 
 			<div>
 				<h3 class="text-xl font-bold mb-4 mono italic">app.BroadcastState(key, value)</h3>
 				<p class="text-[var(--text-secondary)] mb-4">Broadcasts a specific state update (key-value) to all clients.</p>
-				@components.CodeBlock(`app.BroadcastState("online_users", userCount)`, "go", "main.go")
+				@components.CodeBlock(`app.BroadcastState("online_users", userCount)`, " go", " main.go")
 			</div>
 		</section>
 

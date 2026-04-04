@@ -3,7 +3,7 @@ package quickstart
 import "github.com/aydenstechdungeon/gospa/website/components"
 
 templ Page() {
-	<div class="space-y-12 animate-in fade-in slide-in-from-bottom-4 duration-1500 ease-out">
+	<div class="space-y-12">
 		<header class="space-y-6">
 			<h1 class="text-4xl md:text-6xl font-display font-black tracking-tighter">Quick Start</h1>
 			<p class="text-xl text-[var(--text-secondary)] leading-relaxed max-w-2xl font-medium">
@@ -109,7 +109,7 @@ go mod tidy`, "bash", "Terminal")
 					<h2 id="reactive-route" class="text-3xl font-display font-black tracking-tight">Create an SFC</h2>
 				</div>
 				<div class="pl-0 md:pl-[4.5rem] space-y-4">
-					<p class="text-[var(--text-secondary)] text-lg leading-relaxed font-medium">Single File Components allow you to co-locate logic, template, and styles. Create <code class="bg-[var(--bg-tertiary)] px-1.5 py-0.5 rounded text-[var(--accent-primary)] font-bold font-mono">islands/Counter.gospa</code>:</p>
+					<p class="text-[var(--text-secondary)] text-lg leading-relaxed font-medium">Single File Components allow you to co-locate logic, template, and styles. Create <code class=" bg-[var(--bg-tertiary)] px-1.5 py-0.5 rounded text-[var(--accent-primary)] font-bold font-mono">islands/Counter.gospa</code>:</p>
 					@components.CodeBlock(`<script lang="go">
     var count = $state(0)
     func increment() { count++ }

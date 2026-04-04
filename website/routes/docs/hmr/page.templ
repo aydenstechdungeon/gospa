@@ -36,7 +36,7 @@ hmr := fiber.InitHMR(config)
 hmr.Start()
 
 // Register the WebSocket endpoint
-app.Get("/__hmr", hmr.HMREndpoint())`, "go", "main.go")
+app.Get("/__hmr", hmr.HMREndpoint())`, " go", " main.go")
 			</div>
 
 			<div>
@@ -45,13 +45,13 @@ app.Get("/__hmr", hmr.HMREndpoint())`, "go", "main.go")
 				@components.CodeBlock(`import { initHMR } from '@gospa/client';
 
 const hmr = initHMR({
-    wsUrl: ` + "`" + `ws://${window.location.host}/__hmr` + "`" + `,
+    wsUrl: ` + "`"+ `ws://${window.location.host}/__hmr` + "`"+ `,
     reconnectInterval: 1000
 });
 
 hmr.onUpdate((msg) => {
     console.log('Module updated:', msg.moduleId);
-});`, "typescript", "app.ts")
+});`, "typescript", " app.ts")
 			</div>
 
 			<div>
@@ -60,21 +60,21 @@ hmr.onUpdate((msg) => {
 				@components.CodeBlock(`import { registerHMRModule, acceptHMR } from '@gospa/client';
 
 registerHMRModule('my-module', exports);
-acceptHMR('my-module');`, "typescript", "module.ts")
+acceptHMR('my-module');`, "typescript", " module.ts")
 			</div>
 
 			<div>
 				<h2 class="text-2xl font-bold mb-4 border-b border-[var(--border)] pb-2 italic mono">State Preservation</h2>
 				<p class="text-[var(--text-secondary)] mb-4">GoSPA can preserve reactive state (Rune, Derived, etc.) across updates.</p>
-				<p class="text-[var(--text-secondary)] mb-2"><strong class="text-[var(--text-primary)]">Automatic:</strong> If you use the standard StateMap and components, GoSPA automatically serializes state before an update and restores it after.</p>
-				<p class="text-[var(--text-secondary)] mb-4"><strong class="text-[var(--text-primary)]">Manual:</strong> Hook into the state preservation cycle:</p>
+				<p class="text-[var(--text-secondary)] mb-2"><strong class=" text-[var(--text-primary)]">Automatic:</strong> If you use the standard StateMap and components, GoSPA automatically serializes state before an update and restores it after.</p>
+				<p class="text-[var(--text-secondary)] mb-4"><strong class=" text-[var(--text-primary)]">Manual:</strong> Hook into the state preservation cycle:</p>
 				@components.CodeBlock(`window.__gospaGetState = (id) => {
     return { scrollY: window.scrollY };
 };
 
 window.__gospaSetState = (id, state) => {
     window.scrollTo(0, state.scrollY);
-};`, "typescript", "app.ts")
+};`, "typescript", " app.ts")
 			</div>
 
 			<div>
@@ -83,7 +83,7 @@ window.__gospaSetState = (id, state) => {
 				@components.CodeBlock(`import { CSSHMR } from '@gospa/client';
 
 // Automatically handled by HMRClient for registered styles
-CSSHMR.updateStyle('/static/css/main.css');`, "typescript", "styles.ts")
+CSSHMR.updateStyle('/static/css/main.css');`, "typescript", " styles.ts")
 			</div>
 
 			<div>
@@ -91,7 +91,7 @@ CSSHMR.updateStyle('/static/css/main.css');`, "typescript", "styles.ts")
 				<ul class="list-disc list-inside space-y-3 text-[var(--text-secondary)]">
 					<li><strong class="text-[var(--text-primary)]">Full Page Reload</strong>: If a module cannot be hot-swapped (e.g., changes to internal Go logic or complex dependency graphs), HMR falls back to a full page reload.</li>
 					<li><strong class="text-[var(--text-primary)]">Connection Lost</strong>: The client will attempt to reconnect with exponential backoff. If the server is restarted, the client refreshes the page to ensure synchronization.</li>
-					<li><strong class="text-[var(--text-primary)]">Console Logs</strong>: Enable ` + "`" + `debug: true` + "`" + ` in HMRClientConfig to see the internal HMR event log in the browser console.</li>
+					<li><strong class="text-[var(--text-primary)]">Console Logs</strong>: Enable ` + "`"+ `debug: true` + "`"+ ` in HMRClientConfig to see the internal HMR event log in the browser console.</li>
 				</ul>
 			</div>
 		</section>
