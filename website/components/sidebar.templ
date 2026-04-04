@@ -22,7 +22,7 @@ templ SidebarContent(currentPath string) {
 	<div class="space-y-8">
 		<button 
 			data-action="open-search"
-			class="w-full flex items-center justify-between px-3 py-2 mb-6 rounded-xl bg-[var(--bg-secondary)] border border-[var(--border)] text-sm text-[var(--text-secondary)] hover:border-[var(--accent-primary)]/50 transition-all group"
+			class="w-full flex items-center justify-between px-3 py-2 mb-6 rounded-xl bg-[var(--bg-secondary)] border border-[var(--border)] text-sm text-[var(--text-secondary)] hover:border-[var(--accent-primary)]/50 group"
 		>
 			<div class="flex items-center gap-2">
 				<svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="text-[var(--text-muted)] group-hover:text-[var(--accent-primary)]"><circle cx="11" cy="11" r="8"></circle><path d="m21 21-4.3-4.3"></path></svg>
@@ -127,7 +127,7 @@ templ sidebarSection(title string, items []NavItem, currentPath string) {
 				<li>
 					<a 
 						href={ templ.SafeURL(item.Href) } 
-						class={ "block py-2 px-3 rounded-lg text-sm transition-all " + activeClass(isPathActive(currentPath, item.Href)) }
+						class={ "block py-2 px-3 rounded-lg text-sm " + activeClass(isPathActive(currentPath, item.Href)) }
 					>
 						{ item.Label }
 					</a>

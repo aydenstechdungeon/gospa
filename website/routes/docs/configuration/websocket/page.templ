@@ -28,17 +28,17 @@ templ Page() {
 						</tr>
 					</thead>
 					<tbody class="divide-y divide-[var(--border)]">
-						<tr><td class="px-4 py-2 font-mono text-[var(--accent-primary)]">EnableWebSocket</td><td class="px-4 py-2">bool</td><td class="px-4 py-2">true</td><td class="px-4 py-2">Enable WebSocket for state sync</td></tr>
-						<tr><td class="px-4 py-2 font-mono text-[var(--accent-primary)]">WebSocketPath</td><td class="px-4 py-2">string</td><td class="px-4 py-2">"/_gospa/ws"</td><td class="px-4 py-2">WebSocket endpoint path</td></tr>
-						<tr><td class="px-4 py-2 font-mono text-[var(--accent-primary)]">WSReconnectDelay</td><td class="px-4 py-2">time.Duration</td><td class="px-4 py-2">100ms</td><td class="px-4 py-2">Reconnect delay after disconnect</td></tr>
-						<tr><td class="px-4 py-2 font-mono text-[var(--accent-primary)]">WSMaxReconnect</td><td class="px-4 py-2">int</td><td class="px-4 py-2">10</td><td class="px-4 py-2">Max reconnection attempts</td></tr>
-						<tr><td class="px-4 py-2 font-mono text-[var(--accent-primary)]">WSHeartbeat</td><td class="px-4 py-2">time.Duration</td><td class="px-4 py-2">30s</td><td class="px-4 py-2">Heartbeat interval for connection</td></tr>
-						<tr><td class="px-4 py-2 font-mono text-[var(--accent-primary)]">WSMaxMessageSize</td><td class="px-4 py-2">int</td><td class="px-4 py-2">65536</td><td class="px-4 py-2">Max message size in bytes</td></tr>
-						<tr><td class="px-4 py-2 font-mono text-[var(--accent-primary)]">WSConnRateLimit</td><td class="px-4 py-2">float64</td><td class="px-4 py-2">1.5</td><td class="px-4 py-2">Max upgrades/sec per IP</td></tr>
-						<tr><td class="px-4 py-2 font-mono text-[var(--accent-primary)]">WSConnBurst</td><td class="px-4 py-2">float64</td><td class="px-4 py-2">15.0</td><td class="px-4 py-2">Burst capacity for upgrades</td></tr>
-						<tr><td class="px-4 py-2 font-mono text-[var(--accent-primary)]">SerializationFormat</td><td class="px-4 py-2">string</td><td class="px-4 py-2">"json"</td><td class="px-4 py-2">Serialization format: "json" or "msgpack"</td></tr>
-						<tr><td class="px-4 py-2 font-mono text-[var(--accent-primary)]">AllowInsecureWS</td><td class="px-4 py-2">bool</td><td class="px-4 py-2">false</td><td class="px-4 py-2">Allow unsecure WS even on HTTPS (e.g. for proxies)</td></tr>
-						<tr><td class="px-4 py-2 font-mono text-[var(--accent-primary)]">AllowPortsWithInsecureWS</td><td class="px-4 py-2">[]int</td><td class="px-4 py-2">[3000]</td><td class="px-4 py-2">Ports permitted to use insecure WS on HTTPS</td></tr>
+						<tr><td class="px-4 py-2 font-mono text-[var(--accent-primary)]">EnableWebSocket</td><td class=" px-4 py-2">bool</td><td class=" px-4 py-2">true</td><td class=" px-4 py-2">Enable WebSocket for state sync</td></tr>
+						<tr><td class="px-4 py-2 font-mono text-[var(--accent-primary)]">WebSocketPath</td><td class=" px-4 py-2">string</td><td class=" px-4 py-2">"/_gospa/ws"</td><td class=" px-4 py-2">WebSocket endpoint path</td></tr>
+						<tr><td class="px-4 py-2 font-mono text-[var(--accent-primary)]">WSReconnectDelay</td><td class=" px-4 py-2">time.Duration</td><td class=" px-4 py-2">100ms</td><td class=" px-4 py-2">Reconnect delay after disconnect</td></tr>
+						<tr><td class="px-4 py-2 font-mono text-[var(--accent-primary)]">WSMaxReconnect</td><td class=" px-4 py-2">int</td><td class=" px-4 py-2">10</td><td class=" px-4 py-2">Max reconnection attempts</td></tr>
+						<tr><td class="px-4 py-2 font-mono text-[var(--accent-primary)]">WSHeartbeat</td><td class=" px-4 py-2">time.Duration</td><td class=" px-4 py-2">30s</td><td class=" px-4 py-2">Heartbeat interval for connection</td></tr>
+						<tr><td class="px-4 py-2 font-mono text-[var(--accent-primary)]">WSMaxMessageSize</td><td class=" px-4 py-2">int</td><td class=" px-4 py-2">65536</td><td class=" px-4 py-2">Max message size in bytes</td></tr>
+						<tr><td class="px-4 py-2 font-mono text-[var(--accent-primary)]">WSConnRateLimit</td><td class=" px-4 py-2">float64</td><td class=" px-4 py-2">1.5</td><td class=" px-4 py-2">Max upgrades/sec per IP</td></tr>
+						<tr><td class="px-4 py-2 font-mono text-[var(--accent-primary)]">WSConnBurst</td><td class=" px-4 py-2">float64</td><td class=" px-4 py-2">15.0</td><td class=" px-4 py-2">Burst capacity for upgrades</td></tr>
+						<tr><td class="px-4 py-2 font-mono text-[var(--accent-primary)]">SerializationFormat</td><td class=" px-4 py-2">string</td><td class=" px-4 py-2">" json"</td><td class=" px-4 py-2">Serialization format: " json"or " msgpack"</td></tr>
+						<tr><td class="px-4 py-2 font-mono text-[var(--accent-primary)]">AllowInsecureWS</td><td class=" px-4 py-2">bool</td><td class=" px-4 py-2">false</td><td class=" px-4 py-2">Allow unsecure WS even on HTTPS (e.g. for proxies)</td></tr>
+						<tr><td class="px-4 py-2 font-mono text-[var(--accent-primary)]">AllowPortsWithInsecureWS</td><td class=" px-4 py-2">[]int</td><td class=" px-4 py-2">[3000]</td><td class=" px-4 py-2">Ports permitted to use insecure WS on HTTPS</td></tr>
 					</tbody>
 				</table>
 			</div>
@@ -57,12 +57,12 @@ templ Page() {
 						</tr>
 					</thead>
 					<tbody class="divide-y divide-[var(--border)]">
-						<tr><td class="px-4 py-2 font-mono text-[var(--accent-primary)]">CompressState</td><td class="px-4 py-2">bool</td><td class="px-4 py-2">false</td><td class="px-4 py-2">Compress state payloads</td></tr>
-						<tr><td class="px-4 py-2 font-mono text-[var(--accent-primary)]">StateDiffing</td><td class="px-4 py-2">bool</td><td class="px-4 py-2">false</td><td class="px-4 py-2">Send only changed state fields</td></tr>
-						<tr><td class="px-4 py-2 font-mono text-[var(--accent-primary)]">CacheTemplates</td><td class="px-4 py-2">bool</td><td class="px-4 py-2">false</td><td class="px-4 py-2">Cache parsed templates</td></tr>
-						<tr><td class="px-4 py-2 font-mono text-[var(--accent-primary)]">NotificationBufferSize</td><td class="px-4 py-2">int</td><td class="px-4 py-2">1024</td><td class="px-4 py-2">Size of state change notification queue</td></tr>
-						<tr><td class="px-4 py-2 font-mono text-[var(--accent-primary)]">SimpleRuntime</td><td class="px-4 py-2">bool</td><td class="px-4 py-2">false</td><td class="px-4 py-2">Use lightweight client runtime</td></tr>
-						<tr><td class="px-4 py-2 font-mono text-[var(--accent-primary)]">DisableSanitization</td><td class="px-4 py-2">bool</td><td class="px-4 py-2">false</td><td class="px-4 py-2">Trust server-rendered HTML (Faster)</td></tr>
+						<tr><td class="px-4 py-2 font-mono text-[var(--accent-primary)]">CompressState</td><td class=" px-4 py-2">bool</td><td class=" px-4 py-2">false</td><td class=" px-4 py-2">Compress state payloads</td></tr>
+						<tr><td class="px-4 py-2 font-mono text-[var(--accent-primary)]">StateDiffing</td><td class=" px-4 py-2">bool</td><td class=" px-4 py-2">false</td><td class=" px-4 py-2">Send only changed state fields</td></tr>
+						<tr><td class="px-4 py-2 font-mono text-[var(--accent-primary)]">CacheTemplates</td><td class=" px-4 py-2">bool</td><td class=" px-4 py-2">false</td><td class=" px-4 py-2">Cache parsed templates</td></tr>
+						<tr><td class="px-4 py-2 font-mono text-[var(--accent-primary)]">NotificationBufferSize</td><td class=" px-4 py-2">int</td><td class=" px-4 py-2">1024</td><td class=" px-4 py-2">Size of state change notification queue</td></tr>
+						<tr><td class="px-4 py-2 font-mono text-[var(--accent-primary)]">SimpleRuntime</td><td class=" px-4 py-2">bool</td><td class=" px-4 py-2">false</td><td class=" px-4 py-2">Use lightweight client runtime</td></tr>
+						<tr><td class="px-4 py-2 font-mono text-[var(--accent-primary)]">DisableSanitization</td><td class=" px-4 py-2">bool</td><td class=" px-4 py-2">false</td><td class=" px-4 py-2">Trust server-rendered HTML (Faster)</td></tr>
 					</tbody>
 				</table>
 			</div>
@@ -92,7 +92,7 @@ func main() {
     })
     
     app.Run(":3000")
-}`, "go", "main.go")
+}`, "go", " main.go")
 		</section>
 
 		@prevNext("/docs/configuration/basic", "/docs/configuration/scaling")
@@ -101,18 +101,18 @@ func main() {
 
 templ prevNext(prev, next string) {
 	<div class="flex justify-between pt-8 border-t border-[var(--border)] mt-12">
-		if prev != "" {
+		if prev != ""{
 			<a href={ templ.SafeURL(prev) } class="flex items-center gap-2 text-sm text-[var(--text-secondary)] hover:text-[var(--accent-primary)] transition-colors">
-				<svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="m15 18-6-6 6-6"/></svg>
+				<svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d=" m15 18-6-6 6-6"/></svg>
 				<span>Previous</span>
 			</a>
 		} else {
 			<div></div>
 		}
-		if next != "" {
+		if next != ""{
 			<a href={ templ.SafeURL(next) } class="flex items-center gap-2 text-sm text-[var(--text-secondary)] hover:text-[var(--accent-primary)] transition-colors">
 				<span>Next</span>
-				<svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="m9 18 6-6-6-6"/></svg>
+				<svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d=" m9 18 6-6-6-6"/></svg>
 			</a>
 		} else {
 			<div></div>

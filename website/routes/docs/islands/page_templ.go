@@ -35,11 +35,11 @@ func Page() templ.Component {
 		if templ_7745c5c3_Err != nil {
 			return templ_7745c5c3_Err
 		}
-		templ_7745c5c3_Err = components.CodeBlock(`<div data-gospa-island="Counter" 
+		templ_7745c5c3_Err = components.CodeBlock(`<div data-gospa-island="Counter"
      data-gospa-mode="visible"
      data-gospa-priority="high">
     <!-- Server-rendered content goes here -->
-</div>`, "html", "counter.templ").Render(ctx, templ_7745c5c3_Buffer)
+</div>`, "html", " counter.templ").Render(ctx, templ_7745c5c3_Buffer)
 		if templ_7745c5c3_Err != nil {
 			return templ_7745c5c3_Err
 		}
@@ -53,7 +53,7 @@ const scheduler = getPriorityScheduler();
 scheduler.forceHydrate('gospa-island-123');
 
 console.log(scheduler.getStats()); 
-// { total: 10, pending: 2, hydrated: 8, ... }`, "typescript", "app.ts").Render(ctx, templ_7745c5c3_Buffer)
+// { total: 10, pending: 2, hydrated: 8, ... }`, "typescript", " app.ts").Render(ctx, templ_7745c5c3_Buffer)
 		if templ_7745c5c3_Err != nil {
 			return templ_7745c5c3_Err
 		}
@@ -64,7 +64,7 @@ console.log(scheduler.getStats());
 		templ_7745c5c3_Err = components.CodeBlock(`// Server-side
 app.Get("/dashboard", func(c *fiber.Ctx) error {
     return fiber.RenderStream(c, DashboardPage())
-})`, "go", "main.go").Render(ctx, templ_7745c5c3_Buffer)
+})`, "go", " main.go").Render(ctx, templ_7745c5c3_Buffer)
 		if templ_7745c5c3_Err != nil {
 			return templ_7745c5c3_Err
 		}
@@ -81,7 +81,7 @@ const streamer = initStreaming({
 
 document.addEventListener('gospa:hydrated', (ev) => {
   console.log('Island hydrated:', ev.detail.island.name);
-});`, "typescript", "streaming.ts").Render(ctx, templ_7745c5c3_Buffer)
+});`, "typescript", " streaming.ts").Render(ctx, templ_7745c5c3_Buffer)
 		if templ_7745c5c3_Err != nil {
 			return templ_7745c5c3_Err
 		}
@@ -95,7 +95,7 @@ export default {
         // Initialize your framework (Svelte, Preact, Vanilla)
         console.log('Hydrating Counter with props:', props);
     }
-}`, "typescript", "islands/Counter.ts").Render(ctx, templ_7745c5c3_Buffer)
+}`, "typescript", " islands/Counter.ts").Render(ctx, templ_7745c5c3_Buffer)
 		if templ_7745c5c3_Err != nil {
 			return templ_7745c5c3_Err
 		}
@@ -106,7 +106,7 @@ export default {
 		var templ_7745c5c3_Var2 string
 		templ_7745c5c3_Var2, templ_7745c5c3_Err = templ.JoinStringErrs("{name}")
 		if templ_7745c5c3_Err != nil {
-			return templ.Error{Err: templ_7745c5c3_Err, FileName: `routes/docs/islands/page.templ`, Line: 144, Col: 163}
+			return templ.Error{Err: templ_7745c5c3_Err, FileName: `routes/docs/islands/page.templ`, Line: 144, Col: 164}
 		}
 		_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ.EscapeString(templ_7745c5c3_Var2))
 		if templ_7745c5c3_Err != nil {

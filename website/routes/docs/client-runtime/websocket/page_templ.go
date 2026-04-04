@@ -76,7 +76,7 @@ ws.sendAction('increment', { amount: 1 });
 ws.disconnect();
 
 // Get singleton instance
-const client = getWebSocketClient();`, "typescript", "wsclient.ts").Render(ctx, templ_7745c5c3_Buffer)
+const client = getWebSocketClient();`, "typescript", " wsclient.ts").Render(ctx, templ_7745c5c3_Buffer)
 		if templ_7745c5c3_Err != nil {
 			return templ_7745c5c3_Err
 		}
@@ -96,7 +96,7 @@ const count = syncedRune(0, {
 count.set(5);
 
 // Server will be notified
-// If server rejects, value rolls back`, "typescript", "synced-rune.ts").Render(ctx, templ_7745c5c3_Buffer)
+// If server rejects, value rolls back`, "typescript", " synced-rune.ts").Render(ctx, templ_7745c5c3_Buffer)
 		if templ_7745c5c3_Err != nil {
 			return templ_7745c5c3_Err
 		}
@@ -112,7 +112,7 @@ const states = {
 };
 
 // Sync all states under a component ID
-syncBatch('user-form', states);`, "typescript", "sync-batch.ts").Render(ctx, templ_7745c5c3_Buffer)
+syncBatch('user-form', states);`, "typescript", " sync-batch.ts").Render(ctx, templ_7745c5c3_Buffer)
 		if templ_7745c5c3_Err != nil {
 			return templ_7745c5c3_Err
 		}
@@ -131,7 +131,7 @@ const states = {
 applyStateUpdate(states, {
   count: 10,
   name: 'Updated'
-});`, "typescript", "apply-state.ts").Render(ctx, templ_7745c5c3_Buffer)
+});`, "typescript", " apply-state.ts").Render(ctx, templ_7745c5c3_Buffer)
 		if templ_7745c5c3_Err != nil {
 			return templ_7745c5c3_Err
 		}
@@ -152,11 +152,11 @@ console.log('Current state:', ws.state);
 // Listen for state changes
 ws.onStateChange((newState) => {
   console.log('State changed to:', newState);
-});`, "typescript", "connection-state.ts").Render(ctx, templ_7745c5c3_Buffer)
+});`, "typescript", " connection-state.ts").Render(ctx, templ_7745c5c3_Buffer)
 		if templ_7745c5c3_Err != nil {
 			return templ_7745c5c3_Err
 		}
-		templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 6, "</section><div class=\"flex justify-between mt-16\"><a href=\"/docs/client-runtime/navigation-events\" class=\"group flex items-center gap-3 px-6 py-3 rounded-xl border border-[var(--border)] bg-[var(--bg-secondary)] hover:border-[var(--accent-primary)]/50 transition-all\"><svg xmlns=\"http://www.w3.org/2000/svg\" width=\"20\" height=\"20\" viewBox=\"0 0 24 24\" fill=\"none\" stroke=\"currentColor\" stroke-width=\"2\" stroke-linecap=\"round\" stroke-linejoin=\"round\" class=\"text-[var(--text-muted)] group-hover:text-[var(--accent-primary)] transition-colors\"><path d=\"M19 12H5\"></path><path d=\"m12 19-7-7 7-7\"></path></svg><div><div class=\"text-[var(--text-muted)] text-xs uppercase tracking-widest font-bold mb-1\">Previous</div><div class=\"font-bold group-hover:text-[var(--accent-primary)] transition-colors\">Navigation & Events</div></div></a> <a href=\"/docs/client-runtime/transitions\" class=\"group flex items-center gap-3 px-6 py-3 rounded-xl border border-[var(--border)] bg-[var(--bg-secondary)] hover:border-[var(--accent-primary)]/50 transition-all text-right\"><div><div class=\"text-[var(--text-muted)] text-xs uppercase tracking-widest font-bold mb-1\">Next</div><div class=\"font-bold group-hover:text-[var(--accent-primary)] transition-colors\">Transitions</div></div><svg xmlns=\"http://www.w3.org/2000/svg\" width=\"20\" height=\"20\" viewBox=\"0 0 24 24\" fill=\"none\" stroke=\"currentColor\" stroke-width=\"2\" stroke-linecap=\"round\" stroke-linejoin=\"round\" class=\"text-[var(--text-muted)] group-hover:text-[var(--accent-primary)] transition-colors\"><path d=\"M5 12h14\"></path><path d=\"m12 5 7 7-7 7\"></path></svg></a></div></div>")
+		templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 6, "</section><div class=\"flex justify-between mt-16\"><a href=\"/docs/client-runtime/navigation-events\" class=\"group flex items-center gap-3 px-6 py-3 rounded-xl border border-[var(--border)] bg-[var(--bg-secondary)] hover:border-[var(--accent-primary)]/50 transition-all\"><svg xmlns=\"http://www.w3.org/2000/svg\" width=\"20\" height=\"20\" viewBox=\"0 0 24 24\" fill=\"none\" stroke=\"currentColor\" stroke-width=\"2\" stroke-linecap=\"round\" stroke-linejoin=\"round\" class=\"text-[var(--text-muted)] group-hover:text-[var(--accent-primary)] transition-colors\"><path d=\" M19 12H5\"></path><path d=\" m12 19-7-7 7-7\"></path></svg><div><div class=\"text-[var(--text-muted)] text-xs uppercase tracking-widest font-bold mb-1\">Previous</div><div class=\"font-bold group-hover:text-[var(--accent-primary)] transition-colors\">Navigation & Events</div></div></a> <a href=\"/docs/client-runtime/transitions\" class=\"group flex items-center gap-3 px-6 py-3 rounded-xl border border-[var(--border)] bg-[var(--bg-secondary)] hover:border-[var(--accent-primary)]/50 transition-all text-right\"><div><div class=\"text-[var(--text-muted)] text-xs uppercase tracking-widest font-bold mb-1\">Next</div><div class=\"font-bold group-hover:text-[var(--accent-primary)] transition-colors\">Transitions</div></div><svg xmlns=\"http://www.w3.org/2000/svg\" width=\"20\" height=\"20\" viewBox=\"0 0 24 24\" fill=\"none\" stroke=\"currentColor\" stroke-width=\"2\" stroke-linecap=\"round\" stroke-linejoin=\"round\" class=\"text-[var(--text-muted)] group-hover:text-[var(--accent-primary)] transition-colors\"><path d=\" M5 12h14\"></path><path d=\" m12 5 7 7-7 7\"></path></svg></a></div></div>")
 		if templ_7745c5c3_Err != nil {
 			return templ_7745c5c3_Err
 		}

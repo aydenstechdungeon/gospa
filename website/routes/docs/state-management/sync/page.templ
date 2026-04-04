@@ -36,13 +36,13 @@ const serverCount = syncedRune({
 serverCount.set(10);  // Sends update to server
 
 // Server updates are received automatically
-// No manual refresh needed`, "typescript", "synced.ts")
+// No manual refresh needed`, "typescript", " synced.ts")
 
 			<div class="p-4 mt-4 rounded-xl border border-amber-500/20 bg-amber-500/5 text-sm text-[var(--text-secondary)]">
 				<strong class="text-amber-500 font-bold block mb-1">⚠️ Sync Constraints</strong>
 				When syncing state over WebSocket:
 				<ul class="list-disc list-inside mt-2 space-y-1">
-					<li><strong>Payload Size:</strong> Single messages cannot exceed 64KB. Enable <code class="font-mono text-[var(--accent-primary)]">CompressState</code> or <code class="font-mono text-[var(--accent-primary)]">StateDiffing</code> to minimize bandwidth.</li>
+					<li><strong>Payload Size:</strong> Single messages cannot exceed 64KB. Enable <code class="font-mono text-[var(--accent-primary)]">CompressState</code> or <code class=" font-mono text-[var(--accent-primary)]">StateDiffing</code> to minimize bandwidth.</li>
 					<li><strong>Circular References:</strong> JSON serialization will fail if your state objects contain circular references. Ensure your structures are acyclic.</li>
 				</ul>
 			</div>
@@ -81,7 +81,7 @@ client.reconnect();
 
 // Status
 console.log(client.isConnected);
-console.log(client.sessionId);`, "typescript", "wsconfig.ts")
+console.log(client.sessionId);`, "typescript", " wsconfig.ts")
 		</section>
 
 		<div class="flex justify-between pt-6 border-t border-[var(--border)]">

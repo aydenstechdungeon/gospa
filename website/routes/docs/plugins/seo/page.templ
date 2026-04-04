@@ -21,7 +21,7 @@ templ Page() {
     site_description: "A modern web application"
     generate_sitemap: true
     generate_robots: true
-    structured_data: true`, "yaml", "gospa.yaml")
+    structured_data: true`, "yaml", " gospa.yaml")
 		</section>
 
 		<section class="space-y-6">
@@ -59,12 +59,12 @@ templ Page() {
 		<section class="space-y-6">
 			<h2 class="text-2xl font-bold border-b border-[var(--border)] pb-2">Features</h2>
 			<div class="grid gap-4 md:grid-cols-2">
-				@featureCard("Sitemap.xml", "Auto-generate sitemap with lastmod, changefreq, priority.")
-				@featureCard("robots.txt", "Configure crawler access with allow/disallow rules.")
-				@featureCard("Meta Tags", "Title, description, keywords, canonical URLs.")
-				@featureCard("Open Graph", "Facebook/LinkedIn sharing with og:* tags.")
-				@featureCard("Twitter Cards", "Summary, summary_large_image, player cards.")
-				@featureCard("JSON-LD", "Schema.org structured data for rich results.")
+				@featureCard("Sitemap.xml", " Auto-generate sitemap with lastmod, changefreq, priority.")
+				@featureCard("robots.txt", " Configure crawler access with allow/disallow rules.")
+				@featureCard("Meta Tags", " Title, description, keywords, canonical URLs.")
+				@featureCard("Open Graph", " Facebook/LinkedIn sharing with og:* tags.")
+				@featureCard("Twitter Cards", " Summary, summary_large_image, player cards.")
+				@featureCard("JSON-LD", " Schema.org structured data for rich results.")
 			</div>
 		</section>
 
@@ -87,7 +87,7 @@ templ Page() {
     <changefreq>monthly</changefreq>
     <priority>0.8</priority>
   </url>
-</urlset>`, "xml", "static/sitemap.xml")
+</urlset>`, "xml", " static/sitemap.xml")
 				</div>
 				<div>
 					<h3 class="font-bold mb-2 text-[var(--text-secondary)]">robots.txt</h3>
@@ -96,7 +96,7 @@ Allow: /
 Disallow: /admin/
 Disallow: /api/
 
-Sitemap: https://example.com/sitemap.xml`, "text", "static/robots.txt")
+Sitemap: https://example.com/sitemap.xml`, "text", " static/robots.txt")
 				</div>
 			</div>
 		</section>
@@ -111,7 +111,7 @@ templ Page() {
   @@seo.Meta(seo.MetaParams{
     Title:       "Home | My App",
     Description: "Welcome to my awesome application",
-    Keywords:    []string{"gospa", "go", "spa"},
+    Keywords:    []string{"gospa", " go", " spa"},
     Canonical:   "https://example.com/",
     OGImage:     "/images/og-home.png",
   })
@@ -139,7 +139,7 @@ templ Page() {
   <main>
     <!-- Page content -->
   </main>
-}`, "templ", "routes/page.templ")
+}`, "templ", " routes/page.templ")
 		</section>
 
 		<section class="space-y-6">

@@ -39,13 +39,13 @@ templ Page() {
 		<section class="space-y-6">
 			<h2 class="text-2xl font-bold border-b border-[var(--border)] pb-2">Built-in Plugins</h2>
 			<div class="grid gap-4 md:grid-cols-2">
-				@pluginCard("Tailwind CSS", "/docs/plugins/tailwind", "CSS framework with v4 support, CSS-first configuration, and JIT compilation.")
-				@pluginCard("PostCSS", "/docs/plugins/postcss", "Advanced CSS processing with autoprefixer, nesting, and Tailwind extensions.")
-				@pluginCard("Image Optimization", "/docs/plugins/image", "Responsive images with WebP conversion, lazy loading, and srcset generation.")
-				@pluginCard("Form Validation", "/docs/plugins/validation", "Client-side Valibot + server-side Go validator with TypeScript type generation.")
-				@pluginCard("SEO", "/docs/plugins/seo", "Sitemaps, robots.txt, meta tags, Open Graph, and JSON-LD structured data.")
-				@pluginCard("Authentication", "/docs/plugins/auth", "OAuth2 providers, JWT sessions, TOTP/OTP, and backup codes.")
-                @pluginCard("QR Code", "/docs/plugins/qrcode", "A QR Code generator.")
+				@pluginCard("Tailwind CSS", "/docs/plugins/tailwind", " CSS framework with v4 support, CSS-first configuration, and JIT compilation.")
+				@pluginCard("PostCSS", "/docs/plugins/postcss", " Advanced CSS processing with autoprefixer, nesting, and Tailwind extensions.")
+				@pluginCard("Image Optimization", "/docs/plugins/image", " Responsive images with WebP conversion, lazy loading, and srcset generation.")
+				@pluginCard("Form Validation", "/docs/plugins/validation", " Client-side Valibot + server-side Go validator with TypeScript type generation.")
+				@pluginCard("SEO", "/docs/plugins/seo", " Sitemaps, robots.txt, meta tags, Open Graph, and JSON-LD structured data.")
+				@pluginCard("Authentication", "/docs/plugins/auth", " OAuth2 providers, JWT sessions, TOTP/OTP, and backup codes.")
+                @pluginCard("QR Code", "/docs/plugins/qrcode", " A QR Code generator.")
 			</div>
 		</section>
 
@@ -77,7 +77,7 @@ templ Page() {
   auth:
     enabled: true
     jwtSecret: "${JWT_SECRET}"
-    providers: [google, github]`, "yaml", "gospa.yaml")
+    providers: [google, github]`, "yaml", " gospa.yaml")
 		</section>
 
 		<section class="space-y-6">
@@ -178,7 +178,7 @@ func main() {
     }
 
     app.Run(":3000")
-}`, "go", "main.go")
+}`, "go", " main.go")
 		</section>
 
 		<section class="space-y-6">
@@ -198,8 +198,8 @@ type MyPlugin struct {
 }
 
 type Config struct {
-    Option1 string ` + "`yaml:\"option1\"`" + `
-    Option2 bool   ` + "`yaml:\"option2\"`" + `
+    Option1 string ` + "`yaml:\" option1\"`"+ `
+    Option2 bool   ` + "`yaml:\" option2\"`"+ `
 }
 
 func New(config Config) *MyPlugin {
@@ -216,10 +216,10 @@ func (p *MyPlugin) Init() error {
 
 func (p *MyPlugin) Dependencies() []plugin.Dependency {
     return []plugin.Dependency{
-        {Type: plugin.DepGo, Name: "github.com/example/pkg", Version: "v1.0.0"},
+        {Type: plugin.DepGo, Name: "github.com/example/pkg", Version: " v1.0.0"},
         {Type: plugin.DepBun, Name: "some-npm-package", Version: "^2.0.0"},
     }
-}`, "go", "myplugin.go")
+}`, "go", " myplugin.go")
 
 			<h3 class="text-xl font-bold mt-6 mb-4">CLI Plugin with Hooks</h3>
 			@components.CodeBlock(`// CLIPlugin extends Plugin with lifecycle hooks and commands
@@ -259,7 +259,7 @@ func (p *MyPlugin) Commands() []plugin.Command {
             },
         },
     }
-}`, "go", "myplugin_hooks.go")
+}`, "go", " myplugin_hooks.go")
 
 			<h3 class="text-xl font-bold mt-6 mb-4">Runtime Plugin with Middlewares</h3>
 			@components.CodeBlock(`// RuntimePlugin extends Plugin with runtime integration
@@ -294,7 +294,7 @@ func (p *MyPlugin) TemplateFuncs() map[string]interface{} {
             return "formatted"
         },
     }
-}`, "go", "myplugin_runtime.go")
+}`, "go", " myplugin_runtime.go")
 		</section>
 
 		<section class="space-y-6">
@@ -312,7 +312,7 @@ plugin.Disable("myplugin")
 info, ok := plugin.GetPluginInfo("myplugin")
 if ok && info.State == plugin.StateEnabled {
     // Plugin is active
-}`, "go", "plugin_state.go")
+}`, "go", " plugin_state.go")
 		</section>
 
 		<section class="space-y-6">
@@ -342,7 +342,7 @@ entries, err := plugin.ListInstalledPlugins()
 entries, err := plugin.DiscoverPlugins()
 
 // Search plugins
-results, err := plugin.SearchPlugins("tailwind")`, "go", "external_plugins.go")
+results, err := plugin.SearchPlugins("tailwind")`, " go", " external_plugins.go")
 
 			<p class="text-[var(--text-secondary)] mt-4">
 				External plugins are cached in <code class="mono text-[var(--accent-primary)]">~/.gospa/plugins/</code>.
@@ -383,7 +383,7 @@ gospa auth:otp            # Generate TOTP secret (alias: ao)
 gospa auth:backup         # Generate backup codes (alias: ab)
 gospa auth:verify         # Verify OTP code (alias: av)
 
-# QR Code (programmatic API only - no CLI commands)`, "bash", "terminal")
+# QR Code (programmatic API only - no CLI commands)`, "bash", " terminal")
 		</section>
 	</div>
 }

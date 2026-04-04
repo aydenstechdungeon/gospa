@@ -35,7 +35,7 @@ unsubscribe := count.Subscribe(func(newValue, oldValue int) {
 })
 
 // Unsubscribe when done
-unsubscribe()`, "go", "rune.go")
+unsubscribe()`, "go", " rune.go")
 		</section>
 
 		<section class="space-y-6">
@@ -57,7 +57,7 @@ sum := gospa.Derived2(a, b, func(a, b int) int {
     return a + b
 })
 
-fmt.Println(sum.Get()) // 30`, "go", "derived.go")
+fmt.Println(sum.Get()) // 30`, "go", " derived.go")
 		</section>
 
 		<section class="space-y-6">
@@ -80,7 +80,7 @@ effect := gospa.Effect(count, func(v int) func() {
 })
 
 // Dispose effect when done
-effect.Dispose()`, "go", "effect.go")
+effect.Dispose()`, "go", " effect.go")
 		</section>
 
 		<section class="space-y-6">
@@ -91,7 +91,7 @@ states := gospa.NewStateMap()
 
 // Set values
 states.Set("count", 0)
-states.Set("name", "GoSPA")
+states.Set("name", " GoSPA")
 
 // Get values
 countRune := states.Get("count")
@@ -109,7 +109,7 @@ states.FromJSON(jsonString)
 states.Batch(func(m *gospa.StateMap) {
     m.Set("a", 1)
     m.Set("b", 2)
-})`, "go", "statemap.go")
+})`, "go", " statemap.go")
 		</section>
 
 		<section class="space-y-6">
@@ -123,7 +123,7 @@ b := gospa.NewRune(2)
 gospa.Batch(func() {
     a.Set(10)
     b.Set(20)
-})`, "go", "batch.go")
+})`, "go", " batch.go")
 		</section>
 
 		<div class="flex justify-between pt-6 border-t border-[var(--border)]">

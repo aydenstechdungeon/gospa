@@ -43,7 +43,7 @@ func Page() templ.Component {
     site_description: "A modern web application"
     generate_sitemap: true
     generate_robots: true
-    structured_data: true`, "yaml", "gospa.yaml").Render(ctx, templ_7745c5c3_Buffer)
+    structured_data: true`, "yaml", " gospa.yaml").Render(ctx, templ_7745c5c3_Buffer)
 		if templ_7745c5c3_Err != nil {
 			return templ_7745c5c3_Err
 		}
@@ -51,27 +51,27 @@ func Page() templ.Component {
 		if templ_7745c5c3_Err != nil {
 			return templ_7745c5c3_Err
 		}
-		templ_7745c5c3_Err = featureCard("Sitemap.xml", "Auto-generate sitemap with lastmod, changefreq, priority.").Render(ctx, templ_7745c5c3_Buffer)
+		templ_7745c5c3_Err = featureCard("Sitemap.xml", " Auto-generate sitemap with lastmod, changefreq, priority.").Render(ctx, templ_7745c5c3_Buffer)
 		if templ_7745c5c3_Err != nil {
 			return templ_7745c5c3_Err
 		}
-		templ_7745c5c3_Err = featureCard("robots.txt", "Configure crawler access with allow/disallow rules.").Render(ctx, templ_7745c5c3_Buffer)
+		templ_7745c5c3_Err = featureCard("robots.txt", " Configure crawler access with allow/disallow rules.").Render(ctx, templ_7745c5c3_Buffer)
 		if templ_7745c5c3_Err != nil {
 			return templ_7745c5c3_Err
 		}
-		templ_7745c5c3_Err = featureCard("Meta Tags", "Title, description, keywords, canonical URLs.").Render(ctx, templ_7745c5c3_Buffer)
+		templ_7745c5c3_Err = featureCard("Meta Tags", " Title, description, keywords, canonical URLs.").Render(ctx, templ_7745c5c3_Buffer)
 		if templ_7745c5c3_Err != nil {
 			return templ_7745c5c3_Err
 		}
-		templ_7745c5c3_Err = featureCard("Open Graph", "Facebook/LinkedIn sharing with og:* tags.").Render(ctx, templ_7745c5c3_Buffer)
+		templ_7745c5c3_Err = featureCard("Open Graph", " Facebook/LinkedIn sharing with og:* tags.").Render(ctx, templ_7745c5c3_Buffer)
 		if templ_7745c5c3_Err != nil {
 			return templ_7745c5c3_Err
 		}
-		templ_7745c5c3_Err = featureCard("Twitter Cards", "Summary, summary_large_image, player cards.").Render(ctx, templ_7745c5c3_Buffer)
+		templ_7745c5c3_Err = featureCard("Twitter Cards", " Summary, summary_large_image, player cards.").Render(ctx, templ_7745c5c3_Buffer)
 		if templ_7745c5c3_Err != nil {
 			return templ_7745c5c3_Err
 		}
-		templ_7745c5c3_Err = featureCard("JSON-LD", "Schema.org structured data for rich results.").Render(ctx, templ_7745c5c3_Buffer)
+		templ_7745c5c3_Err = featureCard("JSON-LD", " Schema.org structured data for rich results.").Render(ctx, templ_7745c5c3_Buffer)
 		if templ_7745c5c3_Err != nil {
 			return templ_7745c5c3_Err
 		}
@@ -93,7 +93,7 @@ func Page() templ.Component {
     <changefreq>monthly</changefreq>
     <priority>0.8</priority>
   </url>
-</urlset>`, "xml", "static/sitemap.xml").Render(ctx, templ_7745c5c3_Buffer)
+</urlset>`, "xml", " static/sitemap.xml").Render(ctx, templ_7745c5c3_Buffer)
 		if templ_7745c5c3_Err != nil {
 			return templ_7745c5c3_Err
 		}
@@ -106,7 +106,7 @@ Allow: /
 Disallow: /admin/
 Disallow: /api/
 
-Sitemap: https://example.com/sitemap.xml`, "text", "static/robots.txt").Render(ctx, templ_7745c5c3_Buffer)
+Sitemap: https://example.com/sitemap.xml`, "text", " static/robots.txt").Render(ctx, templ_7745c5c3_Buffer)
 		if templ_7745c5c3_Err != nil {
 			return templ_7745c5c3_Err
 		}
@@ -122,7 +122,7 @@ templ Page() {
   @@seo.Meta(seo.MetaParams{
     Title:       "Home | My App",
     Description: "Welcome to my awesome application",
-    Keywords:    []string{"gospa", "go", "spa"},
+    Keywords:    []string{"gospa", " go", " spa"},
     Canonical:   "https://example.com/",
     OGImage:     "/images/og-home.png",
   })
@@ -150,7 +150,7 @@ templ Page() {
   <main>
     <!-- Page content -->
   </main>
-}`, "templ", "routes/page.templ").Render(ctx, templ_7745c5c3_Buffer)
+}`, "templ", " routes/page.templ").Render(ctx, templ_7745c5c3_Buffer)
 		if templ_7745c5c3_Err != nil {
 			return templ_7745c5c3_Err
 		}

@@ -20,7 +20,7 @@ templ Page() {
 cd myapp
 go mod tidy
 gospa doctor
-gospa dev`, "bash", "terminal")
+gospa dev`, "bash", " terminal")
 			</div>
 			<div class="space-y-4">
 				<div class="rounded-2xl border border-[var(--border)] bg-[var(--bg-secondary)] p-5">
@@ -38,14 +38,14 @@ gospa dev`, "bash", "terminal")
 			<div>
 				<h2 class="text-2xl font-bold mb-4 border-b border-[var(--border)] pb-2 italic mono">gospa create</h2>
 				<p class="text-[var(--text-secondary)] mb-4">Create a new GoSPA project scaffold.</p>
-				@components.CodeBlock(`gospa create myapp`, "bash", "terminal")
+				@components.CodeBlock(`gospa create myapp`, "bash", " terminal")
 			</div>
 
 			<div>
 				<h2 class="text-2xl font-bold mb-4 border-b border-[var(--border)] pb-2 italic mono">gospa doctor</h2>
 				<p class="text-[var(--text-secondary)] mb-4">Check local tooling and project layout before you start development or cut a release.</p>
 				@components.CodeBlock(`gospa doctor
-gospa doctor --routes-dir ./routes`, "bash", "terminal")
+gospa doctor --routes-dir ./routes`, "bash", " terminal")
 				<ul class="list-disc pl-6 mt-4 space-y-2 text-[var(--text-secondary)]">
 					<li>Confirms Go is available.</li>
 					<li>Checks for Bun and Bun package manifests.</li>
@@ -58,7 +58,7 @@ gospa doctor --routes-dir ./routes`, "bash", "terminal")
 				<p class="text-[var(--text-secondary)] mb-4">Start the local development workflow with file watching and server restarts.</p>
 				@components.CodeBlock(`gospa dev
 gospa dev --port 8080 --host 0.0.0.0
-gospa dev --routes-dir ./routes`, "bash", "terminal")
+gospa dev --routes-dir ./routes`, "bash", " terminal")
 			</div>
 
 			<div>
@@ -66,7 +66,7 @@ gospa dev --routes-dir ./routes`, "bash", "terminal")
 				<p class="text-[var(--text-secondary)] mb-4">Create a production build with Go plus Bun-based client runtime steps where applicable.</p>
 				@components.CodeBlock(`gospa build
 gospa build -o ./dist --platform linux --arch amd64
-gospa build --minify=false --compress=false`, "bash", "terminal")
+gospa build --minify=false --compress=false`, "bash", " terminal")
 				<div class="mt-4 rounded-2xl border border-[var(--border)] bg-[var(--bg-secondary)] p-5">
 					<h3 class="font-bold mb-3">Current supported flags</h3>
 					<ul class="space-y-2 text-sm text-[var(--text-secondary)]">
@@ -84,7 +84,7 @@ gospa build --minify=false --compress=false`, "bash", "terminal")
 				<p class="text-[var(--text-secondary)] mb-4">Generate Go routes, TypeScript types, action definitions, and route metadata. This creates <code>routes.ts</code>, <code>types.ts</code>, and <code>actions.ts</code> to enable a full type-safe bridge.</p>
 				@components.CodeBlock(`gospa generate
 gospa generate -o ./generated --input-dir .
-gospa generate --type page`, "bash", "terminal")
+gospa generate --type page`, "bash", " terminal")
 				<div class="mt-4 rounded-2xl border border-[var(--border)] bg-[var(--bg-secondary)] p-5">
 					<h3 class="font-bold mb-3">Generate flags</h3>
 					<ul class="space-y-2 text-sm text-[var(--text-secondary)]">
@@ -98,13 +98,13 @@ gospa generate --type page`, "bash", "terminal")
 			<div>
 				<h2 class="text-2xl font-bold mb-4 border-b border-[var(--border)] pb-2 italic mono">gospa clean</h2>
 				<p class="text-[var(--text-secondary)] mb-4">Remove generated and build artifacts such as `dist`, `node_modules`, and templ-generated files.</p>
-				@components.CodeBlock(`gospa clean`, "bash", "terminal")
+				@components.CodeBlock(`gospa clean`, "bash", " terminal")
 			</div>
 
 			<div>
 				<h2 class="text-2xl font-bold mb-4 border-b border-[var(--border)] pb-2 italic mono">gospa version</h2>
 				<p class="text-[var(--text-secondary)] mb-4">Print the installed GoSPA version.</p>
-				@components.CodeBlock(`gospa version`, "bash", "terminal")
+				@components.CodeBlock(`gospa version`, "bash", " terminal")
 			</div>
 		</section>
 	</div>

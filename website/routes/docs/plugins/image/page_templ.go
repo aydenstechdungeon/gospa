@@ -43,7 +43,7 @@ func Page() templ.Component {
     sizes: [320, 640, 1280, 1920, 2560]
     formats: [webp, jpeg, png]
     quality: 85
-    on_the_fly: false  # Enable runtime optimization`, "yaml", "gospa.yaml").Render(ctx, templ_7745c5c3_Buffer)
+    on_the_fly: false  # Enable runtime optimization`, "yaml", " gospa.yaml").Render(ctx, templ_7745c5c3_Buffer)
 		if templ_7745c5c3_Err != nil {
 			return templ_7745c5c3_Err
 		}
@@ -51,19 +51,19 @@ func Page() templ.Component {
 		if templ_7745c5c3_Err != nil {
 			return templ_7745c5c3_Err
 		}
-		templ_7745c5c3_Err = featureCard("Responsive Sizes", "Auto-generate 320w, 640w, 1280w, 1920w, 2560w variants.").Render(ctx, templ_7745c5c3_Buffer)
+		templ_7745c5c3_Err = featureCard("Responsive Sizes", " Auto-generate 320w, 640w, 1280w, 1920w, 2560w variants.").Render(ctx, templ_7745c5c3_Buffer)
 		if templ_7745c5c3_Err != nil {
 			return templ_7745c5c3_Err
 		}
-		templ_7745c5c3_Err = featureCard("Format Conversion", "Convert to WebP, JPEG, PNG with configurable quality.").Render(ctx, templ_7745c5c3_Buffer)
+		templ_7745c5c3_Err = featureCard("Format Conversion", " Convert to WebP, JPEG, PNG with configurable quality.").Render(ctx, templ_7745c5c3_Buffer)
 		if templ_7745c5c3_Err != nil {
 			return templ_7745c5c3_Err
 		}
-		templ_7745c5c3_Err = featureCard("Build-time", "Optimize at build time for zero runtime overhead.").Render(ctx, templ_7745c5c3_Buffer)
+		templ_7745c5c3_Err = featureCard("Build-time", " Optimize at build time for zero runtime overhead.").Render(ctx, templ_7745c5c3_Buffer)
 		if templ_7745c5c3_Err != nil {
 			return templ_7745c5c3_Err
 		}
-		templ_7745c5c3_Err = featureCard("On-the-fly", "Optional runtime optimization for dynamic images.").Render(ctx, templ_7745c5c3_Buffer)
+		templ_7745c5c3_Err = featureCard("On-the-fly", " Optional runtime optimization for dynamic images.").Render(ctx, templ_7745c5c3_Buffer)
 		if templ_7745c5c3_Err != nil {
 			return templ_7745c5c3_Err
 		}
@@ -79,7 +79,7 @@ func Page() templ.Component {
   hero-2560w.webp
   hero-320w.jpeg
   hero-640w.jpeg
-  ...`, "text", "Directory structure").Render(ctx, templ_7745c5c3_Buffer)
+  ...`, "text", " Directory structure").Render(ctx, templ_7745c5c3_Buffer)
 		if templ_7745c5c3_Err != nil {
 			return templ_7745c5c3_Err
 		}
@@ -106,7 +106,7 @@ func Page() templ.Component {
       loading="lazy"
     />
   </picture>
-}`, "templ", "component.templ").Render(ctx, templ_7745c5c3_Buffer)
+}`, "templ", " component.templ").Render(ctx, templ_7745c5c3_Buffer)
 		if templ_7745c5c3_Err != nil {
 			return templ_7745c5c3_Err
 		}

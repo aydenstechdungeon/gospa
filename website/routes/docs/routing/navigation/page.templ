@@ -17,17 +17,17 @@ templ Page() {
 
 		<section class="space-y-6">
 			<h2 class="text-2xl font-bold">Navigation Functions</h2>
-			@components.CodeBlock("import { \n\tnavigate, \n\tprefetch, \n\tback, \n\tforward,\n\treplace\n} from '@gospa/client';\n\n// Navigate to a new page\nnavigate('/about');\nnavigate('/blog/my-post', { replace: true });\n\n// Prefetch a route\nprefetch('/dashboard');\n\n// History navigation\nback();\nforward();\n\n// Replace without history\nreplace('/login');", "typescript", "navigation.ts")
+			@components.CodeBlock("import { \n\tnavigate, \n\tprefetch, \n\tback, \n\tforward,\n\treplace\n} from '@gospa/client';\n\n// Navigate to a new page\nnavigate('/about');\nnavigate('/blog/my-post', { replace: true });\n\n// Prefetch a route\nprefetch('/dashboard');\n\n// History navigation\nback();\nforward();\n\n// Replace without history\nreplace('/login');", " typescript", " navigation.ts")
 		</section>
 
 		<section class="space-y-6">
 			<h2 class="text-2xl font-bold">Navigation Events</h2>
-			@components.CodeBlock("import { \n\tonNavigate, \n\tonNavigated, \n\tonNavigateError \n} from '@gospa/client';\n\n// Before navigation\nconst unsub = onNavigate((to, from) => {\n\tconsole.log('Navigating from', from, 'to', to);\n});\n\n// After navigation\nonNavigated((to, from) => {\n\tconsole.log('Navigated to', to);\n});\n\n// Navigation error\nonNavigateError((error, to) => {\n\tconsole.error('Navigation failed:', error);\n});\n\n// Cleanup\nunsub();", "typescript", "nav_events.ts")
+			@components.CodeBlock("import { \n\tonNavigate, \n\tonNavigated, \n\tonNavigateError \n} from '@gospa/client';\n\n// Before navigation\nconst unsub = onNavigate((to, from) => {\n\tconsole.log('Navigating from', from, 'to', to);\n});\n\n// After navigation\nonNavigated((to, from) => {\n\tconsole.log('Navigated to', to);\n});\n\n// Navigation error\nonNavigateError((error, to) => {\n\tconsole.error('Navigation failed:', error);\n});\n\n// Cleanup\nunsub();", " typescript", " nav_events.ts")
 		</section>
 
 		<section class="space-y-6">
 			<h2 class="text-2xl font-bold">Enhanced Links</h2>
-			@components.CodeBlock("<!-- Automatic SPA navigation -->\n<a href=\"/about\" data-gospa-link>About</a>\n\n<!-- Prefetch on hover -->\n<a href=\"/dashboard\" data-gospa-prefetch>Dashboard</a>\n\n<!-- Disable SPA navigation -->\n<a href=\"/external\" data-gospa-reload>External Link</a>\n\n<!-- Active state -->\n<a href=\"/about\" data-gospa-active=\"active-class\">About</a>", "html", "links.html")
+			@components.CodeBlock("<!-- Automatic SPA navigation -->\n<a href=\"/about\" data-gospa-link>About</a>\n\n<!-- Prefetch on hover -->\n<a href=\"/dashboard\" data-gospa-prefetch>Dashboard</a>\n\n<!-- Disable SPA navigation -->\n<a href=\"/external\" data-gospa-reload>External Link</a>\n\n<!-- Active state -->\n<a href=\"/about\" data-gospa-active=\"active-class\">About</a>", " html", " links.html")
 		</section>
 
 		<section class="space-y-6">
@@ -40,7 +40,7 @@ templ Page() {
 	lazyRuntimeInitialization: { enabled: true, deferBindings: true },
 	serviceWorkerNavigationCaching: { enabled: true, cacheName: 'gospa-docs-navigation-cache', path: '/gospa-navigation-sw.js' },
 	viewTransitions: { enabled: true, fallbackToClassic: true },
-};`, "typescript", "optimizer.ts")
+};`, "typescript", " optimizer.ts")
 			<div class="grid md:grid-cols-2 gap-4">
 				<div class="p-4 rounded-xl border border-[var(--border)] bg-[var(--bg-secondary)]">
 					<h3 class="font-semibold mb-2">1) Speculative Prefetching</h3>
@@ -84,19 +84,19 @@ templ Page() {
 			</p>
 			<div class="p-6 rounded-2xl bg-[var(--bg-secondary)] border border-[var(--border)] space-y-4">
 				<h3 class="font-bold text-sm uppercase tracking-wider text-[var(--text-muted)]">Loading State Attribute</h3>
-				<p class="text-sm text-[var(--text-secondary)]">During background loads, the main container receives <code>data-gospa-loading="true"</code>. Use it to style loading indicators.</p>
+				<p class="text-sm text-[var(--text-secondary)]">During background loads, the main container receives <code>data-gospa-loading=" true"</code>. Use it to style loading indicators.</p>
 				@components.CodeBlock(`/* styles.css */
 [data-gospa-page-content][data-gospa-loading="true"] {
 	opacity: 0.6;
 	cursor: wait;
 	transition: opacity 0.2s;
-}`, "css", "loading.css")
+}`, "css", " loading.css")
 			</div>
 		</section>
 
 		<section class="space-y-6">
 			<h2 class="text-2xl font-bold">Route Params</h2>
-			@components.CodeBlock("import { useParams, useSearchParams } from '@gospa/client';\n\n// Route params\nconst params = useParams();\nconsole.log(params.slug);\n\n// Query params\nconst searchParams = useSearchParams();\nconsole.log(searchParams.page);\n\n// With defaults\nconst page = searchParams.get('page', '1');\n\n// Update query params\nsearchParams.set('page', '2');", "typescript", "params_ts.ts")
+			@components.CodeBlock("import { useParams, useSearchParams } from '@gospa/client';\n\n// Route params\nconst params = useParams();\nconsole.log(params.slug);\n\n// Query params\nconst searchParams = useSearchParams();\nconsole.log(searchParams.page);\n\n// With defaults\nconst page = searchParams.get('page', '1');\n\n// Update query params\nsearchParams.set('page', '2');", " typescript", " params_ts.ts")
 		</section>
 
 		<section class="space-y-6">
@@ -104,7 +104,7 @@ templ Page() {
 			<p class="text-[var(--text-secondary)] leading-relaxed">
 				Unlike standard <code>innerHTML</code> updates, GoSPA automatically identifies and re-executes all <code>&lt;script&gt;</code> tags found within the newly loaded page content. This ensures your page-specific logic, such as component initialization or analytics, runs on every navigation.
 			</p>
-			@components.CodeBlock("<script type=\"module\">\n\timport * as GoSPA from \"/_gospa/runtime.js\";\n\n\t// This script will re-run on every navigation to this page\n\tconst count = new GoSPA.Rune(0);\n\tconsole.log(\"Page-specific logic initialized\");\n</script>", "html", "page-script.html")
+			@components.CodeBlock("<script type=\" module\">\n\timport * as GoSPA from \"/_gospa/runtime.js\";\n\n\t// This script will re-run on every navigation to this page\n\tconst count = new GoSPA.Rune(0);\n\tconsole.log(\" Page-specific logic initialized\");\n</script>", " html", " page-script.html")
 			<div class="p-4 rounded-xl border border-[var(--border)] bg-[var(--bg-secondary)] text-sm">
 				<p class="font-semibold mb-2">Preventing Re-execution</p>
 				<p class="text-[var(--text-secondary)]">If you have a script that should only run once (e.g., global configuration), place it in your <code>root_layout.templ</code> or mark the script tag with <code>data-gospa-permanent</code>.</p>
@@ -114,11 +114,11 @@ templ Page() {
 		<section class="space-y-6">
 			<h2 class="text-2xl font-bold">Persistent Elements</h2>
 			<p class="text-[var(--text-secondary)]">Elements marked with `data-gospa-permanent` persist across navigations without being cleared or patched by the server. This is useful for content managed entirely on the client, like the Table of Contents.</p>
-			@components.CodeBlock("<nav id=\"toc\">\n\t<ul data-gospa-permanent>\n\t\t<!-- Managed by client-side JS -->\n\t</ul>\n</nav>", "html", "permanent.html")
+			@components.CodeBlock("<nav id=\" toc\">\n\t<ul data-gospa-permanent>\n\t\t<!-- Managed by client-side JS -->\n\t</ul>\n</nav>", " html", " permanent.html")
 			<div class="p-4 rounded-xl border border-[var(--accent-primary)]/20 bg-[var(--accent-primary)]/5">
 				<div class="flex items-start gap-4">
 					<div class="p-2 rounded-lg bg-[var(--accent-primary)]/20 text-[var(--accent-primary)]">
-						<svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"></circle><path d="M12 16v-4"></path><path d="M12 8h.01"></path></svg>
+						<svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"></circle><path d=" M12 16v-4"></path><path d=" M12 8h.01"></path></svg>
 					</div>
 					<div>
 						<p class="text-sm font-medium text-[var(--accent-primary)] mb-1">Tip: Flickering Prevention</p>
@@ -135,7 +135,7 @@ templ Page() {
 			<p class="text-[var(--text-secondary)]">
 				Routes are automatically code-split. The client downloads only what's needed.
 			</p>
-			@components.CodeBlock("// Generated routes.ts\nexport const routes = {\n\t'/': () => import('./routes/page.js'),\n\t'/about': () => import('./routes/about/page.js'),\n\t'/blog/[slug]': () => import('./routes/blog/[slug]/page.js'),\n};\n\n// Lazy loaded on navigation", "typescript", "routes.ts")
+			@components.CodeBlock("// Generated routes.ts\nexport const routes = {\n\t'/': () => import('./routes/page.js'),\n\t'/about': () => import('./routes/about/page.js'),\n\t'/blog/[slug]': () => import('./routes/blog/[slug]/page.js'),\n};\n\n// Lazy loaded on navigation", " typescript", " routes.ts")
 		</section>
 
 		@prevNext("/docs/routing/api", "")
@@ -144,18 +144,18 @@ templ Page() {
 
 templ prevNext(prev, next string) {
 	<div class="flex justify-between pt-8 border-t border-[var(--border)] mt-12">
-		if prev != "" {
+		if prev != ""{
 			<a href={ templ.SafeURL(prev) } class="flex items-center gap-2 text-sm text-[var(--text-secondary)] hover:text-[var(--accent-primary)] transition-colors">
-				<svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="m15 18-6-6 6-6"/></svg>
+				<svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d=" m15 18-6-6 6-6"/></svg>
 				<span>Previous</span>
 			</a>
 		} else {
 			<div></div>
 		}
-		if next != "" {
+		if next != ""{
 			<a href={ templ.SafeURL(next) } class="flex items-center gap-2 text-sm text-[var(--text-secondary)] hover:text-[var(--accent-primary)] transition-colors">
 				<span>Next</span>
-				<svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="m9 18 6-6-6-6"/></svg>
+				<svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d=" m9 18 6-6-6-6"/></svg>
 			</a>
 		} else {
 			<div></div>

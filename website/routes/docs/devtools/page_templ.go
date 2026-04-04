@@ -45,7 +45,7 @@ gospa dev --port 3000 --routes ./routes --components ./components
 // - Template changes (.templ) -> Full page reload
 // - Go code changes -> Server restart + page reload
 // - Static files -> Instant refresh
-// - Client TypeScript -> HMR (Hot Module Replacement)`, "bash", "cli/dev.go").Render(ctx, templ_7745c5c3_Buffer)
+// - Client TypeScript -> HMR (Hot Module Replacement)`, "bash", " cli/dev.go").Render(ctx, templ_7745c5c3_Buffer)
 		if templ_7745c5c3_Err != nil {
 			return templ_7745c5c3_Err
 		}
@@ -64,13 +64,13 @@ config := fiber.ErrorOverlayConfig{
     Enabled:     true,
     ShowStack:   true,     // Display stack traces
     ShowRequest: true,     // Show request details
-    Theme:       "dark",   // "dark" or "light"
+    Theme:       "dark",   // " dark"or " light"
     Editor:      "code",   // Opens files in VS Code via vscode:// protocol
 }
 overlay := fiber.NewErrorOverlay(config)
 
 // Render overlay HTML for any error:
-html := overlay.RenderOverlay(err, nil)`, "go", "fiber/error_overlay.go").Render(ctx, templ_7745c5c3_Buffer)
+html := overlay.RenderOverlay(err, nil)`, "go", " fiber/error_overlay.go").Render(ctx, templ_7745c5c3_Buffer)
 		if templ_7745c5c3_Err != nil {
 			return templ_7745c5c3_Err
 		}
@@ -91,11 +91,11 @@ app.Use(fiber.StateInspectorMiddleware(devTools, config))
 
 // Mount the dev panel UI
 app.Get("/_gospa/dev", devTools.DevPanelHandler())
-app.Get("/_gospa/dev/ws", devTools.DevToolsHandler())`, "go", "fiber/dev.go").Render(ctx, templ_7745c5c3_Buffer)
+app.Get("/_gospa/dev/ws", devTools.DevToolsHandler())`, " go", " fiber/dev.go").Render(ctx, templ_7745c5c3_Buffer)
 		if templ_7745c5c3_Err != nil {
 			return templ_7745c5c3_Err
 		}
-		templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 4, "<h3 class=\"text-lg font-semibold mt-6 mb-3\">Features</h3><ul class=\"list-disc list-inside text-[var(--text-secondary)] space-y-2 ml-4\"><li><strong class=\"text-[var(--text-primary)]\">Live Change Log</strong> — See every Rune or StateMap update as it happens on both server and client</li><li><strong class=\"text-[var(--text-primary)]\">Diff View</strong> — Compare \"Before\" and \"After\" state values</li><li><strong class=\"text-[var(--text-primary)]\">Source Tracking</strong> — Identify whether a state change originated from server or client</li><li><strong class=\"text-[var(--text-primary)]\">Key Registry</strong> — Browse all currently tracked reactive state keys</li></ul></div><div><h2 class=\"text-2xl font-bold mb-4 border-b border-[var(--border)] pb-2 italic mono\">Debug Middleware</h2><p class=\"text-[var(--text-secondary)] mb-4\">Lightweight middleware that logs every request with method, path, status, and processing time.</p>")
+		templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 4, "<h3 class=\"text-lg font-semibold mt-6 mb-3\">Features</h3><ul class=\"list-disc list-inside text-[var(--text-secondary)] space-y-2 ml-4\"><li><strong class=\"text-[var(--text-primary)]\">Live Change Log</strong> — See every Rune or StateMap update as it happens on both server and client</li><li><strong class=\"text-[var(--text-primary)]\">Diff View</strong> — Compare \" Before\"and \" After\"state values</li><li><strong class=\"text-[var(--text-primary)]\">Source Tracking</strong> — Identify whether a state change originated from server or client</li><li><strong class=\"text-[var(--text-primary)]\">Key Registry</strong> — Browse all currently tracked reactive state keys</li></ul></div><div><h2 class=\"text-2xl font-bold mb-4 border-b border-[var(--border)] pb-2 italic mono\">Debug Middleware</h2><p class=\"text-[var(--text-secondary)] mb-4\">Lightweight middleware that logs every request with method, path, status, and processing time.</p>")
 		if templ_7745c5c3_Err != nil {
 			return templ_7745c5c3_Err
 		}
@@ -104,7 +104,7 @@ app.Use(fiber.DebugMiddleware(devTools))
 
 // Logging format:
 // [GET] /docs/api 200 1.2ms
-// [POST] /api/users 201 45.3ms`, "go", "fiber/middleware.go").Render(ctx, templ_7745c5c3_Buffer)
+// [POST] /api/users 201 45.3ms`, "go", " fiber/middleware.go").Render(ctx, templ_7745c5c3_Buffer)
 		if templ_7745c5c3_Err != nil {
 			return templ_7745c5c3_Err
 		}
@@ -120,7 +120,7 @@ GOSPA_DEBUG=true gospa dev
 // (available when <html data-gospa-auto> or data-gospa-component is present)
 GoSPA.globalState     // The root StateMap
 GoSPA.components      // All active component instances
-GoSPA.config          // Active runtime configuration`, "bash", "cli/dev.go").Render(ctx, templ_7745c5c3_Buffer)
+GoSPA.config          // Active runtime configuration`, "bash", " cli/dev.go").Render(ctx, templ_7745c5c3_Buffer)
 		if templ_7745c5c3_Err != nil {
 			return templ_7745c5c3_Err
 		}
@@ -135,7 +135,7 @@ GoSPA.config          // Active runtime configuration`, "bash", "cli/dev.go").Re
 // Client disconnected: conn_a1b2c3d4
 
 // From the browser console you can inspect frame-by-frame:
-// Open DevTools → Network → WS → the GoSPA WebSocket connection`, "typescript", "fiber/websocket.go").Render(ctx, templ_7745c5c3_Buffer)
+// Open DevTools → Network → WS → the GoSPA WebSocket connection`, "typescript", " fiber/websocket.go").Render(ctx, templ_7745c5c3_Buffer)
 		if templ_7745c5c3_Err != nil {
 			return templ_7745c5c3_Err
 		}
@@ -152,9 +152,9 @@ GoSPA.globalState  // The root StateMap
 GoSPA.config       // Active runtime configuration
 
 // Call functions directly:
-GoSPA.getState("myComponent", "count")
-GoSPA.setState("myComponent", "count", 42)
-GoSPA.callAction("myComponent", "increment")`, "html", "client/src/runtime.ts").Render(ctx, templ_7745c5c3_Buffer)
+GoSPA.getState("myComponent", " count")
+GoSPA.setState("myComponent", " count", 42)
+GoSPA.callAction("myComponent", " increment")`, " html", " client/src/runtime.ts").Render(ctx, templ_7745c5c3_Buffer)
 		if templ_7745c5c3_Err != nil {
 			return templ_7745c5c3_Err
 		}
@@ -177,7 +177,7 @@ gospa prune --dry-run --verbose
 # Total state variables: 42
 # Used state variables:  38
 # Would prune variables:  4
-# Estimated savings:     512 bytes`, "bash", "cli/build.go").Render(ctx, templ_7745c5c3_Buffer)
+# Estimated savings:     512 bytes`, "bash", " cli/build.go").Render(ctx, templ_7745c5c3_Buffer)
 		if templ_7745c5c3_Err != nil {
 			return templ_7745c5c3_Err
 		}

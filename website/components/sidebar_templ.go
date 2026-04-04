@@ -78,7 +78,7 @@ func SidebarContent(currentPath string) templ.Component {
 			templ_7745c5c3_Var2 = templ.NopComponent
 		}
 		ctx = templ.ClearChildren(ctx)
-		templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 3, "<div class=\"space-y-8\"><button data-action=\"open-search\" class=\"w-full flex items-center justify-between px-3 py-2 mb-6 rounded-xl bg-[var(--bg-secondary)] border border-[var(--border)] text-sm text-[var(--text-secondary)] hover:border-[var(--accent-primary)]/50 transition-all group\"><div class=\"flex items-center gap-2\"><svg xmlns=\"http://www.w3.org/2000/svg\" width=\"16\" height=\"16\" viewBox=\"0 0 24 24\" fill=\"none\" stroke=\"currentColor\" stroke-width=\"2\" stroke-linecap=\"round\" stroke-linejoin=\"round\" class=\"text-[var(--text-muted)] group-hover:text-[var(--accent-primary)]\"><circle cx=\"11\" cy=\"11\" r=\"8\"></circle><path d=\"m21 21-4.3-4.3\"></path></svg> <span>Search docs...</span></div><kbd class=\"text-[10px] font-sans opacity-50 px-1.5 py-0.5 rounded border border-[var(--border)] bg-[var(--bg-primary)]\">⌘K</kbd></button>")
+		templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 3, "<div class=\"space-y-8\"><button data-action=\"open-search\" class=\"w-full flex items-center justify-between px-3 py-2 mb-6 rounded-xl bg-[var(--bg-secondary)] border border-[var(--border)] text-sm text-[var(--text-secondary)] hover:border-[var(--accent-primary)]/50 group\"><div class=\"flex items-center gap-2\"><svg xmlns=\"http://www.w3.org/2000/svg\" width=\"16\" height=\"16\" viewBox=\"0 0 24 24\" fill=\"none\" stroke=\"currentColor\" stroke-width=\"2\" stroke-linecap=\"round\" stroke-linejoin=\"round\" class=\"text-[var(--text-muted)] group-hover:text-[var(--accent-primary)]\"><circle cx=\"11\" cy=\"11\" r=\"8\"></circle><path d=\"m21 21-4.3-4.3\"></path></svg> <span>Search docs...</span></div><kbd class=\"text-[10px] font-sans opacity-50 px-1.5 py-0.5 rounded border border-[var(--border)] bg-[var(--bg-primary)]\">⌘K</kbd></button>")
 		if templ_7745c5c3_Err != nil {
 			return templ_7745c5c3_Err
 		}
@@ -233,7 +233,7 @@ func sidebarSection(title string, items []NavItem, currentPath string) templ.Com
 			if templ_7745c5c3_Err != nil {
 				return templ_7745c5c3_Err
 			}
-			var templ_7745c5c3_Var5 = []any{"block py-2 px-3 rounded-lg text-sm transition-all " + activeClass(isPathActive(currentPath, item.Href))}
+			var templ_7745c5c3_Var5 = []any{"block py-2 px-3 rounded-lg text-sm " + activeClass(isPathActive(currentPath, item.Href))}
 			templ_7745c5c3_Err = templ.RenderCSSItems(ctx, templ_7745c5c3_Buffer, templ_7745c5c3_Var5...)
 			if templ_7745c5c3_Err != nil {
 				return templ_7745c5c3_Err

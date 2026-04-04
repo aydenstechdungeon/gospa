@@ -14,7 +14,7 @@ templ Page() {
 		<section class="space-y-6">
 			<h2 class="text-2xl font-bold border-b border-[var(--border)] pb-2">Installation</h2>
 			<p class="text-[var(--text-secondary)] mb-4">Add PostCSS to your project using the add command:</p>
-			@components.CodeBlock(`gospa add:postcss`, "bash", "terminal")
+			@components.CodeBlock(`gospa add:postcss`, "bash", " terminal")
 			<p class="text-[var(--text-secondary)] mt-4">
 				This command installs PostCSS dependencies and creates a starter configuration file. The plugin integrates automatically with the build process through lifecycle hooks.
 			</p>
@@ -67,7 +67,7 @@ templ Page() {
         input: ./styles/dashboard.css
         output: ./static/css/dashboard.css
         content:
-          - ./routes/dashboard/**/*.templ`, "yaml", "gospa.yaml")
+          - ./routes/dashboard/**/*.templ`, "yaml", " gospa.yaml")
 		</section>
 
 		<section class="space-y-6">
@@ -120,9 +120,9 @@ templ Page() {
 		<section class="space-y-6">
 			<h2 class="text-2xl font-bold border-b border-[var(--border)] pb-2">Lifecycle Hooks</h2>
 			<div class="grid gap-4 md:grid-cols-3">
-				@hookCard("BeforeDev", "Starts PostCSS in watch mode")
-				@hookCard("BeforeBuild", "Builds minified CSS for production")
-				@hookCard("AfterDev", "Stops the watch process gracefully")
+				@hookCard("BeforeDev", " Starts PostCSS in watch mode")
+				@hookCard("BeforeBuild", " Builds minified CSS for production")
+				@hookCard("AfterDev", " Stops the watch process gracefully")
 			</div>
 		</section>
 
@@ -148,27 +148,27 @@ templ Page() {
           name: desktop
         - width: 500
           height: 900
-          name: mobile`, "yaml", "gospa.yaml")
+          name: mobile`, "yaml", " gospa.yaml")
 			
 			<p class="text-[var(--text-secondary)] mb-4 mt-6">2. Extract critical CSS:</p>
-			@components.CodeBlock(`gospa postcss:critical`, "bash", "terminal")
+			@components.CodeBlock(`gospa postcss:critical`, "bash", " terminal")
 			
 			<p class="text-[var(--text-secondary)] mb-4 mt-6">3. Import the postcss package in your layout:</p>
 			@components.CodeBlock(`import (
 	"github.com/aydenstechdungeon/gospa/plugin/postcss"
 	// ... other imports
-)`, "go", "layout.templ")
+)`, "go", " layout.templ")
 			
 			<p class="text-[var(--text-secondary)] mb-4 mt-6">4. Use the helper functions in your templates:</p>
 			@components.CodeBlock(`<!-- Inlined Critical CSS (render-blocking, single round-trip) -->
-@templ.Raw("<style>" + postcss.CriticalCSS("./static/css/critical.css") + "</style>")
+@templ.Raw("<style>"+ postcss.CriticalCSS("./static/css/critical.css") + "</style>")
 
 <!-- Note: Path is relative to your app's working directory -->
-<!-- For apps running from root: "./website/static/css/critical.css" -->
-<!-- For apps running from website dir: "./static/css/critical.css" -->
+<!-- For apps running from root: "./website/static/css/critical.css"-->
+<!-- For apps running from website dir: "./static/css/critical.css"-->
 
 <!-- Async load non-critical CSS (non-blocking) -->
-@templ.Raw(postcss.AsyncCSS("/static/css/non-critical.css"))`, "templ", "root_layout.templ")
+@templ.Raw(postcss.AsyncCSS("/static/css/non-critical.css"))`, " templ", " root_layout.templ")
 			
 			<h3 class="text-lg font-bold text-[var(--accent-primary)] mt-6 mb-2">How It Works</h3>
 			<ul class="list-disc list-inside space-y-2 text-[var(--text-secondary)]">
@@ -228,10 +228,10 @@ templ Page() {
         content:
           - ./routes/dashboard/**/*.templ
         criticalCSS:
-          enabled: true`, "yaml", "gospa.yaml")
+          enabled: true`, "yaml", " gospa.yaml")
 			
 			<p class="text-[var(--text-secondary)] mb-4 mt-6">Build all bundles:</p>
-			@components.CodeBlock(`gospa postcss:bundles`, "bash", "terminal")
+			@components.CodeBlock(`gospa postcss:bundles`, "bash", " terminal")
 			
 			<p class="text-sm text-[var(--text-muted)] mt-4">
 				Each bundle can have its own critical CSS extraction, allowing you to inline only the styles needed for that section of your app.
@@ -241,12 +241,12 @@ templ Page() {
 		<section class="space-y-6">
 			<h2 class="text-2xl font-bold border-b border-[var(--border)] pb-2">Available Plugins</h2>
 			<div class="grid gap-4 md:grid-cols-2">
-				@extensionCard("Typography", "tailwindcss/typography", "Beautiful typographic defaults with prose classes.")
-				@extensionCard("Forms", "tailwindcss/forms", "Form element styling and normalization.")
-				@extensionCard("Aspect Ratio", "tailwindcss/aspect-ratio", "Aspect ratio utilities for responsive media.")
-				@extensionCard("Autoprefixer", "autoprefixer", "Add vendor prefixes for browser compatibility.")
-				@extensionCard("CSSNano", "cssnano", "Advanced CSS minification.")
-				@extensionCard("PostCSS Nested", "postcss-nested", "Support for nested CSS syntax.")
+				@extensionCard("Typography", " tailwindcss/typography", " Beautiful typographic defaults with prose classes.")
+				@extensionCard("Forms", " tailwindcss/forms", " Form element styling and normalization.")
+				@extensionCard("Aspect Ratio", " tailwindcss/aspect-ratio", " Aspect ratio utilities for responsive media.")
+				@extensionCard("Autoprefixer", " autoprefixer", " Add vendor prefixes for browser compatibility.")
+				@extensionCard("CSSNano", " cssnano", " Advanced CSS minification.")
+				@extensionCard("PostCSS Nested", " postcss-nested", " Support for nested CSS syntax.")
 			</div>
 			<p class="text-sm text-[var(--text-muted)] mt-4">
 				Note: Container queries and line-clamp are built into Tailwind v4 and don't require separate plugins.
@@ -260,7 +260,7 @@ templ Page() {
   plugins: {
     '@tailwindcss/postcss': {},
   },
-}`, "javascript", "postcss.config.js")
+}`, "javascript", " postcss.config.js")
 		</section>
 
 		<section class="space-y-6">
@@ -290,7 +290,7 @@ templ Page() {
 /* Aspect ratio is built into Tailwind v4 */
 .video-container {
   @apply aspect-video w-full;
-}`, "css", "styles.css")
+}`, "css", " styles.css")
 		</section>
 
 		<section class="space-y-6">

@@ -24,7 +24,7 @@ templ Page() {
 		</nav>
 
 		<section id="gospa-undefined" class="space-y-6">
-			<h2 class="text-2xl font-bold border-b border-[var(--border)] pb-2">"GoSPA is not defined" Error</h2>
+			<h2 class="text-2xl font-bold border-b border-[var(--border)] pb-2">" GoSPA is not defined"Error</h2>
 			<p class="text-[var(--text-secondary)]">
 				When calling <code class="mono text-[var(--accent-primary)]">GoSPA.remote()</code> or other GoSPA functions, you get:
 			</p>
@@ -32,7 +32,7 @@ templ Page() {
 			
 			<h3 class="text-lg font-semibold mt-6">Solution: Ensure Proper Initialization</h3>
 			<p class="text-[var(--text-secondary)]">
-				The GoSPA runtime is created by calling <code class="mono">init()</code>. For auto-initialization, add <code class="mono">data-gospa-auto</code> to your HTML tag:
+				The GoSPA runtime is created by calling <code class="mono">init()</code>. For auto-initialization, add <code class=" mono">data-gospa-auto</code> to your HTML tag:
 			</p>
 			@components.CodeBlock(`<!DOCTYPE html>
 <html lang="en" data-gospa-auto>
@@ -42,16 +42,16 @@ templ Page() {
 <body>
     <!-- Your content -->
 </body>
-</html>`, "html", "layout.templ")
+</html>`, "html", " layout.templ")
 
 			<h3 class="text-lg font-semibold mt-6">How GoSPA is Created</h3>
 			<p class="text-[var(--text-secondary)]">
-				The <code class="mono">window.GoSPA</code> object is created by the runtime when <code class="mono">init()</code> is called. The runtime script is automatically injected by GoSPA's root layout. The object includes:
+				The <code class="mono">window.GoSPA</code> object is created by the runtime when <code class=" mono">init()</code> is called. The runtime script is automatically injected by GoSPA's root layout. The object includes:
 			</p>
 			<ul class="list-disc list-inside text-[var(--text-secondary)] space-y-2">
 				<li><code class="mono">remote()</code> - Call remote actions</li>
 				<li><code class="mono">remoteAction()</code> - Create typed action callers</li>
-				<li><code class="mono">Rune</code>, <code class="mono">Derived</code>, <code class="mono">Effect</code> - Reactive primitives</li>
+				<li><code class="mono">Rune</code>, <code class=" mono">Derived</code>, <code class=" mono">Effect</code> - Reactive primitives</li>
 				<li><code class="mono">init()</code> - Manual initialization</li>
 			</ul>
 
@@ -67,11 +67,11 @@ templ Page() {
 		</section>
 
 		<section id="remote-not-found" class="space-y-6">
-			<h2 class="text-2xl font-bold border-b border-[var(--border)] pb-2">"ACTION_NOT_FOUND" Error</h2>
+			<h2 class="text-2xl font-bold border-b border-[var(--border)] pb-2">" ACTION_NOT_FOUND"Error</h2>
 			<p class="text-[var(--text-secondary)]">
 				When calling a remote action, you get:
 			</p>
-			@components.CodeBlock(`{ "error": "Remote action not found", "code": "ACTION_NOT_FOUND" }`, "json", "")
+			@components.CodeBlock(`{ "error": " Remote action not found", " code": " ACTION_NOT_FOUND"}`, " json", "")
 
 			<h3 class="text-lg font-semibold mt-6">Solution: Register the Action</h3>
 			<p class="text-[var(--text-secondary)]">
@@ -85,7 +85,7 @@ func init() {
     routing.RegisterRemoteAction("saveData", func(ctx context.Context, rc routing.RemoteContext, input any) (any, error) {
         return "saved", nil
     })
-}`, "go", "routes/init.go")
+}`, "go", " routes/init.go")
 
 			@components.Callout(components.CalloutWarning, "Important", warningCaseSensitive())
 		</section>
@@ -95,7 +95,7 @@ func init() {
 			<p class="text-[var(--text-secondary)]">
 				When CSRF protection is enabled, remote actions may fail with:
 			</p>
-			@components.CodeBlock(`{ "error": "CSRF token mismatch" }`, "json", "")
+			@components.CodeBlock(`{ "error": " CSRF token mismatch"}`, " json", "")
 
 			<h3 class="text-lg font-semibold mt-6">Solution: Enable CSRF in Config</h3>
 			<p class="text-[var(--text-secondary)]">
@@ -103,23 +103,23 @@ func init() {
 			</p>
 			@components.CodeBlock(`app := gospa.New(gospa.Config{
     EnableCSRF: true,
-})`, "go", "main.go")
+})`, "go", " main.go")
 		</section>
 
 		<section id="remote-middleware" class="space-y-6">
-			<h2 class="text-2xl font-bold border-b border-[var(--border)] pb-2">"unauthorized" from RemoteActionMiddleware</h2>
+			<h2 class="text-2xl font-bold border-b border-[var(--border)] pb-2">" unauthorized"from RemoteActionMiddleware</h2>
 			<p class="text-[var(--text-secondary)]">
 				If a global remote action guard is configured, requests can fail before action execution.
 			</p>
-			@components.CodeBlock(`{ "error": "unauthorized" }`, "json", "")
+			@components.CodeBlock(`{ "error": " unauthorized"}`, " json", "")
 			@components.CodeBlock(`app := gospa.New(gospa.Config{
     RemoteActionMiddleware: func(c *fiber.Ctx) error {
         if c.Locals("user") == nil {
-            return c.Status(fiber.StatusUnauthorized).JSON(fiber.Map{"error": "unauthorized"})
+            return c.Status(fiber.StatusUnauthorized).JSON(fiber.Map{"error": " unauthorized"})
         }
         return c.Next()
     },
-})`, "go", "main.go")
+})`, "go", " main.go")
 		</section>
 
 		<section id="network-errors" class="space-y-6">
@@ -127,7 +127,7 @@ func init() {
 			<p class="text-[var(--text-secondary)]">
 				Remote action returns:
 			</p>
-			@components.CodeBlock(`{ ok: false, status: 0, code: "NETWORK_ERROR" }`, "javascript", "")
+			@components.CodeBlock(`{ ok: false, status: 0, code: "NETWORK_ERROR"}`, " javascript", "")
 
 			<h3 class="text-lg font-semibold mt-6">Common Causes</h3>
 			<ul class="list-disc list-inside text-[var(--text-secondary)] space-y-2">
@@ -156,13 +156,13 @@ func init() {
 			@components.CodeBlock(`app := gospa.New(gospa.Config{
     WebSocket: true,
     WSPath: "/_gospa/ws",
-})`, "go", "main.go")
+})`, "go", " main.go")
 
 			<h3 class="text-lg font-semibold mt-6">Common Connection Errors</h3>
 			<ul class="list-disc list-inside text-[var(--text-secondary)] space-y-2">
 				<li><strong>"WebSocket connection failed"</strong> - Server not running or WS not enabled</li>
 				<li><strong>"Max reconnect attempts reached"</strong> - Check server availability and network</li>
-				<li><strong>Works on HTTP but not HTTPS</strong> - Use <code class="mono">wss://</code> { "for" } secure connections</li>
+				<li><strong>Works on HTTP but not HTTPS</strong> - Use <code class="mono">wss://</code> { " for"} secure connections</li>
 			</ul>
 
 			<h3 class="text-lg font-semibold mt-6">Nginx Configuration for WebSocket</h3>
@@ -233,7 +233,7 @@ netstat -ano | findstr :3000   # Windows`, "bash", "")
 
 			<h3 class="text-lg font-semibold mt-6">Common Issues</h3>
 			<ul class="list-disc list-inside text-[var(--text-secondary)] space-y-2">
-				<li><strong>Missing island module</strong> - Ensure <code class="mono">/islands/{ "name" }.js</code> exists</li>
+				<li><strong>Missing island module</strong> - Ensure <code class="mono">/islands/{ " name"}.js</code> exists</li>
 				<li><strong>Hydration timeout</strong> - Increase timeout or lazy-load heavy dependencies</li>
 				<li><strong>Double hydration</strong> - Check for duplicate <code class="mono">data-gospa-island</code> attributes</li>
 			</ul>
@@ -261,9 +261,9 @@ app := gospa.New(gospa.Config{
 })
 
 // Broadcast state update
-app.BroadcastState("count", count.Get())`, "go", "")
+app.BroadcastState("count", count.Get())`, " go", "")
 
-			<h3 class="text-lg font-semibold mt-6">"State Message Too Large" Error</h3>
+			<h3 class="text-lg font-semibold mt-6">" State Message Too Large"Error</h3>
 			<p class="text-[var(--text-secondary)]">
 				WebSocket messages are limited to 64KB. Enable state diffing or compress state:
 			</p>
@@ -278,10 +278,10 @@ app.BroadcastState("count", count.Get())`, "go", "")
 				Exclude circular references from state using JSON tags:
 			</p>
 			@components.CodeBlock(`type Node struct {
-    ID       string  ` + "`json:\"id\"`" + `
-    Value    int     ` + "`json:\"value\"`" + `
-    Parent   *Node   ` + "`json:\"-\"`" + `      // Exclude from sync
-    Children []*Node ` + "`json:\"children\"`" + `
+    ID       string  ` + "`json:\" id\"`"+ `
+    Value    int     ` + "`json:\" value\"`"+ `
+    Parent   *Node   ` + "`json:\"-\"`"+ `      // Exclude from sync
+    Children []*Node ` + "`json:\" children\"`"+ `
 }`, "go", "")
 		</section>
 
@@ -291,7 +291,7 @@ app.BroadcastState("count", count.Get())`, "go", "")
 				Issues building for production or deploying your application.
 			</p>
 
-			<h3 class="text-lg font-semibold mt-6">"templ not found" Error</h3>
+			<h3 class="text-lg font-semibold mt-6">" templ not found"Error</h3>
 			@components.CodeBlock(`# Install templ CLI
 go install github.com/a-h/templ/cmd/templ@latest
 
@@ -300,7 +300,7 @@ export PATH=$PATH:$(go env GOPATH)/bin`, "bash", "")
 
 			<h3 class="text-lg font-semibold mt-6">Binary Size Too Large</h3>
 			@components.CodeBlock(`# Strip debug info and build
-CGO_ENABLED=0 go build -ldflags="-s -w" -o app .
+CGO_ENABLED=0 go build -ldflags="-s -w"-o app .
 
 # Optional: Compress with UPX
 upx --best -o app-compressed app`, "bash", "")
@@ -334,7 +334,7 @@ COPY go.mod go.sum ./
 RUN go mod download
 COPY . .
 RUN go generate ./...
-RUN CGO_ENABLED=0 go build -ldflags="-s -w" -o main .
+RUN CGO_ENABLED=0 go build -ldflags="-s -w"-o main .
 
 FROM alpine:latest
 RUN apk --no-cache add ca-certificates
@@ -342,7 +342,7 @@ WORKDIR /root/
 COPY --from=builder /app/main .
 COPY --from=builder /app/static ./static
 EXPOSE 8080
-CMD ["./main"]`, "dockerfile", "")
+CMD ["./main"]`, " dockerfile", "")
 		</section>
 
 		<div class="bg-blue-500/5 border border-blue-500/20 p-6 rounded-2xl">
@@ -357,9 +357,9 @@ CMD ["./main"]`, "dockerfile", "")
 }
 
 templ warningCaseSensitive() {
-	<p>Action names are case-sensitive. <code class="mono">saveData</code> ≠ <code class="mono">SaveData</code> ≠ <code class="mono">savedata</code>.</p>
+	<p>Action names are case-sensitive. <code class="mono">saveData</code> ≠ <code class=" mono">SaveData</code> ≠ <code class=" mono">savedata</code>.</p>
 }
 
 templ moreInfoWebsocket() {
-	<p>See the <a href="https://github.com/aydenstechdungeon/gospa/blob/main/docs/websocket.md" class="text-[var(--accent-primary)] hover:underline">WebSocket troubleshooting guide</a> { "for" } more details on heartbeat, authentication, and debugging.</p>
+	<p>See the <a href="https://github.com/aydenstechdungeon/gospa/blob/main/docs/websocket.md" class="text-[var(--accent-primary)] hover:underline">WebSocket troubleshooting guide</a> { " for"} more details on heartbeat, authentication, and debugging.</p>
 }

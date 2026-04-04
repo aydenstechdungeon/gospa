@@ -29,7 +29,7 @@ err := fiber.NewAppError(fiber.ErrNotFound, "Resource not found")
 err.Details["resource_id"] = "123"
 
 // With cause
-err := fiber.WrapError(originalErr, fiber.ErrInternal, "Operation failed")`, "go", "fiber/errors.go")
+err := fiber.WrapError(originalErr, fiber.ErrInternal, "Operation failed")`, " go", " fiber/errors.go")
 			</div>
 
 			<div>
@@ -110,11 +110,11 @@ app.Use(handler.Handle)
 
 // Custom error response format
 type ErrorResponse struct {
-    Code      string         ` + "`" + `json:"code"` + "`" + `
-    Message   string         ` + "`" + `json:"message"` + "`" + `
-    Details   map[string]any ` + "`" + `json:"details,omitempty"` + "`" + `
-    RequestID string         ` + "`" + `json:"request_id"` + "`" + `
-}`, "go", "fiber/middleware.go")
+    Code      string         ` + "`"+ `json:" code"` + "`"+ `
+    Message   string         ` + "`"+ `json:" message"` + "`"+ `
+    Details   map[string]any ` + "`"+ `json:" details,omitempty"` + "`"+ `
+    RequestID string         ` + "`"+ `json:" request_id"` + "`"+ `
+}`, "go", " fiber/middleware.go")
 			</div>
 
 			<div>
@@ -129,7 +129,7 @@ app.Use(fiber.RecoveryWithConfig(fiber.RecoveryConfig{
     StackTrace:       true,
     StackTraceAll:    false,
     DefaultErrorCode: fiber.ErrInternal,
-}))`, "go", "fiber/middleware.go")
+}))`, "go", " fiber/middleware.go")
 			</div>
 
 			<div>
@@ -151,9 +151,9 @@ status := fiber.GetStatusFromError(err)
 
 // Error chaining
 err := fiber.NewAppError(fiber.ErrValidation, "Invalid input").
-    WithDetail("field", "email").
-    WithDetail("reason", "invalid format").
-    WithCause(originalErr)`, "go", "fiber/errors.go")
+    WithDetail("field", " email").
+    WithDetail("reason", " invalid format").
+    WithCause(originalErr)`, "go", " fiber/errors.go")
 			</div>
 
 			<div>
@@ -176,7 +176,7 @@ try {
         showToast: true,
         logToServer: true 
     });
-}`, "typescript", "client/runtime.ts")
+}`, "typescript", " client/runtime.ts")
 			</div>
 		</section>
 	</div>
