@@ -34,7 +34,7 @@ var (
 
 func main() {
 	// Production config with performance optimizations
-	devMode := getEnvBool("GOSPA_DEV", false)
+	devMode := os.Getenv("DEV") == "1" || os.Getenv("GOSPA_DEV") == "1"
 
 	app := gospa.New(gospa.Config{
 		RoutesDir:             "./routes",
@@ -42,6 +42,7 @@ func main() {
 		AppName:               "GoSPA Documentation",
 		CacheTemplates:        !devMode,            // Enable template caching in production
 		DefaultRenderStrategy: routing.StrategySSG, // Make the entire docs site static by default
+		RuntimeTier:           gospa.RuntimeTierFull,
 		SSGCacheMaxEntries:    -1,                  // Cache all pages without eviction
 		CompressState:         true,                // Compress WebSocket messages
 		StateDiffing:          true,                // Only send state diffs

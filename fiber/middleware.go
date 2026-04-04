@@ -13,7 +13,9 @@ import (
 	"time"
 
 	"github.com/a-h/templ"
+	"github.com/aydenstechdungeon/gospa/compiler"
 	"github.com/aydenstechdungeon/gospa/embed"
+	"github.com/aydenstechdungeon/gospa/routing"
 	"github.com/aydenstechdungeon/gospa/state"
 	gospatempl "github.com/aydenstechdungeon/gospa/templ"
 	json "github.com/goccy/go-json"
@@ -109,7 +111,14 @@ func StateMiddleware(config Config) gofiber.Handler {
 		// The runtime is required for island hydration — without it, client-side
 		// TypeScript in <script lang="ts"> blocks never executes.
 		if config.RuntimeScript != "" && !bytes.Contains(body, []byte(config.RuntimeScript)) {
-			stateScript += `<script src="` + config.RuntimeScript + `" type="module"></script>`
+			runtimePath := config.RuntimeScript
+			if strings.HasPrefix(runtimePath, "/_gospa/runtime.js") {
+				opts := routing.GetRouteOptions(c.Path())
+				if opts.RuntimeTier != "" && opts.RuntimeTier != "full" {
+					runtimePath = "/_gospa/runtime-" + opts.RuntimeTier + ".js"
+				}
+			}
+			stateScript += `<script src="` + runtimePath + `" type="module"></script>`
 		}
 
 		// In dev mode, also inject islands.js if not already present and the file exists
@@ -129,8 +138,8 @@ func StateMiddleware(config Config) gofiber.Handler {
 
 // RuntimeMiddleware serves the client runtime script.
 // Uses the embedded runtime from the embed package.
-func RuntimeMiddleware(simple bool) gofiber.Handler {
-	runtimeJS, err := embed.RuntimeJS(simple)
+func RuntimeMiddleware(tier compiler.RuntimeTier) gofiber.Handler {
+	runtimeJS, err := embed.RuntimeJS(tier)
 	if err != nil {
 		// Return a middleware that serves an error if runtime is not available
 		return func(c gofiber.Ctx) error {
@@ -309,7 +318,14 @@ func PreloadHeadersMiddleware(config PreloadConfig) gofiber.Handler {
 			links = append(links, fmt.Sprintf("<%s>; rel=modulepreload", config.CoreScript))
 		}
 		if config.RuntimeScript != "" {
-			links = append(links, fmt.Sprintf("<%s>; rel=modulepreload", config.RuntimeScript))
+			runtimePath := config.RuntimeScript
+			if strings.HasPrefix(runtimePath, "/_gospa/runtime.js") {
+				opts := routing.GetRouteOptions(c.Path())
+				if opts.RuntimeTier != "" && opts.RuntimeTier != "full" {
+					runtimePath = "/_gospa/runtime-" + opts.RuntimeTier + ".js"
+				}
+			}
+			links = append(links, fmt.Sprintf("<%s>; rel=modulepreload", runtimePath))
 		}
 
 		// 3. Automatically discover and preload GoSPA internal runtime chunks or manifest entries

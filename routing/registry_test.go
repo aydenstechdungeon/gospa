@@ -130,7 +130,7 @@ func TestRegistry_RegisterRootLayout(t *testing.T) {
 	reg := NewRegistry()
 	reg.RegisterRootLayout(func(_ templ.Component, _ map[string]interface{}) templ.Component {
 		return stubComponent()
-	})
+	}, "full")
 	fn := reg.GetRootLayout()
 	if fn == nil {
 		t.Error("GetRootLayout() should return the registered root layout")

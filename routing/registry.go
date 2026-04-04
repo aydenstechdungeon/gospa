@@ -52,6 +52,9 @@ type RouteOptions struct {
 	// DeferredSlots are slots that are rendered out-of-order after the initial page load.
 	DeferredSlots []string
 
+	// RuntimeTier specifies the minimum client runtime tier required for this route.
+	RuntimeTier string
+
 	// Optional per-route rate limiter config.
 	RateLimit *RateLimitOptions
 }
@@ -100,6 +103,8 @@ type Registry struct {
 	hooks        []HookFunc
 	// slots maps pagePath → slotName → SlotFunc for PPR.
 	slots map[string]map[string]SlotFunc
+	// layoutTiers maps layoutPath → RuntimeTier
+	layoutTiers map[string]string
 }
 
 // globalRegistry is the default global registry.
@@ -119,6 +124,7 @@ func NewRegistry() *Registry {
 		actions:      make(map[string]map[string]ActionFunc),
 		hooks:        make([]HookFunc, 0),
 		slots:        make(map[string]map[string]SlotFunc),
+		layoutTiers:  make(map[string]string),
 	}
 }
 
@@ -245,9 +251,22 @@ func (r *Registry) GetRouteOptions(path string) RouteOptions {
 
 // RegisterLayout registers a layout component for a route path.
 func (r *Registry) RegisterLayout(path string, fn LayoutFunc) {
+	r.RegisterLayoutWithOptions(path, fn, "")
+}
+
+// RegisterLayoutWithOptions registers a layout component with a specific runtime tier.
+func (r *Registry) RegisterLayoutWithOptions(path string, fn LayoutFunc, tier string) {
 	r.mu.Lock()
 	defer r.mu.Unlock()
 	r.layouts[path] = fn
+	r.layoutTiers[path] = tier
+}
+
+// GetLayoutTier returns the runtime tier for a layout path.
+func (r *Registry) GetLayoutTier(path string) string {
+	r.mu.RLock()
+	defer r.mu.RUnlock()
+	return r.layoutTiers[path]
 }
 
 // RegisterMiddleware registers a middleware function for a route path.
@@ -306,11 +325,12 @@ func (r *Registry) GetError(path string) ComponentFunc {
 	return r.errors[path]
 }
 
-// RegisterRootLayout registers the root layout component.
-func (r *Registry) RegisterRootLayout(fn LayoutFunc) {
+// RegisterRootLayout registers the root layout component with a runtime tier.
+func (r *Registry) RegisterRootLayout(fn LayoutFunc, tier string) {
 	r.mu.Lock()
 	defer r.mu.Unlock()
 	r.rootLayout = fn
+	r.layoutTiers[""] = tier
 }
 
 // GetRootLayout returns the root layout component.
@@ -378,6 +398,16 @@ func RegisterLayout(path string, fn LayoutFunc) {
 	globalRegistry.RegisterLayout(path, fn)
 }
 
+// RegisterLayoutWithOptions registers a layout component with options in the global registry.
+func RegisterLayoutWithOptions(path string, fn LayoutFunc, tier string) {
+	globalRegistry.RegisterLayoutWithOptions(path, fn, tier)
+}
+
+// GetLayoutTier returns the runtime tier for a layout from the global registry.
+func GetLayoutTier(path string) string {
+	return globalRegistry.GetLayoutTier(path)
+}
+
 // RegisterMiddleware registers a middleware function in the global registry.
 func RegisterMiddleware(path string, fn MiddlewareFunc) {
 	globalRegistry.RegisterMiddleware(path, fn)
@@ -409,6 +439,8 @@ func GetMiddleware(path string) MiddlewareFunc {
 }
 
 // GetLoading returns the loading component from the global registry.
+
+// GetLoading returns the loading component from the global registry.
 func GetLoading(path string) ComponentFunc {
 	return globalRegistry.GetLoading(path)
 }
@@ -418,9 +450,9 @@ func GetError(path string) ComponentFunc {
 	return globalRegistry.GetError(path)
 }
 
-// RegisterRootLayout registers the root layout in the global registry.
-func RegisterRootLayout(fn LayoutFunc) {
-	globalRegistry.RegisterRootLayout(fn)
+// RegisterRootLayout registers the root layout in the global registry with a runtime tier.
+func RegisterRootLayout(fn LayoutFunc, tier string) {
+	globalRegistry.RegisterRootLayout(fn, tier)
 }
 
 // GetRootLayout returns the root layout from the global registry.

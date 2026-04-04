@@ -1,5 +1,3 @@
-import { sanitizeHtml } from "./dom.ts";
-
 /**
  * GoSPA Streaming SSR Runtime
  * Handles progressive hydration and streaming content updates
@@ -111,14 +109,7 @@ export class StreamingManager {
   private handleHtmlChunk(chunk: StreamChunk): void {
     const element = document.getElementById(chunk.id);
     if (element) {
-      const sanitized = sanitizeHtml(chunk.content);
-      if (sanitized instanceof Promise) {
-        sanitized.then((result) => {
-          element.innerHTML = result;
-        });
-      } else {
-        element.innerHTML = sanitized;
-      }
+      element.innerHTML = chunk.content;
 
       // Dispatch custom event for HTML update
       element.dispatchEvent(

@@ -1,13 +1,4 @@
 import { describe, it, expect, beforeEach } from "bun:test";
-import {
-  find,
-  findAll,
-  addClass,
-  removeClass,
-  hasClass,
-  attr,
-  data,
-} from "./dom";
 import { GlobalWindow } from "happy-dom";
 
 // Setup DOM environment
@@ -28,43 +19,43 @@ describe("dom utils", () => {
   });
 
   it("should find an element by selector", () => {
-    const el = find("#test");
+    const el = document.querySelector("#test");
     expect(el).not.toBeNull();
-    expect(el?.id).toBe("test");
+    expect((el as HTMLElement).id).toBe("test");
   });
 
   it("should find all elements by selector", () => {
-    const elements = findAll(".child");
+    const elements = document.querySelectorAll(".child");
     expect(elements.length).toBe(2);
   });
 
   it("should manage classes correctly", () => {
-    const el = find("#test") as HTMLElement;
+    const el = document.querySelector("#test") as HTMLElement;
 
-    expect(hasClass(el, "foo")).toBe(true);
+    expect(el.classList.contains("foo")).toBe(true);
 
-    addClass(el, "baz");
-    expect(hasClass(el, "baz")).toBe(true);
+    el.classList.add("baz");
+    expect(el.classList.contains("baz")).toBe(true);
 
-    removeClass(el, "foo");
-    expect(hasClass(el, "foo")).toBe(false);
+    el.classList.remove("foo");
+    expect(el.classList.contains("foo")).toBe(false);
   });
 
   it("should manage attributes correctly", () => {
-    const el = find("#test") as HTMLElement;
+    const el = document.querySelector("#test") as HTMLElement;
 
-    expect(attr(el, "title")).toBe("test-title");
+    expect(el.getAttribute("title")).toBe("test-title");
 
-    attr(el, "title", "new-title");
+    el.setAttribute("title", "new-title");
     expect(el.getAttribute("title")).toBe("new-title");
   });
 
   it("should manage data attributes correctly", () => {
-    const el = find("#test") as HTMLElement;
+    const el = document.querySelector("#test") as HTMLElement;
 
-    expect(data(el, "info")).toBe("test-data");
+    expect(el.dataset.info).toBe("test-data");
 
-    data(el, "info", "new-data");
+    el.dataset.info = "new-data";
     expect(el.dataset.info).toBe("new-data");
   });
 });

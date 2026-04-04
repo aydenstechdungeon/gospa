@@ -1,6 +1,13 @@
 // GoSPA Client-side Navigation
 // Enables SPA-style navigation without full page reloads
 
+/**
+ * Declare global debug constant for build-time stripping.
+ */
+declare global {
+  var GOSPA_DEBUG: boolean; // eslint-disable-line no-var
+}
+
 // Navigation state
 const state = {
   currentPath: window.location.pathname,
@@ -406,15 +413,19 @@ async function fetchPageFromServer(
       });
 
       if (!response.ok) {
-        console.error("[GoSPA] Navigation failed:", response.status);
+        if (typeof GOSPA_DEBUG !== "undefined" && GOSPA_DEBUG) {
+          console.error("[GoSPA] Navigation failed:", response.status);
+        }
         return null;
       }
 
       const contentType = response.headers.get("content-type");
       if (contentType && !contentType.includes("text/html")) {
-        console.warn(
-          `[GoSPA] Intercepted non-HTML response (${contentType}) for path ${path}. Falling back to standard navigation.`,
-        );
+        if (typeof GOSPA_DEBUG !== "undefined" && GOSPA_DEBUG) {
+          console.warn(
+            `[GoSPA] Intercepted non-HTML response (${contentType}) for path ${path}. Falling back to standard navigation.`,
+          );
+        }
         return null;
       }
 
@@ -446,7 +457,9 @@ async function fetchPageFromServer(
 
       return { content, title, head };
     } catch (error) {
-      console.error("[GoSPA] Navigation error:", error);
+      if (typeof GOSPA_DEBUG !== "undefined" && GOSPA_DEBUG) {
+        console.error("[GoSPA] Navigation error:", error);
+      }
       return null;
     } finally {
       pendingRequests.delete(path);
@@ -1046,10 +1059,12 @@ async function performDOMUpdateWithTransitions(
     await transition.finished;
   } catch (transitionError) {
     // Fallback to classic DOM update if View Transitions fail
-    console.warn(
-      "[GoSPA] View Transition failed, falling back to classic update:",
-      transitionError,
-    );
+    if (typeof GOSPA_DEBUG !== "undefined" && GOSPA_DEBUG) {
+      console.warn(
+        "[GoSPA] View Transition failed, falling back to classic update:",
+        transitionError,
+      );
+    }
     await update();
   }
 }
@@ -1139,7 +1154,9 @@ export async function navigate(
       if ((error as Error).name === "AbortError") {
         return false;
       }
-      console.error("[GoSPA] Navigation error:", error);
+      if (typeof GOSPA_DEBUG !== "undefined" && GOSPA_DEBUG) {
+        console.error("[GoSPA] Navigation error:", error);
+      }
       state.isNavigating = false;
       state.pendingNavigation = null;
       return false;
@@ -1240,7 +1257,9 @@ function handlePopState(_event: PopStateEvent): void {
       if ((error as Error).name === "AbortError") return;
       progressBar.finish();
       container.removeAttribute("data-gospa-loading");
-      console.error("[GoSPA] Popstate navigation error:", error);
+      if (typeof GOSPA_DEBUG !== "undefined" && GOSPA_DEBUG) {
+        console.error("[GoSPA] Popstate navigation error:", error);
+      }
     }
   });
 
@@ -1371,7 +1390,9 @@ async function registerNavigationServiceWorker(): Promise<void> {
       : path;
     await navigator.serviceWorker.register(swPath, { scope: "/" });
   } catch (error) {
-    console.warn("[GoSPA] Service worker registration failed:", error);
+    if (typeof GOSPA_DEBUG !== "undefined" && GOSPA_DEBUG) {
+      console.warn("[GoSPA] Service worker registration failed:", error);
+    }
   }
 }
 
@@ -1428,7 +1449,9 @@ export async function prefetch(path: string): Promise<void> {
     const url = new URL(path, window.location.origin);
     // Only allow same-origin prefetches
     if (url.origin !== window.location.origin) {
-      console.debug("[GoSPA] Prefetch skipped: cross-origin URL:", path);
+      if (typeof GOSPA_DEBUG !== "undefined" && GOSPA_DEBUG) {
+        console.debug("[GoSPA] Prefetch skipped: cross-origin URL:", path);
+      }
       return;
     }
     // Block potentially dangerous paths
@@ -1438,11 +1461,15 @@ export async function prefetch(path: string): Promise<void> {
       normalizedPath.startsWith("/..") ||
       normalizedPath.includes("/../")
     ) {
-      console.debug("[GoSPA] Prefetch skipped: unsafe path:", path);
+      if (typeof GOSPA_DEBUG !== "undefined" && GOSPA_DEBUG) {
+        console.debug("[GoSPA] Prefetch skipped: unsafe path:", path);
+      }
       return;
     }
   } catch {
-    console.debug("[GoSPA] Prefetch skipped: invalid URL:", path);
+    if (typeof GOSPA_DEBUG !== "undefined" && GOSPA_DEBUG) {
+      console.debug("[GoSPA] Prefetch skipped: invalid URL:", path);
+    }
     return;
   }
 

@@ -40,7 +40,9 @@ func Dev(config *DevConfig) {
 		fmt.Fprintf(os.Stderr, "Warning: templ regeneration failed: %v\n", err)
 	}
 	Generate(&GenerateConfig{
-		DevMode: true,
+		InputDir:  ".",
+		OutputDir: "./generated",
+		DevMode:   true,
 	})
 	_ = BuildIslands(nil, nil)
 
@@ -435,7 +437,9 @@ func handleFileChange(_ context.Context, event FileEvent, restartCh chan struct{
 	if strings.HasSuffix(event.File, ".go") || strings.HasSuffix(event.File, ".templ") || strings.HasSuffix(event.File, ".gospa") {
 		// Run generate in development mode to enable HMR cache-busting
 		Generate(&GenerateConfig{
-			DevMode: true,
+			InputDir:  ".",
+			OutputDir: "./generated",
+			DevMode:   true,
 		})
 		_ = BuildIslands(nil, nil)
 	}

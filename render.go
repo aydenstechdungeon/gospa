@@ -8,13 +8,14 @@ import (
 	"fmt"
 	"html"
 	"os"
+	"strings"
 	"sync"
 	"time"
 
+	gospafiber "github.com/aydenstechdungeon/gospa/fiber"
 	"github.com/aydenstechdungeon/gospa/routing"
 	"github.com/aydenstechdungeon/gospa/state"
 	templpkg "github.com/aydenstechdungeon/gospa/templ"
-	gospafiber "github.com/aydenstechdungeon/gospa/fiber"
 	gofiber "github.com/gofiber/fiber/v3"
 	"github.com/valyala/fasthttp"
 )
@@ -163,9 +164,10 @@ func (a *App) renderRoute(c gofiber.Ctx, route *routing.Route) error {
 
 	c.Set("Content-Type", "text/html")
 
+	tier := a.resolveTier(opts, layouts)
 	rootLayoutFunc := routing.GetRootLayout()
 	if rootLayoutFunc != nil {
-		rootProps := a.buildRootLayoutProps(c, params)
+		rootProps := a.buildRootLayoutProps(c, params, tier)
 		// Merge loaded props into root props if they don't conflict
 		for k, v := range loadedProps {
 			if _, ok := rootProps[k]; !ok {
@@ -217,7 +219,7 @@ func (a *App) renderRoute(c gofiber.Ctx, route *routing.Route) error {
 				if loadingFn := routing.GetLoading(route.Path); loadingFn != nil {
 					ld := loadingFn(map[string]interface{}{})
 					ld = a.wrapWithLayouts(ld, layouts, loadedProps, c.Path())
-					rootProps := a.buildRootLayoutProps(c, loadedProps)
+					rootProps := a.buildRootLayoutProps(c, loadedProps, tier)
 					// Merge loaded props into root props if they don't conflict
 					for k, v := range loadedProps {
 						if _, ok := rootProps[k]; !ok {
@@ -307,7 +309,28 @@ func (a *App) renderRoute(c gofiber.Ctx, route *routing.Route) error {
 			a.Logger().Error("streaming render error", "err", err)
 		}
 		_, _ = fmt.Fprint(w, `</main></div>`)
-		_, _ = fmt.Fprintf(w, `<script src="%s" type="module"></script>`, runtimePath)
+
+		// Determine the highest required runtime tier for this page and all its layouts
+		maxTierLevel := tierToLevel(opts.RuntimeTier)
+		for _, l := range layouts {
+			if lTier := routing.GetLayoutTier(l.Path); lTier != "" {
+				if level := tierToLevel(lTier); level > maxTierLevel {
+					maxTierLevel = level
+				}
+			}
+		}
+		if rootTier := routing.GetLayoutTier(""); rootTier != "" {
+			if level := tierToLevel(rootTier); level > maxTierLevel {
+				maxTierLevel = level
+			}
+		}
+		tier := levelToTier(maxTierLevel)
+		runtimePathForPage := runtimePath
+		if tier != "" && tier != "full" && strings.HasPrefix(runtimePath, "/_gospa/runtime.js") {
+			runtimePathForPage = "/_gospa/runtime-" + tier + ".js"
+		}
+
+		_, _ = fmt.Fprintf(w, `<script src="%s" type="module"></script>`, runtimePathForPage)
 		_, _ = fmt.Fprintf(w, `<script type="module">
 import * as runtime from %s;
 window.__GOSPA_CONFIG__ = {
@@ -328,7 +351,7 @@ runtime.init({
 		timeout: %d
 	}
 });
-</script>`, toJS(runtimePath), toJS(a.Config.NavigationOptions), toJS(c.Locals("gospa.csrf_token")), toJS(wsURL), toJS(string(a.Config.SerializationFormat)), a.Config.DevMode, a.Config.SimpleRuntimeSVGs, a.Config.DisableSanitization, wsRD, wsMR, wsHB, toJS(a.Config.HydrationMode), a.Config.HydrationTimeout)
+</script>`, toJS(runtimePathForPage), toJS(a.Config.NavigationOptions), toJS(c.Locals("gospa.csrf_token")), toJS(wsURL), toJS(string(a.Config.SerializationFormat)), a.Config.DevMode, a.Config.SimpleRuntimeSVGs, a.Config.DisableSanitization, wsRD, wsMR, wsHB, toJS(a.Config.HydrationMode), a.Config.HydrationTimeout)
 
 		// Islands bundle — loads and registers all island setup functions
 		// Only include if the file exists (islands are optional)
@@ -432,4 +455,52 @@ func (a *App) resolveLoadChain(c gofiber.Ctx, route *routing.Route, layouts []*r
 	}
 
 	return props, nil
+}
+
+func (a *App) resolveTier(opts routing.RouteOptions, layouts []*routing.Route) string {
+	maxLevel := tierToLevel(string(a.Config.RuntimeTier))
+	if pLevel := tierToLevel(opts.RuntimeTier); pLevel > maxLevel {
+		maxLevel = pLevel
+	}
+	for _, l := range layouts {
+		if lTier := routing.GetLayoutTier(l.Path); lTier != "" {
+			if level := tierToLevel(lTier); level > maxLevel {
+				maxLevel = level
+			}
+		}
+	}
+	if rootTier := routing.GetLayoutTier(""); rootTier != "" {
+		if level := tierToLevel(rootTier); level > maxLevel {
+			maxLevel = level
+		}
+	}
+	return levelToTier(maxLevel)
+}
+
+// tierToLevel converts a runtime tier string to a numeric level for comparison.
+func tierToLevel(tier string) int {
+	switch strings.ToLower(tier) {
+	case "full":
+		return 3
+	case "core":
+		return 2
+	case "micro":
+		return 1
+	default:
+		return 0
+	}
+}
+
+// levelToTier converts a numeric level back to a runtime tier string.
+func levelToTier(level int) string {
+	switch level {
+	case 3:
+		return "full"
+	case 2:
+		return "core"
+	case 1:
+		return "micro"
+	default:
+		return "full"
+	}
 }
