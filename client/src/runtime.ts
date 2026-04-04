@@ -164,7 +164,7 @@ export const crossfade = async (el: Element, params?: any) =>
   (await getFrameworkFeatures()).crossfade(el, params);
 
 // Signal-based reactivity
-export {
+import {
   reactive,
   $state,
   $derived,
@@ -175,11 +175,22 @@ export {
   reactiveArray,
 } from "./signals.ts";
 
+export {
+  reactive,
+  $state,
+  $derived,
+  $effect,
+  watchProp,
+  toRaw,
+  isReactive,
+  reactiveArray,
+};
+
 // DOM Utilities
 export { cancelPendingDOMUpdates, flushDOMUpdatesNow } from "./dom.ts";
 
 // Error boundaries
-export {
+import {
   withErrorBoundary,
   createErrorFallback,
   getErrorBoundaryState,
@@ -188,8 +199,17 @@ export {
   onComponentError,
 } from "./error-boundary.ts";
 
-// DevTools & Debugging
 export {
+  withErrorBoundary,
+  createErrorFallback,
+  getErrorBoundaryState,
+  clearAllErrorBoundaries,
+  isInErrorState,
+  onComponentError,
+};
+
+// DevTools & Debugging
+import {
   createDevToolsPanel,
   updateDevToolsPanel,
   toggleDevTools,
@@ -197,6 +217,15 @@ export {
   timing,
   memoryUsage,
 } from "./debug.ts";
+
+export {
+  createDevToolsPanel,
+  updateDevToolsPanel,
+  toggleDevTools,
+  inspect,
+  timing,
+  memoryUsage,
+};
 
 // WebSocket tab sharing
 export async function createTabSync(config?: any) {
@@ -226,4 +255,38 @@ export async function measure(name: string, fn: any, metadata?: any) {
 }
 
 import GoSPA from "./runtime-core.ts";
+(GoSPA as any).remote = remote;
+(GoSPA as any).remoteAction = remoteAction;
+
+// WebSocket & Navigation APIs
+(GoSPA as any).initWebSocket = initWebSocket;
+(GoSPA as any).sendAction = sendAction;
+(GoSPA as any).navigate = navigate;
+(GoSPA as any).back = back;
+(GoSPA as any).prefetch = prefetch;
+
+// Islands & Hydration
+(GoSPA as any).initIslands = initIslands;
+(GoSPA as any).hydrateIsland = hydrateIsland;
+
+// Signals & Reactivity (Svelte-like)
+(GoSPA as any).reactive = (GoSPA as any).$state = (GoSPA as any).rune = $state;
+(GoSPA as any).derived = (GoSPA as any).$derived = $derived;
+(GoSPA as any).effect = (GoSPA as any).$effect = $effect;
+(GoSPA as any).watchProp = watchProp;
+
+// Transitions
+(GoSPA as any).setupTransitions = setupTransitions;
+(GoSPA as any).fade = fade;
+(GoSPA as any).fly = fly;
+(GoSPA as any).slide = slide;
+
+// Error Handling
+(GoSPA as any).withErrorBoundary = withErrorBoundary;
+(GoSPA as any).onComponentError = onComponentError;
+
+// Debugging
+(GoSPA as any).inspect = inspect;
+(GoSPA as any).timing = timing;
+
 export default GoSPA;
