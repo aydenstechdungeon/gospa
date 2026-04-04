@@ -3,7 +3,6 @@ package gospa
 import (
 	"bytes"
 	"context"
-	"crypto/sha256"
 	"fmt"
 	"io"
 	"net"
@@ -12,7 +11,6 @@ import (
 	"strings"
 
 	"github.com/a-h/templ"
-	"github.com/aydenstechdungeon/gospa/embed"
 	"github.com/aydenstechdungeon/gospa/routing"
 	json "github.com/goccy/go-json"
 	gofiber "github.com/gofiber/fiber/v3"
@@ -89,7 +87,8 @@ func (a *App) renderError(c gofiber.Ctx, statusCode int, errToDisplay error) err
 	rootLayoutFunc := routing.GetRootLayout()
 	var wrappedContent templ.Component
 	if rootLayoutFunc != nil {
-		rootProps := a.buildRootLayoutProps(c, params)
+		tier := a.resolveTier(routing.RouteOptions{}, layouts)
+		rootProps := a.buildRootLayoutProps(c, params, tier)
 		wrappedContent = rootLayoutFunc(content, rootProps)
 	} else {
 		wrappedContent = content
@@ -146,11 +145,11 @@ func (a *App) wrapWithLayouts(content templ.Component, layouts []*routing.Route,
 	return content
 }
 
-func (a *App) buildRootLayoutProps(c gofiber.Ctx, params map[string]interface{}) map[string]interface{} {
+func (a *App) buildRootLayoutProps(c gofiber.Ctx, params map[string]interface{}, tier string) map[string]interface{} {
 	wsRD, wsMR, wsHB := a.normalizeWSConfig()
 	props := map[string]interface{}{
 		"appName":             a.Config.AppName,
-		"runtimePath":         a.getRuntimePath(),
+		"runtimePath":         a.getRuntimePathForTier(tier),
 		"path":                c.Path(),
 		"debug":               a.Config.DevMode,
 		"wsUrl":               a.getWSUrl(c),
@@ -213,21 +212,36 @@ func (a *App) buildPageHTML(ctx context.Context, route *routing.Route, params ma
 	return buf.Bytes(), nil
 }
 
-func (a *App) getRuntimePath() string {
-	if a.Config.RuntimeScript != "/_gospa/runtime.js" && a.Config.RuntimeScript != "" {
+// getRuntimePathForTier returns the path to the client runtime script for the specified tier.
+func (a *App) getRuntimePathForTier(tier string) string {
+	if a.Config.RuntimeScript != "" && tier == "" {
 		return a.Config.RuntimeScript
 	}
 
 	name := "runtime"
-	if a.Config.SimpleRuntime {
-		name = "runtime-simple"
+	switch strings.ToLower(tier) {
+	case string(RuntimeTierMicro):
+		name = "runtime-micro"
+	case string(RuntimeTierCore):
+		name = "runtime-core"
 	}
 
-	if h, err := embed.RuntimeHash(a.Config.SimpleRuntime); err == nil {
-		return fmt.Sprintf("/_gospa/%s.%s.js", name, h)
+	if a.Config.DevMode {
+		return "/_gospa/" + name + ".js"
 	}
-	h := fmt.Sprintf("%x", sha256.Sum256([]byte(Version)))
-	return fmt.Sprintf("/_gospa/%s.%s.js", name, h[:8])
+
+	if a.Config.BuildManifest != nil {
+		if path, ok := a.Config.BuildManifest["static/js/"+name+".js"]; ok {
+			return "/" + path
+		}
+	}
+
+	return "/_gospa/" + name + ".js"
+}
+
+// getRuntimePath returns the path to the client runtime script from global config.
+func (a *App) getRuntimePath() string {
+	return a.getRuntimePathForTier(string(a.Config.RuntimeTier))
 }
 
 func (a *App) getWSUrl(c gofiber.Ctx) string {

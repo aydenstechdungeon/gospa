@@ -1,50 +1,45 @@
-// GoSPA Client Runtime - Main entry point
-// A lightweight runtime for reactive SPAs with Go/Fiber/Templ
-//
-// HTML sanitization is NOT included by default. The runtime trusts server-rendered
-// content (Templ auto-escapes). For user-generated content, use 'gospa/runtime-secure'
-//
-// Bundle size: ~15KB (without DOMPurify)
+// GoSPA Client Runtime - Main entry point (Full Version)
+// Includes all features: navigation, websockets, remote actions, etc.
 
-// Core exports (re-exported from runtime-core for convenience)
 import {
-  init,
+  init as coreInit,
   createComponent,
   destroyComponent,
   getComponent,
   getState,
   setState,
-  callAction,
   bind,
   autoInit,
   getWebSocket,
   getNavigation,
   getTransitions,
-  remote,
-  remoteAction,
-  configureRemote,
-  getRemotePrefix,
+  getFrameworkFeatures,
 } from "./runtime-core.ts";
 
 export {
-  init,
   createComponent,
   destroyComponent,
   getComponent,
   getState,
   setState,
-  callAction,
   bind,
   autoInit,
   getWebSocket,
   getNavigation,
   getTransitions,
-  remote,
-  remoteAction,
-  configureRemote,
-  getRemotePrefix,
 };
 
+import { initNavigation } from "./navigation.ts";
+
+/**
+ * Initialize the full GoSPA runtime with navigation and all features.
+ */
+export async function init(config: any = {}) {
+  coreInit(config);
+  initNavigation();
+}
+
+// State Primitives
 export {
   Rune,
   Derived,
@@ -53,38 +48,49 @@ export {
   batch,
   rune,
   derived,
-  effect,
   watch,
   untrack,
-  preEffect,
   bindElement,
   bindTwoWay,
   renderIf,
   renderList,
 } from "./runtime-core.ts";
 
-// Export types
-import { registerBinding, unregisterBinding } from "./dom.ts";
-import { getFrameworkFeatures } from "./runtime-core.ts";
+// Remote Actions (Imported directly for Full bundle)
+import {
+  remote,
+  remoteAction,
+  configureRemote,
+  getRemotePrefix,
+  type RemoteOptions,
+  type RemoteResult,
+} from "./remote.ts";
+
+export { remote, remoteAction, configureRemote, getRemotePrefix };
+export type { RemoteOptions, RemoteResult };
+
+// Navigation
+import {
+  navigate as nav,
+  back as navBack,
+  prefetch as navPrefetch,
+} from "./navigation.ts";
 import type { NavigateOptions, NavigationOptions } from "./navigation.ts";
+export type { NavigateOptions, NavigationOptions };
+
+// WebSocket
 import type { StateMessage } from "./websocket.ts";
+export type { StateMessage };
 
-// Lazy-loaded wrappers for feature-rich modules
-// This allows the standard runtime bundle to stay tiny while loading
-// heavier functionality only when used ("on demand").
-
-// Re-export types (static imports are fine for types as they are erased)
+// Types
 export type {
   ComponentDefinition,
   ComponentInstance,
   RuntimeConfig,
 } from "./runtime-core.ts";
-export type { NavigateOptions, NavigationOptions };
-export type { StateMessage };
 export type { Unsubscribe } from "./state.ts";
-export type { RemoteOptions, RemoteResult } from "./remote.ts";
 
-// WebSocket
+// WebSocket Full API
 export async function initWebSocket(config: any) {
   const mod = await getFrameworkFeatures();
   return mod.initWebSocket(config);
@@ -100,7 +106,7 @@ export async function sendAction(name: string, payload?: any) {
   return mod.sendAction(name, payload);
 }
 
-// Navigation
+// Navigation Full API
 export async function navigate(to: string, options?: any) {
   const mod = await getFrameworkFeatures();
   return mod.navigate(to, options);
@@ -157,26 +163,20 @@ export const blur = async (el: Element, params?: any) =>
 export const crossfade = async (el: Element, params?: any) =>
   (await getFrameworkFeatures()).crossfade(el, params);
 
-// Signal-based reactivity (proxy-based auto-tracking)
+// Signal-based reactivity
 export {
   reactive,
   $state,
   $derived,
   $effect,
-  // derived is already exported from runtime-core above
-  effect as signalEffect,
   watchProp,
   toRaw,
   isReactive,
   reactiveArray,
 } from "./signals.ts";
 
-// RAF-batched DOM updates
-export {
-  cancelPendingDOMUpdates,
-  flushDOMUpdatesNow,
-  setSanitizer,
-} from "./dom.ts";
+// DOM Utilities
+export { cancelPendingDOMUpdates, flushDOMUpdatesNow } from "./dom.ts";
 
 // Error boundaries
 export {
@@ -198,7 +198,7 @@ export {
   memoryUsage,
 } from "./debug.ts";
 
-// WebSocket tab sharing (BroadcastChannel)
+// WebSocket tab sharing
 export async function createTabSync(config?: any) {
   const mod = await getFrameworkFeatures();
   return mod.createTabSync(config);
@@ -210,7 +210,7 @@ export async function createIndexedDBPersistence(config?: any) {
   return mod.createIndexedDBPersistence(config);
 }
 
-// Accessibility enhancements
+// Accessibility
 export async function announce(
   message: string,
   politeness?: "polite" | "assertive",
@@ -224,3 +224,6 @@ export async function measure(name: string, fn: any, metadata?: any) {
   const mod = await getFrameworkFeatures();
   return mod.measure(name, fn, metadata);
 }
+
+import GoSPA from "./runtime-core.ts";
+export default GoSPA;

@@ -109,7 +109,7 @@ describe("Rune", () => {
   });
 
   it("should handle object equality", async () => {
-    const r = new Rune({ a: 1 });
+    const r = new Rune({ a: 1 }, { deep: true });
     let count = 0;
 
     const unsub = r.subscribe(() => {

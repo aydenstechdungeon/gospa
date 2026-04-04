@@ -1,6 +1,13 @@
 // GoSPA Client-side Navigation
 // Enables SPA-style navigation without full page reloads
 
+/**
+ * Declare global debug constant for build-time stripping.
+ */
+declare global {
+  var GOSPA_DEBUG: boolean; // eslint-disable-line no-var
+}
+
 // Navigation state
 const state = {
   currentPath: window.location.pathname,
@@ -91,8 +98,8 @@ const DEFAULT_NAVIGATION_OPTIONS: Required<NavigationOptions> = {
   speculativePrefetching: {
     enabled: true,
     ttl: 30_000,
-    hoverDelay: 50,
-    viewportMargin: 150,
+    hoverDelay: 24, // Faster hover intent
+    viewportMargin: 300, // Preload more aggressively
   },
   urlParsingCache: {
     enabled: true,
@@ -117,7 +124,7 @@ const DEFAULT_NAVIGATION_OPTIONS: Required<NavigationOptions> = {
     fallbackToClassic: true,
   },
   progressBar: {
-    enabled: true,
+    enabled: false,
     color: "#3b82f6",
     height: "2px",
   },
@@ -228,7 +235,7 @@ class ProgressBar {
       height: cfg.height ?? "2px",
       backgroundColor: cfg.color ?? "#3b82f6",
       zIndex: "9999",
-      transition: "width 0.3s ease-out, opacity 0.3s ease-in-out",
+      transition: "width 0.1s ease-out, opacity 0.1s ease-in-out",
       width: "0%",
       opacity: "1",
       boxShadow: `0 0 10px ${cfg.color ?? "#3b82f6"}`,
@@ -248,12 +255,10 @@ class ProgressBar {
     if (!this.el) return;
     clearInterval(this.interval!);
     this.el.style.width = "100%";
-    setTimeout(() => {
-      if (this.el) {
-        this.el.style.opacity = "0";
-        setTimeout(() => this.reset(), 300);
-      }
-    }, 100);
+    if (this.el) {
+      this.el.style.opacity = "0";
+      this.reset();
+    }
   }
 
   private reset() {
@@ -373,9 +378,8 @@ function isInternalLink(link: HTMLAnchorElement): boolean {
 
 // Page data type
 interface PageData {
-  content: string;
+  doc: Document;
   title: string;
-  head: string;
 }
 
 // Prefetch cache
@@ -406,47 +410,32 @@ async function fetchPageFromServer(
       });
 
       if (!response.ok) {
-        console.error("[GoSPA] Navigation failed:", response.status);
+        if (typeof GOSPA_DEBUG !== "undefined" && GOSPA_DEBUG) {
+          console.error("[GoSPA] Navigation failed:", response.status);
+        }
         return null;
       }
 
       const contentType = response.headers.get("content-type");
       if (contentType && !contentType.includes("text/html")) {
-        console.warn(
-          `[GoSPA] Intercepted non-HTML response (${contentType}) for path ${path}. Falling back to standard navigation.`,
-        );
+        if (typeof GOSPA_DEBUG !== "undefined" && GOSPA_DEBUG) {
+          console.warn(
+            `[GoSPA] Intercepted non-HTML response (${contentType}) for path ${path}. Falling back to standard navigation.`,
+          );
+        }
         return null;
       }
 
       const html = await response.text();
-
       const parser = new DOMParser();
       const doc = parser.parseFromString(html, "text/html");
-
-      let content: string;
-
-      const rootEl = doc.querySelector("[data-gospa-root]");
-      const pageContentEl = doc.querySelector("[data-gospa-page-content]");
-      const mainEl = doc.querySelector("main");
-
-      if (rootEl) {
-        content = rootEl.innerHTML;
-      } else if (pageContentEl) {
-        content = pageContentEl.innerHTML;
-      } else if (mainEl) {
-        content = mainEl.innerHTML;
-      } else {
-        content = doc.body.innerHTML;
-      }
-
       const title = doc.querySelector("title")?.textContent || "";
 
-      const headEl = doc.querySelector("head");
-      const head = headEl ? headEl.innerHTML : "";
-
-      return { content, title, head };
+      return { doc, title };
     } catch (error) {
-      console.error("[GoSPA] Navigation error:", error);
+      if (typeof GOSPA_DEBUG !== "undefined" && GOSPA_DEBUG) {
+        console.error("[GoSPA] Navigation error:", error);
+      }
       return null;
     } finally {
       pendingRequests.delete(path);
@@ -521,9 +510,8 @@ function patchAttributes(current: Element, incoming: Element): void {
 }
 
 function patchNode(currentNode: Node, incomingNode: Node): void {
-  if (currentNode.isEqualNode(incomingNode)) {
-    return;
-  }
+  // We remove the top-level isEqualNode(incomingNode) check to avoid O(N^2) complexity on large trees.
+  // Instead, we only compare matching node types and tag names before recursing.
 
   if (currentNode.nodeType !== incomingNode.nodeType) {
     currentNode.parentNode?.replaceChild(
@@ -646,16 +634,13 @@ async function updateDOM(data: PageData, pageContent: string): Promise<void> {
   }
 
   // Update head (managed head elements)
-  runOnIdle(() => updateHead(data.head));
+  updateHead(data.doc);
 
   // Re-initialize runtime for new content
   const targetEl = rootEl || contentEl || mainEl || document.body;
   await initNewContent(targetEl);
 
-  // Defer non-critical updates to idle time to reduce INP
-  runOnIdle(() => {
-    updateActiveLinks();
-  });
+  updateActiveLinks();
 
   // Focus management for accessibility
   const focusTarget = document.querySelector(
@@ -706,7 +691,7 @@ function runOnIdle(callback: () => void): void {
 
 // Update head elements - smart reconciliation to avoid CSS flashes
 // and clean up elements that are no longer needed
-function updateHead(headHtml: string): void {
+function updateHead(newDoc: Document): void {
   const escapeSelectorValue = (value: string): string => {
     if (typeof CSS !== "undefined" && typeof CSS.escape === "function") {
       return CSS.escape(value);
@@ -714,18 +699,12 @@ function updateHead(headHtml: string): void {
     return value.replace(/["\\]/g, "\\$&");
   };
 
-  // Parse head HTML to extract elements
-  const parser = new DOMParser();
-  const doc = parser.parseFromString(
-    `<html><head>${headHtml}</head></html>`,
-    "text/html",
-  );
-  const newHead = doc.querySelector("head");
+  const newHead = newDoc.querySelector("head");
 
   if (!newHead) return;
 
   // 1. Update title explicitly if it changed
-  const newTitle = doc.querySelector("title")?.textContent;
+  const newTitle = newDoc.querySelector("title")?.textContent;
   if (newTitle && newTitle !== document.title) {
     document.title = newTitle;
   }
@@ -928,6 +907,9 @@ function executeScripts(container: Element | Document): void {
 }
 
 // Initialize new content (re-run runtime setup)
+// Track initialized elements to avoid duplicate listeners without expensive cloning
+const initializedElements = new WeakSet<Element>();
+
 async function initCriticalContent(
   container: Element | Document = document,
 ): Promise<void> {
@@ -936,16 +918,18 @@ async function initCriticalContent(
   const ws = gospa?._ws;
 
   eventElements.forEach((element) => {
+    if (!(element instanceof Element) || initializedElements.has(element))
+      return;
+
     const attr = element.getAttribute("data-on");
     if (!attr) return;
 
     const [eventType, action] = attr.split(":");
     if (!eventType || !action) return;
 
-    const newElement = element.cloneNode(true) as Element;
-    element.parentNode?.replaceChild(newElement, element);
+    initializedElements.add(element);
 
-    newElement.addEventListener(eventType, async () => {
+    element.addEventListener(eventType, async () => {
       if (ws && ws.readyState === WebSocket.OPEN) {
         ws.send(JSON.stringify({ type: "action", action }));
         return;
@@ -1026,7 +1010,23 @@ async function performDOMUpdateWithTransitions(
   const viewCfg = navigationOptionsConfig.viewTransitions;
   const canTransition = viewCfg.enabled && "startViewTransition" in document;
 
-  const pageContent = await prepareContent(data.content);
+  const doc = data.doc;
+  const rootEl = doc.querySelector("[data-gospa-root]");
+  const pageContentEl = doc.querySelector("[data-gospa-page-content]");
+  const mainEl = doc.querySelector("main");
+
+  let rawContent: string;
+  if (rootEl) {
+    rawContent = rootEl.innerHTML;
+  } else if (pageContentEl) {
+    rawContent = pageContentEl.innerHTML;
+  } else if (mainEl) {
+    rawContent = mainEl.innerHTML;
+  } else {
+    rawContent = doc.body.innerHTML;
+  }
+
+  const pageContent = await prepareContent(rawContent);
 
   const update = async () => {
     await updateDOM(data, pageContent);
@@ -1046,10 +1046,12 @@ async function performDOMUpdateWithTransitions(
     await transition.finished;
   } catch (transitionError) {
     // Fallback to classic DOM update if View Transitions fail
-    console.warn(
-      "[GoSPA] View Transition failed, falling back to classic update:",
-      transitionError,
-    );
+    if (typeof GOSPA_DEBUG !== "undefined" && GOSPA_DEBUG) {
+      console.warn(
+        "[GoSPA] View Transition failed, falling back to classic update:",
+        transitionError,
+      );
+    }
     await update();
   }
 }
@@ -1139,7 +1141,9 @@ export async function navigate(
       if ((error as Error).name === "AbortError") {
         return false;
       }
-      console.error("[GoSPA] Navigation error:", error);
+      if (typeof GOSPA_DEBUG !== "undefined" && GOSPA_DEBUG) {
+        console.error("[GoSPA] Navigation error:", error);
+      }
       state.isNavigating = false;
       state.pendingNavigation = null;
       return false;
@@ -1240,7 +1244,9 @@ function handlePopState(_event: PopStateEvent): void {
       if ((error as Error).name === "AbortError") return;
       progressBar.finish();
       container.removeAttribute("data-gospa-loading");
-      console.error("[GoSPA] Popstate navigation error:", error);
+      if (typeof GOSPA_DEBUG !== "undefined" && GOSPA_DEBUG) {
+        console.error("[GoSPA] Popstate navigation error:", error);
+      }
     }
   });
 
@@ -1371,7 +1377,9 @@ async function registerNavigationServiceWorker(): Promise<void> {
       : path;
     await navigator.serviceWorker.register(swPath, { scope: "/" });
   } catch (error) {
-    console.warn("[GoSPA] Service worker registration failed:", error);
+    if (typeof GOSPA_DEBUG !== "undefined" && GOSPA_DEBUG) {
+      console.warn("[GoSPA] Service worker registration failed:", error);
+    }
   }
 }
 
@@ -1401,6 +1409,19 @@ export function initNavigation(): void {
   setupSpeculativePrefetching();
   void registerNavigationServiceWorker();
 
+  // Inject snappy transition styles if enabled
+  if (navigationOptionsConfig.viewTransitions.enabled && !document.getElementById("gospa-snappy-transitions")) {
+    const style = document.createElement("style");
+    style.id = "gospa-snappy-transitions";
+    style.textContent = `
+      ::view-transition-old(root),
+      ::view-transition-new(root) {
+        animation-duration: 0s !important;
+      }
+    `;
+    document.head.appendChild(style);
+  }
+
   // Mark as SPA-enabled
   document.documentElement.setAttribute("data-gospa-spa", "true");
 
@@ -1416,6 +1437,7 @@ export function destroyNavigation(): void {
   );
   window.removeEventListener("popstate", handlePopState);
   teardownSpeculativePrefetching();
+  document.getElementById("gospa-snappy-transitions")?.remove();
   document.documentElement.removeAttribute("data-gospa-spa");
 }
 
@@ -1428,7 +1450,9 @@ export async function prefetch(path: string): Promise<void> {
     const url = new URL(path, window.location.origin);
     // Only allow same-origin prefetches
     if (url.origin !== window.location.origin) {
-      console.debug("[GoSPA] Prefetch skipped: cross-origin URL:", path);
+      if (typeof GOSPA_DEBUG !== "undefined" && GOSPA_DEBUG) {
+        console.debug("[GoSPA] Prefetch skipped: cross-origin URL:", path);
+      }
       return;
     }
     // Block potentially dangerous paths
@@ -1438,11 +1462,15 @@ export async function prefetch(path: string): Promise<void> {
       normalizedPath.startsWith("/..") ||
       normalizedPath.includes("/../")
     ) {
-      console.debug("[GoSPA] Prefetch skipped: unsafe path:", path);
+      if (typeof GOSPA_DEBUG !== "undefined" && GOSPA_DEBUG) {
+        console.debug("[GoSPA] Prefetch skipped: unsafe path:", path);
+      }
       return;
     }
   } catch {
-    console.debug("[GoSPA] Prefetch skipped: invalid URL:", path);
+    if (typeof GOSPA_DEBUG !== "undefined" && GOSPA_DEBUG) {
+      console.debug("[GoSPA] Prefetch skipped: invalid URL:", path);
+    }
     return;
   }
 

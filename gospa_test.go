@@ -2,6 +2,7 @@ package gospa
 
 import (
 	"os"
+	"strings"
 	"testing"
 	"time"
 )
@@ -229,7 +230,6 @@ func TestDecodeSsgEntry_ExactlyEightBytes(t *testing.T) {
 // ─── storeSsgEntry (internal cache) ──────────────────────────────────────────
 
 func TestStoreSsgEntry_FIFO_Eviction(t *testing.T) {
-	// Use Prefork=true so in-memory ssgCache is used (not external Storage)
 	app := New(Config{SSGCacheMaxEntries: 3, Prefork: false})
 	app.Config.Storage = nil // force in-memory path
 	defer func() { _ = app.Fiber.Shutdown() }()
@@ -326,13 +326,13 @@ func TestGetRuntimePath_Default(t *testing.T) {
 	}
 }
 
-func TestGetRuntimePath_Simple(t *testing.T) {
-	app := New(Config{SimpleRuntime: true})
+func TestGetRuntimePath_Micro(t *testing.T) {
+	app := New(Config{RuntimeTier: RuntimeTierMicro})
 	defer func() { _ = app.Fiber.Shutdown() }()
 	path := app.getRuntimePath()
-	// Should contain "simple" in the path name
-	if len(path) < 8 || path[:8] != "/_gospa/" {
-		t.Errorf("expected path starting with '/_gospa/', got %q", path)
+	// Should contain "micro" in the path name
+	if len(path) < 8 || path[:8] != "/_gospa/" || !strings.Contains(path, "micro") {
+		t.Errorf("expected path containing 'micro', got %q", path)
 	}
 }
 

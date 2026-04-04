@@ -35,6 +35,7 @@ type RouteInfo struct {
 	HasLoader    bool        // True if this route has a server-side Load function
 	HasActions   bool        // True if this route has server-side form actions
 	Actions      []string    // List of action names discovered in Actions map
+	RuntimeTier  string      // Client runtime tier needed by this component
 }
 
 // FuncParam represents a function parameter.
@@ -166,6 +167,17 @@ func scanRoutes(routesDir string) ([]RouteInfo, error) {
 						route.HasActions = true
 						route.Actions = actions
 					}
+				}
+			}
+		}
+
+		// Extract RuntimeTier from .templ file comments
+		// #nosec G122 - this is a generator tool running on local filesystem
+		if content, err := os.ReadFile(filepath.Clean(path)); err == nil {
+			if idx := bytes.Index(content, []byte("@gospa:tier ")); idx != -1 {
+				line := string(content[idx+12:])
+				if end := strings.IndexAny(line, "\n\r"); end != -1 {
+					route.RuntimeTier = strings.TrimSpace(line[:end])
 				}
 			}
 		}
@@ -640,9 +652,9 @@ func generateCode(routes []RouteInfo, routesDir string, hasHooks bool) (string, 
 	if len(pages) > 0 {
 		sb.WriteString("\t// Register pages\n")
 		for _, route := range pages {
-			fmt.Fprintf(&sb, "\trouting.RegisterPage(%q, func(props map[string]interface{}) templ.Component {\n", route.URLPath)
+			fmt.Fprintf(&sb, "\trouting.RegisterPageWithOptions(%q, func(props map[string]interface{}) templ.Component {\n", route.URLPath)
 			fmt.Fprintf(&sb, "\t\treturn %s\n", generatePageCallWithPackage(route))
-			sb.WriteString("\t})\n")
+			fmt.Fprintf(&sb, "\t}, routing.RouteOptions{RuntimeTier: %q})\n", route.RuntimeTier)
 
 			if route.HasLoader {
 				pkgPrefix := ""
@@ -672,7 +684,7 @@ func generateCode(routes []RouteInfo, routesDir string, hasHooks bool) (string, 
 			if isRoot {
 				fmt.Fprintf(&sb, "\trouting.RegisterRootLayout(func(children templ.Component, props map[string]interface{}) templ.Component {\n")
 			} else {
-				fmt.Fprintf(&sb, "\trouting.RegisterLayout(%q, func(children templ.Component, props map[string]interface{}) templ.Component {\n", route.URLPath)
+				fmt.Fprintf(&sb, "\trouting.RegisterLayoutWithOptions(%q, func(children templ.Component, props map[string]interface{}) templ.Component {\n", route.URLPath)
 			}
 			// Generate function call with proper parameters
 			callArgs := generateLayoutCallArgsWithPackage(route)
@@ -694,7 +706,7 @@ func generateCode(routes []RouteInfo, routesDir string, hasHooks bool) (string, 
 			} else {
 				fmt.Fprintf(&sb, "\t\treturn %s\n", callArgs)
 			}
-			sb.WriteString("\t})\n")
+			fmt.Fprintf(&sb, "\t}, %q)\n", route.RuntimeTier)
 
 			if route.HasLoader {
 				pkgPrefix := ""

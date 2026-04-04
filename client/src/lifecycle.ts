@@ -29,6 +29,13 @@ export function onDestroyed(callback: Callback): void {
 }
 
 /**
+ * Declare global debug constant for build-time stripping.
+ */
+declare global {
+  var GOSPA_DEBUG: boolean; // eslint-disable-line no-var
+}
+
+/**
  * Internal: Run all hooks of a specific type.
  */
 export function runHooks(type: HookType): void {
@@ -38,7 +45,9 @@ export function runHooks(type: HookType): void {
       try {
         cb();
       } catch (e) {
-        console.error(`[GoSPA] Error in ${type} hook:`, e);
+        if (typeof GOSPA_DEBUG !== "undefined" && GOSPA_DEBUG) {
+          console.error(`[GoSPA] Error in ${type} hook:`, e);
+        }
       }
     });
 

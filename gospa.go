@@ -264,7 +264,7 @@ func validateAndLogConfig(config *Config) {
 
 // setupRoutes configures core internal routes.
 func (a *App) setupRoutes() {
-	a.Fiber.Get(a.getRuntimePath(), fiber.RuntimeMiddleware(a.Config.SimpleRuntime))
+	a.Fiber.Get(a.getRuntimePath(), fiber.RuntimeMiddleware(a.Config.RuntimeTier))
 
 	a.Fiber.Use("/_gospa/", func(c fiberpkg.Ctx) error {
 		c.Set("Cache-Control", "public, max-age=31536000, immutable")

@@ -6,6 +6,7 @@ import (
 	"os"
 	"time"
 
+	"github.com/aydenstechdungeon/gospa/compiler"
 	"github.com/aydenstechdungeon/gospa/fiber"
 	"github.com/aydenstechdungeon/gospa/routing"
 	"github.com/aydenstechdungeon/gospa/store"
@@ -15,10 +16,19 @@ import (
 // Version is the current version of GoSPA.
 const Version = "0.1.35"
 
-// Serialization formats
+// Serialization format constants.
 const (
-	SerializationJSON    = "json"
+	// SerializationJSON uses standard JSON for state.
+	SerializationJSON = "json"
+	// SerializationMsgPack uses MessagePack for more compact state.
 	SerializationMsgPack = "msgpack"
+)
+
+// RuntimeTier constants (pointing to compiler package)
+const (
+	RuntimeTierMicro = compiler.RuntimeTierMicro
+	RuntimeTierCore  = compiler.RuntimeTierCore
+	RuntimeTierFull  = compiler.RuntimeTierFull
 )
 
 // NavigationSpeculativePrefetchingConfig configures speculative prefetching
@@ -118,7 +128,8 @@ type Config struct {
 	// StateDiffing enables delta-only "patch" WebSocket messages for state syncs.
 	StateDiffing   bool
 	CacheTemplates bool // Cache compiled templates (SSG only)
-	SimpleRuntime  bool // Use lightweight runtime without DOMPurify (~6KB smaller)
+	// RuntimeTier specifies the complexity of the client runtime.
+	RuntimeTier compiler.RuntimeTier
 	// SimpleRuntimeSVGs allows SVG elements in the simple runtime sanitizer.
 	SimpleRuntimeSVGs bool
 	// DisableSanitization disables client-side HTML sanitization for SPA navigation.
@@ -206,10 +217,11 @@ type Config struct {
 
 // DefaultConfig returns the default configuration.
 func DefaultConfig() Config {
-	enabled := true
+	enabled := false
 	color := "#667eea"
 	height := "3px"
 	return Config{
+		RuntimeTier:              RuntimeTierFull,
 		RoutesDir:                "./routes",
 		DevMode:                  false,
 		RuntimeScript:            "/_gospa/runtime.js",

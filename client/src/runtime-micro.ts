@@ -4,8 +4,7 @@
 //
 // For more features, use:
 // - runtime-core.ts (~15KB): DOM bindings, events, lazy-loaded modules
-// - runtime-simple.ts (~18KB): + simple sanitizer
-// - runtime.ts (~20KB): + full DOMPurify sanitizer
+// - runtime.ts (lazy features): full feature modular version
 
 import {
   Rune,

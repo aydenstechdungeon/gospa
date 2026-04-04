@@ -17,7 +17,7 @@ console.log("Gospa SFC Documentation loaded");
     (window as any)["__GOSPA_ISLAND_" + "docsgospasfcpage" + "__"] = { handlers: __GOSPA_HANDLERS__ };
     
     // Scoped hydration selector
-    const scope = (selector: string) => element.querySelector(selector + '.' + 'gospa-0b25');
+    const scope = (selector: string) => element.querySelector(selector + '.' + '');
 }
 
 export function mount(element: Element, props: Record<string, any>, state: any) {

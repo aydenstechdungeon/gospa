@@ -1,32 +1,19 @@
 import { Rune, batch } from "./state.ts";
 import type { Derived } from "./state.ts";
+import { handlers } from "./dom/handlers.ts";
 
-// Configurable sanitizer (defaults to passthrough - trust the server/Templ)
-// Sanitization is opt-in. For user-generated content, import from 'gospa/runtime-secure'
-// or manually configure with setSanitizer() and a sanitizer like DOMPurify
-let defaultSanitizerUsed = false;
-export let sanitizeHtml: (html: string) => string | Promise<string> = (
-  html,
-) => {
-  if (!defaultSanitizerUsed) {
-    console.warn(
-      "[GoSPA] Security Warning: Using default pass-through HTML sanitizer for data-bind=\"html:*\". For user-generated content, use 'gospa/runtime-secure' to enable DOMPurify.",
-    );
-    defaultSanitizerUsed = true;
-  }
-  return html;
-};
+/**
+ * Declare global debug constant for build-time stripping.
+ */
+declare global {
+  var GOSPA_DEBUG: boolean; // eslint-disable-line no-var
+}
 
 // === RAF-batched DOM Updates ===
-// Prevents layout thrashing by batching DOM writes to requestAnimationFrame
 let pendingDOMUpdates: (() => void)[] = [];
 let rafScheduled = false;
 let rafId: number | null = null;
 
-/**
- * Schedule a DOM update to be batched in the next animation frame.
- * This prevents layout thrashing when multiple updates happen synchronously.
- */
 function scheduleDOMUpdate(update: () => void): void {
   pendingDOMUpdates.push(update);
   if (!rafScheduled) {
@@ -35,28 +22,23 @@ function scheduleDOMUpdate(update: () => void): void {
   }
 }
 
-/**
- * Flush all pending DOM updates in a single animation frame.
- */
 function flushDOMUpdates(): void {
   const updates = pendingDOMUpdates;
   pendingDOMUpdates = [];
   rafScheduled = false;
   rafId = null;
 
-  // Execute all updates in sequence
   for (const update of updates) {
     try {
       update();
     } catch (error) {
-      console.error("[GoSPA] DOM update failed:", error);
+      if (typeof GOSPA_DEBUG !== "undefined" && GOSPA_DEBUG) {
+        console.error("[GoSPA] DOM update failed:", error);
+      }
     }
   }
 }
 
-/**
- * Cancel any pending RAF-batched DOM updates.
- */
 export function cancelPendingDOMUpdates(): void {
   if (rafId !== null) {
     cancelAnimationFrame(rafId);
@@ -66,10 +48,6 @@ export function cancelPendingDOMUpdates(): void {
   rafScheduled = false;
 }
 
-/**
- * Force immediate flush of all pending DOM updates.
- * Use sparingly - prefer letting the RAF batching handle timing.
- */
 export function flushDOMUpdatesNow(): void {
   if (rafScheduled) {
     if (rafId !== null) {
@@ -80,20 +58,8 @@ export function flushDOMUpdatesNow(): void {
   }
 }
 
-export function setSanitizer(fn: (html: string) => string | Promise<string>) {
-  sanitizeHtml = fn;
-}
-
 // Binding types
-export type BindingType =
-  | "text"
-  | "html"
-  | "value"
-  | "checked"
-  | "class"
-  | "style"
-  | "attr"
-  | "prop";
+export type BindingType = string; // Modular registry allows any string
 
 // Binding configuration
 export interface Binding {
@@ -109,13 +75,11 @@ const bindings = new Map<string, Set<Binding>>();
 const elementBindings = new WeakMap<Element, Set<Binding>>();
 const elementVersions = new WeakMap<Element, number>();
 
-// Create a unique binding ID
 let bindingId = 0;
 function nextBindingId(): string {
   return `binding-${++bindingId}`;
 }
 
-// Register a binding
 export function registerBinding(binding: Binding): string {
   const id = nextBindingId();
 
@@ -132,7 +96,6 @@ export function registerBinding(binding: Binding): string {
   return id;
 }
 
-// Unregister a binding
 export function unregisterBinding(id: string): void {
   const bindingSet = bindings.get(id);
   if (bindingSet) {
@@ -153,148 +116,32 @@ async function updateElement(binding: Binding, value: unknown): Promise<void> {
   const { element, type, attribute, transform } = binding;
   const transformedValue = transform ? transform(value) : value;
 
-  // Track version to prevent async races
   const version = (elementVersions.get(element) || 0) + 1;
   elementVersions.set(element, version);
 
-  // RAF-batch DOM updates to prevent layout thrashing
-  scheduleDOMUpdate(() => {
-    switch (type) {
-      case "text":
-        if (element instanceof HTMLElement || element instanceof SVGElement) {
-          element.textContent = String(transformedValue ?? "");
-        }
-        break;
-
-      case "html":
-        if (element instanceof HTMLElement) {
-          // SECURITY: Sanitize HTML before setting innerHTML to prevent XSS
-          const htmlValue = String(transformedValue ?? "");
-          const sanitized = sanitizeHtml(htmlValue);
-
-          // Handle both sync and async sanitizers
-          if (sanitized instanceof Promise) {
-            sanitized
-              .then((result) => {
-                // Only update if no newer update has started
-                if (elementVersions.get(element) === version) {
-                  element.innerHTML = result;
-                }
-              })
-              .catch((error: unknown) => {
-                console.error("[GoSPA] HTML sanitization failed:", error);
-              });
-          } else {
-            // Only update if no newer update has started
-            if (elementVersions.get(element) === version) {
-              element.innerHTML = sanitized;
-            }
+  const handler = handlers[type];
+  if (handler) {
+    scheduleDOMUpdate(() => {
+      const result = handler(
+        element,
+        transformedValue,
+        attribute,
+        version,
+        elementVersions,
+      );
+      if (result instanceof Promise) {
+        result.catch((error) => {
+          if (typeof GOSPA_DEBUG !== "undefined" && GOSPA_DEBUG) {
+            console.error(`[GoSPA] Binding '${type}' failed:`, error);
           }
-        }
-        break;
-
-      case "value":
-        if (
-          element instanceof HTMLInputElement ||
-          element instanceof HTMLTextAreaElement ||
-          element instanceof HTMLSelectElement
-        ) {
-          if (element.value !== String(transformedValue ?? "")) {
-            element.value = String(transformedValue ?? "");
-          }
-        }
-        break;
-
-      case "checked":
-        if (element instanceof HTMLInputElement) {
-          element.checked = Boolean(transformedValue);
-        }
-        break;
-
-      case "class":
-        if (element instanceof Element) {
-          if (attribute) {
-            // Toggle specific class
-            if (transformedValue) {
-              element.classList.add(attribute);
-            } else {
-              element.classList.remove(attribute);
-            }
-          } else if (typeof transformedValue === "string") {
-            // Set class string
-            element.className = transformedValue;
-          } else if (Array.isArray(transformedValue)) {
-            // Set class array
-            element.className = transformedValue.join(" ");
-          } else if (
-            typeof transformedValue === "object" &&
-            transformedValue !== null
-          ) {
-            // Toggle classes by object
-            Object.entries(transformedValue as Record<string, boolean>).forEach(
-              ([cls, enabled]) => {
-                if (enabled) {
-                  element.classList.add(cls);
-                } else {
-                  element.classList.remove(cls);
-                }
-              },
-            );
-          }
-        }
-        break;
-
-      case "style":
-        if (element instanceof HTMLElement || element instanceof SVGElement) {
-          if (attribute) {
-            // Set specific style property
-            (element.style as unknown as Record<string, string>)[attribute] =
-              String(transformedValue ?? "");
-          } else if (typeof transformedValue === "string") {
-            // Set style string
-            element.setAttribute("style", transformedValue);
-          } else if (
-            typeof transformedValue === "object" &&
-            transformedValue !== null
-          ) {
-            // Set styles by object
-            Object.entries(transformedValue as Record<string, string>).forEach(
-              ([prop, val]) => {
-                (element.style as unknown as Record<string, string>)[prop] =
-                  val;
-              },
-            );
-          }
-        }
-        break;
-
-      case "attr":
-        if (attribute) {
-          if (
-            transformedValue === null ||
-            transformedValue === undefined ||
-            transformedValue === false
-          ) {
-            element.removeAttribute(attribute);
-          } else if (transformedValue === true) {
-            element.setAttribute(attribute, "");
-          } else {
-            element.setAttribute(attribute, String(transformedValue));
-          }
-        }
-        break;
-
-      case "prop":
-        if (attribute && element instanceof HTMLElement) {
-          (element as unknown as Record<string, unknown>)[attribute] =
-            transformedValue;
-        }
-        break;
-    }
-  });
+        });
+      }
+    });
+  } else if (typeof GOSPA_DEBUG !== "undefined" && GOSPA_DEBUG) {
+    console.warn(`[GoSPA] No handler registered for binding type: ${type}`);
+  }
 }
 
-// Bind a rune to an element
 export function bindElement<T>(
   element: Element,
   rune: Rune<T>,
@@ -309,27 +156,18 @@ export function bindElement<T>(
   };
 
   const id = registerBinding(binding);
+  updateElement(binding, rune.get());
 
-  // Initial update
-  updateElement(binding, rune.get()).catch((error) => {
-    console.error("[GoSPA] Binding update failed:", error);
-  });
-
-  // Subscribe to changes
   const unsubscribe = rune.subscribe((value) => {
-    updateElement(binding, value).catch((error) => {
-      console.error("[GoSPA] Binding update failed:", error);
-    });
+    updateElement(binding, value);
   });
 
-  // Return cleanup function
   return () => {
     unsubscribe();
     unregisterBinding(id);
   };
 }
 
-// Bind a derived value to an element
 export function bindDerived<T>(
   element: Element,
   derived: Derived<T>,
@@ -344,77 +182,53 @@ export function bindDerived<T>(
   };
 
   const id = registerBinding(binding);
+  updateElement(binding, derived.get());
 
-  // Initial update
-  updateElement(binding, derived.get()).catch((error) => {
-    console.error("[GoSPA] Binding update failed:", error);
-  });
-
-  // Subscribe to changes
   const unsubscribe = derived.subscribe((value) => {
-    updateElement(binding, value).catch((error) => {
-      console.error("[GoSPA] Binding update failed:", error);
-    });
+    updateElement(binding, value);
   });
 
-  // Return cleanup function
   return () => {
     unsubscribe();
     unregisterBinding(id);
   };
 }
 
-// Create two-way binding for form elements
 export function bindTwoWay<T extends string | number | boolean>(
   element: HTMLInputElement | HTMLTextAreaElement | HTMLSelectElement,
   rune: Rune<T>,
 ): () => void {
-  // Initial value
+  const isCheckbox =
+    element instanceof HTMLInputElement && element.type === "checkbox";
   const isNumber =
     element instanceof HTMLInputElement && element.type === "number";
 
-  const isCheckbox =
-    element instanceof HTMLInputElement && element.type === "checkbox";
-
-  // Initial value
   if (isCheckbox) {
     element.checked = Boolean(rune.get());
   } else {
     element.value = String(rune.get() ?? "");
   }
 
-  // Subscribe to rune changes
   const unsubscribe = rune.subscribe((value) => {
     if (isCheckbox) {
       element.checked = Boolean(value);
-    } else {
-      if (element.value !== String(value ?? "")) {
-        element.value = String(value ?? "");
-      }
+    } else if (element.value !== String(value ?? "")) {
+      element.value = String(value ?? "");
     }
   });
 
-  // Listen to input changes
   const inputHandler = () => {
     let newValue: string | number | boolean;
+    if (isCheckbox) newValue = element.checked;
+    else if (isNumber) newValue = element.value ? parseFloat(element.value) : 0;
+    else newValue = element.value;
 
-    if (isCheckbox) {
-      newValue = element.checked;
-    } else if (isNumber) {
-      newValue = element.value ? parseFloat(element.value) : 0;
-    } else {
-      newValue = element.value;
-    }
-
-    batch(() => {
-      rune.set(newValue as T);
-    });
+    batch(() => rune.set(newValue as T));
   };
 
   element.addEventListener("input", inputHandler);
   element.addEventListener("change", inputHandler);
 
-  // Return cleanup function
   return () => {
     unsubscribe();
     element.removeEventListener("input", inputHandler);
@@ -422,60 +236,12 @@ export function bindTwoWay<T extends string | number | boolean>(
   };
 }
 
-// Query selector helper with reactive updates
-export function querySelectorAll(selector: string): NodeListOf<Element> {
-  return document.querySelectorAll(selector);
-}
+// Re-export list rendering utilities
+export { renderIf, renderList } from "./dom/lists.ts";
 
-// === DOM Utilities ===
-
-export function find(selector: string): HTMLElement | null {
-  return document.querySelector(selector) as HTMLElement | null;
-}
-
-export function findAll(selector: string): HTMLElement[] {
-  return Array.from(document.querySelectorAll(selector)) as HTMLElement[];
-}
-
-export function addClass(el: Element, ...classes: string[]): void {
-  el.classList.add(...classes);
-}
-
-export function removeClass(el: Element, ...classes: string[]): void {
-  el.classList.remove(...classes);
-}
-
-export function hasClass(el: Element, cls: string): boolean {
-  return el.classList.contains(cls);
-}
-
-export function attr(el: Element, name: string): string | null;
-export function attr(el: Element, name: string, value: string): void;
-export function attr(
-  el: Element,
-  name: string,
-  value?: string,
-): string | null | void {
-  if (value === undefined) {
-    return el.getAttribute(name);
-  }
-  el.setAttribute(name, value);
-}
-
-export function data(el: HTMLElement, name: string): string | undefined;
-export function data(el: HTMLElement, name: string, value: string): void;
-export function data(
-  el: HTMLElement,
-  name: string,
-  value?: string,
-): string | undefined | void {
-  if (value === undefined) {
-    return el.dataset[name];
-  }
-  el.dataset[name] = value;
-}
-
-// Create element with bindings
+/**
+ * Create element with bindings.
+ */
 export function createElement<K extends keyof HTMLElementTagNameMap>(
   tag: K,
   attrs: Record<string, unknown> = {},
@@ -485,32 +251,15 @@ export function createElement<K extends keyof HTMLElementTagNameMap>(
 
   Object.entries(attrs).forEach(([key, value]) => {
     if (key.startsWith("on") && typeof value === "function") {
-      // Event listener
       const eventName = key.slice(2).toLowerCase();
       element.addEventListener(eventName, value as EventListener);
     } else if (key === "class") {
-      // Class
-      if (typeof value === "string") {
-        element.className = value;
-      } else if (Array.isArray(value)) {
-        element.className = value.join(" ");
-      } else if (typeof value === "object" && value !== null) {
-        Object.entries(value as Record<string, boolean>).forEach(
-          ([cls, enabled]) => {
-            if (enabled) element.classList.add(cls);
-          },
-        );
-      }
-    } else if (key === "style" && typeof value === "object") {
-      // Style object
-      Object.entries(value as Record<string, string>).forEach(([prop, val]) => {
-        (element.style as unknown as Record<string, string>)[prop] = val;
-      });
+      handlers.class(element, value);
+    } else if (key === "style") {
+      handlers.style(element, value);
     } else if (value instanceof Rune) {
-      // Reactive binding
       bindElement(element, value, { type: "attr", attribute: key });
     } else {
-      // Static attribute
       element.setAttribute(key, String(value));
     }
   });
@@ -528,100 +277,5 @@ export function createElement<K extends keyof HTMLElementTagNameMap>(
   return element;
 }
 
-// Conditional rendering helper
-export function renderIf<T>(
-  condition: Rune<boolean> | Derived<boolean>,
-  trueRender: () => T,
-  falseRender?: () => T,
-): { element: T | null; cleanup: () => void } {
-  let current: T | null = null;
-
-  const update = (value: boolean) => {
-    if (value) {
-      if (!current) {
-        current = trueRender();
-      }
-    } else {
-      if (current && falseRender) {
-        current = falseRender();
-      } else {
-        current = null;
-      }
-    }
-  };
-
-  // Initial render
-  update(condition.get());
-
-  // Subscribe to changes
-  const unsubscribe = condition.subscribe(update);
-
-  return {
-    element: current,
-    cleanup: () => {
-      unsubscribe();
-    },
-  };
-}
-
-// List rendering helper with key tracking
-export function renderList<T, K>(
-  items: Rune<T[]> | Derived<T[]>,
-  render: (item: T, index: number) => Element,
-  getKey: (item: T, index: number) => K,
-): { container: Element; cleanup: () => void } {
-  const container = document.createDocumentFragment();
-  const containerElement = document.createElement("div");
-  container.appendChild(containerElement);
-
-  const itemMap = new Map<K, { element: Element; index: number }>();
-
-  const update = (newItems: T[]) => {
-    const newKeys = new Set<K>();
-
-    // Add or update items
-    newItems.forEach((item, index) => {
-      const key = getKey(item, index);
-      newKeys.add(key);
-
-      if (!itemMap.has(key)) {
-        const element = render(item, index);
-        itemMap.set(key, { element, index });
-        const refNode = containerElement.children[index] || null;
-        containerElement.insertBefore(element, refNode);
-      } else {
-        const existing = itemMap.get(key)!;
-        existing.index = index;
-        // Reorder if needed
-        if (containerElement.children[index] !== existing.element) {
-          containerElement.insertBefore(
-            existing.element,
-            containerElement.children[index] || null,
-          );
-        }
-      }
-    });
-
-    // Remove items not in new list
-    itemMap.forEach((value, key) => {
-      if (!newKeys.has(key)) {
-        value.element.remove();
-        itemMap.delete(key);
-      }
-    });
-  };
-
-  // Initial render
-  update(items.get());
-
-  // Subscribe to changes
-  const unsubscribe = items.subscribe(update);
-
-  return {
-    container: containerElement,
-    cleanup: () => {
-      unsubscribe();
-      itemMap.clear();
-    },
-  };
-}
+// Note: addClass, removeClass, attr, data, querySelectorAll, find, findAll
+// have been removed as they are native Web API "sugar".

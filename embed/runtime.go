@@ -7,23 +7,30 @@ import (
 	"fmt"
 	"io/fs"
 	"strings"
+
+	"github.com/aydenstechdungeon/gospa/compiler"
 )
 
 //go:embed *.js
 var runtimeFS embed.FS
 
-// RuntimeJS returns the embedded runtime JavaScript based on the simple flag.
-func RuntimeJS(simple bool) ([]byte, error) {
+// RuntimeJS returns the embedded runtime JavaScript based on the tier.
+func RuntimeJS(tier compiler.RuntimeTier) ([]byte, error) {
 	name := "runtime.js"
-	if simple {
-		name = "runtime-simple.js"
+	switch tier {
+	case compiler.RuntimeTierMicro:
+		name = "runtime-micro.js"
+	case compiler.RuntimeTierCore:
+		name = "runtime-core.js"
+	case compiler.RuntimeTierFull:
+		name = "runtime.js"
 	}
 	return runtimeFS.ReadFile(name)
 }
 
 // RuntimeHash returns a truncated SHA256 hash of the runtime JavaScript.
-func RuntimeHash(simple bool) (string, error) {
-	content, err := RuntimeJS(simple)
+func RuntimeHash(tier compiler.RuntimeTier) (string, error) {
+	content, err := RuntimeJS(tier)
 	if err != nil {
 		return "", err
 	}
