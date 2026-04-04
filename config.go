@@ -217,7 +217,7 @@ type Config struct {
 
 // DefaultConfig returns the default configuration.
 func DefaultConfig() Config {
-	enabled := true
+	enabled := false
 	color := "#667eea"
 	height := "3px"
 	return Config{

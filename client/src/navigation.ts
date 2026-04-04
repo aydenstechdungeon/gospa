@@ -124,7 +124,7 @@ const DEFAULT_NAVIGATION_OPTIONS: Required<NavigationOptions> = {
     fallbackToClassic: true,
   },
   progressBar: {
-    enabled: true,
+    enabled: false,
     color: "#3b82f6",
     height: "2px",
   },
