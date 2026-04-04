@@ -29,7 +29,7 @@ export class Rune<T> implements Notifier, Disposable {
   constructor(initialValue: T, options: RuneOptions = {}) {
     this._value = initialValue;
     this._id = ++runeId;
-    this._deep = options.deep ?? true;
+    this._deep = options.deep ?? false;
     trackDisposable(this);
   }
 

@@ -378,9 +378,8 @@ function isInternalLink(link: HTMLAnchorElement): boolean {
 
 // Page data type
 interface PageData {
-  content: string;
+  doc: Document;
   title: string;
-  head: string;
 }
 
 // Prefetch cache
@@ -428,32 +427,11 @@ async function fetchPageFromServer(
       }
 
       const html = await response.text();
-
       const parser = new DOMParser();
       const doc = parser.parseFromString(html, "text/html");
-
-      let content: string;
-
-      const rootEl = doc.querySelector("[data-gospa-root]");
-      const pageContentEl = doc.querySelector("[data-gospa-page-content]");
-      const mainEl = doc.querySelector("main");
-
-      if (rootEl) {
-        content = rootEl.innerHTML;
-      } else if (pageContentEl) {
-        content = pageContentEl.innerHTML;
-      } else if (mainEl) {
-        content = mainEl.innerHTML;
-      } else {
-        content = doc.body.innerHTML;
-      }
-
       const title = doc.querySelector("title")?.textContent || "";
 
-      const headEl = doc.querySelector("head");
-      const head = headEl ? headEl.innerHTML : "";
-
-      return { content, title, head };
+      return { doc, title };
     } catch (error) {
       if (typeof GOSPA_DEBUG !== "undefined" && GOSPA_DEBUG) {
         console.error("[GoSPA] Navigation error:", error);
@@ -532,9 +510,8 @@ function patchAttributes(current: Element, incoming: Element): void {
 }
 
 function patchNode(currentNode: Node, incomingNode: Node): void {
-  if (currentNode.isEqualNode(incomingNode)) {
-    return;
-  }
+  // We remove the top-level isEqualNode(incomingNode) check to avoid O(N^2) complexity on large trees.
+  // Instead, we only compare matching node types and tag names before recursing.
 
   if (currentNode.nodeType !== incomingNode.nodeType) {
     currentNode.parentNode?.replaceChild(
@@ -657,16 +634,13 @@ async function updateDOM(data: PageData, pageContent: string): Promise<void> {
   }
 
   // Update head (managed head elements)
-  runOnIdle(() => updateHead(data.head));
+  updateHead(data.doc);
 
   // Re-initialize runtime for new content
   const targetEl = rootEl || contentEl || mainEl || document.body;
   await initNewContent(targetEl);
 
-  // Defer non-critical updates to idle time to reduce INP
-  runOnIdle(() => {
-    updateActiveLinks();
-  });
+  updateActiveLinks();
 
   // Focus management for accessibility
   const focusTarget = document.querySelector(
@@ -717,7 +691,7 @@ function runOnIdle(callback: () => void): void {
 
 // Update head elements - smart reconciliation to avoid CSS flashes
 // and clean up elements that are no longer needed
-function updateHead(headHtml: string): void {
+function updateHead(newDoc: Document): void {
   const escapeSelectorValue = (value: string): string => {
     if (typeof CSS !== "undefined" && typeof CSS.escape === "function") {
       return CSS.escape(value);
@@ -725,18 +699,12 @@ function updateHead(headHtml: string): void {
     return value.replace(/["\\]/g, "\\$&");
   };
 
-  // Parse head HTML to extract elements
-  const parser = new DOMParser();
-  const doc = parser.parseFromString(
-    `<html><head>${headHtml}</head></html>`,
-    "text/html",
-  );
-  const newHead = doc.querySelector("head");
+  const newHead = newDoc.querySelector("head");
 
   if (!newHead) return;
 
   // 1. Update title explicitly if it changed
-  const newTitle = doc.querySelector("title")?.textContent;
+  const newTitle = newDoc.querySelector("title")?.textContent;
   if (newTitle && newTitle !== document.title) {
     document.title = newTitle;
   }
@@ -939,6 +907,9 @@ function executeScripts(container: Element | Document): void {
 }
 
 // Initialize new content (re-run runtime setup)
+// Track initialized elements to avoid duplicate listeners without expensive cloning
+const initializedElements = new WeakSet<Element>();
+
 async function initCriticalContent(
   container: Element | Document = document,
 ): Promise<void> {
@@ -947,16 +918,18 @@ async function initCriticalContent(
   const ws = gospa?._ws;
 
   eventElements.forEach((element) => {
+    if (!(element instanceof Element) || initializedElements.has(element))
+      return;
+
     const attr = element.getAttribute("data-on");
     if (!attr) return;
 
     const [eventType, action] = attr.split(":");
     if (!eventType || !action) return;
 
-    const newElement = element.cloneNode(true) as Element;
-    element.parentNode?.replaceChild(newElement, element);
+    initializedElements.add(element);
 
-    newElement.addEventListener(eventType, async () => {
+    element.addEventListener(eventType, async () => {
       if (ws && ws.readyState === WebSocket.OPEN) {
         ws.send(JSON.stringify({ type: "action", action }));
         return;
@@ -1037,7 +1010,23 @@ async function performDOMUpdateWithTransitions(
   const viewCfg = navigationOptionsConfig.viewTransitions;
   const canTransition = viewCfg.enabled && "startViewTransition" in document;
 
-  const pageContent = await prepareContent(data.content);
+  const doc = data.doc;
+  const rootEl = doc.querySelector("[data-gospa-root]");
+  const pageContentEl = doc.querySelector("[data-gospa-page-content]");
+  const mainEl = doc.querySelector("main");
+
+  let rawContent: string;
+  if (rootEl) {
+    rawContent = rootEl.innerHTML;
+  } else if (pageContentEl) {
+    rawContent = pageContentEl.innerHTML;
+  } else if (mainEl) {
+    rawContent = mainEl.innerHTML;
+  } else {
+    rawContent = doc.body.innerHTML;
+  }
+
+  const pageContent = await prepareContent(rawContent);
 
   const update = async () => {
     await updateDOM(data, pageContent);
