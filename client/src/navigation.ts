@@ -98,8 +98,8 @@ const DEFAULT_NAVIGATION_OPTIONS: Required<NavigationOptions> = {
   speculativePrefetching: {
     enabled: true,
     ttl: 30_000,
-    hoverDelay: 50,
-    viewportMargin: 150,
+    hoverDelay: 24, // Faster hover intent
+    viewportMargin: 300, // Preload more aggressively
   },
   urlParsingCache: {
     enabled: true,
@@ -235,7 +235,7 @@ class ProgressBar {
       height: cfg.height ?? "2px",
       backgroundColor: cfg.color ?? "#3b82f6",
       zIndex: "9999",
-      transition: "width 0.3s ease-out, opacity 0.3s ease-in-out",
+      transition: "width 0.1s ease-out, opacity 0.1s ease-in-out",
       width: "0%",
       opacity: "1",
       boxShadow: `0 0 10px ${cfg.color ?? "#3b82f6"}`,
@@ -255,12 +255,10 @@ class ProgressBar {
     if (!this.el) return;
     clearInterval(this.interval!);
     this.el.style.width = "100%";
-    setTimeout(() => {
-      if (this.el) {
-        this.el.style.opacity = "0";
-        setTimeout(() => this.reset(), 300);
-      }
-    }, 100);
+    if (this.el) {
+      this.el.style.opacity = "0";
+      this.reset();
+    }
   }
 
   private reset() {
@@ -1422,6 +1420,19 @@ export function initNavigation(): void {
   setupSpeculativePrefetching();
   void registerNavigationServiceWorker();
 
+  // Inject snappy transition styles if enabled
+  if (navigationOptionsConfig.viewTransitions.enabled && !document.getElementById("gospa-snappy-transitions")) {
+    const style = document.createElement("style");
+    style.id = "gospa-snappy-transitions";
+    style.textContent = `
+      ::view-transition-old(root),
+      ::view-transition-new(root) {
+        animation-duration: 0s !important;
+      }
+    `;
+    document.head.appendChild(style);
+  }
+
   // Mark as SPA-enabled
   document.documentElement.setAttribute("data-gospa-spa", "true");
 
@@ -1437,6 +1448,7 @@ export function destroyNavigation(): void {
   );
   window.removeEventListener("popstate", handlePopState);
   teardownSpeculativePrefetching();
+  document.getElementById("gospa-snappy-transitions")?.remove();
   document.documentElement.removeAttribute("data-gospa-spa");
 }
 
