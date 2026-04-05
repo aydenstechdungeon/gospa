@@ -119,30 +119,6 @@
         }
     }
 
-    // Update sidebar active state based on current path
-    function updateSidebarActiveState() {
-        const currentPath = window.location.pathname;
-        const sidebarLinks = document.querySelectorAll('#docs-sidebar a');
-
-        sidebarLinks.forEach(link => {
-            const href = link.getAttribute('href');
-            if (!href) return;
-
-            // Remove active classes
-            link.classList.remove('bg-[var(--accent-primary)]/10', 'text-[var(--accent-primary)]', 'font-semibold', 'border-l-2', 'border-[var(--accent-primary)]', 'rounded-l-none');
-            link.classList.add('text-[var(--text-secondary)]');
-
-            // Add active classes if this is the current page
-            const normalizedHref = href.replace(/\/$/, '');
-            const normalizedPath = currentPath.replace(/\/$/, '');
-
-            if (normalizedPath === normalizedHref ||
-                (normalizedHref !== '/docs' && normalizedPath.startsWith(normalizedHref))) {
-                link.classList.remove('text-[var(--text-secondary)]');
-                link.classList.add('bg-[var(--accent-primary)]/10', 'text-[var(--accent-primary)]', 'font-semibold', 'border-l-2', 'border-[var(--accent-primary)]', 'rounded-l-none');
-            }
-        });
-    }
 
     function handleSearch(query) {
         if (!fuse) return [];
@@ -317,9 +293,7 @@
         // Save sidebar scroll before DOM update
         saveSidebarScroll();
 
-        // Update docs-specific content
         updateToC();
-        updateSidebarActiveState();
         initAsyncCSS();
 
         // Restore sidebar scroll after a brief delay to allow DOM to settle
@@ -334,7 +308,6 @@
         initGlobalActions();
         initAsyncCSS();
         updateToC();
-        updateSidebarActiveState();
     });
 
     // Strategy: Lazy load search on interaction or intent (hover)

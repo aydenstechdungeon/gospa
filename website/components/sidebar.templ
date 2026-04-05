@@ -13,7 +13,7 @@ type NavSection struct {
 }
 
 templ Sidebar(currentPath string) {
-	<aside class="w-64 flex-shrink-0 hidden lg:block border-r border-[var(--border)] h-[calc(100vh-4rem)] sticky top-16 overflow-y-auto p-6 custom-scrollbar" id="sidebar-scroll">
+	<aside class="w-64 flex-shrink-0 hidden lg:block border-r border-[var(--border)] h-[calc(100vh-4rem)] sticky top-16 overflow-y-auto p-6 custom-scrollbar" id="sidebar-scroll" data-gospa-permanent>
 		@SidebarContent(currentPath)
 	</aside>
 }
@@ -128,6 +128,8 @@ templ sidebarSection(title string, items []NavItem, currentPath string) {
 					<a 
 						href={ templ.SafeURL(item.Href) } 
 						class={ "block py-2 px-3 rounded-lg text-sm " + activeClass(isPathActive(currentPath, item.Href)) }
+						data-gospa-active="bg-[var(--accent-primary)]/10 text-[var(--accent-primary)] font-semibold border-l-2 border-[var(--accent-primary)] rounded-l-none"
+						data-gospa-inactive="text-[var(--text-secondary)]"
 					>
 						{ item.Label }
 					</a>

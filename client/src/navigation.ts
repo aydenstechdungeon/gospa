@@ -8,13 +8,16 @@ declare global {
   var GOSPA_DEBUG: boolean; // eslint-disable-line no-var
 }
 
+import { reactive } from "./signals.ts";
+import { Idiomorph } from "./idiomorph.ts";
+
 // Navigation state
-const state = {
+const state = reactive({
   currentPath: window.location.pathname,
   isNavigating: false,
   pendingNavigation: null as Promise<boolean> | null,
   abortController: null as AbortController | null,
-};
+});
 
 // Navigation options
 export interface NavigateOptions {
@@ -61,6 +64,7 @@ export interface ProgressBarConfig {
   enabled?: boolean;
   color?: string;
   height?: string;
+  delay?: number;
 }
 
 export interface ScriptExecutionConfig {
@@ -127,6 +131,7 @@ const DEFAULT_NAVIGATION_OPTIONS: Required<NavigationOptions> = {
     enabled: false,
     color: "#3b82f6",
     height: "2px",
+    delay: 200,
   },
   scriptExecution: {
     executeMarkedOnly: true,
@@ -221,44 +226,59 @@ export function setNavigationOptions(config: NavigationOptions): void {
 class ProgressBar {
   private el: HTMLDivElement | null = null;
   private interval: number | null = null;
+  private showTimeout: number | null = null;
   private progress = 0;
 
   start() {
     if (!navigationOptionsConfig.progressBar.enabled) return;
     this.reset();
-    this.el = document.createElement("div");
+    
     const cfg = navigationOptionsConfig.progressBar;
-    Object.assign(this.el.style, {
-      position: "fixed",
-      top: "0",
-      left: "0",
-      height: cfg.height ?? "2px",
-      backgroundColor: cfg.color ?? "#3b82f6",
-      zIndex: "9999",
-      transition: "width 0.1s ease-out, opacity 0.1s ease-in-out",
-      width: "0%",
-      opacity: "1",
-      boxShadow: `0 0 10px ${cfg.color ?? "#3b82f6"}`,
-    });
-    document.body.appendChild(this.el);
+    this.showTimeout = window.setTimeout(() => {
+      this.showTimeout = null;
+      this.el = document.createElement("div");
+      Object.assign(this.el.style, {
+        position: "fixed",
+        top: "0",
+        left: "0",
+        height: cfg.height ?? "2px",
+        backgroundColor: cfg.color ?? "#3b82f6",
+        zIndex: "9999",
+        transition: "width 0.1s ease-out, opacity 0.1s ease-in-out",
+        width: "0%",
+        opacity: "1",
+        boxShadow: `0 0 10px ${cfg.color ?? "#3b82f6"}`,
+      });
+      document.body.appendChild(this.el);
 
-    this.progress = 0;
-    this.interval = window.setInterval(() => {
-      if (this.progress < 90) {
-        this.progress += (90 - this.progress) * 0.1;
-        if (this.el) this.el.style.width = `${this.progress}%`;
-      }
-    }, 100);
+      this.progress = 0;
+      this.interval = window.setInterval(() => {
+        if (this.progress < 90) {
+          this.progress += (90 - this.progress) * 0.1;
+          if (this.el) this.el.style.width = `${this.progress}%`;
+        }
+      }, 100);
+    }, cfg.delay ?? 200);
   }
 
   finish() {
-    if (!this.el) return;
-    clearInterval(this.interval!);
-    this.el.style.width = "100%";
-    if (this.el) {
-      this.el.style.opacity = "0";
-      this.reset();
+    if (this.showTimeout) {
+      clearTimeout(this.showTimeout);
+      this.showTimeout = null;
+      return;
     }
+    if (!this.el) return;
+    if (this.interval) clearInterval(this.interval);
+    this.el.style.width = "100%";
+    const el = this.el;
+    setTimeout(() => {
+      if (el) {
+        el.style.opacity = "0";
+        setTimeout(() => el.remove(), 200);
+      }
+    }, 100);
+    this.el = null;
+    this.interval = null;
   }
 
   private reset() {
@@ -269,6 +289,10 @@ class ProgressBar {
     if (this.interval) {
       clearInterval(this.interval);
       this.interval = null;
+    }
+    if (this.showTimeout) {
+      clearTimeout(this.showTimeout);
+      this.showTimeout = null;
     }
   }
 }
@@ -495,143 +519,88 @@ async function sanitizeHTML(html: string): Promise<string> {
   return html;
 }
 
-function patchAttributes(current: Element, incoming: Element): void {
-  for (const attr of Array.from(current.attributes)) {
-    if (!incoming.hasAttribute(attr.name)) {
-      current.removeAttribute(attr.name);
+// Smart Morphing with Layout Reconciliation
+async function reconcileDOM(data: PageData): Promise<void> {
+  const incomingDoc = data.doc;
+
+  // Find the deepest common layout container to avoid full-page flashes
+  // and preserve as much state as possible.
+  const currentLayouts = Array.from(document.querySelectorAll("[data-gospa-layout]")).reverse();
+  const incomingLayouts = Array.from(incomingDoc.querySelectorAll("[data-gospa-layout]")).reverse();
+
+  let morphTarget: Element | null = null;
+  let newContent: Element | null = null;
+
+  // We loop through common layouts, but we avoid going too deep if we need
+  // to preserve/update surrounding context (like a sidebar in 'main').
+  for (const currentEl of currentLayouts) {
+    const layoutId = currentEl.getAttribute("data-gospa-layout");
+    
+    // Rationale: We prefer morphing 'main' or higher if we're in the docs
+    // to ensure the sidebar (which is in 'main' but outside 'docs') is updated.
+    if (layoutId === "docs") {
+      // If we're already in docs and moving to another docs page, 
+      // we might want to stay at 'main' level to catch sidebar changes.
+      continue; 
+    }
+
+    const matchingNewEl = incomingLayouts.find(el => el.getAttribute("data-gospa-layout") === layoutId);
+
+    if (matchingNewEl) {
+      morphTarget = currentEl;
+      newContent = matchingNewEl;
+      break;
     }
   }
 
-  for (const attr of Array.from(incoming.attributes)) {
-    if (current.getAttribute(attr.name) !== attr.value) {
-      current.setAttribute(attr.name, attr.value);
-    }
+  // Fallback to designated root/content containers if no common layout found
+  if (!morphTarget) {
+    morphTarget = document.querySelector("[data-gospa-root]") || 
+                  document.querySelector("[data-gospa-page-content]") || 
+                  document.querySelector("main") || 
+                  document.body;
+    
+    newContent = incomingDoc.querySelector("[data-gospa-root]") || 
+                 incomingDoc.querySelector("[data-gospa-page-content]") || 
+                 incomingDoc.querySelector("main") || 
+                 incomingDoc.body;
+  }
+
+  if (morphTarget && newContent) {
+    Idiomorph.morph(morphTarget, newContent, {
+      callbacks: {
+        beforeNodeMorphed: (oldNode, newNode) => {
+          // Compatibility with data-gospa-permanent
+          if (oldNode instanceof Element && oldNode.hasAttribute("data-gospa-permanent")) {
+            return false;
+          }
+          return true;
+        }
+      }
+    });
   }
 }
 
-function patchNode(currentNode: Node, incomingNode: Node): void {
-  // We remove the top-level isEqualNode(incomingNode) check to avoid O(N^2) complexity on large trees.
-  // Instead, we only compare matching node types and tag names before recursing.
-
-  if (currentNode.nodeType !== incomingNode.nodeType) {
-    currentNode.parentNode?.replaceChild(
-      incomingNode.cloneNode(true),
-      currentNode,
-    );
-    return;
-  }
-
-  if (currentNode.nodeType === Node.TEXT_NODE) {
-    if (currentNode.textContent !== incomingNode.textContent) {
-      currentNode.textContent = incomingNode.textContent;
-    }
-    return;
-  }
-
-  if (!(currentNode instanceof Element) || !(incomingNode instanceof Element)) {
-    return;
-  }
-
-  if (currentNode.tagName !== incomingNode.tagName) {
-    currentNode.parentNode?.replaceChild(
-      incomingNode.cloneNode(true),
-      currentNode,
-    );
-    return;
-  }
-
-  // Prevent morphing structurally unrelated elements
-  if (
-    (currentNode.id && currentNode.id !== incomingNode.id) ||
-    (incomingNode.id && currentNode.id !== incomingNode.id) ||
-    currentNode.getAttribute("data-gospa-page") !==
-      incomingNode.getAttribute("data-gospa-page")
-  ) {
-    currentNode.parentNode?.replaceChild(
-      incomingNode.cloneNode(true),
-      currentNode,
-    );
-    return;
-  }
-
-  // Skip patching if the element is marked as permanent.
-  // This allows client-side scripts to manage the element's content without server interference.
-  if (currentNode.hasAttribute("data-gospa-permanent")) {
-    return;
-  }
-
-  patchAttributes(currentNode, incomingNode);
-
-  const currentChildren = Array.from(currentNode.childNodes);
-  const incomingChildren = Array.from(incomingNode.childNodes);
-  const max = Math.max(currentChildren.length, incomingChildren.length);
-
-  for (let i = 0; i < max; i += 1) {
-    const currentChild = currentChildren[i];
-    const incomingChild = incomingChildren[i];
-    if (!currentChild && incomingChild) {
-      currentNode.appendChild(incomingChild.cloneNode(true));
-      continue;
-    }
-    if (currentChild && !incomingChild) {
-      currentChild.remove();
-      continue;
-    }
-    if (currentChild && incomingChild) {
-      patchNode(currentChild, incomingChild);
-    }
-  }
-}
-
-function patchInnerHTML(target: Element, nextHTML: string): void {
-  const template = document.createElement("template");
-  template.innerHTML = nextHTML;
-  const incomingChildren = Array.from(template.content.childNodes);
-  const existingChildren = Array.from(target.childNodes);
-  const max = Math.max(existingChildren.length, incomingChildren.length);
-
-  for (let i = 0; i < max; i += 1) {
-    const currentChild = existingChildren[i];
-    const incomingChild = incomingChildren[i];
-    if (!currentChild && incomingChild) {
-      target.appendChild(incomingChild.cloneNode(true));
-      continue;
-    }
-    if (currentChild && !incomingChild) {
-      currentChild.remove();
-      continue;
-    }
-    if (currentChild && incomingChild) {
-      patchNode(currentChild, incomingChild);
-    }
-  }
-}
-
-// Update the DOM with new content
-async function updateDOM(data: PageData, pageContent: string): Promise<void> {
+async function updateDOM(data: PageData): Promise<void> {
   // Update title
   if (data.title) {
     document.title = data.title;
   }
 
-  // Try to update from outer-most to inner-most based on what's available
+  // Remove loading state before DOM update to prevent visual glitches during transitions
   const rootEl = document.querySelector("[data-gospa-root]");
   const contentEl = document.querySelector("[data-gospa-page-content]");
   const mainEl = document.querySelector("main");
-
-  // Remove loading state before DOM update to prevent visual glitches during transitions
   const container = rootEl || contentEl || mainEl || document.body;
+  
   container.removeAttribute("data-gospa-loading");
 
-  if (rootEl) {
-    patchInnerHTML(rootEl, pageContent);
-  } else if (contentEl) {
-    patchInnerHTML(contentEl, pageContent);
-  } else if (mainEl) {
-    patchInnerHTML(mainEl, pageContent);
-  } else {
-    document.body.innerHTML = pageContent;
-  }
+  // Use Idiomorph for smart reconciliation
+  await reconcileDOM(data);
+
+  document.documentElement.removeAttribute("data-gospa-navigating");
+
+  updateActiveLinks();
 
   // Update head (managed head elements)
   updateHead(data.doc);
@@ -639,8 +608,6 @@ async function updateDOM(data: PageData, pageContent: string): Promise<void> {
   // Re-initialize runtime for new content
   const targetEl = rootEl || contentEl || mainEl || document.body;
   await initNewContent(targetEl);
-
-  updateActiveLinks();
 
   // Focus management for accessibility
   const focusTarget = document.querySelector(
@@ -656,14 +623,28 @@ function updateActiveLinks() {
   const currentPath = window.location.pathname;
   document.querySelectorAll("a[href]").forEach((link) => {
     const href = link.getAttribute("href");
-    if (
-      href &&
-      (href === currentPath || (href !== "/" && currentPath.startsWith(href)))
-    ) {
-      link.classList.add("gospa-active");
+    const currentPathNormalized = currentPath.replace(/\/$/, "");
+    const hrefNormalized = (href || "").split(/[?#]/)[0].replace(/\/$/, "");
+
+    const isActive = hrefNormalized === currentPathNormalized || (
+      link.hasAttribute("data-gospa-active-prefix") && 
+      hrefNormalized !== "" && 
+      currentPathNormalized.startsWith(hrefNormalized + "/")
+    );
+
+    const activeClassesAttr = link.getAttribute("data-gospa-active");
+    const inactiveClassesAttr = link.getAttribute("data-gospa-inactive");
+
+    const activeClasses = activeClassesAttr ? activeClassesAttr.split(" ").filter(Boolean) : ["gospa-active"];
+    const inactiveClasses = inactiveClassesAttr ? inactiveClassesAttr.split(" ").filter(Boolean) : [];
+
+    if (isActive) {
+      if (activeClasses.length > 0) link.classList.add(...activeClasses);
+      if (inactiveClasses.length > 0) link.classList.remove(...inactiveClasses);
       link.setAttribute("aria-current", "page");
     } else {
-      link.classList.remove("gospa-active");
+      if (activeClasses.length > 0) link.classList.remove(...activeClasses);
+      if (inactiveClasses.length > 0) link.classList.add(...inactiveClasses);
       link.removeAttribute("aria-current");
     }
   });
@@ -1029,7 +1010,7 @@ async function performDOMUpdateWithTransitions(
   const pageContent = await prepareContent(rawContent);
 
   const update = async () => {
-    await updateDOM(data, pageContent);
+    await updateDOM(data);
     if (options.scrollToTop !== false) {
       window.scrollTo(0, 0);
     }
@@ -1085,42 +1066,45 @@ export async function navigate(
     }
     state.abortController = new AbortController();
 
-    try {
-      // 1. Instant Feedback Phase
-      // Update URL immediately so user sees their target in the address bar
-      if (options.replace) {
-        window.history.replaceState({ path }, "", path);
-      } else {
-        window.history.pushState({ path }, "", path);
-      }
+      try {
+        // Store scroll position of the OLD path (before we update the URL or state)
+        scrollPositions.set(state.currentPath, window.scrollY);
 
-      // Update active links immediately for instant visual feedback on menus
-      updateActiveLinks();
+        // 1. Instant Feedback Phase
+        // Update URL immediately so user sees their target in the address bar
+        if (options.replace) {
+          window.history.replaceState({ path }, "", path);
+        } else {
+          window.history.pushState({ path }, "", path);
+        }
 
-      // Set loading state on container
-      const container =
-        document.querySelector(
-          "[data-gospa-page-content], [data-gospa-root]",
-        ) || document.body;
-      container.setAttribute("data-gospa-loading", "true");
+        // Instant Visual Feedback: Update the reactive state and active links
+        state.currentPath = path;
+        updateActiveLinks();
 
-      // Store scroll position of the OLD path (before we update state.currentPath)
-      scrollPositions.set(state.currentPath, window.scrollY);
+        // Set loading state on container
+        const container =
+          document.querySelector(
+            "[data-gospa-page-content], [data-gospa-root]",
+          ) || document.body;
+        container.setAttribute("data-gospa-loading", "true");
+        document.documentElement.setAttribute("data-gospa-navigating", "true");
 
-      // 2. Fetch Phase
-      progressBar.start();
-      const data = await getPageData(path, state.abortController.signal);
+        // 2. Fetch Phase
+        progressBar.start();
+        const data = await getPageData(path, state.abortController.signal);
 
-      if (!data) {
-        // Fallback: If SPA navigation fails (e.g. 500 or non-HTML), force a full reload
-        progressBar.finish();
-        container.removeAttribute("data-gospa-loading");
-        window.location.href = path;
-        return false;
-      }
+        if (!data) {
+          // Fallback: If SPA navigation fails (e.g. 500 or non-HTML), force a full reload
+          progressBar.finish();
+          container.removeAttribute("data-gospa-loading");
+          document.documentElement.removeAttribute("data-gospa-navigating");
+          window.location.href = path;
+          return false;
+        }
 
-      // 3. Update Phase
-      state.currentPath = path;
+        // 3. Update Phase
+        // (state.currentPath is already updated)
       await performDOMUpdateWithTransitions(data, options);
 
       progressBar.finish();
@@ -1202,11 +1186,14 @@ function handlePopState(_event: PopStateEvent): void {
     }
 
     // Instant Visual Feedback
+    state.currentPath = path;
     updateActiveLinks();
+
     const container =
       document.querySelector("[data-gospa-page-content], [data-gospa-root]") ||
       document.body;
     container.setAttribute("data-gospa-loading", "true");
+    document.documentElement.setAttribute("data-gospa-navigating", "true");
 
     // Notify before navigation
     beforeNavCallbacks.forEach((cb) => cb(path));
@@ -1222,7 +1209,7 @@ function handlePopState(_event: PopStateEvent): void {
     try {
       const data = await getPageData(path, state.abortController.signal);
       if (data) {
-        state.currentPath = path;
+        // (state.currentPath is already updated instantly)
         await performDOMUpdateWithTransitions(data, { scrollToTop: false });
         progressBar.finish();
         // Restore scroll position for historical paths
@@ -1237,6 +1224,7 @@ function handlePopState(_event: PopStateEvent): void {
       } else {
         progressBar.finish();
         container.removeAttribute("data-gospa-loading");
+        document.documentElement.removeAttribute("data-gospa-navigating");
         // Fallback to reload
         window.location.reload();
       }
@@ -1244,6 +1232,7 @@ function handlePopState(_event: PopStateEvent): void {
       if ((error as Error).name === "AbortError") return;
       progressBar.finish();
       container.removeAttribute("data-gospa-loading");
+      document.documentElement.removeAttribute("data-gospa-navigating");
       if (typeof GOSPA_DEBUG !== "undefined" && GOSPA_DEBUG) {
         console.error("[GoSPA] Popstate navigation error:", error);
       }
