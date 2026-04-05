@@ -263,9 +263,11 @@ export const Idiomorph = (function () {
 
             if (newChild instanceof Element && newChild.id && ctx.persistentIds.has(newChild.id)) {
                 const movedChild = moveBeforeById(oldParent, newChild.id, insertionPoint, ctx);
-                morphNode(movedChild, newChild, ctx);
-                insertionPoint = movedChild.nextSibling;
-                continue;
+                if (movedChild) {
+                    morphNode(movedChild, newChild, ctx);
+                    insertionPoint = movedChild.nextSibling;
+                    continue;
+                }
             }
 
             const insertedNode = createNode(oldParent, newChild, insertionPoint, ctx);
