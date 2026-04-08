@@ -354,6 +354,51 @@ func TestValidateSafeScript(t *testing.T) {
 	}
 }
 
+func TestValidateSafeScript_Hardening(t *testing.T) {
+	tests := []struct {
+		name    string
+		script  string
+		wantErr bool
+	}{
+		{"dot import", "import . \"net/http\"\nfunc main() { Get(\"http://evil.com\") }", true},
+		{"cgo import", "import \"C\"\nfunc main() { C.system(nil) }", true},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			err := ValidateSafeScript(tt.script)
+			if (err != nil) != tt.wantErr {
+				t.Errorf("ValidateSafeScript() error = %v, wantErr %v", err, tt.wantErr)
+			}
+		})
+	}
+}
+
+func TestCompileMultilineScript(t *testing.T) {
+	c := NewCompiler()
+	input := `
+<script lang="go">
+  var x = 1
+  if x > 0 {
+    fmt.Println("positive")
+  }
+</script>
+<template><div>{x}</div></template>
+`
+	templ, _, err := c.Compile(CompileOptions{
+		Type:    ComponentTypeIsland,
+		Name:    "Multiline",
+		PkgName: "islands",
+		IslandID: "multiline",
+	}, input)
+	if err != nil {
+		t.Fatalf("Failed to compile multiline script: %v", err)
+	}
+	if !strings.Contains(templ, "if x > 0 {") {
+		t.Fatalf("Templ missing multiline if statement: %s", templ)
+	}
+}
+
 func TestCompileLegacy(t *testing.T) {
 	c := NewCompiler()
 	templ, ts, err := c.CompileLegacy("MyLegacyIsland", "legacy-id", "<template><div>Legacy</div></template>", "legacy_pkg")

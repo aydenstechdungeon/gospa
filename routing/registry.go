@@ -89,20 +89,42 @@ type HookFunc func(c fiberpkg.Ctx) error
 
 // Registry holds registered page and layout components.
 type Registry struct {
-	mu           sync.RWMutex
-	pages        map[string]ComponentFunc
-	pageOptions  map[string]RouteOptions
-	layouts      map[string]LayoutFunc
-	errors       map[string]ComponentFunc
-	middlewares  map[string]MiddlewareFunc
-	loadings     map[string]ComponentFunc
+	pagesMu     sync.RWMutex
+	pages       map[string]ComponentFunc
+	pageOptions map[string]RouteOptions
+
+	layoutsMu sync.RWMutex
+	layouts   map[string]LayoutFunc
+
+	errorsMu sync.RWMutex
+	errors   map[string]ComponentFunc
+
+	middlewaresMu sync.RWMutex
+	middlewares   map[string]MiddlewareFunc
+
+	loadingsMu sync.RWMutex
+	loadings   map[string]ComponentFunc
+
+	rootLayoutMu sync.RWMutex
 	rootLayout   LayoutFunc
-	loadFuncs    map[string]LoadFunc
-	layoutLoader map[string]LoadFunc
-	actions      map[string]map[string]ActionFunc
-	hooks        []HookFunc
+
+	loadFuncsMu sync.RWMutex
+	loadFuncs   map[string]LoadFunc
+
+	layoutLoaderMu sync.RWMutex
+	layoutLoader   map[string]LoadFunc
+
+	actionsMu sync.RWMutex
+	actions   map[string]map[string]ActionFunc
+
+	hooksMu sync.RWMutex
+	hooks   []HookFunc
+
+	slotsMu sync.RWMutex
 	// slots maps pagePath → slotName → SlotFunc for PPR.
 	slots map[string]map[string]SlotFunc
+
+	layoutTiersMu sync.RWMutex
 	// layoutTiers maps layoutPath → RuntimeTier
 	layoutTiers map[string]string
 }
@@ -130,8 +152,8 @@ func NewRegistry() *Registry {
 
 // RegisterAction registers an action for a page path.
 func (r *Registry) RegisterAction(pagePath, actionName string, fn ActionFunc) {
-	r.mu.Lock()
-	defer r.mu.Unlock()
+	r.actionsMu.Lock()
+	defer r.actionsMu.Unlock()
 	if r.actions[pagePath] == nil {
 		r.actions[pagePath] = make(map[string]ActionFunc)
 	}
@@ -140,15 +162,15 @@ func (r *Registry) RegisterAction(pagePath, actionName string, fn ActionFunc) {
 
 // GetActions returns all actions for a page path.
 func (r *Registry) GetActions(pagePath string) map[string]ActionFunc {
-	r.mu.RLock()
-	defer r.mu.RUnlock()
+	r.actionsMu.RLock()
+	defer r.actionsMu.RUnlock()
 	return r.actions[pagePath]
 }
 
 // GetAction returns a specific action for a page path.
 func (r *Registry) GetAction(pagePath, actionName string) ActionFunc {
-	r.mu.RLock()
-	defer r.mu.RUnlock()
+	r.actionsMu.RLock()
+	defer r.actionsMu.RUnlock()
 	if actions, ok := r.actions[pagePath]; ok {
 		return actions[actionName]
 	}
@@ -174,15 +196,15 @@ func GetAction(pagePath, actionName string) ActionFunc {
 
 // RegisterHook registers a global server-side hook (middleware).
 func (r *Registry) RegisterHook(fn HookFunc) {
-	r.mu.Lock()
-	defer r.mu.Unlock()
+	r.hooksMu.Lock()
+	defer r.hooksMu.Unlock()
 	r.hooks = append(r.hooks, fn)
 }
 
 // GetHooks returns all registered global hooks.
 func (r *Registry) GetHooks() []HookFunc {
-	r.mu.RLock()
-	defer r.mu.RUnlock()
+	r.hooksMu.RLock()
+	defer r.hooksMu.RUnlock()
 	return r.hooks
 }
 
@@ -200,29 +222,29 @@ func GetHooks() []HookFunc {
 
 // RegisterLoad registers a load function for a route path.
 func (r *Registry) RegisterLoad(path string, fn LoadFunc) {
-	r.mu.Lock()
-	defer r.mu.Unlock()
+	r.loadFuncsMu.Lock()
+	defer r.loadFuncsMu.Unlock()
 	r.loadFuncs[path] = fn
 }
 
 // GetLoad returns the load function for a path.
 func (r *Registry) GetLoad(path string) LoadFunc {
-	r.mu.RLock()
-	defer r.mu.RUnlock()
+	r.loadFuncsMu.RLock()
+	defer r.loadFuncsMu.RUnlock()
 	return r.loadFuncs[path]
 }
 
 // RegisterLayoutLoad registers a load function for a layout path.
 func (r *Registry) RegisterLayoutLoad(path string, fn LoadFunc) {
-	r.mu.Lock()
-	defer r.mu.Unlock()
+	r.layoutLoaderMu.Lock()
+	defer r.layoutLoaderMu.Unlock()
 	r.layoutLoader[path] = fn
 }
 
 // GetLayoutLoad returns the load function for a layout path.
 func (r *Registry) GetLayoutLoad(path string) LoadFunc {
-	r.mu.RLock()
-	defer r.mu.RUnlock()
+	r.layoutLoaderMu.RLock()
+	defer r.layoutLoaderMu.RUnlock()
 	return r.layoutLoader[path]
 }
 
@@ -233,16 +255,16 @@ func (r *Registry) RegisterPage(path string, fn ComponentFunc) {
 
 // RegisterPageWithOptions registers a page component with specific options.
 func (r *Registry) RegisterPageWithOptions(path string, fn ComponentFunc, opts RouteOptions) {
-	r.mu.Lock()
-	defer r.mu.Unlock()
+	r.pagesMu.Lock()
+	defer r.pagesMu.Unlock()
 	r.pages[path] = fn
 	r.pageOptions[path] = opts
 }
 
 // GetRouteOptions returns the route options for a path.
 func (r *Registry) GetRouteOptions(path string) RouteOptions {
-	r.mu.RLock()
-	defer r.mu.RUnlock()
+	r.pagesMu.RLock()
+	defer r.pagesMu.RUnlock()
 	if opts, ok := r.pageOptions[path]; ok {
 		return opts
 	}
@@ -256,110 +278,114 @@ func (r *Registry) RegisterLayout(path string, fn LayoutFunc) {
 
 // RegisterLayoutWithOptions registers a layout component with a specific runtime tier.
 func (r *Registry) RegisterLayoutWithOptions(path string, fn LayoutFunc, tier string) {
-	r.mu.Lock()
-	defer r.mu.Unlock()
+	r.layoutsMu.Lock()
+	r.layoutTiersMu.Lock()
+	defer r.layoutsMu.Unlock()
+	defer r.layoutTiersMu.Unlock()
 	r.layouts[path] = fn
 	r.layoutTiers[path] = tier
 }
 
 // GetLayoutTier returns the runtime tier for a layout path.
 func (r *Registry) GetLayoutTier(path string) string {
-	r.mu.RLock()
-	defer r.mu.RUnlock()
+	r.layoutTiersMu.RLock()
+	defer r.layoutTiersMu.RUnlock()
 	return r.layoutTiers[path]
 }
 
 // RegisterMiddleware registers a middleware function for a route path.
 func (r *Registry) RegisterMiddleware(path string, fn MiddlewareFunc) {
-	r.mu.Lock()
-	defer r.mu.Unlock()
+	r.middlewaresMu.Lock()
+	defer r.middlewaresMu.Unlock()
 	r.middlewares[path] = fn
 }
 
 // RegisterLoading registers a loading component for a route path.
 func (r *Registry) RegisterLoading(path string, fn ComponentFunc) {
-	r.mu.Lock()
-	defer r.mu.Unlock()
+	r.loadingsMu.Lock()
+	defer r.loadingsMu.Unlock()
 	r.loadings[path] = fn
 }
 
 // RegisterError registers an error component for a route path.
 func (r *Registry) RegisterError(path string, fn ComponentFunc) {
-	r.mu.Lock()
-	defer r.mu.Unlock()
+	r.errorsMu.Lock()
+	defer r.errorsMu.Unlock()
 	r.errors[path] = fn
 }
 
 // GetPage returns the page component for a path.
 func (r *Registry) GetPage(path string) ComponentFunc {
-	r.mu.RLock()
-	defer r.mu.RUnlock()
+	r.pagesMu.RLock()
+	defer r.pagesMu.RUnlock()
 	return r.pages[path]
 }
 
 // GetLayout returns the layout component for a path.
 func (r *Registry) GetLayout(path string) LayoutFunc {
-	r.mu.RLock()
-	defer r.mu.RUnlock()
+	r.layoutsMu.RLock()
+	defer r.layoutsMu.RUnlock()
 	return r.layouts[path]
 }
 
 // GetMiddleware returns the middleware function for a path.
 func (r *Registry) GetMiddleware(path string) MiddlewareFunc {
-	r.mu.RLock()
-	defer r.mu.RUnlock()
+	r.middlewaresMu.RLock()
+	defer r.middlewaresMu.RUnlock()
 	return r.middlewares[path]
 }
 
 // GetLoading returns the loading component for a path.
 func (r *Registry) GetLoading(path string) ComponentFunc {
-	r.mu.RLock()
-	defer r.mu.RUnlock()
+	r.loadingsMu.RLock()
+	defer r.loadingsMu.RUnlock()
 	return r.loadings[path]
 }
 
 // GetError returns the error component for a path.
 func (r *Registry) GetError(path string) ComponentFunc {
-	r.mu.RLock()
-	defer r.mu.RUnlock()
+	r.errorsMu.RLock()
+	defer r.errorsMu.RUnlock()
 	return r.errors[path]
 }
 
 // RegisterRootLayout registers the root layout component with a runtime tier.
 func (r *Registry) RegisterRootLayout(fn LayoutFunc, tier string) {
-	r.mu.Lock()
-	defer r.mu.Unlock()
+	r.rootLayoutMu.Lock()
+	r.layoutTiersMu.Lock()
+	defer r.rootLayoutMu.Unlock()
+	defer r.layoutTiersMu.Unlock()
 	r.rootLayout = fn
 	r.layoutTiers[""] = tier
 }
 
 // GetRootLayout returns the root layout component.
 func (r *Registry) GetRootLayout() LayoutFunc {
-	r.mu.RLock()
-	defer r.mu.RUnlock()
+	r.rootLayoutMu.RLock()
+	defer r.rootLayoutMu.RUnlock()
 	return r.rootLayout
 }
 
 // HasPage checks if a page is registered for a path.
 func (r *Registry) HasPage(path string) bool {
-	r.mu.RLock()
-	defer r.mu.RUnlock()
+	r.pagesMu.RLock()
+	defer r.pagesMu.RUnlock()
 	_, ok := r.pages[path]
 	return ok
 }
 
 // HasLayout checks if a layout is registered for a path.
 func (r *Registry) HasLayout(path string) bool {
-	r.mu.RLock()
-	defer r.mu.RUnlock()
+	r.layoutsMu.RLock()
+	defer r.layoutsMu.RUnlock()
 	_, ok := r.layouts[path]
 	return ok
 }
 
 // RegisterSlot registers a PPR dynamic slot component for a page path.
 func (r *Registry) RegisterSlot(pagePath, slotName string, fn SlotFunc) {
-	r.mu.Lock()
-	defer r.mu.Unlock()
+	r.slotsMu.Lock()
+	defer r.slotsMu.Unlock()
 	if r.slots[pagePath] == nil {
 		r.slots[pagePath] = make(map[string]SlotFunc)
 	}
@@ -368,8 +394,8 @@ func (r *Registry) RegisterSlot(pagePath, slotName string, fn SlotFunc) {
 
 // GetSlot returns the SlotFunc for a named PPR slot on a page path.
 func (r *Registry) GetSlot(pagePath, slotName string) SlotFunc {
-	r.mu.RLock()
-	defer r.mu.RUnlock()
+	r.slotsMu.RLock()
+	defer r.slotsMu.RUnlock()
 	if m := r.slots[pagePath]; m != nil {
 		return m[slotName]
 	}

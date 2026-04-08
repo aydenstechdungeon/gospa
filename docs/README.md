@@ -1,78 +1,64 @@
 # GoSPA Documentation
 
-This directory is the **authoritative** Markdown documentation for GoSPA. The [documentation website](https://gospa.onrender.com/docs) renders curated pages from the same topics; when in doubt, **edit files here** and keep examples aligned with the current `gospa` module API.
+This directory is the **authoritative** Markdown documentation for GoSPA.
 
 ## How to use these docs
 
-1. **Start:** [Quick start](getstarted/quickstart) → [Tutorial](getstarted/tutorial)
-2. **Configure:** [Configuration reference](configuration) (all `gospa.Config` fields)
-3. **API surface:** [Core API](api/core) (packages) + [CLI](cli) + [Plugins](plugins)
-4. **Ship:** [Production checklist](troubleshooting), [Deployment](configuration/scaling), [Security](configuration/scaling)
-5. **Debug:** [Troubleshooting](troubleshooting) (runtime, WebSocket, remote actions, build)
+1. **Start:** [Quick start](getstarted/quickstart.md)
+2. **Configure:** [Configuration reference](configuration.md)
+3. **API surface:** [Core API](api.md) + [CLI](cli.md) + [Plugins](plugins.md)
+4. **Ship:** [Security Guide](security.md), [Troubleshooting](troubleshooting.md)
 
 ## Structure
 
 ```
 docs/
-├── getstarted/          # Install and first app
-├── gospasfc/           # Single File Components
-├── routing/            # File-based routing
-├── state-management/    # Server and client state
-├── client-runtime/     # Client engine details
-├── configuration/      # Configuration reference
-├── plugins/            # Ecosystem and extensions
-├── api/                # Core packages reference
-├── reactive-primitives/ # Primitives reference
-└── troubleshooting.md   # Operational fixes
+├── api.md               # Fiber & Client API Reference
+├── routing.md           # File-based routing & rendering
+├── state-management.md  # Reactive state synchronization
+├── reactive-primitives.md # Rune, Derived, Effect, EffectScope
+├── remote-actions.md    # Type-safe RPC / Remote Actions
+├── websocket.md         # High-performance real-time sync
+├── sse.md               # Server-Sent Events guide
+├── plugins.md           # Framework extensions & lifecycle
+├── devtools.md          # Debugging, Error Overlay, HMR
+├── runtime.md           # Client runtime lifecycle & hydration
+├── security.md          # Security hardening & best practices
+├── errors.md            # Error handling & boundaries
+├── gospasfc.md          # GoSPA Single File Components
+├── params.md            # Route parameters & query strings
+├── root.md              # Root layout & nesting
+└── faq.md               # Frequently asked questions
 ```
 
 ## Quick navigation
 
 ### Getting started
-- [Installation](getstarted/installation)
-- [Quick start](getstarted/quickstart)
-- [Tutorial](getstarted/tutorial)
+- [Installation](getstarted/installation.md)
+- [Quick start](getstarted/quickstart.md)
 
 ### Core concepts
-- [Rendering](rendering)
-- [State](state-management/server)
-- [Components](components)
-- [Islands](islands)
-- [Routing](routing)
-- [Single File Components (.gospa)](gospasfc)
+- [Reactive Primitives](reactive-primitives.md)
+- [State Management](state-management.md)
+- [Components & Islands](islands.md)
+- [File-based Routing](routing.md)
+- [Remote Actions](remote-actions.md)
+- [Single File Components (.gospa)](gospasfc.md)
 
-### Features
-- [Client runtime](client-runtime/overview)
-- [Runtime API (TypeScript)](reactive-primitives/js)
-- [Realtime](websocket)
-- [Security](configuration/scaling)
-- [Dev tools](devtools)
-- [Deployment](configuration/scaling)
-- [Production checklist](troubleshooting)
+### Advanced Features
+- [Security & Hardening](security.md)
+- [Realtime (WebSockets)](websocket.md)
+- [Server-Sent Events (SSE)](sse.md)
+- [Plugin Architecture](plugins.md)
+- [Dev Tools & HMR](devtools.md)
+- [Runtime Lifecycle](runtime.md)
 
-### API reference
-- [Core API (Go packages)](api/core)
-- [Configuration (`gospa.Config`)](configuration)
-- [CLI](cli)
-- [Plugins](plugins)
+### Reference
+- [Full API Reference](api.md)
+- [Configuration Reference](configuration.md)
+- [CLI Reference](cli.md)
 
-### Advanced & migration
-- [Error handling](errors)
-- [State pruning](state-management/patterns)
-- [v1 → v2 migration](faq)
-
-### Troubleshooting
-- [Runtime initialization](troubleshooting)
-- [Remote actions](remote-actions)
-- [WebSocket](websocket)
-- [HMR / dev server](hmr)
-- [Island hydration](troubleshooting)
-- [State sync](troubleshooting)
-- [Build & deployment](troubleshooting)
-
-## Website (`/website`)
-
-The site under `website/` serves a browsable docs UI. Topic pages are hand-authored in `website/routes/docs/**` (Templ). **Keep them consistent** with this folder: when you change defaults (e.g. `gospa.Config`, security behavior), update both Markdown and the relevant Templ page.
-
-- Full narrative reference: **this `docs/` tree**
-- Guided navigation & SEO: **`website/`** routes
+### Support
+- [General Troubleshooting](troubleshooting.md)
+- [FAQ](faq.md)
+- [Error Handling](errors.md)

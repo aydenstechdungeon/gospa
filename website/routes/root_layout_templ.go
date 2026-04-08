@@ -12,6 +12,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"github.com/aydenstechdungeon/gospa/plugin/postcss"
+	gospatempl "github.com/aydenstechdungeon/gospa/templ"
 	"github.com/aydenstechdungeon/gospa/website/components"
 	"strings"
 )
@@ -103,7 +104,7 @@ func RootLayout(title string, children templ.Component, runtimePath string, path
 		var templ_7745c5c3_Var2 string
 		templ_7745c5c3_Var2, templ_7745c5c3_Err = templ.JoinStringErrs(title)
 		if templ_7745c5c3_Err != nil {
-			return templ.Error{Err: templ_7745c5c3_Err, FileName: `routes/root_layout.templ`, Line: 79, Col: 17}
+			return templ.Error{Err: templ_7745c5c3_Err, FileName: `routes/root_layout.templ`, Line: 80, Col: 17}
 		}
 		_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ.EscapeString(templ_7745c5c3_Var2))
 		if templ_7745c5c3_Err != nil {
@@ -116,7 +117,7 @@ func RootLayout(title string, children templ.Component, runtimePath string, path
 		var templ_7745c5c3_Var3 string
 		templ_7745c5c3_Var3, templ_7745c5c3_Err = templ.JoinStringErrs(title + " | GoSPA")
 		if templ_7745c5c3_Err != nil {
-			return templ.Error{Err: templ_7745c5c3_Err, FileName: `routes/root_layout.templ`, Line: 80, Col: 50}
+			return templ.Error{Err: templ_7745c5c3_Err, FileName: `routes/root_layout.templ`, Line: 81, Col: 50}
 		}
 		_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ.EscapeString(templ_7745c5c3_Var3))
 		if templ_7745c5c3_Err != nil {
@@ -129,7 +130,7 @@ func RootLayout(title string, children templ.Component, runtimePath string, path
 		var templ_7745c5c3_Var4 string
 		templ_7745c5c3_Var4, templ_7745c5c3_Err = templ.JoinStringErrs(getPageDescription(path))
 		if templ_7745c5c3_Err != nil {
-			return templ.Error{Err: templ_7745c5c3_Err, FileName: `routes/root_layout.templ`, Line: 81, Col: 62}
+			return templ.Error{Err: templ_7745c5c3_Err, FileName: `routes/root_layout.templ`, Line: 82, Col: 62}
 		}
 		_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ.EscapeString(templ_7745c5c3_Var4))
 		if templ_7745c5c3_Err != nil {
@@ -153,268 +154,241 @@ func RootLayout(title string, children templ.Component, runtimePath string, path
 			}
 		} else {
 			if strings.HasPrefix(path, "/docs") {
-				templ_7745c5c3_Err = templ.Raw("<style>"+postcss.CriticalCSSWithFallback("./static/css/docs.critical.css", "")+"</style>").Render(ctx, templ_7745c5c3_Buffer)
+				templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 7, "<style nonce=\"")
 				if templ_7745c5c3_Err != nil {
 					return templ_7745c5c3_Err
 				}
-				templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 7, " ")
+				var templ_7745c5c3_Var5 string
+				templ_7745c5c3_Var5, templ_7745c5c3_Err = templ.JoinStringErrs(gospatempl.GetNonce(ctx))
+				if templ_7745c5c3_Err != nil {
+					return templ.Error{Err: templ_7745c5c3_Err, FileName: `routes/root_layout.templ`, Line: 101, Col: 44}
+				}
+				_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ.EscapeString(templ_7745c5c3_Var5))
 				if templ_7745c5c3_Err != nil {
 					return templ_7745c5c3_Err
 				}
-				templ_7745c5c3_Err = templ.Raw(postcss.AsyncCSS("/static/css/docs.non-critical.css")).Render(ctx, templ_7745c5c3_Buffer)
+				templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 8, "\">\n\t\t\t\t\t\t@templ.Raw(postcss.CriticalCSSWithFallback(\"./static/css/docs.critical.css\", \"\"))\n\t\t\t\t\t</style> ")
+				if templ_7745c5c3_Err != nil {
+					return templ_7745c5c3_Err
+				}
+				templ_7745c5c3_Err = templ.Raw(postcss.AsyncCSSWithNonce("/static/css/docs.non-critical.css", gospatempl.GetNonce(ctx))).Render(ctx, templ_7745c5c3_Buffer)
 				if templ_7745c5c3_Err != nil {
 					return templ_7745c5c3_Err
 				}
 			} else {
-				templ_7745c5c3_Err = templ.Raw("<style>"+postcss.CriticalCSSWithFallback("./static/css/website.critical.css", "")+"</style>").Render(ctx, templ_7745c5c3_Buffer)
+				templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 9, "<style nonce=\"")
 				if templ_7745c5c3_Err != nil {
 					return templ_7745c5c3_Err
 				}
-				templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 8, " ")
+				var templ_7745c5c3_Var6 string
+				templ_7745c5c3_Var6, templ_7745c5c3_Err = templ.JoinStringErrs(gospatempl.GetNonce(ctx))
+				if templ_7745c5c3_Err != nil {
+					return templ.Error{Err: templ_7745c5c3_Err, FileName: `routes/root_layout.templ`, Line: 106, Col: 44}
+				}
+				_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ.EscapeString(templ_7745c5c3_Var6))
 				if templ_7745c5c3_Err != nil {
 					return templ_7745c5c3_Err
 				}
-				templ_7745c5c3_Err = templ.Raw(postcss.AsyncCSS("/static/css/website.non-critical.css")).Render(ctx, templ_7745c5c3_Buffer)
+				templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 10, "\">\n\t\t\t\t\t\t@templ.Raw(postcss.CriticalCSSWithFallback(\"./static/css/website.critical.css\", \"\"))\n\t\t\t\t\t</style> ")
+				if templ_7745c5c3_Err != nil {
+					return templ_7745c5c3_Err
+				}
+				templ_7745c5c3_Err = templ.Raw(postcss.AsyncCSSWithNonce("/static/css/website.non-critical.css", gospatempl.GetNonce(ctx))).Render(ctx, templ_7745c5c3_Buffer)
 				if templ_7745c5c3_Err != nil {
 					return templ_7745c5c3_Err
 				}
 			}
 		}
-		templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 9, "<script src=\"/static/js/islands.js\" type=\"module\"></script><script src=\"")
-		if templ_7745c5c3_Err != nil {
-			return templ_7745c5c3_Err
-		}
-		var templ_7745c5c3_Var5 string
-		templ_7745c5c3_Var5, templ_7745c5c3_Err = templ.JoinStringErrs(runtimePath)
-		if templ_7745c5c3_Err != nil {
-			return templ.Error{Err: templ_7745c5c3_Err, FileName: `routes/root_layout.templ`, Line: 108, Col: 28}
-		}
-		_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ.EscapeString(templ_7745c5c3_Var5))
-		if templ_7745c5c3_Err != nil {
-			return templ_7745c5c3_Err
-		}
-		templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 10, "\" type=\"module\"></script>")
-		if templ_7745c5c3_Err != nil {
-			return templ_7745c5c3_Err
-		}
-		templ_7745c5c3_Err = templ.Raw("<script type=\"module\">\n"+
-			"  import * as runtime from \""+runtimePath+"\";\n"+
-			"  runtime.init({\n"+
-			"    wsUrl: "+jsonQuote(wsUrl)+",\n"+
-			"    serializationFormat: "+jsonQuote(serializationFormat)+",\n"+
-			"    debug: "+fmt.Sprintf("%t", debug)+",\n"+
-			"    hydration: {\n"+
-			"      mode: "+jsonQuote(hydrationMode)+",\n"+
-			"      timeout: "+fmt.Sprintf("%d", hydrationTimeout)+"\n"+
-			"    }\n"+
-			"  });\n"+
-			"</script>").Render(ctx, templ_7745c5c3_Buffer)
-		if templ_7745c5c3_Err != nil {
-			return templ_7745c5c3_Err
-		}
-		templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 11, "<script src=\"/static/docs.js\" defer></script><!-- Canonical URL --><link rel=\"canonical\" href=\"")
-		if templ_7745c5c3_Err != nil {
-			return templ_7745c5c3_Err
-		}
-		var templ_7745c5c3_Var6 templ.SafeURL
-		templ_7745c5c3_Var6, templ_7745c5c3_Err = templ.JoinURLErrs(siteURL + path)
-		if templ_7745c5c3_Err != nil {
-			return templ.Error{Err: templ_7745c5c3_Err, FileName: `routes/root_layout.templ`, Line: 124, Col: 46}
-		}
-		_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ.EscapeString(templ_7745c5c3_Var6))
-		if templ_7745c5c3_Err != nil {
-			return templ_7745c5c3_Err
-		}
-		templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 12, "\"><!-- Favicon --><link rel=\"icon\" type=\"image/x-icon\" href=\"/static/gospa1-64.ico\"><link rel=\"apple-touch-icon\" sizes=\"64x64\" href=\"/static/gospa1-64.webp\"><link rel=\"apple-touch-icon\" sizes=\"128x128\" href=\"/static/gospa1-128.webp\"><link rel=\"apple-touch-icon\" sizes=\"256x256\" href=\"/static/gospa1-256.webp\"><link rel=\"apple-touch-icon\" sizes=\"512x512\" href=\"/static/gospa1-512.webp\"><!-- Open Graph / Facebook --><meta property=\"og:type\" content=\"website\"><meta property=\"og:url\" content=\"")
+		templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 11, "<script src=\"/static/js/islands.js\" type=\"module\" nonce=\"")
 		if templ_7745c5c3_Err != nil {
 			return templ_7745c5c3_Err
 		}
 		var templ_7745c5c3_Var7 string
-		templ_7745c5c3_Var7, templ_7745c5c3_Err = templ.JoinStringErrs(siteURL + path)
+		templ_7745c5c3_Var7, templ_7745c5c3_Err = templ.JoinStringErrs(gospatempl.GetNonce(ctx))
 		if templ_7745c5c3_Err != nil {
-			return templ.Error{Err: templ_7745c5c3_Err, FileName: `routes/root_layout.templ`, Line: 135, Col: 51}
+			return templ.Error{Err: templ_7745c5c3_Err, FileName: `routes/root_layout.templ`, Line: 112, Col: 85}
 		}
 		_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ.EscapeString(templ_7745c5c3_Var7))
 		if templ_7745c5c3_Err != nil {
 			return templ_7745c5c3_Err
 		}
-		templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 13, "\"><meta property=\"og:title\" content=\"")
+		templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 12, "\"></script><script src=\"")
 		if templ_7745c5c3_Err != nil {
 			return templ_7745c5c3_Err
 		}
 		var templ_7745c5c3_Var8 string
-		templ_7745c5c3_Var8, templ_7745c5c3_Err = templ.JoinStringErrs(title + " | GoSPA")
+		templ_7745c5c3_Var8, templ_7745c5c3_Err = templ.JoinStringErrs(runtimePath)
 		if templ_7745c5c3_Err != nil {
-			return templ.Error{Err: templ_7745c5c3_Err, FileName: `routes/root_layout.templ`, Line: 136, Col: 57}
+			return templ.Error{Err: templ_7745c5c3_Err, FileName: `routes/root_layout.templ`, Line: 113, Col: 28}
 		}
 		_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ.EscapeString(templ_7745c5c3_Var8))
 		if templ_7745c5c3_Err != nil {
 			return templ_7745c5c3_Err
 		}
-		templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 14, "\"><meta property=\"og:description\" content=\"")
+		templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 13, "\" type=\"module\" nonce=\"")
 		if templ_7745c5c3_Err != nil {
 			return templ_7745c5c3_Err
 		}
 		var templ_7745c5c3_Var9 string
-		templ_7745c5c3_Var9, templ_7745c5c3_Err = templ.JoinStringErrs(getPageDescription(path))
+		templ_7745c5c3_Var9, templ_7745c5c3_Err = templ.JoinStringErrs(gospatempl.GetNonce(ctx))
 		if templ_7745c5c3_Err != nil {
-			return templ.Error{Err: templ_7745c5c3_Err, FileName: `routes/root_layout.templ`, Line: 137, Col: 69}
+			return templ.Error{Err: templ_7745c5c3_Err, FileName: `routes/root_layout.templ`, Line: 113, Col: 77}
 		}
 		_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ.EscapeString(templ_7745c5c3_Var9))
 		if templ_7745c5c3_Err != nil {
 			return templ_7745c5c3_Err
 		}
-		templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 15, "\"><meta property=\"og:image\" content=\"")
+		templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 14, "\"></script><script type=\"module\" nonce=\"")
 		if templ_7745c5c3_Err != nil {
 			return templ_7745c5c3_Err
 		}
 		var templ_7745c5c3_Var10 string
-		templ_7745c5c3_Var10, templ_7745c5c3_Err = templ.JoinStringErrs(defaultImage)
+		templ_7745c5c3_Var10, templ_7745c5c3_Err = templ.JoinStringErrs(gospatempl.GetNonce(ctx))
 		if templ_7745c5c3_Err != nil {
-			return templ.Error{Err: templ_7745c5c3_Err, FileName: `routes/root_layout.templ`, Line: 138, Col: 51}
+			return templ.Error{Err: templ_7745c5c3_Err, FileName: `routes/root_layout.templ`, Line: 114, Col: 57}
 		}
 		_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ.EscapeString(templ_7745c5c3_Var10))
 		if templ_7745c5c3_Err != nil {
 			return templ_7745c5c3_Err
 		}
-		templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 16, "\"><meta property=\"og:image:width\" content=\"512\"><meta property=\"og:image:height\" content=\"512\"><meta property=\"og:site_name\" content=\"")
+		templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 15, "\">\n\t\t\t\tconst b = document.body.dataset;\n\t\t\t\timport(b.gospaRuntimePath).then(m => {\n\t\t\t\t\tm.init({\n\t\t\t\t\t\twsUrl: b.gospaWsUrl,\n\t\t\t\t\t\tserializationFormat: b.gospaSerializationFormat,\n\t\t\t\t\t\tdebug: b.gospaDebug === \"true\",\n\t\t\t\t\t\thydration: {\n\t\t\t\t\t\t\tmode: b.gospaHydrationMode,\n\t\t\t\t\t\t\ttimeout: parseInt(b.gospaHydrationTimeout, 10)\n\t\t\t\t\t\t}\n\t\t\t\t\t});\n\t\t\t\t});\n\t\t\t</script><script src=\"/static/docs.js\" defer nonce=\"")
 		if templ_7745c5c3_Err != nil {
 			return templ_7745c5c3_Err
 		}
 		var templ_7745c5c3_Var11 string
-		templ_7745c5c3_Var11, templ_7745c5c3_Err = templ.JoinStringErrs(siteName)
+		templ_7745c5c3_Var11, templ_7745c5c3_Err = templ.JoinStringErrs(gospatempl.GetNonce(ctx))
 		if templ_7745c5c3_Err != nil {
-			return templ.Error{Err: templ_7745c5c3_Err, FileName: `routes/root_layout.templ`, Line: 141, Col: 51}
+			return templ.Error{Err: templ_7745c5c3_Err, FileName: `routes/root_layout.templ`, Line: 128, Col: 71}
 		}
 		_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ.EscapeString(templ_7745c5c3_Var11))
 		if templ_7745c5c3_Err != nil {
 			return templ_7745c5c3_Err
 		}
-		templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 17, "\"><meta property=\"og:locale\" content=\"en_US\"><!-- Twitter Card --><meta name=\"twitter:card\" content=\"summary_large_image\"><meta name=\"twitter:url\" content=\"")
+		templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 16, "\"></script><!-- Canonical URL --><link rel=\"canonical\" href=\"")
 		if templ_7745c5c3_Err != nil {
 			return templ_7745c5c3_Err
 		}
-		var templ_7745c5c3_Var12 string
-		templ_7745c5c3_Var12, templ_7745c5c3_Err = templ.JoinStringErrs(siteURL + path)
+		var templ_7745c5c3_Var12 templ.SafeURL
+		templ_7745c5c3_Var12, templ_7745c5c3_Err = templ.JoinURLErrs(siteURL + path)
 		if templ_7745c5c3_Err != nil {
-			return templ.Error{Err: templ_7745c5c3_Err, FileName: `routes/root_layout.templ`, Line: 146, Col: 52}
+			return templ.Error{Err: templ_7745c5c3_Err, FileName: `routes/root_layout.templ`, Line: 131, Col: 46}
 		}
 		_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ.EscapeString(templ_7745c5c3_Var12))
 		if templ_7745c5c3_Err != nil {
 			return templ_7745c5c3_Err
 		}
-		templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 18, "\"><meta name=\"twitter:title\" content=\"")
+		templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 17, "\"><!-- Favicon --><link rel=\"icon\" type=\"image/x-icon\" href=\"/static/gospa1-64.ico\"><link rel=\"apple-touch-icon\" sizes=\"64x64\" href=\"/static/gospa1-64.webp\"><link rel=\"apple-touch-icon\" sizes=\"128x128\" href=\"/static/gospa1-128.webp\"><link rel=\"apple-touch-icon\" sizes=\"256x256\" href=\"/static/gospa1-256.webp\"><link rel=\"apple-touch-icon\" sizes=\"512x512\" href=\"/static/gospa1-512.webp\"><!-- Open Graph / Facebook --><meta property=\"og:type\" content=\"website\"><meta property=\"og:url\" content=\"")
 		if templ_7745c5c3_Err != nil {
 			return templ_7745c5c3_Err
 		}
 		var templ_7745c5c3_Var13 string
-		templ_7745c5c3_Var13, templ_7745c5c3_Err = templ.JoinStringErrs(title + " | GoSPA")
+		templ_7745c5c3_Var13, templ_7745c5c3_Err = templ.JoinStringErrs(siteURL + path)
 		if templ_7745c5c3_Err != nil {
-			return templ.Error{Err: templ_7745c5c3_Err, FileName: `routes/root_layout.templ`, Line: 147, Col: 58}
+			return templ.Error{Err: templ_7745c5c3_Err, FileName: `routes/root_layout.templ`, Line: 142, Col: 51}
 		}
 		_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ.EscapeString(templ_7745c5c3_Var13))
 		if templ_7745c5c3_Err != nil {
 			return templ_7745c5c3_Err
 		}
-		templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 19, "\"><meta name=\"twitter:description\" content=\"")
+		templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 18, "\"><meta property=\"og:title\" content=\"")
 		if templ_7745c5c3_Err != nil {
 			return templ_7745c5c3_Err
 		}
 		var templ_7745c5c3_Var14 string
-		templ_7745c5c3_Var14, templ_7745c5c3_Err = templ.JoinStringErrs(getPageDescription(path))
+		templ_7745c5c3_Var14, templ_7745c5c3_Err = templ.JoinStringErrs(title + " | GoSPA")
 		if templ_7745c5c3_Err != nil {
-			return templ.Error{Err: templ_7745c5c3_Err, FileName: `routes/root_layout.templ`, Line: 148, Col: 70}
+			return templ.Error{Err: templ_7745c5c3_Err, FileName: `routes/root_layout.templ`, Line: 143, Col: 57}
 		}
 		_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ.EscapeString(templ_7745c5c3_Var14))
 		if templ_7745c5c3_Err != nil {
 			return templ_7745c5c3_Err
 		}
-		templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 20, "\"><meta name=\"twitter:image\" content=\"")
+		templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 19, "\"><meta property=\"og:description\" content=\"")
 		if templ_7745c5c3_Err != nil {
 			return templ_7745c5c3_Err
 		}
 		var templ_7745c5c3_Var15 string
-		templ_7745c5c3_Var15, templ_7745c5c3_Err = templ.JoinStringErrs(defaultImage)
+		templ_7745c5c3_Var15, templ_7745c5c3_Err = templ.JoinStringErrs(getPageDescription(path))
 		if templ_7745c5c3_Err != nil {
-			return templ.Error{Err: templ_7745c5c3_Err, FileName: `routes/root_layout.templ`, Line: 149, Col: 52}
+			return templ.Error{Err: templ_7745c5c3_Err, FileName: `routes/root_layout.templ`, Line: 144, Col: 69}
 		}
 		_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ.EscapeString(templ_7745c5c3_Var15))
 		if templ_7745c5c3_Err != nil {
 			return templ_7745c5c3_Err
 		}
-		templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 21, "\"><meta name=\"google-site-verification\" content=\"Dn6cwasiI8rWfkU4SLKLrJwfSp8rh4QsZcsA4PSgmkw\"><meta name=\"keywords\" content=\"Go, Golang, SPA, Single Page Application, SSR, Server-Side Rendering, Reactive, Svelte-like, Framework, Web Development\"><link rel=\"alternate\" type=\"application/ld+json\" href=\"/static/structured-data.json\"></head><body class=\"min-h-screen flex flex-col font-sans selection:bg-cyan-500/30\" data-gospa-runtime-path=\"")
+		templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 20, "\"><meta property=\"og:image\" content=\"")
 		if templ_7745c5c3_Err != nil {
 			return templ_7745c5c3_Err
 		}
 		var templ_7745c5c3_Var16 string
-		templ_7745c5c3_Var16, templ_7745c5c3_Err = templ.JoinStringErrs(runtimePath)
+		templ_7745c5c3_Var16, templ_7745c5c3_Err = templ.JoinStringErrs(defaultImage)
 		if templ_7745c5c3_Err != nil {
-			return templ.Error{Err: templ_7745c5c3_Err, FileName: `routes/root_layout.templ`, Line: 158, Col: 40}
+			return templ.Error{Err: templ_7745c5c3_Err, FileName: `routes/root_layout.templ`, Line: 145, Col: 51}
 		}
 		_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ.EscapeString(templ_7745c5c3_Var16))
 		if templ_7745c5c3_Err != nil {
 			return templ_7745c5c3_Err
 		}
-		templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 22, "\" data-gospa-ws-url=\"")
+		templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 21, "\"><meta property=\"og:image:width\" content=\"512\"><meta property=\"og:image:height\" content=\"512\"><meta property=\"og:site_name\" content=\"")
 		if templ_7745c5c3_Err != nil {
 			return templ_7745c5c3_Err
 		}
 		var templ_7745c5c3_Var17 string
-		templ_7745c5c3_Var17, templ_7745c5c3_Err = templ.JoinStringErrs(wsUrl)
+		templ_7745c5c3_Var17, templ_7745c5c3_Err = templ.JoinStringErrs(siteName)
 		if templ_7745c5c3_Err != nil {
-			return templ.Error{Err: templ_7745c5c3_Err, FileName: `routes/root_layout.templ`, Line: 159, Col: 28}
+			return templ.Error{Err: templ_7745c5c3_Err, FileName: `routes/root_layout.templ`, Line: 148, Col: 51}
 		}
 		_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ.EscapeString(templ_7745c5c3_Var17))
 		if templ_7745c5c3_Err != nil {
 			return templ_7745c5c3_Err
 		}
-		templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 23, "\" data-gospa-debug=\"")
+		templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 22, "\"><meta property=\"og:locale\" content=\"en_US\"><!-- Twitter Card --><meta name=\"twitter:card\" content=\"summary_large_image\"><meta name=\"twitter:url\" content=\"")
 		if templ_7745c5c3_Err != nil {
 			return templ_7745c5c3_Err
 		}
 		var templ_7745c5c3_Var18 string
-		templ_7745c5c3_Var18, templ_7745c5c3_Err = templ.JoinStringErrs(fmt.Sprintf("%t", debug))
+		templ_7745c5c3_Var18, templ_7745c5c3_Err = templ.JoinStringErrs(siteURL + path)
 		if templ_7745c5c3_Err != nil {
-			return templ.Error{Err: templ_7745c5c3_Err, FileName: `routes/root_layout.templ`, Line: 160, Col: 46}
+			return templ.Error{Err: templ_7745c5c3_Err, FileName: `routes/root_layout.templ`, Line: 153, Col: 52}
 		}
 		_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ.EscapeString(templ_7745c5c3_Var18))
 		if templ_7745c5c3_Err != nil {
 			return templ_7745c5c3_Err
 		}
-		templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 24, "\" data-gospa-hydration-mode=\"")
+		templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 23, "\"><meta name=\"twitter:title\" content=\"")
 		if templ_7745c5c3_Err != nil {
 			return templ_7745c5c3_Err
 		}
 		var templ_7745c5c3_Var19 string
-		templ_7745c5c3_Var19, templ_7745c5c3_Err = templ.JoinStringErrs(hydrationMode)
+		templ_7745c5c3_Var19, templ_7745c5c3_Err = templ.JoinStringErrs(title + " | GoSPA")
 		if templ_7745c5c3_Err != nil {
-			return templ.Error{Err: templ_7745c5c3_Err, FileName: `routes/root_layout.templ`, Line: 161, Col: 44}
+			return templ.Error{Err: templ_7745c5c3_Err, FileName: `routes/root_layout.templ`, Line: 154, Col: 58}
 		}
 		_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ.EscapeString(templ_7745c5c3_Var19))
 		if templ_7745c5c3_Err != nil {
 			return templ_7745c5c3_Err
 		}
-		templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 25, "\" data-gospa-hydration-timeout=\"")
+		templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 24, "\"><meta name=\"twitter:description\" content=\"")
 		if templ_7745c5c3_Err != nil {
 			return templ_7745c5c3_Err
 		}
 		var templ_7745c5c3_Var20 string
-		templ_7745c5c3_Var20, templ_7745c5c3_Err = templ.JoinStringErrs(hydrationTimeout)
+		templ_7745c5c3_Var20, templ_7745c5c3_Err = templ.JoinStringErrs(getPageDescription(path))
 		if templ_7745c5c3_Err != nil {
-			return templ.Error{Err: templ_7745c5c3_Err, FileName: `routes/root_layout.templ`, Line: 162, Col: 50}
+			return templ.Error{Err: templ_7745c5c3_Err, FileName: `routes/root_layout.templ`, Line: 155, Col: 70}
 		}
 		_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ.EscapeString(templ_7745c5c3_Var20))
 		if templ_7745c5c3_Err != nil {
 			return templ_7745c5c3_Err
 		}
-		templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 26, "\" data-gospa-serialization-format=\"")
+		templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 25, "\"><meta name=\"twitter:image\" content=\"")
 		if templ_7745c5c3_Err != nil {
 			return templ_7745c5c3_Err
 		}
 		var templ_7745c5c3_Var21 string
-		templ_7745c5c3_Var21, templ_7745c5c3_Err = templ.JoinStringErrs(serializationFormat)
+		templ_7745c5c3_Var21, templ_7745c5c3_Err = templ.JoinStringErrs(defaultImage)
 		if templ_7745c5c3_Err != nil {
-			return templ.Error{Err: templ_7745c5c3_Err, FileName: `routes/root_layout.templ`, Line: 163, Col: 56}
+			return templ.Error{Err: templ_7745c5c3_Err, FileName: `routes/root_layout.templ`, Line: 156, Col: 52}
 		}
 		_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ.EscapeString(templ_7745c5c3_Var21))
 		if templ_7745c5c3_Err != nil {
@@ -424,41 +398,49 @@ func RootLayout(title string, children templ.Component, runtimePath string, path
 		if templ_7745c5c3_Err != nil {
 			return templ_7745c5c3_Err
 		}
-		var templ_7745c5c3_Var22 = []any{"px-4 py-1.5 rounded-full text-sm font-medium transition-all duration-300 ", templ.KV("text-[var(--accent-primary)] bg-[var(--accent-primary)]/10 border border-[var(--accent-primary)]/20", strings.HasPrefix(path, "/docs")), templ.KV("text-[var(--text-secondary)] hover:text-white hover:bg-white/5", !strings.HasPrefix(path, "/docs"))}
-		templ_7745c5c3_Err = templ.RenderCSSItems(ctx, templ_7745c5c3_Buffer, templ_7745c5c3_Var22...)
+		var templ_7745c5c3_Var22 string
+		templ_7745c5c3_Var22, templ_7745c5c3_Err = templ.JoinStringErrs(runtimePath)
+		if templ_7745c5c3_Err != nil {
+			return templ.Error{Err: templ_7745c5c3_Err, FileName: `routes/root_layout.templ`, Line: 165, Col: 40}
+		}
+		_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ.EscapeString(templ_7745c5c3_Var22))
 		if templ_7745c5c3_Err != nil {
 			return templ_7745c5c3_Err
 		}
-		templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 28, "<a href=\"/docs\" class=\"")
+		templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 27, "\" data-gospa-ws-url=\"")
 		if templ_7745c5c3_Err != nil {
 			return templ_7745c5c3_Err
 		}
 		var templ_7745c5c3_Var23 string
-		templ_7745c5c3_Var23, templ_7745c5c3_Err = templ.JoinStringErrs(templ.CSSClasses(templ_7745c5c3_Var22).String())
+		templ_7745c5c3_Var23, templ_7745c5c3_Err = templ.JoinStringErrs(wsUrl)
 		if templ_7745c5c3_Err != nil {
-			return templ.Error{Err: templ_7745c5c3_Err, FileName: `routes/root_layout.templ`, Line: 1, Col: 0}
+			return templ.Error{Err: templ_7745c5c3_Err, FileName: `routes/root_layout.templ`, Line: 166, Col: 28}
 		}
 		_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ.EscapeString(templ_7745c5c3_Var23))
 		if templ_7745c5c3_Err != nil {
 			return templ_7745c5c3_Err
 		}
-		templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 29, "\">Documentation</a> ")
+		templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 28, "\" data-gospa-debug=\"")
 		if templ_7745c5c3_Err != nil {
 			return templ_7745c5c3_Err
 		}
-		var templ_7745c5c3_Var24 = []any{"px-4 py-1.5 rounded-full text-sm font-medium transition-all duration-300 ", templ.KV("text-[var(--accent-primary)] bg-[var(--accent-primary)]/10 border border-[var(--accent-primary)]/20", path == "/docs/api"), templ.KV("text-[var(--text-secondary)] hover:text-white hover:bg-white/5", path != "/docs/api")}
-		templ_7745c5c3_Err = templ.RenderCSSItems(ctx, templ_7745c5c3_Buffer, templ_7745c5c3_Var24...)
+		var templ_7745c5c3_Var24 string
+		templ_7745c5c3_Var24, templ_7745c5c3_Err = templ.JoinStringErrs(fmt.Sprintf("%t", debug))
+		if templ_7745c5c3_Err != nil {
+			return templ.Error{Err: templ_7745c5c3_Err, FileName: `routes/root_layout.templ`, Line: 167, Col: 46}
+		}
+		_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ.EscapeString(templ_7745c5c3_Var24))
 		if templ_7745c5c3_Err != nil {
 			return templ_7745c5c3_Err
 		}
-		templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 30, "<a href=\"/docs/api\" class=\"")
+		templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 29, "\" data-gospa-hydration-mode=\"")
 		if templ_7745c5c3_Err != nil {
 			return templ_7745c5c3_Err
 		}
 		var templ_7745c5c3_Var25 string
-		templ_7745c5c3_Var25, templ_7745c5c3_Err = templ.JoinStringErrs(templ.CSSClasses(templ_7745c5c3_Var24).String())
+		templ_7745c5c3_Var25, templ_7745c5c3_Err = templ.JoinStringErrs(hydrationMode)
 		if templ_7745c5c3_Err != nil {
-			return templ.Error{Err: templ_7745c5c3_Err, FileName: `routes/root_layout.templ`, Line: 1, Col: 0}
+			return templ.Error{Err: templ_7745c5c3_Err, FileName: `routes/root_layout.templ`, Line: 168, Col: 44}
 		}
 		_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ.EscapeString(templ_7745c5c3_Var25))
 		if templ_7745c5c3_Err != nil {
@@ -469,7 +451,7 @@ func RootLayout(title string, children templ.Component, runtimePath string, path
 			return templ_7745c5c3_Err
 		}
 		if strings.HasPrefix(path, "/docs") {
-			templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 32, "<!-- Docs Layout: Persistent sidebar, swap only content --> <div class=\"max-w-7xl mx-auto px-4 flex gap-8\"><!-- Persistent Sidebar (outside swap area) --><div class=\"w-64 flex-shrink-0 hidden lg:block\" id=\"docs-sidebar\">")
+			templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 37, "<!-- Docs Layout: Persistent sidebar, swap only content --> <div class=\"max-w-7xl mx-auto px-4 flex gap-8\"><!-- Persistent Sidebar (outside swap area) --><div class=\"w-64 flex-shrink-0 hidden lg:block\" id=\"docs-sidebar\">")
 			if templ_7745c5c3_Err != nil {
 				return templ_7745c5c3_Err
 			}
@@ -481,16 +463,16 @@ func RootLayout(title string, children templ.Component, runtimePath string, path
 			if templ_7745c5c3_Err != nil {
 				return templ_7745c5c3_Err
 			}
-			var templ_7745c5c3_Var26 string
-			templ_7745c5c3_Var26, templ_7745c5c3_Err = templ.JoinStringErrs(path)
+			var templ_7745c5c3_Var32 string
+			templ_7745c5c3_Var32, templ_7745c5c3_Err = templ.JoinStringErrs(path)
 			if templ_7745c5c3_Err != nil {
-				return templ.Error{Err: templ_7745c5c3_Err, FileName: `routes/root_layout.templ`, Line: 274, Col: 34}
+				return templ.Error{Err: templ_7745c5c3_Err, FileName: `routes/root_layout.templ`, Line: 281, Col: 34}
 			}
-			_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ.EscapeString(templ_7745c5c3_Var26))
+			_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ.EscapeString(templ_7745c5c3_Var32))
 			if templ_7745c5c3_Err != nil {
 				return templ_7745c5c3_Err
 			}
-			templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 34, "\">")
+			templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 39, "\">")
 			if templ_7745c5c3_Err != nil {
 				return templ_7745c5c3_Err
 			}
@@ -498,25 +480,25 @@ func RootLayout(title string, children templ.Component, runtimePath string, path
 			if templ_7745c5c3_Err != nil {
 				return templ_7745c5c3_Err
 			}
-			templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 35, "</div></div><!-- Table of Contents (outside swap area) --><div class=\"hidden xl:block w-64 flex-shrink-0 pt-12\" id=\"docs-toc\"><div class=\"sticky top-28\"><h4 class=\"text-xs font-bold uppercase tracking-widest text-[var(--text-muted)] mb-4\">On this page</h4><nav id=\"toc\"><ul class=\"space-y-3 text-xs text-[var(--text-secondary)]\" data-gospa-permanent><!-- Populated by static/docs.js --></ul></nav></div></div></div>")
+			templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 40, "</div></div><!-- Table of Contents (outside swap area) --><div class=\"hidden xl:block w-64 flex-shrink-0 pt-12\" id=\"docs-toc\"><div class=\"sticky top-28\"><h4 class=\"text-xs font-bold uppercase tracking-widest text-[var(--text-muted)] mb-4\">On this page</h4><nav id=\"toc\"><ul class=\"space-y-3 text-xs text-[var(--text-secondary)]\" data-gospa-permanent><!-- Populated by static/docs.js --></ul></nav></div></div></div>")
 			if templ_7745c5c3_Err != nil {
 				return templ_7745c5c3_Err
 			}
 		} else {
-			templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 36, "<!-- Non-Docs Layout: Full page swap --> <div data-gospa-page=\"")
+			templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 41, "<!-- Non-Docs Layout: Full page swap --> <div data-gospa-page=\"")
 			if templ_7745c5c3_Err != nil {
 				return templ_7745c5c3_Err
 			}
-			var templ_7745c5c3_Var27 string
-			templ_7745c5c3_Var27, templ_7745c5c3_Err = templ.JoinStringErrs(path)
+			var templ_7745c5c3_Var33 string
+			templ_7745c5c3_Var33, templ_7745c5c3_Err = templ.JoinStringErrs(path)
 			if templ_7745c5c3_Err != nil {
-				return templ.Error{Err: templ_7745c5c3_Err, FileName: `routes/root_layout.templ`, Line: 293, Col: 32}
+				return templ.Error{Err: templ_7745c5c3_Err, FileName: `routes/root_layout.templ`, Line: 300, Col: 32}
 			}
-			_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ.EscapeString(templ_7745c5c3_Var27))
+			_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ.EscapeString(templ_7745c5c3_Var33))
 			if templ_7745c5c3_Err != nil {
 				return templ_7745c5c3_Err
 			}
-			templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 37, "\">")
+			templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 42, "\">")
 			if templ_7745c5c3_Err != nil {
 				return templ_7745c5c3_Err
 			}
@@ -524,12 +506,12 @@ func RootLayout(title string, children templ.Component, runtimePath string, path
 			if templ_7745c5c3_Err != nil {
 				return templ_7745c5c3_Err
 			}
-			templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 38, "</div>")
+			templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 43, "</div>")
 			if templ_7745c5c3_Err != nil {
 				return templ_7745c5c3_Err
 			}
 		}
-		templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 39, "</main><footer class=\"border-t border-[var(--border)] bg-[var(--bg-secondary)] py-12 z-10 relative\"><div class=\"max-w-7xl mx-auto px-4 grid md:grid-cols-4 gap-8\"><div class=\"col-span-2\"><div class=\"flex items-center gap-2 mb-4\"><span class=\"text-2xl font-bold tracking-tight\">Go<span class=\"text-[var(--accent-primary)]\">SPA</span></span></div><p class=\"text-[var(--text-secondary)] text-sm max-w-sm mb-6\">A lightweight Go framework for building high-performance, reactive single-page applications with server-side rendering.</p><p class=\"text-[var(--text-muted)] text-xs\">© 2026 GoSPA Contributors. Released under the Apache-2.0 License.</p></div><div><h4 class=\"font-semibold mb-4 text-sm\">Documentation</h4><ul class=\"space-y-2 text-sm text-[var(--text-secondary)]\"><li><a href=\"/docs/getstarted/installation\" class=\"hover:text-[var(--accent-primary)] transition-colors\">Getting Started</a></li><li><a href=\"/docs/api\" class=\"hover:text-[var(--accent-primary)] transition-colors\">Go API Reference</a></li><li><a href=\"/docs/client-runtime/overview\" class=\"hover:text-[var(--accent-primary)] transition-colors\">Client Runtime</a></li><li><a href=\"/llms.txt\" class=\"hover:text-[var(--accent-primary)] transition-colors\">llms.txt</a></li><li><a href=\"/llms-full.md\" class=\"hover:text-[var(--accent-primary)] transition-colors\">llms-full.md</a></li></ul></div><div><h4 class=\"font-semibold mb-4 text-sm\">Community</h4><ul class=\"space-y-2 text-sm text-[var(--text-secondary)]\"><li><a href=\"https://github.com/aydenstechdungeon/gospa\" class=\"hover:text-[var(--accent-primary)] transition-colors\">GitHub</a></li><li><a href=\"https://pkg.go.dev/github.com/aydenstechdungeon/gospa\" class=\"hover:text-[var(--accent-primary)] transition-colors\">Go.dev</a></li></ul></div></div></footer></div></body></html>")
+		templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 44, "</main><footer class=\"border-t border-[var(--border)] bg-[var(--bg-secondary)] py-12 z-10 relative\"><div class=\"max-w-7xl mx-auto px-4 grid md:grid-cols-4 gap-8\"><div class=\"col-span-2\"><div class=\"flex items-center gap-2 mb-4\"><span class=\"text-2xl font-bold tracking-tight\">Go<span class=\"text-[var(--accent-primary)]\">SPA</span></span></div><p class=\"text-[var(--text-secondary)] text-sm max-w-sm mb-6\">A lightweight Go framework for building high-performance, reactive single-page applications with server-side rendering.</p><p class=\"text-[var(--text-muted)] text-xs\">© 2026 GoSPA Contributors. Released under the Apache-2.0 License.</p></div><div><h4 class=\"font-semibold mb-4 text-sm\">Documentation</h4><ul class=\"space-y-2 text-sm text-[var(--text-secondary)]\"><li><a href=\"/docs/getstarted/installation\" class=\"hover:text-[var(--accent-primary)] transition-colors\">Getting Started</a></li><li><a href=\"/docs/api\" class=\"hover:text-[var(--accent-primary)] transition-colors\">Go API Reference</a></li><li><a href=\"/docs/client-runtime/overview\" class=\"hover:text-[var(--accent-primary)] transition-colors\">Client Runtime</a></li><li><a href=\"/llms.txt\" class=\"hover:text-[var(--accent-primary)] transition-colors\">llms.txt</a></li><li><a href=\"/llms-full.md\" class=\"hover:text-[var(--accent-primary)] transition-colors\">llms-full.md</a></li></ul></div><div><h4 class=\"font-semibold mb-4 text-sm\">Community</h4><ul class=\"space-y-2 text-sm text-[var(--text-secondary)]\"><li><a href=\"https://github.com/aydenstechdungeon/gospa\" class=\"hover:text-[var(--accent-primary)] transition-colors\">GitHub</a></li><li><a href=\"https://pkg.go.dev/github.com/aydenstechdungeon/gospa\" class=\"hover:text-[var(--accent-primary)] transition-colors\">Go.dev</a></li></ul></div></div></footer></div></body></html>")
 		if templ_7745c5c3_Err != nil {
 			return templ_7745c5c3_Err
 		}

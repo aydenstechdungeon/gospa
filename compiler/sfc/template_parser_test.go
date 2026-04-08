@@ -165,3 +165,26 @@ func TestTemplateParser_RejectsAtComponentWithoutParens(t *testing.T) {
 		t.Fatalf("Unexpected text content: %q", text.Content)
 	}
 }
+
+func TestTemplateParser_ComplexExpressions(t *testing.T) {
+	input := `<div>{ "prop": { "key": "value" } }</div>`
+	p := NewTemplateParser(input, 0, 0, 0)
+	nodes, err := p.Parse()
+	if err != nil {
+		t.Fatalf("Parse failed: %v", err)
+	}
+	if len(nodes) != 1 {
+		t.Fatalf("Expected 1 root node, got %d", len(nodes))
+	}
+	div := nodes[0].(*ElementNode)
+	if len(div.Children) != 1 {
+		t.Fatalf("Expected 1 child, got %d", len(div.Children))
+	}
+	expr, ok := div.Children[0].(*ExpressionNode)
+	if !ok {
+		t.Fatalf("Expected ExpressionNode, got %T", div.Children[0])
+	}
+	if expr.Content != ` "prop": { "key": "value" } ` {
+		t.Fatalf("Unexpected expression content: %q", expr.Content)
+	}
+}

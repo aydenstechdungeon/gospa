@@ -4,6 +4,7 @@ import (
 	"io/fs"
 	"log/slog"
 	"os"
+	"strings"
 	"time"
 
 	"github.com/aydenstechdungeon/gospa/compiler"
@@ -225,7 +226,7 @@ func DefaultConfig() Config {
 	return Config{
 		RuntimeTier:              RuntimeTierFull,
 		RoutesDir:                "./routes",
-		DevMode:                  false,
+		DevMode:                  devMode,
 		RuntimeScript:            "/_gospa/runtime.js",
 		StaticDir:                "./static",
 		StaticPrefix:             "/static",
@@ -265,6 +266,7 @@ func ProductionConfig() Config {
 	config.WSMaxReconnect = 10
 	config.WSHeartbeat = 30 * time.Second
 	config.SSGCacheMaxEntries = 500
+	config.ContentSecurityPolicy = fiber.StrictContentSecurityPolicy
 	return config
 }
 

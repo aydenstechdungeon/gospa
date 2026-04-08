@@ -150,7 +150,7 @@ func Meta(p MetaParams) templ.Component {
 			fmt.Fprintf(&sb, "<meta name=\"keywords\" content=\"%s\">\n", html.EscapeString(strings.Join(p.Keywords, ", ")))
 		}
 		if p.Canonical != "" {
-			fmt.Fprintf(&sb, "<link rel=\"canonical\" href=\"%s\">\n", p.Canonical)
+			fmt.Fprintf(&sb, "<link rel=\"canonical\" href=\"%s\">\n", html.EscapeString(p.Canonical))
 		}
 		if p.OGImage != "" {
 			fmt.Fprintf(&sb, "<meta property=\"og:image\" content=\"%s\">\n", html.EscapeString(p.OGImage))
@@ -167,7 +167,7 @@ func OpenGraph(p OGParams) templ.Component {
 		fmt.Fprintf(&sb, "<meta property=\"og:type\" content=\"%s\">\n", html.EscapeString(p.Type))
 		fmt.Fprintf(&sb, "<meta property=\"og:title\" content=\"%s\">\n", html.EscapeString(p.Title))
 		fmt.Fprintf(&sb, "<meta property=\"og:description\" content=\"%s\">\n", html.EscapeString(p.Description))
-		fmt.Fprintf(&sb, "<meta property=\"og:url\" content=\"%s\">\n", p.URL)
+		fmt.Fprintf(&sb, "<meta property=\"og:url\" content=\"%s\">\n", html.EscapeString(p.URL))
 		if p.Image != "" {
 			fmt.Fprintf(&sb, "<meta property=\"og:image\" content=\"%s\">\n", html.EscapeString(p.Image))
 		}
@@ -429,7 +429,7 @@ func (p *Plugin) generateMetaTags(pagePath string) error {
 	// Open Graph
 	sb.WriteString("\n<!-- Open Graph -->\n")
 	sb.WriteString("<meta property=\"og:type\" content=\"website\">\n")
-	fmt.Fprintf(&sb, "<meta property=\"og:url\" content=\"%s%s\">\n", p.config.SiteURL, page.Path) // URLs usually don't need HTML escaping in the same way, but good practice if queried
+	fmt.Fprintf(&sb, "<meta property=\"og:url\" content=\"%s\">\n", html.EscapeString(p.config.SiteURL+page.Path))
 	fmt.Fprintf(&sb, "<meta property=\"og:title\" content=\"%s\">\n", html.EscapeString(page.Title))
 	fmt.Fprintf(&sb, "<meta property=\"og:description\" content=\"%s\">\n", html.EscapeString(page.Description))
 	fmt.Fprintf(&sb, "<meta property=\"og:site_name\" content=\"%s\">\n", html.EscapeString(p.config.SiteName))
@@ -451,7 +451,7 @@ func (p *Plugin) generateMetaTags(pagePath string) error {
 
 	// Canonical
 	sb.WriteString("\n<!-- Canonical -->\n")
-	fmt.Fprintf(&sb, "<link rel=\"canonical\" href=\"%s%s\">\n", p.config.SiteURL, page.Path)
+	fmt.Fprintf(&sb, "<link rel=\"canonical\" href=\"%s\">\n", html.EscapeString(p.config.SiteURL+page.Path))
 
 	fmt.Println(sb.String())
 	return nil
@@ -556,10 +556,10 @@ func (p *Plugin) GeneratePageMeta(page PageSEO) string {
 	if canonical == "" {
 		canonical = p.config.SiteURL + page.Path
 	}
-	fmt.Fprintf(&sb, "<link rel=\"canonical\" href=\"%s\">\n", canonical)
+	fmt.Fprintf(&sb, "<link rel=\"canonical\" href=\"%s\">\n", html.EscapeString(canonical))
 
 	// Open Graph
-	fmt.Fprintf(&sb, "<meta property=\"og:url\" content=\"%s\">\n", p.config.SiteURL+page.Path)
+	fmt.Fprintf(&sb, "<meta property=\"og:url\" content=\"%s\">\n", html.EscapeString(p.config.SiteURL+page.Path))
 	fmt.Fprintf(&sb, "<meta property=\"og:title\" content=\"%s\">\n", html.EscapeString(title))
 	fmt.Fprintf(&sb, "<meta property=\"og:description\" content=\"%s\">\n", html.EscapeString(description))
 	if image != "" {

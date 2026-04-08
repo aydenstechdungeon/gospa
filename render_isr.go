@@ -35,7 +35,7 @@ func (a *App) backgroundRevalidate(cacheKey string, routeSnap interface{}) {
 	if timeout <= 0 {
 		timeout = 60 * time.Second
 	}
-	bgCtx, cancel := context.WithTimeout(context.Background(), timeout)
+	bgCtx, cancel := context.WithTimeout(a.Context(), timeout)
 	defer cancel()
 	freshHTML, err := a.buildPageHTML(bgCtx, route, nil)
 	if err != nil {

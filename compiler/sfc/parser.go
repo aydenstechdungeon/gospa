@@ -281,7 +281,8 @@ func findStringLiteralRanges(input string) []stringLiteralRange {
 	var ranges []stringLiteralRange
 	i := 0
 	for i < len(input) {
-		if input[i] == '`' {
+		switch input[i] {
+		case '`':
 			start := i
 			i++ // skip opening `
 			for i < len(input) && input[i] != '`' {
@@ -291,7 +292,21 @@ func findStringLiteralRanges(input string) []stringLiteralRange {
 				i++ // skip closing `
 				ranges = append(ranges, stringLiteralRange{start, i})
 			}
-		} else {
+		case '"':
+			start := i
+			i++ // skip opening "
+			for i < len(input) && input[i] != '"' {
+				if input[i] == '\\' && i+1 < len(input) {
+					i += 2
+					continue
+				}
+				i++
+			}
+			if i < len(input) {
+				i++ // skip closing "
+				ranges = append(ranges, stringLiteralRange{start, i})
+			}
+		default:
 			i++
 		}
 	}

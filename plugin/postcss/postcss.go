@@ -536,6 +536,11 @@ func (p *PostCSSPlugin) watchWithContext(projectDir string) {
 	startWatcher := func(input, output string) {
 		fmt.Printf("  Watching: %s -> %s\n", input, output)
 
+		if !isPathSafe(input) || !isPathSafe(output) {
+			fmt.Fprintf(os.Stderr, "PostCSS: invalid characters in input/output paths: %s -> %s\n", input, output)
+			return
+		}
+
 		args := []string{
 			"postcss",
 			input,
@@ -580,6 +585,10 @@ func (p *PostCSSPlugin) compile(projectDir string) error {
 	fmt.Println("PostCSS: compiling...")
 	fmt.Printf("  Input:  %s\n", p.config.Input)
 	fmt.Printf("  Output: %s\n", p.config.Output)
+
+	if !isPathSafe(p.config.Input) || !isPathSafe(p.config.Output) {
+		return fmt.Errorf("PostCSS: invalid characters in input/output paths")
+	}
 
 	args := []string{
 		"postcss",
@@ -947,9 +956,29 @@ func GenerateCriticalCSSHelper(projectDir, criticalCSSPath string) (string, erro
 }
 
 // GenerateAsyncCSSScript generates the HTML for async loading non-critical CSS.
+// Deprecated: use GenerateAsyncCSSScriptWithNonce to comply with nonce-based CSP.
 func GenerateAsyncCSSScript(cssPath string) string {
-	return fmt.Sprintf(`<link rel="preload" href="%s" as="style" onload="this.onload=null;this.rel='stylesheet'" data-gospa-async-css="1">
-<noscript><link rel="stylesheet" href="%s"></noscript>`, cssPath, cssPath)
+	return GenerateAsyncCSSScriptWithNonce(cssPath, "")
+}
+
+// GenerateAsyncCSSScriptWithNonce generates a CSP-compliant async CSS loader.
+// Instead of an inline onload attribute (which is blocked by nonce-based CSP), it emits
+// a <link rel="preload"> plus a small <script nonce="..."> that promotes the preload
+// to a full stylesheet once loaded.  When nonce is empty the nonce attribute is omitted,
+// which is fine only if the policy allows 'unsafe-inline'.
+func GenerateAsyncCSSScriptWithNonce(cssPath, nonce string) string {
+	nonceAttr := ""
+	if nonce != "" {
+		nonceAttr = fmt.Sprintf(` nonce="%s"`, nonce)
+	}
+	// Use a data attribute on the link so the script can locate every preloaded async sheet,
+	// even when multiple AsyncCSS calls appear on the same page.
+	return fmt.Sprintf(
+		`<link rel="preload" href="%s" as="style" data-gospa-async-css="%s">`+
+			`<noscript><link rel="stylesheet" href="%s"></noscript>`+
+			`<script%s>document.querySelector('link[data-gospa-async-css="%s"]').addEventListener('load',function(e){e.target.rel='stylesheet'});</script>`,
+		cssPath, cssPath, cssPath, nonceAttr, cssPath,
+	)
 }
 
 // CriticalCSS reads the critical CSS file and returns its content for inlining in templates.
@@ -970,8 +999,16 @@ func CriticalCSS(path string) string {
 // AsyncCSS generates the HTML markup for async loading non-critical CSS.
 // This is a template helper that can be used directly in templ files.
 // Usage in templates: @templ.Raw(AsyncCSS("/static/css/non-critical.css"))
+// Note: use AsyncCSSWithNonce when a nonce-based CSP is active.
 func AsyncCSS(path string) string {
-	return GenerateAsyncCSSScript(path)
+	return GenerateAsyncCSSScriptWithNonce(path, "")
+}
+
+// AsyncCSSWithNonce is like AsyncCSS but stamps the emitted <script> with the
+// provided CSP nonce so it passes a strict nonce-based Content-Security-Policy.
+// Usage in templates: @templ.Raw(postcss.AsyncCSSWithNonce("/static/css/non-critical.css", gospatempl.GetNonce(ctx)))
+func AsyncCSSWithNonce(path, nonce string) string {
+	return GenerateAsyncCSSScriptWithNonce(path, nonce)
 }
 
 // CriticalCSSWithFallback returns critical CSS from the given path,
@@ -1276,6 +1313,10 @@ func (p *PostCSSPlugin) isPathSafe(projectDir, path string) bool {
 	}
 	rel, err := filepath.Rel(projectDir, fullPath)
 	return err == nil && !strings.HasPrefix(rel, "..")
+}
+
+func isPathSafe(path string) bool {
+	return !strings.ContainsAny(path, "\x00<>|&$;`\"'")
 }
 
 // Ensure PostCSSPlugin implements CLIPlugin interface.

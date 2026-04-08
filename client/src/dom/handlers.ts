@@ -10,6 +10,8 @@ export type BindingHandler = (
   elementVersions?: WeakMap<Element, number>,
 ) => void | Promise<void>;
 
+
+
 export const handlers: Record<string, BindingHandler> = {
   text: (element, value) => {
     if (element instanceof HTMLElement || element instanceof SVGElement) {

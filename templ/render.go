@@ -13,16 +13,26 @@ import (
 
 // RuntimeScript returns the script tag for the GoSPA client runtime.
 func RuntimeScript(src string) templ.Component {
-	return templ.ComponentFunc(func(_ context.Context, w io.Writer) error {
-		_, err := fmt.Fprintf(w, `<script src="%s" type="module"></script>`, templ.EscapeString(src))
+	return templ.ComponentFunc(func(ctx context.Context, w io.Writer) error {
+		nonce := GetNonce(ctx)
+		nonceAttr := ""
+		if nonce != "" {
+			nonceAttr = fmt.Sprintf(` nonce="%s"`, nonce)
+		}
+		_, err := fmt.Fprintf(w, `<script src="%s" type="module"%s></script>`, templ.EscapeString(src), nonceAttr)
 		return err
 	})
 }
 
 // RuntimeScriptInline returns an inline script tag with the runtime code.
 func RuntimeScriptInline(code string) templ.Component {
-	return templ.ComponentFunc(func(_ context.Context, w io.Writer) error {
-		_, err := fmt.Fprintf(w, `<script>%s</script>`, code)
+	return templ.ComponentFunc(func(ctx context.Context, w io.Writer) error {
+		nonce := GetNonce(ctx)
+		nonceAttr := ""
+		if nonce != "" {
+			nonceAttr = fmt.Sprintf(` nonce="%s"`, nonce)
+		}
+		_, err := fmt.Fprintf(w, `<script%s>%s</script>`, nonceAttr, code)
 		return err
 	})
 }
@@ -37,8 +47,13 @@ func CSS(href string) templ.Component {
 
 // CSSInline returns an inline style tag.
 func CSSInline(css string) templ.Component {
-	return templ.ComponentFunc(func(_ context.Context, w io.Writer) error {
-		_, err := fmt.Fprintf(w, `<style>%s</style>`, css)
+	return templ.ComponentFunc(func(ctx context.Context, w io.Writer) error {
+		nonce := GetNonce(ctx)
+		nonceAttr := ""
+		if nonce != "" {
+			nonceAttr = fmt.Sprintf(` nonce="%s"`, nonce)
+		}
+		_, err := fmt.Fprintf(w, `<style%s>%s</style>`, nonceAttr, css)
 		return err
 	})
 }
@@ -152,6 +167,12 @@ func SPAPage(config SPAConfig) templ.Component {
 				return err
 			}
 		}
+		nonce := GetNonce(ctx)
+		nonceAttr := ""
+		if nonce != "" {
+			nonceAttr = fmt.Sprintf(` nonce="%s"`, nonce)
+		}
+
 		if config.Head != nil {
 			if err := config.Head.Render(ctx, w); err != nil {
 				return err
@@ -179,14 +200,19 @@ func SPAPage(config SPAConfig) templ.Component {
 
 		// Runtime script
 		if config.RuntimeSrc != "" {
-			if _, err := fmt.Fprintf(w, `<script src="%s" type="module"></script>`, templ.EscapeString(config.RuntimeSrc)); err != nil {
+			if _, err := fmt.Fprintf(w, `<script src="%s" type="module"%s></script>`, templ.EscapeString(config.RuntimeSrc), nonceAttr); err != nil {
 				return err
 			}
 		}
 
 		// Auto-init script
 		if config.AutoInit {
-			if _, err := fmt.Fprintf(w, `<script data-gospa-auto></script>`); err != nil {
+			nonce := GetNonce(ctx)
+			nonceAttr := ""
+			if nonce != "" {
+				nonceAttr = fmt.Sprintf(` nonce="%s"`, nonce)
+			}
+			if _, err := fmt.Fprintf(w, `<script%s data-gospa-auto></script>`, nonceAttr); err != nil {
 				return err
 			}
 		}
@@ -694,9 +720,9 @@ func (h *HeadManager) Render() templ.Component {
 		return sorted[i].Priority > sorted[j].Priority
 	})
 
-	return templ.ComponentFunc(func(_ context.Context, w io.Writer) error {
+	return templ.ComponentFunc(func(ctx context.Context, w io.Writer) error {
 		for _, el := range sorted {
-			if err := renderHeadElement(el, w); err != nil {
+			if err := renderHeadElement(ctx, el, w); err != nil {
 				return err
 			}
 		}
@@ -705,7 +731,7 @@ func (h *HeadManager) Render() templ.Component {
 }
 
 // renderHeadElement renders a single head element.
-func renderHeadElement(el HeadElement, w io.Writer) error {
+func renderHeadElement(ctx context.Context, el HeadElement, w io.Writer) error {
 	// Add data-gospa-head attribute for client-side updates
 	attrs := make(map[string]string)
 	for k, v := range el.Attrs {
@@ -737,13 +763,18 @@ func renderHeadElement(el HeadElement, w io.Writer) error {
 		return err
 	case "script", "style":
 		// Tags with content
+		nonce := GetNonce(ctx)
+		if nonce != "" {
+			attrs["nonce"] = nonce
+		}
+
 		_, err := fmt.Fprintf(w, `<%s`, el.Tag)
 		if err != nil {
 			return err
 		}
 		for k, v := range attrs {
-			if k == "data-gospa-head" {
-				continue // Don't add to script/style tags
+			if k == "data-gospa-head" && (el.Tag == "script" || el.Tag == "style") {
+				continue // Don't add to script/style tags inner content logic but it's fine for the tag itself
 			}
 			if v == "" {
 				_, err = fmt.Fprintf(w, ` %s`, k)

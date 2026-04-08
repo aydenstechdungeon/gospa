@@ -1,5 +1,7 @@
 import type { Rune, Unsubscribe } from "./rune.ts";
 import { type Notifier } from "./batch.ts";
+import { currentScope } from "./scope.ts";
+import type { Disposable } from "./disposal.ts";
 
 /**
  * Declare global debug constant for build-time stripping.
@@ -52,7 +54,7 @@ export function popEffect(): void {
  * Effect - management for reactive side effects.
  * Automatically tracks dependencies and re-runs on changes.
  */
-export class Effect implements Notifier {
+export class Effect implements Notifier, Disposable {
   private readonly _fn: EffectFn;
   private _cleanup: (() => void) | void;
   private readonly _dependencies: Set<Rune<unknown>> = new Set();
@@ -65,6 +67,12 @@ export class Effect implements Notifier {
     this._fn = fn;
     this._id = ++effectId;
     this._cleanup = undefined;
+
+    // Register with parent scope if active
+    if (currentScope) {
+      currentScope.add(this);
+    }
+
     this._run();
   }
 

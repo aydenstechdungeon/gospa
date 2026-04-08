@@ -177,9 +177,12 @@ func setOAuthStateCookie(c fiber.Ctx, provider, state string) {
 // Recognized signals: GOSPA_ENV=production|prod, ENV/APP_ENV/GO_ENV=production (case-insensitive),
 // and GIN_MODE=release (legacy compatibility).
 func isProductionRuntime() bool {
-	switch strings.ToLower(strings.TrimSpace(os.Getenv("GOSPA_ENV"))) {
+	gospaEnv := strings.ToLower(strings.TrimSpace(os.Getenv("GOSPA_ENV")))
+	switch gospaEnv {
 	case "production", "prod":
 		return true
+	case "development", "dev":
+		return false
 	}
 	for _, key := range []string{"ENV", "APP_ENV", "GO_ENV"} {
 		if strings.EqualFold(strings.TrimSpace(os.Getenv(key)), "production") {
@@ -383,18 +386,18 @@ func (p *AuthPlugin) VerifyOTPHandler() fiber.Handler {
 
 func (p *AuthPlugin) verifyOTPWithStorage(c fiber.Ctx, limitKey, secret, code string) error {
 	var count int
-	if b, err := p.storage.Get(limitKey); err == nil {
+	if b, err := p.storage.Get(c.Context(), limitKey); err == nil {
 		count, _ = strconv.Atoi(string(b))
 	}
 	if count >= 5 {
 		return c.Status(429).JSON(fiber.Map{"error": "too many attempts. please wait."})
 	}
 	if p.VerifyOTP(secret, code) {
-		_ = p.storage.Delete(limitKey)
+		_ = p.storage.Delete(c.Context(), limitKey)
 		return c.JSON(fiber.Map{"success": true})
 	}
 	count++
-	_ = p.storage.Set(limitKey, []byte(strconv.Itoa(count)), 5*time.Minute)
+	_ = p.storage.Set(c.Context(), limitKey, []byte(strconv.Itoa(count)), 5*time.Minute)
 	return c.Status(fiber.StatusUnauthorized).JSON(fiber.Map{"success": false, "error": "invalid OTP code"})
 }
 
@@ -508,7 +511,29 @@ func New(cfg *Config) *AuthPlugin {
 	if cfg.JWTExpiry <= 0 {
 		cfg.JWTExpiry = 24
 	}
-	return &AuthPlugin{config: cfg}
+	p := &AuthPlugin{config: cfg}
+	go p.startCleanup()
+	return p
+}
+
+func (p *AuthPlugin) startCleanup() {
+	ticker := time.NewTicker(15 * time.Minute)
+	defer ticker.Stop()
+	for range ticker.C {
+		p.cleanup()
+	}
+}
+
+func (p *AuthPlugin) cleanup() {
+	now := time.Now().Unix()
+	p.otpLimiter.Range(func(key, value any) bool {
+		if entry, ok := value.(*otpRateEntry); ok {
+			if now > atomic.LoadInt64(&entry.expiresAt) {
+				p.otpLimiter.Delete(key)
+			}
+		}
+		return true
+	})
 }
 
 // Name returns the plugin name.

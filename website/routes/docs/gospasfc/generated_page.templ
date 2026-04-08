@@ -9,8 +9,11 @@ type PageProps struct {
 }
 
 templ Page() {
-{{ var title = "GoSPA Documentation" }}
-{{ println("Hello from Go!") }}
+{{
+var title = "GoSPA Documentation"
+	println("Hello from Go!")
+var _ = title
+}}
 
 {{ if r := state.FromContext(ctx); r != nil { pMap := map[string]interface{}{}; r.Register("routesdocsgospasfcpage", pMap, nil) } }}
 	<div data-gospa-island="routesdocsgospasfcpage" class="">

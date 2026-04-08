@@ -1593,7 +1593,7 @@ How to connect your reactive state to the DOM using data attributes and programm
 | Type | Description | Example |
 |------|-------------|---------|
 | `text` | `textContent` update | `data-bind="message:text"` |
-| `html` | `innerHTML` (sanitized) | `data-bind="content:html"` |
+| `html` | `innerHTML` (baseline-sanitized) | `data-bind="content:html"` |
 | `style` | Inline style property | `data-bind="color:style:color"` |
 | `class` | Toggle class name | `data-bind="isActive:class:active"` |
 | `attr` | Any attribute | `data-bind="href:attr:href"` |
@@ -1710,15 +1710,15 @@ renderList(
 
 ## Sanitization
 
-Configure HTML sanitization for safe innerHTML bindings.
+GoSPA uses a "trust-the-server" model. For streamed fragments, a lightweight internal whitelist sanitizer is used. You can override the default sanitizer if needed:
 
 ```typescript
 import { setSanitizer, getSanitizer } from '@gospa/client';
 
 // Set custom sanitizer
 setSanitizer((html: string) => {
-  // Your sanitization logic
-  return sanitizedHtml;
+  // Your custom sanitization logic
+  return html;
 });
 
 // Get current sanitizer
@@ -1890,7 +1890,6 @@ GoSPA provides multiple runtime variants to balance security, performance, and b
 The **`@gospa/client`** package [exports](https://github.com/aydenstechdungeon/gospa/blob/main/client/package.json) only:
 
 - `@gospa/client` → default runtime (`dist/runtime.js`)
-- `@gospa/client/runtime-secure` → DOMPurify-enabled runtime (`dist/runtime-secure.js`)
 
 Additional bundles (`runtime-core.js`, `runtime-micro.js`, `runtime-simple.js`) are built into `dist/` for **embedding** in the Go binary; they are **not** separate npm import paths unless you vendor the files.
 
@@ -1898,7 +1897,7 @@ Additional bundles (`runtime-core.js`, `runtime-micro.js`, `runtime-simple.js`) 
 
 ### Default Runtime (`@gospa/client`) — Recommended
 
-The default runtime trusts server-rendered HTML (Templ auto-escapes all content). No DOMPurify bundle is included by default.
+The default runtime trusts server-rendered HTML (Templ auto-escapes all content). A lightweight internal sanitizer is used for streamed fragments.
 
 **File (build output):** `runtime.js`
 
@@ -1928,47 +1927,13 @@ import { init, Rune, navigate } from '@gospa/client';
 init();
 ```
 
-### Secure Runtime (`@gospa/client/runtime-secure`)
 
-The secure runtime includes DOMPurify for HTML sanitization. Use this when displaying user-generated content.
-
-**File (build output):** `runtime-secure.js`
-
-**Features:**
-- DOMPurify HTML sanitization
-- Protection against XSS attacks
-- Safe rendering of user-generated content
-- All core features (WebSocket, Navigation, Transitions)
-
-**Size:**
-- Uncompressed: ~35 KB
-- Gzipped: ~13 KB
-
-**When to use:**
-- Rendering user-generated HTML content
-- Social media apps with comments
-- Forums, wikis, CMS with rich text
-- Any app displaying untrusted HTML
-
-```typescript
-// Browser-style (no bundler)
-import * as GoSPA from "/_gospa/runtime-secure.js";
-GoSPA.init();
-
-// npm style (with bundler)
-import { init, sanitize } from '@gospa/client/runtime-secure';
-init();
-
-// Sanitize user content
-const cleanHtml = await GoSPA.sanitize(userComment);
-```
 
 ## Security Model Comparison
 
 | Import / bundle | Sanitizer | Trust model | Use case |
 |-----------------|-----------|-------------|----------|
-| `@gospa/client` | None (optional `setSanitizer`) | Trust server (Templ) | Most apps with CSP |
-| `@gospa/client/runtime-secure` | DOMPurify | Sanitize UGC | User-generated HTML |
+| `@gospa/client` | Internal (Whitelist) | Trust server (Templ) | Most apps with CSP |
 | Embedded `runtime-core` / `micro` | Varies | Custom | Workers, embeds |
 
 
@@ -2084,8 +2049,8 @@ WebSocket settings and performance optimization options for GoSPA.
 | `CompressState` | `bool` | `false` | Enable zlib compression for WebSocket messages |
 | `StateDiffing` | `bool` | `false` | Only send state diffs over WebSocket |
 | `CacheTemplates` | `bool` | `false` | Enable template caching (recommended for production) |
-| `SimpleRuntime` | `bool` | `false` | Use lightweight runtime without DOMPurify |
-| `DisableSanitization` | `bool` | `false` | Trusts server-rendered HTML without DOMPurify |
+| `SimpleRuntime` | `bool` | `false` | Use lightweight runtime |
+| `DisableSanitization` | `bool` | `false` | Trusts server-rendered HTML completely |
 | `NotificationBufferSize` | `int` | `1024` | Size of the state change notification queue |
 
 ## Example

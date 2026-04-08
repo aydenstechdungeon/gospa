@@ -1,6 +1,6 @@
 # SEO Optimization Plugin
 
-Generate SEO assets including sitemap, meta tags, and structured data.
+Generate SEO assets including sitemap, meta tags, and structured data with built-in XSS protection.
 
 ## Installation
 
@@ -18,6 +18,9 @@ plugins:
     generate_sitemap: true
     generate_robots: true
 ```
+
+## Security
+The plugin automatically HTML-escapes all metadata including titles, descriptions, and canonical URLs to prevent Cross-Site Scripting (XSS).
 
 ## CLI Commands
 

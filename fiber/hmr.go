@@ -469,7 +469,8 @@ func (mgr *HMRManager) HMRMiddleware() fiberpkg.Handler {
 
 		// Add HMR script before </body>
 		body := string(c.Response().Body())
-		hmrScript := mgr.generateHMRScript()
+		nonce, _ := c.Locals("gospa.csp_nonce").(string)
+		hmrScript := mgr.generateHMRScript(nonce)
 		body = strings.Replace(body, "</body>", hmrScript+"</body>", 1)
 
 		return c.SendString(body)
@@ -477,9 +478,13 @@ func (mgr *HMRManager) HMRMiddleware() fiberpkg.Handler {
 }
 
 // generateHMRScript generates the client-side HMR script.
-func (mgr *HMRManager) generateHMRScript() string {
+func (mgr *HMRManager) generateHMRScript(nonce string) string {
+	nonceAttr := ""
+	if nonce != "" {
+		nonceAttr = fmt.Sprintf(` nonce="%s"`, nonce)
+	}
 	return fmt.Sprintf(`
-<script>
+<script%s>
 (function() {
 	// Use wss if the page is https AND we aren't allowing insecure connections.
 	const wsProto = (window.location.protocol === 'https:' && !%v) ? 'wss://' : 'ws://';
@@ -539,7 +544,7 @@ func (mgr *HMRManager) generateHMRScript() string {
 	});
 })();
 </script>
-`, mgr.config.AllowInsecureWS)
+`, nonceAttr, mgr.config.AllowInsecureWS)
 }
 
 // Start begins HMR operation.

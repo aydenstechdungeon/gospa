@@ -390,21 +390,26 @@ func (d *DevTools) sendStateKeys(c *websocket.Conn) {
 // DevPanelHandler creates a handler for the dev panel UI.
 func (d *DevTools) DevPanelHandler() fiberpkg.Handler {
 	return func(c fiberpkg.Ctx) error {
-		html := fmt.Sprintf(devPanelHTML(), d.config.AllowInsecureWS)
+		nonce, _ := c.Locals("gospa.csp_nonce").(string)
+		nonceAttr := ""
+		if nonce != "" {
+			nonceAttr = fmt.Sprintf(` nonce="%s"`, nonce)
+		}
+		html := fmt.Sprintf(devPanelHTML(nonceAttr), d.config.AllowInsecureWS)
 		c.Set("Content-Type", "text/html; charset=utf-8")
 		return c.SendString(html)
 	}
 }
 
 // devPanelHTML returns the dev panel HTML.
-func devPanelHTML() string {
+func devPanelHTML(nonceAttr string) string {
 	return `<!DOCTYPE html>
 <html lang="en">
 <head>
 	<meta charset="UTF-8">
 	<meta name="viewport" content="width=device-width, initial-scale=1.0">
 	<title>GoSPA Dev Tools</title>
-	<style>
+	<style` + nonceAttr + `>
 		* { margin: 0; padding: 0; box-sizing: border-box; }
 		body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; background: #1a1a2e; color: #eee; min-height: 100vh; }
 		.container { max-width: 1200px; margin: 0 auto; padding: 1rem; }
@@ -448,7 +453,7 @@ func devPanelHTML() string {
 		<div class="panel">
 			<div class="panel-header">
 				<span class="panel-title">State Keys</span>
-				<button class="btn btn-secondary" onclick="refreshKeys()">Refresh</button>
+				<button class="btn btn-secondary" id="refreshKeysBtn">Refresh</button>
 			</div>
 			<div class="state-keys" id="stateKeys">
 				<span class="empty">No state keys tracked</span>
@@ -459,8 +464,8 @@ func devPanelHTML() string {
 			<div class="panel-header">
 				<span class="panel-title">State Change Log</span>
 				<div>
-					<button class="btn btn-secondary" onclick="clearLog()">Clear</button>
-					<button class="btn btn-primary" onclick="refreshLog()">Refresh</button>
+					<button class="btn btn-secondary" id="clearLogBtn">Clear</button>
+					<button class="btn btn-primary" id="refreshLogBtn">Refresh</button>
 				</div>
 			</div>
 			<div class="log-container" id="logContainer">
@@ -469,7 +474,7 @@ func devPanelHTML() string {
 		</div>
 	</div>
 
-	<script>
+	<script` + nonceAttr + `>
 		let ws = null;
 		let connected = false;
 
@@ -579,6 +584,9 @@ func devPanelHTML() string {
 			document.getElementById('logContainer').innerHTML = '<div class="empty">No state changes logged</div>';
 		}
 
+		document.getElementById('refreshKeysBtn').addEventListener('click', refreshKeys);
+		document.getElementById('clearLogBtn').addEventListener('click', clearLog);
+		document.getElementById('refreshLogBtn').addEventListener('click', refreshLog);
 		connect();
 		refreshKeys();
 		refreshLog();

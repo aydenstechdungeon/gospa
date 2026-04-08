@@ -463,7 +463,12 @@ func (p *TemplateParser) consumeUntil(delimiter string) string {
 	start := p.pos
 
 	if delimiter == "}" || delimiter == ")" {
-		open := delimiter[0] ^ 1
+		var open byte
+		if delimiter == "}" {
+			open = '{'
+		} else {
+			open = '('
+		}
 		depth := 0
 
 		for p.pos < len(p.input) {

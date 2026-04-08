@@ -12,7 +12,7 @@ import (
 
 	"github.com/a-h/templ"
 	"github.com/aydenstechdungeon/gospa/routing"
-	json "github.com/goccy/go-json"
+	"encoding/json"
 	gofiber "github.com/gofiber/fiber/v3"
 )
 
@@ -316,6 +316,11 @@ func (a *App) normalizeWSConfig() (rd, mr, hb int) {
 }
 
 func toJS(v interface{}) string {
-	b, _ := json.Marshal(v)
-	return string(b)
+	var buf bytes.Buffer
+	enc := json.NewEncoder(&buf)
+	enc.SetEscapeHTML(true)
+	if err := enc.Encode(v); err != nil {
+		return "{}"
+	}
+	return strings.TrimSuffix(buf.String(), "\n")
 }

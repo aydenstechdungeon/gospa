@@ -7,7 +7,7 @@ import (
 func (a *App) storeSsgEntry(key string, html []byte) {
 	if a.Config.Storage != nil && !a.Config.Prefork {
 		entry := ssgEntry{html: html, createdAt: time.Now()}
-		_ = a.Config.Storage.Set("gospa:ssg:"+key, encodeSsgEntry(entry), 0)
+		_ = a.Config.Storage.Set(a.Context(), "gospa:ssg:"+key, encodeSsgEntry(entry), 0)
 		return
 	}
 

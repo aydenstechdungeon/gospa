@@ -3,6 +3,9 @@ package component
 
 import (
 	"fmt"
+	"go/ast"
+	"go/parser"
+	"go/token"
 	"regexp"
 	"strings"
 )
@@ -106,25 +109,52 @@ type DetectionResult struct {
 
 // Detect analyzes source code and returns detected reactive boundaries.
 func (rd *ReactiveDetector) Detect(source, filePath string) *DetectionResult {
+	newlineIndices := cGetNewlineIndices(source)
 	result := &DetectionResult{
 		Boundaries: make([]ReactiveBoundary, 0),
 		FilePath:   filePath,
 	}
 
-	// Detect state boundaries
-	rd.detectStateBoundaries(source, result)
+	// Extract script if this is an SFC
+	script := source
+	scriptStartOffset := 0
+	if strings.Contains(source, "<script") {
+		// Simple extraction for detection purposes
+		startIdx := strings.Index(source, "<script")
+		if openTagEnd := strings.Index(source[startIdx:], ">"); openTagEnd != -1 {
+			startIdx += openTagEnd + 1
+			scriptStartOffset = startIdx
+			if endIdx := strings.Index(source[startIdx:], "</script>"); endIdx != -1 {
+				script = source[startIdx : startIdx+endIdx]
+			} else {
+				script = source[startIdx:]
+			}
+		}
+	}
 
-	// Detect derived boundaries
-	rd.detectDerivedBoundaries(source, result)
+	// Parse the Go script using AST
+	fset := token.NewFileSet()
+	// SFC scripts are often snippets, so we wrap them in a pseudo-package/function
+	// to ensure the parser can handle top-level assignments and statements.
+	prefix := "package main\nfunc _gospa_wrapper() {\n"
+	wrappedSource := prefix + script + "\n}"
+	
+	f, err := parser.ParseFile(fset, "", wrappedSource, 0)
+	if err != nil {
+		// Fallback to simpler regex detection if AST parsing fails 
+		// (e.g. invalid syntax during typing in dev mode)
+		rd.detectStateBoundariesLegacy(source, newlineIndices, result)
+		rd.detectDerivedBoundariesLegacy(source, newlineIndices, result)
+		rd.detectEffectBoundariesLegacy(source, newlineIndices, result)
+	} else {
+		rd.detectBoundariesAST(f, scriptStartOffset - len(prefix), newlineIndices, result)
+	}
 
-	// Detect effect boundaries
-	rd.detectEffectBoundaries(source, result)
+	// Detect event handlers (HTML attributes, still regex/string based)
+	rd.detectEventBoundaries(source, newlineIndices, result)
 
-	// Detect event handlers
-	rd.detectEventBoundaries(source, result)
-
-	// Detect islands
-	rd.detectIslands(source, result)
+	// Detect islands (meta-tags)
+	rd.detectIslands(source, newlineIndices, result)
 
 	// Update counts
 	for _, b := range result.Boundaries {
@@ -145,24 +175,137 @@ func (rd *ReactiveDetector) Detect(source, filePath string) *DetectionResult {
 	return result
 }
 
-// detectStateBoundaries detects state declarations.
-func (rd *ReactiveDetector) detectStateBoundaries(source string, result *DetectionResult) {
+
+func (rd *ReactiveDetector) detectBoundariesAST(f *ast.File, offsetAdjustment int, newlineIndices []int, result *DetectionResult) {
+	// Track parents using a stack
+	var stack []ast.Node
+	ast.Inspect(f, func(n ast.Node) bool {
+		if n == nil {
+			stack = stack[:len(stack)-1]
+			return true
+		}
+		stack = append(stack, n)
+
+		call, ok := n.(*ast.CallExpr)
+		if !ok {
+			return true
+		}
+
+		ident, ok := call.Fun.(*ast.Ident)
+		if !ok {
+			return true
+		}
+
+		var bType BoundaryType
+		switch ident.Name {
+		case "$state":
+			bType = BoundaryTypeState
+		case "$derived":
+			bType = BoundaryTypeDerived
+		case "$effect":
+			bType = BoundaryTypeEffect
+		default:
+			return true
+		}
+
+		realPos := int(call.Pos()) + offsetAdjustment
+		lineNum := cGetLineNumber(newlineIndices, realPos)
+
+		boundary := ReactiveBoundary{
+			Type:       bType,
+			LineNumber: lineNum,
+		}
+
+		// Improved variable name detection using parent stack
+		if len(stack) > 1 {
+			parent := stack[len(stack)-2]
+			switch p := parent.(type) {
+			case *ast.AssignStmt:
+				if len(p.Lhs) > 0 {
+					if id, ok := p.Lhs[0].(*ast.Ident); ok {
+						boundary.Name = id.Name
+					}
+				}
+			case *ast.ValueSpec:
+				if len(p.Names) > 0 {
+					boundary.Name = p.Names[0].Name
+				}
+			case *ast.ExprStmt:
+				// If part of an expression (e.g. nested), check one level higher
+				if len(stack) > 2 {
+					grandParent := stack[len(stack)-3]
+					if spec, ok := grandParent.(*ast.ValueSpec); ok && len(spec.Names) > 0 {
+						boundary.Name = spec.Names[0].Name
+					}
+				}
+			}
+		}
+
+		if boundary.Name == "" {
+			boundary.Name = fmt.Sprintf("%s_%d", strings.TrimPrefix(ident.Name, "$"), lineNum)
+		}
+
+		if bType == BoundaryTypeDerived || bType == BoundaryTypeEffect {
+			boundary.Dependencies = rd.extractDependenciesAST(call)
+		}
+
+		if bType == BoundaryTypeState || bType == BoundaryTypeDerived {
+			boundary.StateVars = []string{boundary.Name}
+		}
+
+		result.Boundaries = append(result.Boundaries, boundary)
+		return true
+	})
+}
+
+func (rd *ReactiveDetector) extractDependenciesAST(call *ast.CallExpr) []string {
+	deps := make(map[string]bool)
+	ast.Inspect(call, func(n ast.Node) bool {
+		if id, ok := n.(*ast.Ident); ok {
+			// Skip the rune itself
+			if strings.HasPrefix(id.Name, "$") {
+				return true
+			}
+			// Filter out keywords/built-ins
+			if !isKeyword(id.Name) {
+				deps[id.Name] = true
+			}
+		}
+		return true
+	})
+	
+	res := make([]string, 0, len(deps))
+	for k := range deps {
+		res = append(res, k)
+	}
+	return res
+}
+
+func isKeyword(s string) bool {
+	keywords := map[string]bool{
+		"func": true, "return": true, "if": true, "else": true,
+		"for": true, "range": true, "true": true, "false": true,
+		"nil": true, "string": true, "int": true, "bool": true,
+		"any": true, "var": true, "type": true, "struct": true,
+	}
+	return keywords[s]
+}
+
+// detectStateBoundariesLegacy detects state declarations using regex as a fallback.
+func (rd *ReactiveDetector) detectStateBoundariesLegacy(source string, newlineIndices []int, result *DetectionResult) {
 	for _, pattern := range rd.statePatterns {
 		matches := pattern.FindAllStringSubmatchIndex(source, -1)
 		for _, match := range matches {
-			lineBefore := source[:match[0]]
-			lineNum := strings.Count(lineBefore, "\n") + 1
+			lineNum := cGetLineNumber(newlineIndices, match[0])
 
 			// Extract variable name from the context before the match
-			lastLineIdx := strings.LastIndex(lineBefore, "\n")
-			var context string
-			if lastLineIdx == -1 {
-				context = lineBefore
-			} else {
-				context = lineBefore[lastLineIdx:]
+			lookback := match[0]
+			if lookback > 512 {
+				lookback = 512
 			}
-
+			context := source[match[0]-lookback : match[0]]
 			varName := rd.extractVariableName(context)
+
 			boundary := ReactiveBoundary{
 				Name:       varName,
 				Type:       BoundaryTypeState,
@@ -170,31 +313,28 @@ func (rd *ReactiveDetector) detectStateBoundaries(source string, result *Detecti
 				StateVars:  []string{varName},
 			}
 			if len(match) >= 4 {
-				boundary.Dependencies = []string{source[match[2]:match[3]]}
+				boundary.Dependencies = rd.extractDependencies(source[match[2]:match[3]])
 			}
 			result.Boundaries = append(result.Boundaries, boundary)
 		}
 	}
 }
 
-// detectDerivedBoundaries detects derived/computed values.
-func (rd *ReactiveDetector) detectDerivedBoundaries(source string, result *DetectionResult) {
+// detectDerivedBoundariesLegacy detects derived/computed values using regex as a fallback.
+func (rd *ReactiveDetector) detectDerivedBoundariesLegacy(source string, newlineIndices []int, result *DetectionResult) {
 	for _, pattern := range rd.derivedPatterns {
 		matches := pattern.FindAllStringSubmatchIndex(source, -1)
 		for _, match := range matches {
-			lineBefore := source[:match[0]]
-			lineNum := strings.Count(lineBefore, "\n") + 1
+			lineNum := cGetLineNumber(newlineIndices, match[0])
 
 			// Extract variable name from the context before the match
-			lastLineIdx := strings.LastIndex(lineBefore, "\n")
-			var context string
-			if lastLineIdx == -1 {
-				context = lineBefore
-			} else {
-				context = lineBefore[lastLineIdx:]
+			lookback := match[0]
+			if lookback > 512 {
+				lookback = 512
 			}
-
+			context := source[match[0]-lookback : match[0]]
 			varName := rd.extractVariableName(context)
+
 			boundary := ReactiveBoundary{
 				Name:       varName,
 				Type:       BoundaryTypeDerived,
@@ -209,12 +349,12 @@ func (rd *ReactiveDetector) detectDerivedBoundaries(source string, result *Detec
 	}
 }
 
-// detectEffectBoundaries detects effect declarations.
-func (rd *ReactiveDetector) detectEffectBoundaries(source string, result *DetectionResult) {
+// detectEffectBoundariesLegacy detects effect declarations using regex as a fallback.
+func (rd *ReactiveDetector) detectEffectBoundariesLegacy(source string, newlineIndices []int, result *DetectionResult) {
 	for _, pattern := range rd.effectPatterns {
 		matches := pattern.FindAllStringIndex(source, -1)
 		for _, match := range matches {
-			lineNum := strings.Count(source[:match[0]], "\n") + 1
+			lineNum := cGetLineNumber(newlineIndices, match[0])
 			boundary := ReactiveBoundary{
 				Name:       fmt.Sprintf("effect_%d", lineNum),
 				Type:       BoundaryTypeEffect,
@@ -226,11 +366,11 @@ func (rd *ReactiveDetector) detectEffectBoundaries(source string, result *Detect
 }
 
 // detectEventBoundaries detects event handlers.
-func (rd *ReactiveDetector) detectEventBoundaries(source string, result *DetectionResult) {
+func (rd *ReactiveDetector) detectEventBoundaries(source string, newlineIndices []int, result *DetectionResult) {
 	for _, pattern := range rd.eventPatterns {
 		matches := pattern.FindAllStringIndex(source, -1)
 		for _, match := range matches {
-			lineNum := strings.Count(source[:match[0]], "\n") + 1
+			lineNum := cGetLineNumber(newlineIndices, match[0])
 			boundary := ReactiveBoundary{
 				Name:       fmt.Sprintf("event_%d", lineNum),
 				Type:       BoundaryTypeEvent,
@@ -242,11 +382,11 @@ func (rd *ReactiveDetector) detectEventBoundaries(source string, result *Detecti
 }
 
 // detectIslands detects island declarations.
-func (rd *ReactiveDetector) detectIslands(source string, result *DetectionResult) {
+func (rd *ReactiveDetector) detectIslands(source string, newlineIndices []int, result *DetectionResult) {
 	for _, pattern := range rd.islandPatterns {
 		matches := pattern.FindAllStringSubmatchIndex(source, -1)
 		for _, match := range matches {
-			lineNum := strings.Count(source[:match[0]], "\n") + 1
+			lineNum := cGetLineNumber(newlineIndices, match[0])
 			name := "island"
 			if len(match) >= 4 {
 				name = source[match[2]:match[3]]
@@ -267,14 +407,51 @@ func (rd *ReactiveDetector) detectIslands(source string, result *DetectionResult
 // assignPattern is compiled once at package level to avoid per-call overhead.
 var assignPattern = regexp.MustCompile(`(\w+)\s*:?=`)
 
-// extractVariableName extracts the variable name from a line.
-func (rd *ReactiveDetector) extractVariableName(line string) string {
-	// Look for variable assignment pattern: varName := or varName =
-	matches := assignPattern.FindStringSubmatch(line)
-	if len(matches) > 1 {
-		return matches[1]
+// extractVariableName extracts the variable name from a context.
+func (rd *ReactiveDetector) extractVariableName(context string) string {
+	// Simple assignment patterns: varName := or varName =
+	// Search from right to left to find the nearest/correct variable name.
+	lines := strings.Split(context, "\n")
+	for i := len(lines) - 1; i >= 0; i-- {
+		line := strings.TrimSpace(lines[i])
+		if line == "" {
+			continue
+		}
+		matches := assignPattern.FindStringSubmatch(line)
+		if len(matches) > 1 {
+			return matches[1]
+		}
 	}
 	return "unknown"
+}
+
+func cGetNewlineIndices(s string) []int {
+	var indices []int
+	for i, ch := range s {
+		if ch == '\n' {
+			indices = append(indices, i)
+		}
+	}
+	return indices
+}
+
+func cGetLineNumber(newlineIndices []int, offset int) int {
+	if len(newlineIndices) == 0 {
+		return 1
+	}
+	// Binary search
+	low, high := 0, len(newlineIndices)-1
+	line := 0
+	for low <= high {
+		mid := (low + high) / 2
+		if newlineIndices[mid] < offset {
+			line = mid + 1
+			low = mid + 1
+		} else {
+			high = mid - 1
+		}
+	}
+	return line + 1
 }
 
 // extractDependencies extracts dependencies from an expression.

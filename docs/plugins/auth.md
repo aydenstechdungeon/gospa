@@ -19,6 +19,9 @@ plugins:
     otp_enabled: true
 ```
 
+> [!IMPORTANT]
+> **Security Requirement:** In production mode (`GOSPA_ENV=production`), the `jwt_secret` **must** be set, or the application will panic on startup. Use a secure 32-character hex string.
+
 ## Usage
 
 ```go
@@ -31,3 +34,6 @@ authPlugin := auth.New(&auth.Config{
 
 token, _ := authPlugin.CreateToken(userID, userEmail, role)
 ```
+
+## OTP Rate Limiting
+The plugin includes a built-in rate limiter for OTP attempts (max 5 attempts per 5 minutes). When using the in-memory limiter, a background cleanup routine prunes expired entries every 15 minutes to ensure memory safety.

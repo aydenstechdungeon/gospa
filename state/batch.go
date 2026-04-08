@@ -173,11 +173,6 @@ func BatchWithContext(ctx context.Context, fn func() error) error {
 	activeSyncBatchCount.Add(1)
 	activeBatches.Store(gid, bs)
 
-	activeContextBatches.Store(contextKey(ctx), bs)
-	activeContextBatches.Store(contextKey(batchCtx), bs)
-	activeSyncBatchCount.Add(1)
-	activeBatches.Store(gid, bs)
-
 	if err := fn(); err != nil {
 		return err
 	}

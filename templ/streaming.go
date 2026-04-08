@@ -78,15 +78,17 @@ type StreamWriter struct {
 	done    chan struct{}
 	err     error
 	mu      sync.Mutex
+	nonce   string // CSP nonce for inline scripts
 }
 
 // NewStreamWriter creates a new stream writer.
-func NewStreamWriter(w io.Writer, flusher interface{ Flush() error }, _ int) *StreamWriter {
+func NewStreamWriter(w io.Writer, flusher interface{ Flush() error }, _ int, nonce string) *StreamWriter {
 	sw := &StreamWriter{
 		w:       w,
 		flusher: flusher,
 		chunks:  make(chan StreamChunk, 100),
 		done:    make(chan struct{}),
+		nonce:   nonce,
 	}
 	go sw.processChunks()
 	return sw
@@ -132,7 +134,11 @@ func (sw *StreamWriter) processChunks() {
 			sw.mu.Unlock()
 			continue
 		}
-		_, _ = fmt.Fprintf(sw.w, "<script>__GOSPA_STREAM__(%s)</script>\n", string(data))
+		nonceAttr := ""
+		if sw.nonce != "" {
+			nonceAttr = fmt.Sprintf(` nonce="%s"`, sw.nonce)
+		}
+		_, _ = fmt.Fprintf(sw.w, "<script%s>__GOSPA_STREAM__(%s)</script>\n", nonceAttr, string(data))
 		_ = sw.Flush()
 		sw.mu.Unlock()
 	}
@@ -158,7 +164,8 @@ func (sr *StreamRenderer) StreamComponent(
 	flusher interface{ Flush() error },
 	opts StreamOptions,
 ) error {
-	sw := NewStreamWriter(w, flusher, sr.bufferSize)
+	nonce := GetNonce(ctx)
+	sw := NewStreamWriter(w, flusher, sr.bufferSize, nonce)
 	defer func() { _ = sw.Close() }()
 
 	// Write streaming preamble
@@ -194,29 +201,20 @@ func (sr *StreamRenderer) StreamComponent(
 
 // writePreamble writes the streaming initialization script.
 func (sr *StreamRenderer) writePreamble(sw *StreamWriter) error {
-	preamble := `<script>
+	nonceAttr := ""
+	if sw.nonce != "" {
+		nonceAttr = fmt.Sprintf(` nonce="%s"`, sw.nonce)
+	}
+	preamble := `<script` + nonceAttr + `>
 // Enhanced sanitizer with DOMPurify support and robust XSS prevention
 window.__GOSPA_SANITIZE_STREAM_HTML__ = window.__GOSPA_SANITIZE_STREAM_HTML__ || function(html) {
-	// Try DOMPurify first (most robust)
-	if (typeof window.DOMPurify !== 'undefined') {
-		return window.DOMPurify.sanitize(html, {
-			ALLOWED_TAGS: ['b', 'i', 'em', 'strong', 'a', 'ul', 'ol', 'li', 'p', 'br', 'span', 'div', 'h1', 'h2', 'h3', 'h4', 'h5', 'h6', 'table', 'thead', 'tbody', 'tr', 'th', 'td'],
-			ALLOWED_ATTR: ['href', 'class', 'id', 'title'],
-			FORBID_TAGS: ['style', 'script', 'iframe', 'object', 'embed', 'link', 'meta', 'base', 'applet'],
-			FORBID_ATTR: ['onerror', 'onload', 'onclick', 'onmouseover', 'onfocus', 'onblur', 'style']
-		});
-	}
-	// Fallback: Try GoSPA's DOMPurify
-	if (window.GoSPA && typeof window.GoSPA.sanitizeHtml === 'function') {
-		return window.GoSPA.sanitizeHtml(html);
-	}
-	// Last resort: manual sanitization with strict whitelist
+	// Manual sanitization with strict whitelist (Trust-the-server baseline)
 	var template = document.createElement('template');
 	template.innerHTML = String(html || '');
 	var doc = template.content;
 
 	// Whitelist approach: Remove everything NOT in the whitelist
-	var allowedTags = ['b', 'i', 'u', 'em', 'strong', 'a', 'span', 'br', 'p', 'ul', 'ol', 'li'];
+	var allowedTags = ['b', 'i', 'u', 'em', 'strong', 'a', 'span', 'br', 'p', 'ul', 'ol', 'li', 'h1', 'h2', 'h3', 'h4', 'h5', 'h6', 'table', 'thead', 'tbody', 'tr', 'th', 'td'];
 	var allElements = Array.from(doc.querySelectorAll('*'));
 	allElements.forEach(el => {
 		var tag = el.tagName.toLowerCase();
@@ -276,6 +274,9 @@ window.__GOSPA_STREAM__ = window.__GOSPA_STREAM__ || function(chunk) {
 		case 'script':
 			var script = document.createElement('script');
 			script.textContent = chunk.content;
+			if (window.__GOSPA_CSP_NONCE__) {
+				script.nonce = window.__GOSPA_CSP_NONCE__;
+			}
 			document.head.appendChild(script);
 			break;
 		case 'error':
@@ -283,6 +284,7 @@ window.__GOSPA_STREAM__ = window.__GOSPA_STREAM__ || function(chunk) {
 			break;
 	}
 };
+window.__GOSPA_CSP_NONCE__ = window.__GOSPA_CSP_NONCE__ || '` + sw.nonce + `';
 </script>`
 	_, err := sw.Write([]byte(preamble))
 	return err
@@ -290,7 +292,11 @@ window.__GOSPA_STREAM__ = window.__GOSPA_STREAM__ || function(chunk) {
 
 // writeEpilogue writes the streaming finalization script.
 func (sr *StreamRenderer) writeEpilogue(sw *StreamWriter) error {
-	epilogue := `<script>
+	nonceAttr := ""
+	if sw.nonce != "" {
+		nonceAttr = fmt.Sprintf(` nonce="%s"`, sw.nonce)
+	}
+	epilogue := `<script` + nonceAttr + `>
 if (window.__GOSPA_ISLANDS__ && window.__GOSPA_ISLAND_MANAGER__) {
 	window.__GOSPA_ISLAND_MANAGER__.init();
 }
@@ -466,6 +472,11 @@ func SuspenseWithOptions(loader func() (templ.Component, error), fallback templ.
 		// Start async loading
 		go func() {
 			content, err := loader()
+			nonce := GetNonce(ctx)
+			nonceAttr := ""
+			if nonce != "" {
+				nonceAttr = fmt.Sprintf(` nonce="%s"`, nonce)
+			}
 			if err != nil {
 				// Stream error - ESCAPE for JS string context to prevent XSS
 				escapedErr := escapeJavaScriptString(err.Error())
@@ -475,15 +486,15 @@ func SuspenseWithOptions(loader func() (templ.Component, error), fallback templ.
 					errComponent := opts.ErrorFallback(err)
 					var buf strings.Builder
 					if err := errComponent.Render(ctx, &buf); err != nil {
-						_, _ = fmt.Fprintf(w, `<script>__GOSPA_STREAM__({type:'error',id:'%s',content:'%s'})</script>`, id, escapedErr)
+						_, _ = fmt.Fprintf(w, `<script%s>__GOSPA_STREAM__({type:'error',id:'%s',content:'%s'})</script>`, nonceAttr, id, escapedErr)
 						return
 					}
 					escapedContent := escapeJavaScriptString(buf.String())
-					_, _ = fmt.Fprintf(w, `<script>__GOSPA_STREAM__({type:'error',id:'%s',content:'%s'})</script>`, id, escapedContent)
+					_, _ = fmt.Fprintf(w, `<script%s>__GOSPA_STREAM__({type:'error',id:'%s',content:'%s'})</script>`, nonceAttr, id, escapedContent)
 					return
 				}
 
-				_, _ = fmt.Fprintf(w, `<script>__GOSPA_STREAM__({type:'error',id:'%s',content:'%s'})</script>`, id, escapedErr)
+				_, _ = fmt.Fprintf(w, `<script%s>__GOSPA_STREAM__({type:'error',id:'%s',content:'%s'})</script>`, nonceAttr, id, escapedErr)
 				return
 			}
 
@@ -491,7 +502,7 @@ func SuspenseWithOptions(loader func() (templ.Component, error), fallback templ.
 			if err := content.Render(ctx, &buf); err != nil {
 				// Stream error - ESCAPE for JS string context to prevent XSS
 				escapedErr := escapeJavaScriptString(err.Error())
-				_, _ = fmt.Fprintf(w, `<script>__GOSPA_STREAM__({type:'error',id:'%s',content:'%s'})</script>`, id, escapedErr)
+				_, _ = fmt.Fprintf(w, `<script%s>__GOSPA_STREAM__({type:'error',id:'%s',content:'%s'})</script>`, nonceAttr, id, escapedErr)
 				return
 			}
 
@@ -499,7 +510,7 @@ func SuspenseWithOptions(loader func() (templ.Component, error), fallback templ.
 			// This prevents attacks like: </script><script>alert('xss')</script>
 			// or: ';alert('xss');//
 			escapedContent := escapeJavaScriptString(buf.String())
-			_, _ = fmt.Fprintf(w, `<script>__GOSPA_STREAM__({type:'html',id:'%s',content:'%s'})</script>`, id, escapedContent)
+			_, _ = fmt.Fprintf(w, `<script%s>__GOSPA_STREAM__({type:'html',id:'%s',content:'%s'})</script>`, nonceAttr, id, escapedContent)
 		}()
 
 		return nil

@@ -86,7 +86,7 @@ func StateMiddleware(config Config) gofiber.Handler {
 			return err
 		}
 
-		// Get state from context
+		// Recover state from context
 		stateMap, ok := c.Locals(config.StateKey).(*state.StateMap)
 		if !ok {
 			return err
@@ -95,8 +95,17 @@ func StateMiddleware(config Config) gofiber.Handler {
 		// Inject state as a script tag before </body>
 		body := c.Response().Body()
 
+		// Retrieve CSRF token for possible forms and AJAX setup.
+		csrfToken, _ := c.Locals("gospa.csrf_token").(string)
+
+		// Retrieve CSP Nonce from locals
+		nonce, _ := c.Locals("gospa.csp_nonce").(string)
+		nonceAttr := ""
+		if nonce != "" {
+			nonceAttr = ` nonce="` + nonce + `"`
+		}
+
 		// Use encoding/json with SetEscapeHTML for robust HTML-safe JSON encoding.
-		// This escapes <, >, &, U+2028, and U+2029 which can break out of <script> contexts.
 		var buf bytes.Buffer
 		encoder := stdjson.NewEncoder(&buf)
 		encoder.SetEscapeHTML(true)
@@ -105,11 +114,13 @@ func StateMiddleware(config Config) gofiber.Handler {
 		}
 		// Encode appends a trailing newline; trim it for inline embedding.
 		escapedJSON := strings.TrimRight(buf.String(), "\n")
-		stateScript := `<script>window.__GOSPA_STATE__ = ` + escapedJSON + `;</script>`
+		stateScript := `<script` + nonceAttr + `>window.__GOSPA_STATE__ = ` + escapedJSON + `;`
+		if csrfToken != "" {
+			stateScript += `window.__GOSPA_CSRF_TOKEN__ = "` + csrfToken + `";`
+		}
+		stateScript += `</script>`
 
 		// Always inject the runtime script if not already present in the HTML.
-		// The runtime is required for island hydration — without it, client-side
-		// TypeScript in <script lang="ts"> blocks never executes.
 		if config.RuntimeScript != "" && !bytes.Contains(body, []byte(config.RuntimeScript)) {
 			runtimePath := config.RuntimeScript
 			if strings.HasPrefix(runtimePath, "/_gospa/runtime.js") {
@@ -118,13 +129,13 @@ func StateMiddleware(config Config) gofiber.Handler {
 					runtimePath = "/_gospa/runtime-" + opts.RuntimeTier + ".js"
 				}
 			}
-			stateScript += `<script src="` + runtimePath + `" type="module"></script>`
+			stateScript += `<script src="` + runtimePath + `" type="module"` + nonceAttr + `></script>`
 		}
 
 		// In dev mode, also inject islands.js if not already present and the file exists
 		if config.DevMode && !bytes.Contains(body, []byte("/static/js/islands.js")) {
 			if _, err := os.Stat("static/js/islands.js"); err == nil {
-				stateScript += `<script src="/static/js/islands.js" type="module"></script>`
+				stateScript += `<script src="/static/js/islands.js" type="module"` + nonceAttr + `></script>`
 			}
 		}
 
@@ -162,11 +173,11 @@ func RuntimeMiddlewareWithContent(runtimeContent []byte) gofiber.Handler {
 	}
 }
 
-// isHTTPS returns true if the request was made over HTTPS, even when behind
-// a TLS-terminating reverse proxy. It checks both the direct protocol and the
-// X-Forwarded-Proto header.
+// isHTTPS returns true if the request was made over HTTPS.
+// It relies on Fiber's Ctx.Protocol() which respects TrustedProxies and ProxyHeader
+// configuration on the Fiber App.
 func isHTTPS(c gofiber.Ctx) bool {
-	return c.Protocol() == "https" || c.Get("X-Forwarded-Proto") == "https"
+	return c.Protocol() == "https"
 }
 
 // CSRFSetTokenMiddleware issues and rotates the CSRF cookie on safe HTTP methods.
@@ -256,6 +267,11 @@ func CSRFTokenMiddleware() gofiber.Handler {
 		}
 
 		token := c.Get("X-CSRF-Token")
+		if token == "" {
+			// Fallback to form field for standard HTML submissions.
+			// This enables progressive enhancement without mandatory JS.
+			token = c.FormValue("_csrf")
+		}
 		cookie := c.Cookies("csrf_token")
 
 		if token == "" || cookie == "" || subtle.ConstantTimeCompare([]byte(token), []byte(cookie)) != 1 {
@@ -364,7 +380,7 @@ func PreloadHeadersMiddleware(config PreloadConfig) gofiber.Handler {
 
 		// Fallback to embedded runtime chunks if manifest discovery didn't fill the limit
 		for _, chunk := range embed.RuntimeChunks() {
-			if len(links) >= limit || count >= 2 {
+			if len(links) >= limit || count >= 4 {
 				break
 			}
 			chunkPath := fmt.Sprintf("/_gospa/%s", chunk)
@@ -421,30 +437,49 @@ func PreloadHeadersMiddlewareMinimal(config PreloadConfig) gofiber.Handler {
 	}
 }
 
-// DefaultContentSecurityPolicy is the CSP used when gospa.Config.ContentSecurityPolicy is empty.
-// Uses a nonce-compatible strict policy. Prefer StrictContentSecurityPolicy for apps
-// that don't require any inline scripts. For full compatibility with inline scripts,
-// use LegacyContentSecurityPolicy.
-const DefaultContentSecurityPolicy = "default-src 'self'; base-uri 'self'; frame-ancestors 'none'; object-src 'none'; script-src 'self' 'unsafe-inline'; style-src 'self' 'unsafe-inline'; img-src 'self' data: blob: https:; font-src 'self' data:; connect-src 'self' ws: wss:; form-action 'self'"
+// DefaultContentSecurityPolicy is the default CSP policy for GoSPA.
+// Uses a {nonce} placeholder that SecurityHeadersMiddleware replaces per request.
+const DefaultContentSecurityPolicy = "default-src 'self'; base-uri 'none'; frame-ancestors 'none'; object-src 'none'; script-src 'nonce-{nonce}' 'self'; style-src 'self' 'unsafe-inline'; img-src 'self' data: blob: https:; font-src 'self' data:; connect-src 'self' ws: wss:; form-action 'self'"
 
-// StrictContentSecurityPolicy is a hardened CSP preset for applications that do
-// not rely on inline scripts or inline styles.
-const StrictContentSecurityPolicy = "default-src 'self'; base-uri 'self'; frame-ancestors 'none'; object-src 'none'; script-src 'self'; style-src 'self'; img-src 'self' data: blob: https:; font-src 'self' data:; connect-src 'self' ws: wss:; form-action 'self'"
+// StrictContentSecurityPolicy is a strict CSP policy that disallows unsafe-inline.
+const StrictContentSecurityPolicy = "default-src 'self'; base-uri 'none'; frame-ancestors 'none'; object-src 'none'; script-src 'nonce-{nonce}' 'self'; style-src 'self'; img-src 'self' data: blob: https:; font-src 'self' data:; connect-src 'self' ws: wss:; form-action 'self'"
 
 // LegacyContentSecurityPolicy allows unsafe-inline for script-src. Use only when
 // the application requires inline event handlers or eval-based script execution.
 const LegacyContentSecurityPolicy = "default-src 'self'; base-uri 'self'; frame-ancestors 'none'; object-src 'none'; script-src 'self' 'unsafe-inline'; style-src 'self' 'unsafe-inline'; img-src 'self' data: blob: https:; font-src 'self' data:; connect-src 'self' ws: wss:; form-action 'self'"
 
-// SecurityHeadersMiddleware adds security headers.
+// SecurityHeadersMiddleware adds security headers and handles the CSP nonce.
 func SecurityHeadersMiddleware(policy string) gofiber.Handler {
 	if strings.TrimSpace(policy) == "" {
 		policy = DefaultContentSecurityPolicy
 	}
+	basePolicy := policy
 	return func(c gofiber.Ctx) error {
+		currentPolicy := basePolicy
+		// Generate an unpredictable nonce for every request to harden CSP
+		nonce, err := generateCSRFToken()
+		if err == nil {
+			c.Locals("gospa.csp_nonce", nonce)
+			// Inject nonce into the CSP policy.
+			// When a nonce is present in script-src, browsers IGNORE 'unsafe-inline' per spec.
+			// We therefore strip 'unsafe-inline' from script-src whenever a nonce is used,
+			// so the effective policy matches what we intend.
+			if strings.Contains(currentPolicy, "{nonce}") {
+				currentPolicy = strings.ReplaceAll(currentPolicy, "{nonce}", nonce)
+				// Strip any leftover 'unsafe-inline' from script-src so browsers don't
+				// silently ignore the nonce directive.
+				currentPolicy = removeUnsafeInlineFromScriptSrc(currentPolicy)
+			} else if strings.Contains(currentPolicy, "script-src") && !strings.Contains(currentPolicy, "'nonce-") {
+				// Fallback: prepend nonce to script-src and strip 'unsafe-inline'.
+				currentPolicy = strings.Replace(currentPolicy, "script-src", fmt.Sprintf("script-src 'nonce-%s'", nonce), 1)
+				currentPolicy = removeUnsafeInlineFromScriptSrc(currentPolicy)
+			}
+		}
+
 		if isHTTPS(c) {
 			c.Set("Strict-Transport-Security", "max-age=31536000; includeSubDomains; preload")
 		}
-		c.Set("Content-Security-Policy", policy)
+		c.Set("Content-Security-Policy", currentPolicy)
 		c.Set("X-Content-Type-Options", "nosniff")
 		c.Set("X-Frame-Options", "DENY")
 		c.Set("X-XSS-Protection", "0")
@@ -601,8 +636,29 @@ func RenderComponent(c gofiber.Ctx, config Config, component templ.Component, co
 	wrapper := gospatempl.NewComponent(componentName, opts...)
 	rendered := gospatempl.RenderComponent(wrapper, component)
 
+	ctx := c.Context()
+	if nonce, ok := c.Locals("gospa.csp_nonce").(string); ok && nonce != "" {
+		ctx = gospatempl.WithNonce(ctx, nonce)
+	}
+
 	c.Set("Content-Type", "text/html")
-	return rendered.Render(c.Context(), c.Response().BodyWriter())
+	return rendered.Render(ctx, c.Response().BodyWriter())
+}
+
+// removeUnsafeInlineFromScriptSrc strips 'unsafe-inline' from the script-src
+// directive of a CSP string.  When a nonce is present in script-src, browsers
+// already ignore 'unsafe-inline' per spec — removing it explicitly keeps the
+// policy unambiguous and avoids browser console warnings.
+// Other directives (e.g. style-src) are left untouched.
+func removeUnsafeInlineFromScriptSrc(policy string) string {
+	directives := strings.Split(policy, ";")
+	for i, d := range directives {
+		trimmed := strings.TrimSpace(d)
+		if strings.HasPrefix(trimmed, "script-src") {
+			directives[i] = " " + strings.TrimSpace(strings.ReplaceAll(trimmed, "'unsafe-inline'", ""))
+		}
+	}
+	return strings.Join(directives, ";")
 }
 
 // generateComponentID generates a unique component ID.

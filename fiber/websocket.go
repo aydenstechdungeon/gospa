@@ -3,6 +3,7 @@ package fiber
 import (
 	"bytes"
 	"compress/gzip"
+	"context"
 	"crypto/rand"
 	"encoding/base64"
 	"encoding/hex"
@@ -75,7 +76,7 @@ func (rl *ConnectionRateLimiter) SetLimits(maxTokens float64, refillRate float64
 // AtomicRateLimiterStorage allows storage backends to implement atomic distributed
 // rate limiting semantics for shared deployments.
 type AtomicRateLimiterStorage interface {
-	ConsumeRateLimitToken(key string, now time.Time, maxTokens float64, refillRate float64, ttl time.Duration) (bool, error)
+	ConsumeRateLimitToken(ctx context.Context, key string, now time.Time, maxTokens float64, refillRate float64, ttl time.Duration) (bool, error)
 }
 
 // Global connection rate limiter (singleton)
@@ -129,13 +130,13 @@ func (rl *ConnectionRateLimiter) Allow(ip string) bool {
 	if storage != nil {
 		key := "rate:" + ip
 		if atomicStorage, ok := storage.(AtomicRateLimiterStorage); ok {
-			allowed, err := atomicStorage.ConsumeRateLimitToken(key, now, maxTokens, refillRate, 10*time.Minute)
+			allowed, err := atomicStorage.ConsumeRateLimitToken(context.Background(), key, now, maxTokens, refillRate, 10*time.Minute)
 			if err == nil {
 				return allowed
 			}
 		}
 
-		data, err := storage.Get(key)
+		data, err := storage.Get(context.Background(), key)
 		if err == nil {
 			var b rateBucket
 			if json.Unmarshal(data, &b) == nil {
@@ -149,7 +150,7 @@ func (rl *ConnectionRateLimiter) Allow(ip string) bool {
 				LastRefill: now,
 			}
 			newBytes, _ := json.Marshal(bucket)
-			_ = storage.Set(key, newBytes, 10*time.Minute)
+			_ = storage.Set(context.Background(), key, newBytes, 10*time.Minute)
 			return true
 		}
 
@@ -167,7 +168,7 @@ func (rl *ConnectionRateLimiter) Allow(ip string) bool {
 		}
 
 		newBytes, _ := json.Marshal(bucket)
-		_ = storage.Set(key, newBytes, 10*time.Minute)
+		_ = storage.Set(context.Background(), key, newBytes, 10*time.Minute)
 
 		return allowed
 	}
@@ -281,7 +282,7 @@ func (s *SessionStore) CreateSession(clientID string) (string, error) {
 	if err != nil {
 		return "", err
 	}
-	if err := s.storage.Set(token, bytes, SessionTTL); err != nil {
+	if err := s.storage.Set(context.Background(), token, bytes, SessionTTL); err != nil {
 		return "", err
 	}
 	return token, nil
@@ -289,7 +290,7 @@ func (s *SessionStore) CreateSession(clientID string) (string, error) {
 
 // ValidateSession returns the client ID for a valid, non-expired session token.
 func (s *SessionStore) ValidateSession(token string) (string, bool) {
-	bytes, err := s.storage.Get(token)
+	bytes, err := s.storage.Get(context.Background(), token)
 	if err != nil {
 		return "", false
 	}
@@ -313,7 +314,7 @@ func (s *SessionStore) SetFlash(token, key string, value interface{}) error {
 
 	// Read existing flashes
 	var flashes map[string]interface{}
-	data, err := s.storage.Get(fKey)
+	data, err := s.storage.Get(context.Background(), fKey)
 	if err == nil {
 		_ = json.Unmarshal(data, &flashes)
 	}
@@ -329,7 +330,7 @@ func (s *SessionStore) SetFlash(token, key string, value interface{}) error {
 	}
 
 	// 10 minute TTL is sufficient for Post-Redirect-Get.
-	return s.storage.Set(fKey, newData, 10*time.Minute)
+	return s.storage.Set(context.Background(), fKey, newData, 10*time.Minute)
 }
 
 // GetFlashes retrieves and removes all flash messages for a session.
@@ -339,13 +340,13 @@ func (s *SessionStore) GetFlashes(token string) map[string]interface{} {
 	}
 	fKey := "flash:" + token
 
-	data, err := s.storage.Get(fKey)
+	data, err := s.storage.Get(context.Background(), fKey)
 	if err != nil {
 		return nil
 	}
 
 	// Delete immediately (read-once semantics)
-	_ = s.storage.Delete(fKey)
+	_ = s.storage.Delete(context.Background(), fKey)
 
 	var flashes map[string]interface{}
 	if err := json.Unmarshal(data, &flashes); err != nil {
@@ -356,7 +357,7 @@ func (s *SessionStore) GetFlashes(token string) map[string]interface{} {
 
 // RemoveSession removes a session token.
 func (s *SessionStore) RemoveSession(token string) {
-	_ = s.storage.Delete(token)
+	_ = s.storage.Delete(context.Background(), token)
 }
 
 // RemoveClientSessions removes all sessions for a client ID.
@@ -398,13 +399,13 @@ func NewClientStateStore(storage store.Storage) *ClientStateStore {
 func (s *ClientStateStore) Save(clientID string, sm *state.StateMap) {
 	bytes, err := sm.MarshalJSON()
 	if err == nil {
-		_ = s.storage.Set("state:"+clientID, bytes, SessionTTL)
+		_ = s.storage.Set(context.Background(), "state:"+clientID, bytes, SessionTTL)
 	}
 }
 
 // Get retrieves a client's state.
 func (s *ClientStateStore) Get(clientID string) (*state.StateMap, bool) {
-	bytes, err := s.storage.Get("state:" + clientID)
+	bytes, err := s.storage.Get(context.Background(), "state:"+clientID)
 	if err != nil {
 		return nil, false
 	}
@@ -422,7 +423,7 @@ func (s *ClientStateStore) Get(clientID string) (*state.StateMap, bool) {
 
 // Remove removes a client's state.
 func (s *ClientStateStore) Remove(clientID string) {
-	_ = s.storage.Delete("state:" + clientID)
+	_ = s.storage.Delete(context.Background(), "state:"+clientID)
 }
 
 // Global client state store for session persistence. Defaulting to in-memory.
@@ -461,6 +462,8 @@ type WSClient struct {
 	// Custom serializer/deserializer from config
 	serializer   func(interface{}) ([]byte, error)
 	deserializer func([]byte, interface{}) error
+	// Topic-based subscriptions for performance (PERF-02)
+	topics map[string]bool
 }
 
 // WSMessage represents a WebSocket message.
@@ -484,6 +487,7 @@ type WSStateUpdate struct {
 type WSHub struct {
 	Clients          map[string]*WSClient
 	ClientsBySession map[string]map[string]*WSClient // SessionID -> {ClientID -> *WSClient}
+	ClientsByTopic   map[string]map[string]*WSClient // Topic -> {ClientID -> *WSClient}
 	Register         chan *WSClient
 	Unregister       chan *WSClient
 	Broadcast        chan []byte
@@ -492,7 +496,21 @@ type WSHub struct {
 	stop             chan struct{}
 	// stopOnce ensures Close() is idempotent and never panics on double-call.
 	stopOnce sync.Once
+	// workerPool is a set of channels for parallel message delivery
+	jobQueue chan broadcastJob
 }
+
+type broadcastJob struct {
+	clients []*WSClient
+	message []byte
+}
+
+const (
+	// Number of background workers for parallel broadcasting
+	broadcastWorkerCount = 16
+	// Size of the job queue for workers
+	broadcastJobQueueSize = 1024
+)
 
 // NewWSHub creates a new WebSocket hub.
 func NewWSHub(pubsub store.PubSub) *WSHub {
@@ -502,47 +520,69 @@ func NewWSHub(pubsub store.PubSub) *WSHub {
 	h := &WSHub{
 		Clients:          make(map[string]*WSClient),
 		ClientsBySession: make(map[string]map[string]*WSClient),
+		ClientsByTopic:   make(map[string]map[string]*WSClient),
 		Register:         make(chan *WSClient),
 		Unregister:       make(chan *WSClient),
 		Broadcast:        make(chan []byte, 256),
 		pubsub:           pubsub,
 		stop:             make(chan struct{}),
+		jobQueue:         make(chan broadcastJob, broadcastJobQueueSize),
+	}
+
+	// Start broadcast workers
+	for i := 0; i < broadcastWorkerCount; i++ {
+		go h.broadcastWorker()
 	}
 
 	// Subscribe to a global broadcast channel for state syncing across processes
-	_, _ = h.pubsub.Subscribe("gospa:broadcast", func(message []byte) {
-		h.mu.RLock()
-		defer h.mu.RUnlock()
-
+	_, _ = h.pubsub.Subscribe(context.Background(), "gospa:broadcast", func(message []byte) {
 		var msgData map[string]interface{}
 		var sessionID string
-		// Best effort parse to restrict session scope
+		var topic string
+
+		// Best effort parse to restrict session/topic scope
 		if err := json.Unmarshal(message, &msgData); err == nil {
 			if sid, ok := msgData["_sessionID"].(string); ok {
 				sessionID = sid
 			}
+			if t, ok := msgData["_topic"].(string); ok {
+				topic = t
+			}
 		}
 
-		if sessionID != "" {
-			// Targeted broadcast to specific session (O(1) session lookup)
-			if clients, ok := h.ClientsBySession[sessionID]; ok {
+		h.mu.RLock()
+		var targets []*WSClient
+		switch {
+		case topic != "":
+			// PERF-02: Topic-based O(1) lookup
+			if clients, ok := h.ClientsByTopic[topic]; ok {
+				targets = make([]*WSClient, 0, len(clients))
 				for _, client := range clients {
-					select {
-					case client.Send <- message:
-					default:
-					}
+					targets = append(targets, client)
 				}
 			}
+		case sessionID != "":
+			if clients, ok := h.ClientsBySession[sessionID]; ok {
+				targets = make([]*WSClient, 0, len(clients))
+				for _, client := range clients {
+					targets = append(targets, client)
+				}
+			}
+		default:
+			// Fallback: full broadcast (avoid if possible)
+			targets = make([]*WSClient, 0, len(h.Clients))
+			for _, client := range h.Clients {
+				targets = append(targets, client)
+			}
+		}
+		h.mu.RUnlock()
+
+		if len(targets) == 0 {
 			return
 		}
 
-		// Global broadcast (O(N) iteration unavoidable here)
-		for _, client := range h.Clients {
-			select {
-			case client.Send <- message:
-			default:
-			}
-		}
+		// Parallelize delivery across workers
+		h.dispatchBroadcast(targets, message)
 	})
 
 	return h
@@ -589,6 +629,15 @@ func (h *WSHub) Run() {
 						}
 					}
 				}
+				// Cleanup topic-based indexing (PERF-02)
+				for topic := range client.topics {
+					if clients, ok := h.ClientsByTopic[topic]; ok {
+						delete(clients, client.ID)
+						if len(clients) == 0 {
+							delete(h.ClientsByTopic, topic)
+						}
+					}
+				}
 				// Use guarded Close() to prevent double-close panics
 				client.Close()
 			}
@@ -598,9 +647,104 @@ func (h *WSHub) Run() {
 		case message := <-h.Broadcast:
 			// Instead of directly sending to local clients, publish to the PubSub system.
 			// The PubSub subscription handler will broadcast it locally.
-			_ = h.pubsub.Publish("gospa:broadcast", message)
+			_ = h.pubsub.Publish(context.Background(), "gospa:broadcast", message)
 		case <-h.stop:
+			close(h.jobQueue)
 			return
+		}
+	}
+}
+
+func (h *WSHub) broadcastWorker() {
+	for job := range h.jobQueue {
+		for _, client := range job.clients {
+			select {
+			case client.Send <- job.message:
+			default:
+				// Client buffer full, skip to maintain real-time pressure
+			}
+		}
+	}
+}
+
+// BroadcastToTopic sends a message to all clients subscribed to a topic.
+func (h *WSHub) BroadcastToTopic(topic string, message []byte) {
+	// Add topic hint to message if it's JSON
+	var msgData map[string]interface{}
+	if err := json.Unmarshal(message, &msgData); err == nil {
+		msgData["_topic"] = topic
+		if updated, err := json.Marshal(msgData); err == nil {
+			message = updated
+		}
+	}
+	_ = h.pubsub.Publish(context.Background(), "gospa:broadcast", message)
+}
+
+// Subscribe adds a client to a topic.
+func (h *WSHub) Subscribe(topic string, clientID string) {
+	h.mu.Lock()
+	defer h.mu.Unlock()
+
+	client, ok := h.Clients[clientID]
+	if !ok {
+		return
+	}
+
+	if h.ClientsByTopic[topic] == nil {
+		h.ClientsByTopic[topic] = make(map[string]*WSClient)
+	}
+	h.ClientsByTopic[topic][clientID] = client
+	client.topics[topic] = true
+}
+
+// Unsubscribe removes a client from a topic.
+func (h *WSHub) Unsubscribe(topic string, clientID string) {
+	h.mu.Lock()
+	defer h.mu.Unlock()
+
+	client, ok := h.Clients[clientID]
+	if !ok {
+		return
+	}
+
+	if clients, ok := h.ClientsByTopic[topic]; ok {
+		delete(clients, clientID)
+		if len(clients) == 0 {
+			delete(h.ClientsByTopic, topic)
+		}
+	}
+	delete(client.topics, topic)
+}
+
+func (h *WSHub) dispatchBroadcast(clients []*WSClient, message []byte) {
+	if len(clients) == 0 {
+		return
+	}
+
+	// Split clients into chunks and dispatch to workers
+	chunkSize := (len(clients) + broadcastWorkerCount - 1) / broadcastWorkerCount
+	if chunkSize < 10 {
+		chunkSize = 10
+	}
+
+	for i := 0; i < len(clients); i += chunkSize {
+		end := i + chunkSize
+		if end > len(clients) {
+			end = len(clients)
+		}
+		select {
+		case h.jobQueue <- broadcastJob{clients: clients[i:end], message: message}:
+		default:
+			// Queue full, drop older or skip? Using direct delivery as fallback
+			// to avoid complete starvation under extreme load.
+			go func(c []*WSClient, m []byte) {
+				for _, client := range c {
+					select {
+					case client.Send <- m:
+					default:
+					}
+				}
+			}(clients[i:end], message)
 		}
 	}
 }
@@ -677,6 +821,7 @@ func NewWSClient(id string, conn *websocket.Conn, config WebSocketConfig) *WSCli
 		format:           config.SerializationFormat,
 		serializer:       config.Serializer,
 		deserializer:     config.Deserializer,
+		topics:           make(map[string]bool),
 	}
 }
 
@@ -1366,7 +1511,7 @@ func WebSocketHandler(config WebSocketConfig) fiberpkg.Handler {
 			}
 			data, err := json.Marshal(syncMsg)
 			if err == nil {
-				_ = config.Hub.pubsub.Publish("gospa:broadcast", data)
+				_ = config.Hub.pubsub.Publish(context.Background(), "gospa:broadcast", data)
 			}
 		}
 

@@ -74,9 +74,13 @@ func NewErrorOverlay(config ErrorOverlayConfig) *ErrorOverlay {
 }
 
 // RenderOverlay renders the error overlay HTML.
-func (e *ErrorOverlay) RenderOverlay(err error, req *http.Request) string {
+func (e *ErrorOverlay) RenderOverlay(err error, req *http.Request, nonce ...string) string {
 	info := e.parseError(err, req)
-	return e.renderHTML(info)
+	n := ""
+	if len(nonce) > 0 {
+		n = nonce[0]
+	}
+	return e.renderHTML(info, n)
 }
 
 // parseError extracts error information from an error.
@@ -162,7 +166,11 @@ func (e *ErrorOverlay) extractStack(err error) []StackFrame {
 }
 
 // renderHTML generates the HTML for the error overlay.
-func (e *ErrorOverlay) renderHTML(info *ErrorInfo) string {
+func (e *ErrorOverlay) renderHTML(info *ErrorInfo, nonce string) string {
+	nonceAttr := ""
+	if nonce != "" {
+		nonceAttr = fmt.Sprintf(` nonce="%s"`, nonce)
+	}
 	theme := e.config.Theme
 	if theme == "" {
 		theme = "dark"
@@ -188,7 +196,7 @@ func (e *ErrorOverlay) renderHTML(info *ErrorInfo) string {
 <head>
 	<meta charset="UTF-8">
 	<title>Error: %s</title>
-	<style>
+	<style` + nonceAttr + `>
 		:root {
 			--bg-primary: %s;
 			--bg-secondary: %s;
@@ -420,8 +428,8 @@ func (e *ErrorOverlay) renderHTML(info *ErrorInfo) string {
 				<a href="%s" title="Open in editor">%s:%d</a>
 			</div>
 			<div class="actions">
-				<button class="btn btn-primary" onclick="copyError()">📋 Copy Error</button>
-				<button class="btn btn-secondary" onclick="location.reload()">🔄 Reload</button>
+				<button class="btn btn-primary" id="copyErrorBtn">📋 Copy Error</button>
+				<button class="btn btn-secondary" id="reloadBtn">🔄 Reload</button>
 			</div>
 		</div>
 
@@ -439,12 +447,14 @@ func (e *ErrorOverlay) renderHTML(info *ErrorInfo) string {
 		%s
 	</div>
 
-	<script>
+	<script` + nonceAttr + `>
 		function copyError() {
 			const errorText = document.querySelector('.error-message').textContent;
 			const location = document.querySelector('.error-location a').textContent;
 			navigator.clipboard.writeText(errorText + '\\n  at ' + location);
 		}
+		document.getElementById('copyErrorBtn').addEventListener('click', copyError);
+		document.getElementById('reloadBtn').addEventListener('click', function() { window.location.reload(); });
 	</script>
 </body>
 </html>`,
@@ -478,7 +488,7 @@ func (e *ErrorOverlay) buildStackHTML(frames []StackFrame) string {
 	for i, frame := range frames {
 		editorURL := e.buildEditorURL(frame.File, frame.Line)
 		fmt.Fprintf(&html, `
-		<div class="stack-frame" onclick="toggleFrame(this)">
+		<div class="stack-frame">
 			<div class="stack-frame-header">
 				<div class="stack-function">%s</div>
 			</div>
@@ -600,11 +610,23 @@ func getCurrentTimestamp() int64 {
 	return 0 // Would use time.Now().Unix() in real implementation
 }
 
+var sensitiveHeaders = map[string]bool{
+	"Authorization": true,
+	"Cookie":        true,
+	"Set-Cookie":    true,
+	"X-Api-Key":     true,
+	"X-Csrf-Token":  true,
+}
+
 func extractHeaders(req *http.Request) map[string]string {
 	headers := make(map[string]string)
 	for key, values := range req.Header {
 		if len(values) > 0 {
-			headers[key] = values[0]
+			if sensitiveHeaders[key] {
+				headers[key] = "[REDACTED]"
+			} else {
+				headers[key] = values[0]
+			}
 		}
 	}
 	return headers

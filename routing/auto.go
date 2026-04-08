@@ -66,6 +66,8 @@ type Router struct {
 	layoutIndex     map[string]*Route
 	middlewareIndex map[string]*Route
 	errorRouteIndex map[string]*Route
+	staticPageIndex map[string]*Route
+	dynamicRoutes   []*Route
 }
 
 // NewRouter creates a new router with the given routes directory or filesystem.
@@ -89,6 +91,8 @@ func NewRouter(routesSource interface{}) *Router {
 		layoutIndex:     make(map[string]*Route),
 		middlewareIndex: make(map[string]*Route),
 		errorRouteIndex: make(map[string]*Route),
+		staticPageIndex: make(map[string]*Route),
+		dynamicRoutes:   make([]*Route, 0),
 	}
 }
 
@@ -459,11 +463,22 @@ func (r *Router) findLayout(path string, layouts map[string]*Route) *Route {
 
 // Match matches a URL path to a route.
 func (r *Router) Match(urlPath string) (*Route, map[string]string) {
-	for _, route := range r.routes {
-		if route.Type != RouteTypePage {
-			continue
-		}
+	// Normalize path for lookup
+	urlPath = strings.TrimSuffix(urlPath, "/")
+	if urlPath == "" {
+		urlPath = "/"
+	}
+	if !strings.HasPrefix(urlPath, "/") {
+		urlPath = "/" + urlPath
+	}
 
+	// 1. Check static routes first (O(1))
+	if route, ok := r.staticPageIndex[urlPath]; ok {
+		return route, make(map[string]string)
+	}
+
+	// 2. Check dynamic routes (O(D) where D is number of dynamic routes)
+	for _, route := range r.dynamicRoutes {
 		if params, ok := r.matchRoute(route.Path, urlPath); ok {
 			return route, params
 		}
@@ -789,9 +804,17 @@ func (r *Router) rebuildIndexes() {
 	r.layoutIndex = make(map[string]*Route)
 	r.middlewareIndex = make(map[string]*Route)
 	r.errorRouteIndex = make(map[string]*Route)
+	r.staticPageIndex = make(map[string]*Route)
+	r.dynamicRoutes = make([]*Route, 0)
 
 	for _, rt := range r.routes {
 		switch rt.Type {
+		case RouteTypePage:
+			if rt.IsDynamic || rt.IsCatchAll {
+				r.dynamicRoutes = append(r.dynamicRoutes, rt)
+			} else {
+				r.staticPageIndex[rt.Path] = rt
+			}
 		case RouteTypeLayout:
 			r.layoutIndex[rt.Path] = rt
 		case RouteTypeMiddleware:

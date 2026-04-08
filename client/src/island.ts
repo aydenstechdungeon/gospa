@@ -4,6 +4,8 @@
  */
 import { setupEventDelegation } from "./events";
 import { getSetup } from "./runtime-core";
+import { safeJSONParse } from "./utils/json.ts";
+import { EffectScope } from "./state/scope.ts";
 
 // Island hydration modes
 export type IslandHydrationMode =
@@ -43,6 +45,7 @@ export interface IslandElementData {
   clientOnly?: boolean;
   serverOnly?: boolean;
   element: Element;
+  scope?: EffectScope;
 }
 
 // Island hydration result
@@ -203,7 +206,7 @@ export class IslandManager {
       const propsAttr = element.getAttribute("data-gospa-props");
       if (propsAttr) {
         try {
-          props = JSON.parse(propsAttr);
+          props = safeJSONParse(propsAttr);
         } catch (e) {
           this.log("Failed to parse props for island:", name, e);
         }
@@ -214,7 +217,7 @@ export class IslandManager {
       const stateAttr = element.getAttribute("data-gospa-state");
       if (stateAttr) {
         try {
-          state = JSON.parse(stateAttr);
+          state = safeJSONParse(stateAttr);
         } catch (e) {
           this.log("Failed to parse state for island:", name, e);
         }
@@ -355,10 +358,15 @@ export class IslandManager {
     this.log("Hydrating island:", island.name, island.id);
 
     try {
+      // Create a scope for this island's reactive effects
+      island.scope = new EffectScope();
+
       // First, check the bundled setup functions registry
       const setupFn = getSetup(island.name);
       if (setupFn) {
-        await setupFn(island.element, island.props ?? {}, island.state ?? {});
+        await island.scope.run(async () => {
+          await setupFn(island.element, island.props ?? {}, island.state ?? {});
+        });
         this.hydrated.add(island.id);
         this.log("Hydrated island from registry:", island.name);
         return { id: island.id, name: island.name, success: true };
@@ -383,7 +391,9 @@ export class IslandManager {
       }
 
       // Execute hydration
-      await hydrateFn(island.element, island.props ?? {}, island.state ?? {});
+      await island.scope.run(async () => {
+        await hydrateFn(island.element, island.props ?? {}, island.state ?? {});
+      });
 
       this.hydrated.add(island.id);
       this.log("Hydrated island:", island.name);
@@ -391,12 +401,41 @@ export class IslandManager {
       return { id: island.id, name: island.name, success: true };
     } catch (error) {
       this.log("Failed to hydrate island:", island.name, error);
-      // Mark as hydrated even on error to prevent infinite retry loops
-      // but keep track that it failed
-      this.hydrated.add(island.id);
+      // REL-01: Don't mark as hydrated on error to allow retries later
+      // The pending map and queue will handle cleanup
+      if (island.scope) {
+        island.scope.dispose();
+      }
       // Re-throw to propagate error to queue and callers
       throw error;
     }
+  }
+
+  /**
+   * Destroy an island and its reactive resources.
+   */
+  destroyIsland(id: string): void {
+    const island = this.islands.get(id);
+    if (island) {
+      if (island.scope) {
+        island.scope.dispose();
+      }
+      this.hydrated.delete(id);
+      this.pending.delete(id);
+      this.islands.delete(id);
+      this.log("Destroyed island:", island.name, id);
+    }
+  }
+
+  /**
+   * Destroy all islands within a container element.
+   */
+  destroyIslands(container: Element): void {
+    this.islands.forEach((island, id) => {
+      if (container.contains(island.element) || container === island.element) {
+        this.destroyIsland(id);
+      }
+    });
   }
 
   /**

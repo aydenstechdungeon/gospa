@@ -9,14 +9,14 @@ templ DualCodeBlock(jsCode, tsCode, filename string) {
 					<button 
 						class="px-3 py-1 text-xs font-medium bg-[var(--accent-primary)] text-white transition-colors lang-btn"
 						data-lang="js"
-						onclick="window.switchLang(this, 'js')"
+						data-action="switch-lang"
 					>
 						JS
 					</button>
 					<button 
 						class="px-3 py-1 text-xs font-medium bg-[var(--bg-primary)] text-[var(--text-secondary)] hover:text-[var(--text-primary)] transition-colors lang-btn"
 						data-lang="ts"
-						onclick="window.switchLang(this, 'ts')"
+						data-action="switch-lang"
 					>
 						TS
 					</button>

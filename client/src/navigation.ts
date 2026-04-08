@@ -1,9 +1,3 @@
-// GoSPA Client-side Navigation
-// Enables SPA-style navigation without full page reloads
-
-/**
- * Declare global debug constant for build-time stripping.
- */
 declare global {
   var GOSPA_DEBUG: boolean; // eslint-disable-line no-var
 }
@@ -485,37 +479,17 @@ async function getPageData(
   return fetchPageFromServer(path, signal);
 }
 
+
+
 // Content is trusted - Templ auto-escapes on the server
-// For user-generated content, use 'gospa/runtime-secure' which includes DOMPurify
-// For data-bind="html:*" bindings, we add sanitization as a safety layer
+// For user-generated content, the server is expected to provide safe HTML.
 async function prepareContent(html: string): Promise<string> {
-  // Return HTML as-is - server is trusted, CSP provides XSS protection
   return html;
 }
 
 // Sanitize HTML for data-bind="html:*" bindings
-// By default, this trusts the server (Templ auto-escapes).
-// For user-generated content, use 'gospa/runtime-secure' which enables DOMPurify.
-// eslint-disable-next-line @typescript-eslint/no-explicit-any
-let DOMPurify: ((dirty: string) => string) | null = null;
+// Trusts server-provided HTML per the "trust-the-server" model.
 async function sanitizeHTML(html: string): Promise<string> {
-  // Try to use DOMPurify if loaded (from runtime-secure)
-  if (DOMPurify != null) {
-    return DOMPurify(html);
-  }
-
-  // Check if DOMPurify is available globally
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  const globalPurify = (window as any).DOMPurify as
-    | ((dirty: string) => string)
-    | null;
-  if (globalPurify != null) {
-    DOMPurify = globalPurify;
-    return globalPurify(html);
-  }
-
-  // Default: Trust the server (Templ auto-escapes)
-  // For UGC, you should be using runtime-secure which sets the sanitizer
   return html;
 }
 
@@ -606,8 +580,7 @@ async function updateDOM(data: PageData): Promise<void> {
   updateHead(data.doc);
 
   // Re-initialize runtime for new content
-  const targetEl = rootEl || contentEl || mainEl || document.body;
-  await initNewContent(targetEl);
+  await initNewContent(container);
 
   // Focus management for accessibility
   const focusTarget = document.querySelector(
@@ -1107,6 +1080,9 @@ export async function navigate(
         // (state.currentPath is already updated)
       await performDOMUpdateWithTransitions(data, options);
 
+      // Update active links AFTER DOM morph so sidebar and content change atomically
+      updateActiveLinks();
+
       progressBar.finish();
       afterNavCallbacks.forEach((cb) => cb(path));
       document.dispatchEvent(
@@ -1211,6 +1187,10 @@ function handlePopState(_event: PopStateEvent): void {
       if (data) {
         // (state.currentPath is already updated instantly)
         await performDOMUpdateWithTransitions(data, { scrollToTop: false });
+
+        // Update active links AFTER DOM morph so sidebar and content change atomically
+        updateActiveLinks();
+
         progressBar.finish();
         // Restore scroll position for historical paths
         const savedPos = scrollPositions.get(path);

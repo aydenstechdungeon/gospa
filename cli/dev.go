@@ -3,6 +3,7 @@ package cli
 import (
 	"context"
 	"fmt"
+	"log"
 	"os"
 	"os/exec"
 	"os/signal"
@@ -222,181 +223,127 @@ const (
 
 // DevWatcher watches files for changes.
 type DevWatcher struct {
-	dirs      []string
-	Events    chan FileEvent
-	Errors    chan error
-	stop      chan struct{}
-	interval  time.Duration
-	fileTimes map[string]time.Time
-	debounce  time.Duration
+	dirs     []string
+	Events   chan FileEvent
+	Errors   chan error
+	watcher  *fsnotify.Watcher
+	debounce time.Duration
 }
 
 // NewDevWatcher creates a new file watcher.
 func NewDevWatcher(dirs ...string) *DevWatcher {
 	return &DevWatcher{
-		dirs:      dirs,
-		Events:    make(chan FileEvent, 10000),
-		Errors:    make(chan error, 10),
-		stop:      make(chan struct{}),
-		interval:  500 * time.Millisecond,
-		fileTimes: make(map[string]time.Time),
-		debounce:  100 * time.Millisecond,
+		dirs:     dirs,
+		Events:   make(chan FileEvent, 1000),
+		Errors:   make(chan error, 10),
+		debounce: 100 * time.Millisecond,
 	}
 }
 
-// NewFSDevWatcher creates a new fsnotify-based file watcher.
-func NewFSDevWatcher(dirs ...string) (*fsnotify.Watcher, error) {
-	watcher, err := fsnotify.NewWatcher()
+// Start begins watching the configured directories.
+func (dw *DevWatcher) Start() error {
+	var err error
+	dw.watcher, err = fsnotify.NewWatcher()
 	if err != nil {
-		return nil, err
+		return err
 	}
 
-	for _, dir := range dirs {
-		if err := watcher.Add(dir); err != nil {
-			_ = watcher.Close()
-			return nil, err
+	// Add directories to watch
+	for _, dir := range dw.dirs {
+		if err := dw.addRecursive(dir); err != nil {
+			log.Printf("Warning: failed to watch %s: %v", dir, err)
 		}
 	}
 
-	return watcher, nil
-}
-
-// Start starts the file watcher.
-func (w *DevWatcher) Start() error {
-	// Initial scan
-	for _, dir := range w.dirs {
-		if err := w.scanDir(dir); err != nil {
-			return err
-		}
-	}
-
-	// Start watching
-	go w.watch()
+	// Start processing events
+	go dw.run()
 
 	return nil
 }
 
-// Stop stops the file watcher.
-func (w *DevWatcher) Stop() {
-	close(w.stop)
+func (dw *DevWatcher) addRecursive(dir string) error {
+	return filepath.Walk(dir, func(path string, info os.FileInfo, err error) error {
+		if err != nil {
+			return err
+		}
+		if info.IsDir() {
+			name := info.Name()
+			if name == "node_modules" || name == ".git" || name == ".bin" || name == "dist" || name == "generated" {
+				return filepath.SkipDir
+			}
+			return dw.watcher.Add(path)
+		}
+		return nil
+	})
 }
 
-func (w *DevWatcher) watch() {
-	ticker := time.NewTicker(w.interval)
-	defer ticker.Stop()
+// Stop closes the watcher.
+func (dw *DevWatcher) Stop() {
+	if dw.watcher != nil {
+		_ = dw.watcher.Close()
+	}
+}
+
+func (dw *DevWatcher) run() {
+	lastEvents := make(map[string]time.Time)
+	var mu sync.Mutex
 
 	for {
 		select {
-		case <-w.stop:
-			return
-		case <-ticker.C:
-			for _, dir := range w.dirs {
-				w.checkDir(dir)
+		case event, ok := <-dw.watcher.Events:
+			if !ok {
+				return
 			}
-		}
-	}
-}
 
-func (w *DevWatcher) scanDir(dir string) error {
-	return filepath.Walk(dir, func(path string, info os.FileInfo, err error) error {
-		if err != nil {
-			if os.IsNotExist(err) && path == dir {
-				return nil
+			// Ignore generated files explicitly
+			if strings.Contains(event.Name, "generated_") || strings.HasSuffix(event.Name, ".templ.go") {
+				continue
 			}
-			return err
-		}
 
-		if info.IsDir() {
-			name := info.Name()
-			if name == "node_modules" || name == ".git" || name == ".bin" || name == "dist" {
-				return filepath.SkipDir
+			// Debounce events for the same file
+			mu.Lock()
+			lastTime, exists := lastEvents[event.Name]
+			if exists && time.Since(lastTime) < dw.debounce {
+				mu.Unlock()
+				continue
 			}
-			return nil
-		}
+			lastEvents[event.Name] = time.Now()
+			mu.Unlock()
 
-		// Ignore generated files
-		if strings.HasSuffix(path, "generated_routes.go") || strings.HasPrefix(filepath.Base(path), "_") {
-			return nil
-		}
-		w.fileTimes[path] = info.ModTime()
-
-		return nil
-	})
-}
-
-func (w *DevWatcher) checkDir(dir string) {
-	currentFiles := make(map[string]bool)
-
-	err := filepath.Walk(dir, func(path string, info os.FileInfo, err error) error {
-		if err != nil {
-			fmt.Fprintf(os.Stderr, "Warning: watcher error accessing %s: %v\n", path, err)
-			return nil // Ignore errors and continue
-		}
-
-		if info.IsDir() {
-			name := info.Name()
-			if name == "node_modules" || name == ".git" || name == ".bin" || name == "dist" {
-				return filepath.SkipDir
-			}
-			return nil
-		}
-
-		// Ignore generated files to prevent infinite loops
-		if strings.HasSuffix(path, "generated_routes.go") || strings.HasPrefix(filepath.Base(path), "_") {
-			return nil
-		}
-
-		currentFiles[path] = true
-		oldTime, exists := w.fileTimes[path]
-		modTime := info.ModTime()
-
-		if !exists {
-			// New file
-			w.fileTimes[path] = modTime
-			select {
-			case w.Events <- FileEvent{
-				File:    path,
-				Op:      FileOpCreate,
-				ModTime: modTime,
-			}:
-			default:
-			}
-		} else if !modTime.Equal(oldTime) {
-			// Modified file
-			w.fileTimes[path] = modTime
-			select {
-			case w.Events <- FileEvent{
-				File:    path,
-				Op:      FileOpModify,
-				ModTime: modTime,
-			}:
-			default:
-			}
-		}
-
-		return nil
-	})
-	if err != nil {
-		fmt.Fprintf(os.Stderr, "Warning: watcher directory walk error: %v\n", err)
-	}
-
-	// Check for deleted files - scoped strictly to the current scanned directory tree
-	for path := range w.fileTimes {
-		if strings.HasPrefix(path, dir+string(filepath.Separator)) || path == dir || filepath.Dir(path) == dir {
-			if !currentFiles[path] && path != dir {
-				delete(w.fileTimes, path)
-				select {
-				case w.Events <- FileEvent{
-					File:    path,
-					Op:      FileOpDelete,
-					ModTime: time.Now(),
-				}:
-				default:
+			// Map fsnotify Op to FileOp
+			var op FileOp
+			switch {
+			case event.Op&fsnotify.Create == fsnotify.Create:
+				op = FileOpCreate
+				// If a new directory is created, watch it too
+				if info, err := os.Stat(event.Name); err == nil && info.IsDir() {
+					_ = dw.addRecursive(event.Name)
 				}
+			case event.Op&fsnotify.Write == fsnotify.Write:
+				op = FileOpModify
+			case event.Op&fsnotify.Remove == fsnotify.Remove:
+				op = FileOpDelete
+			case event.Op&fsnotify.Rename == fsnotify.Rename:
+				op = FileOpRename
+			default:
+				continue
 			}
+
+			dw.Events <- FileEvent{
+				File:    event.Name,
+				Op:      op,
+				ModTime: time.Now(),
+			}
+
+		case err, ok := <-dw.watcher.Errors:
+			if !ok {
+				return
+			}
+			dw.Errors <- err
 		}
 	}
 }
+
 
 func handleFileChange(_ context.Context, event FileEvent, restartCh chan struct{}, noRestart bool) {
 	ext := filepath.Ext(event.File)
@@ -420,8 +367,6 @@ func handleFileChange(_ context.Context, event FileEvent, restartCh chan struct{
 
 	case ".go":
 		fmt.Println("Go file changed, restarting server...")
-
-		// Restart server (unless disabled)
 		if !noRestart {
 			select {
 			case restartCh <- struct{}{}:
@@ -429,6 +374,7 @@ func handleFileChange(_ context.Context, event FileEvent, restartCh chan struct{
 			}
 		}
 
+	case ".static", ".css", ".js":
 		fmt.Println("Static file changed, browser will reload")
 		_ = BuildIslands(nil, nil)
 	}

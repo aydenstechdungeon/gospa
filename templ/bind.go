@@ -254,12 +254,17 @@ func (cs *ComponentState) StateAttrs() templ.Attributes {
 
 // InitScript generates the component initialization script.
 func (cs *ComponentState) InitScript() templ.Component {
-	return templ.ComponentFunc(func(_ context.Context, w io.Writer) error {
+	return templ.ComponentFunc(func(ctx context.Context, w io.Writer) error {
+		nonce := GetNonce(ctx)
+		nonceAttr := ""
+		if nonce != "" {
+			nonceAttr = fmt.Sprintf(` nonce="%s"`, nonce)
+		}
 		json, err := cs.ToJSON()
 		if err != nil {
 			return err
 		}
-		_, err = fmt.Fprintf(w, `<script data-component-init="%s">window.__GOSPA_STATE__=%s;</script>`, cs.ID, json)
+		_, err = fmt.Fprintf(w, `<script%s data-component-init="%s">window.__GOSPA_STATE__=%s;</script>`, nonceAttr, cs.ID, json)
 		return err
 	})
 }

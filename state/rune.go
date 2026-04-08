@@ -4,7 +4,6 @@ package state
 
 import (
 	"log"
-	"reflect"
 	"runtime/debug"
 	"strconv"
 	"sync"
@@ -270,8 +269,15 @@ func (r *Rune[T]) Update(fn func(T) T) {
 	r.dirty = false
 	r.mu.Unlock()
 
-	for _, fn := range subs {
-		fn(newValue)
+	for _, s := range subs {
+		func(fn func(T)) {
+			defer func() {
+				if rec := recover(); rec != nil {
+					log.Printf("gospa: recovered panic in rune subscriber (Update): %v\n%s", rec, debug.Stack())
+				}
+			}()
+			fn(newValue)
+		}(s)
 	}
 }
 
@@ -317,6 +323,6 @@ func equal[T any](a, b T) bool {
 		}
 	}
 
-	// Fallback to deeply comparing everything else
-	return reflect.DeepEqual(a, b)
+	// Fallback to deeply comparing everything else using optimized paths
+	return deepEqualValues(a, b)
 }
