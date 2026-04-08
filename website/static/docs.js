@@ -19,7 +19,7 @@
                 if (typeof Fuse === 'undefined') {
                     await new Promise(resolve => {
                         const script = document.createElement('script');
-                        script.src = 'https://cdn.jsdelivr.net/npm/fuse.js@7.0.0/dist/fuse.basic.min.js';
+                        script.src = '/static/js/fuse.basic.min.js';
                         script.onload = resolve;
                         document.head.appendChild(script);
                     });
@@ -358,6 +358,13 @@
         if (actionTarget) {
             const action = actionTarget.getAttribute('data-action');
             switch (action) {
+                case 'switch-lang': {
+                    const lang = actionTarget.getAttribute('data-lang');
+                    if (lang && window.switchLang) {
+                        window.switchLang(actionTarget, lang);
+                    }
+                    break;
+                }
                 case 'copy-code': {
                     const codeEl = actionTarget.parentElement?.querySelector('pre:not(.hidden) code') ||
                         actionTarget.parentElement?.querySelector('code');

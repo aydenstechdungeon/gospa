@@ -3,6 +3,7 @@ package redis
 
 import (
 	"context"
+	"fmt"
 	"strconv"
 	"time"
 
@@ -13,20 +14,18 @@ import (
 // Store provides a Redis-backed implementation of the store.Storage interface.
 type Store struct {
 	client *goredis.Client
-	ctx    context.Context
 }
 
 // NewStore creates a new Redis storage.
 func NewStore(client *goredis.Client) *Store {
 	return &Store{
 		client: client,
-		ctx:    context.Background(), // Can be injected externally or derived
 	}
 }
 
 // Get retrieves a key from Redis.
-func (s *Store) Get(key string) ([]byte, error) {
-	val, err := s.client.Get(s.ctx, key).Bytes()
+func (s *Store) Get(ctx context.Context, key string) ([]byte, error) {
+	val, err := s.client.Get(ctx, key).Bytes()
 	if err == goredis.Nil {
 		return nil, store.ErrNotFound
 	}
@@ -34,64 +33,68 @@ func (s *Store) Get(key string) ([]byte, error) {
 }
 
 // Set stores a key in Redis with an optional expiration time.
-func (s *Store) Set(key string, val []byte, exp time.Duration) error {
-	return s.client.Set(s.ctx, key, val, exp).Err()
+func (s *Store) Set(ctx context.Context, key string, val []byte, exp time.Duration) error {
+	return s.client.Set(ctx, key, val, exp).Err()
 }
 
 // Delete removes a key from Redis.
-func (s *Store) Delete(key string) error {
-	return s.client.Del(s.ctx, key).Err()
+func (s *Store) Delete(ctx context.Context, key string) error {
+	return s.client.Del(ctx, key).Err()
 }
 
 // PubSub provides a Redis-backed implementation of the store.PubSub interface.
 type PubSub struct {
 	client *goredis.Client
-	ctx    context.Context
 }
 
 // NewPubSub creates a new Redis PubSub.
 func NewPubSub(client *goredis.Client) *PubSub {
 	return &PubSub{
 		client: client,
-		ctx:    context.Background(),
 	}
 }
 
 // Publish publishes a message to a Redis channel.
-func (p *PubSub) Publish(channel string, message []byte) error {
-	return p.client.Publish(p.ctx, channel, message).Err()
+func (p *PubSub) Publish(ctx context.Context, channel string, message []byte) error {
+	return p.client.Publish(ctx, channel, message).Err()
 }
 
 // Subscribe subscribes to a Redis channel and invokes the handler for each message.
 // Returns an unsubscribe function to stop the subscription.
-func (p *PubSub) Subscribe(channel string, handler func(message []byte)) (store.Unsubscribe, error) {
-	// Create a new context specifically for this subscription
-	ctx, cancel := context.WithCancel(p.ctx)
-	err := p.SubscribeWithContext(ctx, channel, handler)
+func (p *PubSub) Subscribe(ctx context.Context, channel string, handler func(message []byte)) (store.Unsubscribe, error) {
+	// If the parent context is canceled, the subscription will naturally end
+	subCtx, cancel := context.WithCancel(ctx)
+	
+	err := p.SubscribeWithContext(subCtx, channel, handler)
 	if err != nil {
 		cancel()
 		return nil, err
 	}
+	
 	return store.Unsubscribe(cancel), nil
 }
 
 // SubscribeWithContext subscribes to a Redis channel and automatically unsubscribes
 // when the provided context is canceled.
 func (p *PubSub) SubscribeWithContext(ctx context.Context, channel string, handler func(message []byte)) error {
-	if ctx == nil {
-		ctx = p.ctx
-	}
-
 	pubsub := p.client.Subscribe(ctx, channel)
 
 	// Wait for confirmation that subscription is created
 	_, err := pubsub.Receive(ctx)
 	if err != nil {
+		_ = pubsub.Close()
 		return err
 	}
 
 	go func() {
-		defer func() { _ = pubsub.Close() }()
+		defer func() {
+			if r := recover(); r != nil {
+				// Guard against consumer panics from crashing the whole process
+				fmt.Printf("Redis PubSub: consumer panicked: %v\n", r)
+			}
+			_ = pubsub.Close()
+		}()
+		
 		ch := pubsub.Channel()
 		for {
 			select {
@@ -139,9 +142,9 @@ return allowed
 `)
 
 // ConsumeRateLimitToken atomically consumes a token for distributed rate limiting.
-func (s *Store) ConsumeRateLimitToken(key string, now time.Time, maxTokens float64, refillRate float64, ttl time.Duration) (bool, error) {
+func (s *Store) ConsumeRateLimitToken(ctx context.Context, key string, now time.Time, maxTokens float64, refillRate float64, ttl time.Duration) (bool, error) {
 	result, err := consumeRateLimitTokenScript.Run(
-		s.ctx,
+		ctx,
 		s.client,
 		[]string{key},
 		strconv.FormatInt(now.UnixMilli(), 10),

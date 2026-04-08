@@ -16,8 +16,8 @@ func TestDefaultConfig(t *testing.T) {
 	if config.RoutesDir != "./routes" {
 		t.Errorf("expected RoutesDir to be './routes', got %s", config.RoutesDir)
 	}
-	if config.DevMode != false {
-		t.Errorf("expected DevMode to be false")
+	if config.DevMode != true {
+		t.Errorf("expected DevMode to be true by default")
 	}
 	if config.RuntimeScript != "/_gospa/runtime.js" {
 		t.Errorf("expected RuntimeScript to be '/_gospa/runtime.js', got %s", config.RuntimeScript)

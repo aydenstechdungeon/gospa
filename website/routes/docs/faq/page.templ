@@ -102,7 +102,7 @@ GoSPA.setLogLevel('debug')`, "javascript", " debug.js")
 			<h2 class="text-2xl font-bold border-b border-[var(--border)] pb-2">Performance</h2>
 			
 			@faqItem("How do I reduce bundle size?", `
-				Use the SimpleRuntime for a smaller bundle (9KB vs 25KB) if you don't need DOMPurify:
+				Use the SimpleRuntime for a smaller bundle (9KB vs 15KB) which removes non-essential navigation and state management features:
 			`)
 			@components.CodeBlock(`app := gospa.New(gospa.Config{
     SimpleRuntime: true,

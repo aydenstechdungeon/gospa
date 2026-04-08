@@ -428,6 +428,11 @@ func (p *Plugin) generateValidateTags(field FieldSchema) string {
 		}
 	}
 
+	if field.Pattern != "" {
+		// Note: Requires "regexp" validator registration if using go-playground/validator
+		tags = append(tags, fmt.Sprintf("regexp=%s", field.Pattern))
+	}
+
 	if maxVal, ok := field.Max.(float64); ok {
 		if field.Type == "string" {
 			tags = append(tags, fmt.Sprintf("max=%d", int(maxVal)))

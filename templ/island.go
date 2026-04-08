@@ -269,8 +269,13 @@ func renderIslandWrapper(island *component.Island, attrs map[string]string, opts
 
 // IslandScript generates the script tag for island hydration.
 func IslandScript() templ.Component {
-	return templ.ComponentFunc(func(_ context.Context, w io.Writer) error {
-		script := `<script data-gospa-islands="true">
+	return templ.ComponentFunc(func(ctx context.Context, w io.Writer) error {
+		nonce := GetNonce(ctx)
+		nonceAttr := ""
+		if nonce != "" {
+			nonceAttr = fmt.Sprintf(` nonce="%s"`, nonce)
+		}
+		script := fmt.Sprintf(`<script%s data-gospa-islands="true">
 window.__GOSPA_ISLANDS__ = window.__GOSPA_ISLANDS__ || [];
 document.querySelectorAll('[data-gospa-island]').forEach(function(el) {
 	var data = {
@@ -287,7 +292,7 @@ document.querySelectorAll('[data-gospa-island]').forEach(function(el) {
 	};
 	window.__GOSPA_ISLANDS__.push(data);
 });
-</script>`
+</script>`, nonceAttr)
 		_, err := w.Write([]byte(script))
 		return err
 	})
@@ -311,13 +316,18 @@ func SerializeIslands() (string, error) {
 
 // IslandDataScript generates a script with serialized island data.
 func IslandDataScript() templ.Component {
-	return templ.ComponentFunc(func(_ context.Context, w io.Writer) error {
+	return templ.ComponentFunc(func(ctx context.Context, w io.Writer) error {
+		nonce := GetNonce(ctx)
+		nonceAttr := ""
+		if nonce != "" {
+			nonceAttr = fmt.Sprintf(` nonce="%s"`, nonce)
+		}
 		data, err := SerializeIslands()
 		if err != nil {
 			return err
 		}
 
-		script := fmt.Sprintf(`<script data-gospa-island-data="true">window.__GOSPA_ISLAND_DATA__ = %s;</script>`, data)
+		script := fmt.Sprintf(`<script%s data-gospa-island-data="true">window.__GOSPA_ISLAND_DATA__ = %s;</script>`, nonceAttr, data)
 		_, err = w.Write([]byte(script))
 		return err
 	})

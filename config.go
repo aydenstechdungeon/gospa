@@ -4,6 +4,7 @@ import (
 	"io/fs"
 	"log/slog"
 	"os"
+	"strings"
 	"time"
 
 	"github.com/aydenstechdungeon/gospa/compiler"
@@ -220,10 +221,20 @@ func DefaultConfig() Config {
 	enabled := false
 	color := "#667eea"
 	height := "3px"
+	// Auto-detect DevMode if not explicitly set
+	gospaEnv := strings.ToLower(strings.TrimSpace(os.Getenv("GOSPA_ENV")))
+	devMode := false
+	switch gospaEnv {
+	case "development", "dev", "":
+		devMode = true
+	case "production", "prod":
+		devMode = false
+	}
+
 	return Config{
 		RuntimeTier:              RuntimeTierFull,
 		RoutesDir:                "./routes",
-		DevMode:                  false,
+		DevMode:                  devMode,
 		RuntimeScript:            "/_gospa/runtime.js",
 		StaticDir:                "./static",
 		StaticPrefix:             "/static",
@@ -262,6 +273,7 @@ func ProductionConfig() Config {
 	config.WSMaxReconnect = 10
 	config.WSHeartbeat = 30 * time.Second
 	config.SSGCacheMaxEntries = 500
+	config.ContentSecurityPolicy = fiber.StrictContentSecurityPolicy
 	return config
 }
 

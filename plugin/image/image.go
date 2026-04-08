@@ -10,7 +10,9 @@ import (
 	"io"
 	"os"
 	"path/filepath"
+	"runtime"
 	"strings"
+	"sync"
 
 	"github.com/aydenstechdungeon/gospa/plugin"
 	"golang.org/x/image/draw"
@@ -54,6 +56,15 @@ type Config struct {
 
 	// LazyLoadThreshold sets the threshold for lazy loading (in bytes).
 	LazyLoadThreshold int64 `yaml:"lazy_load_threshold" json:"lazyLoadThreshold"`
+
+	// MaxImageSize is the maximum allowed image file size in bytes (default: 20MB).
+	MaxImageSize int64 `yaml:"max_image_size" json:"maxImageSize"`
+
+	// MaxDimensions is the maximum allowed width/height in pixels (default: 8192).
+	MaxDimensions int `yaml:"max_dimensions" json:"maxDimensions"`
+
+	// Concurrency is the number of parallel workers (default: runtime.GOMAXPROCS).
+	Concurrency int `yaml:"concurrency" json:"concurrency"`
 }
 
 // FormatConfig configures output formats.
@@ -108,6 +119,9 @@ func DefaultConfig() *Config {
 			{Name: "large", Width: 1024, Height: 0, Quality: 85},
 			{Name: "xlarge", Width: 1920, Height: 0, Quality: 90},
 		},
+		MaxImageSize:  20 * 1024 * 1024, // 20MB
+		MaxDimensions: 8192,
+		Concurrency:   0, // Default to GOMAXPROCS
 	}
 }
 
@@ -217,7 +231,7 @@ func (p *ImagePlugin) Commands() []plugin.Command {
 	}
 }
 
-// optimizeAllImages optimizes all images in the source directory.
+// optimizeAllImages optimizes all images in the source directory in parallel.
 func (p *ImagePlugin) optimizeAllImages(projectDir string) error {
 	srcDir := filepath.Join(projectDir, p.config.SourceDir)
 	outDir := filepath.Join(projectDir, p.config.OutputDir)
@@ -232,8 +246,17 @@ func (p *ImagePlugin) optimizeAllImages(projectDir string) error {
 		return nil
 	}
 
-	// Walk source directory
-	return filepath.Walk(srcDir, func(path string, info os.FileInfo, err error) error {
+	concurrency := p.config.Concurrency
+	if concurrency <= 0 {
+		concurrency = runtime.GOMAXPROCS(0)
+	}
+
+	semaphore := make(chan struct{}, concurrency)
+	var wg sync.WaitGroup
+	var errs []error
+	var mu sync.Mutex
+
+	err := filepath.Walk(srcDir, func(path string, info os.FileInfo, err error) error {
 		if err != nil {
 			return err
 		}
@@ -253,9 +276,32 @@ func (p *ImagePlugin) optimizeAllImages(projectDir string) error {
 			return err
 		}
 
-		// Optimize the image
-		return p.optimizeImage(path, filepath.Join(outDir, relPath))
+		wg.Add(1)
+		go func(src, dst string) {
+			defer wg.Done()
+			semaphore <- struct{}{}
+			defer func() { <-semaphore }()
+
+			if err := p.optimizeImage(src, dst); err != nil {
+				mu.Lock()
+				errs = append(errs, fmt.Errorf("failed to optimize %s: %w", src, err))
+				mu.Unlock()
+			}
+		}(path, filepath.Join(outDir, relPath))
+
+		return nil
 	})
+
+	wg.Wait()
+
+	if err != nil {
+		return err
+	}
+	if len(errs) > 0 {
+		return fmt.Errorf("multiple errors occurred during image optimization (showing first): %w", errs[0])
+	}
+
+	return nil
 }
 
 // optimizeChangedImages optimizes only images that have changed.
@@ -293,12 +339,27 @@ func (p *ImagePlugin) optimizeImage(srcPath, outPath string) error {
 		return nil // Already optimized and up to date
 	}
 
+	// Security: Check for decompression bombs and large images
+	if srcStat.Size() > p.config.MaxImageSize {
+		return fmt.Errorf("image file size exceeds maximum (%d > %d bytes)", srcStat.Size(), p.config.MaxImageSize)
+	}
+
 	// Read source image
 	file, err := os.Open(srcPath) // #nosec //nolint:gosec
 	if err != nil {
 		return fmt.Errorf("failed to open image: %w", err)
 	}
 	defer func() { _ = file.Close() }()
+
+	// Decode config to check dimensions without full decode if possible (for security)
+	config, _, err := image.DecodeConfig(file)
+	if err == nil {
+		if config.Width > p.config.MaxDimensions || config.Height > p.config.MaxDimensions {
+			return fmt.Errorf("image dimensions exceed maximum (%dx%d > %d pixels)", config.Width, config.Height, p.config.MaxDimensions)
+		}
+	}
+	// Reset file pointer for full decode
+	_, _ = file.Seek(0, 0)
 
 	// Decode image
 	var img image.Image

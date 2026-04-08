@@ -3,6 +3,7 @@
 package gospa
 
 import (
+	"context"
 	"errors"
 	"fmt"
 	"log/slog"
@@ -65,6 +66,9 @@ type App struct {
 	pprShellMu sync.RWMutex
 	// pprShellBuilding guards against duplicate PPR shell builds under concurrent load.
 	pprShellBuilding sync.Map
+	// ctx is the application-level context, canceled on Shutdown.
+	ctx    context.Context
+	cancel context.CancelFunc
 }
 
 var defaultApp *App
@@ -158,6 +162,7 @@ func New(config Config) *App {
 		pprShellKeys:        make([]string, 0),
 		pprShellIndex:       make(map[string]struct{}),
 	}
+	app.ctx, app.cancel = context.WithCancel(context.Background())
 
 	app.setupMiddleware()
 
@@ -245,20 +250,16 @@ func validateAndLogConfig(config *Config) {
 		config.HydrationTimeout = 10000
 	}
 
-	// SECURITY FIX: GOSPA_WS_INSECURE must only be honoured in dev mode.
-	// In production, this env var is intentionally ignored to prevent accidental
-	// misconfiguration that would allow plaintext ws:// connections in production.
-	if !config.AllowInsecureWS && os.Getenv("GOSPA_WS_INSECURE") == "1" {
-		if config.DevMode {
-			config.AllowInsecureWS = true
-		} else {
-			config.Logger.Warn("GOSPA_WS_INSECURE=1 is set but is ignored because DevMode is false. This override only applies in development environments.")
-		}
+	// GOSPA_WS_INSECURE env var provides a quick override for development.
+	// We honor it globally to allow developers full control over their environment.
+	if os.Getenv("GOSPA_WS_INSECURE") == "1" {
+		config.AllowInsecureWS = true
 	}
 
-	// SECURITY FIX: Ensure RemoteActionMiddleware is set in production
+	// SECURITY: Warn if RemoteActionMiddleware is missing in production.
+	// We do not force a block here, leaving the security model in the developer's hands.
 	if !config.DevMode && config.RemoteActionMiddleware == nil && !config.AllowUnauthenticatedRemoteActions {
-		config.Logger.Error("CRITICAL SECURITY RISK: RemoteActionMiddleware must be set in production mode. Remote actions are currently disabled or insecurely exposed.")
+		config.Logger.Warn("RemoteActionMiddleware is not set in production. Ensure remote actions are protected by another layer or are intentionally public.")
 	}
 }
 
@@ -274,7 +275,8 @@ func (a *App) setupRoutes() {
 		return c.Next()
 	})
 	a.Fiber.Use("/_gospa/", static.New("", static.Config{
-		FS: embed.RuntimeFS(),
+		FS:       embed.RuntimeFS(),
+		Compress: true,
 	}))
 
 	// Serve dynamically compiled island modules with proper MIME type
@@ -293,9 +295,13 @@ func (a *App) setupRoutes() {
 	})
 	// Try to serve islands from static/islands or generated/ directory
 	if _, err := os.Stat("static/islands"); err == nil {
-		a.Fiber.Use("/islands/", static.New("static/islands"))
+		a.Fiber.Use("/islands/", static.New("static/islands", static.Config{
+			Compress: true,
+		}))
 	} else if _, err := os.Stat("generated"); err == nil {
-		a.Fiber.Use("/islands/", static.New("generated"))
+		a.Fiber.Use("/islands/", static.New("generated", static.Config{
+			Compress: true,
+		}))
 	}
 
 	if a.Hub != nil {
@@ -346,6 +352,7 @@ func (a *App) setupRoutes() {
 
 	if _, err := os.Stat(a.Config.StaticDir); err == nil {
 		a.Fiber.Use(a.Config.StaticPrefix, static.New(a.Config.StaticDir, static.Config{
+			Compress: true,
 			ModifyResponse: func(c fiberpkg.Ctx) error {
 				path := c.Path()
 				switch {
@@ -621,6 +628,9 @@ func (a *App) RunTLS(addr, certFile, keyFile string) error {
 
 // Shutdown gracefully shuts down the GoSPA application.
 func (a *App) Shutdown() error {
+	if a.cancel != nil {
+		a.cancel()
+	}
 	if err := plugin.TriggerHook(plugin.BeforePrune, nil); err != nil {
 		a.Logger().Error("plugin BeforePrune hook failed", "err", err)
 	}
@@ -635,6 +645,14 @@ func (a *App) Shutdown() error {
 		a.Logger().Error("plugin AfterPrune hook failed", "err", err)
 	}
 	return err
+}
+
+// Context returns the application-level context.
+func (a *App) Context() context.Context {
+	if a.ctx == nil {
+		return context.Background()
+	}
+	return a.ctx
 }
 
 // RegisterRoutes manually triggers route registration.

@@ -17,7 +17,7 @@ import (
 
 var (
 	rePkgName      = regexp.MustCompile(`[^a-zA-Z0-9]+`)
-	reDynamicParam = regexp.MustCompile(`:([a-zA-Z]+)`)
+	reDynamicParam = regexp.MustCompile(`:([a-zA-Z_][a-zA-Z0-9_]*)`)
 )
 
 // RouteInfo holds information about a discovered route.

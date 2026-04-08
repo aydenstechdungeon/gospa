@@ -1,12 +1,9 @@
-// GoSPA Client-side Navigation
-// Enables SPA-style navigation without full page reloads
-
-/**
- * Declare global debug constant for build-time stripping.
- */
 declare global {
   var GOSPA_DEBUG: boolean; // eslint-disable-line no-var
 }
+
+import { getIslandManager } from "./island";
+import { morphInnerHTML } from "./idiomorph";
 
 // Navigation state
 const state = {
@@ -461,150 +458,18 @@ async function getPageData(
   return fetchPageFromServer(path, signal);
 }
 
+
+
 // Content is trusted - Templ auto-escapes on the server
-// For user-generated content, use 'gospa/runtime-secure' which includes DOMPurify
-// For data-bind="html:*" bindings, we add sanitization as a safety layer
+// For user-generated content, the server is expected to provide safe HTML.
 async function prepareContent(html: string): Promise<string> {
-  // Return HTML as-is - server is trusted, CSP provides XSS protection
   return html;
 }
 
 // Sanitize HTML for data-bind="html:*" bindings
-// By default, this trusts the server (Templ auto-escapes).
-// For user-generated content, use 'gospa/runtime-secure' which enables DOMPurify.
-// eslint-disable-next-line @typescript-eslint/no-explicit-any
-let DOMPurify: ((dirty: string) => string) | null = null;
+// Trusts server-provided HTML per the "trust-the-server" model.
 async function sanitizeHTML(html: string): Promise<string> {
-  // Try to use DOMPurify if loaded (from runtime-secure)
-  if (DOMPurify != null) {
-    return DOMPurify(html);
-  }
-
-  // Check if DOMPurify is available globally
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  const globalPurify = (window as any).DOMPurify as
-    | ((dirty: string) => string)
-    | null;
-  if (globalPurify != null) {
-    DOMPurify = globalPurify;
-    return globalPurify(html);
-  }
-
-  // Default: Trust the server (Templ auto-escapes)
-  // For UGC, you should be using runtime-secure which sets the sanitizer
   return html;
-}
-
-function patchAttributes(current: Element, incoming: Element): void {
-  for (const attr of Array.from(current.attributes)) {
-    if (!incoming.hasAttribute(attr.name)) {
-      current.removeAttribute(attr.name);
-    }
-  }
-
-  for (const attr of Array.from(incoming.attributes)) {
-    if (current.getAttribute(attr.name) !== attr.value) {
-      current.setAttribute(attr.name, attr.value);
-    }
-  }
-}
-
-function patchNode(currentNode: Node, incomingNode: Node): void {
-  // We remove the top-level isEqualNode(incomingNode) check to avoid O(N^2) complexity on large trees.
-  // Instead, we only compare matching node types and tag names before recursing.
-
-  if (currentNode.nodeType !== incomingNode.nodeType) {
-    currentNode.parentNode?.replaceChild(
-      incomingNode.cloneNode(true),
-      currentNode,
-    );
-    return;
-  }
-
-  if (currentNode.nodeType === Node.TEXT_NODE) {
-    if (currentNode.textContent !== incomingNode.textContent) {
-      currentNode.textContent = incomingNode.textContent;
-    }
-    return;
-  }
-
-  if (!(currentNode instanceof Element) || !(incomingNode instanceof Element)) {
-    return;
-  }
-
-  if (currentNode.tagName !== incomingNode.tagName) {
-    currentNode.parentNode?.replaceChild(
-      incomingNode.cloneNode(true),
-      currentNode,
-    );
-    return;
-  }
-
-  // Prevent morphing structurally unrelated elements
-  if (
-    (currentNode.id && currentNode.id !== incomingNode.id) ||
-    (incomingNode.id && currentNode.id !== incomingNode.id) ||
-    currentNode.getAttribute("data-gospa-page") !==
-      incomingNode.getAttribute("data-gospa-page")
-  ) {
-    currentNode.parentNode?.replaceChild(
-      incomingNode.cloneNode(true),
-      currentNode,
-    );
-    return;
-  }
-
-  // Skip patching if the element is marked as permanent.
-  // This allows client-side scripts to manage the element's content without server interference.
-  if (currentNode.hasAttribute("data-gospa-permanent")) {
-    return;
-  }
-
-  patchAttributes(currentNode, incomingNode);
-
-  const currentChildren = Array.from(currentNode.childNodes);
-  const incomingChildren = Array.from(incomingNode.childNodes);
-  const max = Math.max(currentChildren.length, incomingChildren.length);
-
-  for (let i = 0; i < max; i += 1) {
-    const currentChild = currentChildren[i];
-    const incomingChild = incomingChildren[i];
-    if (!currentChild && incomingChild) {
-      currentNode.appendChild(incomingChild.cloneNode(true));
-      continue;
-    }
-    if (currentChild && !incomingChild) {
-      currentChild.remove();
-      continue;
-    }
-    if (currentChild && incomingChild) {
-      patchNode(currentChild, incomingChild);
-    }
-  }
-}
-
-function patchInnerHTML(target: Element, nextHTML: string): void {
-  const template = document.createElement("template");
-  template.innerHTML = nextHTML;
-  const incomingChildren = Array.from(template.content.childNodes);
-  const existingChildren = Array.from(target.childNodes);
-  const max = Math.max(existingChildren.length, incomingChildren.length);
-
-  for (let i = 0; i < max; i += 1) {
-    const currentChild = existingChildren[i];
-    const incomingChild = incomingChildren[i];
-    if (!currentChild && incomingChild) {
-      target.appendChild(incomingChild.cloneNode(true));
-      continue;
-    }
-    if (currentChild && !incomingChild) {
-      currentChild.remove();
-      continue;
-    }
-    if (currentChild && incomingChild) {
-      patchNode(currentChild, incomingChild);
-    }
-  }
 }
 
 // Update the DOM with new content
@@ -623,12 +488,20 @@ async function updateDOM(data: PageData, pageContent: string): Promise<void> {
   const container = rootEl || contentEl || mainEl || document.body;
   container.removeAttribute("data-gospa-loading");
 
-  if (rootEl) {
-    patchInnerHTML(rootEl, pageContent);
-  } else if (contentEl) {
-    patchInnerHTML(contentEl, pageContent);
-  } else if (mainEl) {
-    patchInnerHTML(mainEl, pageContent);
+  const targetEl = rootEl || contentEl || mainEl;
+
+  if (targetEl) {
+    morphInnerHTML(targetEl, pageContent, {
+      ignoreActiveValue: true,
+      callbacks: {
+        beforeNodeRemoved(node) {
+          // Destroy any islands within nodes being removed
+          if (node instanceof Element) {
+            getIslandManager()?.destroyIslands(node);
+          }
+        },
+      },
+    });
   } else {
     document.body.innerHTML = pageContent;
   }
@@ -637,8 +510,7 @@ async function updateDOM(data: PageData, pageContent: string): Promise<void> {
   updateHead(data.doc);
 
   // Re-initialize runtime for new content
-  const targetEl = rootEl || contentEl || mainEl || document.body;
-  await initNewContent(targetEl);
+  await initNewContent(container);
 
   updateActiveLinks();
 
@@ -1094,9 +966,6 @@ export async function navigate(
         window.history.pushState({ path }, "", path);
       }
 
-      // Update active links immediately for instant visual feedback on menus
-      updateActiveLinks();
-
       // Set loading state on container
       const container =
         document.querySelector(
@@ -1122,6 +991,9 @@ export async function navigate(
       // 3. Update Phase
       state.currentPath = path;
       await performDOMUpdateWithTransitions(data, options);
+
+      // Update active links AFTER DOM morph so sidebar and content change atomically
+      updateActiveLinks();
 
       progressBar.finish();
       afterNavCallbacks.forEach((cb) => cb(path));
@@ -1201,8 +1073,6 @@ function handlePopState(_event: PopStateEvent): void {
       return;
     }
 
-    // Instant Visual Feedback
-    updateActiveLinks();
     const container =
       document.querySelector("[data-gospa-page-content], [data-gospa-root]") ||
       document.body;
@@ -1224,6 +1094,10 @@ function handlePopState(_event: PopStateEvent): void {
       if (data) {
         state.currentPath = path;
         await performDOMUpdateWithTransitions(data, { scrollToTop: false });
+
+        // Update active links AFTER DOM morph so sidebar and content change atomically
+        updateActiveLinks();
+
         progressBar.finish();
         // Restore scroll position for historical paths
         const savedPos = scrollPositions.get(path);

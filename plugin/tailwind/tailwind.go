@@ -8,6 +8,7 @@ import (
 	"os"
 	"os/exec"
 	"path/filepath"
+	"strings"
 	"sync"
 
 	"github.com/aydenstechdungeon/gospa/plugin"
@@ -287,6 +288,11 @@ func (p *TailwindPlugin) watchWithContext() {
 	fmt.Printf("  Input:  %s\n", p.config.Input)
 	fmt.Printf("  Output: %s\n", p.config.Output)
 
+	if !isPathSafe(p.config.Input) || !isPathSafe(p.config.Output) {
+		fmt.Fprintf(os.Stderr, "Tailwind: invalid characters in input/output paths\n")
+		return
+	}
+
 	args := []string{"@tailwindcss/cli", "-i", p.config.Input, "-o", p.config.Output, "--watch"}
 
 	// Add content paths
@@ -316,6 +322,10 @@ func (p *TailwindPlugin) compile() error {
 	fmt.Println("Tailwind: compiling for production...")
 	fmt.Printf("  Input:  %s\n", p.config.Input)
 	fmt.Printf("  Output: %s\n", p.config.Output)
+
+	if !isPathSafe(p.config.Input) || !isPathSafe(p.config.Output) {
+		return fmt.Errorf("tailwind: invalid characters in input/output paths")
+	}
 
 	args := []string{"@tailwindcss/cli", "-i", p.config.Input, "-o", p.config.Output}
 
@@ -348,6 +358,10 @@ func formatContentArray(paths []string) string {
 	}
 	result += "  ]"
 	return result
+}
+
+func isPathSafe(path string) bool {
+	return !strings.ContainsAny(path, "\x00<>|&$;`\"'")
 }
 
 // Ensure TailwindPlugin implements CLIPlugin interface.

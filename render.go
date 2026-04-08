@@ -38,7 +38,7 @@ func (a *App) renderRoute(c gofiber.Ctx, route *routing.Route) error {
 		var entry ssgEntry
 		var hit bool
 		if a.Config.Storage != nil && !a.Config.Prefork {
-			if data, err := a.Config.Storage.Get("gospa:ssg:" + cacheKey); err == nil {
+			if data, err := a.Config.Storage.Get(c.Context(), "gospa:ssg:"+cacheKey); err == nil {
 				entry, hit = decodeSsgEntry(data)
 			}
 		} else {
@@ -73,7 +73,7 @@ func (a *App) renderRoute(c gofiber.Ctx, route *routing.Route) error {
 		var entry ssgEntry
 		var hit bool
 		if a.Config.Storage != nil && !a.Config.Prefork {
-			if data, err := a.Config.Storage.Get("gospa:ssg:" + cacheKey); err == nil {
+			if data, err := a.Config.Storage.Get(c.Context(), "gospa:ssg:"+cacheKey); err == nil {
 				entry, hit = decodeSsgEntry(data)
 			}
 		} else {
@@ -104,7 +104,7 @@ func (a *App) renderRoute(c gofiber.Ctx, route *routing.Route) error {
 		var shell []byte
 		var shellHit bool
 		if a.Config.Storage != nil && !a.Config.Prefork {
-			if data, err := a.Config.Storage.Get("gospa:ppr:" + cacheKey); err == nil {
+			if data, err := a.Config.Storage.Get(c.Context(), "gospa:ppr:"+cacheKey); err == nil {
 				shell = data
 				shellHit = true
 			}
@@ -156,6 +156,9 @@ func (a *App) renderRoute(c gofiber.Ctx, route *routing.Route) error {
 	}
 
 	ctx := c.Context()
+	if nonce, ok := c.Locals("gospa.csp_nonce").(string); ok && nonce != "" {
+		ctx = templpkg.WithNonce(ctx, nonce)
+	}
 	registry := state.NewRegistry()
 	ctx = context.WithValue(ctx, state.RegistryContextKey, registry)
 
@@ -248,7 +251,7 @@ func (a *App) renderRoute(c gofiber.Ctx, route *routing.Route) error {
 			var shellHTML []byte
 			var shellOk bool
 			if a.Config.Storage != nil && !a.Config.Prefork {
-				if data, err := a.Config.Storage.Get("gospa:ppr:" + cacheKey); err == nil {
+				if data, err := a.Config.Storage.Get(c.Context(), "gospa:ppr:"+cacheKey); err == nil {
 					shellHTML, shellOk = data, true
 				}
 			} else {
@@ -298,6 +301,11 @@ func (a *App) renderRoute(c gofiber.Ctx, route *routing.Route) error {
 	wsRD, wsMR, wsHB := a.normalizeWSConfig()
 
 	c.Set("Cache-Control", "no-store")
+	cspNonce, _ := c.Locals("gospa.csp_nonce").(string)
+	nonceFmt := ""
+	if cspNonce != "" {
+		nonceFmt = ` nonce="` + html.EscapeString(cspNonce) + `"`
+	}
 	c.Response().SetBodyStreamWriter(fasthttp.StreamWriter(func(w *bufio.Writer) {
 		var mu sync.Mutex // Mutex for thread-safe writing to the buffer
 
@@ -330,8 +338,8 @@ func (a *App) renderRoute(c gofiber.Ctx, route *routing.Route) error {
 			runtimePathForPage = "/_gospa/runtime-" + tier + ".js"
 		}
 
-		_, _ = fmt.Fprintf(w, `<script src="%s" type="module"></script>`, runtimePathForPage)
-		_, _ = fmt.Fprintf(w, `<script type="module">
+		_, _ = fmt.Fprintf(w, `<script src="%s" type="module"%s></script>`, runtimePathForPage, nonceFmt)
+		_, _ = fmt.Fprintf(w, `<script type="module"%s>
 import * as runtime from %s;
 window.__GOSPA_CONFIG__ = {
 	navigationOptions: %s,
@@ -351,7 +359,7 @@ runtime.init({
 		timeout: %d
 	}
 });
-</script>`, toJS(runtimePathForPage), toJS(a.Config.NavigationOptions), toJS(c.Locals("gospa.csrf_token")), toJS(wsURL), toJS(string(a.Config.SerializationFormat)), a.Config.DevMode, a.Config.SimpleRuntimeSVGs, a.Config.DisableSanitization, wsRD, wsMR, wsHB, toJS(a.Config.HydrationMode), a.Config.HydrationTimeout)
+</script>`, nonceFmt, toJS(runtimePathForPage), toJS(a.Config.NavigationOptions), toJS(c.Locals("gospa.csrf_token")), toJS(wsURL), toJS(string(a.Config.SerializationFormat)), a.Config.DevMode, a.Config.SimpleRuntimeSVGs, a.Config.DisableSanitization, wsRD, wsMR, wsHB, toJS(a.Config.HydrationMode), a.Config.HydrationTimeout)
 
 		// Islands bundle — loads and registers all island setup functions
 		// Only include if the file exists (islands are optional)
@@ -374,7 +382,7 @@ runtime.init({
 				wg.Add(1)
 				go func(name string) {
 					defer wg.Done()
-					a.renderAndStreamDeferredSlot(&mu, w, route, name, params, c.Path())
+					a.renderAndStreamDeferredSlot(&mu, w, route, name, params, c.Path(), nonceFmt)
 				}(slotName)
 			}
 			wg.Wait()
@@ -387,7 +395,7 @@ runtime.init({
 }
 
 // renderAndStreamDeferredSlot renders a slot in the background and streams it immediately as a replacement chunk.
-func (a *App) renderAndStreamDeferredSlot(mu *sync.Mutex, w *bufio.Writer, route *routing.Route, slotName string, params map[string]interface{}, path string) {
+func (a *App) renderAndStreamDeferredSlot(mu *sync.Mutex, w *bufio.Writer, route *routing.Route, slotName string, params map[string]interface{}, path string, nonce string) {
 	slotFn := routing.GetSlot(route.Path, slotName)
 	if slotFn == nil {
 		return
@@ -406,11 +414,12 @@ func (a *App) renderAndStreamDeferredSlot(mu *sync.Mutex, w *bufio.Writer, route
 	mu.Lock()
 	defer mu.Unlock()
 
-	// SECURITY: Escape slotName to prevent XSS via attribute injection.
+	// SECURITY: Use proper JS escaping for slot names and IDs.
 	// buf.String() contains templ-rendered content which is already HTML-safe.
 	safeSlotName := html.EscapeString(slotName)
+	jsSlotName := toJS(slotName)
 	_, _ = fmt.Fprintf(w, `<template id="gospa-deferred-content-%s">%s</template>`, safeSlotName, buf.String())
-	_, _ = fmt.Fprintf(w, `<script>if(window.__GOSPA_STREAM__){__GOSPA_STREAM__({type:'html', id:'gospa-deferred-%s', content: document.getElementById('gospa-deferred-content-%s').innerHTML})}</script>`, safeSlotName, safeSlotName)
+	_, _ = fmt.Fprintf(w, `<script%s>if(window.__GOSPA_STREAM__){__GOSPA_STREAM__({type:'html', id:'gospa-deferred-'+%s, content: document.getElementById('gospa-deferred-content-'+%s).innerHTML})}</script>`, nonce, jsSlotName, jsSlotName)
 	_ = w.Flush()
 }
 

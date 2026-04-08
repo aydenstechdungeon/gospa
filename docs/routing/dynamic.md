@@ -36,4 +36,4 @@ extractor := routing.NewParamExtractor("/users/{id:\\d+}")
 
 ## Performance
 
-GoSPA uses a `matchRoute` cache to avoid redundant pattern matching. Exact path lookups are $O(1)$ after the first visit.
+GoSPA uses an optimized `Router` with static path indexing. Exact path lookups are $O(1)$ and dynamic routes are matched with optimized regex patterns.

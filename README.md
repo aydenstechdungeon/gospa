@@ -1,4 +1,4 @@
-# GoSPA
+# GoSPA (Alpha)
 
 <div align="center">
   <img src="https://github.com/user-attachments/assets/9e9d126d-8c91-465a-a5c0-968e41c095fb" width="128" height="128" alt="GoSPA Logo 1">
@@ -20,7 +20,7 @@ GoSPA (Go Spa and Go S-P-A are the only valid pronunciations)  brings Svelte-lik
 ## Quick Start
 
 ### 0. Prerequisites
-- **Go 1.25.0+** (matches `go.mod`; use a current stable toolchain)
+- **Go 1.26.0+** (matches `go.mod`; use a current stable toolchain)
 - **Node.js Tooling**: **Bun** is preferred for the client-side build process (zero-config JS bundling, CSS extraction). **pnpm** and **npm** are supported as fallbacks using `esbuild`, but Bun remains the recommended choice for maximum performance.
 - **`JWT_SECRET`**: Ensure this environment variable is set for production authentication contexts (when using the Auth plugin).
 
@@ -53,7 +53,6 @@ go run github.com/aydenstechdungeon/gospa/cmd/gospa@latest dev
 > For local client/runtime tooling, **Bun is strongly preferred**. The GoSPA CLI provides fallbacks for `pnpm` and `npm` using `esbuild`, but Bun's integrated bundler is the authoritative development target.
 
 ### 3. A Simple SFC
-(.gospa is in alpha, try to use templs instead)
 ```svelte
 // islands/Counter.gospa
 <script lang="go">
@@ -99,26 +98,53 @@ config.AppName = "myapp"
 
 For prefork deployments, add external `Storage` and `PubSub` backends so state and realtime traffic stay consistent across workers.
 
-## Security
-
-- **Vulnerability scanning (Go):** run `govulncheck ./...` regularly; the repo's GitHub Actions workflow runs tests and govulncheck. For a full local gate, use `./scripts/quality-check.sh`.
-- **Auth plugin:** set `JWT_SECRET` in production. Production is inferred from `GOSPA_ENV`, `ENV` / `APP_ENV` / `GO_ENV`, or legacy `GIN_MODE`—see [Security](docs/configuration/scaling.md#auth-plugin-jwt-and-production-detection).
-- **CSP:** the compatibility default (`fiber.DefaultContentSecurityPolicy`) allows inline scripts and styles for typical GoSPA output. For tighter deployments, start from `fiber.StrictContentSecurityPolicy` and set `ContentSecurityPolicy` explicitly.
-- **SFC trust boundary:** `.gospa` files are *source code*, not user content. The compiler embeds `<script>` blocks directly into generated Go source. **Never compile untrusted tenant-provided SFCs in a shared CI or runtime.** For semi-trusted sources, enable `SafeMode` on `CompileOptions`—see [SFC docs](docs/gospasfc/getting-started.md#security--trust-boundary).
-
 ## Documentation
 
-- **Browse:** [gospa.onrender.com/docs](https://gospa.onrender.com/docs) (website)
-- **Authoritative Markdown:** [`docs/README.md`](docs/README.md) (table of contents for the `docs/` tree)
-- **Config & API:** [`docs/configuration.md`](docs/configuration.md), [`docs/api/core.md`](docs/api/core.md)
-- **Production:** [Production checklist](docs/troubleshooting.md), [Security](docs/configuration/scaling.md)
-- **Examples & Benchmarks:** [GospaSvKitBenchmark](https://github.com/aydenstechdungeon/GospaSvKitBenchmark) [not complete]
+Explore the full GoSPA documentation:
 
-## Community & Support
+- [**Reactive Primitives**](docs/reactive-primitives.md) - `Rune`, `Derived`, `Effect`, and `EffectScope`.
+- [**State Management**](docs/state-management.md) - Server-to-client state synchronization.
+- [**File-Based Routing**](docs/routing.md) - Layouts, pages, and rendering strategies.
+- [**Route Parameters**](docs/params.md) - Dynamic route segments.
+- [**Remote Actions**](docs/api/remote-actions.md) - Type-safe RPC between client and server.
+- [**WebSocket & Real-time**](docs/api/websocket.md) - High-performance state sync.
+- [**Server-Sent Events**](docs/api/sse.md) - Lightweight real-time notifications.
+- [**Plugin Architecture**](docs/plugins.md) - Extending the framework.
+- [**DevTools & Debugging**](docs/devtools.md) - Error overlays and HMR.
+- [**Client Runtime**](docs/internals/runtime.md) - Tiered runtime internals.
+- [**API Reference**](docs/api.md) - Fiber and Client API details.
 
-- **Discussions**: [GitHub Discussions](https://github.com/aydenstechdungeon/gospa/discussions)
-- **Issues**: [GitHub Issues](https://github.com/aydenstechdungeon/gospa/issues)
+## Security & Performance
 
----
+GoSPA is built with a "security-first" and "performance-by-default" philosophy. A comprehensive audit of the embedded asset pipeline was conducted in April 2026.
 
-[Apache License 2.0](LICENSE)
+### Security Highlights
+- **State Injection Safety**: All global state injected via `__GOSPA_STATE__` is HTML-escaped using `SetEscapeHTML(true)` to prevent `<script>` breakout XSS.
+- **Content Security Policy**: Supports nonce-based CSP for all injected scripts. `ProductionConfig()` defaults to a `StrictContentSecurityPolicy` that disallows unsafe-inline scripts.
+- **Trust-the-Server Model**: GoSPA adopts a server-trust security model. The runtime assumes the server renders safe HTML (Templ auto-escapes dynamic content), avoiding the overhead of heavy client-side sanitizers.
+- **Client-side Baseline**: Streamed HTML chunks use a lightweight, whitelist-based manual sanitizer to mitigate XSS in dynamic fragments without large dependencies.
+- **Auth & CSRF**: Built-in CSRF protection with `X-CSRF-Token` headers and secure session management.
+
+### Performance Highlights
+- **O(1) Routing**: Path matching uses optimized static lookups for zero latency at scale.
+- **Tiered Runtime**: Choose between `Micro` (~1KB), `Core` (~13KB), or `Full` (~15KB) runtimes.
+- **Delta Patching**: GZIP-compressed binary diffs for real-time state updates via WebSocket.
+- **Pre-compression**: Automatic `.gz` and `.br` asset generation for static files.
+
+For more details, see the [Comprehensive Security & Performance Audit](docs/security.md).
+
+## Accessibility (A11y)
+
+Building accessible SPAs is a first-class citizen in GoSPA:
+
+- **Live Announcer**: Use `GoSPA.announce("Message")` to trigger screened reader notifications.
+- **Focus Management**: Built-in utilities for focus trapping and restoration during navigation.
+- **ARIA Helpers**: Lightweight helpers for managing ARIA attributes and roles reactively.
+
+## Contributing
+
+We welcome contributions! Please see our [Contributing Guide](CONTRIBUTING.md) and [Code of Conduct](CODE_OF_CONDUCT.md).
+
+## License
+
+GoSPA is licensed under the [MIT License](LICENSE).

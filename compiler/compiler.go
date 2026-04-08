@@ -73,6 +73,7 @@ var DangerousImportNames = []string{
 	"runtime/debug",
 	"runtime/pprof",
 	"reflect", // reflection-based code can bypass type safety
+	"C",       // cgo
 }
 
 // DangerousCallPatterns are regex patterns for unsafe function calls that
@@ -108,17 +109,19 @@ func ValidateSafeScript(script string) error {
 	fset := token.NewFileSet()
 
 	// Determine if script is a full file or just a body
-	src := script
-	isBody := !strings.Contains(script, "package ")
+	// Replace runes ($state -> _state) so it's valid Go for the parser
+	sanitized := strings.ReplaceAll(script, "$", "_")
+	src := sanitized
+	isBody := !strings.Contains(sanitized, "package ")
 	if isBody {
-		src = "package p\n" + script
+		src = "package p\n" + sanitized
 	}
 
 	f, err := parser.ParseFile(fset, "", src, parser.ParseComments)
 	if err != nil {
 		if isBody {
 			// Try wrapping in a function if it's just statements
-			src = "package p\nfunc __check() {\n" + script + "\n}"
+			src = "package p\nfunc __check() {\n" + sanitized + "\n}"
 			f, err = parser.ParseFile(fset, "", src, parser.ParseComments)
 		}
 		if err != nil {
@@ -144,6 +147,10 @@ func ValidateSafeScript(script string) error {
 				}
 			}
 			if x.Name != nil {
+				if x.Name.Name == "." {
+					validationErr = fmt.Errorf("safe mode: dot imports are disallowed for security")
+					return false
+				}
 				blockedTypes[x.Name.Name] = path
 			} else {
 				parts := strings.Split(path, "/")
@@ -630,127 +637,7 @@ func (c *GospaCompiler) generateIslandTempl(name, islandID, template, script, ha
 		pkgName = "islands"
 	}
 
-	snippetDefs := []string{}
-	cleanTemplate := template
-
-	typeArgs := func(args string) string {
-		if strings.TrimSpace(args) == "" {
-			return ""
-		}
-		parts := strings.Split(args, ",")
-		typedParts := []string{}
-		for _, p := range parts {
-			trimmed := strings.TrimSpace(p)
-			if trimmed == "" {
-				continue
-			}
-			if !strings.Contains(trimmed, " ") {
-				trimmed += " any"
-			}
-			typedParts = append(typedParts, trimmed)
-		}
-		return strings.Join(typedParts, ", ")
-	}
-
-	for {
-		startLoc := snippetRegex.FindStringSubmatchIndex(cleanTemplate)
-		if startLoc == nil {
-			break
-		}
-		snippetName := cleanTemplate[startLoc[2]:startLoc[3]]
-		snippetArgs := cleanTemplate[startLoc[4]:startLoc[5]]
-		remaining := cleanTemplate[startLoc[1]:]
-		endLoc := endSnippetRegex.FindStringIndex(remaining)
-		if endLoc == nil {
-			break
-		}
-		content := remaining[:endLoc[0]]
-		snippetDefs = append(snippetDefs, fmt.Sprintf("templ %s(%s) {\n\t%s\n}", snippetName, typeArgs(snippetArgs), strings.TrimSpace(content)))
-		cleanTemplate = cleanTemplate[:startLoc[0]] + cleanTemplate[startLoc[1]+endLoc[1]:]
-	}
-
-	importRegex := regexp.MustCompile(`(?m)^import\s+(?:"[^"]+"|\(.*\))`)
-	imports := importRegex.FindAllString(script, -1)
-	extraImports := strings.Join(imports, "\n")
-	cleanScript := importRegex.ReplaceAllString(script, "")
-	structDefs, cleanScript := extractStructDefs(cleanScript)
-
-	if strings.Contains(cleanScript, "fmt.") && !strings.Contains(extraImports, "\"fmt\"") {
-		switch {
-		case extraImports == "":
-			extraImports = "import \"fmt\""
-		case strings.HasPrefix(extraImports, "import ("):
-			extraImports = strings.Replace(extraImports, "import (", "import (\n\t\"fmt\"", 1)
-		default:
-			extraImports = "import \"fmt\"\n" + extraImports
-		}
-	}
-	if strings.Contains(extraImports, "\"fmt\"") {
-		cleanScript = "var _ = fmt.Sprint\n" + cleanScript
-	}
-
-	vRegex := regexp.MustCompile(`(?m)^(?:var\s+)?([a-zA-Z0-9_]+)\s*(?::=|=)`)
-	matches := vRegex.FindAllStringSubmatch(cleanScript, -1)
-	for _, m := range matches {
-		if m[1] != "_" {
-			cleanScript += fmt.Sprintf("\nvar _ = %s", m[1])
-		}
-	}
-
-	funcBlockRegex := regexp.MustCompile(`(?s)func\s+([a-zA-Z0-9_]+)\((.*?)\)\s*\{(.*?)\}`)
-	cleanScript = funcBlockRegex.ReplaceAllStringFunc(cleanScript, func(match string) string {
-		parts := funcBlockRegex.FindStringSubmatch(match)
-		fnName := parts[1]
-		fnArgs := parts[2]
-		fnBody := parts[3]
-		flatBody := strings.ReplaceAll(strings.TrimSpace(fnBody), "\n", "; ")
-		return fmt.Sprintf("%s := func(%s) { %s }", fnName, fnArgs, flatBody)
-	})
-
-	extraSnippets := strings.TrimSpace(structDefs)
-	if strings.TrimSpace(templTypesSnippet) != "" {
-		if extraSnippets != "" {
-			extraSnippets += "\n\n"
-		}
-		extraSnippets += strings.TrimSpace(templTypesSnippet)
-	}
-	if len(snippetDefs) > 0 {
-		if extraSnippets != "" {
-			extraSnippets += "\n\n"
-		}
-		extraSnippets += strings.Join(snippetDefs, "\n\n")
-	}
-
-	scriptInjection := ""
-	if strings.TrimSpace(cleanScript) != "" {
-		lines := strings.Split(strings.TrimSpace(cleanScript), "\n")
-		i := 0
-		for i < len(lines) {
-			trimmed := strings.TrimSpace(lines[i])
-			if trimmed == "" || strings.HasPrefix(trimmed, "//") || strings.Contains(trimmed, "func(") || strings.Contains(trimmed, "func ") {
-				i++
-				continue
-			}
-			if strings.Contains(trimmed, "var _ = ") {
-				i++
-				continue
-			}
-			openBraces := strings.Count(trimmed, "{") - strings.Count(trimmed, "}")
-			if openBraces > 0 {
-				block := trimmed
-				for openBraces > 0 && i+1 < len(lines) {
-					i++
-					nextLine := strings.TrimSpace(lines[i])
-					block += " " + nextLine
-					openBraces += strings.Count(nextLine, "{") - strings.Count(nextLine, "}")
-				}
-				scriptInjection += "{{ " + block + " }}\n"
-			} else {
-				scriptInjection += "{{ " + trimmed + " }}\n"
-			}
-			i++
-		}
-	}
+	cleanTemplate, extraImports, extraSnippets, scriptInjection := c.processScript(script, template, templTypesSnippet)
 
 	if !strings.Contains(extraImports, "github.com/aydenstechdungeon/gospa/state") {
 		switch {
@@ -816,127 +703,7 @@ func (c *GospaCompiler) generatePageTempl(name, islandID, template, script, hash
 		pkgName = "pages"
 	}
 
-	snippetDefs := []string{}
-	cleanTemplate := template
-
-	typeArgs := func(args string) string {
-		if strings.TrimSpace(args) == "" {
-			return ""
-		}
-		parts := strings.Split(args, ",")
-		typedParts := []string{}
-		for _, p := range parts {
-			trimmed := strings.TrimSpace(p)
-			if trimmed == "" {
-				continue
-			}
-			if !strings.Contains(trimmed, " ") {
-				trimmed += " any"
-			}
-			typedParts = append(typedParts, trimmed)
-		}
-		return strings.Join(typedParts, ", ")
-	}
-
-	for {
-		startLoc := snippetRegex.FindStringSubmatchIndex(cleanTemplate)
-		if startLoc == nil {
-			break
-		}
-		snippetName := cleanTemplate[startLoc[2]:startLoc[3]]
-		snippetArgs := cleanTemplate[startLoc[4]:startLoc[5]]
-		remaining := cleanTemplate[startLoc[1]:]
-		endLoc := endSnippetRegex.FindStringIndex(remaining)
-		if endLoc == nil {
-			break
-		}
-		content := remaining[:endLoc[0]]
-		snippetDefs = append(snippetDefs, fmt.Sprintf("templ %s(%s) {\n\t%s\n}", snippetName, typeArgs(snippetArgs), strings.TrimSpace(content)))
-		cleanTemplate = cleanTemplate[:startLoc[0]] + cleanTemplate[startLoc[1]+endLoc[1]:]
-	}
-
-	importRegex := regexp.MustCompile(`(?m)^import\s+(?:"[^"]+"|\(.*\))`)
-	imports := importRegex.FindAllString(script, -1)
-	extraImports := strings.Join(imports, "\n")
-	cleanScript := importRegex.ReplaceAllString(script, "")
-	structDefs, cleanScript := extractStructDefs(cleanScript)
-
-	if strings.Contains(cleanScript, "fmt.") && !strings.Contains(extraImports, "\"fmt\"") {
-		switch {
-		case extraImports == "":
-			extraImports = "import \"fmt\""
-		case strings.HasPrefix(extraImports, "import ("):
-			extraImports = strings.Replace(extraImports, "import (", "import (\n\t\"fmt\"", 1)
-		default:
-			extraImports = "import \"fmt\"\n" + extraImports
-		}
-	}
-	if strings.Contains(extraImports, "\"fmt\"") {
-		cleanScript = "var _ = fmt.Sprint\n" + cleanScript
-	}
-
-	vRegex := regexp.MustCompile(`(?m)^(?:var\s+)?([a-zA-Z0-9_]+)\s*(?::=|=)`)
-	matches := vRegex.FindAllStringSubmatch(cleanScript, -1)
-	for _, m := range matches {
-		if m[1] != "_" {
-			cleanScript += fmt.Sprintf("\nvar _ = %s", m[1])
-		}
-	}
-
-	funcBlockRegex := regexp.MustCompile(`(?s)func\s+([a-zA-Z0-9_]+)\((.*?)\)\s*\{(.*?)\}`)
-	cleanScript = funcBlockRegex.ReplaceAllStringFunc(cleanScript, func(match string) string {
-		parts := funcBlockRegex.FindStringSubmatch(match)
-		fnName := parts[1]
-		fnArgs := parts[2]
-		fnBody := parts[3]
-		flatBody := strings.ReplaceAll(strings.TrimSpace(fnBody), "\n", "; ")
-		return fmt.Sprintf("%s := func(%s) { %s }", fnName, fnArgs, flatBody)
-	})
-
-	extraSnippets := strings.TrimSpace(structDefs)
-	if strings.TrimSpace(templTypesSnippet) != "" {
-		if extraSnippets != "" {
-			extraSnippets += "\n\n"
-		}
-		extraSnippets += strings.TrimSpace(templTypesSnippet)
-	}
-	if len(snippetDefs) > 0 {
-		if extraSnippets != "" {
-			extraSnippets += "\n\n"
-		}
-		extraSnippets += strings.Join(snippetDefs, "\n\n")
-	}
-
-	scriptInjection := ""
-	if strings.TrimSpace(cleanScript) != "" {
-		lines := strings.Split(strings.TrimSpace(cleanScript), "\n")
-		i := 0
-		for i < len(lines) {
-			trimmed := strings.TrimSpace(lines[i])
-			if trimmed == "" || strings.HasPrefix(trimmed, "//") || strings.Contains(trimmed, "func(") || strings.Contains(trimmed, "func ") {
-				i++
-				continue
-			}
-			if strings.Contains(trimmed, "var _ = ") {
-				i++
-				continue
-			}
-			openBraces := strings.Count(trimmed, "{") - strings.Count(trimmed, "}")
-			if openBraces > 0 {
-				block := trimmed
-				for openBraces > 0 && i+1 < len(lines) {
-					i++
-					nextLine := strings.TrimSpace(lines[i])
-					block += " " + nextLine
-					openBraces += strings.Count(nextLine, "{") - strings.Count(nextLine, "}")
-				}
-				scriptInjection += "{{ " + block + " }}\n"
-			} else {
-				scriptInjection += "{{ " + trimmed + " }}\n"
-			}
-			i++
-		}
-	}
+	cleanTemplate, extraImports, extraSnippets, scriptInjection := c.processScript(script, template, templTypesSnippet)
 
 	propNames := []string{}
 	for _, p := range props {
@@ -1013,6 +780,131 @@ func (c *GospaCompiler) generateStaticTempl(name, template, script, hash, pkgNam
 	templ := c.generateIslandTempl(name, "", template, script, hash, pkgName, hydrateMode, props, templTypesSnippet, tier)
 	templ = strings.Replace(templ, "\n\t<div data-gospa-island=\"\" class=\""+hash+"\">\n\t\t", "\n\t\t", 1)
 	return strings.Replace(templ, "\n\t</div>\n}\n", "\n}\n", 1)
+}
+
+func (c *GospaCompiler) processScript(script, template, templTypesSnippet string) (cleanTemplate string, extraImports string, extraSnippets string, scriptInjection string) {
+	snippetDefs := []string{}
+	cleanTemplate = template
+
+	typeArgs := func(args string) string {
+		if strings.TrimSpace(args) == "" {
+			return ""
+		}
+		parts := strings.Split(args, ",")
+		typedParts := []string{}
+		for _, p := range parts {
+			trimmed := strings.TrimSpace(p)
+			if trimmed == "" {
+				continue
+			}
+			if !strings.Contains(trimmed, " ") {
+				trimmed += " any"
+			}
+			typedParts = append(typedParts, trimmed)
+		}
+		return strings.Join(typedParts, ", ")
+	}
+
+	for {
+		startLoc := snippetRegex.FindStringSubmatchIndex(cleanTemplate)
+		if startLoc == nil {
+			break
+		}
+		snippetName := cleanTemplate[startLoc[2]:startLoc[3]]
+		snippetArgs := cleanTemplate[startLoc[4]:startLoc[5]]
+		remaining := cleanTemplate[startLoc[1]:]
+		endLoc := endSnippetRegex.FindStringIndex(remaining)
+		if endLoc == nil {
+			break
+		}
+		content := remaining[:endLoc[0]]
+		snippetDefs = append(snippetDefs, fmt.Sprintf("templ %s(%s) {\n\t%s\n}", snippetName, typeArgs(snippetArgs), strings.TrimSpace(content)))
+		cleanTemplate = cleanTemplate[:startLoc[0]] + cleanTemplate[startLoc[1]+endLoc[1]:]
+	}
+
+	importRegex := regexp.MustCompile(`(?m)^import\s+(?:"[^"]+"|\(.*\))`)
+	imports := importRegex.FindAllString(script, -1)
+	extraImports = strings.Join(imports, "\n")
+	cleanScript := importRegex.ReplaceAllString(script, "")
+	structDefs, cleanScript := extractStructDefs(cleanScript)
+
+	if strings.Contains(cleanScript, "fmt.") && !strings.Contains(extraImports, "\"fmt\"") {
+		switch {
+		case extraImports == "":
+			extraImports = "import \"fmt\""
+		case strings.HasPrefix(extraImports, "import ("):
+			extraImports = strings.Replace(extraImports, "import (", "import (\n\t\"fmt\"", 1)
+		default:
+			extraImports = "import \"fmt\"\n" + extraImports
+		}
+	}
+	if strings.Contains(extraImports, "\"fmt\"") {
+		cleanScript = "var _ = fmt.Sprint\n" + cleanScript
+	}
+
+	// Unused variable hack: identify variables and add var _ = name to avoid Go compilation errors.
+	vRegex := regexp.MustCompile(`(?m)^(?:var\s+)?([a-zA-Z0-9_]+)\s*(?::=|=)`)
+	matches := vRegex.FindAllStringSubmatch(cleanScript, -1)
+	seen := make(map[string]bool)
+	for _, m := range matches {
+		if m[1] != "_" && !seen[m[1]] {
+			cleanScript += fmt.Sprintf("\nvar _ = %s", m[1])
+			seen[m[1]] = true
+		}
+	}
+
+	// Transform local functions to function variables since named functions
+	// cannot be defined inside the body of another function (templ's Render).
+	funcBlockRegex := regexp.MustCompile(`(?s)func\s+([a-zA-Z0-9_]+)\((.*?)\)\s*\{(.*?)\}`)
+	cleanScript = funcBlockRegex.ReplaceAllStringFunc(cleanScript, func(match string) string {
+		parts := funcBlockRegex.FindStringSubmatch(match)
+		fnName := parts[1]
+		fnArgs := parts[2]
+		fnBody := parts[3]
+		flatBody := strings.ReplaceAll(strings.TrimSpace(fnBody), "\n", "; ")
+		return fmt.Sprintf("%s := func(%s) { %s }", fnName, fnArgs, flatBody)
+	})
+
+	extraSnippets = strings.TrimSpace(structDefs)
+	if strings.TrimSpace(templTypesSnippet) != "" {
+		if extraSnippets != "" {
+			extraSnippets += "\n\n"
+		}
+		extraSnippets += strings.TrimSpace(templTypesSnippet)
+	}
+	if len(snippetDefs) > 0 {
+		if extraSnippets != "" {
+			extraSnippets += "\n\n"
+		}
+		extraSnippets += strings.Join(snippetDefs, "\n\n")
+	}
+
+	scriptInjection = ""
+	if strings.TrimSpace(cleanScript) != "" {
+		// Wrap the entire script in a single block for stability.
+		// Templ handles multiline Go code inside {{ }} blocks.
+		scriptInjection = "{{\n" + strings.TrimSpace(cleanScript) + "\n}}\n"
+	}
+	return
+}
+
+func typeArgs(args string) string {
+	if strings.TrimSpace(args) == "" {
+		return ""
+	}
+	parts := strings.Split(args, ",")
+	typedParts := []string{}
+	for _, p := range parts {
+		trimmed := strings.TrimSpace(p)
+		if trimmed == "" {
+			continue
+		}
+		if !strings.Contains(trimmed, " ") {
+			trimmed += " any"
+		}
+		typedParts = append(typedParts, trimmed)
+	}
+	return strings.Join(typedParts, ", ")
 }
 
 func (c *GospaCompiler) validateTemplateNodes(nodes []sfc.Node) error {

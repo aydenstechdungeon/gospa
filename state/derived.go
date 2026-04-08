@@ -28,6 +28,8 @@ type Derived[T any] struct {
 	version   uint64
 	// lastDepVersions stores the version of each dependency when last computed
 	lastDepVersions map[string]uint64
+	// computing tracks if we are currently recomputing to detect circularity
+	computing bool
 }
 
 // dependency represents a dependency on an observable
@@ -63,12 +65,22 @@ func NewDerived[T any](compute func() T) *Derived[T] {
 // recompute recalculates the derived value.
 // CRITICAL: New value is calculated entirely outside the lock.
 func (d *Derived[T]) recompute() {
+	d.mu.Lock()
+	if d.computing {
+		d.mu.Unlock()
+		log.Printf("gospa: circular dependency detected in derived rune %s\n%s", d.id, debug.Stack())
+		return
+	}
+	d.computing = true
+	d.mu.Unlock()
+
 	newValue := d.compute()
 
 	var subs []subEntry[T]
 	var changed bool
 
 	d.mu.Lock()
+	d.computing = false
 	if !equal(d.value, newValue) {
 		d.value = newValue
 		changed = true

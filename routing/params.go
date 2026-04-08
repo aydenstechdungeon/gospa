@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"net/url"
 	"regexp"
+	"sort"
 	"strconv"
 	"strings"
 
@@ -460,9 +461,18 @@ func (rm *RouteMatch) Query(key string) string {
 
 // BuildURL builds a URL from a route pattern and parameters.
 func BuildURL(pattern string, pathParams Params, queryParams *QueryParams) string {
-	// Replace path parameters
+	// Replace path parameters - sort keys by length descending to prevent partial match issues (e.g. :id vs :id_alt)
 	u := pattern
-	for key, value := range pathParams {
+	keys := make([]string, 0, len(pathParams))
+	for k := range pathParams {
+		keys = append(keys, k)
+	}
+	sort.Slice(keys, func(i, j int) bool {
+		return len(keys[i]) > len(keys[j])
+	})
+
+	for _, key := range keys {
+		value := pathParams[key]
 		u = strings.ReplaceAll(u, ":"+key, url.PathEscape(value))
 		// For catch-all, we want to keep slashes but escape other characters
 		if strings.Contains(pattern, "*"+key) {
@@ -521,8 +531,17 @@ func (pb *PathBuilder) QueryAdd(key, value string) *PathBuilder {
 func (pb *PathBuilder) Build() string {
 	u := pb.pattern
 
-	// Replace path parameters
-	for key, value := range pb.params {
+	// Replace path parameters - sort keys by length descending
+	keys := make([]string, 0, len(pb.params))
+	for k := range pb.params {
+		keys = append(keys, k)
+	}
+	sort.Slice(keys, func(i, j int) bool {
+		return len(keys[i]) > len(keys[j])
+	})
+
+	for _, key := range keys {
+		value := pb.params[key]
 		u = strings.ReplaceAll(u, ":"+key, url.PathEscape(value))
 		if strings.Contains(pb.pattern, "*"+key) {
 			segs := strings.Split(value, "/")

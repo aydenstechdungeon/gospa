@@ -3,6 +3,7 @@
 package fiber
 
 import (
+	"context"
 	"crypto/rand"
 	"encoding/hex"
 	"fmt"
@@ -105,7 +106,7 @@ func NewSSEBroker(config *SSEConfig) *SSEBroker {
 	}
 
 	// Subscribe to distributed events
-	_, _ = b.pubsub.Subscribe("gospa:sse", func(message []byte) {
+	_, _ = b.pubsub.Subscribe(context.Background(), "gospa:sse", func(message []byte) {
 		var sseMsg struct {
 			Target string   `json:"target"` // "all", "topic:xyz", "client:xyz"
 			Event  SSEEvent `json:"event"`
@@ -219,7 +220,7 @@ func (b *SSEBroker) Send(clientID string, event SSEEvent) bool {
 		"target": "client:" + clientID,
 		"event":  event,
 	})
-	_ = b.pubsub.Publish("gospa:sse", data)
+	_ = b.pubsub.Publish(context.Background(), "gospa:sse", data)
 	return true
 }
 
@@ -229,7 +230,7 @@ func (b *SSEBroker) Broadcast(event SSEEvent) int {
 		"target": "all",
 		"event":  event,
 	})
-	_ = b.pubsub.Publish("gospa:sse", data)
+	_ = b.pubsub.Publish(context.Background(), "gospa:sse", data)
 	return 0 // Distributed, local count meaningless
 }
 
@@ -239,7 +240,7 @@ func (b *SSEBroker) BroadcastToTopic(topic string, event SSEEvent) int {
 		"target": "topic:" + topic,
 		"event":  event,
 	})
-	_ = b.pubsub.Publish("gospa:sse", data)
+	_ = b.pubsub.Publish(context.Background(), "gospa:sse", data)
 	return 0
 }
 

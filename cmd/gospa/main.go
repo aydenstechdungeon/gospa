@@ -27,15 +27,25 @@ func main() {
 	case "version", "--version", "-v":
 		fmt.Println(gospa.Version)
 	case "create":
-		if len(os.Args) < 3 {
-			fmt.Fprintln(os.Stderr, "Usage: gospa create <name>")
+		fs := flag.NewFlagSet("create", flag.ExitOnError)
+		nonInteractive := fs.Bool("y", false, "Non-interactive mode (use defaults for prompts)")
+		nonInteractiveLong := fs.Bool("non-interactive", false, "Non-interactive mode")
+		_ = fs.Parse(os.Args[2:])
+		
+		args := fs.Args()
+		if len(args) < 1 {
+			fmt.Fprintln(os.Stderr, "Usage: gospa create <name> [-y]")
 			os.Exit(1)
 		}
-		if err := cli.ValidateProjectName(os.Args[2]); err != nil {
+		
+		name := args[0]
+		if err := cli.ValidateProjectName(name); err != nil {
 			fmt.Fprintf(os.Stderr, "Error: Invalid project name: %v\n", err)
 			os.Exit(1)
 		}
-		cli.CreateProject(os.Args[2])
+		
+		isNonInteractive := *nonInteractive || *nonInteractiveLong
+		cli.CreateProjectWithOptions(name, "", isNonInteractive)
 	case "dev":
 		fs := flag.NewFlagSet("dev", flag.ExitOnError)
 		port := fs.Int("port", 3000, "Port to advertise in dev output")

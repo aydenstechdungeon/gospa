@@ -13,12 +13,13 @@ import (
 
 // ProjectConfig holds configuration for a new GoSPA project.
 type ProjectConfig struct {
-	Name       string
-	Module     string
-	OutputDir  string
-	WithGit    bool
-	WithDocker bool
-	Template   string
+	Name           string
+	Module         string
+	OutputDir      string
+	WithGit        bool
+	WithDocker     bool
+	Template       string
+	NonInteractive bool
 }
 
 var (
@@ -36,16 +37,16 @@ var validTemplates = map[string]bool{
 
 // CreateProject creates a new GoSPA project with the given name.
 func CreateProject(name string) {
-	CreateProjectWithOptions(name, "")
+	CreateProjectWithOptions(name, "", false)
 }
 
 // CreateProjectWithTemplate creates a new GoSPA project with the specified template.
 func CreateProjectWithTemplate(name string, template string) {
-	CreateProjectWithOptions(name, template)
+	CreateProjectWithOptions(name, template, false)
 }
 
 // CreateProjectWithOptions creates a new GoSPA project with custom options.
-func CreateProjectWithOptions(name string, template string) {
+func CreateProjectWithOptions(name string, template string, nonInteractive bool) {
 	if err := ValidateProjectName(name); err != nil {
 		fmt.Fprintf(os.Stderr, "Error: invalid project name %q: %v\n", name, err)
 		os.Exit(1)
@@ -61,14 +62,15 @@ func CreateProjectWithOptions(name string, template string) {
 	}
 
 	// Prompt for module path if not provided via env or interactive
-	module := askForModule(name)
+	module := askForModule(name, nonInteractive)
 
 	config := &ProjectConfig{
-		Name:      name,
-		Module:    module,
-		OutputDir: name,
-		WithGit:   true,
-		Template:  template,
+		Name:           name,
+		Module:         module,
+		OutputDir:      name,
+		WithGit:        true,
+		Template:       template,
+		NonInteractive: nonInteractive,
 	}
 
 	if err := createProject(config); err != nil {
@@ -589,10 +591,10 @@ func getGitUsername() string {
 	return "yourusername"
 }
 
-func askForModule(projectName string) string {
+func askForModule(projectName string, nonInteractive bool) string {
 	// First, try to get git username properly
 	username := getGitUsername()
-	if username == "yourusername" {
+	if username == "yourusername" && !nonInteractive {
 		// Prompt user for their GitHub username
 		fmt.Print("Enter your GitHub username or organization: ")
 		_, _ = fmt.Scanln(&username)

@@ -567,3 +567,21 @@ func main() {
     tree.Destroy()
 }
 ```
+
+## 6. Depth-First Mounting Strategy
+
+GoSPA's component tree follows a **Depth-First Mounting** strategy. This ensures that a component's children are fully initialized and registered with the reactive context *before* the parent component completes its mount phase.
+
+### Mounting Order
+1. Parent **OnBeforeMount**
+2. ├── Child A **OnBeforeMount**
+3. ├── ├── Grandchild A1 **OnBeforeMount**
+4. ├── ├── Grandchild A1 **OnMount** (Initialized)
+5. ├── Child A **OnMount** (Initialized)
+6. Parent **OnMount** (Initialized)
+
+### Why it Matters
+This order is critical for **State Propagation**. If a parent component's `$effect` depends on state being set by a child component, the depth-first approach guarantees that the child's state is available when the parent's logic executes.
+
+> [!TIP]
+> Use the `OnMount` hook to fetch data or initialize third-party libraries that require child DOM elements to be present.
