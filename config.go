@@ -77,6 +77,7 @@ type NavigationProgressBarConfig struct {
 	Enabled *bool   `json:"enabled,omitempty"`
 	Color   *string `json:"color,omitempty"`
 	Height  *string `json:"height,omitempty"`
+	Delay   *int    `json:"delay,omitempty"`
 }
 
 // NavigationOptions configures client-side navigation
@@ -221,16 +222,7 @@ func DefaultConfig() Config {
 	enabled := false
 	color := "#667eea"
 	height := "3px"
-	// Auto-detect DevMode if not explicitly set
-	gospaEnv := strings.ToLower(strings.TrimSpace(os.Getenv("GOSPA_ENV")))
-	devMode := false
-	switch gospaEnv {
-	case "development", "dev", "":
-		devMode = true
-	case "production", "prod":
-		devMode = false
-	}
-
+	delay := 200
 	return Config{
 		RuntimeTier:              RuntimeTierFull,
 		RoutesDir:                "./routes",
@@ -259,6 +251,7 @@ func DefaultConfig() Config {
 				Enabled: &enabled,
 				Color:   &color,
 				Height:  &height,
+				Delay:   &delay,
 			},
 		},
 	}

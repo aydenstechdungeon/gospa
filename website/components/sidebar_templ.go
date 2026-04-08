@@ -41,7 +41,7 @@ func Sidebar(currentPath string) templ.Component {
 			templ_7745c5c3_Var1 = templ.NopComponent
 		}
 		ctx = templ.ClearChildren(ctx)
-		templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 1, "<aside class=\"w-64 flex-shrink-0 hidden lg:block border-r border-[var(--border)] h-[calc(100vh-4rem)] sticky top-16 overflow-y-auto p-6 custom-scrollbar\" id=\"sidebar-scroll\">")
+		templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 1, "<aside class=\"w-64 flex-shrink-0 hidden lg:block border-r border-[var(--border)] h-[calc(100vh-4rem)] sticky top-16 overflow-y-auto p-6 custom-scrollbar\" id=\"sidebar-scroll\" data-gospa-permanent>")
 		if templ_7745c5c3_Err != nil {
 			return templ_7745c5c3_Err
 		}
@@ -264,14 +264,14 @@ func sidebarSection(title string, items []NavItem, currentPath string) templ.Com
 			if templ_7745c5c3_Err != nil {
 				return templ_7745c5c3_Err
 			}
-			templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 10, "\">")
+			templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 10, "\" data-gospa-active=\"bg-[var(--accent-primary)]/10 text-[var(--accent-primary)] font-semibold border-l-2 border-[var(--accent-primary)] rounded-l-none\" data-gospa-inactive=\"text-[var(--text-secondary)]\">")
 			if templ_7745c5c3_Err != nil {
 				return templ_7745c5c3_Err
 			}
 			var templ_7745c5c3_Var8 string
 			templ_7745c5c3_Var8, templ_7745c5c3_Err = templ.JoinStringErrs(item.Label)
 			if templ_7745c5c3_Err != nil {
-				return templ.Error{Err: templ_7745c5c3_Err, FileName: `components/sidebar.templ`, Line: 132, Col: 18}
+				return templ.Error{Err: templ_7745c5c3_Err, FileName: `components/sidebar.templ`, Line: 134, Col: 18}
 			}
 			_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ.EscapeString(templ_7745c5c3_Var8))
 			if templ_7745c5c3_Err != nil {
