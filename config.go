@@ -299,9 +299,9 @@ func WithDevMode(enabled bool) ConfigOption {
 
 // WithPort sets the server port. Note: This option is a no-op for the App;
 // the port is passed directly to app.Run(addr) instead.
-func WithPort(port string) ConfigOption {
-	return func(c *Config) {
-		c.AppName = c.AppName
+func WithPort(_ string) ConfigOption {
+	return func(_ *Config) {
+		// No-op: the port is passed directly to app.Run(addr) instead.
 	}
 }
 
