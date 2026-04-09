@@ -5,7 +5,7 @@
   "description": "A lightweight Go framework for building high-performance, reactive single-page applications with server-side rendering.",
   "url": "https://gospa.onrender.com",
   "codeRepository": "https://github.com/aydenstechdungeon/gospa",
-  "license": "https://opensource.org/licenses/MIT",
+  "license": "https://opensource.org/licenses/Apache-2.0",
   "programmingLanguage": {
     "@type": "ComputerLanguage",
     "name": "Go",

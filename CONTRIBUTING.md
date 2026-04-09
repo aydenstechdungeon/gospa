@@ -18,7 +18,7 @@ Please use the GitHub Issue tracker. When creating a bug report, it is highly re
 ## 3. Pull Request Guidelines
 
 *   **Branch naming**: Try to keep feature branches structured, e.g., `feature/awesome-new-router` or `fix/derived-deadlock`.
-*   **Documentation**: If you are adding a new core feature, you must also add accompanying documentation in `docs/04-api-reference`. 
+*   **Documentation**: If you are adding a new core feature, you must also add accompanying documentation in the `docs/` directory. Reference existing docs for structure.
 *   **Tests**: Every bug fix should have an accompanying unit test guarding against regressions. All new critical paths need at least moderate `testing.T` coverage in Go.
 
 ## 4. Coding conventions

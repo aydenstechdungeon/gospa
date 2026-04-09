@@ -7,6 +7,23 @@
 
 GoSPA (Go Spa and Go S-P-A are the only valid pronunciations)  brings Svelte-like reactive primitives (`Runes`, `Effects`, `Derived`) to the Go ecosystem. It is a high-performance framework for building reactive SPAs with Templ, Fiber, file-based routing, and real-time state synchronization.
 
+## Table of Contents
+
+- [GoSPA (Alpha)](#gospa-alpha)
+  - [Table of Contents](#table-of-contents)
+  - [Highlights](#highlights)
+  - [Quick Start](#quick-start)
+    - [0. Prerequisites](#0-prerequisites)
+    - [1. Install CLI](#1-install-cli)
+    - [2. Scaffold \& Run](#2-scaffold--run)
+    - [3. A Simple SFC](#3-a-simple-sfc)
+  - [Comparison](#comparison)
+  - [Recommended Production Baseline](#recommended-production-baseline)
+  - [Documentation](#documentation)
+  - [Accessibility (A11y)](#accessibility-a11y)
+  - [Contributing](#contributing)
+  - [License](#license)
+
 ## Highlights
 
 - **Native Reactivity** - `Rune`, `Derived`, `Effect` primitives that work exactly like Svelte 5.
@@ -114,25 +131,6 @@ Explore the full GoSPA documentation:
 - [**Client Runtime**](docs/internals/runtime.md) - Tiered runtime internals.
 - [**API Reference**](docs/api.md) - Fiber and Client API details.
 
-## Security & Performance
-
-GoSPA is built with a "security-first" and "performance-by-default" philosophy. A comprehensive audit of the embedded asset pipeline was conducted in April 2026.
-
-### Security Highlights
-- **State Injection Safety**: All global state injected via `__GOSPA_STATE__` is HTML-escaped using `SetEscapeHTML(true)` to prevent `<script>` breakout XSS.
-- **Content Security Policy**: Supports nonce-based CSP for all injected scripts. `ProductionConfig()` defaults to a `StrictContentSecurityPolicy` that disallows unsafe-inline scripts.
-- **Trust-the-Server Model**: GoSPA adopts a server-trust security model. The runtime assumes the server renders safe HTML (Templ auto-escapes dynamic content), avoiding the overhead of heavy client-side sanitizers.
-- **Client-side Baseline**: Streamed HTML chunks use a lightweight, whitelist-based manual sanitizer to mitigate XSS in dynamic fragments without large dependencies.
-- **Auth & CSRF**: Built-in CSRF protection with `X-CSRF-Token` headers and secure session management.
-
-### Performance Highlights
-- **O(1) Routing**: Path matching uses optimized static lookups for zero latency at scale.
-- **Tiered Runtime**: Choose between `Micro` (~1KB), `Core` (~13KB), or `Full` (~15KB) runtimes.
-- **Delta Patching**: GZIP-compressed binary diffs for real-time state updates via WebSocket.
-- **Pre-compression**: Automatic `.gz` and `.br` asset generation for static files.
-
-For more details, see the [Comprehensive Security & Performance Audit](docs/security.md).
-
 ## Accessibility (A11y)
 
 Building accessible SPAs is a first-class citizen in GoSPA:
@@ -143,7 +141,7 @@ Building accessible SPAs is a first-class citizen in GoSPA:
 
 ## Contributing
 
-We welcome contributions! Please see our [Contributing Guide](CONTRIBUTING.md) and [Code of Conduct](CODE_OF_CONDUCT.md).
+We welcome contributions! Please see our [Contributing Guide](CONTRIBUTING.md).
 
 ## License
 

@@ -15,7 +15,7 @@ func main() {
 	config.DevMode = true
 	config.AppName = "guestbook"
 	config.EnableWebSocket = true
-	config.ContentSecurityPolicy = "default-src 'self'; script-src 'self' 'unsafe-inline' https://unpkg.com unpkg.com; style-src 'self' 'unsafe-inline' https://unpkg.com unpkg.com; img-src 'self' data: https:; connect-src 'self' ws: wss: localhost:*;"
+	config.ContentSecurityPolicy = "default-src 'self'; script-src 'self' 'nonce-{nonce}' https://unpkg.com; style-src 'self' 'nonce-{nonce}' https://unpkg.com; img-src 'self' data: https:; connect-src 'self' wss: https:;"
 
 	app := gospa.New(config)
 

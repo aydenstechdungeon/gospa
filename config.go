@@ -3,7 +3,6 @@ package gospa
 import (
 	"io/fs"
 	"log/slog"
-	"os"
 	"time"
 
 	"github.com/aydenstechdungeon/gospa/compiler"
@@ -241,7 +240,7 @@ func DefaultConfig() Config {
 		ISRSemaphoreLimit:        10,
 		ISRTimeout:               60 * time.Second,
 		NotificationBufferSize:   1024,
-		AllowInsecureWS:          os.Getenv("GOSPA_WS_INSECURE") == "1",
+		AllowInsecureWS:          false, // Only set via config explicitly; env var handled in validateAndLogConfig
 		AllowPortsWithInsecureWS: []int{3000},
 		IslandsBundlePath:        "static/js/islands.js",
 		ManifestPath:             "./manifest.json",
@@ -298,11 +297,11 @@ func WithDevMode(enabled bool) ConfigOption {
 	}
 }
 
-// WithPort sets the server port.
+// WithPort sets the server port. Note: This option is a no-op for the App;
+// the port is passed directly to app.Run(addr) instead.
 func WithPort(port string) ConfigOption {
-	return func(_ *Config) {
-		// This is typically used with Run(), so we handle it there
-		_ = port
+	return func(c *Config) {
+		c.AppName = c.AppName
 	}
 }
 

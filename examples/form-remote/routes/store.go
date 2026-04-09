@@ -46,7 +46,7 @@ func (s *MessageStore) AddMessage(name, content string) Message {
 		Timestamp: time.Now(),
 	}
 	s.nextID++
-	s.messages = append([]Message{msg}, s.messages...)
+	s.messages = append(s.messages, msg)
 	return msg
 }
 
@@ -74,14 +74,22 @@ func (s *MessageStore) GetMessages(page, pageSize int) PaginatedMessages {
 		page = totalPages
 	}
 
-	start := (page - 1) * pageSize
-	end := start + pageSize
-	if start >= total {
-		start = 0
-		end = 0
-	}
+	start := total - (page * pageSize)
+	end := total - ((page - 1) * pageSize)
 	if end > total {
 		end = total
+	}
+	if start < 0 {
+		start = 0
+	}
+	if start >= end {
+		return PaginatedMessages{
+			Messages:   []Message{},
+			Total:      total,
+			Page:       page,
+			PageSize:   pageSize,
+			TotalPages: totalPages,
+		}
 	}
 
 	return PaginatedMessages{

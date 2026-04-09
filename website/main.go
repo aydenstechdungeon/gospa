@@ -43,9 +43,9 @@ func main() {
 		CacheTemplates:        !devMode,            // Enable template caching in production
 		DefaultRenderStrategy: routing.StrategySSG, // Make the entire docs site static by default
 		RuntimeTier:           gospa.RuntimeTierFull,
-		SSGCacheMaxEntries:    -1,                  // Cache all pages without eviction
-		CompressState:         true,                // Compress WebSocket messages
-		StateDiffing:          true,                // Only send state diffs
+		SSGCacheMaxEntries:    -1,   // Cache all pages without eviction
+		CompressState:         true, // Compress WebSocket messages
+		StateDiffing:          true, // Only send state diffs
 		EnableWebSocket:       true,
 		SerializationFormat:   gospa.SerializationMsgPack,
 		WSHeartbeat:           30 * time.Second,
@@ -74,6 +74,12 @@ func main() {
 			},
 		},
 	})
+
+	// Add security headers middleware
+	app.Fiber.Use(securityHeadersMiddleware)
+
+	// Add security headers middleware
+	app.Fiber.Use(securityHeadersMiddleware)
 
 	// Add middleware for performance (Link headers, caching)
 	// IMPORTANT: This must come BEFORE routes to catch static assets
@@ -319,4 +325,14 @@ func getEnvBool(key string, defaultVal bool) bool {
 		return b
 	}
 	return defaultVal
+}
+
+// securityHeadersMiddleware adds essential security headers to all responses
+func securityHeadersMiddleware(c fiber.Ctx) error {
+	c.Set("Content-Security-Policy", "default-src 'self'; script-src 'self' 'nonce-{nonce}'; style-src 'self' 'nonce-{nonce}'; img-src 'self' data: https:; font-src 'self' data:; connect-src 'self' wss: https:; frame-ancestors 'none'; base-uri 'self'; form-action 'self';")
+	c.Set("X-Frame-Options", "DENY")
+	c.Set("X-Content-Type-Options", "nosniff")
+	c.Set("Referrer-Policy", "strict-origin-when-cross-origin")
+	c.Set("Permissions-Policy", "camera=(), microphone=(), geolocation=(), payment=()")
+	return c.Next()
 }
