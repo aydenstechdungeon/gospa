@@ -251,15 +251,25 @@ func validateAndLogConfig(config *Config) {
 	}
 
 	// GOSPA_WS_INSECURE env var provides a quick override for development.
-	// We honor it globally to allow developers full control over their environment.
+	// SECURITY: We block this override in production (DevMode: false) to prevent
+	// accidental mixed-content exposure from leaked environment variables.
 	if os.Getenv("GOSPA_WS_INSECURE") == "1" {
-		config.AllowInsecureWS = true
+		if config.DevMode {
+			config.AllowInsecureWS = true
+		} else {
+			config.Logger.Warn("GOSPA_WS_INSECURE=1 is ignored in production mode. Use AllowInsecureWS in config explicitly if required.")
+		}
 	}
 
 	// SECURITY: Warn if RemoteActionMiddleware is missing in production.
 	// We do not force a block here, leaving the security model in the developer's hands.
 	if !config.DevMode && config.RemoteActionMiddleware == nil && !config.AllowUnauthenticatedRemoteActions {
 		config.Logger.Warn("RemoteActionMiddleware is not set in production. Ensure remote actions are protected by another layer or are intentionally public.")
+	}
+
+	// SECURITY: Warn if DisableSanitization is enabled — this opens XSS vectors.
+	if config.DisableSanitization {
+		config.Logger.Warn("DisableSanitization is enabled — client-side HTML sanitization is OFF. This creates XSS vulnerabilities.")
 	}
 }
 
@@ -638,7 +648,9 @@ func (a *App) Shutdown() error {
 		a.Hub.Close()
 	}
 	if closer, ok := a.Config.Storage.(interface{ Close() error }); ok {
-		_ = closer.Close()
+		if err := closer.Close(); err != nil {
+			a.Logger().Error("Storage close failed", "err", err)
+		}
 	}
 	err := a.Fiber.Shutdown()
 	if err := plugin.TriggerHook(plugin.AfterPrune, nil); err != nil {

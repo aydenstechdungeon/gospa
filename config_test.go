@@ -7,10 +7,6 @@ import (
 )
 
 func TestDefaultConfig(t *testing.T) {
-	// Set environment variable to ensure consistent test results
-	_ = os.Setenv("GOSPA_WS_INSECURE", "1")
-	defer func() { _ = os.Unsetenv("GOSPA_WS_INSECURE") }()
-
 	config := DefaultConfig()
 
 	if config.RoutesDir != "./routes" {
@@ -43,11 +39,36 @@ func TestDefaultConfig(t *testing.T) {
 	if config.ISRTimeout != 60*time.Second {
 		t.Errorf("expected ISRTimeout to be 60s, got %v", config.ISRTimeout)
 	}
-	if config.AllowInsecureWS != true {
-		t.Errorf("expected AllowInsecureWS to be true when env is set")
+	if config.AllowInsecureWS != false {
+		t.Errorf("expected AllowInsecureWS to be false in DefaultConfig (env var processed in New())")
 	}
 	if len(config.AllowPortsWithInsecureWS) != 1 || config.AllowPortsWithInsecureWS[0] != 3000 {
 		t.Errorf("expected AllowPortsWithInsecureWS to be [3000], got %v", config.AllowPortsWithInsecureWS)
+	}
+}
+
+func TestGOSPAWSInsecureHonoredInDevMode(t *testing.T) {
+	_ = os.Setenv("GOSPA_WS_INSECURE", "1")
+	defer func() { _ = os.Unsetenv("GOSPA_WS_INSECURE") }()
+
+	config := DefaultConfig()
+	config.DevMode = true
+	app := New(config)
+
+	if !app.Config.AllowInsecureWS {
+		t.Errorf("expected AllowInsecureWS to be true in DevMode when GOSPA_WS_INSECURE=1")
+	}
+}
+
+func TestGOSPAWSInsecureIgnoredInProduction(t *testing.T) {
+	_ = os.Setenv("GOSPA_WS_INSECURE", "1")
+	defer func() { _ = os.Unsetenv("GOSPA_WS_INSECURE") }()
+
+	config := ProductionConfig()
+	app := New(config)
+
+	if app.Config.AllowInsecureWS {
+		t.Errorf("expected AllowInsecureWS to be false in production even when GOSPA_WS_INSECURE=1")
 	}
 }
 

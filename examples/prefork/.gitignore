@@ -1,0 +1,5 @@
+dist/
+*.log
+generated/
+server
+server.exe
