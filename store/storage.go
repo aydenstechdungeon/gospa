@@ -28,7 +28,7 @@ type MemoryStorage struct {
 
 	// Optimization for zero-TTL entries (LRU-ish eviction)
 	zeroTTLCount int
-	lru          *list.List                // Tracks zero-TTL key order for eviction
+	lru          *list.List               // Tracks zero-TTL key order for eviction
 	lruElements  map[string]*list.Element // key -> list element
 }
 

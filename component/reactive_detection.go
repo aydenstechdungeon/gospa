@@ -138,16 +138,16 @@ func (rd *ReactiveDetector) Detect(source, filePath string) *DetectionResult {
 	// to ensure the parser can handle top-level assignments and statements.
 	prefix := "package main\nfunc _gospa_wrapper() {\n"
 	wrappedSource := prefix + script + "\n}"
-	
+
 	f, err := parser.ParseFile(fset, "", wrappedSource, 0)
 	if err != nil {
-		// Fallback to simpler regex detection if AST parsing fails 
+		// Fallback to simpler regex detection if AST parsing fails
 		// (e.g. invalid syntax during typing in dev mode)
 		rd.detectStateBoundariesLegacy(source, newlineIndices, result)
 		rd.detectDerivedBoundariesLegacy(source, newlineIndices, result)
 		rd.detectEffectBoundariesLegacy(source, newlineIndices, result)
 	} else {
-		rd.detectBoundariesAST(f, scriptStartOffset - len(prefix), newlineIndices, result)
+		rd.detectBoundariesAST(f, scriptStartOffset-len(prefix), newlineIndices, result)
 	}
 
 	// Detect event handlers (HTML attributes, still regex/string based)
@@ -174,7 +174,6 @@ func (rd *ReactiveDetector) Detect(source, filePath string) *DetectionResult {
 
 	return result
 }
-
 
 func (rd *ReactiveDetector) detectBoundariesAST(f *ast.File, offsetAdjustment int, newlineIndices []int, result *DetectionResult) {
 	// Track parents using a stack
@@ -273,7 +272,7 @@ func (rd *ReactiveDetector) extractDependenciesAST(call *ast.CallExpr) []string 
 		}
 		return true
 	})
-	
+
 	res := make([]string, 0, len(deps))
 	for k := range deps {
 		res = append(res, k)

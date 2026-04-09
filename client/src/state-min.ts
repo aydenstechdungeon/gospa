@@ -9,7 +9,9 @@ export type ComputeFn<T> = () => T;
 let _id = 0;
 let _eid = 0;
 let _batch = 0;
-const _pending: Set<Notifier> = new Set();
+const _pending: Notifier[] = [];
+const _pendingSet = new Set<Notifier>();
+export const _tracking = true;
 
 interface Notifier {
   notify(): void;
@@ -25,9 +27,11 @@ export function batch(fn: () => void): void {
   } finally {
     _batch--;
     if (_batch === 0) {
-      const p = [..._pending];
-      _pending.clear();
-      p.forEach((n) => n.notify());
+      for (let i = 0; i < _pending.length; i++) {
+        _pending[i].notify();
+      }
+      _pending.length = 0;
+      _pendingSet.clear();
     }
   }
 }
@@ -36,7 +40,8 @@ export function batch(fn: () => void): void {
 export class Rune<T> implements Notifier {
   private _v: T;
   private readonly _id: number;
-  private readonly _s: Set<Subscriber<T>> = new Set();
+  private readonly _s: (Subscriber<T> | null)[] = [];
+  private _sv = 0;
   private _y: boolean = false;
 
   constructor(initialValue: T) {
@@ -69,13 +74,19 @@ export class Rune<T> implements Notifier {
   }
 
   subscribe(fn: Subscriber<T>): Unsubscribe {
-    this._s.add(fn);
-    return () => this._s.delete(fn);
+    this._s.push(fn);
+    const i = this._s.length - 1;
+    return () => {
+      this._s[i] = null;
+    };
   }
 
   private _notify(_o: T): void {
     if (_batch > 0) {
-      _pending.add(this);
+      if (!_pendingSet.has(this)) {
+        _pendingSet.add(this);
+        _pending.push(this);
+      }
       return;
     }
     this.notify();
@@ -83,7 +94,11 @@ export class Rune<T> implements Notifier {
 
   notify(): void {
     const v = this._v;
-    this._s.forEach((fn) => fn(v, this._v));
+    const s = this._s;
+    for (let i = 0; i < s.length; i++) {
+      const fn = s[i];
+      if (fn) fn(v, this._v);
+    }
   }
 
   private _eq(a: T, b: T): boolean {
@@ -91,7 +106,7 @@ export class Rune<T> implements Notifier {
   }
 
   private _track(): void {
-    if (_cur) _cur.addDep(this as unknown as Rune<unknown>);
+    if (_tracking && _cur) _cur.addDep(this as unknown as Rune<unknown>);
   }
 
   toJSON(): { id: number; value: T } {
@@ -108,7 +123,7 @@ export class Derived<T> implements Notifier {
   private _v: T;
   private readonly _c: ComputeFn<T>;
   private readonly _d: Set<Rune<unknown>> = new Set();
-  private readonly _s: Set<Subscriber<T>> = new Set();
+  private readonly _s: (Subscriber<T> | null)[] = [];
   private _y: boolean = true;
   private _z: boolean = false;
 
@@ -129,8 +144,11 @@ export class Derived<T> implements Notifier {
   }
 
   subscribe(fn: Subscriber<T>): Unsubscribe {
-    this._s.add(fn);
-    return () => this._s.delete(fn);
+    this._s.push(fn);
+    const i = this._s.length - 1;
+    return () => {
+      this._s[i] = null;
+    };
   }
 
   private _recompute(): void {
@@ -163,7 +181,10 @@ export class Derived<T> implements Notifier {
 
   private _notify(): void {
     if (_batch > 0) {
-      _pending.add(this);
+      if (!_pendingSet.has(this)) {
+        _pendingSet.add(this);
+        _pending.push(this);
+      }
       return;
     }
     this.notify();
@@ -172,17 +193,21 @@ export class Derived<T> implements Notifier {
   notify(): void {
     if (this._y) this._recompute();
     const v = this._v;
-    this._s.forEach((fn) => fn(v, this._v));
+    const s = this._s;
+    for (let i = 0; i < s.length; i++) {
+      const fn = s[i];
+      if (fn) fn(v, this._v);
+    }
   }
 
   private _track(): void {
-    if (_cur) _cur.addDep(this as unknown as Rune<unknown>);
+    if (_tracking && _cur) _cur.addDep(this as unknown as Rune<unknown>);
   }
 
   dispose(): void {
     this._z = true;
     this._d.clear();
-    this._s.clear();
+    this._s.length = 0;
   }
 }
 

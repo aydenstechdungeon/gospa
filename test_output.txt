@@ -1,0 +1,270 @@
+=== RUN   TestBatch_DeferredNotification
+--- PASS: TestBatch_DeferredNotification (0.05s)
+=== RUN   TestBatch_MultipleRunes
+--- PASS: TestBatch_MultipleRunes (0.05s)
+=== RUN   TestBatch_NoChangeNoNotification
+--- PASS: TestBatch_NoChangeNoNotification (0.05s)
+=== RUN   TestBatchWithContext_Deferred
+    batch_comprehensive_test.go:129: notifications inside BatchWithContext should be 0, got 2
+    batch_comprehensive_test.go:141: expected 1 notification, got 2
+--- FAIL: TestBatchWithContext_Deferred (0.05s)
+=== RUN   TestBatchWithContext_Error_StillFlushes
+--- PASS: TestBatchWithContext_Error_StillFlushes (0.00s)
+=== RUN   TestBatchWithContext_OriginalContextParticipates
+    batch_comprehensive_test.go:168: expected original context to map to active batch state
+--- FAIL: TestBatchWithContext_OriginalContextParticipates (0.00s)
+=== RUN   TestBatchResult_Comprehensive
+--- PASS: TestBatchResult_Comprehensive (0.00s)
+=== RUN   TestBatchError_NoError
+--- PASS: TestBatchError_NoError (0.00s)
+=== RUN   TestBatchError_WithError
+--- PASS: TestBatchError_WithError (0.00s)
+=== RUN   TestIsInBatch
+--- PASS: TestIsInBatch (0.00s)
+=== RUN   TestFlushPendingNotifications_OutsideBatch
+--- PASS: TestFlushPendingNotifications_OutsideBatch (0.00s)
+=== RUN   TestBatch_ConcurrentOnDifferentGoroutines
+--- PASS: TestBatch_ConcurrentOnDifferentGoroutines (0.00s)
+=== RUN   TestBatch_NestedCallsWorkCorrectly
+--- PASS: TestBatch_NestedCallsWorkCorrectly (0.05s)
+=== RUN   TestBatch
+--- PASS: TestBatch (0.10s)
+=== RUN   TestBatchResult
+--- PASS: TestBatchResult (0.00s)
+=== RUN   TestBatchError
+--- PASS: TestBatchError (0.00s)
+=== RUN   TestNestedBatch
+--- PASS: TestNestedBatch (0.10s)
+=== RUN   TestConcurrentBatch
+--- PASS: TestConcurrentBatch (0.00s)
+=== RUN   TestNewDerived_InitialValue
+--- PASS: TestNewDerived_InitialValue (0.00s)
+=== RUN   TestDerived_UpdatesWhenDepChanges
+--- PASS: TestDerived_UpdatesWhenDepChanges (0.02s)
+=== RUN   TestDerived_GetAny
+--- PASS: TestDerived_GetAny (0.00s)
+=== RUN   TestDerived_ID
+--- PASS: TestDerived_ID (0.00s)
+=== RUN   TestDerived_IDUnique
+--- PASS: TestDerived_IDUnique (0.00s)
+=== RUN   TestDerivedFrom_MultipleObservables
+--- PASS: TestDerivedFrom_MultipleObservables (0.02s)
+=== RUN   TestDerived2_Product
+--- PASS: TestDerived2_Product (0.02s)
+=== RUN   TestDerived3_Sum
+--- PASS: TestDerived3_Sum (0.00s)
+=== RUN   TestDerived_Subscribe
+--- PASS: TestDerived_Subscribe (0.05s)
+=== RUN   TestDerived_Unsubscribe
+--- PASS: TestDerived_Unsubscribe (0.10s)
+=== RUN   TestDerived_SubscribeAny
+--- PASS: TestDerived_SubscribeAny (0.02s)
+=== RUN   TestDerived_MarshalJSON
+--- PASS: TestDerived_MarshalJSON (0.00s)
+=== RUN   TestDerived_Dispose
+--- PASS: TestDerived_Dispose (0.05s)
+=== RUN   TestDerived_DependOn
+--- PASS: TestDerived_DependOn (0.03s)
+=== RUN   TestDerived_DependOn_DeduplicatesObservable
+--- PASS: TestDerived_DependOn_DeduplicatesObservable (0.00s)
+=== RUN   TestNewDerived
+--- PASS: TestNewDerived (0.00s)
+=== RUN   TestDerivedRecomputation
+--- PASS: TestDerivedRecomputation (0.10s)
+=== RUN   TestDerivedSubscribe
+--- PASS: TestDerivedSubscribe (0.10s)
+=== RUN   TestDerivedNoRecomputeOnSameValue
+--- PASS: TestDerivedNoRecomputeOnSameValue (0.10s)
+=== RUN   TestDerivedFrom
+--- PASS: TestDerivedFrom (0.10s)
+=== RUN   TestDerived2
+--- PASS: TestDerived2 (0.10s)
+=== RUN   TestDerived3
+--- PASS: TestDerived3 (0.00s)
+=== RUN   TestDerivedID
+--- PASS: TestDerivedID (0.00s)
+=== RUN   TestDerivedMarshalJSON
+--- PASS: TestDerivedMarshalJSON (0.00s)
+=== RUN   TestDerivedGetAny
+--- PASS: TestDerivedGetAny (0.00s)
+=== RUN   TestDerivedDispose
+--- PASS: TestDerivedDispose (0.00s)
+=== RUN   TestDerivedSubscribeAny
+--- PASS: TestDerivedSubscribeAny (0.10s)
+=== RUN   TestNewEffect_RunsImmediately
+--- PASS: TestNewEffect_RunsImmediately (0.00s)
+=== RUN   TestNewEffect_RunsOnDependencyChange
+--- PASS: TestNewEffect_RunsOnDependencyChange (0.10s)
+=== RUN   TestEffect_PauseStop
+--- PASS: TestEffect_PauseStop (0.06s)
+=== RUN   TestEffect_Resume
+--- PASS: TestEffect_Resume (0.06s)
+=== RUN   TestEffect_Dispose
+--- PASS: TestEffect_Dispose (0.06s)
+=== RUN   TestEffect_DoubleDispose_NoPanic
+--- PASS: TestEffect_DoubleDispose_NoPanic (0.00s)
+=== RUN   TestEffect_IsActive
+--- PASS: TestEffect_IsActive (0.00s)
+=== RUN   TestEffect_CleanupRunsOnReexecution
+--- PASS: TestEffect_CleanupRunsOnReexecution (0.06s)
+=== RUN   TestEffect_CleanupRunsOnDispose
+--- PASS: TestEffect_CleanupRunsOnDispose (0.00s)
+=== RUN   TestWatch_Comprehensive
+--- PASS: TestWatch_Comprehensive (0.10s)
+=== RUN   TestWatch_Unsubscribe
+--- PASS: TestWatch_Unsubscribe (0.06s)
+=== RUN   TestWatch2_Comprehensive
+--- PASS: TestWatch2_Comprehensive (0.06s)
+=== RUN   TestWatch3_Comprehensive
+--- PASS: TestWatch3_Comprehensive (0.03s)
+=== RUN   TestEffectOn_NoObservables
+--- PASS: TestEffectOn_NoObservables (0.00s)
+=== RUN   TestEffect_MultipleEffectsOnSameRune
+--- PASS: TestEffect_MultipleEffectsOnSameRune (0.08s)
+=== RUN   TestNewEffect
+--- PASS: TestNewEffect (0.10s)
+=== RUN   TestEffectCleanup
+--- PASS: TestEffectCleanup (0.10s)
+=== RUN   TestEffectPauseResume
+--- PASS: TestEffectPauseResume (0.20s)
+=== RUN   TestEffectIsActive
+--- PASS: TestEffectIsActive (0.00s)
+=== RUN   TestEffectDispose
+--- PASS: TestEffectDispose (0.00s)
+=== RUN   TestEffectOn
+--- PASS: TestEffectOn (0.15s)
+=== RUN   TestWatch
+--- PASS: TestWatch (0.15s)
+=== RUN   TestWatch2
+--- PASS: TestWatch2 (0.15s)
+=== RUN   TestWatch3
+--- PASS: TestWatch3 (0.05s)
+=== RUN   TestEnqueueStateNotificationFallsBackToSyncWhenQueueIsFull
+--- PASS: TestEnqueueStateNotificationFallsBackToSyncWhenQueueIsFull (0.00s)
+=== RUN   TestSafelyRunStateNotificationRecoversPanics
+2026/04/08 22:34:44 gospa: recovered panic in StateMap.OnChange: boom
+goroutine 123 [running]:
+runtime/debug.Stack()
+	/usr/lib/go/src/runtime/debug/stack.go:26 +0x5e
+github.com/aydenstechdungeon/gospa/state.safelyRunStateNotification.func1()
+	/home/a4bet/gospa/state/serialize.go:75 +0x38
+panic({0x626180?, 0x685dd0?})
+	/usr/lib/go/src/runtime/panic.go:860 +0x13a
+github.com/aydenstechdungeon/gospa/state.TestSafelyRunStateNotificationRecoversPanics.func1({0x70?, 0x206a518206b8?}, {0x421be5?, 0x10?})
+	/home/a4bet/gospa/state/notification_queue_test.go:41 +0x51
+github.com/aydenstechdungeon/gospa/state.safelyRunStateNotification({0x206a5172ceb0, {0x0, 0x0}, {0x0, 0x0}})
+	/home/a4bet/gospa/state/serialize.go:78 +0x62
+github.com/aydenstechdungeon/gospa/state.TestSafelyRunStateNotificationRecoversPanics(0x206a51746488)
+	/home/a4bet/gospa/state/notification_queue_test.go:38 +0xa5
+testing.tRunner(0x206a51746488, 0x683d08)
+	/usr/lib/go/src/testing/testing.go:2036 +0xea
+created by testing.(*T).Run in goroutine 1
+	/usr/lib/go/src/testing/testing.go:2101 +0x4c5
+--- PASS: TestSafelyRunStateNotificationRecoversPanics (0.00s)
+=== RUN   TestStateMapOnChangeDispatchesThroughBoundedQueue
+--- PASS: TestStateMapOnChangeDispatchesThroughBoundedQueue (0.00s)
+=== RUN   TestRegistry_Registration
+--- PASS: TestRegistry_Registration (0.00s)
+=== RUN   TestRegistry_FromContext
+--- PASS: TestRegistry_FromContext (0.00s)
+=== RUN   TestRegistry_GetDataJSON
+--- PASS: TestRegistry_GetDataJSON (0.00s)
+=== RUN   TestRegistry_GetRegistryDataJSON_FromContext
+--- PASS: TestRegistry_GetRegistryDataJSON_FromContext (0.00s)
+=== RUN   TestNewRune
+--- PASS: TestNewRune (0.00s)
+=== RUN   TestRuneSet
+--- PASS: TestRuneSet (0.00s)
+=== RUN   TestRuneSubscribe
+--- PASS: TestRuneSubscribe (0.05s)
+=== RUN   TestRuneUnsubscribe
+--- PASS: TestRuneUnsubscribe (0.05s)
+=== RUN   TestRuneUpdate
+--- PASS: TestRuneUpdate (0.00s)
+=== RUN   TestRuneConcurrentAccess
+--- PASS: TestRuneConcurrentAccess (0.00s)
+=== RUN   TestRuneID
+--- PASS: TestRuneID (0.00s)
+=== RUN   TestRuneMarshalJSON
+--- PASS: TestRuneMarshalJSON (0.00s)
+=== RUN   TestRuneSetAny
+--- PASS: TestRuneSetAny (0.00s)
+=== RUN   TestRuneGetAny
+--- PASS: TestRuneGetAny (0.00s)
+=== RUN   TestRuneSubscribeAny
+--- PASS: TestRuneSubscribeAny (0.05s)
+=== RUN   TestRuneNoNotificationOnEqualValue
+--- PASS: TestRuneNoNotificationOnEqualValue (0.05s)
+=== RUN   TestRuneStringEquality
+--- PASS: TestRuneStringEquality (0.10s)
+=== RUN   TestRuneSliceEquality
+--- PASS: TestRuneSliceEquality (0.10s)
+=== RUN   TestStateMap_AddAndGet
+--- PASS: TestStateMap_AddAndGet (0.00s)
+=== RUN   TestStateMap_GetMissing
+--- PASS: TestStateMap_GetMissing (0.00s)
+=== RUN   TestStateMap_AddAny
+--- PASS: TestStateMap_AddAny (0.00s)
+=== RUN   TestStateMap_Remove
+--- PASS: TestStateMap_Remove (0.00s)
+=== RUN   TestStateMap_RemoveNonExistent
+--- PASS: TestStateMap_RemoveNonExistent (0.00s)
+=== RUN   TestStateMap_AddOverwrite
+--- PASS: TestStateMap_AddOverwrite (0.00s)
+=== RUN   TestStateMap_ToMap
+--- PASS: TestStateMap_ToMap (0.00s)
+=== RUN   TestStateMap_MarshalJSON
+--- PASS: TestStateMap_MarshalJSON (0.00s)
+=== RUN   TestStateMap_ToJSON
+--- PASS: TestStateMap_ToJSON (0.00s)
+=== RUN   TestStateMap_ForEach
+--- PASS: TestStateMap_ForEach (0.00s)
+=== RUN   TestStateMap_Diff_Added
+--- PASS: TestStateMap_Diff_Added (0.00s)
+=== RUN   TestStateMap_Diff_Removed
+--- PASS: TestStateMap_Diff_Removed (0.00s)
+=== RUN   TestStateMap_Diff_Changed
+--- PASS: TestStateMap_Diff_Changed (0.00s)
+=== RUN   TestStateMap_Diff_NilOther
+--- PASS: TestStateMap_Diff_NilOther (0.00s)
+=== RUN   TestStateMap_Diff_NoChange
+--- PASS: TestStateMap_Diff_NoChange (0.00s)
+=== RUN   TestStateMap_OnChange
+--- PASS: TestStateMap_OnChange (0.00s)
+=== RUN   TestStateMap_ConcurrentAccess
+--- PASS: TestStateMap_ConcurrentAccess (0.00s)
+=== RUN   TestSerializeState
+--- PASS: TestSerializeState (0.00s)
+=== RUN   TestNewInitMessage
+--- PASS: TestNewInitMessage (0.00s)
+=== RUN   TestNewUpdateMessage
+--- PASS: TestNewUpdateMessage (0.00s)
+=== RUN   TestNewSyncMessage
+--- PASS: TestNewSyncMessage (0.00s)
+=== RUN   TestNewErrorMessage
+--- PASS: TestNewErrorMessage (0.00s)
+=== RUN   TestParseMessage_RoundTrip
+--- PASS: TestParseMessage_RoundTrip (0.00s)
+=== RUN   TestParseMessage_InvalidJSON
+--- PASS: TestParseMessage_InvalidJSON (0.00s)
+=== RUN   TestParseMessage_InvalidType
+--- PASS: TestParseMessage_InvalidType (0.00s)
+=== RUN   TestNewSnapshot
+--- PASS: TestNewSnapshot (0.00s)
+=== RUN   TestSnapshot_MarshalJSON
+--- PASS: TestSnapshot_MarshalJSON (0.00s)
+=== RUN   TestNewStateDiff
+--- PASS: TestNewStateDiff (0.00s)
+=== RUN   TestStateValidator_ValidValue
+--- PASS: TestStateValidator_ValidValue (0.00s)
+=== RUN   TestStateValidator_InvalidValue
+--- PASS: TestStateValidator_InvalidValue (0.00s)
+=== RUN   TestStateValidator_UnregisteredKey
+--- PASS: TestStateValidator_UnregisteredKey (0.00s)
+=== RUN   TestStateValidator_ValidateAll
+--- PASS: TestStateValidator_ValidateAll (0.00s)
+=== RUN   TestDeepEqualValues
+--- PASS: TestDeepEqualValues (0.00s)
+FAIL
+FAIL	github.com/aydenstechdungeon/gospa/state	3.348s
+FAIL

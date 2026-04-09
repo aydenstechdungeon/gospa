@@ -20,6 +20,7 @@ type Effect struct {
 	cleanup  CleanupFunc
 	deps     []Observable
 	unsubs   []Unsubscribe
+	id       string
 	active   bool
 	disposed bool
 }
@@ -43,6 +44,7 @@ func NewEffect(fn EffectFn) *Effect {
 		fn:     fn,
 		deps:   make([]Observable, 0),
 		unsubs: make([]Unsubscribe, 0),
+		id:     generateRuneID(),
 		active: true,
 	}
 	// Run immediately
@@ -92,7 +94,11 @@ func (e *Effect) DependOn(o Observable) {
 	// Subscribe to the observable
 	unsub := o.SubscribeAny(func(_ any) {
 		if e.IsActive() {
-			e.run()
+			if inBatch() {
+				addToBatch(e)
+			} else {
+				e.run()
+			}
 		}
 	})
 
@@ -214,4 +220,14 @@ func Watch3[A, B, C any](a *Rune[A], b *Rune[B], c *Rune[C], callback func(A, B,
 	return func() {
 		effect.Dispose()
 	}
+}
+
+// notifySubscribers implements the notifier interface for batching.
+func (e *Effect) notifySubscribers() {
+	e.run()
+}
+
+// ID returns the unique identifier for this effect.
+func (e *Effect) ID() string {
+	return e.id
 }

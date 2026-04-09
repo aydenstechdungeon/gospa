@@ -344,7 +344,6 @@ func (dw *DevWatcher) run() {
 	}
 }
 
-
 func handleFileChange(_ context.Context, event FileEvent, restartCh chan struct{}, noRestart bool) {
 	ext := filepath.Ext(event.File)
 

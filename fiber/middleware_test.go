@@ -6,8 +6,8 @@ import (
 	"strings"
 	"testing"
 
-	gofiber "github.com/gofiber/fiber/v3"
 	"github.com/aydenstechdungeon/gospa/state"
+	gofiber "github.com/gofiber/fiber/v3"
 )
 
 func TestCSRFSetTokenMiddleware_DoesNotRotateExistingToken(t *testing.T) {

@@ -31,19 +31,19 @@ func main() {
 		nonInteractive := fs.Bool("y", false, "Non-interactive mode (use defaults for prompts)")
 		nonInteractiveLong := fs.Bool("non-interactive", false, "Non-interactive mode")
 		_ = fs.Parse(os.Args[2:])
-		
+
 		args := fs.Args()
 		if len(args) < 1 {
 			fmt.Fprintln(os.Stderr, "Usage: gospa create <name> [-y]")
 			os.Exit(1)
 		}
-		
+
 		name := args[0]
 		if err := cli.ValidateProjectName(name); err != nil {
 			fmt.Fprintf(os.Stderr, "Error: Invalid project name: %v\n", err)
 			os.Exit(1)
 		}
-		
+
 		isNonInteractive := *nonInteractive || *nonInteractiveLong
 		cli.CreateProjectWithOptions(name, "", isNonInteractive)
 	case "dev":

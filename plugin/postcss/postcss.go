@@ -956,6 +956,7 @@ func GenerateCriticalCSSHelper(projectDir, criticalCSSPath string) (string, erro
 }
 
 // GenerateAsyncCSSScript generates the HTML for async loading non-critical CSS.
+//
 // Deprecated: use GenerateAsyncCSSScriptWithNonce to comply with nonce-based CSP.
 func GenerateAsyncCSSScript(cssPath string) string {
 	return GenerateAsyncCSSScriptWithNonce(cssPath, "")

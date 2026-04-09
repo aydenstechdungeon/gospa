@@ -510,12 +510,17 @@ async function reconcileDOM(data: PageData): Promise<void> {
   for (const currentEl of currentLayouts) {
     const layoutId = currentEl.getAttribute("data-gospa-layout");
     
-    // Rationale: We prefer morphing 'main' or higher if we're in the docs
-    // to ensure the sidebar (which is in 'main' but outside 'docs') is updated.
+    // If we're already in docs and moving to another docs page,
+    // morph at the 'docs' level so the sidebar (outside this container)
+    // is completely untouched by the morph.
     if (layoutId === "docs") {
-      // If we're already in docs and moving to another docs page, 
-      // we might want to stay at 'main' level to catch sidebar changes.
-      continue; 
+      const matchingNewEl = incomingLayouts.find(el => el.getAttribute("data-gospa-layout") === "docs");
+      if (matchingNewEl) {
+        morphTarget = currentEl;
+        newContent = matchingNewEl;
+        break;
+      }
+      continue;
     }
 
     const matchingNewEl = incomingLayouts.find(el => el.getAttribute("data-gospa-layout") === layoutId);
@@ -548,7 +553,18 @@ async function reconcileDOM(data: PageData): Promise<void> {
           if (oldNode instanceof Element && oldNode.hasAttribute("data-gospa-permanent")) {
             return false;
           }
+          // Skip child diffing for inner-morph nodes
+          if (oldNode instanceof Element && oldNode.getAttribute("data-gospa-morph") === "inner") {
+            return false;
+          }
           return true;
+        },
+        afterNodeMorphed: (oldNode, newNode) => {
+          // Replace innerHTML for inner-morph nodes (avoids diffing large text blocks)
+          if (oldNode instanceof Element && oldNode.getAttribute("data-gospa-morph") === "inner" &&
+              newNode instanceof Element) {
+            oldNode.innerHTML = newNode.innerHTML;
+          }
         }
       }
     });
@@ -594,14 +610,20 @@ async function updateDOM(data: PageData): Promise<void> {
 
 function updateActiveLinks() {
   const currentPath = window.location.pathname;
-  document.querySelectorAll("a[href]").forEach((link) => {
+  const currentPathNormalized = currentPath.replace(/\/$/, "");
+
+  // On docs pages, only sidebar links need active state updates
+  const sidebar = document.querySelector("#docs-sidebar");
+  const scope = sidebar || document;
+
+  scope.querySelectorAll("a[href]").forEach((link) => {
     const href = link.getAttribute("href");
-    const currentPathNormalized = currentPath.replace(/\/$/, "");
     const hrefNormalized = (href || "").split(/[?#]/)[0].replace(/\/$/, "");
 
     const isActive = hrefNormalized === currentPathNormalized || (
-      link.hasAttribute("data-gospa-active-prefix") && 
       hrefNormalized !== "" && 
+      hrefNormalized !== "/" &&
+      hrefNormalized !== "/docs" &&
       currentPathNormalized.startsWith(hrefNormalized + "/")
     );
 
@@ -874,6 +896,7 @@ async function initCriticalContent(
   eventElements.forEach((element) => {
     if (!(element instanceof Element) || initializedElements.has(element))
       return;
+    if (element.closest("[data-gospa-permanent]")) return;
 
     const attr = element.getAttribute("data-on");
     if (!attr) return;
@@ -902,6 +925,8 @@ async function initDeferredBindings(
   const gospa = (window as any).__gospa__;
 
   for (const element of boundElements) {
+    if (element.closest("[data-gospa-permanent]")) continue;
+
     const attr = element.getAttribute("data-bind");
     if (!attr) continue;
 
@@ -980,7 +1005,7 @@ async function performDOMUpdateWithTransitions(
     rawContent = doc.body.innerHTML;
   }
 
-  const pageContent = await prepareContent(rawContent);
+  await prepareContent(rawContent);
 
   const update = async () => {
     await updateDOM(data);

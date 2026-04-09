@@ -386,9 +386,9 @@ func TestCompileMultilineScript(t *testing.T) {
 <template><div>{x}</div></template>
 `
 	templ, _, err := c.Compile(CompileOptions{
-		Type:    ComponentTypeIsland,
-		Name:    "Multiline",
-		PkgName: "islands",
+		Type:     ComponentTypeIsland,
+		Name:     "Multiline",
+		PkgName:  "islands",
 		IslandID: "multiline",
 	}, input)
 	if err != nil {

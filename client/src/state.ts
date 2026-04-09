@@ -15,7 +15,8 @@ export { fastDeepEqual } from "./state/equality.ts";
 /**
  * tracking - Check if currently inside a reactive tracking context.
  */
-import { currentEffect } from "./state/effect.ts";
+import { currentEffect, _tracking } from "./state/effect.ts";
+export { _tracking };
 export function tracking(): boolean {
   return currentEffect !== null;
 }

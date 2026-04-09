@@ -10,6 +10,7 @@ import {
   type Unsubscribe,
   untrack,
   getCurrentEffect,
+  _tracking,
 } from "./state.ts";
 
 // Symbol to identify reactive proxies
@@ -57,11 +58,13 @@ export function reactive<T extends object>(initial: T): T {
       if (prop === RAW_SYMBOL) return Object.fromEntries(rawValues);
 
       // Track dependency if inside an effect
-      const currentEffect = getCurrentEffect();
-      if (currentEffect) {
-        const rune = runes.get(prop);
-        if (rune) {
-          currentEffect.addDependency(rune as unknown as Rune<unknown>);
+      if (_tracking) {
+        const currentEffect = getCurrentEffect();
+        if (currentEffect) {
+          const rune = runes.get(prop);
+          if (rune) {
+            currentEffect.addDependency(rune as unknown as Rune<unknown>);
+          }
         }
       }
 

@@ -149,6 +149,7 @@ export let config: RuntimeConfig = {};
 // Lazy-loaded aggregate features bundle
 let featuresModule: Promise<typeof import("./framework-features.ts")> | null =
   null;
+let cachedFeatures: typeof import("./framework-features.ts") | null = null;
 
 /**
  * Declare global debug constant for build-time stripping.
@@ -375,8 +376,24 @@ export function autoInit(): void {
 }
 
 // Lazy module loaders using the aggregate bundle
+/**
+ * Get the framework features module synchronously if already loaded.
+ */
+export function getFrameworkFeaturesSync() {
+  return cachedFeatures;
+}
+
+/**
+ * Get the framework features module, loading it if necessary.
+ */
 export async function getFrameworkFeatures() {
-  if (!featuresModule) featuresModule = import("./framework-features.ts");
+  if (cachedFeatures) return cachedFeatures;
+  if (!featuresModule) {
+    featuresModule = import("./framework-features.ts").then((mod) => {
+      cachedFeatures = mod;
+      return mod;
+    });
+  }
   return featuresModule;
 }
 

@@ -28,7 +28,7 @@ func BenchmarkDetectBoundaries(b *testing.B) {
 
 func BenchmarkDetectBoundaries_Large(b *testing.B) {
 	rd := NewReactiveDetector()
-	
+
 	// Generate a larger SFC with 100+ runes
 	var scriptContent string
 	for i := 0; i < 100; i++ {
@@ -49,7 +49,7 @@ func BenchmarkDetectBoundaries_Large(b *testing.B) {
 
 func BenchmarkDetectBoundaries_ManyLines(b *testing.B) {
 	rd := NewReactiveDetector()
-	
+
 	// Generate a SFC with 1000 lines to test newline indexing performance
 	var content string
 	for i := 0; i < 1000; i++ {

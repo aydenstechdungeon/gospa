@@ -43,7 +43,8 @@ type subEntry[T any] struct {
 type Rune[T any] struct {
 	mu          sync.RWMutex
 	value       T
-	subscribers map[uint64]subEntry[T]
+	valueAtomic atomic.Pointer[T]
+	subscribers []subEntry[T]
 	// ID uniquely identifies this rune for client-side synchronization
 	id string
 	// dirty marks if the rune has uncommitted changes in batch mode
@@ -69,17 +70,23 @@ func generateRuneID() string {
 //	count := state.NewRune(0)
 //	name := state.NewRune("hello")
 func NewRune[T any](initial T) *Rune[T] {
-	return &Rune[T]{
+	r := &Rune[T]{
 		value:       initial,
-		subscribers: make(map[uint64]subEntry[T]),
+		subscribers: make([]subEntry[T], 0, 2),
 		id:          generateRuneID(),
 		nextSubID:   1,
 	}
+	r.valueAtomic.Store(&r.value)
+	return r
 }
 
 // Get returns the current value of the rune.
 // This is thread-safe and can be called concurrently.
 func (r *Rune[T]) Get() T {
+	// Optimization: Lock-free read for hot path
+	if ptr := r.valueAtomic.Load(); ptr != nil {
+		return *ptr
+	}
 	r.mu.RLock()
 	defer r.mu.RUnlock()
 	return r.value
@@ -110,6 +117,7 @@ func (r *Rune[T]) Set(value T) {
 		return
 	}
 	r.value = value
+	r.valueAtomic.Store(&r.value)
 	r.dirty = true
 	r.version++
 
@@ -120,10 +128,13 @@ func (r *Rune[T]) Set(value T) {
 		return
 	}
 
-	// Copy subscribers to avoid holding lock during callbacks
+	// For slices, we skip the copy if we can.
+	// But notifying outside the lock is safer for deadlocks.
 	subs := make([]subEntry[T], 0, len(r.subscribers))
 	for _, sub := range r.subscribers {
-		subs = append(subs, sub)
+		if sub.fn != nil {
+			subs = append(subs, sub)
+		}
 	}
 	r.dirty = false
 	r.mu.Unlock()
@@ -162,19 +173,54 @@ func (r *Rune[T]) SetAny(value any) error {
 //	})
 //	defer unsub()
 func (r *Rune[T]) Subscribe(fn Subscriber[T]) Unsubscribe {
+	// Move safety wrapper here to avoid defer/recover in the hot loop
+	safeFn := func(v T) {
+		defer func() {
+			if rec := recover(); rec != nil {
+				log.Printf("gospa: recovered panic in rune subscriber: %v\n%s", rec, debug.Stack())
+			}
+		}()
+		fn(v)
+	}
+
 	r.mu.Lock()
 	defer r.mu.Unlock()
 
 	id := r.nextSubID
 	r.nextSubID++
 
-	r.subscribers[id] = subEntry[T]{id: id, fn: fn}
+	r.subscribers = append(r.subscribers, subEntry[T]{id: id, fn: safeFn})
 
 	// Return unsubscribe function
 	return func() {
 		r.mu.Lock()
 		defer r.mu.Unlock()
-		delete(r.subscribers, id)
+		for i, sub := range r.subscribers {
+			if sub.id == id {
+				// Use tombstone to avoid O(N) shift during active notification
+				r.subscribers[i].fn = nil
+				break
+			}
+		}
+
+		// Periodically compact if too many tombstones
+		if len(r.subscribers) > 10 {
+			nilCount := 0
+			for _, s := range r.subscribers {
+				if s.fn == nil {
+					nilCount++
+				}
+			}
+			if nilCount > len(r.subscribers)/2 {
+				newSubs := make([]subEntry[T], 0, len(r.subscribers)-nilCount)
+				for _, s := range r.subscribers {
+					if s.fn != nil {
+						newSubs = append(newSubs, s)
+					}
+				}
+				r.subscribers = newSubs
+			}
+		}
 	}
 }
 
@@ -190,14 +236,9 @@ func (r *Rune[T]) SubscribeAny(fn func(any)) Unsubscribe {
 // This is called outside the lock to prevent deadlocks.
 func (r *Rune[T]) notify(subs []subEntry[T], value T) {
 	for _, sub := range subs {
-		func(fn Subscriber[T]) {
-			defer func() {
-				if rec := recover(); rec != nil {
-					log.Printf("gospa: recovered panic in rune subscriber: %v\n%s", rec, debug.Stack())
-				}
-			}()
-			fn(value)
-		}(sub.fn)
+		if sub.fn != nil {
+			sub.fn(value)
+		}
 	}
 }
 
@@ -211,7 +252,9 @@ func (r *Rune[T]) notifySubscribers() {
 	value := r.value
 	subs := make([]subEntry[T], 0, len(r.subscribers))
 	for _, sub := range r.subscribers {
-		subs = append(subs, sub)
+		if sub.fn != nil {
+			subs = append(subs, sub)
+		}
 	}
 	r.dirty = false
 	r.mu.Unlock()
@@ -285,40 +328,37 @@ func (r *Rune[T]) Update(fn func(T) T) {
 // This handles both comparable and non-comparable types.
 func equal[T any](a, b T) bool {
 	// Try type assertion for common types to avoid reflection overhead
-	var aAny interface{} = a
-	var bAny interface{} = b
-
-	switch aVal := aAny.(type) {
+	switch aVal := any(a).(type) {
 	case string:
-		if bVal, ok := bAny.(string); ok {
+		if bVal, ok := any(b).(string); ok {
 			return aVal == bVal
 		}
 	case int:
-		if bVal, ok := bAny.(int); ok {
+		if bVal, ok := any(b).(int); ok {
 			return aVal == bVal
 		}
 	case int64:
-		if bVal, ok := bAny.(int64); ok {
+		if bVal, ok := any(b).(int64); ok {
 			return aVal == bVal
 		}
 	case int32:
-		if bVal, ok := bAny.(int32); ok {
+		if bVal, ok := any(b).(int32); ok {
 			return aVal == bVal
 		}
 	case uint:
-		if bVal, ok := bAny.(uint); ok {
+		if bVal, ok := any(b).(uint); ok {
 			return aVal == bVal
 		}
 	case float64:
-		if bVal, ok := bAny.(float64); ok {
+		if bVal, ok := any(b).(float64); ok {
 			return aVal == bVal
 		}
 	case float32:
-		if bVal, ok := bAny.(float32); ok {
+		if bVal, ok := any(b).(float32); ok {
 			return aVal == bVal
 		}
 	case bool:
-		if bVal, ok := bAny.(bool); ok {
+		if bVal, ok := any(b).(bool); ok {
 			return aVal == bVal
 		}
 	}
