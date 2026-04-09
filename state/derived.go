@@ -17,7 +17,7 @@ type Derived[T any] struct {
 	mu          sync.RWMutex
 	value       T
 	compute     func() T
-	subscribers map[uint64]subEntry[T]
+	subscribers []subEntry[T]
 	// deps tracks the observables this derived value depends on
 	deps []dependency
 	// dirty marks if dependencies have changed and value needs recomputation
@@ -26,8 +26,10 @@ type Derived[T any] struct {
 	id        string
 	nextSubID uint64
 	version   uint64
-	// lastDepVersions stores the version of each dependency when last computed
-	lastDepVersions map[string]uint64
+	// depsVersion increments whenever any dependency fires markDirty
+	depsVersion uint64
+	// lastSeen tracks depsVersion at the time of last recompute
+	lastSeen uint64
 	// computing tracks if we are currently recomputing to detect circularity
 	computing bool
 }
@@ -49,13 +51,12 @@ type dependency struct {
 //	})
 func NewDerived[T any](compute func() T) *Derived[T] {
 	d := &Derived[T]{
-		compute:         compute,
-		subscribers:     make(map[uint64]subEntry[T]),
-		deps:            make([]dependency, 0),
-		id:              generateRuneID(),
-		dirty:           true,
-		nextSubID:       1,
-		lastDepVersions: make(map[string]uint64),
+		compute:     compute,
+		subscribers: make([]subEntry[T], 0, 2),
+		deps:        make([]dependency, 0),
+		id:          generateRuneID(),
+		dirty:       true,
+		nextSubID:   1,
 	}
 	// Compute initial value
 	d.recompute()
@@ -81,6 +82,7 @@ func (d *Derived[T]) recompute() {
 
 	d.mu.Lock()
 	d.computing = false
+	d.lastSeen = d.depsVersion
 	if !equal(d.value, newValue) {
 		d.value = newValue
 		changed = true
@@ -88,14 +90,11 @@ func (d *Derived[T]) recompute() {
 		if len(d.subscribers) > 0 {
 			subs = make([]subEntry[T], 0, len(d.subscribers))
 			for _, sub := range d.subscribers {
-				subs = append(subs, sub)
+				if sub.fn != nil {
+					subs = append(subs, sub)
+				}
 			}
 		}
-	}
-
-	// Update snapshot of dependency versions
-	for _, dep := range d.deps {
-		d.lastDepVersions[dep.observable.ID()] = dep.observable.Version()
 	}
 
 	d.dirty = false
@@ -103,14 +102,9 @@ func (d *Derived[T]) recompute() {
 
 	if changed {
 		for _, sub := range subs {
-			func(fn Subscriber[T]) {
-				defer func() {
-					if r := recover(); r != nil {
-						log.Printf("gospa: recovered panic in derived subscriber: %v\n%s", r, debug.Stack())
-					}
-				}()
-				fn(newValue)
-			}(sub.fn)
+			if sub.fn != nil {
+				sub.fn(newValue)
+			}
 		}
 	}
 }
@@ -119,15 +113,7 @@ func (d *Derived[T]) recompute() {
 // If dependencies have changed, it recomputes first.
 func (d *Derived[T]) Get() T {
 	d.mu.RLock()
-	stale := d.dirty
-	if !stale {
-		for _, dep := range d.deps {
-			if dep.observable.Version() > d.lastDepVersions[dep.observable.ID()] {
-				stale = true
-				break
-			}
-		}
-	}
+	stale := d.dirty || (d.depsVersion > d.lastSeen)
 	d.mu.RUnlock()
 
 	if stale {
@@ -158,18 +144,32 @@ func (d *Derived[T]) GetAny() any {
 // Subscribe registers a callback for when the derived value changes.
 // Returns an unsubscribe function.
 func (d *Derived[T]) Subscribe(fn Subscriber[T]) Unsubscribe {
+	safeFn := func(v T) {
+		defer func() {
+			if r := recover(); r != nil {
+				log.Printf("gospa: recovered panic in derived subscriber: %v\n%s", r, debug.Stack())
+			}
+		}()
+		fn(v)
+	}
+
 	d.mu.Lock()
 	defer d.mu.Unlock()
 
 	id := d.nextSubID
 	d.nextSubID++
 
-	d.subscribers[id] = subEntry[T]{id: id, fn: fn}
+	d.subscribers = append(d.subscribers, subEntry[T]{id: id, fn: safeFn})
 
 	return func() {
 		d.mu.Lock()
 		defer d.mu.Unlock()
-		delete(d.subscribers, id)
+		for i, sub := range d.subscribers {
+			if sub.id == id {
+				d.subscribers[i].fn = nil
+				break
+			}
+		}
 	}
 }
 
@@ -229,6 +229,7 @@ func sameObservable(a, b Observable) bool {
 // internally) to avoid a deadlock with the caller's subscription goroutine.
 func (d *Derived[T]) markDirty() {
 	d.mu.Lock()
+	d.depsVersion++
 	if d.dirty {
 		d.mu.Unlock()
 		return
@@ -236,8 +237,7 @@ func (d *Derived[T]) markDirty() {
 	d.dirty = true
 	d.mu.Unlock()
 
-	// Recompute immediately — this sets dirty=false, computes the new value,
-	// takes a snapshot of current subscribers, and fires notify() in a goroutine.
+	// Recompute immediately or integrate via batch system
 	d.recompute()
 }
 

@@ -196,7 +196,7 @@ func (e *ErrorOverlay) renderHTML(info *ErrorInfo, nonce string) string {
 <head>
 	<meta charset="UTF-8">
 	<title>Error: %s</title>
-	<style` + nonceAttr + `>
+	<style`+nonceAttr+`>
 		:root {
 			--bg-primary: %s;
 			--bg-secondary: %s;
@@ -447,7 +447,7 @@ func (e *ErrorOverlay) renderHTML(info *ErrorInfo, nonce string) string {
 		%s
 	</div>
 
-	<script` + nonceAttr + `>
+	<script`+nonceAttr+`>
 		function copyError() {
 			const errorText = document.querySelector('.error-message').textContent;
 			const location = document.querySelector('.error-location a').textContent;

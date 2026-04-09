@@ -4,7 +4,6 @@ import (
 	"io/fs"
 	"log/slog"
 	"os"
-	"strings"
 	"time"
 
 	"github.com/aydenstechdungeon/gospa/compiler"
@@ -226,7 +225,7 @@ func DefaultConfig() Config {
 	return Config{
 		RuntimeTier:              RuntimeTierFull,
 		RoutesDir:                "./routes",
-		DevMode:                  devMode,
+		DevMode:                  true,
 		RuntimeScript:            "/_gospa/runtime.js",
 		StaticDir:                "./static",
 		StaticPrefix:             "/static",

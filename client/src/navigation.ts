@@ -510,12 +510,17 @@ async function reconcileDOM(data: PageData): Promise<void> {
   for (const currentEl of currentLayouts) {
     const layoutId = currentEl.getAttribute("data-gospa-layout");
     
-    // Rationale: We prefer morphing 'main' or higher if we're in the docs
-    // to ensure the sidebar (which is in 'main' but outside 'docs') is updated.
+    // If we're already in docs and moving to another docs page,
+    // morph at the 'docs' level so the sidebar (outside this container)
+    // is completely untouched by the morph.
     if (layoutId === "docs") {
-      // If we're already in docs and moving to another docs page, 
-      // we might want to stay at 'main' level to catch sidebar changes.
-      continue; 
+      const matchingNewEl = incomingLayouts.find(el => el.getAttribute("data-gospa-layout") === "docs");
+      if (matchingNewEl) {
+        morphTarget = currentEl;
+        newContent = matchingNewEl;
+        break;
+      }
+      continue;
     }
 
     const matchingNewEl = incomingLayouts.find(el => el.getAttribute("data-gospa-layout") === layoutId);
@@ -543,7 +548,7 @@ async function reconcileDOM(data: PageData): Promise<void> {
   if (morphTarget && newContent) {
     Idiomorph.morph(morphTarget, newContent, {
       callbacks: {
-        beforeNodeMorphed: (oldNode, newNode) => {
+        beforeNodeMorphed: (oldNode, _newNode) => {
           // Compatibility with data-gospa-permanent
           if (oldNode instanceof Element && oldNode.hasAttribute("data-gospa-permanent")) {
             return false;
@@ -600,8 +605,9 @@ function updateActiveLinks() {
     const hrefNormalized = (href || "").split(/[?#]/)[0].replace(/\/$/, "");
 
     const isActive = hrefNormalized === currentPathNormalized || (
-      link.hasAttribute("data-gospa-active-prefix") && 
       hrefNormalized !== "" && 
+      hrefNormalized !== "/" &&
+      hrefNormalized !== "/docs" &&
       currentPathNormalized.startsWith(hrefNormalized + "/")
     );
 
@@ -980,7 +986,7 @@ async function performDOMUpdateWithTransitions(
     rawContent = doc.body.innerHTML;
   }
 
-  const pageContent = await prepareContent(rawContent);
+  await prepareContent(rawContent);
 
   const update = async () => {
     await updateDOM(data);

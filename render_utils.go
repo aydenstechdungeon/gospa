@@ -10,9 +10,9 @@ import (
 	"strconv"
 	"strings"
 
+	"encoding/json"
 	"github.com/a-h/templ"
 	"github.com/aydenstechdungeon/gospa/routing"
-	"encoding/json"
 	gofiber "github.com/gofiber/fiber/v3"
 )
 

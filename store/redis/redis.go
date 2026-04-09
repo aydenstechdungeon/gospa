@@ -64,13 +64,13 @@ func (p *PubSub) Publish(ctx context.Context, channel string, message []byte) er
 func (p *PubSub) Subscribe(ctx context.Context, channel string, handler func(message []byte)) (store.Unsubscribe, error) {
 	// If the parent context is canceled, the subscription will naturally end
 	subCtx, cancel := context.WithCancel(ctx)
-	
+
 	err := p.SubscribeWithContext(subCtx, channel, handler)
 	if err != nil {
 		cancel()
 		return nil, err
 	}
-	
+
 	return store.Unsubscribe(cancel), nil
 }
 
@@ -94,7 +94,7 @@ func (p *PubSub) SubscribeWithContext(ctx context.Context, channel string, handl
 			}
 			_ = pubsub.Close()
 		}()
-		
+
 		ch := pubsub.Channel()
 		for {
 			select {

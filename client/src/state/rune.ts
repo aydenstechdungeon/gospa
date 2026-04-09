@@ -1,5 +1,5 @@
 import { areEqual } from "./equality.ts";
-import { type Notifier, batchDepth, pendingNotifications } from "./batch.ts";
+import { type Notifier, batchDepth, addToBatch } from "./batch.ts";
 import { type Disposable, trackDisposable } from "./disposal.ts";
 import { currentEffect } from "./effect.ts";
 
@@ -19,7 +19,8 @@ export interface RuneOptions {
 export class Rune<T> implements Notifier, Disposable {
   private _value: T;
   private readonly _id: number;
-  private readonly _subscribers: Set<Subscriber<T>> = new Set();
+  private readonly _subscribers: (Subscriber<T> | null)[] = [];
+  private _sv = 0;
   private _dirty: boolean = false;
   private _disposed: boolean = false;
   private _hasPendingOldValue: boolean = false;
@@ -67,8 +68,14 @@ export class Rune<T> implements Notifier, Disposable {
   }
 
   subscribe(fn: Subscriber<T>): Unsubscribe {
-    this._subscribers.add(fn);
-    return () => this._subscribers.delete(fn);
+    this._subscribers.push(fn);
+    const i = this._subscribers.length - 1;
+    const v = this._sv;
+    return () => {
+      if (this._sv === v) {
+        this._subscribers[i] = null;
+      }
+    };
   }
 
   private _notifySubscribers(oldValue: T): void {
@@ -78,7 +85,7 @@ export class Rune<T> implements Notifier, Disposable {
     }
 
     if (batchDepth > 0) {
-      pendingNotifications.add(this);
+      addToBatch(this);
       return;
     }
 
@@ -94,7 +101,12 @@ export class Rune<T> implements Notifier, Disposable {
         : value;
     this._hasPendingOldValue = false;
     this._pendingOldValue = undefined;
-    this._subscribers.forEach((fn) => fn(value, old));
+    
+    const subs = this._subscribers;
+    for (let i = 0; i < subs.length; i++) {
+      const fn = subs[i];
+      if (fn) fn(value, old);
+    }
   }
 
   private _equal(a: T, b: T): boolean {
@@ -117,7 +129,8 @@ export class Rune<T> implements Notifier, Disposable {
    */
   dispose(): void {
     this._disposed = true;
-    this._subscribers.clear();
+    this._sv++;
+    this._subscribers.length = 0;
   }
 
   /**

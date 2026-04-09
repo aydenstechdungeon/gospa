@@ -3,7 +3,8 @@ export interface Notifier {
 }
 
 export let batchDepth = 0;
-export const pendingNotifications: Set<Notifier> = new Set();
+export const pendingNotifications: Notifier[] = [];
+const pendingSet = new Set<Notifier>();
 let autoBatchScheduled = false;
 
 /**
@@ -17,12 +18,28 @@ export function scheduleAutoBatch(): void {
 
   queueMicrotask(() => {
     autoBatchScheduled = false;
-    if (batchDepth === 0 && pendingNotifications.size > 0) {
-      const pending = [...pendingNotifications];
-      pendingNotifications.clear();
-      pending.forEach((n) => n.notify());
+    if (batchDepth === 0 && pendingNotifications.length > 0) {
+      flushPending();
     }
   });
+}
+
+/**
+ * Add a notifier to the current batch.
+ */
+export function addToBatch(n: Notifier): void {
+  if (!pendingSet.has(n)) {
+    pendingSet.add(n);
+    pendingNotifications.push(n);
+  }
+}
+
+function flushPending(): void {
+  for (let i = 0; i < pendingNotifications.length; i++) {
+    pendingNotifications[i].notify();
+  }
+  pendingNotifications.length = 0;
+  pendingSet.clear();
 }
 
 /**
@@ -35,9 +52,7 @@ export function batch(fn: () => void): void {
   } finally {
     batchDepth--;
     if (batchDepth === 0) {
-      const pending = [...pendingNotifications];
-      pendingNotifications.clear();
-      pending.forEach((n) => n.notify());
+      flushPending();
     }
   }
 }

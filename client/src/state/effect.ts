@@ -16,6 +16,7 @@ let effectId = 0;
 // Track current effect for dependency collection
 export let currentEffect: Effect | null = null;
 export const effectStack: Effect[] = [];
+export let _tracking = true;
 
 /**
  * Get the currently executing effect for dependency tracking.
@@ -123,7 +124,9 @@ export class Effect implements Notifier, Disposable {
   }
 
   addDependency(rune: Rune<unknown>): void {
-    this._dependencies.add(rune);
+    if (_tracking) {
+      this._dependencies.add(rune);
+    }
   }
 
   notify(): void {
@@ -167,10 +170,12 @@ export function effect(fn: EffectFn): Effect {
 export function untrack<T>(fn: () => T): T {
   const prev = currentEffect;
   currentEffect = null;
+  _tracking = false;
   try {
     return fn();
   } finally {
     currentEffect = prev;
+    _tracking = true;
   }
 }
 

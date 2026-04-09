@@ -14,6 +14,7 @@ import {
   getNavigation,
   getTransitions,
   getFrameworkFeatures,
+  getFrameworkFeaturesSync,
 } from "./runtime-core.ts";
 
 export {
@@ -70,11 +71,6 @@ export { remote, remoteAction, configureRemote, getRemotePrefix };
 export type { RemoteOptions, RemoteResult };
 
 // Navigation
-import {
-  navigate as nav,
-  back as navBack,
-  prefetch as navPrefetch,
-} from "./navigation.ts";
 import type { NavigateOptions, NavigationOptions } from "./navigation.ts";
 export type { NavigateOptions, NavigationOptions };
 
@@ -92,32 +88,44 @@ export type { Unsubscribe } from "./state.ts";
 
 // WebSocket Full API
 export async function initWebSocket(config: any) {
+  const syncMod = getFrameworkFeaturesSync();
+  if (syncMod) return syncMod.initWebSocket(config);
   const mod = await getFrameworkFeatures();
   return mod.initWebSocket(config);
 }
 
 export async function getWebSocketClient() {
+  const syncMod = getFrameworkFeaturesSync();
+  if (syncMod) return syncMod.getWebSocketClient();
   const mod = await getFrameworkFeatures();
   return mod.getWebSocketClient();
 }
 
 export async function sendAction(name: string, payload?: any) {
+  const syncMod = getFrameworkFeaturesSync();
+  if (syncMod) return syncMod.sendAction(name, payload);
   const mod = await getFrameworkFeatures();
   return mod.sendAction(name, payload);
 }
 
 // Navigation Full API
 export async function navigate(to: string, options?: any) {
+  const syncMod = getFrameworkFeaturesSync();
+  if (syncMod) return syncMod.navigate(to, options);
   const mod = await getFrameworkFeatures();
   return mod.navigate(to, options);
 }
 
 export async function back() {
+  const syncMod = getFrameworkFeaturesSync();
+  if (syncMod) return syncMod.back();
   const mod = await getFrameworkFeatures();
   return mod.back();
 }
 
 export async function prefetch(path: string) {
+  const syncMod = getFrameworkFeaturesSync();
+  if (syncMod) return syncMod.prefetch(path);
   const mod = await getFrameworkFeatures();
   return mod.prefetch(path);
 }

@@ -300,7 +300,14 @@ func activeClass(active bool) string {
 func isPathActive(currentPath, targetPath string) bool {
 	curr := strings.TrimSuffix(currentPath, "/")
 	target := strings.TrimSuffix(targetPath, "/")
-	return curr == target
+	if curr == target {
+		return true
+	}
+	// Only do prefix matching for category parents, not root pages like /docs
+	if target == "" || target == "/" || target == "/docs" {
+		return false
+	}
+	return strings.HasPrefix(curr, target+"/")
 }
 
 var _ = templruntime.GeneratedTemplate

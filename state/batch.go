@@ -24,6 +24,31 @@ type batchState struct {
 	active bool
 }
 
+var batchStatePool = sync.Pool{
+	New: func() any {
+		return &batchState{
+			dirty: make(map[string]notifier),
+		}
+	},
+}
+
+func getBatchStateFromPool() *batchState {
+	bs := batchStatePool.Get().(*batchState)
+	bs.active = true
+	if bs.dirty == nil {
+		bs.dirty = make(map[string]notifier)
+	}
+	return bs
+}
+
+func putBatchStateToPool(bs *batchState) {
+	bs.active = false
+	for k := range bs.dirty {
+		delete(bs.dirty, k)
+	}
+	batchStatePool.Put(bs)
+}
+
 // notifier interface for objects that can be batched
 type notifier interface {
 	notifySubscribers()
@@ -54,7 +79,10 @@ var activeContextBatches sync.Map
 func getGID() int64 {
 	var buf [64]byte
 	n := runtime.Stack(buf[:], false)
-	// FAST PATH: skip "goroutine " (10 chars), find the first space
+	if n < 10 {
+		return 0
+	}
+	// skip "goroutine "
 	s := string(buf[10:n])
 	spaceIdx := strings.IndexByte(s, ' ')
 	if spaceIdx == -1 {
@@ -71,19 +99,20 @@ func getBatchState(ctx context.Context) *batchState {
 		if bs, ok := ctx.Value(batchContextKey{}).(*batchState); ok {
 			return bs
 		}
-		if bs, ok := activeContextBatches.Load(contextKey(ctx)); ok {
+		// Fallback to checking the context pointer in the active map
+		if bs, ok := activeContextBatches.Load(contextKeyOnly(ctx)); ok {
 			return bs.(*batchState)
 		}
 	}
 
 	// PERF FIX: Skip the expensive runtime.Stack call (getGID) entirely when
-	// no synchronous Batch() is active. This is the common case for all state
-	// mutations that happen outside a Batch() call.
+	// no synchronous Batch() is active.
 	if activeSyncBatchCount.Load() == 0 {
 		return nil
 	}
 
-	// 2. Fallback to goroutine-local storage — only reached inside a Batch().
+	// 2. Fallback to goroutine-local storage — only reached inside a Batch()
+	// or when mutations happen inside BatchWithContext without passing ctx.
 	gid := getGID()
 	if bs, ok := activeBatches.Load(gid); ok {
 		return bs.(*batchState)
@@ -91,20 +120,18 @@ func getBatchState(ctx context.Context) *batchState {
 	return nil
 }
 
-func contextKey(ctx context.Context) string {
-	// Use fmt.Sprintf with type and pointer, plus a unique counter to avoid
-	// collisions when GC reuses pointers for derived contexts.
-	return fmt.Sprintf("%T:%p:%d", ctx, ctx, getGID())
+func contextKeyOnly(ctx context.Context) string {
+	return fmt.Sprintf("%p", ctx)
 }
 
 // inBatch returns true if the current goroutine is within a batch operation.
 func inBatch() bool {
-	return getBatchState(context.TODO()) != nil
+	return getBatchState(context.Background()) != nil
 }
 
 // addToBatch adds a notifier to the current batch for deferred notification.
 func addToBatch(n notifier) {
-	bs := getBatchState(context.TODO())
+	bs := getBatchState(context.Background())
 	if bs == nil {
 		return
 	}
@@ -123,10 +150,9 @@ func addToBatch(n notifier) {
 // This is safe when fn() runs synchronously in the calling goroutine. If fn() spawns
 // new goroutines that also mutate state, use BatchWithContext and pass the ctx down.
 func Batch(fn func()) {
-	bs := &batchState{
-		dirty:  make(map[string]notifier),
-		active: true,
-	}
+	bs := getBatchStateFromPool()
+	defer putBatchStateToPool(bs)
+
 	gid := getGID()
 	activeSyncBatchCount.Add(1)
 	activeBatches.Store(gid, bs)
@@ -149,29 +175,21 @@ func BatchWithContext(ctx context.Context, fn func() error) error {
 		ctx = context.Background()
 	}
 
-	bs := &batchState{
-		dirty:  make(map[string]notifier),
-		active: true,
-	}
+	bs := getBatchStateFromPool()
+	defer putBatchStateToPool(bs)
 
-	// Embed the batch state into the context so that downstream callers that
-	// receive this context can participate in the batch via getBatchState(ctx).
-	batchCtx := context.WithValue(ctx, batchContextKey{}, bs)
+	activeSyncBatchCount.Add(1)
+	ctxKey := contextKeyOnly(ctx)
+	activeContextBatches.Store(ctxKey, bs)
 
-	// Register cleanup BEFORE any stores so that a panic between store calls
-	// cannot leak entries in the sync maps.
 	gid := getGID()
+	activeBatches.Store(gid, bs)
+
 	defer func() {
-		activeContextBatches.Delete(contextKey(ctx))
-		activeContextBatches.Delete(contextKey(batchCtx))
+		activeContextBatches.Delete(ctxKey)
 		activeBatches.Delete(gid)
 		activeSyncBatchCount.Add(-1)
 	}()
-
-	activeContextBatches.Store(contextKey(ctx), bs)
-	activeContextBatches.Store(contextKey(batchCtx), bs)
-	activeSyncBatchCount.Add(1)
-	activeBatches.Store(gid, bs)
 
 	if err := fn(); err != nil {
 		return err
@@ -189,20 +207,19 @@ func BatchWithContextFn(ctx context.Context, fn func(batchCtx context.Context) e
 		ctx = context.Background()
 	}
 
-	bs := &batchState{
-		dirty:  make(map[string]notifier),
-		active: true,
-	}
+	bs := getBatchStateFromPool()
+	defer putBatchStateToPool(bs)
 
 	batchCtx := context.WithValue(ctx, batchContextKey{}, bs)
-	activeContextBatches.Store(contextKey(ctx), bs)
-	activeContextBatches.Store(contextKey(batchCtx), bs)
-	defer activeContextBatches.Delete(contextKey(ctx))
-	defer activeContextBatches.Delete(contextKey(batchCtx))
 
-	gid := getGID()
-	activeBatches.Store(gid, bs)
-	defer activeBatches.Delete(gid)
+	activeSyncBatchCount.Add(1)
+	ctxKey := contextKeyOnly(ctx)
+	activeContextBatches.Store(ctxKey, bs)
+
+	defer func() {
+		activeContextBatches.Delete(ctxKey)
+		activeSyncBatchCount.Add(-1)
+	}()
 
 	if err := fn(batchCtx); err != nil {
 		return err

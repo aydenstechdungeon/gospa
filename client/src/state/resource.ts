@@ -1,5 +1,5 @@
 import { Rune, type Subscriber, type Unsubscribe } from "./rune.ts";
-import { type Notifier, batchDepth, pendingNotifications } from "./batch.ts";
+import { type Notifier, batchDepth, addToBatch } from "./batch.ts";
 import { pushEffect, popEffect, getCurrentEffect } from "./effect.ts";
 import type { Effect } from "./effect.ts";
 
@@ -122,7 +122,7 @@ export class DerivedAsync<T, E = Error> implements Notifier {
 
   private _notifySubscribers(): void {
     if (batchDepth > 0) {
-      pendingNotifications.add(this);
+      addToBatch(this);
       return;
     }
     this.notify();

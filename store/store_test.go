@@ -54,7 +54,7 @@ func TestMemoryStorage_LRUEviction(t *testing.T) {
 
 	_ = s.Set(ctx, "k1", []byte("1"), 0)
 	_ = s.Set(ctx, "k2", []byte("2"), 0)
-	
+
 	// Access k1 to make it MRU
 	_, _ = s.Get(ctx, "k1")
 

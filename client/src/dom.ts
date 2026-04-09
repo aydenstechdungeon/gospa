@@ -10,12 +10,16 @@ declare global {
 }
 
 // === RAF-batched DOM Updates ===
-let pendingDOMUpdates: (() => void)[] = [];
+let pendingElementUpdates: Map<Element, Set<() => void>> = new Map();
 let rafScheduled = false;
 let rafId: number | null = null;
 
-function scheduleDOMUpdate(update: () => void): void {
-  pendingDOMUpdates.push(update);
+function scheduleDOMUpdate(element: Element, update: () => void): void {
+  if (!pendingElementUpdates.has(element)) {
+    pendingElementUpdates.set(element, new Set());
+  }
+  pendingElementUpdates.get(element)!.add(update);
+
   if (!rafScheduled) {
     rafScheduled = true;
     rafId = requestAnimationFrame(flushDOMUpdates);
@@ -23,20 +27,22 @@ function scheduleDOMUpdate(update: () => void): void {
 }
 
 function flushDOMUpdates(): void {
-  const updates = pendingDOMUpdates;
-  pendingDOMUpdates = [];
+  const elementUpdates = pendingElementUpdates;
+  pendingElementUpdates = new Map();
   rafScheduled = false;
   rafId = null;
 
-  for (const update of updates) {
-    try {
-      update();
-    } catch (error) {
-      if (typeof GOSPA_DEBUG !== "undefined" && GOSPA_DEBUG) {
-        console.error("[GoSPA] DOM update failed:", error);
+  elementUpdates.forEach((updates) => {
+    for (const update of updates) {
+      try {
+        update();
+      } catch (error) {
+        if (typeof GOSPA_DEBUG !== "undefined" && GOSPA_DEBUG) {
+          console.error("[GoSPA] DOM update failed:", error);
+        }
       }
     }
-  }
+  });
 }
 
 export function cancelPendingDOMUpdates(): void {
@@ -44,7 +50,7 @@ export function cancelPendingDOMUpdates(): void {
     cancelAnimationFrame(rafId);
     rafId = null;
   }
-  pendingDOMUpdates = [];
+  pendingElementUpdates = new Map();
   rafScheduled = false;
 }
 
@@ -121,7 +127,7 @@ async function updateElement(binding: Binding, value: unknown): Promise<void> {
 
   const handler = handlers[type];
   if (handler) {
-    scheduleDOMUpdate(() => {
+    scheduleDOMUpdate(element, () => {
       const result = handler(
         element,
         transformedValue,
