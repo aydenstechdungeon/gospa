@@ -548,12 +548,23 @@ async function reconcileDOM(data: PageData): Promise<void> {
   if (morphTarget && newContent) {
     Idiomorph.morph(morphTarget, newContent, {
       callbacks: {
-        beforeNodeMorphed: (oldNode, _newNode) => {
+        beforeNodeMorphed: (oldNode, newNode) => {
           // Compatibility with data-gospa-permanent
           if (oldNode instanceof Element && oldNode.hasAttribute("data-gospa-permanent")) {
             return false;
           }
+          // Skip child diffing for inner-morph nodes
+          if (oldNode instanceof Element && oldNode.getAttribute("data-gospa-morph") === "inner") {
+            return false;
+          }
           return true;
+        },
+        afterNodeMorphed: (oldNode, newNode) => {
+          // Replace innerHTML for inner-morph nodes (avoids diffing large text blocks)
+          if (oldNode instanceof Element && oldNode.getAttribute("data-gospa-morph") === "inner" &&
+              newNode instanceof Element) {
+            oldNode.innerHTML = newNode.innerHTML;
+          }
         }
       }
     });
@@ -599,9 +610,14 @@ async function updateDOM(data: PageData): Promise<void> {
 
 function updateActiveLinks() {
   const currentPath = window.location.pathname;
-  document.querySelectorAll("a[href]").forEach((link) => {
+  const currentPathNormalized = currentPath.replace(/\/$/, "");
+
+  // On docs pages, only sidebar links need active state updates
+  const sidebar = document.querySelector("#docs-sidebar");
+  const scope = sidebar || document;
+
+  scope.querySelectorAll("a[href]").forEach((link) => {
     const href = link.getAttribute("href");
-    const currentPathNormalized = currentPath.replace(/\/$/, "");
     const hrefNormalized = (href || "").split(/[?#]/)[0].replace(/\/$/, "");
 
     const isActive = hrefNormalized === currentPathNormalized || (
@@ -880,6 +896,7 @@ async function initCriticalContent(
   eventElements.forEach((element) => {
     if (!(element instanceof Element) || initializedElements.has(element))
       return;
+    if (element.closest("[data-gospa-permanent]")) return;
 
     const attr = element.getAttribute("data-on");
     if (!attr) return;
@@ -908,6 +925,8 @@ async function initDeferredBindings(
   const gospa = (window as any).__gospa__;
 
   for (const element of boundElements) {
+    if (element.closest("[data-gospa-permanent]")) continue;
+
     const attr = element.getAttribute("data-bind");
     if (!attr) continue;
 

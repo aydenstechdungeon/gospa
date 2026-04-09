@@ -293,7 +293,12 @@
         // Save sidebar scroll before DOM update
         saveSidebarScroll();
 
-        updateToC();
+        // Defer ToC generation so content paints first
+        if ('requestIdleCallback' in window) {
+            requestIdleCallback(() => updateToC());
+        } else {
+            setTimeout(updateToC, 0);
+        }
         initAsyncCSS();
 
         // Restore sidebar scroll after a brief delay to allow DOM to settle
