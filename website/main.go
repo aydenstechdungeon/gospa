@@ -16,6 +16,7 @@ import (
 	_ "github.com/aydenstechdungeon/gospa/website/routes" // Import routes to trigger init()
 
 	"github.com/aydenstechdungeon/gospa"
+	gospafiber "github.com/aydenstechdungeon/gospa/fiber"
 	"github.com/aydenstechdungeon/gospa/routing"
 	"github.com/gofiber/fiber/v3"
 
@@ -75,11 +76,13 @@ func main() {
 		},
 	})
 
-	// Add security headers middleware
-	app.Fiber.Use(securityHeadersMiddleware)
-
-	// Add security headers middleware
-	app.Fiber.Use(securityHeadersMiddleware)
+	// Add security headers middleware with nonce-based CSP
+	cspPolicy := "default-src 'self'; script-src 'self' 'nonce-{nonce}'; style-src 'self' 'nonce-{nonce}'; img-src 'self' data: https:; font-src 'self' data:; connect-src 'self' wss: https:; frame-ancestors 'none'; base-uri 'self'; form-action 'self';"
+	app.Fiber.Use(gospafiber.SecurityHeadersMiddleware(cspPolicy))
+	app.Fiber.Use(func(c fiber.Ctx) error {
+		c.Set("Permissions-Policy", "camera=(), microphone=(), geolocation=(), payment=()")
+		return c.Next()
+	})
 
 	// Add middleware for performance (Link headers, caching)
 	// IMPORTANT: This must come BEFORE routes to catch static assets
@@ -325,14 +328,4 @@ func getEnvBool(key string, defaultVal bool) bool {
 		return b
 	}
 	return defaultVal
-}
-
-// securityHeadersMiddleware adds essential security headers to all responses
-func securityHeadersMiddleware(c fiber.Ctx) error {
-	c.Set("Content-Security-Policy", "default-src 'self'; script-src 'self' 'nonce-{nonce}'; style-src 'self' 'nonce-{nonce}'; img-src 'self' data: https:; font-src 'self' data:; connect-src 'self' wss: https:; frame-ancestors 'none'; base-uri 'self'; form-action 'self';")
-	c.Set("X-Frame-Options", "DENY")
-	c.Set("X-Content-Type-Options", "nosniff")
-	c.Set("Referrer-Policy", "strict-origin-when-cross-origin")
-	c.Set("Permissions-Policy", "camera=(), microphone=(), geolocation=(), payment=()")
-	return c.Next()
 }
