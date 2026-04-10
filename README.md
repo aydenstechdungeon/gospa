@@ -145,4 +145,4 @@ We welcome contributions! Please see our [Contributing Guide](CONTRIBUTING.md).
 
 ## License
 
-GoSPA is licensed under the [MIT License](LICENSE).
+GoSPA is licensed under the [Apache-2.0 license](LICENSE).
