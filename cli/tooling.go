@@ -48,12 +48,16 @@ func GetPackageManager() PackageManager {
 	return detectedPM
 }
 
-// GetBundlerCommand returns the command to use for client-side bundling.
+// GetBundlerCommand returns the package manager command for bun-compatible operations.
+// Note: For pnpm and npm, this returns the PM name - you need to use GetExecuteCommand
+// with esbuild for actual bundling since pnpm/npm don't have built-in bundlers.
+// Use BunPM directly with "bun build" for native bundling.
 func GetBundlerCommand(pm PackageManager) string {
 	if pm == BunPM {
 		return "bun"
 	}
-	// Default fallback to npx/pnpx/bun x with esbuild
+	// For pnpm and npm, this returns the PM name but actual bundling
+	// requires GetExecuteCommand() + esbuild
 	return string(pm)
 }
 

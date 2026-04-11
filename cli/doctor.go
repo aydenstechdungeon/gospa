@@ -11,7 +11,11 @@ import (
 
 // DoctorConfig controls CLI doctor checks.
 type DoctorConfig struct {
-	RoutesDir string
+	RoutesDir    string // Routes directory
+	Fix          bool   // Auto-fix detected issues
+	JSONOutput   bool   // JSON output
+	Quiet        bool   // Only show errors
+	CheckUpdates bool   // Check for package updates
 }
 
 // Doctor inspects the current project for common setup issues.
@@ -25,8 +29,10 @@ func Doctor(config *DoctorConfig) {
 		config.RoutesDir = "./routes"
 	}
 
-	printer.Title("GoSPA Doctor")
-	printer.Subtitle("Checking Go, Node.js tooling, project layout, and runtime entrypoints...")
+	if !config.Quiet && !config.JSONOutput {
+		printer.Title("GoSPA Doctor")
+		printer.Subtitle("Checking Go, Node.js tooling, project layout, and runtime entrypoints...")
+	}
 
 	checks := []doctorCheck{
 		checkBinary("go", true),
@@ -43,6 +49,16 @@ func Doctor(config *DoctorConfig) {
 		checkIslandsBundle(),
 	}
 
+	// Add update checks if requested
+	if config.CheckUpdates {
+		checks = append(checks, checkForUpdates()...)
+	}
+
+	if config.JSONOutput {
+		outputDoctorJSON(checks)
+		return
+	}
+
 	hasFailure := false
 	for _, check := range checks {
 		if check.Err != nil {
@@ -51,15 +67,24 @@ func Doctor(config *DoctorConfig) {
 				hasFailure = true
 				continue
 			}
-			printer.Warning("%s: %v", check.Name, check.Err)
+			if !config.Quiet {
+				printer.Warning("%s: %v", check.Name, check.Err)
+			}
 			continue
 		}
 
-		if check.Detail != "" {
-			printer.Success("%s: %s", check.Name, check.Detail)
-		} else {
-			printer.Success("%s", check.Name)
+		if !config.Quiet {
+			if check.Detail != "" {
+				printer.Success("%s: %s", check.Name, check.Detail)
+			} else {
+				printer.Success("%s", check.Name)
+			}
 		}
+	}
+
+	// Auto-fix if requested
+	if config.Fix {
+		hasFailure = doctorFix(config) || hasFailure
 	}
 
 	if hasFailure {
@@ -67,7 +92,116 @@ func Doctor(config *DoctorConfig) {
 		os.Exit(1)
 	}
 
-	fmt.Println("\nGoSPA Doctor found no blocking setup issues.")
+	if !config.Quiet {
+		fmt.Println("\nGoSPA Doctor found no blocking setup issues.")
+	}
+}
+
+// outputDoctorJSON outputs check results as JSON
+func outputDoctorJSON(checks []doctorCheck) {
+	type jsonCheck struct {
+		Name     string `json:"name"`
+		Detail   string `json:"detail,omitempty"`
+		Required bool   `json:"required"`
+		Passed   bool   `json:"passed"`
+		Error    string `json:"error,omitempty"`
+	}
+
+	var results []jsonCheck
+	for _, c := range checks {
+		jc := jsonCheck{
+			Name:     c.Name,
+			Detail:   c.Detail,
+			Required: c.Required,
+			Passed:   c.Err == nil,
+		}
+		if c.Err != nil {
+			jc.Error = c.Err.Error()
+		}
+		results = append(results, jc)
+	}
+
+	data, _ := json.MarshalIndent(results, "", "  ")
+	fmt.Println(string(data))
+}
+
+// doctorFix attempts to auto-fix detected issues
+func doctorFix(config *DoctorConfig) bool {
+	hasFailure := false
+	fixed := false
+
+	// Fix missing directories
+	if _, err := os.Stat(config.RoutesDir); os.IsNotExist(err) {
+		fmt.Printf("Creating missing routes directory: %s\n", config.RoutesDir)
+		if err := os.MkdirAll(config.RoutesDir, 0750); err != nil {
+			fmt.Fprintf(os.Stderr, "Failed to create %s: %v\n", config.RoutesDir, err)
+			hasFailure = true
+		} else {
+			fixed = true
+		}
+	}
+
+	// Fix missing package.json
+	if _, err := os.Stat("package.json"); os.IsNotExist(err) {
+		fmt.Println("Creating missing package.json...")
+		defaultPkgJSON := `{
+	"name": "gospa-project",
+	"type": "module",
+	"scripts": {
+		"dev": "gospa dev",
+		"build": "gospa build"
+	}
+}
+`
+		if err := os.WriteFile("package.json", []byte(defaultPkgJSON), 0600); err != nil {
+			fmt.Fprintf(os.Stderr, "Failed to create package.json: %v\n", err)
+			hasFailure = true
+		} else {
+			fixed = true
+		}
+	}
+
+	if fixed {
+		fmt.Println("✓ Auto-fix complete")
+	}
+
+	return hasFailure
+}
+
+// checkForUpdates returns checks for package updates
+func checkForUpdates() []doctorCheck {
+	return []doctorCheck{
+		checkGospaVersion(),
+	}
+}
+
+func checkGospaVersion() doctorCheck {
+	cmd := exec.Command("go", "list", "-m", "-json", "github.com/aydenstechdungeon/gospa")
+	output, err := cmd.Output()
+	if err != nil {
+		return doctorCheck{
+			Name:     "GoSPA version",
+			Required: false,
+			Err:      fmt.Errorf("cannot check GoSPA version: %v", err),
+		}
+	}
+
+	var mod struct {
+		Version string `json:"Version"`
+	}
+	if err := json.Unmarshal(output, &mod); err != nil {
+		return doctorCheck{
+			Name:     "GoSPA version",
+			Required: false,
+			Err:      fmt.Errorf("cannot parse GoSPA version: %v", err),
+		}
+	}
+
+	return doctorCheck{
+		Name:     "GoSPA version",
+		Required: false,
+		Detail:   mod.Version,
+	}
 }
 
 type doctorCheck struct {
@@ -184,19 +318,20 @@ func checkTemplVersion() doctorCheck {
 		}
 	}
 
-	expectedVersion := "v0.3.1001"
-	if mod.Version != expectedVersion {
+	// Accept templ v0.3.x (any v0.3 release is compatible)
+	// The pinned version in dev.go should be updated periodically
+	if strings.HasPrefix(mod.Version, "v0.3.") {
 		return doctorCheck{
 			Name:     "templ version",
 			Required: false,
-			Detail:   fmt.Sprintf("found %s (expected %s)", mod.Version, expectedVersion),
+			Detail:   mod.Version,
 		}
 	}
 
 	return doctorCheck{
 		Name:     "templ version",
 		Required: false,
-		Detail:   mod.Version,
+		Detail:   fmt.Sprintf("found %s (recommended: v0.3.x)", mod.Version),
 	}
 }
 

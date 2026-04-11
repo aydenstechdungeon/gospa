@@ -53,6 +53,9 @@ func Dev(config *DevConfig) {
 			Port:      3000,
 			Host:      "localhost",
 			RoutesDir: "./routes",
+			Timeout:   30 * time.Second,
+			LogFormat: "text",
+			Debounce:  100 * time.Millisecond,
 		}
 	}
 
@@ -66,13 +69,18 @@ func Dev(config *DevConfig) {
 
 // DevConfig holds configuration for the development server.
 type DevConfig struct {
-	Port       int
-	Host       string
-	RoutesDir  string
-	WatchPaths []string // extra directories to watch in addition to RoutesDir
-	Open       bool     // open browser automatically
-	Verbose    bool     // verbose logging
-	NoRestart  bool     // disable automatic server restart on file changes
+	Port       int           // Server port
+	Host       string        // Bind address
+	RoutesDir  string        // Routes directory
+	WatchPaths []string      // extra directories to watch in addition to RoutesDir
+	Open       bool          // open browser automatically
+	Verbose    bool          // verbose logging
+	NoRestart  bool          // disable automatic server restart on file changes
+	Timeout    time.Duration // Server start timeout before kill
+	LogFormat  string        // Log format: text, json
+	HMRPort    int           // HMR WebSocket port (0 = auto)
+	Proxy      string        // Proxy API requests to backend
+	Debounce   time.Duration // File change debounce interval
 }
 
 // DevWithConfig starts the development server with custom configuration.
@@ -105,6 +113,7 @@ func startDevWithConfig(config *DevConfig) error {
 
 	// Start file watcher
 	watcher := NewDevWatcher(watchDirs...)
+	watcher.SetDebounce(config.Debounce)
 	if err := watcher.Start(); err != nil {
 		return fmt.Errorf("failed to start watcher: %w", err)
 	}
@@ -112,10 +121,6 @@ func startDevWithConfig(config *DevConfig) error {
 
 	// Start the server manager goroutine
 	restartCh := make(chan struct{}, 1)
-
-	// Create context for running the server process
-	serverCtx, cancelServer := context.WithCancel(ctx)
-	defer cancelServer()
 
 	// Initial start signal
 	restartCh <- struct{}{}
@@ -135,8 +140,8 @@ func startDevWithConfig(config *DevConfig) error {
 					terminateProcess(currentCmd)
 				}
 
-				// Start new server
-				currentCmd = startServerProcess(serverCtx, config)
+				// Start new server with fresh context (not shared with other restarts)
+				currentCmd = startServerProcess(context.Background(), config)
 				cmdMu.Unlock()
 			}
 		}
@@ -149,7 +154,7 @@ func startDevWithConfig(config *DevConfig) error {
 			case <-ctx.Done():
 				return
 			case event := <-watcher.Events:
-				handleFileChange(ctx, event, restartCh, config.NoRestart)
+				handleFileChange(ctx, event, restartCh, config.NoRestart, watcher)
 			case err := <-watcher.Errors:
 				fmt.Fprintf(os.Stderr, "Watcher error: %v\n", err)
 			}
@@ -170,12 +175,27 @@ func startDevWithConfig(config *DevConfig) error {
 }
 
 func startServerProcess(ctx context.Context, config *DevConfig) *exec.Cmd {
-	// Build and run the server
-	args := []string{"run", "."}
-	if config.Verbose {
-		args = append(args, "-v")
+	// Build the server binary to a temp location for faster restarts
+	tmpDir := filepath.Join(os.TempDir(), "gospa-dev")
+	if err := os.MkdirAll(tmpDir, 0750); err != nil {
+		fmt.Fprintf(os.Stderr, "Error creating temp dir: %v\n", err)
 	}
-	cmd := exec.CommandContext(ctx, "go", args...)
+	serverBinary := filepath.Join(tmpDir, "server")
+
+	// Build the server
+	buildArgs := []string{"build", "-ldflags", "-s -w", "-o", serverBinary, "."}
+	buildCmd := exec.Command("go", buildArgs...) //nolint:gosec // G204: buildArgs is constructed from trusted input
+	buildCmd.Stdout = os.Stdout
+	buildCmd.Stdout = os.Stdout
+	buildCmd.Stderr = os.Stderr
+	if err := buildCmd.Run(); err != nil {
+		fmt.Fprintf(os.Stderr, "Error building server: %v\n", err)
+		return nil
+	}
+
+	// Run the pre-built binary
+	cmd := exec.CommandContext(ctx, serverBinary) //nolint:gosec // G204: serverBinary is our own build output
+	cmd.Stdout = os.Stdout
 	cmd.Stdout = os.Stdout
 	cmd.Stderr = os.Stderr
 	cmd.Env = append(
@@ -184,6 +204,36 @@ func startServerProcess(ctx context.Context, config *DevConfig) *exec.Cmd {
 		fmt.Sprintf("PORT=%d", config.Port),
 		"HOST="+config.Host,
 	)
+
+	// Set up timeout if specified
+	if config.Timeout > 0 {
+		timeoutCtx, timeoutCancel := context.WithTimeout(ctx, config.Timeout)
+		defer timeoutCancel()
+
+		// Start the command with timeout context
+		if err := cmd.Start(); err != nil {
+			fmt.Fprintf(os.Stderr, "Error starting server: %v\n", err)
+			return nil
+		}
+
+		// Wait for command with timeout
+		done := make(chan error, 1)
+		go func() {
+			done <- cmd.Wait()
+		}()
+
+		select {
+		case <-timeoutCtx.Done():
+			_ = cmd.Process.Kill()
+			fmt.Fprintf(os.Stderr, "Server start timed out after %v\n", config.Timeout)
+			return nil
+		case err := <-done:
+			if err != nil {
+				fmt.Fprintf(os.Stderr, "Server exited with error: %v\n", err)
+			}
+			return nil
+		}
+	}
 
 	if err := cmd.Start(); err != nil {
 		fmt.Fprintf(os.Stderr, "Error starting server: %v\n", err)
@@ -223,21 +273,37 @@ const (
 
 // DevWatcher watches files for changes.
 type DevWatcher struct {
-	dirs     []string
-	Events   chan FileEvent
-	Errors   chan error
-	watcher  *fsnotify.Watcher
-	debounce time.Duration
+	dirs             []string
+	Events           chan FileEvent
+	Errors           chan error
+	watcher          *fsnotify.Watcher
+	debounce         time.Duration
+	islandBuildCh    chan struct{}
+	islandBuildDone  chan struct{}
+	islandMu         sync.Mutex
+	isBuilding       bool
+	templRegenMu     sync.Mutex
+	templRegenTimer  *time.Timer
+	templRegenActive bool
+	stopCh           chan struct{}
 }
 
-// NewDevWatcher creates a new file watcher.
+// NewDevWatcher creates a new file watcher with configurable debounce.
 func NewDevWatcher(dirs ...string) *DevWatcher {
 	return &DevWatcher{
-		dirs:     dirs,
-		Events:   make(chan FileEvent, 1000),
-		Errors:   make(chan error, 10),
-		debounce: 100 * time.Millisecond,
+		dirs:            dirs,
+		Events:          make(chan FileEvent, 1000),
+		Errors:          make(chan error, 10),
+		debounce:        100 * time.Millisecond, // Default; overridden by config
+		islandBuildCh:   make(chan struct{}, 1),
+		islandBuildDone: make(chan struct{}, 1),
+		stopCh:          make(chan struct{}),
 	}
+}
+
+// SetDebounce sets the debounce duration for the watcher.
+func (dw *DevWatcher) SetDebounce(d time.Duration) {
+	dw.debounce = d
 }
 
 // Start begins watching the configured directories.
@@ -279,6 +345,10 @@ func (dw *DevWatcher) addRecursive(dir string) error {
 
 // Stop closes the watcher.
 func (dw *DevWatcher) Stop() {
+	// Signal stop to background goroutines
+	if dw.stopCh != nil {
+		close(dw.stopCh)
+	}
 	if dw.watcher != nil {
 		_ = dw.watcher.Close()
 	}
@@ -287,6 +357,9 @@ func (dw *DevWatcher) Stop() {
 func (dw *DevWatcher) run() {
 	lastEvents := make(map[string]time.Time)
 	var mu sync.Mutex
+
+	// Start debounced island build processor
+	go dw.processIslandBuilds()
 
 	for {
 		select {
@@ -344,17 +417,107 @@ func (dw *DevWatcher) run() {
 	}
 }
 
-func handleFileChange(_ context.Context, event FileEvent, restartCh chan struct{}, noRestart bool) {
+// processIslandBuilds handles debounced island rebuilding
+func (dw *DevWatcher) processIslandBuilds() {
+	debounce := 500 * time.Millisecond
+	timer := time.NewTimer(debounce)
+	defer timer.Stop()
+
+	for {
+		select {
+		case <-dw.stopCh:
+			return
+		case <-dw.islandBuildCh:
+			// Reset timer on new build request
+			if !timer.Stop() {
+				select {
+				case <-timer.C:
+				default:
+				}
+			}
+			timer.Reset(debounce)
+		case <-timer.C:
+			// Perform the build
+			dw.islandMu.Lock()
+			dw.isBuilding = true
+			dw.islandMu.Unlock()
+
+			_ = BuildIslands(nil, nil)
+
+			dw.islandMu.Lock()
+			dw.isBuilding = false
+			dw.islandMu.Unlock()
+		}
+	}
+}
+
+// triggerTemplRegen triggers a debounced templ regenerate
+func (dw *DevWatcher) triggerTemplRegen() {
+	dw.templRegenMu.Lock()
+	defer dw.templRegenMu.Unlock()
+
+	// If regeneration is already active, just signal a new request (debounce)
+	if dw.templRegenActive {
+		// Reset existing timer if any
+		if dw.templRegenTimer != nil {
+			if !dw.templRegenTimer.Stop() {
+				select {
+				case <-dw.templRegenTimer.C:
+				default:
+				}
+			}
+		}
+		dw.templRegenTimer = time.NewTimer(200 * time.Millisecond)
+		return
+	}
+
+	// Mark as active and start new timer
+	dw.templRegenActive = true
+	if dw.templRegenTimer != nil {
+		if !dw.templRegenTimer.Stop() {
+			select {
+			case <-dw.templRegenTimer.C:
+			default:
+			}
+		}
+	}
+	dw.templRegenTimer = time.NewTimer(200 * time.Millisecond)
+
+	go func() {
+		<-dw.templRegenTimer.C
+		if err := regenerateTempl(); err != nil {
+			fmt.Fprintf(os.Stderr, "Error regenerating templates: %v\n", err)
+		} else {
+			fmt.Printf("✓ templ regenerated\n")
+		}
+		dw.templRegenMu.Lock()
+		dw.templRegenActive = false
+		dw.templRegenMu.Unlock()
+	}()
+}
+
+// triggerIslandBuild signals a debounced island rebuild
+func (dw *DevWatcher) triggerIslandBuild() {
+	select {
+	case dw.islandBuildCh <- struct{}{}:
+	default:
+	}
+}
+
+func handleFileChange(ctx context.Context, event FileEvent, restartCh chan struct{}, noRestart bool, watcher *DevWatcher) {
+	// Check if shutdown is in progress
+	select {
+	case <-ctx.Done():
+		return
+	default:
+	}
+
 	ext := filepath.Ext(event.File)
 
 	switch ext {
 	case ".templ", ".gospa":
-		fmt.Printf("%s changed, regenerating...\n", ext)
-		if err := regenerateTempl(); err != nil {
-			fmt.Fprintf(os.Stderr, "Error regenerating templates: %v\n", err)
-			return
-		}
-		fmt.Printf("✓ %s regenerated\n", ext)
+		fmt.Printf("%s changed, triggering templ regeneration...\n", ext)
+		watcher.triggerTemplRegen()
 
 		// Restart server (unless disabled)
 		if !noRestart {
@@ -374,8 +537,10 @@ func handleFileChange(_ context.Context, event FileEvent, restartCh chan struct{
 		}
 
 	case ".static", ".css", ".js":
-		fmt.Println("Static file changed, browser will reload")
-		_ = BuildIslands(nil, nil)
+		fmt.Println("Static file changed, triggering island rebuild...")
+		if watcher != nil {
+			watcher.triggerIslandBuild()
+		}
 	}
 
 	// Generate types
@@ -386,7 +551,10 @@ func handleFileChange(_ context.Context, event FileEvent, restartCh chan struct{
 			OutputDir: "./generated",
 			DevMode:   true,
 		})
-		_ = BuildIslands(nil, nil)
+		// Trigger debounced island rebuild (for .go changes affecting islands)
+		if watcher != nil {
+			watcher.triggerIslandBuild()
+		}
 	}
 }
 

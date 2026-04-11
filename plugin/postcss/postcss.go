@@ -152,13 +152,11 @@ func NewWithConfig(cfg *Config) *PostCSSPlugin {
 
 // loadConfigFromYaml reads standard configurations if gospa.yaml is present.
 func loadConfigFromYaml(cfg *Config) {
+	// Only look for gospa.yaml in the current working directory
+	// Using "../../gospa.yaml" was fragile and wouldn't work in monorepos
 	data, err := os.ReadFile("gospa.yaml")
 	if err != nil {
-		// Try root directory if not found in current (helpful for some build setups)
-		data, err = os.ReadFile("../../gospa.yaml")
-		if err != nil {
-			return
-		}
+		return
 	}
 
 	// Wrapper to match the gospa.yaml structure

@@ -2,6 +2,7 @@
 package fiber
 
 import (
+	"bytes"
 	"fmt"
 	"os"
 	"path/filepath"
@@ -22,30 +23,29 @@ type HMRConfig struct {
 	WatchPaths      []string      `json:"watchPaths"`
 	IgnorePaths     []string      `json:"ignorePaths"`
 	DebounceTime    time.Duration `json:"debounceTime"`
-	BroadcastAll    bool          `json:"broadcastAll"`
 	AllowInsecureWS bool          `json:"allowInsecureWS"`
 }
 
 // HMRManager manages hot module replacement.
 type HMRManager struct {
-	config       HMRConfig
-	clients      map[*websocket.Conn]bool
-	clientsMu    sync.RWMutex
-	fileWatcher  *HMRFileWatcher
-	debounceMap  map[string]time.Time
-	debounceMu   sync.Mutex
-	moduleStates map[string]any
-	stateMu      sync.RWMutex
-	changeChan   chan HMRFileChangeEvent
-	stopOnce     sync.Once
+	config        HMRConfig
+	clients       map[*websocket.Conn]bool
+	clientsMu     sync.RWMutex
+	fileWatcher   *HMRFileWatcher
+	debounceMap   map[string]time.Time
+	debounceMu    sync.Mutex
+	moduleStates  map[string]any
+	stateMu       sync.RWMutex
+	changeChan    chan HMRFileChangeEvent
+	broadcastChan chan HMRMessage
+	stopOnce      sync.Once
 }
 
 // HMRFileChangeEvent represents a file change event.
 type HMRFileChangeEvent struct {
-	Path        string    `json:"path"`
-	EventType   string    `json:"eventType"` // "create", "modify", "delete"
-	Timestamp   time.Time `json:"timestamp"`
-	ContentHash string    `json:"contentHash,omitempty"`
+	Path      string    `json:"path"`
+	EventType string    `json:"eventType"` // "create", "modify", "delete"
+	Timestamp time.Time `json:"timestamp"`
 }
 
 // HMRMessage represents a message sent to clients.
@@ -87,16 +87,19 @@ func NewHMRManager(config HMRConfig) *HMRManager {
 	}
 
 	mgr := &HMRManager{
-		config:       config,
-		clients:      make(map[*websocket.Conn]bool),
-		debounceMap:  make(map[string]time.Time),
-		moduleStates: make(map[string]any),
-		changeChan:   make(chan HMRFileChangeEvent, 100),
+		config:        config,
+		clients:       make(map[*websocket.Conn]bool),
+		debounceMap:   make(map[string]time.Time),
+		moduleStates:  make(map[string]any),
+		changeChan:    make(chan HMRFileChangeEvent, 100),
+		broadcastChan: make(chan HMRMessage, 50), // Buffered for async broadcast
 	}
 
 	if config.Enabled {
 		mgr.fileWatcher = NewHMRFileWatcher(config.WatchPaths, config.IgnorePaths, mgr.changeChan)
 		go mgr.processChanges()
+		go mgr.broadcastLoop()      // Async broadcast processing
+		go mgr.cleanupDebounceMap() // Periodic cleanup of stale debounce entries
 	}
 
 	return mgr
@@ -194,6 +197,27 @@ func (fw *HMRFileWatcher) watch() {
 
 			// Only handle write, create, and rename events
 			if event.Has(fsnotify.Write) || event.Has(fsnotify.Create) || event.Has(fsnotify.Rename) {
+				// If a new directory is created, start watching it
+				if event.Has(fsnotify.Create) {
+					if info, err := os.Stat(event.Name); err == nil && info.IsDir() {
+						// Check if directory should be ignored
+						shouldIgnore := false
+						for _, ignore := range fw.ignore {
+							if matched, err := filepath.Match(ignore, filepath.Base(event.Name)); err == nil && matched {
+								shouldIgnore = true
+								break
+							}
+						}
+						if !shouldIgnore {
+							if err := watcher.Add(event.Name); err != nil {
+								fmt.Printf("[HMR] Failed to watch new directory %s: %v\n", event.Name, err)
+							} else {
+								fmt.Printf("[HMR] Now watching new directory: %s\n", event.Name)
+							}
+						}
+					}
+				}
+
 				// Check if it's a watched file type
 				if fw.isWatchedFile(event.Name) {
 					// Check ignore patterns
@@ -259,7 +283,7 @@ func (mgr *HMRManager) processChanges() {
 		updateType := mgr.determineUpdateType(event.Path)
 		moduleID := mgr.pathToModuleID(event.Path)
 
-		// Broadcast update to clients
+		// Build update message
 		msg := HMRMessage{
 			Type:      "update",
 			Path:      event.Path,
@@ -277,7 +301,38 @@ func (mgr *HMRManager) processChanges() {
 			mgr.stateMu.RUnlock()
 		}
 
+		// Send to broadcast channel (non-blocking)
+		select {
+		case mgr.broadcastChan <- msg:
+		default:
+			// Broadcast channel full, skip this update
+			fmt.Printf("[HMR] Warning: broadcast channel full, dropping update for %s\n", event.Path)
+		}
+	}
+}
+
+// broadcastLoop processes broadcasts asynchronously to avoid blocking file event processing.
+func (mgr *HMRManager) broadcastLoop() {
+	for msg := range mgr.broadcastChan {
 		mgr.Broadcast(msg)
+	}
+}
+
+// cleanupDebounceMap periodically removes stale entries from debounceMap.
+// Entries older than 2x the debounce time are considered stale.
+func (mgr *HMRManager) cleanupDebounceMap() {
+	ticker := time.NewTicker(mgr.config.DebounceTime * 4)
+	defer ticker.Stop()
+
+	for range ticker.C {
+		mgr.debounceMu.Lock()
+		threshold := time.Now().Add(-mgr.config.DebounceTime * 2)
+		for path, lastTime := range mgr.debounceMap {
+			if lastTime.Before(threshold) {
+				delete(mgr.debounceMap, path)
+			}
+		}
+		mgr.debounceMu.Unlock()
 	}
 }
 
@@ -467,13 +522,25 @@ func (mgr *HMRManager) HMRMiddleware() fiberpkg.Handler {
 			return c.Next()
 		}
 
-		// Add HMR script before </body>
-		body := string(c.Response().Body())
+		// Add HMR script before </body> using bytes for efficiency
+		body := c.Response().Body()
 		nonce, _ := c.Locals("gospa.csp_nonce").(string)
 		hmrScript := mgr.generateHMRScript(nonce)
-		body = strings.Replace(body, "</body>", hmrScript+"</body>", 1)
 
-		return c.SendString(body)
+		// Find </body> position and create new body with injected script
+		bodyTag := []byte("</body>")
+		idx := bytes.LastIndex(body, bodyTag)
+		if idx == -1 {
+			return c.SendString(string(body))
+		}
+
+		// Build new body: content before </body> + script + </body>
+		var buf bytes.Buffer
+		buf.Write(body[:idx])
+		buf.WriteString(hmrScript)
+		buf.Write(body[idx:])
+
+		return c.SendString(buf.String())
 	}
 }
 
@@ -495,8 +562,12 @@ func (mgr *HMRManager) generateHMRScript(nonce string) string {
 	};
 	
 	ws.onmessage = function(event) {
-		const msg = JSON.parse(event.data);
-		handleHMRMessage(msg);
+		try {
+			const msg = JSON.parse(event.data);
+			handleHMRMessage(msg);
+		} catch (e) {
+			console.error('[HMR] Failed to parse message:', e);
+		}
 	};
 	
 	ws.onclose = function() {
@@ -561,6 +632,7 @@ func (mgr *HMRManager) Stop() {
 	}
 	mgr.stopOnce.Do(func() {
 		close(mgr.changeChan)
+		close(mgr.broadcastChan)
 	})
 }
 

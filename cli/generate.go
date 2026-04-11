@@ -8,6 +8,7 @@ import (
 	"os"
 	"path/filepath"
 	"regexp"
+	"sort"
 	"strings"
 
 	"github.com/aydenstechdungeon/gospa/compiler"
@@ -39,14 +40,16 @@ func Generate(config *GenerateConfig) {
 	if config.DevMode {
 		fmt.Println("Running in development mode (HMR enabled)")
 	}
-	if err := compileSFCs(config); err != nil {
-		fmt.Fprintf(os.Stderr, "Error compiling SFCs: %v\n", err)
-	}
+	if !config.NoTempl {
+		if err := compileSFCs(config); err != nil {
+			fmt.Fprintf(os.Stderr, "Error compiling SFCs: %v\n", err)
+		}
 
-	// Run templ generate to ensure .go files are created/updated before route generation
-	fmt.Println("Running templ generate...")
-	if err := regenerateTempl(); err != nil {
-		fmt.Fprintf(os.Stderr, "Warning: templ generate failed: %v\n", err)
+		// Run templ generate to ensure .go files are created/updated before route generation
+		fmt.Println("Running templ generate...")
+		if err := regenerateTempl(); err != nil {
+			fmt.Fprintf(os.Stderr, "Warning: templ generate failed: %v\n", err)
+		}
 	}
 
 	// Generate Go route registry (e.g., generated_routes.go)
@@ -62,15 +65,27 @@ func Generate(config *GenerateConfig) {
 		return
 	}
 
-	// Generate TypeScript types from Go state structs
-	if err := generateTypesWithConfig(config); err != nil {
-		fmt.Fprintf(os.Stderr, "Error generating types: %v\n", err)
+	// Skip further generation if RoutesOnly
+	if config.RoutesOnly {
+		// Trigger AfterGenerate hook
+		_ = plugin.TriggerHook(plugin.AfterGenerate, map[string]interface{}{"config": config})
+		fmt.Println("✓ Generated Go routes")
 		return
 	}
 
+	// Generate TypeScript types from Go state structs
+	if !config.NoTypes {
+		if err := generateTypesWithConfig(config); err != nil {
+			fmt.Fprintf(os.Stderr, "Error generating types: %v\n", err)
+			return
+		}
+	}
+
 	// Generate TypeScript wrappers for remote actions
-	if err := generateRemoteActions(config); err != nil {
-		fmt.Fprintf(os.Stderr, "Warning: failed to generate remote action wrappers: %v\n", err)
+	if !config.NoActions {
+		if err := generateRemoteActions(config); err != nil {
+			fmt.Fprintf(os.Stderr, "Warning: failed to generate remote action wrappers: %v\n", err)
+		}
 	}
 
 	// Generate routes and type-safe helpers via the routing generator
@@ -79,17 +94,27 @@ func Generate(config *GenerateConfig) {
 	// Trigger AfterGenerate hook
 	_ = plugin.TriggerHook(plugin.AfterGenerate, map[string]interface{}{"config": config})
 
-	fmt.Println("✓ Generated Go routes, TypeScript types, and TS routes")
+	if config.RoutesOnly {
+		fmt.Println("✓ Generated Go routes")
+	} else {
+		fmt.Println("✓ Generated Go routes, TypeScript types, and TS routes")
+	}
 }
 
 // GenerateConfig holds configuration for code generation.
 type GenerateConfig struct {
-	InputDir      string
-	OutputDir     string
-	StateFiles    []string
-	RouteFiles    []string
-	ComponentType string
-	DevMode       bool
+	InputDir      string   // Input directory
+	OutputDir     string   // Output directory
+	StateFiles    []string // State files to process
+	RouteFiles    []string // Route files to process
+	ComponentType string   // Default component type
+	DevMode       bool     // Development mode (HMR enabled)
+	Watch         bool     // Watch mode
+	NoTypes       bool     // Skip TS type generation
+	NoActions     bool     // Skip remote action generation
+	RoutesOnly    bool     // Only generate routes
+	Strict        bool     // Strict type checking
+	NoTempl       bool     // Skip templ generate
 }
 
 // GenerateWithConfig generates code with custom configuration.
@@ -365,36 +390,39 @@ func parseStateFile(filename string) (map[string]TypeScriptType, error) {
 			return true
 		}
 
-		// Check if struct has state-related comment
-		if hasStateComment(typeSpec) || hasStateSuffix(typeSpec.Name.Name) {
-			tsTypeDef := TypeScriptType{
-				Name:   typeSpec.Name.Name,
-				Fields: make([]TypeScriptField, 0),
-			}
-
-			for _, field := range structType.Fields.List {
-				if len(field.Names) == 0 {
-					continue
-				}
-
-				name := field.Names[0].Name
-				fieldType := convertGoTypeToTS(field.Type)
-				optional := false
-
-				// Check if field is a pointer (optional)
-				if _, isPtr := field.Type.(*ast.StarExpr); isPtr {
-					optional = true
-				}
-
-				tsTypeDef.Fields = append(tsTypeDef.Fields, TypeScriptField{
-					Name:     name,
-					Type:     fieldType,
-					Optional: optional,
-				})
-			}
-
-			types[typeSpec.Name.Name] = tsTypeDef
+		// Check if struct has explicit gospa:state annotation in its doc comment
+		// This provides a clear opt-in mechanism for state types
+		if !hasStateComment(typeSpec) {
+			return true
 		}
+
+		tsTypeDef := TypeScriptType{
+			Name:   typeSpec.Name.Name,
+			Fields: make([]TypeScriptField, 0),
+		}
+
+		for _, field := range structType.Fields.List {
+			if len(field.Names) == 0 {
+				continue
+			}
+
+			name := field.Names[0].Name
+			fieldType := convertGoTypeToTS(field.Type)
+			optional := false
+
+			// Check if field is a pointer (optional)
+			if _, isPtr := field.Type.(*ast.StarExpr); isPtr {
+				optional = true
+			}
+
+			tsTypeDef.Fields = append(tsTypeDef.Fields, TypeScriptField{
+				Name:     name,
+				Type:     fieldType,
+				Optional: optional,
+			})
+		}
+
+		types[typeSpec.Name.Name] = tsTypeDef
 
 		return true
 	})
@@ -402,6 +430,8 @@ func parseStateFile(filename string) (map[string]TypeScriptType, error) {
 	return types, nil
 }
 
+// hasStateComment checks if the type has a "gospa:state" annotation in its doc comment.
+// Add "// gospa:state" to a struct's doc comment to expose it to the TypeScript generator.
 func hasStateComment(typeSpec *ast.TypeSpec) bool {
 	if typeSpec.Doc == nil {
 		return false
@@ -414,10 +444,6 @@ func hasStateComment(typeSpec *ast.TypeSpec) bool {
 	}
 
 	return false
-}
-
-func hasStateSuffix(name string) bool {
-	return strings.HasSuffix(name, "State") || strings.HasSuffix(name, "Props")
 }
 
 func convertGoTypeToTS(expr ast.Expr) string {
@@ -457,8 +483,16 @@ func writeTypeScriptFile(outputDir string, types map[string]TypeScriptType) erro
 
 	sb.WriteString("// Auto-generated by GoSPA. DO NOT EDIT.\n\n")
 
+	// Sort type names for deterministic output
+	typeNames := make([]string, 0, len(types))
+	for name := range types {
+		typeNames = append(typeNames, name)
+	}
+	sort.Strings(typeNames)
+
 	// Write interface declarations
-	for _, t := range types {
+	for _, name := range typeNames {
+		t := types[name]
 		fmt.Fprintf(&sb, "export interface %s {\n", t.Name)
 
 		for _, field := range t.Fields {
@@ -474,7 +508,7 @@ func writeTypeScriptFile(outputDir string, types map[string]TypeScriptType) erro
 
 	// Write type exports
 	sb.WriteString("export type AppState = {\n")
-	for name := range types {
+	for _, name := range typeNames {
 		if name == "" {
 			continue
 		}

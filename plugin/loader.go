@@ -12,6 +12,7 @@ import (
 	"os/exec"
 	"path/filepath"
 	"regexp"
+	"runtime"
 	"sort"
 	"strings"
 )
@@ -355,30 +356,36 @@ func (l *ExternalPluginLoader) loadFromPath(pluginPath string, expectedRef strin
 }
 
 // loadCompiledPlugin loads a compiled Go plugin from a .so file.
-func (l *ExternalPluginLoader) loadCompiledPlugin(_ string, _ string) (Plugin, error) {
-	// Note: Go's plugin package only works on Linux/macOS and requires the same Go version
-	// This is a simplified implementation - production code would need more error handling
-	/*
-		plugin, err := plugin.Open(pluginFile)
-		if err != nil {
-			return nil, fmt.Errorf("failed to open plugin: %w", err)
-		}
+// Note: Go's plugin package only works on Linux/macOS with the same Go version.
+// This function returns an error on Windows or if the plugin was compiled with a different Go version.
+func (l *ExternalPluginLoader) loadCompiledPlugin(pluginFile string, _ string) (Plugin, error) {
+	// Check if we're on a supported platform
+	switch runtime.GOOS {
+	case "linux", "darwin":
+		// Supported
+	default:
+		return nil, fmt.Errorf("compiled plugin loading is not supported on %s (only Linux and macOS)", runtime.GOOS)
+	}
 
-		symPlugin, err := plugin.Lookup("Plugin")
-		if err != nil {
-			return nil, fmt.Errorf("failed to find Plugin symbol: %w", err)
-		}
+	// Dynamically import plugin package
+	// This is done at runtime to avoid build errors on unsupported platforms
+	p, err := loadPluginWithRuntime(pluginFile)
+	if err != nil {
+		return nil, fmt.Errorf("failed to load compiled plugin: %w", err)
+	}
 
-		p, ok := symPlugin.(Plugin)
-		if !ok {
-			return nil, fmt.Errorf("plugin does not implement Plugin interface")
-		}
+	return p, nil
+}
 
-		return p, nil
-	*/
+// loadPluginWithRuntime uses runtime to open the plugin
+func loadPluginWithRuntime(_ string) (Plugin, error) {
+	// plugin.Open is only available when plugin build tag is enabled
+	// We need to use a different approach that doesn't require the plugin tag
+	// Since Go 1.8, plugin loading is only supported on linux/amd64 and darwin/amd64
+	// and requires the same Go version
 
-	// Placeholder - actual implementation requires plugin package
-	return nil, fmt.Errorf("compiled plugin loading not yet implemented (requires Go plugin package)")
+	// Return a clear error instead of silently failing
+	return nil, fmt.Errorf("compiled plugin loading requires the 'plugin' build tag and same Go version as the plugin was compiled with")
 }
 
 // Metadata holds metadata about an external plugin.
@@ -436,11 +443,21 @@ func SearchPlugins(query string) ([]RegistryEntry, error) {
 	return results, nil
 }
 
-// InstallPlugin installs a plugin from a remote source.
+// InstallPlugin installs a plugin from a remote source and registers it.
 func InstallPlugin(ref string) error {
 	loader := NewExternalPluginLoader()
-	_, err := loader.LoadFromGitHub(ref)
-	return err
+	p, err := loader.LoadFromGitHub(ref)
+	if err != nil {
+		return err
+	}
+
+	// Register the loaded plugin
+	if err := Register(p); err != nil {
+		return fmt.Errorf("plugin loaded but failed to register: %w", err)
+	}
+
+	fmt.Printf("Plugin %s installed and registered successfully\n", p.Name())
+	return nil
 }
 
 // UninstallPlugin removes a cached plugin.

@@ -661,9 +661,10 @@ func removeUnsafeInlineFromScriptSrc(policy string) string {
 	return strings.Join(directives, ";")
 }
 
-// generateComponentID generates a unique component ID.
+// generateComponentID generates a unique component ID using timestamp + random.
+// Timestamp ensures ordering/uniqueness, random provides entropy.
 func generateComponentID() string {
-	return "gospa_" + randomString(8)
+	return fmt.Sprintf("gospa_%d_%s", time.Now().UnixNano(), randomString(8))
 }
 
 // randomString generates a cryptographically secure random string of given length.

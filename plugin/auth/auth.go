@@ -15,6 +15,7 @@ import (
 	"net/url"
 	"os"
 	"path/filepath"
+	"runtime"
 	"strconv"
 	"strings"
 	"sync"
@@ -404,22 +405,45 @@ func (p *AuthPlugin) verifyOTPWithStorage(c fiber.Ctx, limitKey, secret, code st
 func (p *AuthPlugin) verifyOTPInMemory(c fiber.Ctx, rateKey, secret, code string) error {
 	now := time.Now().Unix()
 
-	val, loaded := p.otpLimiter.Load(rateKey)
-	if !loaded {
-		entry := &otpRateEntry{count: 1, expiresAt: now + 300}
-		p.otpLimiter.Store(rateKey, entry)
-	} else {
+	// Use a CAS loop to atomically check-and-increment the counter
+	// This prevents the TOCTOU race where two requests could both pass
+	// the count check before either increments
+	for {
+		val, loaded := p.otpLimiter.Load(rateKey)
+		if !loaded {
+			// No entry exists, create one
+			entry := &otpRateEntry{count: 1, expiresAt: now + 300}
+			// Try to store - if another goroutine already stored, retry
+			if _, stored := p.otpLimiter.LoadOrStore(rateKey, entry); !stored {
+				// We stored it, proceed to verify
+				break
+			}
+			// Another goroutine stored something, retry the loop
+			continue
+		}
+
 		entry := val.(*otpRateEntry)
 		expires := atomic.LoadInt64(&entry.expiresAt)
 		if now > expires {
+			// Entry expired, reset and retry
 			atomic.StoreInt32(&entry.count, 1)
 			atomic.StoreInt64(&entry.expiresAt, now+300)
-		} else {
-			if atomic.LoadInt32(&entry.count) >= 5 {
+			continue
+		}
+
+		// Check current count with CAS loop
+		for {
+			currentCount := atomic.LoadInt32(&entry.count)
+			if currentCount >= 5 {
 				return c.Status(429).JSON(fiber.Map{"error": "too many attempts. please wait."})
 			}
-			atomic.AddInt32(&entry.count, 1)
+			// Try to increment atomically
+			if atomic.CompareAndSwapInt32(&entry.count, currentCount, currentCount+1) {
+				break
+			}
+			// CAS failed, retry the inner loop
 		}
+		break
 	}
 
 	if p.VerifyOTP(secret, code) {
@@ -448,9 +472,14 @@ func DefaultConfig() *Config {
 	jwtSecret := os.Getenv("JWT_SECRET")
 
 	if jwtSecret == "" && isProductionRuntime() {
+		// Provide cross-platform instructions for generating a secret
+		secretCmd := "openssl rand -hex 32" //nolint:gosec // G101: not a hardcoded credential, just a command example
+		if runtime.GOOS == "windows" {
+			secretCmd = "powershell -Command \"[Convert]::ToBase64String((1..32 | ForEach-Object { Get-Random -Maximum 256 }))\""
+		}
 		panic("JWT_SECRET environment variable is not set. " +
-			"Generate a secure secret with: openssl rand -hex 32 " +
-			"and set it in your environment before starting the application in production.")
+			"Generate a secure secret with: " + secretCmd +
+			" and set it in your environment before starting the application in production.")
 	}
 
 	if jwtSecret != "" && len(jwtSecret) < 32 {

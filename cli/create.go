@@ -2,6 +2,7 @@
 package cli
 
 import (
+	"encoding/json"
 	"errors"
 	"fmt"
 	"os"
@@ -20,6 +21,7 @@ type ProjectConfig struct {
 	WithDocker     bool
 	Template       string
 	NonInteractive bool
+	PackageManager string // Package manager to use (bun, pnpm, npm, auto)
 }
 
 var (
@@ -190,18 +192,40 @@ func createProject(config *ProjectConfig) error {
 }
 
 func createGoMod(config *ProjectConfig) error {
+	// Get the current gospa version dynamically
+	gospaVersion := getGoSPAGlobalVersion()
+
 	content := fmt.Sprintf(`module %s
 
 go 1.23
 
 require (
 	github.com/a-h/templ v0.3.1001
-	github.com/aydenstechdungeon/gospa v0.1.36
+	github.com/aydenstechdungeon/gospa %s
 )
-`, config.Module)
+`, config.Module, gospaVersion)
 
 	path := filepath.Join(config.OutputDir, "go.mod")
 	return os.WriteFile(path, []byte(content), 0600)
+}
+
+// getGoSPAGlobalVersion returns the current gospa version from go.mod
+func getGoSPAGlobalVersion() string {
+	// Try to get the version from the current module
+	cmd := exec.Command("go", "list", "-m", "-json", "github.com/aydenstechdungeon/gospa")
+	output, err := cmd.Output()
+	if err != nil {
+		// Fallback to a known recent version if we can't determine
+		return "v0.1.36"
+	}
+
+	var mod struct {
+		Version string `json:"Version"`
+	}
+	if err := json.Unmarshal(output, &mod); err != nil || mod.Version == "" {
+		return "v0.1.36"
+	}
+	return mod.Version
 }
 
 func createMainGo(config *ProjectConfig) error {

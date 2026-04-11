@@ -4,6 +4,7 @@ package plugin
 import (
 	"fmt"
 	"os"
+	"os/exec"
 	"path/filepath"
 	"sync"
 )
@@ -244,31 +245,35 @@ func GetAllPluginInfo() []Info {
 	return result
 }
 
-// GetCLIPlugins returns all registered CLI plugins.
-// This function is thread-safe.
+// GetCLIPlugins returns all enabled CLI plugins.
+// This function is thread-safe and only returns plugins that are in StateEnabled.
 func GetCLIPlugins() []CLIPlugin {
 	registryMu.RLock()
 	defer registryMu.RUnlock()
 
 	var cliPlugins []CLIPlugin
 	for _, entry := range registry {
-		if cp, ok := entry.impl.(CLIPlugin); ok {
-			cliPlugins = append(cliPlugins, cp)
+		if entry.plugin.State == StateEnabled {
+			if cp, ok := entry.impl.(CLIPlugin); ok {
+				cliPlugins = append(cliPlugins, cp)
+			}
 		}
 	}
 	return cliPlugins
 }
 
-// GetRuntimePlugins returns all registered runtime plugins.
-// This function is thread-safe.
+// GetRuntimePlugins returns all enabled runtime plugins.
+// This function is thread-safe and only returns plugins that are in StateEnabled.
 func GetRuntimePlugins() []RuntimePlugin {
 	registryMu.RLock()
 	defer registryMu.RUnlock()
 
 	var runtimePlugins []RuntimePlugin
 	for _, entry := range registry {
-		if rp, ok := entry.impl.(RuntimePlugin); ok {
-			runtimePlugins = append(runtimePlugins, rp)
+		if entry.plugin.State == StateEnabled {
+			if rp, ok := entry.impl.(RuntimePlugin); ok {
+				runtimePlugins = append(runtimePlugins, rp)
+			}
 		}
 	}
 	return runtimePlugins
@@ -299,11 +304,23 @@ func Disable(name string) error {
 }
 
 // TriggerHook triggers a lifecycle hook for all registered CLI plugins concurrently.
+// Only enabled plugins have their hooks triggered.
 func TriggerHook(hook Hook, ctx map[string]interface{}) error {
-	var wg sync.WaitGroup
-	errCh := make(chan error, len(GetCLIPlugins()))
+	registryMu.RLock()
+	var enabledPlugins []CLIPlugin
+	for _, entry := range registry {
+		if entry.plugin.State == StateEnabled {
+			if cp, ok := entry.impl.(CLIPlugin); ok {
+				enabledPlugins = append(enabledPlugins, cp)
+			}
+		}
+	}
+	registryMu.RUnlock()
 
-	for _, p := range GetCLIPlugins() {
+	var wg sync.WaitGroup
+	errCh := make(chan error, len(enabledPlugins))
+
+	for _, p := range enabledPlugins {
 		wg.Add(1)
 		go func(plugin CLIPlugin) {
 			defer wg.Done()
@@ -316,10 +333,19 @@ func TriggerHook(hook Hook, ctx map[string]interface{}) error {
 	wg.Wait()
 	close(errCh)
 
+	// Collect all errors
+	var errs []error
 	for err := range errCh {
-		if err != nil {
-			return err // Return the first error encountered
+		errs = append(errs, err)
+	}
+
+	if len(errs) > 0 {
+		// Return aggregated error message
+		errMsg := fmt.Sprintf("%d plugin(s) failed on hook %s:", len(errs), hook)
+		for _, e := range errs {
+			errMsg += fmt.Sprintf("\n  - %v", e)
 		}
+		return fmt.Errorf("%s", errMsg)
 	}
 	return nil
 }
@@ -361,10 +387,10 @@ func GetAllDependencies() []Dependency {
 		if entry.plugin.State != StateEnabled {
 			continue
 		}
+		// Plugin interface requires Dependencies() method, so the type assertion
+		// is always successful - but we check anyway for safety
 		if p, ok := entry.impl.(interface{ Dependencies() []Dependency }); ok {
 			deps = append(deps, p.Dependencies()...)
-		} else {
-			deps = append(deps, entry.impl.Dependencies()...)
 		}
 	}
 	return deps
@@ -391,8 +417,19 @@ func ResolveDependencies() error {
 	if len(goDeps) > 0 {
 		fmt.Println("Installing Go dependencies for plugins...")
 		for _, dep := range goDeps {
-			fmt.Printf("  go get %s@%s\n", dep.Name, dep.Version)
-			// Note: Actual installation would use exec.Command to run go get
+			version := dep.Version
+			if version == "latest" {
+				version = "@latest"
+			} else {
+				version = "@" + version
+			}
+			fmt.Printf("  go get %s%s\n", dep.Name, version)
+			cmd := exec.Command("go", "get", dep.Name+version) //nolint:gosec // G204: dep.Name and version are from trusted plugin manifest
+			cmd.Stdout = os.Stdout
+			cmd.Stderr = os.Stderr
+			if err := cmd.Run(); err != nil {
+				return fmt.Errorf("failed to install Go dependency %s: %w", dep.Name, err)
+			}
 		}
 	}
 
@@ -400,8 +437,17 @@ func ResolveDependencies() error {
 	if len(bunDeps) > 0 {
 		fmt.Println("Installing Bun dependencies for plugins...")
 		for _, dep := range bunDeps {
-			fmt.Printf("  bun add %s@%s\n", dep.Name, dep.Version)
-			// Note: Actual installation would use exec.Command to run bun add
+			version := dep.Version
+			if version == "latest" {
+				version = "latest"
+			}
+			fmt.Printf("  bun add %s@%s\n", dep.Name, version)
+			cmd := exec.Command("bun", "add", dep.Name+"@"+version) //nolint:gosec // G204: dep.Name and version are from trusted plugin manifest
+			cmd.Stdout = os.Stdout
+			cmd.Stderr = os.Stderr
+			if err := cmd.Run(); err != nil {
+				return fmt.Errorf("failed to install Bun dependency %s: %w", dep.Name, err)
+			}
 		}
 	}
 
