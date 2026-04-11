@@ -205,36 +205,6 @@ func startServerProcess(ctx context.Context, config *DevConfig) *exec.Cmd {
 		"HOST="+config.Host,
 	)
 
-	// Set up timeout if specified
-	if config.Timeout > 0 {
-		timeoutCtx, timeoutCancel := context.WithTimeout(ctx, config.Timeout)
-		defer timeoutCancel()
-
-		// Start the command with timeout context
-		if err := cmd.Start(); err != nil {
-			fmt.Fprintf(os.Stderr, "Error starting server: %v\n", err)
-			return nil
-		}
-
-		// Wait for command with timeout
-		done := make(chan error, 1)
-		go func() {
-			done <- cmd.Wait()
-		}()
-
-		select {
-		case <-timeoutCtx.Done():
-			_ = cmd.Process.Kill()
-			fmt.Fprintf(os.Stderr, "Server start timed out after %v\n", config.Timeout)
-			return nil
-		case err := <-done:
-			if err != nil {
-				fmt.Fprintf(os.Stderr, "Server exited with error: %v\n", err)
-			}
-			return nil
-		}
-	}
-
 	if err := cmd.Start(); err != nil {
 		fmt.Fprintf(os.Stderr, "Error starting server: %v\n", err)
 		return nil
