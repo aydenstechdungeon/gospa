@@ -62,7 +62,14 @@ func main() {
 		compress := fs.Bool("compress", true, "Precompress static assets")
 		cgo := fs.Bool("cgo", false, "Enable CGO for the Go binary build")
 		_ = fs.Parse(os.Args[2:])
-		cfg := &cli.BuildConfig{OutputDir: *out, Minify: *minify, Compress: *compress, CGO: *cgo}
+		cfg := &cli.BuildConfig{
+			OutputDir:    *out,
+			Minify:       *minify,
+			Compress:     *compress,
+			CGO:          *cgo,
+			StaticAssets: true,
+			Env:          "production",
+		}
 		if *platform != "" {
 			cfg.Platform = *platform
 		}

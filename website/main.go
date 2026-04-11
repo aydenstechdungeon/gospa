@@ -76,8 +76,10 @@ func main() {
 		},
 	})
 
-	// Add security headers middleware with nonce-based CSP
-	cspPolicy := "default-src 'self'; script-src 'self' 'nonce-{nonce}'; style-src 'self' 'nonce-{nonce}'; img-src 'self' data: https:; font-src 'self' data:; connect-src 'self' wss: https:; frame-ancestors 'none'; base-uri 'self'; form-action 'self';"
+	// Add security headers middleware with nonce-based CSP.
+	// NOTE: We allow 'unsafe-inline' for style-src because the GoSPA runtime and speculative navigation
+	// (IntersectionObserver viewport margins) require dynamic style updates.
+	cspPolicy := "default-src 'self'; script-src 'self' 'nonce-{nonce}'; style-src 'self' 'unsafe-inline'; img-src 'self' data: https:; font-src 'self' data:; connect-src 'self' wss: https:; frame-ancestors 'none'; base-uri 'self'; form-action 'self';"
 	app.Fiber.Use(gospafiber.SecurityHeadersMiddleware(cspPolicy))
 	app.Fiber.Use(func(c fiber.Ctx) error {
 		c.Set("Permissions-Policy", "camera=(), microphone=(), geolocation=(), payment=()")

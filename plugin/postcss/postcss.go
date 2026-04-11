@@ -1024,6 +1024,22 @@ func CriticalCSSWithFallback(path, fallback string) string {
 	return string(css)
 }
 
+// CriticalCSSWithNonce generates a <style> tag with the critical CSS and a CSP nonce.
+// This is preferred over using <style nonce={...}>@templ.Raw(CriticalCSS(...))</style>
+// because Templ treats the content of <style> tags as raw text and may not execute
+// the @ component declaration correctly.
+func CriticalCSSWithNonce(path, nonce string) string {
+	css := CriticalCSSWithFallback(path, "")
+	if css == "" {
+		return ""
+	}
+	nonceAttr := ""
+	if nonce != "" {
+		nonceAttr = fmt.Sprintf(` nonce="%s"`, nonce)
+	}
+	return fmt.Sprintf(`<style%s>%s</style>`, nonceAttr, css)
+}
+
 // classRegex matches class="..." with literal string values in templ files.
 var classRegex = regexp.MustCompile(`class="([^"]*)"`)
 

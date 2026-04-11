@@ -98,14 +98,10 @@ templ RootLayout(title string, children templ.Component, runtimePath string, pat
 				}
 			} else {
 				if strings.HasPrefix(path, "/docs") {
-					<style nonce={ gospatempl.GetNonce(ctx) }>
-						@templ.Raw(postcss.CriticalCSSWithFallback("./static/css/docs.critical.css", ""))
-					</style>
+					@templ.Raw(postcss.CriticalCSSWithNonce("./static/css/docs.critical.css", gospatempl.GetNonce(ctx)))
 					@templ.Raw(postcss.AsyncCSSWithNonce("/static/css/docs.non-critical.css", gospatempl.GetNonce(ctx)))
 				} else {
-					<style nonce={ gospatempl.GetNonce(ctx) }>
-						@templ.Raw(postcss.CriticalCSSWithFallback("./static/css/website.critical.css", ""))
-					</style>
+					@templ.Raw(postcss.CriticalCSSWithNonce("./static/css/website.critical.css", gospatempl.GetNonce(ctx)))
 					@templ.Raw(postcss.AsyncCSSWithNonce("/static/css/website.non-critical.css", gospatempl.GetNonce(ctx)))
 				}
 			}
