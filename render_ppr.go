@@ -45,7 +45,7 @@ func (a *App) storePprShell(key string, shell []byte) {
 	a.pprShellCache[key] = pprEntry{html: shell, createdAt: time.Now()}
 }
 
-func (a *App) applyPPRSlots(route *routing.Route, shell []byte, path string, opts routing.RouteOptions) ([]byte, error) {
+func (a *App) applyPPRSlots(ctx context.Context, route *routing.Route, shell []byte, path string, opts routing.RouteOptions) ([]byte, error) {
 	_, params := a.Router.Match(path)
 	if params == nil {
 		params = map[string]string{}
@@ -62,7 +62,7 @@ func (a *App) applyPPRSlots(route *routing.Route, shell []byte, path string, opt
 			slotProps[k] = v
 		}
 		var slotBuf bytes.Buffer
-		if err := slotFn(slotProps).Render(context.Background(), &slotBuf); err != nil {
+		if err := slotFn(slotProps).Render(ctx, &slotBuf); err != nil {
 			a.Logger().Error("PPR slot render error", "slot", slotName, "err", err)
 			continue
 		}

@@ -23,6 +23,7 @@ import (
 // renderRoute renders a route with its layout chain.
 func (a *App) renderRoute(c gofiber.Ctx, route *routing.Route) error {
 	cacheKey := c.Path()
+	ctx := c.Context()
 	opts := routing.GetRouteOptions(route.Path)
 
 	effStrategy := opts.Strategy
@@ -54,6 +55,14 @@ func (a *App) renderRoute(c gofiber.Ctx, route *routing.Route) error {
 		if hit {
 			c.Set("Content-Type", "text/html")
 			c.Set("Cache-Control", "public, max-age=31536000, immutable")
+
+			// SECURITY: Replace nonces in cached HTML with the current request's nonce
+			// to ensure CSP remains valid across different requests and sessions.
+			currentNonce, _ := c.Locals("gospa.csp_nonce").(string)
+			if currentNonce != "" {
+				return c.Send(a.replaceNonces(entry.html, currentNonce))
+			}
+
 			return c.Send(entry.html)
 		}
 	}
@@ -95,6 +104,13 @@ func (a *App) renderRoute(c gofiber.Ctx, route *routing.Route) error {
 			}
 			c.Set("Content-Type", "text/html")
 			c.Set("Cache-Control", fmt.Sprintf("public, s-maxage=%d, stale-while-revalidate=%d", ttlSec, ttlSec))
+
+			// SECURITY: Replace nonces in cached HTML with the current request's nonce.
+			currentNonce, _ := c.Locals("gospa.csp_nonce").(string)
+			if currentNonce != "" {
+				return c.Send(a.replaceNonces(entry.html, currentNonce))
+			}
+
 			return c.Send(entry.html)
 		}
 	}
@@ -119,12 +135,19 @@ func (a *App) renderRoute(c gofiber.Ctx, route *routing.Route) error {
 		}
 
 		if shellHit {
-			result, err := a.applyPPRSlots(route, shell, c.Path(), opts)
+			result, err := a.applyPPRSlots(ctx, route, shell, c.Path(), opts)
 			if err != nil {
 				a.Logger().Error("PPR slot error", "err", err)
 			}
 			c.Set("Content-Type", "text/html")
 			c.Set("Cache-Control", "no-store")
+
+			// SECURITY: Replace nonces in cached shell before applying slots.
+			currentNonce, _ := c.Locals("gospa.csp_nonce").(string)
+			if currentNonce != "" {
+				result = a.replaceNonces(result, currentNonce)
+			}
+
 			return c.Send(result)
 		}
 	}
@@ -154,8 +177,6 @@ func (a *App) renderRoute(c gofiber.Ctx, route *routing.Route) error {
 	for k, v := range gospafiber.GetFlashes(c) {
 		loadedProps[k] = v
 	}
-
-	ctx := c.Context()
 	if nonce, ok := c.Locals("gospa.csp_nonce").(string); ok && nonce != "" {
 		ctx = templpkg.WithNonce(ctx, nonce)
 	}
@@ -185,7 +206,14 @@ func (a *App) renderRoute(c gofiber.Ctx, route *routing.Route) error {
 				a.Logger().Error("SSG render error", "err", err)
 				return a.renderError(c, gofiber.StatusInternalServerError, err)
 			}
-			a.storeSsgEntry(cacheKey, buf.Bytes())
+
+			htmlBytes := buf.Bytes()
+			// Prepare for caching: replace the current nonce with a placeholder.
+			if nonce, ok := c.Locals("gospa.csp_nonce").(string); ok && nonce != "" {
+				htmlBytes = bytes.ReplaceAll(htmlBytes, []byte(nonce), []byte("__GOSPA_NONCE_PLACEHOLDER__"))
+			}
+
+			a.storeSsgEntry(cacheKey, htmlBytes)
 			c.Set("Cache-Control", "public, max-age=31536000, immutable")
 			return c.Send(buf.Bytes())
 		}
@@ -204,7 +232,14 @@ func (a *App) renderRoute(c gofiber.Ctx, route *routing.Route) error {
 				a.Logger().Error("ISR render error", "err", err)
 				return a.renderError(c, gofiber.StatusInternalServerError, err)
 			}
-			a.storeSsgEntry(cacheKey, buf.Bytes())
+
+			htmlBytes := buf.Bytes()
+			// Prepare for caching: replace the current nonce with a placeholder.
+			if nonce, ok := c.Locals("gospa.csp_nonce").(string); ok && nonce != "" {
+				htmlBytes = bytes.ReplaceAll(htmlBytes, []byte(nonce), []byte("__GOSPA_NONCE_PLACEHOLDER__"))
+			}
+
+			a.storeSsgEntry(cacheKey, htmlBytes)
 			c.Set("Cache-Control", fmt.Sprintf("public, s-maxage=%d, stale-while-revalidate=%d", ttlSec, ttlSec))
 			return c.Send(buf.Bytes())
 		}
@@ -237,8 +272,15 @@ func (a *App) renderRoute(c gofiber.Ctx, route *routing.Route) error {
 					a.Logger().Error("PPR shell render error", "err", err)
 					return a.renderError(c, gofiber.StatusInternalServerError, err)
 				}
-				a.storePprShell(cacheKey, shellBuf.Bytes())
-				result, err := a.applyPPRSlots(route, shellBuf.Bytes(), c.Path(), opts)
+
+				shellBytes := shellBuf.Bytes()
+				// Prepare for caching: replace current nonce with a placeholder.
+				if nonce, ok := c.Locals("gospa.csp_nonce").(string); ok && nonce != "" {
+					shellBytes = bytes.ReplaceAll(shellBytes, []byte(nonce), []byte("__GOSPA_NONCE_PLACEHOLDER__"))
+				}
+
+				a.storePprShell(cacheKey, shellBytes)
+				result, err := a.applyPPRSlots(ctx, route, shellBuf.Bytes(), c.Path(), opts)
 				if err != nil {
 					a.Logger().Error("PPR slot error", "err", err)
 					return a.renderError(c, gofiber.StatusInternalServerError, err)
@@ -263,7 +305,7 @@ func (a *App) renderRoute(c gofiber.Ctx, route *routing.Route) error {
 				a.pprShellMu.RUnlock()
 			}
 			if shellOk {
-				result, err := a.applyPPRSlots(route, shellHTML, c.Path(), opts)
+				result, err := a.applyPPRSlots(ctx, route, shellHTML, c.Path(), opts)
 				if err != nil {
 					a.Logger().Error("PPR slot error", "err", err)
 					return a.renderError(c, gofiber.StatusInternalServerError, err)

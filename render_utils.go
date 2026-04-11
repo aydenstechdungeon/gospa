@@ -324,3 +324,10 @@ func toJS(v interface{}) string {
 	}
 	return strings.TrimSuffix(buf.String(), "\n")
 }
+
+const noncePlaceholder = "__GOSPA_NONCE_PLACEHOLDER__"
+
+// replaceNonces replaces the nonce placeholder in the HTML with the actual nonce.
+func (a *App) replaceNonces(html []byte, nonce string) []byte {
+	return bytes.ReplaceAll(html, []byte(noncePlaceholder), []byte(nonce))
+}
