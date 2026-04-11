@@ -73,7 +73,7 @@ export class HMRClient {
   private reconnectAttempts = 0;
   private moduleRegistry: ModuleRegistry = {};
   private stateRegistry: Map<string, ModuleState> = new Map();
-  private moduleVersions: Map<string, ModuleVersion> = new Map(); // For rollback
+  private moduleVersions: Map<string, ModuleVersion> = new Map(); // For rollback - only 1 version per moduleId (overwrites on update)
   private moduleDepGraph: Map<string, Set<string>> = new Map(); // Dependency graph
   private dependentsMap: Map<string, Set<string>> = new Map(); // Reverse deps
   private isConnecting = false;
@@ -83,7 +83,7 @@ export class HMRClient {
 
   constructor(config: HMRClientConfig = {}) {
     this.config = {
-      wsUrl: config.wsUrl || `ws://${window.location.host}/__hmr`,
+      wsUrl: config.wsUrl || `${window.location.protocol === 'https:' ? 'wss:' : 'ws:'}//${window.location.host}/__hmr`,
       reconnectInterval: config.reconnectInterval || 1000,
       maxReconnectAttempts: config.maxReconnectAttempts || 10,
       onUpdate: config.onUpdate || (() => {}),
@@ -314,8 +314,8 @@ export class HMRClient {
       // Show visual indicator
       this.showUpdateNotification(moduleId);
 
-      // Broadcast update to other tabs
-      this.broadcastState();
+      // Broadcast update to other tabs (only the changed module)
+      this.broadcastState(moduleId);
 
       // Get and update affected modules (dependency graph)
       const affectedModules = this.getAffectedModules(moduleId);
@@ -472,20 +472,27 @@ export class HMRClient {
   }
 
   /**
-   * Broadcast state changes to other tabs
+   * Broadcast state changes to other tabs (only the changed module)
    */
-  private broadcastState(): void {
+  private broadcastState(moduleId?: string): void {
     if (!this.broadcastChannel) return;
 
-    const allStates: Record<string, unknown> = {};
-    for (const moduleId of Object.keys(this.moduleRegistry)) {
+    // If moduleId provided, only broadcast that module's state (delta)
+    // Otherwise broadcast all (fallback for initial sync)
+    const states: Record<string, unknown> = {};
+    if (moduleId) {
       const state = this.extractModuleState(moduleId);
-      if (state) allStates[moduleId] = state;
+      if (state) states[moduleId] = state;
+    } else {
+      for (const id of Object.keys(this.moduleRegistry)) {
+        const state = this.extractModuleState(id);
+        if (state) states[id] = state;
+      }
     }
 
     this.broadcastChannel.postMessage({
       type: "state-sync",
-      state: allStates,
+      state: states,
     });
   }
 

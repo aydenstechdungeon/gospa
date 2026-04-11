@@ -12,6 +12,7 @@ import (
 
 	"github.com/aydenstechdungeon/gospa/plugin"
 	"github.com/skip2/go-qrcode"
+	"golang.org/x/image/draw"
 )
 
 // Level represents the error correction level.
@@ -219,6 +220,13 @@ func (qr *QRCode) DataURL() (string, error) {
 func (p *Plugin) GenerateWithLogo(content string, logo image.Image, opts ...Option) (image.Image, error) {
 	qr := p.NewQRCode(content, opts...)
 
+	// If logo is provided, we need higher error correction to maintain scannability
+	// A logo covering 20% of the QR code center can interfere with ~15% of modules
+	// Upgrade to LevelHigh (30%) if using a logo with lower correction levels
+	if logo != nil && qr.Level < LevelHigh {
+		qr.Level = LevelHigh
+	}
+
 	// Generate base QR code
 	baseQR, err := qrcode.New(content, qr.Level.toQrcodeLevel())
 	if err != nil {
@@ -242,34 +250,30 @@ func overlayLogo(qr image.Image, logo image.Image, size int) (image.Image, error
 	// Create output image
 	output := image.NewRGBA(image.Rect(0, 0, size, size))
 
-	// Draw QR code scaled to size
-	for y := 0; y < size; y++ {
-		for x := 0; x < size; x++ {
-			output.Set(x, y, qr.At(
-				x*qr.Bounds().Dx()/size,
-				y*qr.Bounds().Dy()/size,
-			))
-		}
-	}
+	// Scale QR code to output size using CatmullRom interpolation for high quality
+	qrBounds := qr.Bounds()
+	dstBounds := image.Rect(0, 0, size, size)
+	draw.CatmullRom.Scale(output, dstBounds, qr, qrBounds, draw.Over, nil)
 
 	// Calculate logo position (centered, max 20% of QR code size)
 	logoSize := size / 5
 	logoX := (size - logoSize) / 2
 	logoY := (size - logoSize) / 2
 
-	// Draw logo
-	for y := 0; y < logoSize; y++ {
-		for x := 0; x < logoSize; x++ {
-			px := logoX + x
-			py := logoY + y
-			if px >= 0 && px < size && py >= 0 && py < size {
-				// Scale logo coordinates
-				lx := x * logo.Bounds().Dx() / logoSize
-				ly := y * logo.Bounds().Dy() / logoSize
-				_, _, _, a := logo.At(lx, ly).RGBA()
-				if a > 0 {
-					output.Set(px, py, logo.At(lx, ly))
-				}
+	// Scale logo to fit in the center area using high-quality interpolation
+	logoBounds := logo.Bounds()
+	logoDst := image.Rect(logoX, logoY, logoX+logoSize, logoY+logoSize)
+	scaledLogo := image.NewRGBA(logoDst)
+	draw.CatmullRom.Scale(scaledLogo, logoDst, logo, logoBounds, draw.Over, nil)
+
+	// Draw scaled logo onto output with alpha blending
+	for y := logoY; y < logoY+logoSize; y++ {
+		for x := logoX; x < logoX+logoSize; x++ {
+			srcX := logoX + (x - logoX)
+			srcY := logoY + (y - logoY)
+			_, _, _, a := scaledLogo.At(srcX, srcY).RGBA()
+			if a > 0 {
+				output.Set(x, y, scaledLogo.At(srcX, srcY))
 			}
 		}
 	}

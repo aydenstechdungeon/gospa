@@ -304,11 +304,119 @@ func (p *ImagePlugin) optimizeAllImages(projectDir string) error {
 	return nil
 }
 
-// optimizeChangedImages optimizes only images that have changed.
+// optimizeChangedImages optimizes only images that have changed since last optimization.
 func (p *ImagePlugin) optimizeChangedImages(projectDir string) error {
-	// For dev mode, we could implement a file watcher or mtime check
-	// For now, just optimize all images
-	return p.optimizeAllImages(projectDir)
+	srcDir := filepath.Join(projectDir, p.config.SourceDir)
+	outDir := filepath.Join(projectDir, p.config.OutputDir)
+
+	// Ensure output directory exists
+	if err := os.MkdirAll(outDir, 0750); err != nil {
+		return fmt.Errorf("failed to create output directory: %w", err)
+	}
+
+	// Skip if source directory doesn't exist
+	if _, err := os.Stat(srcDir); os.IsNotExist(err) {
+		return nil
+	}
+
+	// Track whether any images were optimized
+	var wg sync.WaitGroup
+	var mu sync.Mutex
+	anyChanged := false
+
+	concurrency := p.config.Concurrency
+	if concurrency <= 0 {
+		concurrency = runtime.GOMAXPROCS(0)
+	}
+	semaphore := make(chan struct{}, concurrency)
+
+	err := filepath.Walk(srcDir, func(path string, info os.FileInfo, err error) error {
+		if err != nil {
+			return err
+		}
+		if info.IsDir() {
+			return nil
+		}
+
+		ext := strings.ToLower(filepath.Ext(path))
+		if !isImageFile(ext) {
+			return nil
+		}
+
+		relPath, err := filepath.Rel(srcDir, path)
+		if err != nil {
+			return err
+		}
+
+		// Check if any output file is older than the source
+		outPath := filepath.Join(outDir, relPath)
+		srcMtime := info.ModTime()
+
+		needsUpdate := false
+		// Check if any format/size output is missing or older than source
+		for _, size := range p.config.Sizes {
+			sizeOutPath := p.addSizeSuffix(outPath, size.Name)
+			var formatExts []string
+			switch {
+			case p.config.Formats.JPEG && ext != ".png":
+				formatExts = append(formatExts, ".jpg")
+			case p.config.Formats.PNG && ext == ".png":
+				formatExts = append(formatExts, ".png")
+			}
+			if p.config.Formats.WebP {
+				formatExts = append(formatExts, ".webp")
+			}
+			if p.config.Formats.AVIF {
+				formatExts = append(formatExts, ".avif")
+			}
+
+			for _, formatExt := range formatExts {
+				outputFile := sizeOutPath + formatExt
+				if dstInfo, err := os.Stat(outputFile); err != nil || dstInfo.ModTime().Before(srcMtime) {
+					needsUpdate = true
+					break
+				}
+			}
+			if needsUpdate {
+				break
+			}
+		}
+
+		if !needsUpdate {
+			return nil
+		}
+
+		mu.Lock()
+		anyChanged = true
+		mu.Unlock()
+
+		wg.Add(1)
+		go func(src, dst string) {
+			defer wg.Done()
+			semaphore <- struct{}{}
+			defer func() { <-semaphore }()
+
+			if err := p.optimizeImage(src, dst); err != nil {
+				fmt.Fprintf(os.Stderr, "Warning: failed to optimize changed image %s: %v\n", src, err)
+			}
+		}(path, outPath)
+
+		return nil
+	})
+
+	wg.Wait()
+
+	if err != nil {
+		return err
+	}
+
+	if !anyChanged {
+		fmt.Println("Image optimization: no changes detected")
+	} else {
+		fmt.Println("Image optimization: processed changed images")
+	}
+
+	return nil
 }
 
 // optimizeImage optimizes a single image.

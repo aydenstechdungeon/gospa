@@ -15,6 +15,7 @@ import (
 	"strings"
 	"sync"
 	"syscall"
+	"time"
 
 	"github.com/andybalholm/brotli"
 	"github.com/aydenstechdungeon/gospa/plugin"
@@ -22,16 +23,23 @@ import (
 
 // BuildConfig holds configuration for the production build.
 type BuildConfig struct {
-	OutputDir    string
-	Platform     string
-	Arch         string
-	StaticAssets bool
-	Minify       bool
-	Compress     bool
-	Env          string
-	SourceMap    bool
-	NoSourceMap  bool
-	CGO          bool
+	OutputDir    string // Output directory
+	Platform     string // Target GOOS
+	Arch         string // Target GOARCH
+	StaticAssets bool   // Copy static assets
+	Minify       bool   // Enable minification
+	Compress     bool   // Enable gzip/br compression
+	Env          string // Build environment
+	SourceMap    bool   // Generate source maps
+	NoSourceMap  bool   // Explicitly disable source maps
+	CGO          bool   // Enable CGO
+	LDFlags      string // Custom linker flags
+	Tags         string // Build tags (comma-separated)
+	AssetsDir    string // Static assets source directory
+	NoManifest   bool   // Skip build manifest generation
+	Watch        bool   // Watch mode after build
+	NoStatic     bool   // Skip static asset copying
+	NoCompress   bool   // Skip compression
 }
 
 // BuildSummary captures the important outputs from a production build.
@@ -42,6 +50,15 @@ type BuildSummary struct {
 	GoBinaryPath       string
 	StaticFilesCopied  int
 	CompressedFiles    int
+}
+
+// BuildAllConfig holds configuration for multi-platform builds.
+type BuildAllConfig struct {
+	Targets   []string // Target platforms (e.g., linux/amd64, darwin/arm64)
+	OutputDir string   // Output directory for builds
+	Compress  bool     // Compress binaries with tar.gz
+	Manifest  bool     // Generate release manifest
+	Parallel  int      // Number of parallel builds (0 = number of CPUs)
 }
 
 // Build builds the application for production.
@@ -66,6 +83,9 @@ func Build(config *BuildConfig) {
 			Minify:       true,
 			Compress:     true,
 			Env:          "production",
+			LDFlags:      "-s -w",
+			AssetsDir:    "static",
+			NoManifest:   false,
 		}
 	}
 
@@ -87,6 +107,12 @@ func Build(config *BuildConfig) {
 	printBuildSummary(printer, summary)
 	printer.Success("Build complete!")
 }
+
+// buildMu protects the build state to prevent concurrent builds
+var buildMu sync.Mutex
+
+// isBuilding indicates if a build is currently in progress
+var isBuilding bool
 
 // BuildWithConfig builds the application with custom configuration.
 func BuildWithConfig(config *BuildConfig) (*BuildSummary, error) {
@@ -114,12 +140,15 @@ func BuildWithConfig(config *BuildConfig) (*BuildSummary, error) {
 	}
 
 	// Step 3.5: Ensure dependencies are tidied after generation
-	fmt.Println("Tidying module dependencies...")
-	tidyCmd := exec.Command("go", "mod", "tidy")
-	tidyCmd.Stdout = os.Stdout
-	tidyCmd.Stderr = os.Stderr
-	if err := tidyCmd.Run(); err != nil {
-		return nil, fmt.Errorf("failed to tidy module dependencies: %w", err)
+	// Skip if GOSPA_SKIP_MOD_TIDY is set (useful for offline builds or when go.mod has replace directives)
+	if os.Getenv("GOSPA_SKIP_MOD_TIDY") == "" {
+		fmt.Println("Tidying module dependencies...")
+		tidyCmd := exec.Command("go", "mod", "tidy")
+		tidyCmd.Stdout = os.Stdout
+		tidyCmd.Stderr = os.Stderr
+		if err := tidyCmd.Run(); err != nil {
+			fmt.Fprintf(os.Stderr, "Warning: go mod tidy failed: %v (set GOSPA_SKIP_MOD_TIDY=1 to skip)\n", err)
+		}
 	}
 
 	// Step 4: Build Go binary
@@ -131,7 +160,7 @@ func BuildWithConfig(config *BuildConfig) (*BuildSummary, error) {
 	summary.GoBinaryPath = binaryPath
 
 	// Step 5: Copy static assets
-	if config.StaticAssets {
+	if config.StaticAssets && !config.NoStatic {
 		fmt.Println("Copying static assets...")
 		count, err := copyStaticAssets(config)
 		if err != nil {
@@ -141,7 +170,7 @@ func BuildWithConfig(config *BuildConfig) (*BuildSummary, error) {
 	}
 
 	// Step 6: Pre-compress static assets if requested
-	if config.Compress {
+	if config.Compress && !config.NoCompress {
 		fmt.Println("Pre-compressing static assets...")
 		count, err := compressStaticAssets(config)
 		if err != nil {
@@ -151,9 +180,11 @@ func BuildWithConfig(config *BuildConfig) (*BuildSummary, error) {
 	}
 
 	// Step 7: Generate build manifest
-	fmt.Println("Generating build manifest...")
-	if err := generateBuildManifest(config); err != nil {
-		fmt.Fprintf(os.Stderr, "Warning: failed to generate manifest: %v\n", err)
+	if !config.NoManifest {
+		fmt.Println("Generating build manifest...")
+		if err := generateBuildManifest(config); err != nil {
+			fmt.Fprintf(os.Stderr, "Warning: failed to generate manifest: %v\n", err)
+		}
 	}
 
 	return summary, nil
@@ -227,11 +258,10 @@ func unifiedClientBuild(config *BuildConfig, summary *BuildSummary) error {
 		cmd = exec.Command(bunPath, args...)
 	} else {
 		// Fallback to esbuild via npx/pnpm dlx
-		executeCmd := GetExecuteCommand(pm)
-		parts := strings.Fields(executeCmd)
+		// Parse the execute command properly - it returns things like "pnpm dlx" or "npx"
+		execCmd, execArgs := parseExecuteCommand(GetExecuteCommand(pm))
 
-		args := append([]string{}, parts[1:]...)
-		args = append(args, "esbuild")
+		args := append(execArgs, "esbuild") //nolint:gocritic // Intentionally creating new slice to preserve execArgs
 		args = append(args, entries...)
 		args = append(args, "--outdir="+outputDir, "--target=browser", "--format=esm", "--splitting", "--bundle")
 
@@ -246,7 +276,7 @@ func unifiedClientBuild(config *BuildConfig, summary *BuildSummary) error {
 		}
 
 		// #nosec //nolint:gosec
-		cmd = exec.Command(parts[0], args...)
+		cmd = exec.Command(execCmd, args...)
 		fmt.Printf("Warning: Bun not found. Using %s esbuild for bundling (slower & not preferred)\n", pm)
 	}
 
@@ -274,7 +304,7 @@ func unifiedClientBuild(config *BuildConfig, summary *BuildSummary) error {
 func BuildIslands(config *BuildConfig, summary *BuildSummary) error {
 	if config == nil {
 		config = &BuildConfig{
-			OutputDir: ".",
+			OutputDir: "dist",
 			Env:       "development",
 		}
 	}
@@ -297,9 +327,14 @@ func buildGoBinary(config *BuildConfig) (string, error) {
 	args := []string{
 		"build",
 		"-trimpath",
-		"-ldflags", "-s -w", // Strip debug info
+		"-ldflags", config.LDFlags,
 		"-o", outputPath,
 		".",
+	}
+
+	// Add build tags if specified
+	if config.Tags != "" {
+		args = append(args, "-tags", config.Tags)
 	}
 
 	// #nosec //nolint:gosec // args are safe static inputs
@@ -327,7 +362,10 @@ func buildGoBinary(config *BuildConfig) (string, error) {
 }
 
 func copyStaticAssets(config *BuildConfig) (int, error) {
-	staticDir := "static"
+	staticDir := config.AssetsDir
+	if staticDir == "" {
+		staticDir = "static"
+	}
 	if _, err := os.Stat(staticDir); os.IsNotExist(err) {
 		return 0, nil
 	}
@@ -449,14 +487,13 @@ func compressStaticAssets(config *BuildConfig) (int, error) {
 		return 0, err
 	}
 
-	var compressed struct {
-		sync.Mutex
-		count int
-	}
-	var firstErr error
-	var errOnce sync.Once
-	var wg sync.WaitGroup
-	sem := make(chan struct{}, 10) // Concurrency limit
+	// Track errors from both compression passes
+	var (
+		gzipErr   error
+		brotliErr error
+		wg        sync.WaitGroup
+		sem       = make(chan struct{}, 10) // Concurrency limit per algorithm
+	)
 
 	for _, file := range files {
 		// Parallel Gzip
@@ -466,12 +503,8 @@ func compressStaticAssets(config *BuildConfig) (int, error) {
 			defer wg.Done()
 			defer func() { <-sem }()
 			if err := compressFileGzip(path); err != nil {
-				errOnce.Do(func() { firstErr = err })
-				return
+				gzipErr = err
 			}
-			compressed.Lock()
-			compressed.count++
-			compressed.Unlock()
 		}(file)
 
 		// Parallel Brotli
@@ -481,17 +514,22 @@ func compressStaticAssets(config *BuildConfig) (int, error) {
 			defer wg.Done()
 			defer func() { <-sem }()
 			if err := compressFileBrotli(path); err != nil {
-				errOnce.Do(func() { firstErr = err })
-				return
+				brotliErr = err
 			}
-			compressed.Lock()
-			compressed.count++
-			compressed.Unlock()
 		}(file)
 	}
 	wg.Wait()
 
-	return compressed.count, firstErr
+	// Return first error encountered, or nil
+	if gzipErr != nil {
+		return 0, gzipErr
+	}
+	if brotliErr != nil {
+		return 0, brotliErr
+	}
+
+	// Count is the number of unique files compressed (not compression algorithms)
+	return len(files), nil
 }
 
 func compressFileGzip(path string) error {
@@ -568,12 +606,21 @@ func generateBuildManifest(config *BuildConfig) error {
 			return err
 		}
 
-		data, err := os.ReadFile(path) //nolint:gosec // G304/G122: walking our own build output
+		// Stream file content into hasher to avoid loading entire file into memory
+		hashWriter := sha256.New()
+		file, err := os.Open(path) //nolint:gosec // G304: walking our own build output
 		if err != nil {
 			return err
 		}
+		if _, err := io.Copy(hashWriter, file); err != nil {
+			file.Close() //nolint:errcheck,gosec
+			return err
+		}
+		if err := file.Close(); err != nil {
+			return err
+		}
 
-		hash := fmt.Sprintf("%x", sha256.Sum256(data))
+		hash := fmt.Sprintf("%x", hashWriter.Sum(nil))
 		manifest[relPath] = hash
 		return nil
 	})
@@ -590,38 +637,153 @@ func generateBuildManifest(config *BuildConfig) error {
 }
 
 // BuildAll builds for all platforms.
-func BuildAll() {
-	platforms := []struct {
+func BuildAll(config *BuildAllConfig) {
+	if config == nil {
+		config = &BuildAllConfig{
+			Targets:   []string{"linux/amd64", "linux/arm64", "darwin/amd64", "darwin/arm64", "windows/amd64", "windows/arm64"},
+			OutputDir: "./dist",
+			Compress:  true,
+			Manifest:  true,
+			Parallel:  runtime.NumCPU(),
+		}
+	}
+
+	targets := parseBuildTargets(config.Targets)
+	if len(targets) == 0 {
+		fmt.Fprintln(os.Stderr, "Error: no valid targets specified")
+		os.Exit(1)
+	}
+
+	fmt.Printf("Building for %d platforms...\n", len(targets))
+
+	// Create output directory
+	if err := os.MkdirAll(config.OutputDir, 0750); err != nil {
+		fmt.Fprintf(os.Stderr, "Error creating output directory: %v\n", err)
+		os.Exit(1)
+	}
+
+	// Build results
+	type buildResult struct {
 		platform string
 		arch     string
-	}{
-		{"linux", "amd64"},
-		{"linux", "arm64"},
-		{"darwin", "amd64"},
-		{"darwin", "arm64"},
-		{"windows", "amd64"},
-		{"windows", "arm64"},
+		success  bool
+		output   string
+		err      error
 	}
 
-	for _, p := range platforms {
-		outputDir := fmt.Sprintf("dist/%s-%s", p.platform, p.arch)
-		config := &BuildConfig{
-			OutputDir:    outputDir,
-			Platform:     p.platform,
-			Arch:         p.arch,
-			StaticAssets: true,
-			Minify:       true,
-			Compress:     true,
-			Env:          "production",
-		}
+	results := make(chan buildResult, len(targets))
+	var wg sync.WaitGroup
 
-		fmt.Printf("\nBuilding for %s/%s...\n", p.platform, p.arch)
-		if _, err := BuildWithConfig(config); err != nil {
-			fmt.Fprintf(os.Stderr, "Failed to build for %s/%s: %v\n", p.platform, p.arch, err)
+	// Limit concurrent builds
+	sem := make(chan struct{}, config.Parallel)
+
+	for _, t := range targets {
+		wg.Add(1)
+		sem <- struct{}{}
+
+		go func(platform, arch string) {
+			defer wg.Done()
+			defer func() { <-sem }()
+
+			outputDir := filepath.Join(config.OutputDir, fmt.Sprintf("%s-%s", platform, arch))
+			cfg := &BuildConfig{
+				OutputDir:    outputDir,
+				Platform:     platform,
+				Arch:         arch,
+				StaticAssets: true,
+				Minify:       true,
+				Compress:     config.Compress,
+				Env:          "production",
+				LDFlags:      "-s -w",
+			}
+
+			fmt.Printf("\nBuilding for %s/%s...\n", platform, arch)
+			_, err := BuildWithConfig(cfg)
+
+			result := buildResult{
+				platform: platform,
+				arch:     arch,
+				output:   outputDir,
+			}
+
+			if err != nil {
+				result.success = false
+				result.err = err
+			} else {
+				result.success = true
+			}
+
+			results <- result
+		}(t.platform, t.arch)
+	}
+
+	// Close results channel when all builds complete
+	go func() {
+		wg.Wait()
+		close(results)
+	}()
+
+	// Collect results
+	var failed []string
+	var succeeded int
+	for result := range results {
+		if result.success {
+			fmt.Printf("✓ Built for %s/%s\n", result.platform, result.arch)
+			succeeded++
 		} else {
-			fmt.Printf("✓ Built for %s/%s\n", p.platform, p.arch)
+			fmt.Printf("✗ Failed for %s/%s: %v\n", result.platform, result.arch, result.err)
+			failed = append(failed, fmt.Sprintf("%s/%s", result.platform, result.arch))
 		}
 	}
+
+	// Summary
+	fmt.Printf("\nBuild summary: %d/%d succeeded", succeeded, len(targets))
+	if len(failed) > 0 {
+		fmt.Printf(", %d failed: %v\n", len(failed), failed)
+	} else {
+		fmt.Println()
+	}
+
+	if len(failed) > 0 {
+		os.Exit(1)
+	}
+}
+
+type targetSpec struct {
+	platform string
+	arch     string
+}
+
+func parseBuildTargets(targets []string) []targetSpec {
+	var result []targetSpec
+	platforms := map[string]bool{
+		"linux":   true,
+		"darwin":  true,
+		"windows": true,
+		"freebsd": true,
+		"openbsd": true,
+	}
+	arches := map[string]bool{
+		"amd64": true,
+		"arm64": true,
+		"386":   true,
+		"arm":   true,
+	}
+
+	for _, t := range targets {
+		parts := strings.Split(t, "/")
+		if len(parts) != 2 {
+			continue
+		}
+		platform := strings.ToLower(strings.TrimSpace(parts[0]))
+		arch := strings.ToLower(strings.TrimSpace(parts[1]))
+
+		if platforms[platform] && arches[arch] {
+			result = append(result, targetSpec{platform: platform, arch: arch})
+		}
+	}
+
+	return result
 }
 
 func printBuildSummary(printer *ColorPrinter, summary *BuildSummary) {
@@ -670,54 +832,131 @@ func formatFileSize(path string) string {
 	return fmt.Sprintf("%.1f %s", size, unit)
 }
 
-// Clean removes build artifacts.
-func Clean() {
-	fmt.Println("Cleaning build artifacts...")
+// parseExecuteCommand splits an execute command like "pnpm dlx" or "npx" into
+// the binary and arguments. This properly handles the command without breaking
+// on whitespace in paths (unlike strings.Fields).
+func parseExecuteCommand(executeCmd string) (string, []string) {
+	// Simple parser that splits on first whitespace only
+	// Commands like "pnpm dlx", "npx", "bun x" are supported
+	parts := strings.SplitN(executeCmd, " ", 2)
+	if len(parts) == 1 {
+		return parts[0], nil
+	}
+	// For "pnpm dlx", returns ("pnpm", ["dlx"])
+	// For "bun x", returns ("bun", ["x"])
+	subArgs := strings.Fields(parts[1])
+	return parts[0], subArgs
+}
 
-	dirs := []string{"dist", "node_modules"}
+// CleanConfig holds configuration for the clean command.
+type CleanConfig struct {
+	DryRun      bool // Show what would be deleted
+	NodeModules bool // Include node_modules
+	Generated   bool // Include generated files
+	Dist        bool // Include dist directory
+	All         bool // Clean everything including cache
+	Cache       bool // Clean gospa cache (~/.gospa)
+}
+
+// Clean removes build artifacts.
+func Clean(config *CleanConfig) {
+	if config == nil {
+		config = &CleanConfig{
+			NodeModules: true,
+			Generated:   true,
+			Dist:        true,
+		}
+	}
+
+	action := "Cleaning"
+	if config.DryRun {
+		action = "Would remove"
+	}
+	fmt.Printf("%s build artifacts...\n", action)
+
+	// Collect directories to clean
+	var dirs []string
+	if config.Dist {
+		dirs = append(dirs, "dist")
+	}
+	if config.NodeModules {
+		dirs = append(dirs, "node_modules")
+	}
+	if config.All {
+		dirs = append(dirs, ".gospa")
+	}
+
 	for _, dir := range dirs {
 		if _, err := os.Stat(dir); err == nil {
-			if err := os.RemoveAll(dir); err != nil {
-				fmt.Fprintf(os.Stderr, "Failed to remove %s: %v\n", dir, err)
+			if config.DryRun {
+				fmt.Printf("  %s %s (dry-run)\n", action, dir)
 			} else {
-				fmt.Printf("✓ Removed %s\n", dir)
+				if err := os.RemoveAll(dir); err != nil {
+					fmt.Fprintf(os.Stderr, "Failed to remove %s: %v\n", dir, err)
+				} else {
+					fmt.Printf("✓ Removed %s\n", dir)
+				}
 			}
 		}
 	}
 
 	// Remove generated templ files
-	// Use WalkDir for safer filesystem traversal (avoids TOCTOU race)
-	if err := filepath.WalkDir(".", func(path string, d fs.DirEntry, walkErr error) error {
-		if walkErr != nil {
-			return walkErr
-		}
+	if config.Generated {
+		if err := filepath.WalkDir(".", func(path string, d fs.DirEntry, walkErr error) error {
+			if walkErr != nil {
+				return walkErr
+			}
 
-		if d.IsDir() {
-			return nil
-		}
-
-		name := d.Name()
-		if strings.HasSuffix(name, "_templ.go") || strings.HasSuffix(name, "_templ.txt") {
-			// Clean and validate path to prevent any potential path traversal
-			cleanPath := filepath.Clean(path)
-			// Resolve to absolute path to ensure we're within the project
-			absPath, err := filepath.Abs(cleanPath)
-			if err != nil {
-				fmt.Fprintf(os.Stderr, "Failed to resolve path %s: %v\n", cleanPath, err)
+			if d.IsDir() {
 				return nil
 			}
-			// Remove the cleaned path
-			// #nosec //nolint:gosec // clean command is intended to remove files identified during walk; path validated with filepath.Abs
-			if err := os.Remove(absPath); err != nil {
-				fmt.Fprintf(os.Stderr, "Failed to remove %s: %v\n", cleanPath, err)
-			} else {
-				fmt.Printf("✓ Removed %s\n", cleanPath)
+
+			name := d.Name()
+			if strings.HasSuffix(name, "_templ.go") || strings.HasSuffix(name, "_templ.txt") {
+				// Clean and validate path to prevent any potential path traversal
+				cleanPath := filepath.Clean(path)
+				// Resolve to absolute path to ensure we're within the project
+				absPath, err := filepath.Abs(cleanPath)
+				if err != nil {
+					fmt.Fprintf(os.Stderr, "Failed to resolve path %s: %v\n", cleanPath, err)
+					return nil
+				}
+				if config.DryRun {
+					fmt.Printf("  %s %s (dry-run)\n", action, cleanPath)
+				} else {
+					// Remove the cleaned path
+					// #nosec //nolint:gosec // clean command is intended to remove files identified during walk; path validated with filepath.Abs
+					if err := os.Remove(absPath); err != nil {
+						fmt.Fprintf(os.Stderr, "Failed to remove %s: %v\n", cleanPath, err)
+					} else {
+						fmt.Printf("✓ Removed %s\n", cleanPath)
+					}
+				}
+			}
+
+			return nil
+		}); err != nil {
+			fmt.Fprintf(os.Stderr, "Error walking directory: %v\n", err)
+		}
+	}
+
+	// Clean gospa cache if requested
+	if config.Cache || config.All {
+		homeDir, err := os.UserHomeDir()
+		if err == nil {
+			cacheDir := filepath.Join(homeDir, ".gospa")
+			if _, err := os.Stat(cacheDir); err == nil {
+				if config.DryRun {
+					fmt.Printf("  %s %s (dry-run)\n", action, cacheDir)
+				} else {
+					if err := os.RemoveAll(cacheDir); err != nil {
+						fmt.Fprintf(os.Stderr, "Failed to remove %s: %v\n", cacheDir, err)
+					} else {
+						fmt.Printf("✓ Removed %s\n", cacheDir)
+					}
+				}
 			}
 		}
-
-		return nil
-	}); err != nil {
-		fmt.Fprintf(os.Stderr, "Error walking directory: %v\n", err)
 	}
 
 	fmt.Println("✓ Clean complete!")
@@ -727,7 +966,7 @@ func Clean() {
 func Watch() {
 	fmt.Println("Building and watching for changes...")
 
-	// Initial build
+	// Initial build (synchronous)
 	Build(nil)
 
 	// Only watch directories that actually exist; components/, lib/, and
@@ -753,6 +992,10 @@ func Watch() {
 	sigChan := make(chan os.Signal, 1)
 	signal.Notify(sigChan, os.Interrupt, syscall.SIGTERM)
 
+	// Debounce timer for build events
+	var debounceTimer *time.Timer
+	const debounceInterval = 500 * time.Millisecond
+
 	for {
 		select {
 		case <-sigChan:
@@ -760,8 +1003,29 @@ func Watch() {
 			return
 		case event := <-watcher.Events:
 			fmt.Printf("\nFile changed: %s\n", event.File)
-			Build(nil)
-			fmt.Println("✓ Rebuilt")
+			// Reset debounce timer
+			if debounceTimer != nil {
+				debounceTimer.Stop()
+			}
+			debounceTimer = time.NewTimer(debounceInterval)
+			// Wait for debounce interval, then build asynchronously
+			go func(_ FileEvent) {
+				<-time.After(debounceInterval)
+				buildMu.Lock()
+				if isBuilding {
+					buildMu.Unlock()
+					return
+				}
+				isBuilding = true
+				buildMu.Unlock()
+
+				Build(nil)
+
+				buildMu.Lock()
+				isBuilding = false
+				buildMu.Unlock()
+				fmt.Println("✓ Rebuilt")
+			}(event)
 		case err := <-watcher.Errors:
 			fmt.Fprintf(os.Stderr, "Watcher error: %v\n", err)
 		}

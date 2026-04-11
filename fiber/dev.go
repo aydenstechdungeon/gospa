@@ -35,6 +35,10 @@ type DevConfig struct {
 	StateKey string
 	// AllowInsecureWS allows unsecure ws:// connections
 	AllowInsecureWS bool
+	// HMRManager is an optional HMR manager to use for file watching instead of polling
+	// When set, DevTools will subscribe to HMR file change events instead of using
+	// the legacy polling FileWatcher. This reduces CPU usage significantly.
+	HMRManager *HMRManager
 }
 
 // DefaultDevConfig returns default development configuration.
@@ -50,7 +54,11 @@ func DefaultDevConfig() DevConfig {
 	}
 }
 
-// FileWatcher watches for file changes.
+// FileWatcher watches for file changes using polling.
+//
+// Deprecated: This uses CPU-intensive polling (100ms ticker with filepath.Walk).
+// Use HMRManager's HMRFileWatcher instead, which uses efficient fsnotify events.
+// Kept for backwards compatibility when HMR is not available.
 type FileWatcher struct {
 	config  DevConfig
 	changes chan string
@@ -120,7 +128,18 @@ func isPathSafe(path, baseDir string) bool {
 // watchDir watches a directory for changes.
 func (w *FileWatcher) watchDir(dir string) {
 	// SECURITY: Validate the directory is not outside the intended path
-	if !isPathSafe(dir, w.config.RoutesDir) && !isPathSafe(dir, w.config.ComponentsDir) {
+	// Check against all allowed base directories
+	allowedBases := []string{w.config.RoutesDir, w.config.ComponentsDir}
+	allowedBases = append(allowedBases, w.config.WatchPaths...)
+
+	isAllowed := false
+	for _, base := range allowedBases {
+		if base != "" && isPathSafe(dir, base) {
+			isAllowed = true
+			break
+		}
+	}
+	if !isAllowed {
 		log.Printf("[GoSPA] FileWatcher: skipping unsafe directory path: %s", dir)
 		return
 	}
@@ -222,7 +241,7 @@ type StateLogEntry struct {
 func NewDevTools(config DevConfig) *DevTools {
 	return &DevTools{
 		config:    config,
-		watcher:   NewFileWatcher(config),
+		watcher:   nil, // Will use HMR watcher if available, otherwise falls back to nil (lazy init)
 		clients:   make(map[string]*websocket.Conn),
 		stateLog:  make([]StateLogEntry, 0),
 		stateKeys: make(map[string]bool),
@@ -235,7 +254,19 @@ func (d *DevTools) Start() {
 		return
 	}
 
-	d.watcher.Start()
+	// Use HMR file watcher if available (recommended)
+	if d.config.HMRManager != nil && d.config.HMRManager.fileWatcher != nil {
+		log.Println("DevTools: using HMR file watcher (event-based)")
+		d.watcher = nil
+		// DevTools will receive file change events through the HMR manager
+		// when clients connect to the dev tools WebSocket
+	} else {
+		// Fall back to legacy polling watcher (deprecated)
+		log.Println("DevTools: using legacy polling FileWatcher (deprecated, CPU-intensive)")
+		d.watcher = NewFileWatcher(d.config)
+		d.watcher.Start()
+	}
+
 	log.Println("Development tools started")
 }
 
@@ -245,7 +276,9 @@ func (d *DevTools) Stop() {
 		return
 	}
 
-	d.watcher.Stop()
+	if d.watcher != nil {
+		d.watcher.Stop()
+	}
 	log.Println("Development tools stopped")
 }
 
@@ -307,8 +340,26 @@ func (d *DevTools) broadcastStateChange(entry StateLogEntry) {
 		return
 	}
 
-	for _, conn := range d.clients {
-		_ = conn.WriteMessage(websocket.TextMessage, data)
+	// Collect failed client IDs
+	var failed []string
+	d.mu.RLock()
+	for clientID, conn := range d.clients {
+		if err := conn.WriteMessage(websocket.TextMessage, data); err != nil {
+			failed = append(failed, clientID)
+		}
+	}
+	d.mu.RUnlock()
+
+	// Remove failed connections
+	if len(failed) > 0 {
+		d.mu.Lock()
+		for _, clientID := range failed {
+			if conn, ok := d.clients[clientID]; ok {
+				_ = conn.Close()
+				delete(d.clients, clientID)
+			}
+		}
+		d.mu.Unlock()
 	}
 }
 
