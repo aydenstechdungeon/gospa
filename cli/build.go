@@ -303,10 +303,19 @@ func unifiedClientBuild(config *BuildConfig, summary *BuildSummary) error {
 // BuildIslands builds the islands TypeScript bundle into a single JavaScript file.
 func BuildIslands(config *BuildConfig, summary *BuildSummary) error {
 	if config == nil {
-		config = &BuildConfig{
-			OutputDir: "dist",
-			Env:       "development",
+		config = &BuildConfig{}
+	}
+	// In dev mode (GOSPA_DEV=1), output to static/ so the dev server can serve it directly
+	// In production, output to dist/ for proper bundling
+	if config.OutputDir == "" {
+		if os.Getenv("GOSPA_DEV") == "1" {
+			config.OutputDir = "static"
+		} else {
+			config.OutputDir = "dist"
 		}
+	}
+	if config.Env == "" {
+		config.Env = "development"
 	}
 	if summary == nil {
 		summary = &BuildSummary{}

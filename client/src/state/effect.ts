@@ -188,13 +188,13 @@ export function watch<T>(
 ): Unsubscribe {
   const sourceArray = Array.isArray(sources) ? sources : [sources];
   const unsubscribers: Unsubscribe[] = [];
-  let previousValues = sourceArray.map((source) => source.get());
+  let previousValues: T[] = sourceArray.map((source) => source.get());
 
   sourceArray.forEach((source) => {
     unsubscribers.push(
       source.subscribe(() => {
         const values = sourceArray.map((s) => s.get());
-        const oldValues = previousValues;
+        const oldValues = [...previousValues];
         previousValues = [...values];
         callback(
           Array.isArray(sources) ? values : values[0],

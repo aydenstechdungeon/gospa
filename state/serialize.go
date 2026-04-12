@@ -30,6 +30,8 @@ type stateNotification struct {
 var (
 	stateNotificationQueue chan stateNotification
 	stateDispatchOnce      sync.Once
+	stateDispatchMu        sync.Mutex
+	stateDispatchRunning   atomic.Bool
 	droppedNotifications   atomic.Uint64
 	notificationQueueSize  = 1024 // Default size
 )
@@ -43,17 +45,26 @@ func SetNotificationQueueSize(size int) {
 }
 
 func startStateNotificationDispatcher() {
+	stateDispatchMu.Lock()
+	defer stateDispatchMu.Unlock()
+
+	if stateDispatchRunning.Load() {
+		return
+	}
+
 	stateDispatchOnce.Do(func() {
 		workerCount := runtime.GOMAXPROCS(0)
 		if workerCount < 2 {
 			workerCount = 2
 		}
 		stateNotificationQueue = make(chan stateNotification, notificationQueueSize)
+		stateDispatchRunning.Store(true)
 		for i := 0; i < workerCount; i++ {
 			go func() {
 				for notification := range stateNotificationQueue {
 					safelyRunStateNotification(notification)
 				}
+				stateDispatchRunning.Store(false)
 			}()
 		}
 	})
@@ -62,11 +73,15 @@ func startStateNotificationDispatcher() {
 // ShutdownStateNotificationDispatcher stops the notification dispatcher and waits for
 // pending notifications to be processed (best effort).
 func ShutdownStateNotificationDispatcher() {
+	stateDispatchMu.Lock()
+	defer stateDispatchMu.Unlock()
+
 	if stateNotificationQueue != nil {
 		close(stateNotificationQueue)
 		stateNotificationQueue = nil
-		stateDispatchOnce = sync.Once{} // Allow restart for tests
 	}
+	stateDispatchRunning.Store(false)
+	stateDispatchOnce = sync.Once{}
 }
 
 func safelyRunStateNotification(notification stateNotification) {
@@ -99,9 +114,10 @@ func DroppedStateNotifications() uint64 {
 //
 //nolint:revive // changing name would break API
 type StateMap struct {
-	mu           sync.RWMutex
-	observables  map[string]Observable
-	unsubscribes map[string]Unsubscribe
+	mu            sync.RWMutex
+	observables   map[string]Observable
+	unsubscribes  map[string]Unsubscribe
+	onChangeDepth int32
 	// OnChange is invoked when any state variable changes.
 	// DEADLOCK WARNING: OnChange must NOT call back into StateMap.Add, StateMap.Remove,
 	// or any method that acquires sm.mu. Notifications are dispatched outside the StateMap
@@ -153,12 +169,21 @@ func (sm *StateMap) Add(name string, obs Observable) *StateMap {
 	unsub := obs.SubscribeAny(func(v any) {
 		sm.mu.RLock()
 		handler := sm.OnChange
+		depth := atomic.LoadInt32(&sm.onChangeDepth)
 		sm.mu.RUnlock()
 		if handler != nil {
+			if depth > 0 {
+				log.Printf("gospa: StateMap.OnChange re-entrancy detected, skipping notification for key %q", name)
+				return
+			}
 			enqueueStateNotification(stateNotification{
-				handler: handler,
-				key:     name,
-				value:   v,
+				handler: func(key string, value any) {
+					atomic.AddInt32(&sm.onChangeDepth, 1)
+					defer atomic.AddInt32(&sm.onChangeDepth, -1)
+					handler(key, value)
+				},
+				key:   name,
+				value: v,
 			})
 		}
 	})

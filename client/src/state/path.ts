@@ -43,5 +43,5 @@ export function derivedPath<T extends object>(
   obj: Rune<T>,
   path: string,
 ): Derived<unknown> {
-  return new Derived(() => getByPath(obj.peek(), path));
+  return new Derived(() => getByPath(obj.value, path));
 }

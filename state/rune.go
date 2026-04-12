@@ -313,14 +313,7 @@ func (r *Rune[T]) Update(fn func(T) T) {
 	r.mu.Unlock()
 
 	for _, s := range subs {
-		func(fn func(T)) {
-			defer func() {
-				if rec := recover(); rec != nil {
-					log.Printf("gospa: recovered panic in rune subscriber (Update): %v\n%s", rec, debug.Stack())
-				}
-			}()
-			fn(newValue)
-		}(s)
+		s(newValue)
 	}
 }
 
@@ -337,28 +330,64 @@ func equal[T any](a, b T) bool {
 		if bVal, ok := any(b).(int); ok {
 			return aVal == bVal
 		}
-	case int64:
-		if bVal, ok := any(b).(int64); ok {
+	case int8:
+		if bVal, ok := any(b).(int8); ok {
+			return aVal == bVal
+		}
+	case int16:
+		if bVal, ok := any(b).(int16); ok {
 			return aVal == bVal
 		}
 	case int32:
 		if bVal, ok := any(b).(int32); ok {
 			return aVal == bVal
 		}
+	case int64:
+		if bVal, ok := any(b).(int64); ok {
+			return aVal == bVal
+		}
 	case uint:
 		if bVal, ok := any(b).(uint); ok {
 			return aVal == bVal
 		}
-	case float64:
-		if bVal, ok := any(b).(float64); ok {
+	case uint8:
+		if bVal, ok := any(b).(uint8); ok {
+			return aVal == bVal
+		}
+	case uint16:
+		if bVal, ok := any(b).(uint16); ok {
+			return aVal == bVal
+		}
+	case uint32:
+		if bVal, ok := any(b).(uint32); ok {
+			return aVal == bVal
+		}
+	case uint64:
+		if bVal, ok := any(b).(uint64); ok {
+			return aVal == bVal
+		}
+	case uintptr:
+		if bVal, ok := any(b).(uintptr); ok {
 			return aVal == bVal
 		}
 	case float32:
 		if bVal, ok := any(b).(float32); ok {
 			return aVal == bVal
 		}
+	case float64:
+		if bVal, ok := any(b).(float64); ok {
+			return aVal == bVal
+		}
 	case bool:
 		if bVal, ok := any(b).(bool); ok {
+			return aVal == bVal
+		}
+	case complex64:
+		if bVal, ok := any(b).(complex64); ok {
+			return aVal == bVal
+		}
+	case complex128:
+		if bVal, ok := any(b).(complex128); ok {
 			return aVal == bVal
 		}
 	}

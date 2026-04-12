@@ -24,6 +24,9 @@ const templVersion = "v0.3.1001"
 func Dev(config *DevConfig) {
 	fmt.Println("Starting development server...")
 
+	// Set GOSPA_DEV in environment so BuildIslands detects dev mode
+	_ = os.Setenv("GOSPA_DEV", "1")
+
 	// Check if we're in a GoSPA project
 	if !isGoSPAProject() {
 		fmt.Fprintln(os.Stderr, "Error: Not a GoSPA project. Run 'gospa create' first.")
@@ -45,7 +48,11 @@ func Dev(config *DevConfig) {
 		OutputDir: "./generated",
 		DevMode:   true,
 	})
-	_ = BuildIslands(nil, nil)
+	// In dev mode, output islands to static/ so the dev server can serve them directly
+	_ = BuildIslands(&BuildConfig{
+		OutputDir: "static",
+		Env:       "development",
+	}, nil)
 
 	// Use defaults if config is nil
 	if config == nil {

@@ -6,8 +6,12 @@ import { Rune, type RuneOptions } from "./rune.ts";
  */
 export class StateMap {
   private readonly _runes: Map<string, Rune<unknown>> = new Map();
+  private _disposed: boolean = false;
 
   set<T>(key: string, value: T, options?: RuneOptions): Rune<T> {
+    if (this._disposed) {
+      throw new Error("Cannot set on a disposed StateMap");
+    }
     const existing = this._runes.get(key);
     if (existing) {
       existing.set(value);
@@ -59,10 +63,11 @@ export class StateMap {
       }
     });
     this._runes.clear();
+    this._disposed = true;
   }
 
   isDisposed(): boolean {
-    return this._runes.size === 0;
+    return this._disposed;
   }
 }
 

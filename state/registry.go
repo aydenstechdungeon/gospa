@@ -44,10 +44,30 @@ func (r *Registry) Register(id string, props, state map[string]interface{}) {
 }
 
 // GetData returns all registered island data.
+// Returns a deep copy to prevent external mutation.
 func (r *Registry) GetData() []IslandData {
 	r.mu.Lock()
 	defer r.mu.Unlock()
-	return r.islands
+	result := make([]IslandData, len(r.islands))
+	for i, island := range r.islands {
+		result[i] = IslandData{
+			ID:    island.ID,
+			Props: copyMap(island.Props),
+			State: copyMap(island.State),
+		}
+	}
+	return result
+}
+
+func copyMap(m map[string]interface{}) map[string]interface{} {
+	if m == nil {
+		return nil
+	}
+	result := make(map[string]interface{}, len(m))
+	for k, v := range m {
+		result[k] = v
+	}
+	return result
 }
 
 // FromContext retrieves the registry from a context.
