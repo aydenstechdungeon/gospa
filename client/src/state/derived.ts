@@ -16,6 +16,10 @@ declare global {
 
 export type ComputeFn<T> = () => T;
 
+interface DependencyCollector {
+  addDependency(rune: Rune<unknown>): void;
+}
+
 /**
  * Derived - computed state.
  * Automatically computes a value from other runes and caches it.
@@ -56,13 +60,13 @@ export class Derived<T> implements Notifier {
     const oldDeps = new Set(this._dependencies);
     this._dependencies.clear();
 
-    const collector = {
+    const collector: DependencyCollector = {
       addDependency: (rune: Rune<unknown>) => {
         this._dependencies.add(rune);
       },
-    } as Effect;
+    };
 
-    pushEffect(collector);
+    pushEffect(collector as Effect);
     try {
       this._value = this._compute();
       this._dirty = false;
@@ -70,18 +74,7 @@ export class Derived<T> implements Notifier {
       popEffect();
     }
 
-    // Unsubscribe from obsolete dependencies
-    oldDeps.forEach((dep) => {
-      if (!this._dependencies.has(dep)) {
-        const unsub = this._depUnsubs.get(dep);
-        if (unsub) {
-          unsub();
-          this._depUnsubs.delete(dep);
-        }
-      }
-    });
-
-    // Subscribe to new dependencies
+    // Subscribe to new dependencies and track their unsubs
     this._dependencies.forEach((dep) => {
       if (!oldDeps.has(dep)) {
         const unsub = dep.subscribe(() => {
@@ -89,6 +82,17 @@ export class Derived<T> implements Notifier {
           this._notifySubscribers();
         });
         this._depUnsubs.set(dep, unsub);
+      }
+    });
+
+    // Unsubscribe from deps that are no longer needed
+    oldDeps.forEach((dep) => {
+      if (!this._dependencies.has(dep)) {
+        const unsub = this._depUnsubs.get(dep);
+        if (unsub) {
+          unsub();
+          this._depUnsubs.delete(dep);
+        }
       }
     });
   }
@@ -110,10 +114,9 @@ export class Derived<T> implements Notifier {
   }
 
   private trackDependency(): void {
-    // Collect this derived as a dependency of the active effect
     const active = getCurrentEffect();
     if (active) {
-      (active as any).addDependency(this as unknown as Rune<unknown>);
+      active.addDependency(this as unknown as Rune<unknown>);
     }
   }
 

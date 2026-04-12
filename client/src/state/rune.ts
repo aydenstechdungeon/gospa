@@ -21,7 +21,6 @@ export class Rune<T> implements Notifier, Disposable {
   private readonly _id: number;
   private readonly _subscribers: (Subscriber<T> | null)[] = [];
   private _sv = 0;
-  private _dirty: boolean = false;
   private _disposed: boolean = false;
   private _hasPendingOldValue: boolean = false;
   private _pendingOldValue?: T;
@@ -43,7 +42,6 @@ export class Rune<T> implements Notifier, Disposable {
     if (this._equal(this._value, newValue)) return;
     const oldValue = this._value;
     this._value = newValue;
-    this._dirty = true;
     this._notifySubscribers(oldValue);
   }
 

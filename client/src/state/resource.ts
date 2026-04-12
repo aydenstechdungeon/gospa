@@ -18,11 +18,13 @@ export type ResourceStatus = "idle" | "pending" | "success" | "error";
  */
 export class DerivedAsync<T, E = Error> implements Notifier {
   private _value: T | undefined;
+  private _oldValue: T | undefined;
   private _error: E | undefined;
   private _status: ResourceStatus = "pending";
   private readonly _compute: () => Promise<T>;
   private readonly _dependencies: Set<Rune<unknown>> = new Set();
   private readonly _subscribers: Set<Subscriber<T | undefined>> = new Set();
+  private readonly _depUnsubs: Map<Rune<unknown>, Unsubscribe> = new Map();
   private _dirty: boolean = true;
   private _disposed: boolean = false;
   private _abortController: AbortController | null = null;
@@ -93,12 +95,25 @@ export class DerivedAsync<T, E = Error> implements Notifier {
       popEffect();
     }
 
+    // Subscribe to new dependencies
     this._dependencies.forEach((dep) => {
       if (!oldDeps.has(dep)) {
-        dep.subscribe(() => {
+        const unsub = dep.subscribe(() => {
           this._dirty = true;
           this._recompute();
         });
+        this._depUnsubs.set(dep, unsub);
+      }
+    });
+
+    // Unsubscribe from deps that are no longer needed
+    oldDeps.forEach((dep) => {
+      if (!this._dependencies.has(dep)) {
+        const unsub = this._depUnsubs.get(dep);
+        if (unsub) {
+          unsub();
+          this._depUnsubs.delete(dep);
+        }
       }
     });
 
@@ -130,7 +145,9 @@ export class DerivedAsync<T, E = Error> implements Notifier {
 
   notify(): void {
     const value = this._value;
-    this._subscribers.forEach((fn) => fn(value, this._value));
+    const oldValue = this._oldValue;
+    this._oldValue = value;
+    this._subscribers.forEach((fn) => fn(value, oldValue));
   }
 
   private trackDependency(): void {
@@ -145,6 +162,8 @@ export class DerivedAsync<T, E = Error> implements Notifier {
     if (this._abortController) {
       this._abortController.abort();
     }
+    this._depUnsubs.forEach((unsub) => unsub());
+    this._depUnsubs.clear();
     this._dependencies.clear();
     this._subscribers.clear();
   }
@@ -267,12 +286,21 @@ export function resourceReactive<T, E = Error>(
 ): Resource<T, E> {
   const res = new Resource<T, E>(fetcher);
   const sourceArray = Array.isArray(sources) ? sources : [sources];
+  const unsubscribes: (() => void)[] = [];
 
   sourceArray.forEach((source) => {
-    source.subscribe(() => {
+    const unsub = source.subscribe(() => {
       res.refetch();
     });
+    unsubscribes.push(unsub);
   });
+
+  // Override dispose to also clean up source subscriptions
+  const originalDispose = res.dispose.bind(res);
+  res.dispose = () => {
+    unsubscribes.forEach((unsub) => unsub());
+    originalDispose();
+  };
 
   res.refetch();
   return res;

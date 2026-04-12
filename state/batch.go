@@ -156,12 +156,24 @@ func Batch(fn func()) {
 	gid := getGID()
 	activeSyncBatchCount.Add(1)
 	activeBatches.Store(gid, bs)
+
+	var panicked bool
 	defer func() {
 		activeBatches.Delete(gid)
-		activeSyncBatchCount.Add(-1)
+		if panicked {
+			activeSyncBatchCount.Add(-1)
+		}
 	}()
 
-	fn()
+	func() {
+		defer func() {
+			if rec := recover(); rec != nil {
+				panicked = true
+				panic(rec)
+			}
+		}()
+		fn()
+	}()
 
 	flushBatch(bs)
 }

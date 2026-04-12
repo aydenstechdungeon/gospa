@@ -170,6 +170,24 @@ func (d *Derived[T]) Subscribe(fn Subscriber[T]) Unsubscribe {
 				break
 			}
 		}
+
+		if len(d.subscribers) > 10 {
+			nilCount := 0
+			for _, s := range d.subscribers {
+				if s.fn == nil {
+					nilCount++
+				}
+			}
+			if nilCount > len(d.subscribers)/2 {
+				newSubs := make([]subEntry[T], 0, len(d.subscribers)-nilCount)
+				for _, s := range d.subscribers {
+					if s.fn != nil {
+						newSubs = append(newSubs, s)
+					}
+				}
+				d.subscribers = newSubs
+			}
+		}
 	}
 }
 
@@ -237,7 +255,12 @@ func (d *Derived[T]) markDirty() {
 	d.dirty = true
 	d.mu.Unlock()
 
-	// Recompute immediately or integrate via batch system
+	// If we're in a batch, defer recomputation until batch flush
+	if inBatch() {
+		addToBatch(d)
+		return
+	}
+
 	d.recompute()
 }
 
@@ -266,6 +289,18 @@ func (d *Derived[T]) Dispose() {
 	}
 	d.deps = nil
 	d.subscribers = nil
+}
+
+// notifySubscribers is called during batch flush to notify all subscribers.
+func (d *Derived[T]) notifySubscribers() {
+	d.mu.Lock()
+	if !d.dirty {
+		d.mu.Unlock()
+		return
+	}
+	d.mu.Unlock()
+
+	d.recompute()
 }
 
 // DerivedFrom creates a derived value that depends on one or more observables.

@@ -1,5 +1,6 @@
 /**
- * Fast deep equality check with circular reference support.
+ * Fast deep equality check for plain objects, arrays, Dates, Sets, and Maps.
+ * Does not handle circular references.
  * ~10x faster than JSON.stringify for large objects.
  */
 export function fastDeepEqual(a: unknown, b: unknown): boolean {
