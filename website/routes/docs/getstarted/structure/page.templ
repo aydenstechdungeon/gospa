@@ -6,86 +6,147 @@ templ Page() {
 	<div class="space-y-8">
 		<header>
 			<h1 class="text-4xl font-bold tracking-tight mb-4">Project Structure</h1>
-			<p class="text-xl text-[var(--text-secondary)]">Anatomy of a GoSPA application.</p>
+			<p class="text-xl text-[var(--text-secondary)]">Anatomy of a GoSPA application built from scratch.</p>
 		</header>
 
-		<section>
-			<h2 id="overview" class="text-2xl font-bold mb-4">File Hierarchy</h2>
-			<p class="text-[var(--text-secondary)] mb-4">A standard GoSPA project follows this structure:</p>
-			@components.CodeBlock(`my-app/
-├── main.go           # Server entry point & configuration
-├── go.mod            # Go module dependencies
-├── routes/           # File-based routing & UI templates
-│   ├── layout.templ  # Shared root layout
-│   └── page.templ    # Home page template
-├── components/       # Reusable .templ components (optional)
-├── lib/              # Shared Go code (optional)
-├── static/           # Public assets (images, CSS, JS)
-├── generated/        # Auto-generated TypeScript bindings
-└── gospa.json        # Optional project configuration`, "plaintext", " File Structure")
+		<nav class="flex flex-wrap gap-2 p-4 rounded-2xl bg-[var(--bg-secondary)] border border-[var(--border)]">
+			<a href="#overview" class="text-sm font-medium hover:text-[var(--accent-primary)] transition-colors">Overview</a>
+			<a href="#main-go" class="text-sm font-medium hover:text-[var(--accent-primary)] transition-colors">main.go</a>
+			<a href="#root-layout" class="text-sm font-medium hover:text-[var(--accent-primary)] transition-colors">Root Layout</a>
+			<a href="#package-json" class="text-sm font-medium hover:text-[var(--accent-primary)] transition-colors">package.json</a>
+			<a href="#routes" class="text-sm font-medium hover:text-[var(--accent-primary)] transition-colors">routes/</a>
+			<a href="#static" class="text-sm font-medium hover:text-[var(--accent-primary)] transition-colors">static/</a>
+		</nav>
+
+		<section id="overview">
+			<h2 class="text-2xl font-bold mb-4">File Hierarchy</h2>
+			<p class="text-[var(--text-secondary)] mb-4">A minimum GoSPA project requires:</p>
+			@components.CodeBlock(`myapp/
+├── go.mod
+├── main.go
+├── package.json
+├── static/
+│   └── css/
+│       └── style.css
+└── routes/
+    ├── _error.templ
+    ├── _middleware.go
+    ├── root_layout.templ
+    └── page.templ`, "plaintext", " File Structure")
 		</section>
 
-		<section>
-			<h2 id="routes-dir" class="text-2xl font-bold mb-4">The `routes/` Directory</h2>
-			<p class="text-[var(--text-secondary)] mb-4">
-				Your UI lives here. GoSPA looks for `.templ` files to build its routing table. 
-				Supporting nested directories, dynamic parameters like <code class="bg-[var(--bg-tertiary)] px-1.5 py-0.5 rounded">[id].templ</code>, and layout inheritance.
-			</p>
+		<section id="main-go">
+			<h2 class="text-2xl font-bold mb-4">Server Configuration (main.go)</h2>
+			<p class="text-[var(--text-secondary)] mb-4">The core server file initializes GoSPA with the file-based router.</p>
+			@components.CodeBlock(`package main
+
+import (
+	"log"
+	"os"
+
+	_ "yourmodule/routes" // Import routes to trigger init()
+	"github.com/aydenstechdungeon/gospa"
+)
+
+func main() {
+	port := os.Getenv("PORT")
+	if port == "" {
+		port = "3000"
+	}
+
+	config := gospa.DefaultConfig()
+	config.RoutesDir = "./routes"
+	config.DevMode = true
+	config.AppName = "My GoSPA App"
+
+	app := gospa.New(config)
+	if err := app.Run(":" + port); err != nil {
+		log.Fatal(err)
+	}
+}`, "go", " main.go")
 		</section>
 
-		<section>
-			<h2 id="layouts" class="text-2xl font-bold mb-4">Layout Files</h2>
+		<section id="root-layout">
+			<h2 class="text-2xl font-bold mb-4">The Root Layout (root_layout.templ)</h2>
 			<p class="text-[var(--text-secondary)] mb-4">
-				GoSPA supports two types of layout files:
+				This file defines the <code class="mono">&lt;html&gt;</code> wrapper and <strong>must</strong> include three core pieces:
 			</p>
-			<div class="overflow-x-auto mb-4">
-				<table class="w-full text-left border-collapse">
-					<thead>
-						<tr class="border-b border-[var(--border)]">
-							<th class="py-2 pr-4 font-bold">File</th>
-							<th class="py-2 pr-4 font-bold">Purpose</th>
-							<th class="py-2 font-bold">Scope</th>
-						</tr>
-					</thead>
-					<tbody class="text-[var(--text-secondary)]">
-						<tr class="border-b border-[var(--border)]">
-							<td class="py-2 pr-4"><code class=" bg-[var(--bg-tertiary)] px-1.5 py-0.5 rounded">root_layout.templ</code></td>
-							<td class="py-2 pr-4">Outer HTML shell (<code class=" bg-[var(--bg-tertiary)] px-1 rounded">&lt;html&gt;</code>, <code class=" bg-[var(--bg-tertiary)] px-1 rounded">&lt;head&gt;</code>, <code class=" bg-[var(--bg-tertiary)] px-1 rounded">&lt;body&gt;</code>)</td>
-							<td class="py-2">Entire application</td>
-						</tr>
-						<tr>
-							<td class="py-2 pr-4"><code class=" bg-[var(--bg-tertiary)] px-1.5 py-0.5 rounded">layout.templ</code></td>
-							<td class="py-2 pr-4">Nested layouts for sections</td>
-							<td class="py-2">Route segment and children</td>
-						</tr>
-					</tbody>
-				</table>
+			<ul class="list-disc list-inside text-[var(--text-secondary)] mb-4 space-y-1">
+				<li>The base <code class="mono">runtime.js</code> script</li>
+				<li>The <code class="mono">data-gospa-islands</code> script block for dynamic island mounting</li>
+			</ul>
+			<p class="text-sm text-amber-500 mb-4">
+				<strong>Important:</strong> If these tags are missing, your application will only render as raw HTML. Reactivity (islands) will fail to mount.
+			</p>
+			@components.CodeBlock(`package routes
+
+templ RootLayout(title string) {
+	<!DOCTYPE html>
+	<html lang="en" data-gospa-auto>
+	<head>
+		<meta charset="UTF-8"/>
+		<meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+		<title>{ title }</title>
+		<link rel="stylesheet" href="/static/css/style.css"/>
+	</head>
+	<body>
+		{ children... }
+
+		<!-- GoSPA core engine -->
+		<script src="/_gospa/runtime.js"></script>
+		<!-- Island hydration hook -->
+		<script data-gospa-islands></script>
+	</body>
+	</html>
+}`, "templ", " root_layout.templ")
+		</section>
+
+		<section id="package-json">
+			<h2 class="text-2xl font-bold mb-4">Frontend Tooling (package.json)</h2>
+			<p class="text-[var(--text-secondary)] mb-4">
+				To compile TypeScript and CSS locally, you need a bundler. Bun is the native recommendation.
+			</p>
+			@components.CodeBlock(`{
+	"name": "myapp",
+	"type": "module",
+	"scripts": {
+		"build": "bun run build:css",
+		"build:css": "tailwindcss -i ./static/css/style.css -o ./static/css/main.css"
+	},
+	"devDependencies": {
+		"tailwindcss": "^4.0.0",
+		"@tailwindcss/cli": "^4.0.0"
+	}
+}`, "json", " package.json")
+
+			<div class="mt-4 p-4 rounded-xl bg-amber-500/5 border border-amber-500/20">
+				<h4 class="text-amber-500 font-bold mb-2">Common Gotcha: MIME Type Errors</h4>
+				<p class="text-sm text-[var(--text-secondary)]">
+					If you see MIME type errors when the browser attempts to fetch island modules (e.g., <code class="mono text-[var(--accent-primary)]">Refused to execute script from '/islands/button.js'</code>), this usually indicates the server failed to interpret <code class="mono">.js</code> or <code class="mono">.ts</code> assets properly. GoSPA natively patches this by setting <code class="mono">Content-Type: application/javascript</code> on the <code class="mono">/islands/</code> route locally.
+				</p>
 			</div>
+		</section>
+
+		<section id="routes">
+			<h2 class="text-2xl font-bold mb-4">The routes/ Directory</h2>
 			<p class="text-[var(--text-secondary)] mb-4">
-				<strong>root_layout.templ</strong> — Place at <code class="bg-[var(--bg-tertiary)] px-1.5 py-0.5 rounded">routes/root_layout.templ</code> to define the outermost HTML document. 
-				Must include the GoSPA runtime script. Only one root layout exists per app.
-			</p>
-			<p class="text-[var(--text-secondary)] mb-4">
-				<strong>layout.templ</strong> — Regular layouts that wrap pages. Create in subdirectories (e.g., <code class="bg-[var(--bg-tertiary)] px-1.5 py-0.5 rounded">routes/blog/layout.templ</code>) 
-				to wrap all pages in that section. Multiple nested layouts are supported.
+				Your UI lives here. GoSPA looks for <code class="mono">.templ</code> files to build its routing table.
 			</p>
 			@components.CodeBlock(`routes/
-├── root_layout.templ     # (Optional) Wraps entire app (Requires routing.RegisterRootLayout())
+├── root_layout.templ     # (Optional) Wraps entire app
 ├── layout.templ          # Optional root wrapper
 ├── page.templ            # Home page
 ├── about/
 │   └── page.templ        # About page
 └── dashboard/
     ├── layout.templ      # Dashboard sidebar/header
-    └── page.templ        # Dashboard home`, "plaintext", " Layout Hierarchy Example")
+    └── page.templ        # Dashboard home`, "plaintext", " routes/")
 		</section>
 
-		<section>
-			<h2 id="generated-dir" class="text-2xl font-bold mb-4">The `generated/` Directory</h2>
-			<p class="text-[var(--text-secondary)] mb-4">
-				GoSPA automatically synchronizes your Go types and routes with TypeScript. 
-				This directory contains the generated JS/TS files that power the client-side runtime. 
-				<strong>Do not edit these files manually.</strong>
+		<section id="static">
+			<h2 class="text-2xl font-bold mb-4">The static/ Directory</h2>
+			<p class="text-[var(--text-secondary)]">
+				Public assets like images, CSS, and JavaScript are served from this directory.
 			</p>
 		</section>
 

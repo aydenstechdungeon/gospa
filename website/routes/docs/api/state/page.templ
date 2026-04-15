@@ -16,22 +16,151 @@ templ Page() {
 			<a href="#derived" class="text-sm font-medium hover:text-[var(--accent-primary)] transition-colors">Derived</a>
 			<a href="#effects" class="text-sm font-medium hover:text-[var(--accent-primary)] transition-colors">Effects</a>
 			<a href="#statemap" class="text-sm font-medium hover:text-[var(--accent-primary)] transition-colors">StateMap</a>
+			<a href="#batch" class="text-sm font-medium hover:text-[var(--accent-primary)] transition-colors">Batch</a>
+			<a href="#validator" class="text-sm font-medium hover:text-[var(--accent-primary)] transition-colors">Validator</a>
 		</nav>
 
 		<section id="runes" class="space-y-8">
 			<h2 class="text-2xl font-bold border-b border-[var(--border)] pb-2">Runes</h2>
-			<p class="text-[var(--text-secondary)]">Reactive state container that notifies subscribers on change.</p>
-			@components.CodeBlock(`count := gospa.NewRune(0)
+			<p class="text-[var(--text-secondary)]">Core reactive primitive. Holds a value and notifies subscribers on changes.</p>
+			@components.CodeBlock(`// Create
+rune := state.NewRune[T](initial T)
+
+// Read
+rune.Get() T
+rune.GetAny() any  // for Observable interface
+rune.ID() string   // returns unique internal ID
+
+// Write
+rune.Set(value T)
+rune.Update(fn func(T) T)
+rune.SetAny(value any) error // for Settable interface
+
+// Subscribe
+unsubscribe := rune.Subscribe(func(newValue T) {})
+unsubscribe := rune.SubscribeAny(func(newValue any) {})`, "go", " rune.go")
+
+			<h3 class="text-lg font-semibold mt-6">Example</h3>
+			@components.CodeBlock(`count := state.NewRune(0)
+
+// Read
+fmt.Println(count.Get()) // 0
+
+// Write
 count.Set(5)
-value := count.Get()`, "go", " rune.go")
+count.Update(func(v int) int { return v + 1 })
+
+// React
+unsub := count.Subscribe(func(v int) {
+    fmt.Println("Count:", v)
+})
+defer unsub()`, "go", " example.go")
 		</section>
 
 		<section id="derived" class="space-y-8">
 			<h2 class="text-2xl font-bold border-b border-[var(--border)] pb-2">Derived Values</h2>
-			<p class="text-[var(--text-secondary)]">Computed values that auto-update when dependencies change.</p>
-			@components.CodeBlock(`doubled := gospa.Derived(count, func(v int) int {
-    return v * 2
-})`, "go", " derived.go")
+			<p class="text-[var(--text-secondary)]">Computed state that recalculates when dependencies change.</p>
+			@components.CodeBlock(`// Create
+derived := state.NewDerived[T](compute func() T)
+
+// Read
+derived.Get() T
+
+// Subscribe
+unsubscribe := derived.Subscribe(func(T) {})
+
+// Lifecycle
+derived.Dispose()`, "go", " derived.go")
+
+			<h3 class="text-lg font-semibold mt-6">Helper Functions</h3>
+			@components.CodeBlock(`// Single dependency
+d := state.DerivedFrom(rune, func(v T) U { ... })
+
+// Two dependencies
+d := state.Derived2(rune1, rune2, func(v1 T1, v2 T2) U { ... })
+
+// Three dependencies
+d := state.Derived3(rune1, rune2, rune3, func(v1 T1, v2 T2, v3 T3) U { ... })`, "go", " helpers.go")
+		</section>
+
+		<section id="effects" class="space-y-8">
+			<h2 class="text-2xl font-bold border-b border-[var(--border)] pb-2">Effects</h2>
+			<p class="text-[var(--text-secondary)]">Side effects that run when dependencies change.</p>
+			@components.CodeBlock(`// Create - returns cleanup function
+cleanup := state.NewEffect(func() func() {
+    // effect logic
+    return func() {
+        // cleanup logic
+    }
+})`, "go", " effect.go")
+
+			<h3 class="text-lg font-semibold mt-6">Helper Functions</h3>
+			@components.CodeBlock(`// Single dependency
+cleanup := state.EffectOn(rune, func(v T) { ... })
+
+// Watch multiple
+cleanup := state.Watch(rune1, rune2, func(v1 T1, v2 T2) { ... })
+cleanup := state.Watch3(rune1, rune2, rune3, func(v1 T1, v2 T2, v3 T3) { ... })`, "go", " helpers.go")
+		</section>
+
+		<section id="batch" class="space-y-8">
+			<h2 class="text-2xl font-bold border-b border-[var(--border)] pb-2">Batch Updates</h2>
+			<p class="text-[var(--text-secondary)]">Batch multiple updates into a single notification cycle.</p>
+			@components.CodeBlock(`state.Batch(func() {
+    count.Set(1)
+    name.Set("Alice")
+})`, "go", " batch.go")
+		</section>
+
+		<section id="statemap" class="space-y-8">
+			<h2 class="text-2xl font-bold border-b border-[var(--border)] pb-2">StateMap</h2>
+			<p class="text-[var(--text-secondary)]">Collection of named reactive values.</p>
+			@components.CodeBlock(`// Create
+sm := state.NewStateMap()
+
+// Add reactive value
+sm.Add(key string, observable Observable)
+sm.AddAny(key string, value any) error // Adds plain value as auto-rune
+sm.AddComputed(name string, depKeys []string, fn func(values map[string]interface{}) interface{}) *StateMap
+
+// Get value
+obs, ok := sm.Get(key string)
+
+// Remove
+sm.Remove(key string) *StateMap
+
+// Iteration
+sm.ForEach(func(key string, value any) { ... })
+
+// Conversion
+m := sm.ToMap() // returns map[string]any
+
+// Serialization
+json, err := sm.ToJSON()
+data, err := sm.MarshalJSON()
+sm.FromJSON(data []byte)
+
+// Diff
+diff := sm.Diff(other *StateMap) *StateMapComparison
+
+// OnChange callback
+sm.OnChange = func(key string, value any) { ... }`, "go", " statemap.go")
+		</section>
+
+		<section id="validator" class="space-y-8">
+			<h2 class="text-2xl font-bold border-b border-[var(--border)] pb-2">StateValidator</h2>
+			<p class="text-[var(--text-secondary)]">Validates reactive state updates.</p>
+			@components.CodeBlock(`validator := state.NewStateValidator()
+
+// Register rules
+validator.AddValidator("count", func(v any) error {
+    if v.(int) < 0 { return errors.New("must be positive") }
+    return nil
+})
+
+// Validate
+err := validator.Validate("count", -1)
+err := validator.ValidateAll(map[string]any{"count": 5})`, "go", " validator.go")
 		</section>
 
 		<div class="flex justify-between mt-16 pt-8 border-t border-[var(--border)]">
