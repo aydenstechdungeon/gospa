@@ -7,22 +7,65 @@ templ Page() {
 		<header>
 			<h1 class="text-4xl font-bold tracking-tight mb-4">Routing API</h1>
 			<p class="text-xl text-[var(--text-secondary)] leading-relaxed">
-				File-based routing, manual routes, parameters, and registry.
+				Low-level API for parameter extraction, validation, and URL construction.
 			</p>
 		</header>
 
-		<section id="router" class="space-y-8">
-			<h2 class="text-2xl font-bold border-b border-[var(--border)] pb-2">Router</h2>
-			<p class="text-[var(--text-secondary)]">File-based router that scans <code class=" mono">.templ</code> files.</p>
-			@components.CodeBlock(`router := routing.NewRouter(routesDir)
-err := router.Scan()
-route, params := router.Match(path)`, "go", " routing.go")
-		</section>
+		<nav class="flex flex-wrap gap-2 p-4 rounded-2xl bg-[var(--bg-secondary)] border border-[var(--border)]">
+			<a href="#params" class="text-sm font-medium hover:text-[var(--accent-primary)] transition-colors">Params</a>
+			<a href="#queryparams" class="text-sm font-medium hover:text-[var(--accent-primary)] transition-colors">QueryParams</a>
+			<a href="#pathbuilder" class="text-sm font-medium hover:text-[var(--accent-primary)] transition-colors">PathBuilder</a>
+			<a href="#route-matching" class="text-sm font-medium hover:text-[var(--accent-primary)] transition-colors">Route Matching</a>
+			<a href="#generated" class="text-sm font-medium hover:text-[var(--accent-primary)] transition-colors">Generated Artifacts</a>
+		</nav>
 
 		<section id="params" class="space-y-8">
-			<h2 class="text-2xl font-bold border-b border-[var(--border)] pb-2">Route Parameters</h2>
-			@components.CodeBlock(`value := params.Get("id")
-intVal, err := params.Int("count")`, " go", " params.go")
+			<h2 class="text-2xl font-bold border-b border-[var(--border)] pb-2">Params</h2>
+			<p class="text-[var(--text-secondary)]">Type-safe parameter map with conversion methods.</p>
+			@components.CodeBlock(`id := params.GetInt("id")
+name := params.GetString("name")
+isAdmin := params.GetBool("admin")`, "go", " params.go")
+		</section>
+
+		<section id="queryparams" class="space-y-8">
+			<h2 class="text-2xl font-bold border-b border-[var(--border)] pb-2">QueryParams</h2>
+			<p class="text-[var(--text-secondary)]">Handle URL query string parameters.</p>
+			@components.CodeBlock(`qp := routing.NewQueryParams(url.Query())
+page := qp.GetInt("page")
+search := qp.Get("q")`, "go", " query.go")
+		</section>
+
+		<section id="pathbuilder" class="space-y-8">
+			<h2 class="text-2xl font-bold border-b border-[var(--border)] pb-2">PathBuilder</h2>
+			<p class="text-[var(--text-secondary)]">Construct safe URLs from patterns and parameters.</p>
+			@components.CodeBlock(`builder := routing.NewPathBuilder("/users/:id/posts/:postId")
+builder.Param("id", "1")
+builder.Param("postId", "42")
+path := builder.Build() // "/users/1/posts/42"`, "go", " path.go")
+		</section>
+
+		<section id="route-matching" class="space-y-8">
+			<h2 class="text-2xl font-bold border-b border-[var(--border)] pb-2">Route Matching</h2>
+			
+			<h3 class="text-xl font-semibold mt-4">ParamExtractor</h3>
+			@components.CodeBlock(`extractor := routing.NewParamExtractor("/users/:id")
+params, ok := extractor.Extract("/users/123")`, "go", " extractor.go")
+		</section>
+
+		<section id="generated" class="space-y-8">
+			<h2 class="text-2xl font-bold border-b border-[var(--border)] pb-2">Generated Artifacts</h2>
+			
+			<h3 class="text-xl font-semibold mt-4">Go Route Registry</h3>
+			<p class="text-[var(--text-secondary)]">Automatically registers all routes from your file system.</p>
+			<div class="p-4 rounded-xl bg-[var(--bg-secondary)] border border-[var(--border)]">
+				<code class="text-sm text-[var(--accent-primary)]">routes/generated_routes.go</code>
+			</div>
+
+			<h3 class="text-xl font-semibold mt-4">TypeScript Routes</h3>
+			<p class="text-[var(--text-secondary)]">Provides <code class="mono">buildPath</code>, <code class="mono">matchRoute</code>, and <code class="mono">findRoute</code> on the client.</p>
+			<div class="p-4 rounded-xl bg-[var(--bg-secondary)] border border-[var(--border)]">
+				<code class="text-sm text-[var(--accent-primary)]">generated/routes.ts</code>
+			</div>
 		</section>
 
 		<div class="flex justify-between mt-16 pt-8 border-t border-[var(--border)]">

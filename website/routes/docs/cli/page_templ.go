@@ -31,7 +31,7 @@ func Page() templ.Component {
 			templ_7745c5c3_Var1 = templ.NopComponent
 		}
 		ctx = templ.ClearChildren(ctx)
-		templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 1, "<div class=\"space-y-12\"><header><h1 class=\"text-4xl font-bold tracking-tight mb-4 text-transparent bg-clip-text bg-gradient-to-r from-[var(--accent-primary)] to-[var(--accent-secondary)]\">CLI Reference</h1><p class=\"text-xl text-[var(--text-secondary)] leading-relaxed\">The current GoSPA CLI centers on six supported workflows: scaffold, inspect, develop, build, generate, and clean.</p></header><section class=\"grid gap-6 lg:grid-cols-[1.3fr_0.7fr] items-start\"><div class=\"rounded-[2rem] border border-[var(--border)] bg-[var(--bg-secondary)] p-6 md:p-8 shadow-[0_20px_60px_rgba(0,0,0,0.12)]\"><div class=\"flex items-center gap-3 mb-5\"><div class=\"px-3 py-1 rounded-full text-xs font-bold uppercase tracking-[0.28em] bg-[var(--accent-primary)]/10 text-[var(--accent-primary)]\">Recommended Flow</div></div>")
+		templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 1, "<div class=\"space-y-12\"><header><h1 class=\"text-4xl font-bold tracking-tight mb-4 text-transparent bg-clip-text bg-gradient-to-r from-[var(--accent-primary)] to-[var(--accent-secondary)]\">CLI Reference</h1><p class=\"text-xl text-[var(--text-secondary)] leading-relaxed\">The GoSPA CLI provides commands for creating, building, and developing GoSPA applications.</p></header><section class=\"grid gap-6 lg:grid-cols-[1.3fr_0.7fr] items-start\"><div class=\"rounded-[2rem] border border-[var(--border)] bg-[var(--bg-secondary)] p-6 md:p-8 shadow-[0_20px_60px_rgba(0,0,0,0.12)]\"><div class=\"flex items-center gap-3 mb-5\"><div class=\"px-3 py-1 rounded-full text-xs font-bold uppercase tracking-[0.28em] bg-[var(--accent-primary)]/10 text-[var(--accent-primary)]\">Recommended Flow</div></div>")
 		if templ_7745c5c3_Err != nil {
 			return templ_7745c5c3_Err
 		}
@@ -43,15 +43,47 @@ gospa dev`, "bash", " terminal").Render(ctx, templ_7745c5c3_Buffer)
 		if templ_7745c5c3_Err != nil {
 			return templ_7745c5c3_Err
 		}
-		templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 2, "</div><div class=\"space-y-4\"><div class=\"rounded-2xl border border-[var(--border)] bg-[var(--bg-secondary)] p-5\"><h2 class=\"font-bold mb-2\">What `doctor` gives you</h2><p class=\"text-sm text-[var(--text-secondary)] leading-relaxed\">Before you start the server, validate Go/Bun availability, project layout, and runtime entrypoints from the same CLI users already installed.</p></div><div class=\"rounded-2xl border border-[var(--border)] bg-[var(--bg-secondary)] p-5\"><h2 class=\"font-bold mb-2\">What `build` now reports</h2><p class=\"text-sm text-[var(--text-secondary)] leading-relaxed\">Production builds now surface the Bun executable, runtime artifact path, Go binary path and size, plus copied/compressed asset counts.</p></div></div></section><section class=\"space-y-8\"><div><h2 class=\"text-2xl font-bold mb-4 border-b border-[var(--border)] pb-2 italic mono\">gospa create</h2><p class=\"text-[var(--text-secondary)] mb-4\">Create a new GoSPA project scaffold.</p>")
+		templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 2, "</div><div class=\"space-y-4\"><div class=\"rounded-2xl border border-[var(--border)] bg-[var(--bg-secondary)] p-5\"><h2 class=\"font-bold mb-2\">What `doctor` gives you</h2><p class=\"text-sm text-[var(--text-secondary)] leading-relaxed\">Before you start the server, validate Go/Bun availability, project layout, and runtime entrypoints from the same CLI users already installed.</p></div><div class=\"rounded-2xl border border-[var(--border)] bg-[var(--bg-secondary)] p-5\"><h2 class=\"font-bold mb-2\">What `build` now reports</h2><p class=\"text-sm text-[var(--text-secondary)] leading-relaxed\">Production builds now surface the Bun executable, runtime artifact path, Go binary path and size, plus copied/compressed asset counts.</p></div></div></section><nav class=\"flex flex-wrap gap-2 p-4 rounded-2xl bg-[var(--bg-secondary)] border border-[var(--border)]\"><a href=\"#create\" class=\"text-sm font-medium hover:text-[var(--accent-primary)] transition-colors\">create</a> <a href=\"#dev\" class=\"text-sm font-medium hover:text-[var(--accent-primary)] transition-colors\">dev</a> <a href=\"#build\" class=\"text-sm font-medium hover:text-[var(--accent-primary)] transition-colors\">build</a> <a href=\"#generate\" class=\"text-sm font-medium hover:text-[var(--accent-primary)] transition-colors\">generate</a> <a href=\"#prune\" class=\"text-sm font-medium hover:text-[var(--accent-primary)] transition-colors\">prune</a> <a href=\"#doctor\" class=\"text-sm font-medium hover:text-[var(--accent-primary)] transition-colors\">doctor</a> <a href=\"#clean\" class=\"text-sm font-medium hover:text-[var(--accent-primary)] transition-colors\">clean</a> <a href=\"#add\" class=\"text-sm font-medium hover:text-[var(--accent-primary)] transition-colors\">add</a> <a href=\"#version\" class=\"text-sm font-medium hover:text-[var(--accent-primary)] transition-colors\">version</a></nav><section class=\"space-y-8\"><div id=\"create\"><h2 class=\"text-2xl font-bold mb-4 border-b border-[var(--border)] pb-2 italic mono\">gospa create</h2><p class=\"text-[var(--text-secondary)] mb-4\">Creates a new GoSPA project with all necessary files and directory structure.</p>")
 		if templ_7745c5c3_Err != nil {
 			return templ_7745c5c3_Err
 		}
-		templ_7745c5c3_Err = components.CodeBlock(`gospa create myapp`, "bash", " terminal").Render(ctx, templ_7745c5c3_Buffer)
+		templ_7745c5c3_Err = components.CodeBlock(`gospa create <project-name> [options]`, "bash", " terminal").Render(ctx, templ_7745c5c3_Buffer)
 		if templ_7745c5c3_Err != nil {
 			return templ_7745c5c3_Err
 		}
-		templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 3, "</div><div><h2 class=\"text-2xl font-bold mb-4 border-b border-[var(--border)] pb-2 italic mono\">gospa doctor</h2><p class=\"text-[var(--text-secondary)] mb-4\">Check local tooling and project layout before you start development or cut a release.</p>")
+		templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 3, "<div class=\"mt-4 rounded-2xl border border-[var(--border)] bg-[var(--bg-secondary)] p-5\"><h3 class=\"font-bold mb-3\">Options</h3><div class=\"overflow-x-auto\"><table class=\"w-full text-sm\"><thead><tr class=\"border-b border-[var(--border)]\"><th class=\"text-left py-2 pr-4 font-semibold\">Flag</th><th class=\"text-left py-2 pr-4 font-semibold\">Short</th><th class=\"text-left py-2 pr-4 font-semibold\">Default</th><th class=\"text-left py-2 font-semibold\">Description</th></tr></thead> <tbody class=\"text-[var(--text-secondary)]\"><tr class=\"border-b border-[var(--border)]\"><td class=\"py-2 pr-4 mono text-[var(--accent-primary)]\">--module</td><td class=\"py-2 pr-4\">-m</td><td class=\"py-2 pr-4\">&lt;project-name&gt;</td><td class=\"py-2\">Go module name</td></tr><tr class=\"border-b border-[var(--border)]\"><td class=\"py-2 pr-4 mono text-[var(--accent-primary)]\">--output</td><td class=\"py-2 pr-4\">-o</td><td class=\"py-2 pr-4\">&lt;project-name&gt;</td><td class=\"py-2\">Output directory</td></tr><tr class=\"border-b border-[var(--border)]\"><td class=\"py-2 pr-4 mono text-[var(--accent-primary)]\">--no-git</td><td class=\"py-2 pr-4\">-</td><td class=\"py-2 pr-4\">false</td><td class=\"py-2\">Skip .gitignore creation</td></tr><tr><td class=\"py-2 pr-4 mono text-[var(--accent-primary)]\">--docker</td><td class=\"py-2 pr-4\">-</td><td class=\"py-2 pr-4\">false</td><td class=\"py-2\">Add default Dockerfile</td></tr></tbody></table></div></div></div><div id=\"dev\"><h2 class=\"text-2xl font-bold mb-4 border-b border-[var(--border)] pb-2 italic mono\">gospa dev</h2><p class=\"text-[var(--text-secondary)] mb-4\">Starts the development server with hot reload. Watches for file changes and automatically regenerates templates.</p>")
+		if templ_7745c5c3_Err != nil {
+			return templ_7745c5c3_Err
+		}
+		templ_7745c5c3_Err = components.CodeBlock(`gospa dev [options]`, "bash", " terminal").Render(ctx, templ_7745c5c3_Buffer)
+		if templ_7745c5c3_Err != nil {
+			return templ_7745c5c3_Err
+		}
+		templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 4, "<div class=\"mt-4 rounded-2xl border border-[var(--border)] bg-[var(--bg-secondary)] p-5\"><h3 class=\"font-bold mb-3\">Options</h3><ul class=\"space-y-2 text-sm text-[var(--text-secondary)]\"><li><code class=\"mono text-[var(--accent-primary)]\">--port</code>, <code class=\"mono text-[var(--accent-primary)]\">-p</code> — Server port (default: 3000)</li><li><code class=\"mono text-[var(--accent-primary)]\">--host</code>, <code class=\"mono text-[var(--accent-primary)]\">-H</code> — Server host (default: localhost)</li><li><code class=\"mono text-[var(--accent-primary)]\">--routes</code>, <code class=\"mono text-[var(--accent-primary)]\">-r</code> — Routes directory (default: ./routes)</li><li><code class=\"mono text-[var(--accent-primary)]\">--components</code>, <code class=\"mono text-[var(--accent-primary)]\">-c</code> — Components directory (default: ./components)</li></ul></div></div><div id=\"build\"><h2 class=\"text-2xl font-bold mb-4 border-b border-[var(--border)] pb-2 italic mono\">gospa build</h2><p class=\"text-[var(--text-secondary)] mb-4\">Builds the application for production deployment.</p>")
+		if templ_7745c5c3_Err != nil {
+			return templ_7745c5c3_Err
+		}
+		templ_7745c5c3_Err = components.CodeBlock(`gospa build [options]`, "bash", " terminal").Render(ctx, templ_7745c5c3_Buffer)
+		if templ_7745c5c3_Err != nil {
+			return templ_7745c5c3_Err
+		}
+		templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 5, "<div class=\"mt-4 rounded-2xl border border-[var(--border)] bg-[var(--bg-secondary)] p-5\"><h3 class=\"font-bold mb-3\">Options</h3><ul class=\"space-y-2 text-sm text-[var(--text-secondary)]\"><li><code class=\"mono text-[var(--accent-primary)]\">--output</code>, <code class=\"mono text-[var(--accent-primary)]\">-o</code> — Output directory (default: dist)</li><li><code class=\"mono text-[var(--accent-primary)]\">--platform</code>, <code class=\"mono text-[var(--accent-primary)]\">-p</code> — Target platform (OS)</li><li><code class=\"mono text-[var(--accent-primary)]\">--arch</code>, <code class=\"mono text-[var(--accent-primary)]\">-a</code> — Target architecture</li><li><code class=\"mono text-[var(--accent-primary)]\">--no-minify</code> — Disable JS minification</li><li><code class=\"mono text-[var(--accent-primary)]\">--no-compress</code> — Disable gzip precompression</li><li><code class=\"mono text-[var(--accent-primary)]\">--all</code> — Build for all platforms</li></ul></div></div><div id=\"generate\"><h2 class=\"text-2xl font-bold mb-4 border-b border-[var(--border)] pb-2 italic mono\">gospa generate</h2><p class=\"text-[var(--text-secondary)] mb-4\">Generates TypeScript route definitions and types from Go source code.</p>")
+		if templ_7745c5c3_Err != nil {
+			return templ_7745c5c3_Err
+		}
+		templ_7745c5c3_Err = components.CodeBlock(`gospa generate [options]`, "bash", " terminal").Render(ctx, templ_7745c5c3_Buffer)
+		if templ_7745c5c3_Err != nil {
+			return templ_7745c5c3_Err
+		}
+		templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 6, "<div class=\"mt-4 rounded-2xl border border-[var(--border)] bg-[var(--bg-secondary)] p-5\"><h3 class=\"font-bold mb-3\">Options</h3><ul class=\"space-y-2 text-sm text-[var(--text-secondary)]\"><li><code class=\"mono text-[var(--accent-primary)]\">--input-dir</code> — Input directory to scan (default: .)</li><li><code class=\"mono text-[var(--accent-primary)]\">--output</code>, <code class=\"mono text-[var(--accent-primary)]\">-o</code> — Output directory (default: ./generated)</li><li><code class=\"mono text-[var(--accent-primary)]\">--type</code> — Default .gospa type (island, page, layout, static, server)</li></ul></div></div><div id=\"prune\"><h2 class=\"text-2xl font-bold mb-4 border-b border-[var(--border)] pb-2 italic mono\">gospa prune</h2><p class=\"text-[var(--text-secondary)] mb-4\">Removes unused component state from state stores to prevent memory leaks in long-running applications.</p>")
+		if templ_7745c5c3_Err != nil {
+			return templ_7745c5c3_Err
+		}
+		templ_7745c5c3_Err = components.CodeBlock(`gospa prune [options]`, "bash", " terminal").Render(ctx, templ_7745c5c3_Buffer)
+		if templ_7745c5c3_Err != nil {
+			return templ_7745c5c3_Err
+		}
+		templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 7, "<div class=\"mt-4 rounded-2xl border border-[var(--border)] bg-[var(--bg-secondary)] p-5\"><h3 class=\"font-bold mb-3\">Options</h3><ul class=\"space-y-2 text-sm text-[var(--text-secondary)]\"><li><code class=\"mono text-[var(--accent-primary)]\">--root-dir</code> — Project root (default: .)</li><li><code class=\"mono text-[var(--accent-primary)]\">--dry-run</code> — Analyze without modifying</li><li><code class=\"mono text-[var(--accent-primary)]\">--verbose</code> — Detailed report output</li><li><code class=\"mono text-[var(--accent-primary)]\">--aggressive</code> — More aggressive pruning</li></ul></div></div><div id=\"doctor\"><h2 class=\"text-2xl font-bold mb-4 border-b border-[var(--border)] pb-2 italic mono\">gospa doctor</h2><p class=\"text-[var(--text-secondary)] mb-4\">Validates local project/tooling setup before development or release.</p>")
 		if templ_7745c5c3_Err != nil {
 			return templ_7745c5c3_Err
 		}
@@ -60,37 +92,7 @@ gospa doctor --routes-dir ./routes`, "bash", " terminal").Render(ctx, templ_7745
 		if templ_7745c5c3_Err != nil {
 			return templ_7745c5c3_Err
 		}
-		templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 4, "<ul class=\"list-disc pl-6 mt-4 space-y-2 text-[var(--text-secondary)]\"><li>Confirms Go is available.</li><li>Checks for Bun and Bun package manifests.</li><li>Validates optional app layout like `main.go`, routes, and client runtime entrypoints.</li></ul></div><div><h2 class=\"text-2xl font-bold mb-4 border-b border-[var(--border)] pb-2 italic mono\">gospa dev</h2><p class=\"text-[var(--text-secondary)] mb-4\">Start the local development workflow with file watching and server restarts.</p>")
-		if templ_7745c5c3_Err != nil {
-			return templ_7745c5c3_Err
-		}
-		templ_7745c5c3_Err = components.CodeBlock(`gospa dev
-gospa dev --port 8080 --host 0.0.0.0
-gospa dev --routes-dir ./routes`, "bash", " terminal").Render(ctx, templ_7745c5c3_Buffer)
-		if templ_7745c5c3_Err != nil {
-			return templ_7745c5c3_Err
-		}
-		templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 5, "</div><div><h2 class=\"text-2xl font-bold mb-4 border-b border-[var(--border)] pb-2 italic mono\">gospa build</h2><p class=\"text-[var(--text-secondary)] mb-4\">Create a production build with Go plus Bun-based client runtime steps where applicable.</p>")
-		if templ_7745c5c3_Err != nil {
-			return templ_7745c5c3_Err
-		}
-		templ_7745c5c3_Err = components.CodeBlock(`gospa build
-gospa build -o ./dist --platform linux --arch amd64
-gospa build --minify=false --compress=false`, "bash", " terminal").Render(ctx, templ_7745c5c3_Buffer)
-		if templ_7745c5c3_Err != nil {
-			return templ_7745c5c3_Err
-		}
-		templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 6, "<div class=\"mt-4 rounded-2xl border border-[var(--border)] bg-[var(--bg-secondary)] p-5\"><h3 class=\"font-bold mb-3\">Current supported flags</h3><ul class=\"space-y-2 text-sm text-[var(--text-secondary)]\"><li><code class=\"mono text-[var(--accent-primary)]\">-o</code> — output directory</li><li><code class=\"mono text-[var(--accent-primary)]\">--platform</code> — target GOOS</li><li><code class=\"mono text-[var(--accent-primary)]\">--arch</code> — target GOARCH</li><li><code class=\"mono text-[var(--accent-primary)]\">--minify</code> — enable or disable Bun minification</li><li><code class=\"mono text-[var(--accent-primary)]\">--compress</code> — enable or disable gzip precompression</li></ul></div></div><div><h2 class=\"text-2xl font-bold mb-4 border-b border-[var(--border)] pb-2 italic mono\">gospa generate</h2><p class=\"text-[var(--text-secondary)] mb-4\">Generate Go routes, TypeScript types, action definitions, and route metadata. This creates <code>routes.ts</code>, <code>types.ts</code>, and <code>actions.ts</code> to enable a full type-safe bridge.</p>")
-		if templ_7745c5c3_Err != nil {
-			return templ_7745c5c3_Err
-		}
-		templ_7745c5c3_Err = components.CodeBlock(`gospa generate
-gospa generate -o ./generated --input-dir .
-gospa generate --type page`, "bash", " terminal").Render(ctx, templ_7745c5c3_Buffer)
-		if templ_7745c5c3_Err != nil {
-			return templ_7745c5c3_Err
-		}
-		templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 7, "<div class=\"mt-4 rounded-2xl border border-[var(--border)] bg-[var(--bg-secondary)] p-5\"><h3 class=\"font-bold mb-3\">Generate flags</h3><ul class=\"space-y-2 text-sm text-[var(--text-secondary)]\"><li><code class=\"mono text-[var(--accent-primary)]\">--input-dir</code> — directory to scan for routes/state</li><li><code class=\"mono text-[var(--accent-primary)]\">-o</code> — output directory</li><li><code class=\"mono text-[var(--accent-primary)]\">--type</code> — default `.gospa` type (<code>island</code>, <code>page</code>, <code>layout</code>, <code>static</code>, <code>server</code>)</li></ul></div></div><div><h2 class=\"text-2xl font-bold mb-4 border-b border-[var(--border)] pb-2 italic mono\">gospa clean</h2><p class=\"text-[var(--text-secondary)] mb-4\">Remove generated and build artifacts such as `dist`, `node_modules`, and templ-generated files.</p>")
+		templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 8, "<ul class=\"list-disc pl-6 mt-4 space-y-2 text-[var(--text-secondary)]\"><li>Confirms Go is available</li><li>Checks for Bun and Bun package manifests</li><li>Validates project layout (go.mod, main.go, routes)</li></ul></div><div id=\"clean\"><h2 class=\"text-2xl font-bold mb-4 border-b border-[var(--border)] pb-2 italic mono\">gospa clean</h2><p class=\"text-[var(--text-secondary)] mb-4\">Removes generated and build artifacts.</p>")
 		if templ_7745c5c3_Err != nil {
 			return templ_7745c5c3_Err
 		}
@@ -98,7 +100,15 @@ gospa generate --type page`, "bash", " terminal").Render(ctx, templ_7745c5c3_Buf
 		if templ_7745c5c3_Err != nil {
 			return templ_7745c5c3_Err
 		}
-		templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 8, "</div><div><h2 class=\"text-2xl font-bold mb-4 border-b border-[var(--border)] pb-2 italic mono\">gospa version</h2><p class=\"text-[var(--text-secondary)] mb-4\">Print the installed GoSPA version.</p>")
+		templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 9, "<p class=\"text-sm text-[var(--text-secondary)] mt-4\">Removes: <code class=\"mono\">dist/</code>, <code class=\"mono\">node_modules/</code>, and all <code class=\"mono\">_templ.go</code> files.</p></div><div id=\"add\"><h2 class=\"text-2xl font-bold mb-4 border-b border-[var(--border)] pb-2 italic mono\">gospa add</h2><p class=\"text-[var(--text-secondary)] mb-4\">Adds a feature to the project via plugins.</p>")
+		if templ_7745c5c3_Err != nil {
+			return templ_7745c5c3_Err
+		}
+		templ_7745c5c3_Err = components.CodeBlock(`gospa add <feature>`, "bash", " terminal").Render(ctx, templ_7745c5c3_Buffer)
+		if templ_7745c5c3_Err != nil {
+			return templ_7745c5c3_Err
+		}
+		templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 10, "<div class=\"mt-4 rounded-2xl border border-[var(--border)] bg-[var(--bg-secondary)] p-5\"><h3 class=\"font-bold mb-3\">Available Features</h3><ul class=\"space-y-2 text-sm text-[var(--text-secondary)]\"><li><code class=\"mono text-[var(--accent-primary)]\">tailwind</code> — Adds Tailwind CSS support</li><li><code class=\"mono text-[var(--accent-primary)]\">postcss</code> — Adds PostCSS with Tailwind extensions</li><li><code class=\"mono text-[var(--accent-primary)]\">image</code> — Adds image optimization</li><li><code class=\"mono text-[var(--accent-primary)]\">validation</code> — Adds form validation (Valibot + Go validator)</li><li><code class=\"mono text-[var(--accent-primary)]\">seo</code> — Adds SEO optimization</li><li><code class=\"mono text-[var(--accent-primary)]\">auth</code> — Adds authentication (OAuth2, JWT, OTP)</li></ul></div></div><div id=\"version\"><h2 class=\"text-2xl font-bold mb-4 border-b border-[var(--border)] pb-2 italic mono\">gospa version</h2><p class=\"text-[var(--text-secondary)] mb-4\">Print the installed GoSPA version.</p>")
 		if templ_7745c5c3_Err != nil {
 			return templ_7745c5c3_Err
 		}
@@ -106,7 +116,7 @@ gospa generate --type page`, "bash", " terminal").Render(ctx, templ_7745c5c3_Buf
 		if templ_7745c5c3_Err != nil {
 			return templ_7745c5c3_Err
 		}
-		templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 9, "</div></section></div>")
+		templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 11, "</div></section></div>")
 		if templ_7745c5c3_Err != nil {
 			return templ_7745c5c3_Err
 		}
