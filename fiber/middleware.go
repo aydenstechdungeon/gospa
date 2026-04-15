@@ -307,6 +307,8 @@ func DefaultPreloadConfig() PreloadConfig {
 }
 
 // PreloadHeadersMiddleware adds HTTP Link headers for preloading critical resources.
+// Link headers are set before downstream handlers run so they arrive in the response
+// headers rather than after the body已经开始解析.
 func PreloadHeadersMiddleware(config PreloadConfig) gofiber.Handler {
 	return func(c gofiber.Ctx) error {
 		err := c.Next()
@@ -408,7 +410,7 @@ func PreloadHeadersMiddleware(config PreloadConfig) gofiber.Handler {
 			c.Set("Link", strings.Join(links, ", "))
 		}
 
-		return nil
+		return c.Next()
 	}
 }
 

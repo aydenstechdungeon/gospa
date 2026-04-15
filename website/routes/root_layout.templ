@@ -87,7 +87,6 @@ templ RootLayout(title string, children templ.Component, runtimePath string, pat
 			<!-- Preload critical assets & Preconnect -->
 			<link rel="preconnect" href="/" crossorigin />
 			<link rel="preload" href="/static/fonts/InterVariable.woff2" as="font" type="font/woff2" crossorigin="anonymous" fetchpriority="high" />
-			<link rel="preload" as="image" href="/static/gospa1-64.webp" type="image/webp" />
 
 			<!-- Compiled Tailwind CSS with Critical CSS extraction -->
 			if debug {
@@ -108,18 +107,20 @@ templ RootLayout(title string, children templ.Component, runtimePath string, pat
 			<script src="/static/js/islands.js" type="module" nonce={ gospatempl.GetNonce(ctx) }></script>
 			<script src={ runtimePath } type="module" nonce={ gospatempl.GetNonce(ctx) }></script>
 			<script type="module" nonce={ gospatempl.GetNonce(ctx) }>
-				const b = document.body.dataset;
-				import(b.gospaRuntimePath).then(m => {
-					m.init({
-						wsUrl: b.gospaWsUrl,
-						serializationFormat: b.gospaSerializationFormat,
-						debug: b.gospaDebug === "true",
-						hydration: {
-							mode: b.gospaHydrationMode,
-							timeout: parseInt(b.gospaHydrationTimeout, 10)
-						}
+				requestIdleCallback(() => {
+					const b = document.body.dataset;
+					import(b.gospaRuntimePath).then(m => {
+						m.init({
+							wsUrl: b.gospaWsUrl,
+							serializationFormat: b.gospaSerializationFormat,
+							debug: b.gospaDebug === "true",
+							hydration: {
+								mode: b.gospaHydrationMode,
+								timeout: parseInt(b.gospaHydrationTimeout, 10)
+							}
+						});
 					});
-				});
+				}, { timeout: 2000 });
 			</script>
 			<script src="/static/docs.js" defer nonce={ gospatempl.GetNonce(ctx) }></script>
 
@@ -166,7 +167,7 @@ templ RootLayout(title string, children templ.Component, runtimePath string, pat
 			data-gospa-serialization-format={ serializationFormat }
 		>
 			<!-- Animated background elements -->
-			<div class="fixed inset-0 pointer-events-none z-0 overflow-hidden">
+			<div class="fixed inset-0 pointer-events-none z-0 overflow-hidden" style="contain: layout style paint;">
 				<div class="absolute -top-[10%] -left-[10%] w-[40%] h-[40%] bg-cyan-500/10 blur-[120px] rounded-full animate-float"></div>
 				<div class="absolute top-[20%] -right-[5%] w-[30%] h-[30%] bg-purple-500/10 blur-[100px] rounded-full animate-pulse"></div>
 				<div class="absolute inset-0 grid-bg"></div>
@@ -299,7 +300,7 @@ templ RootLayout(title string, children templ.Component, runtimePath string, pat
 				}
 			</main>
 
-			<footer class="border-t border-[var(--border)] bg-[var(--bg-secondary)] py-12 z-10 relative">
+			<footer class="border-t border-[var(--border)] bg-[var(--bg-secondary)] py-12 z-10 relative" style="content-visibility: auto; contain-intrinsic-size: 0 500px;">
 				<div class="max-w-7xl mx-auto px-4 grid md:grid-cols-4 gap-8">
 					<div class="col-span-2">
 						<div class="flex items-center gap-2 mb-4">

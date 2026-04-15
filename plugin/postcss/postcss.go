@@ -1172,6 +1172,11 @@ func splitCSS(fullCSS []byte, maxSize int, criticalClasses map[string]bool) ([]b
 	critical := make([]byte, 0, len(before)+len(utilPrefix)+len(criticalInner)+1)
 	critical = append(critical, before...)
 	critical = append(critical, utilPrefix...)
+
+	// Safety block: ensure structural utilities are always in critical CSS
+	// to prevent CLS from async non-critical CSS loading
+	critical = append(critical, []byte(".hidden{display:none!important}.invisible{visibility:hidden}.fixed{position:fixed}.absolute{position:absolute}")...)
+
 	critical = append(critical, criticalInner...)
 	critical = append(critical, '}')
 
