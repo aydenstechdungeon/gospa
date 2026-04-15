@@ -92,18 +92,6 @@ func main() {
 	// We've updated the framework to register static routes later so this works as expected.
 	app.Fiber.Use(cacheMiddleware)
 
-	// Test route - simple response
-	app.Fiber.Get("/test", func(c fiber.Ctx) error {
-		c.Set("Content-Type", "text/html")
-		return c.SendString("<html><body><h1>Test OK</h1></body></html>")
-	})
-
-	// Test route - simple response
-	app.Fiber.Get("/test", func(c fiber.Ctx) error {
-		c.Set("Content-Type", "text/html")
-		return c.SendString("<html><body><h1>Test OK</h1></body></html>")
-	})
-
 	// Legacy redirects after documentation restructuring
 	app.Fiber.Get("/docs/getstarted", func(c fiber.Ctx) error {
 		return c.Redirect().Status(301).To("/docs/getstarted/installation")
