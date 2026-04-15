@@ -103,6 +103,12 @@ GoSPA automatically compiles this to a reactive Templ component and a TypeScript
 | **File Routing** | ✅ | ❌ | ❌ | ✅ | ❌ |
 | **Type Safety** | ✅ | ❌ | ❌ | ✅ | ✅ |
 
+GoSPA Docs page (gospa.onrender.com - free hosting)
+<img width="693" height="29" alt="Screenshot_20260415_184459-1" src="https://github.com/user-attachments/assets/ae973cae-26fc-4ebf-9290-7be3b966d286" />
+SvelteKit Docs page (svelte.dev/docs/kit/introduction)
+<img width="687" height="25" alt="Screenshot_20260415_184329" src="https://github.com/user-attachments/assets/8cc0b88d-3b61-49ae-92cf-aa0e289e6f19" />
+
+
 ## Recommended Production Baseline
 
 Start from `gospa.ProductionConfig()` and tighten only what your app needs:
