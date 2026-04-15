@@ -410,7 +410,7 @@ func PreloadHeadersMiddleware(config PreloadConfig) gofiber.Handler {
 			c.Set("Link", strings.Join(links, ", "))
 		}
 
-		return c.Next()
+		return nil
 	}
 }
 
