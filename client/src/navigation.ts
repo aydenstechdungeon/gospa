@@ -1416,6 +1416,13 @@ export async function prefetch(path: string): Promise<void> {
     return;
   }
 
+  // Throttle prefetch under main thread pressure to improve INP
+  if ((navigator as any).scheduling?.isInputPending?.()) {
+    // Reschedule for next idle period instead of blocking main thread
+    requestIdleCallback(() => { void prefetch(path); }, { timeout: 1000 });
+    return;
+  }
+
   const existing = prefetchCache.get(path);
   if (existing && existing.expiresAt > Date.now()) return;
   if (existing) prefetchCache.delete(path);

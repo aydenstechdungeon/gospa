@@ -44,10 +44,10 @@ func main() {
 		CacheTemplates:        !devMode,            // Enable template caching in production
 		DefaultRenderStrategy: routing.StrategySSG, // Make the entire docs site static by default
 		RuntimeTier:           gospa.RuntimeTierFull,
-		SSGCacheMaxEntries:    -1,   // Cache all pages without eviction
-		CompressState:         true, // Compress WebSocket messages
-		StateDiffing:          true, // Only send state diffs
-		EnableWebSocket:       true,
+		SSGCacheMaxEntries:    -1,    // Cache all pages without eviction
+		CompressState:         true,  // Compress WebSocket messages
+		StateDiffing:          true,  // Only send state diffs
+		EnableWebSocket:       false, // Docs site doesn't need real-time state sync
 		SerializationFormat:   gospa.SerializationMsgPack,
 		WSHeartbeat:           30 * time.Second,
 		WSReconnectDelay:      1 * time.Second,
@@ -57,7 +57,8 @@ func main() {
 		HydrationMode:         "idle",
 		NavigationOptions: gospa.NavigationOptions{
 			IdleCallbackBatchUpdates: &gospa.NavigationIdleCallbackBatchUpdatesConfig{
-				Enabled: boolPtr(true),
+				Enabled:             boolPtr(true),
+				FallbackToMicrotask: boolPtr(true),
 			},
 			URLParsingCache: &gospa.NavigationURLParsingCacheConfig{
 				Enabled: boolPtr(true),
@@ -90,6 +91,18 @@ func main() {
 	// IMPORTANT: This must come BEFORE routes to catch static assets
 	// We've updated the framework to register static routes later so this works as expected.
 	app.Fiber.Use(cacheMiddleware)
+
+	// Test route - simple response
+	app.Fiber.Get("/test", func(c fiber.Ctx) error {
+		c.Set("Content-Type", "text/html")
+		return c.SendString("<html><body><h1>Test OK</h1></body></html>")
+	})
+
+	// Test route - simple response
+	app.Fiber.Get("/test", func(c fiber.Ctx) error {
+		c.Set("Content-Type", "text/html")
+		return c.SendString("<html><body><h1>Test OK</h1></body></html>")
+	})
 
 	// Legacy redirects after documentation restructuring
 	app.Fiber.Get("/docs/getstarted", func(c fiber.Ctx) error {
