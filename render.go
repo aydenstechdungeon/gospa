@@ -1,7 +1,6 @@
 package gospa
 
 import (
-	"bufio"
 	"bytes"
 	"context"
 	"encoding/json"
@@ -9,7 +8,6 @@ import (
 	"html"
 	"os"
 	"strings"
-	"sync"
 	"time"
 
 	gospafiber "github.com/aydenstechdungeon/gospa/fiber"
@@ -17,7 +15,6 @@ import (
 	"github.com/aydenstechdungeon/gospa/state"
 	templpkg "github.com/aydenstechdungeon/gospa/templ"
 	gofiber "github.com/gofiber/fiber/v3"
-	"github.com/valyala/fasthttp"
 )
 
 // renderRoute renders a route with its layout chain.
@@ -324,18 +321,12 @@ func (a *App) renderRoute(c gofiber.Ctx, route *routing.Route) error {
 		}
 
 		c.Set("Cache-Control", "no-store")
-		c.Response().SetBodyStreamWriter(fasthttp.StreamWriter(func(w *bufio.Writer) {
-			defer func() {
-				if r := recover(); r != nil {
-					a.Logger().Error("panic during streaming render", "err", r)
-				}
-			}()
-			if err := wrappedContent.Render(ctx, w); err != nil {
-				a.Logger().Error("streaming render error", "err", err)
-			}
-			_ = w.Flush()
-		}))
-		return nil
+		var buf bytes.Buffer
+		if err := wrappedContent.Render(ctx, &buf); err != nil {
+			a.Logger().Error("render error", "err", err)
+			return a.renderError(c, gofiber.StatusInternalServerError, err)
+		}
+		return c.Send(buf.Bytes())
 	}
 
 	wsURL := a.getWSUrl(c)
@@ -348,40 +339,39 @@ func (a *App) renderRoute(c gofiber.Ctx, route *routing.Route) error {
 	if cspNonce != "" {
 		nonceFmt = ` nonce="` + html.EscapeString(cspNonce) + `"`
 	}
-	c.Response().SetBodyStreamWriter(fasthttp.StreamWriter(func(w *bufio.Writer) {
-		var mu sync.Mutex // Mutex for thread-safe writing to the buffer
+	var pageBuf bytes.Buffer
+	_, _ = fmt.Fprint(&pageBuf, `<!DOCTYPE html><html lang="en" data-gospa-auto><head><meta charset="UTF-8"><meta name="viewport" content="width=device-width, initial-scale=1.0"><title>`)
+	// SECURITY: Escape AppName to prevent XSS via title injection.
+	_, _ = fmt.Fprint(&pageBuf, html.EscapeString(a.Config.AppName))
+	_, _ = fmt.Fprint(&pageBuf, `</title></head><body><div id="app" data-gospa-root><main>`)
+	if err := content.Render(ctx, &pageBuf); err != nil {
+		a.Logger().Error("render error", "err", err)
+		return a.renderError(c, gofiber.StatusInternalServerError, err)
+	}
+	_, _ = fmt.Fprint(&pageBuf, `</main></div>`)
 
-		_, _ = fmt.Fprint(w, `<!DOCTYPE html><html lang="en" data-gospa-auto><head><meta charset="UTF-8"><meta name="viewport" content="width=device-width, initial-scale=1.0"><title>`)
-		// SECURITY: Escape AppName to prevent XSS via title injection.
-		_, _ = fmt.Fprint(w, html.EscapeString(a.Config.AppName))
-		_, _ = fmt.Fprint(w, `</title></head><body><div id="app" data-gospa-root><main>`)
-		if err := content.Render(ctx, w); err != nil {
-			a.Logger().Error("streaming render error", "err", err)
-		}
-		_, _ = fmt.Fprint(w, `</main></div>`)
-
-		// Determine the highest required runtime tier for this page and all its layouts
-		maxTierLevel := tierToLevel(opts.RuntimeTier)
-		for _, l := range layouts {
-			if lTier := routing.GetLayoutTier(l.Path); lTier != "" {
-				if level := tierToLevel(lTier); level > maxTierLevel {
-					maxTierLevel = level
-				}
-			}
-		}
-		if rootTier := routing.GetLayoutTier(""); rootTier != "" {
-			if level := tierToLevel(rootTier); level > maxTierLevel {
+	// Determine the highest required runtime tier for this page and all its layouts
+	maxTierLevel := tierToLevel(opts.RuntimeTier)
+	for _, l := range layouts {
+		if lTier := routing.GetLayoutTier(l.Path); lTier != "" {
+			if level := tierToLevel(lTier); level > maxTierLevel {
 				maxTierLevel = level
 			}
 		}
-		tier := levelToTier(maxTierLevel)
-		runtimePathForPage := runtimePath
-		if tier != "" && tier != "full" && strings.HasPrefix(runtimePath, "/_gospa/runtime.js") {
-			runtimePathForPage = "/_gospa/runtime-" + tier + ".js"
+	}
+	if rootTier := routing.GetLayoutTier(""); rootTier != "" {
+		if level := tierToLevel(rootTier); level > maxTierLevel {
+			maxTierLevel = level
 		}
+	}
+	tier = levelToTier(maxTierLevel)
+	runtimePathForPage := runtimePath
+	if tier != "" && tier != "full" && strings.HasPrefix(runtimePath, "/_gospa/runtime.js") {
+		runtimePathForPage = "/_gospa/runtime-" + tier + ".js"
+	}
 
-		_, _ = fmt.Fprintf(w, `<script src="%s" type="module"%s></script>`, runtimePathForPage, nonceFmt)
-		_, _ = fmt.Fprintf(w, `<script type="module"%s>
+	_, _ = fmt.Fprintf(&pageBuf, `<script src="%s" type="module"%s></script>`, runtimePathForPage, nonceFmt)
+	_, _ = fmt.Fprintf(&pageBuf, `<script type="module"%s>
 import * as runtime from %s;
 window.__GOSPA_CONFIG__ = {
 	navigationOptions: %s,
@@ -403,44 +393,36 @@ runtime.init({
 });
 </script>`, nonceFmt, toJS(runtimePathForPage), toJS(a.Config.NavigationOptions), toJS(c.Locals("gospa.csrf_token")), toJS(wsURL), toJS(string(a.Config.SerializationFormat)), a.Config.DevMode, a.Config.SimpleRuntimeSVGs, a.Config.DisableSanitization, wsRD, wsMR, wsHB, toJS(a.Config.HydrationMode), a.Config.HydrationTimeout)
 
-		// Islands bundle — loads and registers all island setup functions
-		// Only include if the file exists (islands are optional)
-		islandsPath := a.Config.IslandsBundlePath
-		if islandsPath == "" {
-			islandsPath = "static/js/islands.js"
-		}
-		if _, err := os.Stat(islandsPath); err == nil {
-			_, _ = fmt.Fprintf(w, `<script src="/%s" type="module"></script>`, html.EscapeString(islandsPath))
-		}
+	// Islands bundle — loads and registers all island setup functions
+	// Only include if the file exists (islands are optional)
+	islandsPath := a.Config.IslandsBundlePath
+	if islandsPath == "" {
+		islandsPath = "static/js/islands.js"
+	}
+	if _, err := os.Stat(islandsPath); err == nil {
+		_, _ = fmt.Fprintf(&pageBuf, `<script src="/%s" type="module"></script>`, html.EscapeString(islandsPath))
+	}
 
-		// Centralized State Registry
-		data, _ := json.Marshal(registry.GetData())
-		_, _ = fmt.Fprintf(w, `<script id="__GOSPA_DATA__" type="application/json">%s</script>`, string(data))
+	// Centralized State Registry
+	data, _ := json.Marshal(registry.GetData())
+	_, _ = fmt.Fprintf(&pageBuf, `<script id="__GOSPA_DATA__" type="application/json">%s</script>`, string(data))
 
-		// Handle Deferred Slots
-		if len(opts.DeferredSlots) > 0 {
-			var wg sync.WaitGroup
-			for _, slotName := range opts.DeferredSlots {
-				wg.Add(1)
-				go func(name string) {
-					defer wg.Done()
-					a.renderAndStreamDeferredSlot(&mu, w, route, name, params, c.Path(), nonceFmt)
-				}(slotName)
-			}
-			wg.Wait()
+	// Handle Deferred Slots
+	for _, slotName := range opts.DeferredSlots {
+		if deferredHTML := a.renderDeferredSlotToBuffer(route, slotName, params, c.Path(), nonceFmt); deferredHTML != "" {
+			_, _ = pageBuf.WriteString(deferredHTML)
 		}
+	}
 
-		_, _ = fmt.Fprint(w, `</body></html>`)
-		_ = w.Flush()
-	}))
-	return nil
+	_, _ = fmt.Fprint(&pageBuf, `</body></html>`)
+	return c.Send(pageBuf.Bytes())
 }
 
-// renderAndStreamDeferredSlot renders a slot in the background and streams it immediately as a replacement chunk.
-func (a *App) renderAndStreamDeferredSlot(mu *sync.Mutex, w *bufio.Writer, route *routing.Route, slotName string, params map[string]interface{}, path string, nonce string) {
+// renderDeferredSlotToBuffer renders a slot and returns replacement markup to be appended to the HTML response.
+func (a *App) renderDeferredSlotToBuffer(route *routing.Route, slotName string, params map[string]interface{}, path string, nonce string) string {
 	slotFn := routing.GetSlot(route.Path, slotName)
 	if slotFn == nil {
-		return
+		return ""
 	}
 	slotProps := map[string]interface{}{"path": path}
 	for k, v := range params {
@@ -450,19 +432,21 @@ func (a *App) renderAndStreamDeferredSlot(mu *sync.Mutex, w *bufio.Writer, route
 	var buf bytes.Buffer
 	if err := slotFn(slotProps).Render(context.Background(), &buf); err != nil {
 		a.Logger().Error("Deferred slot render error", "slot", slotName, "err", err)
-		return
+		return ""
 	}
-
-	mu.Lock()
-	defer mu.Unlock()
 
 	// SECURITY: Use proper JS escaping for slot names and IDs.
 	// buf.String() contains templ-rendered content which is already HTML-safe.
 	safeSlotName := html.EscapeString(slotName)
 	jsSlotName := toJS(slotName)
-	_, _ = fmt.Fprintf(w, `<template id="gospa-deferred-content-%s">%s</template>`, safeSlotName, buf.String())
-	_, _ = fmt.Fprintf(w, `<script%s>if(window.__GOSPA_STREAM__){__GOSPA_STREAM__({type:'html', id:'gospa-deferred-'+%s, content: document.getElementById('gospa-deferred-content-'+%s).innerHTML})}</script>`, nonce, jsSlotName, jsSlotName)
-	_ = w.Flush()
+	return fmt.Sprintf(
+		`<template id="gospa-deferred-content-%s">%s</template><script%s>if(window.__GOSPA_STREAM__){__GOSPA_STREAM__({type:'html', id:'gospa-deferred-'+%s, content: document.getElementById('gospa-deferred-content-'+%s).innerHTML})}</script>`,
+		safeSlotName,
+		buf.String(),
+		nonce,
+		jsSlotName,
+		jsSlotName,
+	)
 }
 
 // resolveLoadChain executes the load functions for a route and its layout chain.
