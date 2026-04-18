@@ -660,12 +660,24 @@ func (r *Route) String() string {
 
 // ResolveLayoutChain resolves the complete layout chain for a matched route.
 // It returns all layouts from root to the nearest parent, ordered root-first.
+//
+// When the filesystem scan (Scan) found layout files those entries take
+// priority.  If the router was initialised without a routes directory, or the
+// directory does not contain .templ source files (e.g. a production binary
+// deployed without source), the global registry is consulted as a fallback so
+// that layouts registered via generated init() code are still applied.
 func (r *Router) ResolveLayoutChain(route *Route) []*Route {
 	if route == nil {
 		return nil
 	}
 
 	chain := make([]*Route, 0)
+
+	// synthRoute creates a synthetic *Route for a layout that exists only in
+	// the global registry (no corresponding .templ file on disk).
+	synthRoute := func(p string) *Route {
+		return &Route{Path: p, Type: RouteTypeLayout}
+	}
 
 	// Walk up the path hierarchy collecting layouts
 	path := route.Path
@@ -674,6 +686,9 @@ func (r *Router) ResolveLayoutChain(route *Route) []*Route {
 	if route.Type == RouteTypePage || route.Type == RouteTypeError {
 		if layout, ok := r.layoutIndex[path]; ok {
 			chain = append([]*Route{layout}, chain...)
+		} else if HasLayout(path) {
+			// Fallback: layout registered in global registry but not on disk.
+			chain = append([]*Route{synthRoute(path)}, chain...)
 		}
 	}
 
@@ -686,15 +701,25 @@ func (r *Router) ResolveLayoutChain(route *Route) []*Route {
 
 		if layout, ok := r.layoutIndex[parent]; ok {
 			chain = append([]*Route{layout}, chain...)
+		} else if HasLayout(parent) {
+			// Fallback: layout registered in global registry but not on disk.
+			chain = append([]*Route{synthRoute(parent)}, chain...)
 		}
 
 		path = parent
 	}
 
-	// Check for root layout
+	// Check for root layout ("/") via filesystem index.
+	// Note: the root_layout registered via RegisterRootLayout is handled
+	// separately in render.go via GetRootLayout(); we only include a "/"
+	// entry here when an explicit layout.templ lives at the routes root.
 	if layout, ok := r.layoutIndex["/"]; ok {
 		if len(chain) == 0 || chain[0].Path != "/" {
 			chain = append([]*Route{layout}, chain...)
+		}
+	} else if HasLayout("/") {
+		if len(chain) == 0 || chain[0].Path != "/" {
+			chain = append([]*Route{synthRoute("/")}, chain...)
 		}
 	}
 

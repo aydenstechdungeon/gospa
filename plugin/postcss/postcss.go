@@ -970,12 +970,14 @@ func GenerateAsyncCSSScriptWithNonce(cssPath, nonce string) string {
 	if nonce != "" {
 		nonceAttr = fmt.Sprintf(` nonce="%s"`, nonce)
 	}
-	// Use a data attribute on the link so the script can locate every preloaded async sheet,
-	// even when multiple AsyncCSS calls appear on the same page.
+	// Use a real stylesheet link with media="print" so the browser reliably fetches the CSS
+	// without blocking first paint. The script then promotes it to media="all" once loaded.
+	// This avoids the rel=preload -> rel=stylesheet race where some browsers can miss the load
+	// transition and leave the async stylesheet unapplied.
 	return fmt.Sprintf(
-		`<link rel="preload" href="%s" as="style" data-gospa-async-css="%s">`+
+		`<link rel="stylesheet" href="%s" media="print" data-gospa-async-css="%s">`+
 			`<noscript><link rel="stylesheet" href="%s"></noscript>`+
-			`<script%s>document.querySelector('link[data-gospa-async-css="%s"]').addEventListener('load',function(e){e.target.rel='stylesheet'});</script>`,
+			`<script%s>(function(){const l=document.querySelector('link[data-gospa-async-css="%s"]');if(!l)return;const activate=function(){if(l.dataset.gospaAsyncApplied==='1')return;l.media='all';l.dataset.gospaAsyncApplied='1';};if(l.sheet){activate();return;}l.addEventListener('load',activate,{once:true});setTimeout(activate,3000);})();</script>`,
 		cssPath, cssPath, cssPath, nonceAttr, cssPath,
 	)
 }
@@ -1174,8 +1176,10 @@ func splitCSS(fullCSS []byte, maxSize int, criticalClasses map[string]bool) ([]b
 	critical = append(critical, utilPrefix...)
 
 	// Safety block: ensure structural utilities are always in critical CSS
-	// to prevent CLS from async non-critical CSS loading
-	critical = append(critical, []byte(".hidden{display:none!important}.invisible{visibility:hidden}.fixed{position:fixed}.absolute{position:absolute}")...)
+	// to prevent CLS from async non-critical CSS loading.
+	// Do NOT use !important here: responsive utilities like `hidden md:flex`
+	// depend on later media-query rules being able to override the base hidden state.
+	critical = append(critical, []byte(".hidden{display:none}.invisible{visibility:hidden}.fixed{position:fixed}.absolute{position:absolute}")...)
 
 	critical = append(critical, criticalInner...)
 	critical = append(critical, '}')

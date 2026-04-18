@@ -184,24 +184,32 @@
             preloadLink.dataset.gospaAsyncBound = '1';
 
             const activate = () => {
-                if (preloadLink.rel !== 'stylesheet') {
-                    preloadLink.rel = 'stylesheet';
-                    preloadLink.removeAttribute('as');
+                if (preloadLink.dataset.gospaAsyncApplied === '1') return;
+                preloadLink.dataset.gospaAsyncApplied = '1';
+
+                if (preloadLink.media === 'print') {
+                    preloadLink.media = 'all';
                 }
             };
 
             // Add listener for future load
-            preloadLink.addEventListener('load', activate);
+            preloadLink.addEventListener('load', activate, { once: true });
 
-            // If already loaded (e.g. from cache) or if we're run late, activate now
-            if (document.readyState === 'complete' || (preloadLink.isSVG && preloadLink.getAttribute('rel') === 'stylesheet')) {
+            // If already loaded (e.g. from cache) or if we're run late, activate now.
+            // Accessing .sheet is a reliable same-origin signal that the stylesheet is ready.
+            if (preloadLink.sheet) {
                 activate();
             } else if (window.performance && window.performance.getEntriesByName) {
-                // Check performance timeline to see if it already finished
+                // Check performance timeline to see if it already finished.
                 if (window.performance.getEntriesByName(preloadLink.href).length > 0) {
                     activate();
                 }
+            } else if (document.readyState === 'complete') {
+                activate();
             }
+
+            // Safety net for engines that fetch the sheet but never dispatch load on the link.
+            window.setTimeout(activate, 3000);
         });
     }
 

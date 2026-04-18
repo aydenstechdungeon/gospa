@@ -136,7 +136,7 @@ func RootLayout(title string, children templ.Component, runtimePath string, path
 		if templ_7745c5c3_Err != nil {
 			return templ_7745c5c3_Err
 		}
-		templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 4, "\"><meta name=\"author\" content=\"GoSPA Contributors\"><meta name=\"robots\" content=\"index, follow\"><meta name=\"language\" content=\"English\"><!-- Preload critical assets & Preconnect --><link rel=\"preconnect\" href=\"/\" crossorigin><link rel=\"preload\" href=\"/static/fonts/InterVariable.woff2\" as=\"font\" type=\"font/woff2\" crossorigin=\"anonymous\" fetchpriority=\"high\"><!-- Compiled Tailwind CSS with Critical CSS extraction -->")
+		templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 4, "\"><meta name=\"author\" content=\"GoSPA Contributors\"><meta name=\"robots\" content=\"index, follow\"><meta name=\"language\" content=\"English\"><!-- Preload critical assets & Preconnect --><link rel=\"preconnect\" href=\"/\" crossorigin><link rel=\"preload\" href=\"/static/fonts/InterVariable-subset.woff2\" as=\"font\" type=\"font/woff2\" crossorigin=\"anonymous\" fetchpriority=\"high\"><!-- Compiled Tailwind CSS with Critical CSS extraction -->")
 		if templ_7745c5c3_Err != nil {
 			return templ_7745c5c3_Err
 		}
@@ -233,7 +233,7 @@ func RootLayout(title string, children templ.Component, runtimePath string, path
 		if templ_7745c5c3_Err != nil {
 			return templ_7745c5c3_Err
 		}
-		templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 13, "\">\n\t\t\t\trequestIdleCallback(() => {\n\t\t\t\t\tconst b = document.body.dataset;\n\t\t\t\t\timport(b.gospaRuntimePath).then(m => {\n\t\t\t\t\t\tm.init({\n\t\t\t\t\t\t\twsUrl: b.gospaWsUrl,\n\t\t\t\t\t\t\tserializationFormat: b.gospaSerializationFormat,\n\t\t\t\t\t\t\tdebug: b.gospaDebug === \"true\",\n\t\t\t\t\t\t\thydration: {\n\t\t\t\t\t\t\t\tmode: b.gospaHydrationMode,\n\t\t\t\t\t\t\t\ttimeout: parseInt(b.gospaHydrationTimeout, 10)\n\t\t\t\t\t\t\t}\n\t\t\t\t\t\t});\n\t\t\t\t\t});\n\t\t\t\t}, { timeout: 2000 });\n\t\t\t</script><script src=\"/static/docs.js\" defer nonce=\"")
+		templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 13, "\">\n\t\t\t\trequestIdleCallback(() => {\n\t\t\t\t\tconst b = document.body.dataset;\n\t\t\t\t\timport(b.gospaRuntimePath).then(m => {\n\t\t\t\t\t\tm.init({\n\t\t\t\t\t\t\twsUrl: b.gospaWsUrl,\n\t\t\t\t\t\t\tserializationFormat: b.gospaSerializationFormat,\n\t\t\t\t\t\t\tdebug: b.gospaDebug === \"true\",\n\t\t\t\t\t\t\thydration: {\n\t\t\t\t\t\t\t\tmode: b.gospaHydrationMode,\n\t\t\t\t\t\t\t\ttimeout: parseInt(b.gospaHydrationTimeout, 10)\n\t\t\t\t\t\t\t}\n\t\t\t\t\t\t});\n\t\t\t\t\t});\n\t\t\t\t}, { timeout: 2000 });\n\t\t\t</script><script src=\"/static/docs.js\" async nonce=\"")
 		if templ_7745c5c3_Err != nil {
 			return templ_7745c5c3_Err
 		}
@@ -454,7 +454,7 @@ func RootLayout(title string, children templ.Component, runtimePath string, path
 		if templ_7745c5c3_Err != nil {
 			return templ_7745c5c3_Err
 		}
-		templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 30, "\"><!-- Animated background elements --><div class=\"fixed inset-0 pointer-events-none z-0 overflow-hidden\" style=\"contain: layout style paint;\"><div class=\"absolute -top-[10%] -left-[10%] w-[40%] h-[40%] bg-cyan-500/10 blur-[120px] rounded-full animate-float\"></div><div class=\"absolute top-[20%] -right-[5%] w-[30%] h-[30%] bg-purple-500/10 blur-[100px] rounded-full animate-pulse\"></div><div class=\"absolute inset-0 grid-bg\"></div></div><div id=\"app\" data-gospa-root data-gospa-layout=\"root\" class=\"flex flex-col min-h-screen relative z-10\"><header class=\"sticky top-0 z-50 glass border-b border-[var(--border)]\"><div class=\"max-w-7xl mx-auto px-4 h-16 flex items-center justify-between relative\"><div class=\"absolute inset-x-0 bottom-0 h-px bg-gradient-to-r from-transparent via-[var(--accent-primary)]/30 to-transparent\"></div><div class=\"flex items-center gap-10\"><a href=\"/\" class=\"flex items-center gap-3 group\"><div class=\"relative\"><div class=\"absolute inset-0 bg-[var(--accent-primary)] blur-md opacity-0 group-hover:opacity-40 transition-opacity\"></div><img src=\"/static/gospa1-64.webp\" alt=\"GoSPA\" class=\"w-9 h-9 relative z-10 rounded-xl shadow-2xl transition-transform group-hover:scale-110\" width=\"36\" height=\"36\" fetchpriority=\"high\"></div><span class=\"text-2xl font-display font-bold tracking-tight bg-clip-text text-transparent bg-gradient-to-br from-white via-zinc-200 to-zinc-500\">Go<span class=\"text-[var(--accent-primary)]\">SPA</span></span></a><nav class=\"hidden md:flex items-center gap-2\">")
+		templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 30, "\"><!-- Animated background elements --><div class=\"fixed inset-0 pointer-events-none z-0 overflow-hidden\" style=\"contain: layout style paint;\"><div class=\"absolute -top-[10%] -left-[10%] w-[40%] h-[40%] bg-cyan-500/10 blur-[120px] rounded-full animate-float\"></div><div class=\"absolute top-[20%] -right-[5%] w-[30%] h-[30%] bg-purple-500/10 blur-[100px] rounded-full animate-pulse\"></div><div class=\"absolute inset-0 grid-bg\"></div></div><div id=\"app\" data-gospa-root data-gospa-layout=\"root\" class=\"flex flex-col min-h-screen relative z-10\"><header class=\"sticky top-0 z-50 glass border-b border-[var(--border)]\"><div class=\"max-w-7xl mx-auto px-4 h-16 flex items-center justify-between relative\"><div class=\"absolute inset-x-0 bottom-0 h-px bg-gradient-to-r from-transparent via-[var(--accent-primary)]/30 to-transparent\"></div><div class=\"flex items-center gap-10\"><a href=\"/\" class=\"flex items-center gap-3 group\"><div class=\"relative\"><div class=\"absolute inset-0 bg-[var(--accent-primary)] blur-md opacity-0 group-hover:opacity-40 transition-opacity\"></div><img src=\"/static/gospa1-64.webp\" alt=\"GoSPA\" class=\"w-9 h-9 relative z-10 rounded-xl shadow-2xl transition-transform group-hover:scale-110\" width=\"36\" height=\"36\" fetchpriority=\"high\" decoding=\"async\"></div><span class=\"text-2xl font-display font-bold tracking-tight bg-clip-text text-transparent bg-gradient-to-br from-white via-zinc-200 to-zinc-500\">Go<span class=\"text-[var(--accent-primary)]\">SPA</span></span></a><nav class=\"hidden md:flex items-center gap-2\">")
 		if templ_7745c5c3_Err != nil {
 			return templ_7745c5c3_Err
 		}
@@ -511,7 +511,7 @@ func RootLayout(title string, children templ.Component, runtimePath string, path
 			if templ_7745c5c3_Err != nil {
 				return templ_7745c5c3_Err
 			}
-			templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 36, "</div><!-- Swappable Content Area --><div data-gospa-docs-content data-gospa-layout=\"docs\" class=\"flex-grow min-w-0\"><div data-gospa-page=\"")
+			templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 36, "</div><!-- Swappable Content Area --><div data-gospa-docs-content data-gospa-layout=\"docs-shell\" class=\"flex-grow min-w-0\"><div data-gospa-page=\"")
 			if templ_7745c5c3_Err != nil {
 				return templ_7745c5c3_Err
 			}

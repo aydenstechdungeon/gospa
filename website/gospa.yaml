@@ -37,3 +37,4 @@ plugins:
             - routes/root_layout.templ
             - routes/docs/layout.templ
             - routes/docs/page.templ
+            - components/sidebar.templ
