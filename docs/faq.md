@@ -25,4 +25,4 @@ GoSPA automatically manages reactive scopes for all island components. If you ar
 Yes! GoSPA includes built-in CSRF protection that is compatible with both standard HTML forms and dynamic AJAX/Remote Action requests.
 
 ### Is GoSPA secure against XSS?
-Yes. GoSPA enforces mandatory HTML sanitization using `DOMPurify` for all navigation and dynamic HTML bindings. This "Secure by Default" posture significantly reduces the risk of script injection.
+Yes, with the default runtime policy. Dynamic HTML bindings and stream HTML updates escape content by default, and raw HTML rendering requires an explicit trusted wrapper.

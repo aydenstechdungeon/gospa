@@ -4,10 +4,6 @@ import { Rune } from "./state.ts";
 
 // Event handler types
 export type EventHandler<E = Event> = (event: E) => void | Promise<void>;
-export type ModifierHandler<E = Event> = (
-  event: E,
-  handler: EventHandler<E>,
-) => void | Promise<void>;
 
 // Event modifiers
 export type EventModifier =
@@ -17,26 +13,6 @@ export type EventModifier =
   | "once"
   | "passive"
   | "self";
-
-// Modifier implementations
-const modifiers: Record<EventModifier, ModifierHandler> = {
-  prevent: (event, handler) => {
-    event.preventDefault();
-    return handler(event);
-  },
-  stop: (event, handler) => {
-    event.stopPropagation();
-    return handler(event);
-  },
-  capture: (event, handler) => handler(event),
-  once: (event, handler) => handler(event),
-  passive: (event, handler) => handler(event),
-  self: (event, handler) => {
-    if (event.target === event.currentTarget) {
-      return handler(event);
-    }
-  },
-};
 
 // Event configuration
 export interface EventConfig {
@@ -58,20 +34,29 @@ function createWrappedHandler<E extends Event>(
   mods: EventModifier[],
 ): EventHandler<E> {
   return (event: E) => {
-    // Apply modifiers in order
+    let shouldCallHandler = true;
+
     for (const mod of mods) {
       if (mod === "capture" || mod === "once" || mod === "passive") {
-        continue; // These are handled by addEventListener options
+        continue;
       }
-      const modHandler = modifiers[mod];
-      modHandler(event, handler as EventHandler);
+
+      if (mod === "prevent") {
+        event.preventDefault();
+        continue;
+      }
+
+      if (mod === "stop") {
+        event.stopPropagation();
+        continue;
+      }
+
+      if (mod === "self" && event.target !== event.currentTarget) {
+        shouldCallHandler = false;
+      }
     }
 
-    // Call handler directly if no active modifiers
-    const activeMods = mods.filter(
-      (m) => !["capture", "once", "passive"].includes(m),
-    );
-    if (activeMods.length === 0) {
+    if (shouldCallHandler) {
       return handler(event);
     }
   };

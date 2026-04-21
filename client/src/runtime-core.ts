@@ -37,6 +37,7 @@ import {
   registerBinding,
   unregisterBinding,
 } from "./dom.ts";
+import { trustedHTML, type TrustedHTMLValue } from "./html-policy.ts";
 
 export {
   bindElement,
@@ -45,6 +46,8 @@ export {
   renderList,
   registerBinding,
   unregisterBinding,
+  trustedHTML,
+  type TrustedHTMLValue,
 };
 
 import {

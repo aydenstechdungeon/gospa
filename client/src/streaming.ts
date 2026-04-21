@@ -3,6 +3,8 @@
  * Handles progressive hydration and streaming content updates
  */
 
+import { toHTMLString } from "./html-policy.ts";
+
 // Stream chunk types
 interface StreamChunk {
   type: "html" | "island" | "script" | "state" | "error";
@@ -32,6 +34,7 @@ interface HydrationQueueItem {
 interface StreamingManagerOptions {
   enableLogging?: boolean;
   hydrationTimeout?: number;
+  allowInlineScriptChunks?: boolean;
 }
 
 /**
@@ -48,6 +51,7 @@ export class StreamingManager {
     this.options = {
       enableLogging: false,
       hydrationTimeout: 30000,
+      allowInlineScriptChunks: false,
       ...options,
     };
 
@@ -109,7 +113,7 @@ export class StreamingManager {
   private handleHtmlChunk(chunk: StreamChunk): void {
     const element = document.getElementById(chunk.id);
     if (element) {
-      element.innerHTML = chunk.content;
+      element.innerHTML = toHTMLString(chunk.content);
 
       // Dispatch custom event for HTML update
       element.dispatchEvent(
@@ -140,6 +144,14 @@ export class StreamingManager {
    * Handle script chunk - execute script
    */
   private handleScriptChunk(chunk: StreamChunk): void {
+    if (!this.options.allowInlineScriptChunks) {
+      console.warn(
+        "[GoSPA Stream] Ignoring inline script chunk by default policy:",
+        chunk.id,
+      );
+      return;
+    }
+
     const script = document.createElement("script");
     script.textContent = chunk.content;
     document.head.appendChild(script);

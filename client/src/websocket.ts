@@ -131,6 +131,14 @@ export interface WebSocketConfig {
    * Persist unsent WS message queue across reloads.
    */
   persistQueueOnUnload?: boolean;
+  /**
+   * Max queued outbound messages while socket is disconnected.
+   */
+  maxQueuedMessages?: number;
+  /**
+   * Called when a queued message is dropped because queue is full.
+   */
+  onQueueDrop?: (dropped: StateMessage, totalDropped: number) => void;
 }
 
 // Helper functions for session persistence
@@ -187,6 +195,7 @@ export class WSClient {
   private requestId = 0;
   private sessionData: SessionData | null = null;
   private beforeUnloadHandler: (() => void) | null = null;
+  private droppedQueuedMessages = 0;
 
   constructor(config: WebSocketConfig) {
     this.config = {
@@ -202,6 +211,8 @@ export class WSClient {
       serializationFormat: "json",
       persistSession: false,
       persistQueueOnUnload: true,
+      maxQueuedMessages: 500,
+      onQueueDrop: () => {},
       ...config,
     };
     this.connectionState = new Rune<ConnectionState>("disconnected");
@@ -215,6 +226,7 @@ export class WSClient {
         const savedQueue = sessionStorage.getItem("gospa_ws_queue");
         if (savedQueue) {
           this.messageQueue = JSON.parse(savedQueue) || [];
+          this.trimMessageQueueToLimit();
           sessionStorage.removeItem("gospa_ws_queue");
         }
       } catch (e) {
@@ -434,6 +446,38 @@ export class WSClient {
     }
   }
 
+  private trimMessageQueueToLimit(): void {
+    const overflow = this.messageQueue.length - this.config.maxQueuedMessages;
+    if (overflow <= 0) return;
+
+    this.messageQueue.splice(0, overflow);
+    this.droppedQueuedMessages += overflow;
+    console.warn(
+      `[GoSPA] Dropped ${overflow} queued WebSocket messages during restore (limit: ${this.config.maxQueuedMessages}).`,
+    );
+  }
+
+  private enqueueMessage(message: StateMessage): void {
+    if (this.messageQueue.length >= this.config.maxQueuedMessages) {
+      const dropped = this.messageQueue.shift();
+      if (dropped) {
+        this.droppedQueuedMessages += 1;
+        this.config.onQueueDrop(dropped, this.droppedQueuedMessages);
+      }
+
+      if (
+        this.droppedQueuedMessages === 1 ||
+        this.droppedQueuedMessages % 100 === 0
+      ) {
+        console.warn(
+          `[GoSPA] WebSocket queue full. Dropped oldest message(s): ${this.droppedQueuedMessages}.`,
+        );
+      }
+    }
+
+    this.messageQueue.push(message);
+  }
+
   send(message: StateMessage): void {
     if (this.ws?.readyState === WebSocket.OPEN) {
       if (this.config.serializationFormat === "msgpack") {
@@ -442,7 +486,7 @@ export class WSClient {
         this.ws.send(JSON.stringify(message));
       }
     } else {
-      this.messageQueue.push(message);
+      this.enqueueMessage(message);
     }
   }
 

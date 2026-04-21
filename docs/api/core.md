@@ -1210,7 +1210,7 @@ GoSPA.transformers.stopPropagation
 
 ### Event Handling Patterns
 
-GoSPA sanitizes HTML during SPA navigation using DOMPurify, which strips inline event handlers (`onclick`, `onmouseover`, etc.) for security. Use these patterns instead:
+GoSPA does not rely on inline event handlers for navigation or hydration. Use these patterns instead:
 
 **Inside Components (data-on):**
 

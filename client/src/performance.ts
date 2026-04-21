@@ -30,7 +30,8 @@ export interface PerformanceConfig {
  */
 export class PerformanceMonitor {
   private metrics: PerformanceMetric[] = [];
-  private marks: Map<string, number> = new Map();
+  private marks: Map<string, { startTime: number; sampled: boolean }> =
+    new Map();
   private config: Required<PerformanceConfig>;
   private observers: Set<(metric: PerformanceMetric) => void> = new Set();
 
@@ -50,11 +51,7 @@ export class PerformanceMonitor {
    * Check if monitoring is enabled
    */
   private isEnabled(): boolean {
-    if (!this.config.enabled) return false;
-    if (this.config.sampleRate < 1 && Math.random() > this.config.sampleRate) {
-      return false;
-    }
-    return true;
+    return this.config.enabled;
   }
 
   /**
@@ -63,8 +60,15 @@ export class PerformanceMonitor {
   start(name: string): void {
     if (!this.isEnabled()) return;
 
+    const sampled =
+      this.config.sampleRate >= 1 || Math.random() <= this.config.sampleRate;
+    this.marks.set(name, { startTime: performance.now(), sampled });
+
+    if (!sampled) {
+      return;
+    }
+
     const markName = `gospa:${name}:start`;
-    this.marks.set(name, performance.now());
 
     if (typeof performance !== "undefined" && performance.mark) {
       performance.mark(markName);
@@ -77,16 +81,20 @@ export class PerformanceMonitor {
   end(name: string, metadata?: Record<string, unknown>): number | null {
     if (!this.isEnabled()) return null;
 
-    const startTime = this.marks.get(name);
-    if (startTime === undefined) {
+    const mark = this.marks.get(name);
+    if (mark === undefined) {
       console.warn(`[GoSPA Performance] No start mark found for: ${name}`);
       return null;
     }
 
-    const endTime = performance.now();
-    const duration = endTime - startTime;
-
     this.marks.delete(name);
+
+    if (!mark.sampled) {
+      return null;
+    }
+
+    const endTime = performance.now();
+    const duration = endTime - mark.startTime;
 
     // Record metric
     const metric: PerformanceMetric = {
@@ -122,7 +130,7 @@ export class PerformanceMonitor {
    * Measure a function's execution time
    */
   measure<T>(name: string, fn: () => T, metadata?: Record<string, unknown>): T {
-    if (!this.isEnabled()) {
+    if (!this.config.enabled) {
       return fn();
     }
 
@@ -145,7 +153,7 @@ export class PerformanceMonitor {
     fn: () => Promise<T>,
     metadata?: Record<string, unknown>,
   ): Promise<T> {
-    if (!this.isEnabled()) {
+    if (!this.config.enabled) {
       return fn();
     }
 

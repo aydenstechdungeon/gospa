@@ -74,11 +74,11 @@ The optional Auth plugin provides JWT-based session management.
 
 GoSPA enforces a "Secure by Default" posture for HTML rendering to mitigate Cross-Site Scripting (XSS) attacks.
 
-### Mandatory Sanitization
-All partial DOM updates during SPA navigation and dynamic HTML bindings (`data-bind="html:*"`) are automatically scrubbed using `DOMPurify`. This prevents the execution of malicious scripts injected into server-side HTML fragments.
+### HTML Rendering Policy
+GoSPA does not bundle a runtime sanitizer by default. Dynamic HTML bindings and stream HTML updates escape content unless you explicitly mark content as trusted with runtime policy helpers.
 
 ### Trust Boundary
-If you absolutely must render raw, unsanitized HTML, you must explicitly opt-out by using a trusted wrapper or dedicated primitive. **Always verify the source of untrusted HTML before bypassing the sanitizer.**
+If you absolutely must render raw HTML, only pass server-controlled content through trusted wrappers. Never pass user input directly into HTML bindings.
 
 ## 8. Prototype Pollution Protection
 
