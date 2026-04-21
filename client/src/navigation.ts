@@ -6,6 +6,13 @@ import { reactive } from "./signals.ts";
 import { Idiomorph } from "./idiomorph.ts";
 import { toHTMLString } from "./html-policy.ts";
 
+function getCSPNonce(): string | undefined {
+  const nonceScript = document.querySelector("script[nonce]") as
+    | HTMLScriptElement
+    | null;
+  return nonceScript?.nonce || nonceScript?.getAttribute("nonce") || undefined;
+}
+
 // Navigation state
 const state = reactive({
   currentPath: window.location.pathname,
@@ -788,6 +795,10 @@ function updateHead(newDoc: Document): void {
 
     if (!existingEl) {
       const script = document.createElement("script");
+      const nonce = getCSPNonce();
+      if (nonce) {
+        script.nonce = nonce;
+      }
       Array.from(el.attributes).forEach((attr) =>
         script.setAttribute(attr.name, attr.value),
       );
@@ -846,6 +857,10 @@ function executeScripts(container: Element | Document): void {
     }
 
     const newScript = document.createElement("script");
+    const nonce = getCSPNonce();
+    if (nonce) {
+      newScript.nonce = nonce;
+    }
     // Copy all attributes
     Array.from(oldScript.attributes).forEach((attr) => {
       newScript.setAttribute(attr.name, attr.value);
