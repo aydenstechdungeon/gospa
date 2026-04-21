@@ -15,6 +15,7 @@ import (
 
 	"github.com/a-h/templ"
 	"github.com/aydenstechdungeon/gospa/plugin"
+	gospatempl "github.com/aydenstechdungeon/gospa/templ"
 )
 
 // MetaParams represents parameters for the Meta component.
@@ -198,12 +199,16 @@ var defaultPlugin = New(DefaultConfig())
 
 // StructuredData generates JSON-LD structured data.
 func StructuredData(data any) templ.Component {
-	return templ.ComponentFunc(func(_ context.Context, w io.Writer) error {
+	return templ.ComponentFunc(func(ctx context.Context, w io.Writer) error {
 		jsonData, err := json.MarshalIndent(data, "", "  ")
 		if err != nil {
 			return err
 		}
-		_, err = fmt.Fprintf(w, "<script type=\"application/ld+json\">\n%s\n</script>\n", string(jsonData))
+		nonceAttr := ""
+		if nonce := gospatempl.GetNonce(ctx); nonce != "" {
+			nonceAttr = fmt.Sprintf(` nonce="%s"`, html.EscapeString(nonce))
+		}
+		_, err = fmt.Fprintf(w, "<script type=\"application/ld+json\"%s>\n%s\n</script>\n", nonceAttr, string(jsonData))
 		return err
 	})
 }
