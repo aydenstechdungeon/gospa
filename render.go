@@ -18,7 +18,7 @@ import (
 )
 
 // renderRoute renders a route with its layout chain.
-func (a *App) renderRoute(c gofiber.Ctx, route *routing.Route) error {
+func (a *App) renderRoute(c gofiber.Ctx, route *routing.Route, routeParams map[string]interface{}) error {
 	cacheKey := c.Path()
 	ctx := c.Context()
 	opts := routing.GetRouteOptions(route.Path)
@@ -150,12 +150,8 @@ func (a *App) renderRoute(c gofiber.Ctx, route *routing.Route) error {
 	}
 
 	layouts := a.Router.ResolveLayoutChain(route)
-	_, routeParams := a.Router.Match(c.Path())
-
-	// Convert map[string]string to map[string]interface{}
-	params := make(map[string]interface{}, len(routeParams))
-	for k, v := range routeParams {
-		params[k] = v
+	if routeParams == nil {
+		routeParams = map[string]interface{}{}
 	}
 
 	// Resolve data load chain
@@ -166,7 +162,7 @@ func (a *App) renderRoute(c gofiber.Ctx, route *routing.Route) error {
 	}
 
 	// Merge with route params (route params take precedence for ID fields etc)
-	for k, v := range params {
+	for k, v := range routeParams {
 		loadedProps[k] = v
 	}
 
@@ -188,7 +184,7 @@ func (a *App) renderRoute(c gofiber.Ctx, route *routing.Route) error {
 	tier := a.resolveTier(opts, layouts)
 	rootLayoutFunc := routing.GetRootLayout()
 	if rootLayoutFunc != nil {
-		rootProps := a.buildRootLayoutProps(c, params, tier)
+		rootProps := a.buildRootLayoutProps(c, routeParams, tier)
 		// Merge loaded props into root props if they don't conflict
 		for k, v := range loadedProps {
 			if _, ok := rootProps[k]; !ok {
@@ -409,11 +405,22 @@ runtime.init({
 
 	// Handle Deferred Slots
 	for _, slotName := range opts.DeferredSlots {
-		_, _ = out.WriteString(a.renderDeferredSlotToBuffer(route, slotName, params, c.Path(), nonceFmt))
+		_, _ = out.WriteString(a.renderDeferredSlotToBuffer(route, slotName, routeParams, c.Path(), nonceFmt))
 	}
 
 	_, _ = fmt.Fprint(&out, `</body></html>`)
 	return c.Send(out.Bytes())
+}
+
+func extractRouteParams(c gofiber.Ctx, route *routing.Route) map[string]interface{} {
+	if len(route.Params) == 0 {
+		return map[string]interface{}{}
+	}
+	params := make(map[string]interface{}, len(route.Params))
+	for _, key := range route.Params {
+		params[key] = c.Params(key)
+	}
+	return params
 }
 
 // renderDeferredSlotToBuffer renders a deferred slot and returns the HTML/script chunk for injection.

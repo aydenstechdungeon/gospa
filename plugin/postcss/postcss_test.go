@@ -328,3 +328,76 @@ func TestSplitCSSDefaultMaxSize(t *testing.T) {
 		t.Errorf("no split needed for small CSS")
 	}
 }
+
+func TestExtractCriticalForBundle_RejectsOutputTraversal(t *testing.T) {
+	tmpDir := t.TempDir()
+	p := New()
+
+	bundleOutput := filepath.Join(tmpDir, "static", "css")
+	if err := os.MkdirAll(bundleOutput, 0750); err != nil {
+		t.Fatalf("failed to create bundle output dir: %v", err)
+	}
+
+	fullCSSPath := filepath.Join(bundleOutput, "main.css")
+	if err := os.WriteFile(fullCSSPath, []byte(`@layer utilities{.a{color:red}.b{color:blue}}`), 0600); err != nil {
+		t.Fatalf("failed to write full css: %v", err)
+	}
+
+	bundle := BundleEntry{
+		Name:   "main",
+		Output: "static/css/main.css",
+		CriticalCSS: &CriticalCSSConfig{
+			Enabled:           true,
+			CriticalOutput:    "../outside/critical.css",
+			NonCriticalOutput: "../outside/non-critical.css",
+			InlineMaxSize:     20,
+		},
+	}
+
+	err := p.extractCriticalForBundle(tmpDir, bundle)
+	if err == nil {
+		t.Fatal("expected traversal output to be rejected")
+	}
+
+	outsideDir := filepath.Join(filepath.Dir(tmpDir), "outside")
+	if _, statErr := os.Stat(outsideDir); !os.IsNotExist(statErr) {
+		t.Fatalf("expected outside directory not to be created, stat err=%v", statErr)
+	}
+}
+
+func TestExtractCriticalForBundle_AllowsSafeNestedOutput(t *testing.T) {
+	tmpDir := t.TempDir()
+	p := New()
+
+	bundleOutput := filepath.Join(tmpDir, "static", "css")
+	if err := os.MkdirAll(bundleOutput, 0750); err != nil {
+		t.Fatalf("failed to create bundle output dir: %v", err)
+	}
+
+	fullCSSPath := filepath.Join(bundleOutput, "main.css")
+	if err := os.WriteFile(fullCSSPath, []byte(`@layer utilities{.a{color:red}.b{color:blue}.c{color:green}}`), 0600); err != nil {
+		t.Fatalf("failed to write full css: %v", err)
+	}
+
+	bundle := BundleEntry{
+		Name:   "main",
+		Output: "static/css/main.css",
+		CriticalCSS: &CriticalCSSConfig{
+			Enabled:           true,
+			CriticalOutput:    "static/css/critical/main.critical.css",
+			NonCriticalOutput: "static/css/critical/main.non-critical.css",
+			InlineMaxSize:     20,
+		},
+	}
+
+	if err := p.extractCriticalForBundle(tmpDir, bundle); err != nil {
+		t.Fatalf("expected safe nested output to succeed, got %v", err)
+	}
+
+	if _, err := os.Stat(filepath.Join(tmpDir, "static", "css", "critical", "main.critical.css")); err != nil {
+		t.Fatalf("expected critical css file to exist: %v", err)
+	}
+	if _, err := os.Stat(filepath.Join(tmpDir, "static", "css", "critical", "main.non-critical.css")); err != nil {
+		t.Fatalf("expected non-critical css file to exist: %v", err)
+	}
+}

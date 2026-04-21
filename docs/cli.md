@@ -681,7 +681,7 @@ type CLIPlugin interface {
 }
 ```
 
-See [`04-plugins.md`](docs/plugins) for the detailed plugin development guide.
+See [`plugins.md`](plugins.md) for the detailed plugin development guide.
 
 ---
 

@@ -11,6 +11,7 @@ import (
 	"go/token"
 	"regexp"
 	"strings"
+	"unicode"
 
 	"github.com/aydenstechdungeon/gospa/compiler/sfc"
 )
@@ -98,9 +99,20 @@ var DangerousCallPatterns = []*regexp.Regexp{
 	regexp.MustCompile(`unix\.ForkExec`),    // unix fork/exec
 }
 
-// ValidateSafeScript validates that script content does not contain dangerous patterns.
+// DangerousTSPatterns are patterns that should be blocked when validating
+// TypeScript snippets in SafeMode.
+var DangerousTSPatterns = []*regexp.Regexp{
+	regexp.MustCompile(`(?m)\bimport\s+[^\n]*\bfrom\s*['\"](?:child_process|fs|fs/promises|os|net|tls|dgram|worker_threads|vm)['\"]`),
+	regexp.MustCompile(`(?m)\brequire\s*\(\s*['\"](?:child_process|fs|fs/promises|os|net|tls|dgram|worker_threads|vm)['\"]\s*\)`),
+	regexp.MustCompile(`(?m)\b(?:child_process\.)?(?:exec|execSync|spawn|spawnSync|fork)\s*\(`),
+	regexp.MustCompile(`(?m)\b(?:fs|fs/promises)\s*\.\s*(?:writeFile|writeFileSync|rm|rmSync|unlink|unlinkSync|rename|renameSync|mkdir|mkdirSync)\s*\(`),
+	regexp.MustCompile(`(?m)\b(?:process\.)?env\s*\[`),
+	regexp.MustCompile(`(?m)\b(?:process\.)?env\s*\.`),
+}
+
+// ValidateSafeGoScript validates that script content does not contain dangerous patterns.
 // Returns nil if the script is safe, or an error describing the dangerous pattern found.
-func ValidateSafeScript(script string) error {
+func ValidateSafeGoScript(script string) error {
 	if strings.TrimSpace(script) == "" {
 		return nil
 	}
@@ -187,6 +199,137 @@ func ValidateSafeScript(script string) error {
 	return validationErr
 }
 
+// ValidateSafeTSScript validates TypeScript snippets in SafeMode without
+// attempting to parse them as Go.
+func ValidateSafeTSScript(script string) error {
+	trimmed := strings.TrimSpace(script)
+	if trimmed == "" {
+		return nil
+	}
+	if strings.ContainsRune(script, '\x00') {
+		return fmt.Errorf("script contains NUL byte")
+	}
+	if err := validateDelimitedSyntax(script); err != nil {
+		return fmt.Errorf("script has invalid TypeScript-like syntax: %w", err)
+	}
+	for _, re := range DangerousTSPatterns {
+		if re.MatchString(script) {
+			return fmt.Errorf("safe mode: TS script contains dangerous pattern: %s", re.String())
+		}
+	}
+	return nil
+}
+
+// ValidateSafeScript is retained as a compatibility wrapper for callers/tests
+// that validate Go snippets.
+func ValidateSafeScript(script string) error {
+	return ValidateSafeGoScript(script)
+}
+
+func validateDelimitedSyntax(script string) error {
+	var stack []rune
+	inSingle := false
+	inDouble := false
+	inTemplate := false
+	inLineComment := false
+	inBlockComment := false
+	escaped := false
+
+	for i := 0; i < len(script); i++ {
+		ch := rune(script[i])
+
+		if inLineComment {
+			if ch == '\n' {
+				inLineComment = false
+			}
+			continue
+		}
+		if inBlockComment {
+			if ch == '*' && i+1 < len(script) && script[i+1] == '/' {
+				inBlockComment = false
+				i++
+			}
+			continue
+		}
+
+		if inSingle || inDouble || inTemplate {
+			if escaped {
+				escaped = false
+				continue
+			}
+			if ch == '\\' {
+				escaped = true
+				continue
+			}
+			if inSingle && ch == '\'' {
+				inSingle = false
+			}
+			if inDouble && ch == '"' {
+				inDouble = false
+			}
+			if inTemplate && ch == '`' {
+				inTemplate = false
+			}
+			continue
+		}
+
+		if ch == '/' && i+1 < len(script) {
+			next := rune(script[i+1])
+			if next == '/' {
+				inLineComment = true
+				i++
+				continue
+			}
+			if next == '*' {
+				inBlockComment = true
+				i++
+				continue
+			}
+		}
+
+		switch ch {
+		case '\'':
+			inSingle = true
+		case '"':
+			inDouble = true
+		case '`':
+			inTemplate = true
+		case '{', '(', '[':
+			stack = append(stack, ch)
+		case '}', ')', ']':
+			if len(stack) == 0 {
+				return fmt.Errorf("unexpected closing delimiter %q", ch)
+			}
+			top := stack[len(stack)-1]
+			stack = stack[:len(stack)-1]
+			if !isMatchingDelimiter(top, ch) {
+				return fmt.Errorf("mismatched delimiters: %q and %q", top, ch)
+			}
+		}
+	}
+
+	if inSingle || inDouble || inTemplate || inBlockComment {
+		return fmt.Errorf("unterminated string/comment")
+	}
+	if len(stack) > 0 {
+		return fmt.Errorf("unbalanced delimiters")
+	}
+	return nil
+}
+
+func isMatchingDelimiter(open, closing rune) bool {
+	switch open {
+	case '{':
+		return closing == '}'
+	case '(':
+		return closing == ')'
+	case '[':
+		return closing == ']'
+	default:
+		return false
+	}
+}
+
 // NewCompiler creates a new GospaCompiler.
 func NewCompiler() *GospaCompiler {
 	return &GospaCompiler{}
@@ -269,13 +412,14 @@ func (c *GospaCompiler) Compile(opts CompileOptions, input string) (templ, ts st
 
 	// SafeMode: validate script content before processing
 	if opts.SafeMode {
+		validationCache := make(map[string]error)
 		// Validate Go script
-		if err := ValidateSafeScript(scriptContent); err != nil {
+		if err := c.validateSafeScriptCached(validationCache, scriptContent); err != nil {
 			return "", "", fmt.Errorf("safe mode violation in Go script: %w", err)
 		}
 		// Validate TypeScript script if present
 		if parsed.ScriptTS.Content != "" {
-			if err := ValidateSafeScript(parsed.ScriptTS.Content); err != nil {
+			if err := ValidateSafeTSScript(parsed.ScriptTS.Content); err != nil {
 				return "", "", fmt.Errorf("safe mode violation in TS script: %w", err)
 			}
 		}
@@ -298,7 +442,8 @@ func (c *GospaCompiler) Compile(opts CompileOptions, input string) (templ, ts st
 	}
 
 	if opts.SafeMode {
-		if err := c.validateTemplateNodes(nodes); err != nil {
+		validationCache := make(map[string]error)
+		if err := c.validateTemplateNodesWithCache(nodes, validationCache); err != nil {
 			return "", "", fmt.Errorf("safe mode violation in template: %w", err)
 		}
 	}
@@ -507,10 +652,18 @@ func (c *GospaCompiler) generateHash(name string) string {
 }
 
 var (
-	snippetRegex       = regexp.MustCompile(`\{#snippet\s+([a-zA-Z0-9_]+)\((.*?)\)\}`)
-	endSnippetRegex    = regexp.MustCompile(`\{/snippet\}`)
-	reactiveLabelRegex = regexp.MustCompile(`\$:\s*([a-zA-Z0-9_]+)\s*=\s*([^;\n]+)`)
-	nameSafeRegex      = regexp.MustCompile(`[^a-zA-Z0-9]`)
+	snippetRegex            = regexp.MustCompile(`\{#snippet\s+([a-zA-Z0-9_]+)\((.*?)\)\}`)
+	endSnippetRegex         = regexp.MustCompile(`\{/snippet\}`)
+	reactiveLabelRegex      = regexp.MustCompile(`\$:\s*([a-zA-Z0-9_]+)\s*=\s*([^;\n]+)`)
+	nameSafeRegex           = regexp.MustCompile(`[^a-zA-Z0-9]`)
+	importRegex             = regexp.MustCompile(`(?m)^import\s+(?:"[^"]+"|\(.*\))`)
+	variableAssignRegex     = regexp.MustCompile(`(?m)^(?:var\s+)?([a-zA-Z0-9_]+)\s*(?::=|=)`)
+	funcBlockRegex          = regexp.MustCompile(`(?s)func\s+([a-zA-Z0-9_]+)\((.*?)\)\s*\{(.*?)\}`)
+	goFuncRegex             = regexp.MustCompile(`(?m)^\s*func\s+([a-zA-Z0-9_]+)\((.*?)\)\s*\{`)
+	goForRangeRegex         = regexp.MustCompile(`(?m)for\s+_,\s*([a-zA-Z0-9_]+)\s*:=\s*range\s*(.*?)\s*\{`)
+	namedFuncRegex          = regexp.MustCompile(`function\s+([a-zA-Z0-9_]+)`)
+	safeIdentifierExprRegex = regexp.MustCompile(`^[a-zA-Z_][a-zA-Z0-9_]*(?:\.[a-zA-Z_][a-zA-Z0-9_]*)*$`)
+	safeLiteralExprRegex    = regexp.MustCompile(`^(?:-?\d+(?:\.\d+)?|true|false|nil|"(?:[^"\\]|\\.)*"|` + "`[^`]*`" + `)$`)
 )
 
 func (c *GospaCompiler) sanitizeName(name string) string {
@@ -822,7 +975,6 @@ func (c *GospaCompiler) processScript(script, template, templTypesSnippet string
 		cleanTemplate = cleanTemplate[:startLoc[0]] + cleanTemplate[startLoc[1]+endLoc[1]:]
 	}
 
-	importRegex := regexp.MustCompile(`(?m)^import\s+(?:"[^"]+"|\(.*\))`)
 	imports := importRegex.FindAllString(script, -1)
 	extraImports = strings.Join(imports, "\n")
 	cleanScript := importRegex.ReplaceAllString(script, "")
@@ -843,8 +995,7 @@ func (c *GospaCompiler) processScript(script, template, templTypesSnippet string
 	}
 
 	// Unused variable hack: identify variables and add var _ = name to avoid Go compilation errors.
-	vRegex := regexp.MustCompile(`(?m)^(?:var\s+)?([a-zA-Z0-9_]+)\s*(?::=|=)`)
-	matches := vRegex.FindAllStringSubmatch(cleanScript, -1)
+	matches := variableAssignRegex.FindAllStringSubmatch(cleanScript, -1)
 	seen := make(map[string]bool)
 	for _, m := range matches {
 		if m[1] != "_" && !seen[m[1]] {
@@ -855,7 +1006,6 @@ func (c *GospaCompiler) processScript(script, template, templTypesSnippet string
 
 	// Transform local functions to function variables since named functions
 	// cannot be defined inside the body of another function (templ's Render).
-	funcBlockRegex := regexp.MustCompile(`(?s)func\s+([a-zA-Z0-9_]+)\((.*?)\)\s*\{(.*?)\}`)
 	cleanScript = funcBlockRegex.ReplaceAllStringFunc(cleanScript, func(match string) string {
 		parts := funcBlockRegex.FindStringSubmatch(match)
 		fnName := parts[1]
@@ -907,57 +1057,101 @@ func typeArgs(args string) string {
 	return strings.Join(typedParts, ", ")
 }
 
-func (c *GospaCompiler) validateTemplateNodes(nodes []sfc.Node) error {
+func (c *GospaCompiler) validateTemplateNodesWithCache(nodes []sfc.Node, cache map[string]error) error {
 	for _, node := range nodes {
 		var err error
 		switch n := node.(type) {
 		case *sfc.ElementNode:
 			for _, attr := range n.Attributes {
 				if attr.IsExpression {
-					if err = ValidateSafeScript(attr.Value); err != nil {
+					if err = c.validateSafeScriptCached(cache, attr.Value); err != nil {
 						return fmt.Errorf("attribute %q: %w", attr.Name, err)
 					}
 				}
 			}
-			err = c.validateTemplateNodes(n.Children)
+			err = c.validateTemplateNodesWithCache(n.Children, cache)
 		case *sfc.ExpressionNode:
-			err = ValidateSafeScript(n.Content)
+			err = c.validateSafeScriptCached(cache, n.Content)
 		case *sfc.IfNode:
-			if err = ValidateSafeScript(n.Condition); err != nil {
+			if err = c.validateSafeScriptCached(cache, n.Condition); err != nil {
 				return err
 			}
-			if err = c.validateTemplateNodes(n.Then); err != nil {
+			if err = c.validateTemplateNodesWithCache(n.Then, cache); err != nil {
 				return err
 			}
 			for _, elseif := range n.ElseIfs {
-				if err = ValidateSafeScript(elseif.Condition); err != nil {
+				if err = c.validateSafeScriptCached(cache, elseif.Condition); err != nil {
 					return err
 				}
-				if err = c.validateTemplateNodes(elseif.Then); err != nil {
+				if err = c.validateTemplateNodesWithCache(elseif.Then, cache); err != nil {
 					return err
 				}
 			}
-			err = c.validateTemplateNodes(n.Else)
+			err = c.validateTemplateNodesWithCache(n.Else, cache)
 		case *sfc.EachNode:
-			if err = ValidateSafeScript(n.Iteratee); err != nil {
+			if err = c.validateSafeScriptCached(cache, n.Iteratee); err != nil {
 				return err
 			}
-			err = c.validateTemplateNodes(n.Children)
+			err = c.validateTemplateNodesWithCache(n.Children, cache)
 		case *sfc.ComponentNode:
 			for _, attr := range n.Attributes {
 				if attr.IsExpression {
-					if err = ValidateSafeScript(attr.Value); err != nil {
+					if err = c.validateSafeScriptCached(cache, attr.Value); err != nil {
 						return fmt.Errorf("component attribute %q: %w", attr.Name, err)
 					}
 				}
 			}
-			err = c.validateTemplateNodes(n.Children)
+			err = c.validateTemplateNodesWithCache(n.Children, cache)
 		}
 		if err != nil {
 			return err
 		}
 	}
 	return nil
+}
+
+func (c *GospaCompiler) validateSafeScriptCached(cache map[string]error, expr string) error {
+	trimmed := strings.TrimSpace(expr)
+	if trimmed == "" {
+		return nil
+	}
+	if cache != nil {
+		if cached, ok := cache[trimmed]; ok {
+			return cached
+		}
+	}
+
+	var err error
+	if isSafeSimpleExpression(trimmed) {
+		for _, re := range DangerousCallPatterns {
+			if re.MatchString(trimmed) {
+				err = fmt.Errorf("safe mode: script contains dangerous call: %s", trimmed)
+				break
+			}
+		}
+	} else {
+		err = ValidateSafeScript(trimmed)
+	}
+
+	if cache != nil {
+		cache[trimmed] = err
+	}
+	return err
+}
+
+func isSafeSimpleExpression(expr string) bool {
+	if len(expr) == 0 || len(expr) > 128 {
+		return false
+	}
+	if safeIdentifierExprRegex.MatchString(expr) || safeLiteralExprRegex.MatchString(expr) {
+		return true
+	}
+	for _, r := range expr {
+		if !unicode.IsLetter(r) && !unicode.IsDigit(r) && !strings.ContainsRune("_.$", r) {
+			return false
+		}
+	}
+	return true
 }
 
 func (c *GospaCompiler) generateTS(islandID, script string, fromGo bool, _ string, hash string) string {
@@ -974,14 +1168,12 @@ func (c *GospaCompiler) generateTS(islandID, script string, fromGo bool, _ strin
 		tsScript = EffectRegex.ReplaceAllString(tsScript, "state.$$effect(() => {$1})")
 
 		// Convert Go func to JS function
-		funcRegex := regexp.MustCompile(`(?m)^\s*func\s+([a-zA-Z0-9_]+)\((.*?)\)\s*\{`)
-		tsScript = funcRegex.ReplaceAllString(tsScript, "function $1($2) {")
+		tsScript = goFuncRegex.ReplaceAllString(tsScript, "function $1($2) {")
 
 		// Reactive labels $: name = expr -> const name = state.$derived(() => expr)
 		tsScript = ReactiveLabelRegex.ReplaceAllString(tsScript, "const $1 = state.$derived(() => $2)")
 
 		// Clean up Go-isms
-		goForRangeRegex := regexp.MustCompile(`(?m)for\s+_,\s*([a-zA-Z0-9_]+)\s*:=\s*range\s*(.*?)\s*\{`)
 		tsScript = goForRangeRegex.ReplaceAllString(tsScript, "for (const $1 of $2) {")
 
 		tsScript = strings.ReplaceAll(tsScript, " := ", " = ")
@@ -990,7 +1182,6 @@ func (c *GospaCompiler) generateTS(islandID, script string, fromGo bool, _ strin
 		tsScript = strings.ReplaceAll(tsScript, "fmt.Printf", "console.log")
 
 		// Extract function names for event binding (must do after conversion)
-		namedFuncRegex := regexp.MustCompile(`function\s+([a-zA-Z0-9_]+)`)
 		matches := namedFuncRegex.FindAllStringSubmatch(tsScript, -1)
 		for _, m := range matches {
 			funcNames = append(funcNames, m[1])

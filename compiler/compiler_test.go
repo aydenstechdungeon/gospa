@@ -374,6 +374,39 @@ func TestValidateSafeScript_Hardening(t *testing.T) {
 	}
 }
 
+func TestValidateSafeTSScript_AcceptsValidTypeScript(t *testing.T) {
+	script := `
+const count: number = 1
+type User = { id: string; age?: number }
+const names: string[] = ["a", "b"]
+`
+	if err := ValidateSafeTSScript(script); err != nil {
+		t.Fatalf("expected valid TypeScript to pass safe-mode validation, got %v", err)
+	}
+}
+
+func TestCompile_SafeMode_AcceptsTypeScriptScriptBlock(t *testing.T) {
+	c := NewCompiler()
+	input := `
+<script lang="ts">
+const count: number = 1
+const labels: string[] = ["ok"]
+</script>
+<template><button>{count}</button></template>
+`
+	_, _, err := c.Compile(CompileOptions{
+		Type:     ComponentTypeIsland,
+		Name:     "SafeTS",
+		PkgName:  "islands",
+		IslandID: "safe-ts",
+		Hydrate:  true,
+		SafeMode: true,
+	}, input)
+	if err != nil {
+		t.Fatalf("expected SafeMode to accept valid TypeScript script block, got %v", err)
+	}
+}
+
 func TestCompileMultilineScript(t *testing.T) {
 	c := NewCompiler()
 	input := `

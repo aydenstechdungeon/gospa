@@ -4,7 +4,7 @@ Get your first reactive GoSPA application running in under five minutes.
 
 ## Prerequisites
 
-- **Go 1.25.0+**
+- **Go 1.26.0+**
 - **Bun** (for client-side builds)
 - **Templ** CLI (`go install github.com/a-h/templ/cmd/templ@latest`)
 
@@ -96,6 +96,6 @@ templ Page() {
 
 ## Next Steps
 
-- **[Core Concepts: State](../state-management/server)** — Deep dive into Runes, Derived values, and Effects.
-- **[Routing](../routing)** — Dynamic parameters and layout nesting.
-- **[CLI Reference](../cli)** — Master the `gospa` command.
+- **[Core Concepts: State](../state-management/server.md)** — Deep dive into Runes, Derived values, and Effects.
+- **[Routing](../routing.md)** — Dynamic parameters and layout nesting.
+- **[CLI Reference](../cli.md)** — Master the `gospa` command.

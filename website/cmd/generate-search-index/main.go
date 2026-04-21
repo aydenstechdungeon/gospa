@@ -114,6 +114,9 @@ func parsePageTempl(path string, content string) *SearchIndexEntry {
 func pathToURL(path string) string {
 	// Convert routes/docs/path/page.templ to /docs/path
 	path = strings.TrimPrefix(path, "routes/docs/")
+	if path == "page.templ" {
+		return "/docs"
+	}
 	path = strings.TrimSuffix(path, "/page.templ")
 
 	if path == "" {

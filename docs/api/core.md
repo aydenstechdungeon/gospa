@@ -61,7 +61,7 @@ app.Static("/static", "./public")
 
 ### `Config`
 
-The `Config` struct is defined in [`gospa.go`](https://github.com/aydenstechdungeon/gospa/blob/main/gospa.go) as `type Config struct`. **Authoritative defaults, security notes, and examples** are in the **[Configuration reference](02-configuration.md)**.
+The `Config` struct is defined in [`gospa.go`](https://github.com/aydenstechdungeon/gospa/blob/main/gospa.go) as `type Config struct`. **Authoritative defaults, security notes, and examples** are in the **[Configuration reference](../configuration.md)**.
 
 Presets:
 
@@ -135,7 +135,7 @@ Presets:
 - **`RemoteActionMiddleware`**: Required in production for remote actions unless `AllowUnauthenticatedRemoteActions` is set.
 - **`EnableCSRF`**: Defaults to `true`; wired in `gospa.New`.
 - **`ContentSecurityPolicy`**: Empty uses `fiber.DefaultContentSecurityPolicy` (compatibility policy for typical GoSPA apps). For stricter deployments, start from `fiber.StrictContentSecurityPolicy`.
-- **`PublicOrigin`**: Stable WebSocket URL behind proxies (see [Configuration](02-configuration.md)).
+- **`PublicOrigin`**: Stable WebSocket URL behind proxies (see [Configuration](../configuration.md)).
 - **`Prefork` + `Storage` + `PubSub`**: Required together for correct multi-process behavior.
 
 ```go
@@ -1343,7 +1343,7 @@ Local state handlers run entirely in the browser without WebSocket communication
 
 ## Islands & Partial Hydration
 
-See [ISLANDS.md](ISLANDS.md) for full documentation.
+See [islands.md](../islands.md) for full documentation.
 
 ```typescript
 import { initIslands, hydrateIsland, getIslandManager } from './island.ts';
@@ -1416,7 +1416,7 @@ export function mount(element, props, state) { ... }  // alias for hydrate
 
 ## HMR (Hot Module Replacement)
 
-See [HMR.md](HMR.md) for full documentation.
+See [hmr.md](../hmr.md) for full documentation.
 
 ```go
 // Server setup

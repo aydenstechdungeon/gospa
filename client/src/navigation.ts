@@ -501,6 +501,8 @@ async function reconcileDOM(data: PageData): Promise<void> {
   // and preserve as much state as possible.
   const currentLayouts = Array.from(document.querySelectorAll("[data-gospa-layout]")).reverse();
   const incomingLayouts = Array.from(incomingDoc.querySelectorAll("[data-gospa-layout]")).reverse();
+  const currentLayoutIds = currentLayouts.map((el) => el.getAttribute("data-gospa-layout") || "");
+  const incomingLayoutIds = incomingLayouts.map((el) => el.getAttribute("data-gospa-layout") || "");
 
   let morphTarget: Element | null = null;
   let newContent: Element | null = null;
@@ -543,6 +545,15 @@ async function reconcileDOM(data: PageData): Promise<void> {
                  incomingDoc.querySelector("[data-gospa-page-content]") || 
                  incomingDoc.querySelector("main") || 
                  incomingDoc.body;
+  }
+
+  if (typeof GOSPA_DEBUG !== "undefined" && GOSPA_DEBUG) {
+    console.debug("[GoSPA] Layout reconciliation", {
+      currentLayoutIds,
+      incomingLayoutIds,
+      morphTarget: morphTarget?.getAttribute("data-gospa-layout") || morphTarget?.nodeName || null,
+      newContent: newContent?.getAttribute("data-gospa-layout") || newContent?.nodeName || null,
+    });
   }
 
   if (morphTarget && newContent) {

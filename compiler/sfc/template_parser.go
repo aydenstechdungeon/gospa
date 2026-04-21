@@ -10,6 +10,7 @@ import (
 type TemplateParser struct {
 	input      string
 	pos        int
+	posIndex   *positionIndex
 	baseLine   int
 	baseColumn int
 	baseOffset int
@@ -19,6 +20,7 @@ type TemplateParser struct {
 func NewTemplateParser(input string, offset int, line, col int) *TemplateParser {
 	return &TemplateParser{
 		input:      input,
+		posIndex:   newPositionIndex(input),
 		baseOffset: offset,
 		baseLine:   line,
 		baseColumn: col,
@@ -520,8 +522,8 @@ func (p *TemplateParser) consumeEscapedUntil(delimiter string) string {
 }
 
 func (p *TemplateParser) setPos(base *BaseNode, start, end int) {
-	base.StartLine, base.StartColumn = OffsetToPosition(p.input, start)
-	base.EndLine, base.EndColumn = OffsetToPosition(p.input, end)
+	base.StartLine, base.StartColumn = p.posIndex.OffsetToPosition(start)
+	base.EndLine, base.EndColumn = p.posIndex.OffsetToPosition(end)
 	// Add base offsets from SFC block
 	base.StartLine += p.baseLine
 	base.EndLine += p.baseLine
@@ -534,7 +536,7 @@ func (p *TemplateParser) setPos(base *BaseNode, start, end int) {
 }
 
 func (p *TemplateParser) error(msg string) error {
-	line, col := OffsetToPosition(p.input, p.pos)
+	line, col := p.posIndex.OffsetToPosition(p.pos)
 	return fmt.Errorf("at %d:%d: %s", line+p.baseLine, col+p.baseColumn, msg)
 }
 

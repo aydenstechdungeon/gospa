@@ -3,8 +3,11 @@ package fiber
 import (
 	"bytes"
 	"encoding/json"
+	"fmt"
 	"net/http/httptest"
+	"sync"
 	"testing"
+	"time"
 
 	gofiber "github.com/gofiber/fiber/v3"
 )
@@ -61,5 +64,74 @@ func TestSSESubscribeHandler_Authorization(t *testing.T) {
 
 	if resp2.StatusCode != gofiber.StatusOK {
 		t.Errorf("expected 200 OK for authorized subscription, got %d", resp2.StatusCode)
+	}
+}
+
+func TestSSEBrokerConnect_DuplicateClientIDDoesNotOverwrite(t *testing.T) {
+	broker := NewSSEBroker(&SSEConfig{})
+
+	first := broker.Connect("client-fixed")
+	second := broker.Connect("client-fixed")
+
+	if first.ID != "client-fixed" {
+		t.Fatalf("expected first ID to be preserved, got %q", first.ID)
+	}
+	if second.ID == "client-fixed" {
+		t.Fatal("expected duplicate ID to be remapped to a server-minted ID")
+	}
+	if second.ID == "" {
+		t.Fatal("expected second client to have a non-empty ID")
+	}
+
+	if broker.ClientCount() != 2 {
+		t.Fatalf("expected 2 connected clients, got %d", broker.ClientCount())
+	}
+
+	connected, ok := broker.GetClient("client-fixed")
+	if !ok {
+		t.Fatal("expected original client to remain connected under original ID")
+	}
+	if connected != first {
+		t.Fatal("expected original client to remain mapped to original ID")
+	}
+}
+
+func TestSSEBroker_BroadcastWithConcurrentConnectDisconnect(t *testing.T) {
+	broker := NewSSEBroker(&SSEConfig{})
+
+	for i := 0; i < 32; i++ {
+		id := fmt.Sprintf("seed-%d", i)
+		broker.Connect(id)
+	}
+
+	var wg sync.WaitGroup
+	wg.Add(2)
+
+	go func() {
+		defer wg.Done()
+		for i := 0; i < 300; i++ {
+			broker.Broadcast(SSEEvent{Event: "tick", Data: i})
+		}
+	}()
+
+	go func() {
+		defer wg.Done()
+		for i := 0; i < 300; i++ {
+			id := fmt.Sprintf("temp-%d", i)
+			client := broker.Connect(id)
+			broker.Disconnect(client.ID)
+		}
+	}()
+
+	done := make(chan struct{})
+	go func() {
+		wg.Wait()
+		close(done)
+	}()
+
+	select {
+	case <-done:
+	case <-time.After(3 * time.Second):
+		t.Fatal("timed out waiting for concurrent broadcast/connect-disconnect workload")
 	}
 }

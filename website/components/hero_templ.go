@@ -29,7 +29,7 @@ func Hero() templ.Component {
 			templ_7745c5c3_Var1 = templ.NopComponent
 		}
 		ctx = templ.ClearChildren(ctx)
-		templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 1, "<section class=\"relative pt-24 pb-20 md:pt-40 md:pb-32 overflow-hidden\"><div class=\"max-w-7xl mx-auto px-4 relative z-10\"><div class=\"flex flex-col items-center text-center\"><h1 class=\"text-6xl md:text-8xl font-display font-black tracking-tight mb-8 leading-[1.1]\">Svelte-like <span class=\"bg-gradient-to-br from-[var(--accent-primary)] via-cyan-400 to-[var(--accent-secondary)] bg-clip-text text-transparent\">Reactivity</span><br>")
+		templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 1, "<section class=\"relative pt-24 pb-20 md:pt-40 md:pb-32 overflow-hidden\" style=\"contain: layout style;\"><div class=\"max-w-7xl mx-auto px-4 relative z-10\"><div class=\"flex flex-col items-center text-center\"><h1 class=\"text-6xl md:text-8xl font-display font-black tracking-tight mb-8 leading-[1.1]\">Svelte-like <span class=\"bg-gradient-to-br from-[var(--accent-primary)] via-cyan-400 to-[var(--accent-secondary)] bg-clip-text text-transparent\">Reactivity</span><br>")
 		if templ_7745c5c3_Err != nil {
 			return templ_7745c5c3_Err
 		}

@@ -57,6 +57,23 @@ type Route struct {
 	regexCache *regexp.Regexp
 	// regexOnce ensures regex is compiled only once
 	regexOnce sync.Once
+	// matchSegments stores precompiled route segments for dynamic matching.
+	matchSegments []routeSegment
+}
+
+type routeSegmentKind uint8
+
+const (
+	segmentStatic routeSegmentKind = iota
+	segmentParam
+	segmentOptionalParam
+	segmentCatchAll
+	segmentOptionalCatchAll
+)
+
+type routeSegment struct {
+	kind  routeSegmentKind
+	value string
 }
 
 // Router manages all routes.
@@ -208,14 +225,15 @@ func (r *Router) parseRoute(relPath string) (*Route, error) {
 	priority := calculatePriority(urlPath, isDynamic, isCatchAll)
 
 	return &Route{
-		Path:       urlPath,
-		File:       relPath,
-		Type:       routeType,
-		Params:     params,
-		IsDynamic:  isDynamic,
-		IsCatchAll: isCatchAll,
-		Priority:   priority,
-		Children:   make([]*Route, 0),
+		Path:          urlPath,
+		File:          relPath,
+		Type:          routeType,
+		Params:        params,
+		IsDynamic:     isDynamic,
+		IsCatchAll:    isCatchAll,
+		Priority:      priority,
+		Children:      make([]*Route, 0),
+		matchSegments: compileRouteSegments(urlPath),
 	}, nil
 }
 
@@ -477,9 +495,11 @@ func (r *Router) Match(urlPath string) (*Route, map[string]string) {
 		return route, make(map[string]string)
 	}
 
+	pathSegs := splitPathSegments(urlPath)
+
 	// 2. Check dynamic routes (O(D) where D is number of dynamic routes)
 	for _, route := range r.dynamicRoutes {
-		if params, ok := r.matchRoute(route.Path, urlPath); ok {
+		if params, ok := matchRouteSegments(route.matchSegments, pathSegs); ok {
 			return route, params
 		}
 	}
@@ -487,63 +507,9 @@ func (r *Router) Match(urlPath string) (*Route, map[string]string) {
 }
 
 // matchRoute checks if a route pattern matches a URL path.
+// Kept for compatibility with existing tests/callers.
 func (r *Router) matchRoute(pattern, path string) (map[string]string, bool) {
-	patternSegs := splitPathSegments(pattern)
-	pathSegs := splitPathSegments(path)
-
-	params := make(map[string]string)
-	i, j := 0, 0
-	for i < len(patternSegs) {
-		seg := patternSegs[i]
-		if seg == "" {
-			i++
-			continue
-		}
-
-		if strings.HasPrefix(seg, "*?") {
-			paramName := seg[2:]
-			if j >= len(pathSegs) {
-				params[paramName] = ""
-			} else {
-				params[paramName] = strings.Join(pathSegs[j:], "/")
-			}
-			return params, true
-		}
-
-		if strings.HasPrefix(seg, "*") {
-			paramName := seg[1:]
-			params[paramName] = strings.Join(pathSegs[j:], "/")
-			return params, true
-		}
-
-		if strings.HasPrefix(seg, ":?") {
-			paramName := seg[2:]
-			if j >= len(pathSegs) {
-				params[paramName] = ""
-				i++
-				continue
-			}
-			params[paramName] = pathSegs[j]
-			i++
-			j++
-			continue
-		}
-
-		if j >= len(pathSegs) {
-			return nil, false
-		}
-
-		if !r.matchSegment(seg, pathSegs[j], params) {
-			return nil, false
-		}
-		i++
-		j++
-	}
-
-	if j != len(pathSegs) {
-		return nil, false
-	}
-	return params, true
+	return matchRouteSegments(compileRouteSegments(pattern), splitPathSegments(path))
 }
 
 func splitPathSegments(path string) []string {
@@ -554,20 +520,86 @@ func splitPathSegments(path string) []string {
 	return strings.Split(trimmed, "/")
 }
 
-// matchSegment matches a single path segment.
-func (r *Router) matchSegment(pattern, value string, params map[string]string) bool {
-	// Dynamic parameter
-	if strings.HasPrefix(pattern, ":") {
-		paramName := pattern[1:]
-		if strings.HasPrefix(pattern, ":?") {
-			paramName = pattern[2:]
+func compileRouteSegments(pattern string) []routeSegment {
+	parts := splitPathSegments(pattern)
+	segments := make([]routeSegment, 0, len(parts))
+	for _, part := range parts {
+		switch {
+		case strings.HasPrefix(part, "*?"):
+			segments = append(segments, routeSegment{kind: segmentOptionalCatchAll, value: part[2:]})
+		case strings.HasPrefix(part, "*"):
+			segments = append(segments, routeSegment{kind: segmentCatchAll, value: part[1:]})
+		case strings.HasPrefix(part, ":?"):
+			segments = append(segments, routeSegment{kind: segmentOptionalParam, value: part[2:]})
+		case strings.HasPrefix(part, ":"):
+			segments = append(segments, routeSegment{kind: segmentParam, value: part[1:]})
+		default:
+			segments = append(segments, routeSegment{kind: segmentStatic, value: part})
 		}
-		params[paramName] = value
-		return true
+	}
+	return segments
+}
+
+func matchRouteSegments(pattern []routeSegment, pathSegs []string) (map[string]string, bool) {
+	var params map[string]string
+	i, j := 0, 0
+	for i < len(pattern) {
+		seg := pattern[i]
+		switch seg.kind {
+		case segmentOptionalCatchAll:
+			if params == nil {
+				params = make(map[string]string)
+			}
+			if j >= len(pathSegs) {
+				params[seg.value] = ""
+			} else {
+				params[seg.value] = strings.Join(pathSegs[j:], "/")
+			}
+			return params, true
+		case segmentCatchAll:
+			if params == nil {
+				params = make(map[string]string)
+			}
+			params[seg.value] = strings.Join(pathSegs[j:], "/")
+			return params, true
+		case segmentOptionalParam:
+			if params == nil {
+				params = make(map[string]string)
+			}
+			if j >= len(pathSegs) {
+				params[seg.value] = ""
+				i++
+				continue
+			}
+			params[seg.value] = pathSegs[j]
+			i++
+			j++
+		case segmentParam:
+			if j >= len(pathSegs) {
+				return nil, false
+			}
+			if params == nil {
+				params = make(map[string]string)
+			}
+			params[seg.value] = pathSegs[j]
+			i++
+			j++
+		case segmentStatic:
+			if j >= len(pathSegs) || seg.value != pathSegs[j] {
+				return nil, false
+			}
+			i++
+			j++
+		}
 	}
 
-	// Static match
-	return pattern == value
+	if j != len(pathSegs) {
+		return nil, false
+	}
+	if params == nil {
+		return map[string]string{}, true
+	}
+	return params, true
 }
 
 // GetRoutes returns all routes.
@@ -660,12 +692,24 @@ func (r *Route) String() string {
 
 // ResolveLayoutChain resolves the complete layout chain for a matched route.
 // It returns all layouts from root to the nearest parent, ordered root-first.
+//
+// When the filesystem scan (Scan) found layout files those entries take
+// priority.  If the router was initialised without a routes directory, or the
+// directory does not contain .templ source files (e.g. a production binary
+// deployed without source), the global registry is consulted as a fallback so
+// that layouts registered via generated init() code are still applied.
 func (r *Router) ResolveLayoutChain(route *Route) []*Route {
 	if route == nil {
 		return nil
 	}
 
 	chain := make([]*Route, 0)
+
+	// synthRoute creates a synthetic *Route for a layout that exists only in
+	// the global registry (no corresponding .templ file on disk).
+	synthRoute := func(p string) *Route {
+		return &Route{Path: p, Type: RouteTypeLayout}
+	}
 
 	// Walk up the path hierarchy collecting layouts
 	path := route.Path
@@ -674,6 +718,9 @@ func (r *Router) ResolveLayoutChain(route *Route) []*Route {
 	if route.Type == RouteTypePage || route.Type == RouteTypeError {
 		if layout, ok := r.layoutIndex[path]; ok {
 			chain = append([]*Route{layout}, chain...)
+		} else if HasLayout(path) {
+			// Fallback: layout registered in global registry but not on disk.
+			chain = append([]*Route{synthRoute(path)}, chain...)
 		}
 	}
 
@@ -686,15 +733,25 @@ func (r *Router) ResolveLayoutChain(route *Route) []*Route {
 
 		if layout, ok := r.layoutIndex[parent]; ok {
 			chain = append([]*Route{layout}, chain...)
+		} else if HasLayout(parent) {
+			// Fallback: layout registered in global registry but not on disk.
+			chain = append([]*Route{synthRoute(parent)}, chain...)
 		}
 
 		path = parent
 	}
 
-	// Check for root layout
+	// Check for root layout ("/") via filesystem index.
+	// Note: the root_layout registered via RegisterRootLayout is handled
+	// separately in render.go via GetRootLayout(); we only include a "/"
+	// entry here when an explicit layout.templ lives at the routes root.
 	if layout, ok := r.layoutIndex["/"]; ok {
 		if len(chain) == 0 || chain[0].Path != "/" {
 			chain = append([]*Route{layout}, chain...)
+		}
+	} else if HasLayout("/") {
+		if len(chain) == 0 || chain[0].Path != "/" {
+			chain = append([]*Route{synthRoute("/")}, chain...)
 		}
 	}
 

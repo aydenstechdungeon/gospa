@@ -14,6 +14,7 @@ import (
 	"sync"
 
 	"github.com/aydenstechdungeon/gospa/plugin"
+	"github.com/aydenstechdungeon/gospa/plugin/pathsafety"
 	"gopkg.in/yaml.v3"
 )
 
@@ -46,6 +47,8 @@ type Config struct {
 	CriticalCSS CriticalCSSConfig `yaml:"criticalCSS" json:"criticalCSS"`
 	// Bundles defines multiple CSS entry points for code splitting.
 	Bundles []BundleEntry `yaml:"bundles" json:"bundles"`
+	// AllowOutputEscape allows writes outside the project directory.
+	AllowOutputEscape bool `yaml:"allowOutputEscape" json:"allowOutputEscape"`
 }
 
 // CriticalCSSConfig configures critical CSS extraction.
@@ -212,13 +215,20 @@ func (p *PostCSSPlugin) Name() string {
 
 // Init initializes the PostCSS plugin.
 func (p *PostCSSPlugin) Init() error {
-	// Create output directory
-	outputDir := filepath.Dir(p.config.Output)
+	resolvedOutput, err := p.resolvePath(".", p.config.Output)
+	if err != nil {
+		return fmt.Errorf("invalid PostCSS output path %q: %w", p.config.Output, err)
+	}
+	outputDir := filepath.Dir(resolvedOutput)
 	if err := os.MkdirAll(outputDir, 0750); err != nil {
 		return fmt.Errorf("failed to create output directory: %w", err)
 	}
-	// Create input directory
-	inputDir := filepath.Dir(p.config.Input)
+
+	resolvedInput, err := p.resolvePath(".", p.config.Input)
+	if err != nil {
+		return fmt.Errorf("invalid PostCSS input path %q: %w", p.config.Input, err)
+	}
+	inputDir := filepath.Dir(resolvedInput)
 	if err := os.MkdirAll(inputDir, 0750); err != nil {
 		return fmt.Errorf("failed to create input directory: %w", err)
 	}
@@ -281,7 +291,10 @@ func (p *PostCSSPlugin) OnHook(hook plugin.Hook, ctx map[string]interface{}) err
 			return fmt.Errorf("failed to generate PostCSS config: %w", err)
 		}
 		// Create input CSS if needed
-		cssPath := filepath.Join(projectDir, p.config.Input)
+		cssPath, err := p.resolvePath(projectDir, p.config.Input)
+		if err != nil {
+			return fmt.Errorf("invalid PostCSS input path %q: %w", p.config.Input, err)
+		}
 		if _, err := os.Stat(cssPath); os.IsNotExist(err) {
 			if err := p.generateMainCSS(cssPath); err != nil {
 				return fmt.Errorf("failed to generate main CSS: %w", err)
@@ -453,7 +466,10 @@ func (p *PostCSSPlugin) install(_ []string) error {
 	}
 
 	// Create input CSS if needed
-	cssPath := p.config.Input
+	cssPath, err := p.resolvePath(".", p.config.Input)
+	if err != nil {
+		return fmt.Errorf("invalid PostCSS input path %q: %w", p.config.Input, err)
+	}
 	if _, err := os.Stat(cssPath); os.IsNotExist(err) {
 		if err := p.generateMainCSS(cssPath); err != nil {
 			return fmt.Errorf("failed to generate main CSS: %w", err)
@@ -461,7 +477,11 @@ func (p *PostCSSPlugin) install(_ []string) error {
 	}
 
 	// Create output directory
-	outputDir := filepath.Dir(p.config.Output)
+	resolvedOutput, err := p.resolvePath(".", p.config.Output)
+	if err != nil {
+		return fmt.Errorf("invalid PostCSS output path %q: %w", p.config.Output, err)
+	}
+	outputDir := filepath.Dir(resolvedOutput)
 	if err := os.MkdirAll(outputDir, 0750); err != nil {
 		return fmt.Errorf("failed to create output directory: %w", err)
 	}
@@ -534,15 +554,22 @@ func (p *PostCSSPlugin) watchWithContext(projectDir string) {
 	startWatcher := func(input, output string) {
 		fmt.Printf("  Watching: %s -> %s\n", input, output)
 
-		if !isPathSafe(input) || !isPathSafe(output) {
-			fmt.Fprintf(os.Stderr, "PostCSS: invalid characters in input/output paths: %s -> %s\n", input, output)
+		resolvedInput, err := p.resolvePath(projectDir, input)
+		if err != nil {
+			fmt.Fprintf(os.Stderr, "PostCSS: invalid input path %q: %v\n", input, err)
+			return
+		}
+
+		resolvedOutput, err := p.resolvePath(projectDir, output)
+		if err != nil {
+			fmt.Fprintf(os.Stderr, "PostCSS: invalid output path %q: %v\n", output, err)
 			return
 		}
 
 		args := []string{
 			"postcss",
-			input,
-			"--output", output,
+			resolvedInput,
+			"--output", resolvedOutput,
 			"--config", projectDir,
 			"--watch",
 		}
@@ -584,14 +611,20 @@ func (p *PostCSSPlugin) compile(projectDir string) error {
 	fmt.Printf("  Input:  %s\n", p.config.Input)
 	fmt.Printf("  Output: %s\n", p.config.Output)
 
-	if !isPathSafe(p.config.Input) || !isPathSafe(p.config.Output) {
-		return fmt.Errorf("PostCSS: invalid characters in input/output paths")
+	resolvedInput, err := p.resolvePath(projectDir, p.config.Input)
+	if err != nil {
+		return fmt.Errorf("invalid PostCSS input path %q: %w", p.config.Input, err)
+	}
+
+	resolvedOutput, err := p.resolvePath(projectDir, p.config.Output)
+	if err != nil {
+		return fmt.Errorf("invalid PostCSS output path %q: %w", p.config.Output, err)
 	}
 
 	args := []string{
 		"postcss",
-		p.config.Input,
-		"--output", p.config.Output,
+		resolvedInput,
+		"--output", resolvedOutput,
 		"--config", projectDir,
 	}
 
@@ -733,19 +766,34 @@ func (p *PostCSSPlugin) criticalCommand(args []string) error {
 		return fmt.Errorf("failed to compile CSS: %w", err)
 	}
 
+	resolvedOutput, err := p.resolvePath(projectDir, p.config.Output)
+	if err != nil {
+		return fmt.Errorf("invalid PostCSS output path %q: %w", p.config.Output, err)
+	}
+
+	criticalOutputPath, err := p.resolvePath(projectDir, p.config.CriticalCSS.CriticalOutput)
+	if err != nil {
+		return fmt.Errorf("invalid critical CSS output path %q: %w", p.config.CriticalCSS.CriticalOutput, err)
+	}
+
+	nonCriticalOutputPath, err := p.resolvePath(projectDir, p.config.CriticalCSS.NonCriticalOutput)
+	if err != nil {
+		return fmt.Errorf("invalid non-critical CSS output path %q: %w", p.config.CriticalCSS.NonCriticalOutput, err)
+	}
+
 	// Read the compiled CSS
-	fullCSS, err := os.ReadFile(p.config.Output)
+	fullCSS, err := os.ReadFile(resolvedOutput) // #nosec G304 -- path resolved via pathsafety in resolvePath
 	if err != nil {
 		return fmt.Errorf("failed to read compiled CSS: %w", err)
 	}
 
 	// Create output directories
-	criticalDir := filepath.Dir(p.config.CriticalCSS.CriticalOutput)
+	criticalDir := filepath.Dir(criticalOutputPath)
 	if err := os.MkdirAll(criticalDir, 0750); err != nil {
 		return fmt.Errorf("failed to create critical CSS directory: %w", err)
 	}
 
-	nonCriticalDir := filepath.Dir(p.config.CriticalCSS.NonCriticalOutput)
+	nonCriticalDir := filepath.Dir(nonCriticalOutputPath)
 	if err := os.MkdirAll(nonCriticalDir, 0750); err != nil {
 		return fmt.Errorf("failed to create non-critical CSS directory: %w", err)
 	}
@@ -753,15 +801,6 @@ func (p *PostCSSPlugin) criticalCommand(args []string) error {
 	// Use shared splitting logic
 	criticalClasses := extractClassesFromTempl(projectDir, p.config.CriticalCSS.CriticalContent)
 	criticalCSS, nonCriticalCSS := splitCSS(fullCSS, p.config.CriticalCSS.InlineMaxSize, criticalClasses)
-
-	// Use cleaned path to prevent path traversal
-	criticalOutputPath := filepath.Clean(p.config.CriticalCSS.CriticalOutput)
-	nonCriticalOutputPath := filepath.Clean(p.config.CriticalCSS.NonCriticalOutput)
-
-	// Ensure paths do not escape the project directory
-	if !p.isPathSafe(projectDir, criticalOutputPath) || !p.isPathSafe(projectDir, nonCriticalOutputPath) {
-		return fmt.Errorf("safety violation: critical CSS paths must be within project directory")
-	}
 
 	if err := os.WriteFile(criticalOutputPath, criticalCSS, 0600); err != nil { // #nosec //nolint:gosec // path from config, validated
 		return fmt.Errorf("failed to write critical CSS: %w", err)
@@ -803,10 +842,18 @@ func (p *PostCSSPlugin) bundlesCommand(args []string) error {
 		fmt.Printf("    Input:  %s\n", bundle.Input)
 		fmt.Printf("    Output: %s\n", bundle.Output)
 
+		resolvedInput, err := p.resolvePath(projectDir, bundle.Input)
+		if err != nil {
+			return fmt.Errorf("invalid bundle input path %q: %w", bundle.Input, err)
+		}
+		resolvedOutput, err := p.resolvePath(projectDir, bundle.Output)
+		if err != nil {
+			return fmt.Errorf("invalid bundle output path %q: %w", bundle.Output, err)
+		}
+
 		// Generate bundle-specific CSS file if it doesn't exist
-		inputPath := filepath.Join(projectDir, bundle.Input)
-		if _, err := os.Stat(inputPath); os.IsNotExist(err) {
-			if err := p.generateBundleCSS(inputPath, bundle); err != nil {
+		if _, err := os.Stat(resolvedInput); os.IsNotExist(err) {
+			if err := p.generateBundleCSS(resolvedInput, bundle); err != nil {
 				return fmt.Errorf("failed to generate bundle CSS for %s: %w", bundle.Name, err)
 			}
 		}
@@ -814,8 +861,8 @@ func (p *PostCSSPlugin) bundlesCommand(args []string) error {
 		// Compile the bundle
 		args := []string{
 			"postcss",
-			bundle.Input,
-			"--output", bundle.Output,
+			resolvedInput,
+			"--output", resolvedOutput,
 			"--config", projectDir,
 		}
 
@@ -880,7 +927,10 @@ func (p *PostCSSPlugin) generateBundleCSS(cssPath string, bundle BundleEntry) er
 
 // extractCriticalForBundle extracts critical CSS for a specific bundle.
 func (p *PostCSSPlugin) extractCriticalForBundle(projectDir string, bundle BundleEntry) error {
-	fullCSSPath := filepath.Join(projectDir, bundle.Output)
+	fullCSSPath, err := p.resolvePath(projectDir, bundle.Output)
+	if err != nil {
+		return fmt.Errorf("invalid bundle output path %q: %w", bundle.Output, err)
+	}
 	fullCSS, err := os.ReadFile(filepath.Clean(fullCSSPath))
 	if err != nil {
 		return fmt.Errorf("failed to read bundle CSS: %w", err)
@@ -901,12 +951,14 @@ func (p *PostCSSPlugin) extractCriticalForBundle(projectDir string, bundle Bundl
 		nonCriticalOutput = base + ".non-critical" + ext
 	}
 
-	// Validate paths to prevent traversal
-	cleanCriticalOutput := filepath.Clean(criticalOutput)
-	cleanNonCriticalOutput := filepath.Clean(nonCriticalOutput)
-	outputDir := filepath.Dir(bundle.Output)
-	if !strings.HasPrefix(cleanCriticalOutput, filepath.Clean(outputDir)) || !strings.HasPrefix(cleanNonCriticalOutput, filepath.Clean(outputDir)) {
-		return fmt.Errorf("invalid output path: critical=%s, non-critical=%s", criticalOutput, nonCriticalOutput)
+	cleanCriticalOutput, err := p.resolvePath(projectDir, criticalOutput)
+	if err != nil {
+		return fmt.Errorf("invalid critical output path %q: %w", criticalOutput, err)
+	}
+
+	cleanNonCriticalOutput, err := p.resolvePath(projectDir, nonCriticalOutput)
+	if err != nil {
+		return fmt.Errorf("invalid non-critical output path %q: %w", nonCriticalOutput, err)
 	}
 
 	// Create output directories
@@ -941,6 +993,17 @@ func (p *PostCSSPlugin) extractCriticalForBundle(projectDir string, bundle Bundl
 	return nil
 }
 
+func (p *PostCSSPlugin) resolvePath(projectDir, path string) (string, error) {
+	if strings.ContainsAny(path, "\x00") {
+		return "", fmt.Errorf("path contains invalid characters")
+	}
+	resolved, err := pathsafety.ResolvePath(projectDir, path, p.config.AllowOutputEscape)
+	if err != nil {
+		return "", err
+	}
+	return filepath.Clean(resolved), nil
+}
+
 // GenerateCriticalCSSHelper generates a Go helper function for templating.
 // This can be used in your template files to inline critical CSS.
 func GenerateCriticalCSSHelper(projectDir, criticalCSSPath string) (string, error) {
@@ -970,12 +1033,14 @@ func GenerateAsyncCSSScriptWithNonce(cssPath, nonce string) string {
 	if nonce != "" {
 		nonceAttr = fmt.Sprintf(` nonce="%s"`, nonce)
 	}
-	// Use a data attribute on the link so the script can locate every preloaded async sheet,
-	// even when multiple AsyncCSS calls appear on the same page.
+	// Use a real stylesheet link with media="print" so the browser reliably fetches the CSS
+	// without blocking first paint. The script then promotes it to media="all" once loaded.
+	// This avoids the rel=preload -> rel=stylesheet race where some browsers can miss the load
+	// transition and leave the async stylesheet unapplied.
 	return fmt.Sprintf(
-		`<link rel="preload" href="%s" as="style" data-gospa-async-css="%s">`+
+		`<link rel="stylesheet" href="%s" media="print" data-gospa-async-css="%s">`+
 			`<noscript><link rel="stylesheet" href="%s"></noscript>`+
-			`<script%s>document.querySelector('link[data-gospa-async-css="%s"]').addEventListener('load',function(e){e.target.rel='stylesheet'});</script>`,
+			`<script%s>(function(){const l=document.querySelector('link[data-gospa-async-css="%s"]');if(!l)return;const activate=function(){if(l.dataset.gospaAsyncApplied==='1')return;l.media='all';l.dataset.gospaAsyncApplied='1';};if(l.sheet){activate();return;}l.addEventListener('load',activate,{once:true});setTimeout(activate,3000);})();</script>`,
 		cssPath, cssPath, cssPath, nonceAttr, cssPath,
 	)
 }
@@ -1174,8 +1239,10 @@ func splitCSS(fullCSS []byte, maxSize int, criticalClasses map[string]bool) ([]b
 	critical = append(critical, utilPrefix...)
 
 	// Safety block: ensure structural utilities are always in critical CSS
-	// to prevent CLS from async non-critical CSS loading
-	critical = append(critical, []byte(".hidden{display:none!important}.invisible{visibility:hidden}.fixed{position:fixed}.absolute{position:absolute}")...)
+	// to prevent CLS from async non-critical CSS loading.
+	// Do NOT use !important here: responsive utilities like `hidden md:flex`
+	// depend on later media-query rules being able to override the base hidden state.
+	critical = append(critical, []byte(".hidden{display:none}.invisible{visibility:hidden}.fixed{position:fixed}.absolute{position:absolute}")...)
 
 	critical = append(critical, criticalInner...)
 	critical = append(critical, '}')
@@ -1323,20 +1390,6 @@ func matchesAnySelector(rule []byte, selectors map[string]bool) bool {
 		}
 	}
 	return false
-}
-
-// isPathSafe checks if the given path is within the project directory.
-func (p *PostCSSPlugin) isPathSafe(projectDir, path string) bool {
-	fullPath := path
-	if !filepath.IsAbs(path) {
-		fullPath = filepath.Join(projectDir, path)
-	}
-	rel, err := filepath.Rel(projectDir, fullPath)
-	return err == nil && !strings.HasPrefix(rel, "..")
-}
-
-func isPathSafe(path string) bool {
-	return !strings.ContainsAny(path, "\x00<>|&$;`\"'")
 }
 
 // Ensure PostCSSPlugin implements CLIPlugin interface.

@@ -143,7 +143,7 @@ func cacheMiddleware(c fiber.Ctx) error {
 	if isHTMLPage(path) {
 		// Preload fonts and images
 		links := []string{
-			"</static/fonts/InterVariable.woff2>; rel=preload; as=font; type=font/woff2; crossorigin=anonymous; fetchpriority=high",
+			"</static/fonts/InterVariable-subset.woff2>; rel=preload; as=font; type=font/woff2; crossorigin=anonymous; fetchpriority=high",
 			"</static/gospa1-64.webp>; rel=preload; as=image; fetchpriority=high",
 		}
 
