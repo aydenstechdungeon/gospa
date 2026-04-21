@@ -23,7 +23,7 @@ func TestIslandsRoute_DynamicTSPathTraversalBlocked(t *testing.T) {
 		t.Fatalf("chdir temp dir: %v", err)
 	}
 
-	if err := os.MkdirAll(filepath.Join("generated", "components"), 0o755); err != nil {
+	if err := os.MkdirAll(filepath.Join("generated", "components"), 0o750); err != nil {
 		t.Fatalf("mkdir generated: %v", err)
 	}
 	if err := os.WriteFile(filepath.Join("generated", "components", "card.ts"), []byte(`export const card = "ok"`), 0o600); err != nil {

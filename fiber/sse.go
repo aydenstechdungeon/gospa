@@ -546,7 +546,7 @@ func SetupSSE(app *fiberpkg.App, broker *SSEBroker, basePath string, corsConfig 
 		sse.Use(cors.New(*corsConfig))
 	}
 
-	sse.Get("/connect", broker.SSEHandler(func(c fiberpkg.Ctx) string {
+	sse.Get("/connect", broker.SSEHandler(func(_ fiberpkg.Ctx) string {
 		return ""
 	}))
 

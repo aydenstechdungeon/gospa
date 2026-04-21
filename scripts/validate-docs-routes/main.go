@@ -84,7 +84,12 @@ func collectDocsRoutes(root string) (map[string]bool, error) {
 }
 
 func loadSearchEntries(path string) ([]searchEntry, error) {
-	data, err := os.ReadFile(path)
+	cleanPath := filepath.Clean(path)
+	if filepath.IsAbs(cleanPath) || strings.HasPrefix(cleanPath, "..") {
+		return nil, fmt.Errorf("invalid search index path %q", path)
+	}
+
+	data, err := os.ReadFile(cleanPath) // #nosec G304 -- path constrained to project-relative safe path
 	if err != nil {
 		return nil, err
 	}

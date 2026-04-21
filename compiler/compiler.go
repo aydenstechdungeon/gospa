@@ -317,14 +317,14 @@ func validateDelimitedSyntax(script string) error {
 	return nil
 }
 
-func isMatchingDelimiter(open, close rune) bool {
+func isMatchingDelimiter(open, closing rune) bool {
 	switch open {
 	case '{':
-		return close == '}'
+		return closing == '}'
 	case '(':
-		return close == ')'
+		return closing == ')'
 	case '[':
-		return close == ']'
+		return closing == ']'
 	default:
 		return false
 	}
@@ -1057,10 +1057,6 @@ func typeArgs(args string) string {
 	return strings.Join(typedParts, ", ")
 }
 
-func (c *GospaCompiler) validateTemplateNodes(nodes []sfc.Node) error {
-	return c.validateTemplateNodesWithCache(nodes, nil)
-}
-
 func (c *GospaCompiler) validateTemplateNodesWithCache(nodes []sfc.Node, cache map[string]error) error {
 	for _, node := range nodes {
 		var err error
@@ -1151,7 +1147,7 @@ func isSafeSimpleExpression(expr string) bool {
 		return true
 	}
 	for _, r := range expr {
-		if !(unicode.IsLetter(r) || unicode.IsDigit(r) || strings.ContainsRune("_.$", r)) {
+		if !unicode.IsLetter(r) && !unicode.IsDigit(r) && !strings.ContainsRune("_.$", r) {
 			return false
 		}
 	}

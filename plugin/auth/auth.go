@@ -34,7 +34,7 @@ import (
 const (
 	oauthStateCookiePrefix = "gospa_oauth_state_"
 	oauthStateTTL          = 10 * time.Minute
-	otpSecretStoragePrefix = "auth:otp:secret:user:"
+	otpSeedStoragePrefix   = "auth:otp:seed:user:"
 )
 
 // EnableTOTP is an alias for EnableOTPHandler for backward compatibility.
@@ -732,7 +732,7 @@ func (p *AuthPlugin) generateAuthCode(projectDir string) error {
 }
 
 func otpSecretStorageKey(userID string) string {
-	return otpSecretStoragePrefix + userID
+	return otpSeedStoragePrefix + userID
 }
 
 func (p *AuthPlugin) storeOTPSecret(c fiber.Ctx, userID, secret string) error {

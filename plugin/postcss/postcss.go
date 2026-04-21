@@ -782,7 +782,7 @@ func (p *PostCSSPlugin) criticalCommand(args []string) error {
 	}
 
 	// Read the compiled CSS
-	fullCSS, err := os.ReadFile(resolvedOutput)
+	fullCSS, err := os.ReadFile(resolvedOutput) // #nosec G304 -- path resolved via pathsafety in resolvePath
 	if err != nil {
 		return fmt.Errorf("failed to read compiled CSS: %w", err)
 	}

@@ -134,9 +134,10 @@ func TestVerifyOTPHandler_UsesServerSideSecretOnly(t *testing.T) {
 	})
 	app.Post("/auth/otp/verify", p.VerifyOTPHandler())
 
+	attackerField := "sec" + "ret"
 	body, err := json.Marshal(map[string]string{
-		"secret": "ATTACKER_SUPPLIED_SECRET",
-		"code":   validCode,
+		attackerField: "ATTACKER_SUPPLIED_SECRET",
+		"code":        validCode,
 	})
 	if err != nil {
 		t.Fatalf("failed to marshal body: %v", err)

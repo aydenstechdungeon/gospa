@@ -1,3 +1,4 @@
+// Package pathsafety provides safe path resolution helpers.
 package pathsafety
 
 import (
