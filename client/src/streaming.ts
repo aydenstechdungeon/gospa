@@ -37,6 +37,13 @@ interface StreamingManagerOptions {
   allowInlineScriptChunks?: boolean;
 }
 
+function getCSPNonce(): string | undefined {
+  const nonceScript = document.querySelector("script[nonce]") as
+    | HTMLScriptElement
+    | null;
+  return nonceScript?.nonce || nonceScript?.getAttribute("nonce") || undefined;
+}
+
 /**
  * StreamingManager handles streaming SSR content and progressive hydration
  */
@@ -153,6 +160,10 @@ export class StreamingManager {
     }
 
     const script = document.createElement("script");
+    const nonce = getCSPNonce();
+    if (nonce) {
+      script.nonce = nonce;
+    }
     script.textContent = chunk.content;
     document.head.appendChild(script);
   }
