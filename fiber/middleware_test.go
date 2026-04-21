@@ -3,6 +3,7 @@ package fiber
 import (
 	"io"
 	"net/http/httptest"
+	"regexp"
 	"strings"
 	"testing"
 
@@ -39,6 +40,39 @@ func TestCSRFSetTokenMiddleware_DoesNotRotateExistingToken(t *testing.T) {
 
 	if got := resp2.Header.Get("Set-Cookie"); strings.Contains(got, "csrf_token=") {
 		t.Fatalf("expected csrf token not to rotate, got Set-Cookie=%q", got)
+	}
+}
+
+func TestCSRFSetTokenMiddleware_ReplacesInvalidCookieToken(t *testing.T) {
+	app := gofiber.New()
+	app.Use(CSRFSetTokenMiddleware())
+	app.Get("/", func(c gofiber.Ctx) error {
+		tok, _ := c.Locals("gospa.csrf_token").(string)
+		return c.SendString(tok)
+	})
+
+	req := httptest.NewRequest("GET", "/", nil)
+	req.Header.Set("Cookie", `csrf_token=invalid"token`)
+	resp, err := app.Test(req)
+	if err != nil {
+		t.Fatalf("request failed: %v", err)
+	}
+	defer func() { _ = resp.Body.Close() }()
+
+	body, err := io.ReadAll(resp.Body)
+	if err != nil {
+		t.Fatalf("read body failed: %v", err)
+	}
+	if ok, _ := regexp.MatchString(`^[A-Fa-f0-9]{64}$`, string(body)); !ok {
+		t.Fatalf("expected replaced token to be strict 64-char hex, got %q", string(body))
+	}
+
+	setCookie := resp.Header.Get("Set-Cookie")
+	if !strings.Contains(setCookie, "csrf_token=") {
+		t.Fatalf("expected csrf Set-Cookie header, got %q", setCookie)
+	}
+	if strings.Contains(setCookie, `invalid"token`) {
+		t.Fatalf("invalid csrf token value must not be reflected, got %q", setCookie)
 	}
 }
 func TestPreloadHeadersMiddleware(t *testing.T) {
@@ -191,5 +225,31 @@ func TestStateMiddleware_NonceInjection(t *testing.T) {
 
 	if !strings.Contains(string(body), `nonce="test-nonce-123"`) {
 		t.Errorf("expected nonce in injected script, but not found in body: %s", string(body))
+	}
+}
+
+func TestStateMiddleware_IgnoresInvalidCSRFTokensForInlineScript(t *testing.T) {
+	config := Config{StateKey: "gospa.state"}
+	app := gofiber.New()
+	app.Use(func(c gofiber.Ctx) error {
+		stateMap := state.NewStateMap()
+		c.Locals(config.StateKey, stateMap)
+		c.Locals("gospa.csrf_token", `bad";alert(1)//`)
+		return c.Next()
+	})
+	app.Use(StateMiddleware(config))
+	app.Get("/", func(c gofiber.Ctx) error {
+		c.Set("Content-Type", "text/html")
+		return c.SendString("<body></body>")
+	})
+
+	resp, err := app.Test(httptest.NewRequest("GET", "/", nil))
+	if err != nil {
+		t.Fatalf("request failed: %v", err)
+	}
+	defer func() { _ = resp.Body.Close() }()
+	body, _ := io.ReadAll(resp.Body)
+	if strings.Contains(string(body), "__GOSPA_CSRF_TOKEN__") {
+		t.Fatalf("expected invalid csrf token to be omitted from inline script, got %s", string(body))
 	}
 }

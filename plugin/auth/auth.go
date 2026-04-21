@@ -23,6 +23,7 @@ import (
 	"time"
 
 	"github.com/aydenstechdungeon/gospa/plugin"
+	"github.com/aydenstechdungeon/gospa/plugin/pathsafety"
 	"github.com/aydenstechdungeon/gospa/store"
 	json "github.com/goccy/go-json"
 	"github.com/gofiber/fiber/v3"
@@ -33,6 +34,7 @@ import (
 const (
 	oauthStateCookiePrefix = "gospa_oauth_state_"
 	oauthStateTTL          = 10 * time.Minute
+	otpSecretStoragePrefix = "auth:otp:secret:user:"
 )
 
 // EnableTOTP is an alias for EnableOTPHandler for backward compatibility.
@@ -111,6 +113,13 @@ type Config struct {
 
 	// OutputDir is where generated auth code is written.
 	OutputDir string `yaml:"output_dir" json:"outputDir"`
+
+	// AllowOutputEscape allows code generation output outside project/workspace root.
+	AllowOutputEscape bool `yaml:"allow_output_escape" json:"allowOutputEscape"`
+
+	// ResolveOTPSecret resolves the OTP secret for an authenticated user ID.
+	// If nil, storage key auth:otp:secret:user:<id> is used when storage is configured.
+	ResolveOTPSecret func(userID string) (string, error) `yaml:"-" json:"-"`
 }
 
 // OAuthProvider represents an OAuth provider configuration.
@@ -355,6 +364,10 @@ func (p *AuthPlugin) EnableOTPHandler() fiber.Handler {
 			return c.Status(fiber.StatusInternalServerError).JSON(fiber.Map{"error": "failed to generate OTP"})
 		}
 
+		if err := p.storeOTPSecret(c, user.ID, secret); err != nil {
+			return c.Status(fiber.StatusInternalServerError).JSON(fiber.Map{"error": "failed to persist OTP setup"})
+		}
+
 		return c.JSON(fiber.Map{
 			"secret":  secret,
 			"qr_code": url,
@@ -365,6 +378,12 @@ func (p *AuthPlugin) EnableOTPHandler() fiber.Handler {
 // VerifyOTPHandler returns a handler that verifies an OTP code.
 func (p *AuthPlugin) VerifyOTPHandler() fiber.Handler {
 	return func(c fiber.Ctx) error {
+		userAny := c.Locals("user")
+		user, ok := userAny.(*User)
+		if !ok || user == nil || user.ID == "" {
+			return c.Status(fiber.StatusUnauthorized).JSON(fiber.Map{"success": false, "error": "verification failed"})
+		}
+
 		var req struct {
 			Secret string `json:"secret"`
 			Code   string `json:"code"`
@@ -373,15 +392,17 @@ func (p *AuthPlugin) VerifyOTPHandler() fiber.Handler {
 			return c.Status(fiber.StatusBadRequest).JSON(fiber.Map{"error": "invalid request"})
 		}
 
-		rateKey := c.IP()
-		if u, ok := c.Locals("user").(*User); ok {
-			rateKey = "user:" + u.ID
+		secret, err := p.resolveOTPSecret(c, user.ID)
+		if err != nil || secret == "" {
+			return c.Status(fiber.StatusUnauthorized).JSON(fiber.Map{"success": false, "error": "verification failed"})
 		}
 
+		rateKey := fmt.Sprintf("otp:user:%s:ip:%s", user.ID, c.IP())
+
 		if p.storage != nil {
-			return p.verifyOTPWithStorage(c, rateKey, req.Secret, req.Code)
+			return p.verifyOTPWithStorage(c, rateKey, secret, req.Code)
 		}
-		return p.verifyOTPInMemory(c, rateKey, req.Secret, req.Code)
+		return p.verifyOTPInMemory(c, rateKey, secret, req.Code)
 	}
 }
 
@@ -572,8 +593,12 @@ func (p *AuthPlugin) Name() string {
 
 // Init initializes the auth plugin.
 func (p *AuthPlugin) Init() error {
-	// Create output directory
-	if err := os.MkdirAll(p.config.OutputDir, 0750); err != nil {
+	outputDir, err := pathsafety.ResolvePath(".", p.config.OutputDir, p.config.AllowOutputEscape)
+	if err != nil {
+		return fmt.Errorf("invalid auth output directory %q: %w", p.config.OutputDir, err)
+	}
+
+	if err := os.MkdirAll(outputDir, 0750); err != nil {
 		return fmt.Errorf("failed to create output directory: %w", err)
 	}
 	return nil
@@ -680,7 +705,10 @@ func (p *AuthPlugin) Commands() []plugin.Command {
 
 // generateAuthCode generates authentication code files.
 func (p *AuthPlugin) generateAuthCode(projectDir string) error {
-	outputDir := filepath.Join(projectDir, p.config.OutputDir)
+	outputDir, err := pathsafety.ResolvePath(projectDir, p.config.OutputDir, p.config.AllowOutputEscape)
+	if err != nil {
+		return fmt.Errorf("invalid auth output directory %q: %w", p.config.OutputDir, err)
+	}
 
 	// Generate JWT utilities
 	if err := p.generateJWTCode(outputDir); err != nil {
@@ -701,6 +729,31 @@ func (p *AuthPlugin) generateAuthCode(projectDir string) error {
 
 	fmt.Println("Generated authentication code in", outputDir)
 	return nil
+}
+
+func otpSecretStorageKey(userID string) string {
+	return otpSecretStoragePrefix + userID
+}
+
+func (p *AuthPlugin) storeOTPSecret(c fiber.Ctx, userID, secret string) error {
+	if userID == "" || secret == "" || p.storage == nil {
+		return nil
+	}
+	return p.storage.Set(c.Context(), otpSecretStorageKey(userID), []byte(secret), 0)
+}
+
+func (p *AuthPlugin) resolveOTPSecret(c fiber.Ctx, userID string) (string, error) {
+	if p.config.ResolveOTPSecret != nil {
+		return p.config.ResolveOTPSecret(userID)
+	}
+	if p.storage == nil {
+		return "", fmt.Errorf("no otp secret resolver configured")
+	}
+	b, err := p.storage.Get(c.Context(), otpSecretStorageKey(userID))
+	if err != nil {
+		return "", err
+	}
+	return string(b), nil
 }
 
 // generateJWTCode generates JWT utilities.

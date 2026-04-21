@@ -39,3 +39,13 @@ func TestDecodeRemoteActionBody_UseNumber(t *testing.T) {
 		t.Fatalf("expected json.Number, got %T", m["n"])
 	}
 }
+
+func TestDecodeRemoteActionBody_RejectsTrailingJSON(t *testing.T) {
+	_, err := decodeRemoteActionBody([]byte(`{"ok":true} {"extra":1}`))
+	if err == nil {
+		t.Fatal("expected trailing JSON payload to be rejected")
+	}
+	if !strings.Contains(err.Error(), "trailing") {
+		t.Fatalf("expected trailing data error, got %v", err)
+	}
+}

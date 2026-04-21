@@ -9,6 +9,7 @@ import (
 	"fmt"
 	"log/slog"
 	"os"
+	"regexp"
 	"strings"
 	"time"
 
@@ -21,6 +22,8 @@ import (
 	json "github.com/goccy/go-json"
 	gofiber "github.com/gofiber/fiber/v3"
 )
+
+var csrfTokenPattern = regexp.MustCompile(`^[A-Fa-f0-9]{64}$`)
 
 // Config holds the SPA middleware configuration.
 type Config struct {
@@ -115,8 +118,12 @@ func StateMiddleware(config Config) gofiber.Handler {
 		// Encode appends a trailing newline; trim it for inline embedding.
 		escapedJSON := strings.TrimRight(buf.String(), "\n")
 		stateScript := `<script` + nonceAttr + `>window.__GOSPA_STATE__ = ` + escapedJSON + `;`
-		if csrfToken != "" {
-			stateScript += `window.__GOSPA_CSRF_TOKEN__ = "` + csrfToken + `";`
+		if isValidCSRFToken(csrfToken) {
+			csrfJSON, err := stdjson.Marshal(csrfToken)
+			if err != nil {
+				return err
+			}
+			stateScript += `window.__GOSPA_CSRF_TOKEN__ = ` + string(csrfJSON) + `;`
 		}
 		stateScript += `</script>`
 
@@ -190,8 +197,20 @@ func CSRFSetTokenMiddleware() gofiber.Handler {
 
 		// Keep token stable across tabs/requests unless it doesn't exist.
 		if existing := c.Cookies("csrf_token"); existing != "" {
-			c.Locals("gospa.csrf_token", existing)
-			return c.Next()
+			if isValidCSRFToken(existing) {
+				c.Locals("gospa.csrf_token", existing)
+				return c.Next()
+			}
+			c.Cookie(&gofiber.Cookie{
+				Name:     "csrf_token",
+				Value:    "",
+				HTTPOnly: true,
+				SameSite: "Strict",
+				Secure:   isHTTPS(c),
+				Path:     "/",
+				Expires:  time.Unix(0, 0),
+				MaxAge:   -1,
+			})
 		}
 
 		token, err := generateCSRFToken()
@@ -212,6 +231,10 @@ func CSRFSetTokenMiddleware() gofiber.Handler {
 
 		return c.Next()
 	}
+}
+
+func isValidCSRFToken(token string) bool {
+	return csrfTokenPattern.MatchString(token)
 }
 
 // generateCSRFToken creates a random CSRF token.

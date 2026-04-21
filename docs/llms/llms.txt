@@ -9,29 +9,29 @@
 
 ### Getting Started
 
-[tutorial](docs/getstarted/tutorial.md)
-  - Size: 8321 bytes
-
 [structure](docs/getstarted/structure.md)
   - Size: 3430 bytes
 
 [quickstart](docs/getstarted/quickstart.md)
-  - Size: 2429 bytes
+  - Size: 2622 bytes
 
 [installation](docs/getstarted/installation.md)
-  - Size: 1108 bytes
+  - Size: 1363 bytes
+
+[tutorial](docs/getstarted/tutorial.md)
+  - Size: 8321 bytes
 
 
 ### SFC Components
 
 [gospasfc](docs/gospasfc.md)
-  - Size: 199 bytes
-
-[examples](docs/gospasfc/examples.md)
-  - Size: 678 bytes
+  - Size: 2091 bytes
 
 [advanced](docs/gospasfc/advanced.md)
   - Size: 914 bytes
+
+[examples](docs/gospasfc/examples.md)
+  - Size: 678 bytes
 
 [getting-started](docs/gospasfc/getting-started.md)
   - Size: 1645 bytes
@@ -52,19 +52,19 @@
 ### Routing
 
 [routing](docs/routing.md)
-  - Size: 155 bytes
-
-[dynamic](docs/routing/dynamic.md)
-  - Size: 1184 bytes
+  - Size: 2555 bytes
 
 [api](docs/routing/api.md)
   - Size: 1054 bytes
 
+[navigation](docs/routing/navigation.md)
+  - Size: 1406 bytes
+
 [layouts](docs/routing/layouts.md)
   - Size: 2131 bytes
 
-[navigation](docs/routing/navigation.md)
-  - Size: 1406 bytes
+[dynamic](docs/routing/dynamic.md)
+  - Size: 1214 bytes
 
 
 ### State Management
@@ -72,23 +72,20 @@
 [client](docs/state-management/client.md)
   - Size: 985 bytes
 
-[state-management](docs/state-management.md)
-  - Size: 211 bytes
-
-[sync](docs/state-management/sync.md)
-  - Size: 1205 bytes
+[patterns](docs/state-management/patterns.md)
+  - Size: 1154 bytes
 
 [server](docs/state-management/server.md)
   - Size: 1297 bytes
 
-[patterns](docs/state-management/patterns.md)
-  - Size: 1154 bytes
+[sync](docs/state-management/sync.md)
+  - Size: 1205 bytes
+
+[state-management](docs/state-management.md)
+  - Size: 2231 bytes
 
 
 ### Client Runtime
-
-[websocket](docs/client-runtime/websocket.md)
-  - Size: 1514 bytes
 
 [dom-bindings](docs/client-runtime/dom-bindings.md)
   - Size: 3828 bytes
@@ -96,26 +93,29 @@
 [navigation-events](docs/client-runtime/navigation-events.md)
   - Size: 3227 bytes
 
-[overview](docs/client-runtime/overview.md)
-  - Size: 2760 bytes
+[websocket](docs/client-runtime/websocket.md)
+  - Size: 1514 bytes
 
 [transitions](docs/client-runtime/transitions.md)
   - Size: 2045 bytes
 
+[overview](docs/client-runtime/overview.md)
+  - Size: 2760 bytes
+
 
 ### Configuration
-
-[websocket](docs/configuration/websocket.md)
-  - Size: 1894 bytes
-
-[basic](docs/configuration/basic.md)
-  - Size: 1695 bytes
 
 [scaling](docs/configuration/scaling.md)
   - Size: 2112 bytes
 
+[basic](docs/configuration/basic.md)
+  - Size: 1695 bytes
+
+[websocket](docs/configuration/websocket.md)
+  - Size: 1894 bytes
+
 [configuration](docs/configuration.md)
-  - Size: 287 bytes
+  - Size: 2067 bytes
 
 
 ### Plugins
@@ -124,22 +124,22 @@
   - Size: 386 bytes
 
 [plugins](docs/plugins.md)
-  - Size: 261 bytes
+  - Size: 1884 bytes
 
 [validation](docs/plugins/validation.md)
-  - Size: 513 bytes
+  - Size: 844 bytes
 
 [tailwind](docs/plugins/tailwind.md)
   - Size: 842 bytes
 
 [seo](docs/plugins/seo.md)
-  - Size: 541 bytes
+  - Size: 724 bytes
 
 [auth](docs/plugins/auth.md)
-  - Size: 527 bytes
+  - Size: 973 bytes
 
 [image](docs/plugins/image.md)
-  - Size: 654 bytes
+  - Size: 1029 bytes
 
 [postcss](docs/plugins/postcss.md)
   - Size: 1034 bytes
@@ -150,26 +150,29 @@
 [js](docs/reactive-primitives/js.md)
   - Size: 1099 bytes
 
-[advanced](docs/reactive-primitives/advanced.md)
-  - Size: 1248 bytes
+[reactive-primitives](docs/reactive-primitives.md)
+  - Size: 1923 bytes
 
 [go](docs/reactive-primitives/go.md)
   - Size: 1065 bytes
 
-[reactive-primitives](docs/reactive-primitives.md)
-  - Size: 221 bytes
+[advanced](docs/reactive-primitives/advanced.md)
+  - Size: 1248 bytes
 
 
 ### API Reference
 
-[api](docs/api.md)
-  - Size: 123 bytes
+[sse](docs/api/sse.md)
+  - Size: 1900 bytes
+
+[remote-actions](docs/api/remote-actions.md)
+  - Size: 2130 bytes
 
 [client](docs/api/client.md)
   - Size: 21 bytes
 
 [core](docs/api/core.md)
-  - Size: 34082 bytes
+  - Size: 34088 bytes
 
 [fiber](docs/api/fiber.md)
   - Size: 24 bytes
@@ -180,6 +183,12 @@
 [state](docs/api/state.md)
   - Size: 23 bytes
 
+[websocket](docs/api/websocket.md)
+  - Size: 2232 bytes
+
+[api](docs/api.md)
+  - Size: 2163 bytes
+
 
 ### Troubleshooting
 
@@ -189,52 +198,52 @@
 
 ### Other
 
-[faq](docs/faq.md)
-  - Size: 6 bytes
+[security](docs/security.md)
+  - Size: 5883 bytes
 
-[sse](docs/sse.md)
-  - Size: 21 bytes
+[hmr](docs/hmr.md)
+  - Size: 1642 bytes
 
 [errors](docs/errors.md)
-  - Size: 17 bytes
-
-[components](docs/components.md)
-  - Size: 12764 bytes
-
-[cli](docs/cli.md)
-  - Size: 18983 bytes
-
-[root](docs/root.md)
-  - Size: 21 bytes
-
-[runtime](docs/runtime.md)
-  - Size: 15 bytes
+  - Size: 1302 bytes
 
 [devtools](docs/devtools.md)
-  - Size: 23 bytes
+  - Size: 1945 bytes
+
+[README](docs/README.md)
+  - Size: 2693 bytes
+
+[faq](docs/faq.md)
+  - Size: 1575 bytes
+
+[cli](docs/cli.md)
+  - Size: 18978 bytes
+
+[components](docs/components.md)
+  - Size: 13710 bytes
+
+[runtime](docs/runtime.md)
+  - Size: 1929 bytes
+
+[params](docs/params.md)
+  - Size: 1809 bytes
 
 [rendering](docs/rendering.md)
   - Size: 12488 bytes
 
-[remote-actions](docs/remote-actions.md)
-  - Size: 17 bytes
-
-[params](docs/params.md)
-  - Size: 17 bytes
-
-[README](docs/README.md)
-  - Size: 2899 bytes
-
-[hmr](docs/hmr.md)
-  - Size: 25 bytes
+[runtime](docs/internals/runtime.md)
+  - Size: 2189 bytes
 
 [islands](docs/islands.md)
   - Size: 7749 bytes
 
-[websocket](docs/websocket.md)
-  - Size: 28 bytes
+[storage](docs/storage.md)
+  - Size: 2462 bytes
+
+[root](docs/root.md)
+  - Size: 2109 bytes
 
 
 ## File Summary
 
-Total documentation files: 65
+Total documentation files: 68

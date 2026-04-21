@@ -2,6 +2,12 @@
 
 This directory is the **authoritative** Markdown documentation for GoSPA.
 
+## Source-of-truth policy
+
+- `docs/**` is canonical for technical content, APIs, and version requirements.
+- `website/routes/docs/**` is a rendered presentation layer and must not diverge semantically from `docs/**`.
+- Any docs change that affects URLs, taxonomy, or prerequisites must update both markdown links and website routes/search index in the same change.
+
 ## How to use these docs
 
 1. **Start:** [Quick start](getstarted/quickstart.md)
@@ -17,9 +23,9 @@ docs/
 ├── routing.md           # File-based routing & rendering
 ├── state-management.md  # Reactive state synchronization
 ├── reactive-primitives.md # Rune, Derived, Effect, EffectScope
-├── remote-actions.md    # Type-safe RPC / Remote Actions
-├── websocket.md         # High-performance real-time sync
-├── sse.md               # Server-Sent Events guide
+├── api/remote-actions.md # Type-safe RPC / Remote Actions
+├── api/websocket.md      # High-performance real-time sync
+├── api/sse.md            # Server-Sent Events guide
 ├── plugins.md           # Framework extensions & lifecycle
 ├── devtools.md          # Debugging, Error Overlay, HMR
 ├── runtime.md           # Client runtime lifecycle & hydration
@@ -42,13 +48,13 @@ docs/
 - [State Management](state-management.md)
 - [Components & Islands](islands.md)
 - [File-based Routing](routing.md)
-- [Remote Actions](remote-actions.md)
+- [Remote Actions](api/remote-actions.md)
 - [Single File Components (.gospa)](gospasfc.md)
 
 ### Advanced Features
 - [Security & Hardening](security.md)
-- [Realtime (WebSockets)](websocket.md)
-- [Server-Sent Events (SSE)](sse.md)
+- [Realtime (WebSockets)](api/websocket.md)
+- [Server-Sent Events (SSE)](api/sse.md)
 - [Plugin Architecture](plugins.md)
 - [Dev Tools & HMR](devtools.md)
 - [Runtime Lifecycle](runtime.md)

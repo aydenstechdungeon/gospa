@@ -593,6 +593,7 @@ func (h *WSHub) Run() {
 	for {
 		select {
 		case client := <-h.Register:
+			var oldClientToClose *WSClient
 			h.mu.Lock()
 			if oldClient, ok := h.Clients[client.ID]; ok {
 				// Cleanup existing indexing
@@ -604,7 +605,7 @@ func (h *WSHub) Run() {
 						}
 					}
 				}
-				_ = oldClient.Conn.Close()
+				oldClientToClose = oldClient
 			}
 
 			h.Clients[client.ID] = client
@@ -615,6 +616,9 @@ func (h *WSHub) Run() {
 				h.ClientsBySession[client.SessionID][client.ID] = client
 			}
 			h.mu.Unlock()
+			if oldClientToClose != nil {
+				oldClientToClose.Close()
+			}
 			slog.Default().Info("client connected", "id", client.ID)
 
 		case client := <-h.Unregister:
@@ -735,16 +739,17 @@ func (h *WSHub) dispatchBroadcast(clients []*WSClient, message []byte) {
 		select {
 		case h.jobQueue <- broadcastJob{clients: clients[i:end], message: message}:
 		default:
-			// Queue full, drop older or skip? Using direct delivery as fallback
-			// to avoid complete starvation under extreme load.
-			go func(c []*WSClient, m []byte) {
-				for _, client := range c {
-					select {
-					case client.Send <- m:
-					default:
-					}
-				}
-			}(clients[i:end], message)
+			// Queue full: bounded fallback in caller goroutine (no goroutine burst).
+			h.deliverChunkNonBlocking(clients[i:end], message)
+		}
+	}
+}
+
+func (h *WSHub) deliverChunkNonBlocking(clients []*WSClient, message []byte) {
+	for _, client := range clients {
+		select {
+		case client.Send <- message:
+		default:
 		}
 	}
 }

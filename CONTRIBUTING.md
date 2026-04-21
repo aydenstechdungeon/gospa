@@ -27,4 +27,18 @@ Please use the GitHub Issue tracker. When creating a bug report, it is highly re
 *   Prioritize explicit error checking over panicking. Only panic if you are within a `Must...` initialization sequence or standard library execution fails completely.
 *   Client-side scripts are written in Typescript and compiled via Bun. Maintain strong ESLint/Prettier defaults on all TS assets. 
 
+## 5. Dependency security exception process
+
+Security checks (`govulncheck`, `bun audit`, docs link checker) are required in CI. Temporary exceptions are allowed only when there is no compatible upstream fix.
+
+To request an exception, open a PR that includes:
+
+1. Advisory ID(s) and affected package path.
+2. Why no safe upgrade is currently possible.
+3. Scope and exploitability assessment for GoSPA.
+4. Temporary mitigation plan and owner.
+5. Expiry date (max 30 days) and follow-up issue link.
+
+Exceptions without an expiry or owner should not be merged.
+
 Thanks again!

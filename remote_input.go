@@ -25,6 +25,13 @@ func decodeRemoteActionBody(body []byte) (interface{}, error) {
 	if err := dec.Decode(&v); err != nil {
 		return nil, err
 	}
+	var trailing interface{}
+	if err := dec.Decode(&trailing); err != io.EOF {
+		if err == nil {
+			return nil, fmt.Errorf("invalid json: trailing data")
+		}
+		return nil, err
+	}
 	return v, nil
 }
 

@@ -5,6 +5,7 @@ import (
 	"bytes"
 	"fmt"
 	"io"
+	"sort"
 	"strings"
 
 	"golang.org/x/net/html"
@@ -61,6 +62,7 @@ func Parse(input string) (*SFC, error) {
 	}
 
 	// 2. Tokenize top-level blocks
+	posIndex := newPositionIndex(input)
 	rawInput := []byte(input)
 	var topLevelBlocks []Block
 	var implicitContent strings.Builder
@@ -135,7 +137,7 @@ func Parse(input string) (*SFC, error) {
 					Content:    strings.TrimSpace(content), // Trim whitespace
 					ByteOffset: contentOffset,
 				}
-				block.Line, block.Column = OffsetToPosition(input, contentOffset)
+				block.Line, block.Column = posIndex.OffsetToPosition(contentOffset)
 				topLevelBlocks = append(topLevelBlocks, block)
 
 				baseOffset += startTagRawLen + endIdx + len(endTagBytes)
@@ -195,7 +197,7 @@ func Parse(input string) (*SFC, error) {
 			Content:    strings.TrimSpace(implicitContent.String()),
 			ByteOffset: implicitStartOffset,
 		}
-		sfc.Template.Line, sfc.Template.Column = OffsetToPosition(input, implicitStartOffset)
+		sfc.Template.Line, sfc.Template.Column = posIndex.OffsetToPosition(implicitStartOffset)
 	}
 
 	if sfc.Template.Content == "" && sfc.Script.Content == "" && sfc.ScriptTS.Content == "" {
@@ -257,7 +259,10 @@ func parseFrontMatter(content string) map[string]string {
 func OffsetToPosition(input string, offset int) (int, int) {
 	line := 0
 	col := 0
-	for i := 0; i < offset && i < len(input); i++ {
+	if offset > len(input) {
+		offset = len(input)
+	}
+	for i := 0; i < offset; i++ {
 		if input[i] == '\n' {
 			line++
 			col = 0
@@ -266,6 +271,38 @@ func OffsetToPosition(input string, offset int) (int, int) {
 		}
 	}
 	return line, col
+}
+
+type positionIndex struct {
+	newlines []int
+	length   int
+}
+
+func newPositionIndex(input string) *positionIndex {
+	newlines := make([]int, 0, strings.Count(input, "\n"))
+	for i := 0; i < len(input); i++ {
+		if input[i] == '\n' {
+			newlines = append(newlines, i)
+		}
+	}
+	return &positionIndex{newlines: newlines, length: len(input)}
+}
+
+func (idx *positionIndex) OffsetToPosition(offset int) (int, int) {
+	if offset <= 0 {
+		return 0, 0
+	}
+	if offset > idx.length {
+		offset = idx.length
+	}
+	if len(idx.newlines) == 0 {
+		return 0, offset
+	}
+	line := sort.SearchInts(idx.newlines, offset)
+	if line == 0 {
+		return 0, offset
+	}
+	return line, offset - idx.newlines[line-1] - 1
 }
 
 // stringLiteralRange represents the [start, end) byte range of a Go string literal.

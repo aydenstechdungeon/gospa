@@ -47,6 +47,8 @@ type SSEClient struct {
 type SSEBroker struct {
 	// clients holds all connected clients
 	clients map[string]*SSEClient
+	// clientsByTopic provides O(1) fanout lookup by topic.
+	clientsByTopic map[string]map[string]*SSEClient
 	// mutex protects concurrent access
 	mutex sync.RWMutex
 	// authorizeSubscribe is the hook to authorize subscriptions
@@ -97,6 +99,7 @@ func NewSSEBroker(config *SSEConfig) *SSEBroker {
 
 	b := &SSEBroker{
 		clients:            make(map[string]*SSEClient),
+		clientsByTopic:     make(map[string]map[string]*SSEClient),
 		eventBufferSize:    config.EventBufferSize,
 		heartbeatInterval:  config.HeartbeatInterval,
 		onConnect:          config.OnConnect,
@@ -115,35 +118,33 @@ func NewSSEBroker(config *SSEConfig) *SSEBroker {
 			return
 		}
 
-		b.mutex.RLock()
-		defer b.mutex.RUnlock()
+		var recipients []*SSEClient
 
+		b.mutex.RLock()
 		switch {
 		case sseMsg.Target == "all":
+			recipients = make([]*SSEClient, 0, len(b.clients))
 			for _, client := range b.clients {
-				select {
-				case client.Channel <- sseMsg.Event:
-				default:
-				}
+				recipients = append(recipients, client)
 			}
 		case len(sseMsg.Target) > 6 && sseMsg.Target[:6] == "topic:":
 			topic := sseMsg.Target[6:]
-			for _, client := range b.clients {
-				if client.Topics[topic] {
-					select {
-					case client.Channel <- sseMsg.Event:
-					default:
-					}
+			if topicClients, ok := b.clientsByTopic[topic]; ok {
+				recipients = make([]*SSEClient, 0, len(topicClients))
+				for _, client := range topicClients {
+					recipients = append(recipients, client)
 				}
 			}
 		case len(sseMsg.Target) > 7 && sseMsg.Target[:7] == "client:":
 			clientID := sseMsg.Target[7:]
 			if client, exists := b.clients[clientID]; exists {
-				select {
-				case client.Channel <- sseMsg.Event:
-				default:
-				}
+				recipients = append(recipients, client)
 			}
+		}
+		b.mutex.RUnlock()
+
+		for _, client := range recipients {
+			trySendSSEEvent(client, sseMsg.Event)
 		}
 	})
 
@@ -154,6 +155,19 @@ func NewSSEBroker(config *SSEConfig) *SSEBroker {
 func (b *SSEBroker) Connect(clientID string, metadata ...map[string]any) *SSEClient {
 	b.mutex.Lock()
 	defer b.mutex.Unlock()
+
+	if clientID == "" {
+		clientID = generateClientID()
+	}
+	if _, exists := b.clients[clientID]; exists {
+		for {
+			generatedID := generateClientID()
+			if _, inUse := b.clients[generatedID]; !inUse {
+				clientID = generatedID
+				break
+			}
+		}
+	}
 
 	client := &SSEClient{
 		ID:          clientID,
@@ -181,7 +195,14 @@ func (b *SSEBroker) Disconnect(clientID string) {
 	defer b.mutex.Unlock()
 
 	if client, exists := b.clients[clientID]; exists {
-		close(client.Channel)
+		for topic := range client.Topics {
+			if topicClients, ok := b.clientsByTopic[topic]; ok {
+				delete(topicClients, clientID)
+				if len(topicClients) == 0 {
+					delete(b.clientsByTopic, topic)
+				}
+			}
+		}
 		delete(b.clients, clientID)
 
 		if b.onDisconnect != nil {
@@ -198,6 +219,10 @@ func (b *SSEBroker) Subscribe(clientID string, topics ...string) {
 	if client, exists := b.clients[clientID]; exists {
 		for _, topic := range topics {
 			client.Topics[topic] = true
+			if b.clientsByTopic[topic] == nil {
+				b.clientsByTopic[topic] = make(map[string]*SSEClient)
+			}
+			b.clientsByTopic[topic][clientID] = client
 		}
 	}
 }
@@ -210,6 +235,12 @@ func (b *SSEBroker) Unsubscribe(clientID string, topics ...string) {
 	if client, exists := b.clients[clientID]; exists {
 		for _, topic := range topics {
 			delete(client.Topics, topic)
+			if topicClients, ok := b.clientsByTopic[topic]; ok {
+				delete(topicClients, clientID)
+				if len(topicClients) == 0 {
+					delete(b.clientsByTopic, topic)
+				}
+			}
 		}
 	}
 }
@@ -265,10 +296,8 @@ func (b *SSEBroker) GetClientsByTopic(topic string) []*SSEClient {
 	defer b.mutex.RUnlock()
 
 	var clients []*SSEClient
-	for _, client := range b.clients {
-		if client.Topics[topic] {
-			clients = append(clients, client)
-		}
+	for _, client := range b.clientsByTopic[topic] {
+		clients = append(clients, client)
 	}
 	return clients
 }
@@ -284,21 +313,18 @@ func (b *SSEBroker) SSEHandler(clientIDFunc func(fiberpkg.Ctx) string) fiberpkg.
 
 		// Get client ID
 		clientID := clientIDFunc(c)
-		if clientID == "" {
-			clientID = generateClientID()
-		}
 
 		// Connect client
 		client := b.Connect(clientID, map[string]any{
 			"remote_addr": c.IP(),
 			"user_agent":  c.Get("User-Agent"),
 		})
-		defer b.Disconnect(clientID)
+		defer b.Disconnect(client.ID)
 
 		// Send connected event
-		b.Send(clientID, SSEEvent{
+		b.Send(client.ID, SSEEvent{
 			Event: "connected",
-			Data:  map[string]any{"clientId": clientID},
+			Data:  map[string]any{"clientId": client.ID},
 		})
 
 		// Start heartbeat
@@ -521,7 +547,7 @@ func SetupSSE(app *fiberpkg.App, broker *SSEBroker, basePath string, corsConfig 
 	}
 
 	sse.Get("/connect", broker.SSEHandler(func(c fiberpkg.Ctx) string {
-		return c.Query("clientId", "")
+		return ""
 	}))
 
 	sse.Post("/subscribe", broker.SSESubscribeHandler())
@@ -532,6 +558,16 @@ func SetupSSE(app *fiberpkg.App, broker *SSEBroker, basePath string, corsConfig 
 			"clientCount": broker.ClientCount(),
 		})
 	})
+}
+
+func trySendSSEEvent(client *SSEClient, event SSEEvent) {
+	defer func() {
+		_ = recover()
+	}()
+	select {
+	case client.Channel <- event:
+	default:
+	}
 }
 
 // SSEHelper provides helper methods for common SSE patterns.

@@ -126,6 +126,9 @@ For prefork deployments, add external `Storage` and `PubSub` backends so state a
 
 Explore the full GoSPA documentation:
 
+- Source of truth policy: `docs/**` is canonical; website docs pages (`website/routes/docs/**`) must mirror this content and route taxonomy.
+- When in doubt, update `docs/README.md` first, then sync website routes and search index.
+
 - [**Reactive Primitives**](docs/reactive-primitives.md) - `Rune`, `Derived`, `Effect`, and `EffectScope`.
 - [**State Management**](docs/state-management.md) - Server-to-client state synchronization.
 - [**File-Based Routing**](docs/routing.md) - Layouts, pages, and rendering strategies.

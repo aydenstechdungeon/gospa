@@ -26,6 +26,41 @@ import (
 	"github.com/gofiber/fiber/v3/middleware/static"
 )
 
+const islandsRoutePrefix = "/islands/"
+
+func safeIslandTSPath(requestPath string) (string, int, error) {
+	relPath := strings.TrimPrefix(requestPath, islandsRoutePrefix)
+	if relPath == requestPath {
+		return "", fiberpkg.StatusBadRequest, fmt.Errorf("invalid islands request path")
+	}
+	if relPath == "" || strings.ContainsRune(relPath, '\x00') {
+		return "", fiberpkg.StatusBadRequest, fmt.Errorf("invalid islands request path")
+	}
+
+	cleanRel := filepath.Clean(filepath.FromSlash(relPath))
+	if filepath.IsAbs(cleanRel) || cleanRel == "." || cleanRel == ".." || strings.HasPrefix(cleanRel, ".."+string(filepath.Separator)) {
+		return "", fiberpkg.StatusForbidden, fmt.Errorf("forbidden islands path")
+	}
+	if filepath.Ext(cleanRel) != ".js" {
+		return "", fiberpkg.StatusBadRequest, fmt.Errorf("invalid islands module extension")
+	}
+
+	targetRel := strings.TrimSuffix(cleanRel, ".js") + ".ts"
+	baseAbs, err := filepath.Abs("generated")
+	if err != nil {
+		return "", fiberpkg.StatusInternalServerError, fmt.Errorf("failed to resolve islands base path")
+	}
+	targetAbs, err := filepath.Abs(filepath.Join(baseAbs, targetRel))
+	if err != nil {
+		return "", fiberpkg.StatusInternalServerError, fmt.Errorf("failed to resolve islands file path")
+	}
+	if !strings.HasPrefix(targetAbs, baseAbs+string(filepath.Separator)) {
+		return "", fiberpkg.StatusForbidden, fmt.Errorf("forbidden islands path")
+	}
+
+	return targetAbs, 0, nil
+}
+
 // App is the main GoSPA application.
 type App struct {
 	// Config is the application configuration.
@@ -290,13 +325,17 @@ func (a *App) setupRoutes() {
 	}))
 
 	// Serve dynamically compiled island modules with proper MIME type
-	a.Fiber.Use("/islands/", func(c fiberpkg.Ctx) error {
+	a.Fiber.Use(islandsRoutePrefix, func(c fiberpkg.Ctx) error {
 		path := c.Path()
 		if strings.HasSuffix(path, ".js") {
 			c.Set("Content-Type", "application/javascript")
-			// Strip prefix and check if .ts counterpart exists in generated/
-			relPath := strings.TrimPrefix(path, "/islands/")
-			tsPath := filepath.Join("generated", strings.TrimSuffix(relPath, ".js")+".ts")
+			tsPath, code, err := safeIslandTSPath(path)
+			if err != nil {
+				if code == fiberpkg.StatusForbidden || code == fiberpkg.StatusBadRequest {
+					return c.Status(code).SendString(err.Error())
+				}
+				return c.Status(fiberpkg.StatusInternalServerError).SendString("internal islands path error")
+			}
 			if _, err := os.Stat(tsPath); err == nil {
 				return c.SendFile(tsPath)
 			}
@@ -710,7 +749,7 @@ func (a *App) registerPageRoute(r *routing.Route) {
 		}
 	}
 	handlers = append(handlers, func(c fiberpkg.Ctx) error {
-		return a.renderRoute(c, r)
+		return a.renderRoute(c, r, extractRouteParams(c, r))
 	})
 	a.Fiber.Get(r.Path, handlers[0], handlers[1:]...)
 
