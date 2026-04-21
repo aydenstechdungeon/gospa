@@ -69,6 +69,7 @@ export class SSEClient {
   private stateHandlers: Set<SSEStateHandler> = new Set();
   private lastEventId: string | null = null;
   private heartbeatTimer: ReturnType<typeof setInterval> | null = null;
+  private connectionTimeoutTimer: ReturnType<typeof setTimeout> | null = null;
   private missedHeartbeats = 0;
   private isIntentionallyClosed = false;
 
@@ -229,6 +230,7 @@ export class SSEClient {
 
       // Connection opened
       this.eventSource.onopen = () => {
+        this.clearConnectionTimeout();
         this.log("Connection opened");
         this.setState("connected");
         this.reconnectAttempts = 0;
@@ -243,10 +245,21 @@ export class SSEClient {
 
       // Error handler
       this.eventSource.onerror = (event: Event) => {
+        this.clearConnectionTimeout();
         this.log("Connection error:", event);
         this.setState("error");
         this.handleError(new Error("SSE connection error"));
       };
+
+      if (this.config.timeout > 0) {
+        this.connectionTimeoutTimer = setTimeout(() => {
+          if (this.connectionState === "connected") return;
+          this.log(`Connection timeout after ${this.config.timeout}ms`);
+          this.setState("error");
+          this.handleError(new Error("SSE connection timeout"));
+          this.cleanup();
+        }, this.config.timeout);
+      }
 
       // Listen for custom events
       this.setupCustomEventListeners();
@@ -414,6 +427,13 @@ export class SSEClient {
     }
   }
 
+  private clearConnectionTimeout(): void {
+    if (this.connectionTimeoutTimer) {
+      clearTimeout(this.connectionTimeoutTimer);
+      this.connectionTimeoutTimer = null;
+    }
+  }
+
   /**
    * Set connection state
    */
@@ -437,6 +457,7 @@ export class SSEClient {
    */
   private cleanup(): void {
     this.stopHeartbeatMonitor();
+    this.clearConnectionTimeout();
 
     if (this.reconnectTimeout) {
       clearTimeout(this.reconnectTimeout);

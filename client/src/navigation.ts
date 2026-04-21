@@ -4,6 +4,7 @@ declare global {
 
 import { reactive } from "./signals.ts";
 import { Idiomorph } from "./idiomorph.ts";
+import { toHTMLString } from "./html-policy.ts";
 
 // Navigation state
 const state = reactive({
@@ -489,8 +490,8 @@ async function prepareContent(html: string): Promise<string> {
 
 // Sanitize HTML for data-bind="html:*" bindings
 // Trusts server-provided HTML per the "trust-the-server" model.
-async function sanitizeHTML(html: string): Promise<string> {
-  return html;
+async function sanitizeHTML(html: unknown): Promise<string> {
+  return toHTMLString(html);
 }
 
 // Smart Morphing with Layout Reconciliation
@@ -689,8 +690,13 @@ function updateHead(newDoc: Document): void {
     document.title = newTitle;
   }
 
-  // Track which GoSPA-managed elements are still needed
-  const neededSelectors = new Set<string>();
+  const neededLinkHrefs = new Set<string>();
+  const neededMetaNames = new Set<string>();
+  const neededMetaProperties = new Set<string>();
+  const neededMetaHttpEquivs = new Set<string>();
+  const neededStyleIds = new Set<string>();
+  const neededScriptSrcs = new Set<string>();
+  let hasInlineManagedScript = false;
 
   // 2. Smart reconciliation for link tags (CSS)
   // Never remove existing stylesheets to avoid FOUC (Flash of Unstyled Content)
@@ -701,7 +707,7 @@ function updateHead(newDoc: Document): void {
 
     // Build a unique selector for tracking
     const selector = href ? `link[href="${escapeSelectorValue(href)}"]` : null;
-    if (selector) neededSelectors.add(selector);
+    if (href) neededLinkHrefs.add(href);
 
     // Check if this link already exists in the document
     const existingEl = selector ? document.head.querySelector(selector) : null;
@@ -731,7 +737,9 @@ function updateHead(newDoc: Document): void {
       selector = `meta[http-equiv="${escapeSelectorValue(httpEquiv)}"]`;
     }
 
-    if (selector) neededSelectors.add(selector);
+    if (name) neededMetaNames.add(name);
+    if (property) neededMetaProperties.add(property);
+    if (httpEquiv) neededMetaHttpEquivs.add(httpEquiv);
 
     const existingEl = selector ? document.head.querySelector(selector) : null;
 
@@ -754,7 +762,7 @@ function updateHead(newDoc: Document): void {
     const id = newEl.id;
     const selector = id ? `style#${id}` : null;
 
-    if (selector) neededSelectors.add(selector);
+    if (id) neededStyleIds.add(id);
 
     const existingEl = selector ? document.head.querySelector(selector) : null;
 
@@ -768,11 +776,11 @@ function updateHead(newDoc: Document): void {
   // 5. Handle scripts separately if marked
   newHead.querySelectorAll("script[data-gospa-head]").forEach((el) => {
     const src = el.getAttribute("src");
-    const selector = src
-      ? `script[src="${escapeSelectorValue(src)}"]`
-      : `script`;
-
-    neededSelectors.add(selector);
+    if (src) {
+      neededScriptSrcs.add(src);
+    } else {
+      hasInlineManagedScript = true;
+    }
 
     const existingEl = src
       ? document.head.querySelector(`script[src="${escapeSelectorValue(src)}"]`)
@@ -793,64 +801,30 @@ function updateHead(newDoc: Document): void {
   const existingGoSPAElements =
     document.head.querySelectorAll("[data-gospa-head]");
   existingGoSPAElements.forEach((el) => {
-    let shouldRemove = true;
+    let shouldRemove = false;
 
-    // Check if this element matches any of the needed selectors
-    for (const needed of neededSelectors) {
-      if (el.matches(needed)) {
-        shouldRemove = false;
-        break;
-      }
-    }
-
-    // For link and meta elements, also check by attribute patterns
     if (el.matches("link[href]")) {
       const href = el.getAttribute("href");
-      if (
-        href &&
-        neededSelectors.has(`link[href="${escapeSelectorValue(href)}"]`)
-      ) {
-        shouldRemove = false;
-      }
+      shouldRemove = !href || !neededLinkHrefs.has(href);
     } else if (el.matches("meta[name]")) {
       const name = el.getAttribute("name");
-      if (
-        name &&
-        neededSelectors.has(`meta[name="${escapeSelectorValue(name)}"]`)
-      ) {
-        shouldRemove = false;
-      }
+      shouldRemove = !name || !neededMetaNames.has(name);
     } else if (el.matches("meta[property]")) {
       const property = el.getAttribute("property");
-      if (
-        property &&
-        neededSelectors.has(`meta[property="${escapeSelectorValue(property)}"]`)
-      ) {
-        shouldRemove = false;
-      }
+      shouldRemove = !property || !neededMetaProperties.has(property);
     } else if (el.matches("meta[http-equiv]")) {
       const httpEquiv = el.getAttribute("http-equiv");
-      if (
-        httpEquiv &&
-        neededSelectors.has(
-          `meta[http-equiv="${escapeSelectorValue(httpEquiv)}"]`,
-        )
-      ) {
-        shouldRemove = false;
-      }
+      shouldRemove = !httpEquiv || !neededMetaHttpEquivs.has(httpEquiv);
     } else if (el.matches("style[id]")) {
       const id = el.id;
-      if (id && neededSelectors.has(`style#${id}`)) {
-        shouldRemove = false;
-      }
+      shouldRemove = !id || !neededStyleIds.has(id);
     } else if (el.matches("script[data-gospa-head]")) {
       const src = el.getAttribute("src");
-      if (
-        src &&
-        neededSelectors.has(`script[src="${escapeSelectorValue(src)}"]`)
-      ) {
-        shouldRemove = false;
-      }
+      shouldRemove = src
+        ? !neededScriptSrcs.has(src)
+        : !hasInlineManagedScript;
+    } else {
+      shouldRemove = true;
     }
 
     if (shouldRemove) {
@@ -947,7 +921,7 @@ async function initDeferredBindings(
           break;
         case "html":
           // FIX: Sanitize HTML content to prevent XSS
-          element.innerHTML = await sanitizeHTML(value as string);
+          element.innerHTML = await sanitizeHTML(value);
           break;
         case "value":
           (element as HTMLInputElement).value = value;
@@ -1430,7 +1404,18 @@ export async function prefetch(path: string): Promise<void> {
   // Throttle prefetch under main thread pressure to improve INP
   if ((navigator as any).scheduling?.isInputPending?.()) {
     // Reschedule for next idle period instead of blocking main thread
-    requestIdleCallback(() => { void prefetch(path); }, { timeout: 1000 });
+    if ("requestIdleCallback" in window) {
+      (window as any).requestIdleCallback(
+        () => {
+          void prefetch(path);
+        },
+        { timeout: 1000 },
+      );
+    } else {
+      setTimeout(() => {
+        void prefetch(path);
+      }, 0);
+    }
     return;
   }
 

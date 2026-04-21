@@ -122,6 +122,8 @@ config.AppName = "myapp"
 
 For prefork deployments, add external `Storage` and `PubSub` backends so state and realtime traffic stay consistent across workers.
 
+Dynamic HTML (`data-bind="html:*"` and stream HTML chunks) is escaped by default in the runtime. If you need to render raw HTML, only use trusted server-controlled content.
+
 ## Documentation
 
 Explore the full GoSPA documentation:

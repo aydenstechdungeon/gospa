@@ -45,12 +45,7 @@ import { Rune, Effect, navigate } from '@gospa/client';`,
 						<tr class="border-b border-[var(--border)]">
 							<td class="py-3 px-4"><code class=" text-[var(--accent-primary)]">runtime.js (default full runtime)</code></td>
 							<td class="py-3 px-4">~15KB</td>
-							<td class="py-3 px-4">Full runtime without DOMPurify (server-trust model)</td>
-						</tr>
-						<tr class="border-b border-[var(--border)]">
-							<td class="py-3 px-4"><code class=" text-[var(--accent-primary)]">runtime-secure.js</code></td>
-							<td class="py-3 px-4">~35KB</td>
-							<td class="py-3 px-4">Full runtime + DOMPurify sanitizer for untrusted HTML/UGC</td>
+							<td class="py-3 px-4">Full runtime with escaped dynamic HTML by default (server-trust model)</td>
 						</tr>
 					</tbody>
 				</table>
@@ -346,10 +341,10 @@ init({
 					<div class="font-bold group-hover:text-[var(--accent-primary)] transition-colors">Islands</div>
 				</div>
 			</a>
-			<a href="/docs/client-runtime/runtime-api" class="group flex items-center gap-3 px-6 py-3 rounded-xl border border-[var(--border)] bg-[var(--bg-secondary)] hover:border-[var(--accent-primary)]/50 transition-all text-right">
+			<a href="/docs/api/client" class="group flex items-center gap-3 px-6 py-3 rounded-xl border border-[var(--border)] bg-[var(--bg-secondary)] hover:border-[var(--accent-primary)]/50 transition-all text-right">
 				<div>
 					<div class="text-[var(--text-muted)] text-xs uppercase tracking-widest font-bold mb-1">Next</div>
-					<div class="font-bold group-hover:text-[var(--accent-primary)] transition-colors">Runtime API</div>
+					<div class="font-bold group-hover:text-[var(--accent-primary)] transition-colors">Client API</div>
 				</div>
 				<svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="text-[var(--text-muted)] group-hover:text-[var(--accent-primary)] transition-colors"><path d=" M5 12h14"></path><path d=" m12 5 7 7-7 7"></path></svg>
 			</a>

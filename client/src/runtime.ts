@@ -55,6 +55,8 @@ export {
   bindTwoWay,
   renderIf,
   renderList,
+  trustedHTML,
+  type TrustedHTMLValue,
 } from "./runtime-core.ts";
 
 // Remote Actions (Imported directly for Full bundle)

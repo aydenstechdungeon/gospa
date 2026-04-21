@@ -10,6 +10,7 @@ export type BindingHandler = (
   elementVersions?: WeakMap<Element, number>,
 ) => void | Promise<void>;
 
+import { toHTMLString } from "../html-policy.ts";
 
 
 export const handlers: Record<string, BindingHandler> = {
@@ -22,7 +23,7 @@ export const handlers: Record<string, BindingHandler> = {
   html: (element, value, _attr, version, elementVersions) => {
     if (element instanceof HTMLElement) {
       if (!elementVersions || elementVersions.get(element) === version) {
-        element.innerHTML = String(value ?? "");
+        element.innerHTML = toHTMLString(value);
       }
     }
   },
