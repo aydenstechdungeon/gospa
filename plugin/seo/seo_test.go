@@ -7,6 +7,8 @@ import (
 	"path/filepath"
 	"strings"
 	"testing"
+
+	gospatempl "github.com/aydenstechdungeon/gospa/templ"
 )
 
 func TestMeta(t *testing.T) {
@@ -125,6 +127,27 @@ func TestStructuredData(t *testing.T) {
 	}
 	if !strings.Contains(out, `"name": "Test Org"`) {
 		t.Errorf("expected JSON data, but it wasn't in output: %s", out)
+	}
+}
+
+func TestStructuredDataWithNonce(t *testing.T) {
+	data := map[string]interface{}{
+		"@context": "https://schema.org",
+		"@type":    "Organization",
+		"name":     "Test Org",
+	}
+
+	component := StructuredData(data)
+	w := httptest.NewRecorder()
+	ctx := gospatempl.WithNonce(context.Background(), "test-nonce-123")
+	err := component.Render(ctx, w)
+	if err != nil {
+		t.Fatalf("failed to render: %v", err)
+	}
+
+	out := w.Body.String()
+	if !strings.Contains(out, `<script type="application/ld+json" nonce="test-nonce-123">`) {
+		t.Errorf("expected nonce on script tag, but it wasn't in output: %s", out)
 	}
 }
 
