@@ -331,9 +331,11 @@ templ Layout(title string) {
 func createRootLayout(config *ProjectConfig) error {
 	content := `package routes
 
+import gospa_templ "github.com/aydenstechdungeon/gospa/templ"
+
 templ RootLayout(title string) {
 	<!DOCTYPE html>
-	<html lang="en" data-gospa-auto>
+	<html lang="en">
 	<head>
 		<meta charset="UTF-8"/>
 		<meta name="viewport" content="width=device-width, initial-scale=1.0"/>
@@ -343,10 +345,9 @@ templ RootLayout(title string) {
 		<link rel="preconnect" href="/"/>
 		<link rel="stylesheet" href="/static/css/style.css"/>
 	</head>
-	<body>
+	@gospa_templ.Flush()
+	<body data-gospa-auto>
 		{ children... }
-		<script src="/_gospa/runtime.js" type="module"></script>
-		<script data-gospa-islands></script>
 	</body>
 	</html>
 }
