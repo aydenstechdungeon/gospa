@@ -2,6 +2,7 @@ package fiber
 
 import (
 	"bytes"
+	"encoding/base64"
 	"crypto/rand"
 	"crypto/subtle"
 	"encoding/hex"
@@ -246,6 +247,16 @@ func generateCSRFToken() (string, error) {
 	return hex.EncodeToString(b), nil
 }
 
+// generateCSPNonce creates a base64 nonce for Content Security Policy.
+// CSP nonces are expected to use a base64-compatible value.
+func generateCSPNonce() (string, error) {
+	b := make([]byte, 32)
+	if _, err := rand.Read(b); err != nil {
+		return "", err
+	}
+	return base64.StdEncoding.EncodeToString(b), nil
+}
+
 // SessionMiddleware ensures a session token exists in an HttpOnly cookie.
 // This mitigates XSS risks compared to storing tokens in sessionStorage.
 func SessionMiddleware() gofiber.Handler {
@@ -482,21 +493,15 @@ func SecurityHeadersMiddleware(policy string) gofiber.Handler {
 	return func(c gofiber.Ctx) error {
 		currentPolicy := basePolicy
 		// Generate an unpredictable nonce for every request to harden CSP
-		nonce, err := generateCSRFToken()
+		nonce, err := generateCSPNonce()
 		if err == nil {
 			c.Locals("gospa.csp_nonce", nonce)
-			// Inject nonce into the CSP policy.
-			// When a nonce is present in script-src, browsers IGNORE 'unsafe-inline' per spec.
-			// We therefore strip 'unsafe-inline' from script-src whenever a nonce is used,
-			// so the effective policy matches what we intend.
+			// Inject nonce into the CSP policy only when the policy explicitly
+			// opts in via the {nonce} placeholder.
+			// When a nonce is present in script-src, browsers ignore 'unsafe-inline'
+			// for scripts per spec, so strip it in that explicit nonce mode.
 			if strings.Contains(currentPolicy, "{nonce}") {
 				currentPolicy = strings.ReplaceAll(currentPolicy, "{nonce}", nonce)
-				// Strip any leftover 'unsafe-inline' from script-src so browsers don't
-				// silently ignore the nonce directive.
-				currentPolicy = removeUnsafeInlineFromScriptSrc(currentPolicy)
-			} else if strings.Contains(currentPolicy, "script-src") && !strings.Contains(currentPolicy, "'nonce-") {
-				// Fallback: prepend nonce to script-src and strip 'unsafe-inline'.
-				currentPolicy = strings.Replace(currentPolicy, "script-src", fmt.Sprintf("script-src 'nonce-%s'", nonce), 1)
 				currentPolicy = removeUnsafeInlineFromScriptSrc(currentPolicy)
 			}
 		}
