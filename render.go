@@ -396,12 +396,12 @@ runtime.init({
 		islandsPath = "static/js/islands.js"
 	}
 	if _, err := os.Stat(islandsPath); err == nil {
-		_, _ = fmt.Fprintf(&out, `<script src="/%s" type="module"></script>`, html.EscapeString(islandsPath))
+		_, _ = fmt.Fprintf(&out, `<script src="/%s" type="module"%s></script>`, html.EscapeString(islandsPath), nonceFmt)
 	}
 
 	// Centralized State Registry
 	data, _ := json.Marshal(registry.GetData())
-	_, _ = fmt.Fprintf(&out, `<script id="__GOSPA_DATA__" type="application/json">%s</script>`, string(data))
+	_, _ = fmt.Fprintf(&out, `<script id="__GOSPA_DATA__" type="application/json"%s>%s</script>`, nonceFmt, string(data))
 
 	// Handle Deferred Slots
 	for _, slotName := range opts.DeferredSlots {
