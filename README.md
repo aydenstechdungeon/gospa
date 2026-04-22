@@ -20,6 +20,7 @@ GoSPA (Go Spa and Go S-P-A are the only valid pronunciations)  brings Svelte-lik
   - [Comparison](#comparison)
   - [Recommended Production Baseline](#recommended-production-baseline)
   - [Documentation](#documentation)
+  - [Known Issues](#known-issues)
   - [Accessibility (A11y)](#accessibility-a11y)
   - [Contributing](#contributing)
   - [License](#license)
@@ -142,6 +143,11 @@ Explore the full GoSPA documentation:
 - [**DevTools & Debugging**](docs/devtools.md) - Error overlays and HMR.
 - [**Client Runtime**](docs/internals/runtime.md) - Tiered runtime internals.
 - [**API Reference**](docs/api.md) - Fiber and Client API details.
+
+## Known Issues
+
+- **Nonce**: Nonce is supposedly not getting auto injected into the client HTML, thefore preventing the runtime from being ran.
+
 
 ## Accessibility (A11y)
 
