@@ -146,9 +146,23 @@ Explore the full GoSPA documentation:
 
 ## Known Issues
 
-- **Nonce**: Nonce is supposedly not getting auto injected into the client HTML, thefore preventing the runtime from being ran.
-  User/client/developer-fix: ```cspPolicy := "default-src 'self'; script-src 'self' 'nonce-{nonce}'; style-src 'self' 'unsafe-inline'; img-src 'self' data: https:; font-src 'self' data:; connect-src 'self' wss: https:; frame-ancestors 'none'; base-uri 'self'; form-action 'self';"
-	app.Fiber.Use(gospafiber.SecurityHeadersMiddleware(cspPolicy))``` (code from main.go in the website folder, tailor it for your experience)
+- **CSP nonce mismatch can block runtime scripts**
+  - Symptom: Browser console shows CSP violations such as `Refused to execute inline script` or `Refused to load the script`.
+  - Cause: custom CSP policy does not include `'nonce-{nonce}'`, or custom inline/module scripts are missing the per-request nonce.
+  - Manual Developer Fix:
+
+```go
+cspPolicy := "default-src 'self'; script-src 'self' 'nonce-{nonce}'; style-src 'self' 'unsafe-inline'; img-src 'self' data: https:; font-src 'self' data:; connect-src 'self' wss: https:; frame-ancestors 'none'; base-uri 'self'; form-action 'self';"
+app.Fiber.Use(gospafiber.SecurityHeadersMiddleware(cspPolicy))
+```
+
+```templ
+<script type="module" nonce={ gospatempl.GetNonce(ctx) }>
+  // custom client bootstrap code
+</script>
+```
+
+  Use the same nonce source (`gospatempl.GetNonce(ctx)`) for every custom inline or module script in your layout.
 
 ## Accessibility (A11y)
 

@@ -13,6 +13,7 @@ templ Page() {
 
 		<nav class="flex flex-wrap gap-4 p-4 rounded-2xl bg-[var(--bg-secondary)] border border-[var(--border)]">
 			<a href="#gospa-undefined" class="text-sm font-medium hover:text-[var(--accent-primary)] transition-colors">GoSPA is not defined</a>
+			<a href="#csp-nonce-errors" class="text-sm font-medium hover:text-[var(--accent-primary)] transition-colors">CSP Nonce Errors</a>
 			<a href="#remote-not-found" class="text-sm font-medium hover:text-[var(--accent-primary)] transition-colors">Remote Action Not Found</a>
 			<a href="#csrf-errors" class="text-sm font-medium hover:text-[var(--accent-primary)] transition-colors">CSRF Errors</a>
 			<a href="#network-errors" class="text-sm font-medium hover:text-[var(--accent-primary)] transition-colors">Network Errors</a>
@@ -64,6 +65,30 @@ templ Page() {
     
     const result = await remote('myAction', {});
 </script>`, "html", "")
+		</section>
+
+		<section id="csp-nonce-errors" class="space-y-6">
+			<h2 class="text-2xl font-bold border-b border-[var(--border)] pb-2">CSP Nonce Errors</h2>
+			<p class="text-[var(--text-secondary)]">
+				CSP violations prevent runtime or custom scripts from executing.
+			</p>
+			@components.CodeBlock(`Refused to execute inline script because it violates the following Content Security Policy directive...`, "text", "")
+
+			<h3 class="text-lg font-semibold mt-6">Solution: Use nonce placeholder in CSP</h3>
+			@components.CodeBlock(`cspPolicy := "default-src 'self'; script-src 'self' 'nonce-{nonce}'; style-src 'self' 'unsafe-inline'; img-src 'self' data: https:; font-src 'self' data:; connect-src 'self' wss: https:; frame-ancestors 'none'; base-uri 'self'; form-action 'self';"
+app.Fiber.Use(gospafiber.SecurityHeadersMiddleware(cspPolicy))`, "go", " main.go")
+
+			<h3 class="text-lg font-semibold mt-6">Solution: Add nonce to custom scripts</h3>
+			@components.CodeBlock(`<script src="/static/js/islands.js" type="module" nonce={ gospatempl.GetNonce(ctx) }></script>
+<script type="module" nonce={ gospatempl.GetNonce(ctx) }>
+  // custom bootstrap logic
+</script>`, "templ", " root_layout.templ")
+
+			<h3 class="text-lg font-semibold mt-6">Verify in DevTools</h3>
+			<ul class="list-disc list-inside text-[var(--text-secondary)] space-y-2">
+				<li><code class="mono">Content-Security-Policy</code> includes <code class="mono">'nonce-...'</code> in <code class="mono">script-src</code></li>
+				<li>Rendered script tags for the same response include that same nonce value</li>
+			</ul>
 		</section>
 
 		<section id="remote-not-found" class="space-y-6">

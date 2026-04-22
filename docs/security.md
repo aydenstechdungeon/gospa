@@ -50,6 +50,24 @@ Instead of using `'unsafe-inline'`, use the `{nonce}` placeholder in your policy
 config.ContentSecurityPolicy = "default-src 'self'; script-src 'self' 'nonce-{nonce}'; ..."
 ```
 
+### Common Nonce Pitfall
+If you use a custom root layout, CSP can still fail even with `SecurityHeadersMiddleware` enabled.
+
+Typical failure mode:
+- Browser logs `Refused to execute inline script` or `Refused to load the script`.
+- Framework scripts load, but custom inline/module script blocks fail.
+
+Fix:
+1. Keep `'nonce-{nonce}'` in `script-src`.
+2. Add the generated nonce to every custom inline/module script tag.
+
+```templ
+<script src="/static/js/app.js" type="module" nonce={ gospatempl.GetNonce(ctx) }></script>
+<script type="module" nonce={ gospatempl.GetNonce(ctx) }>
+  // custom bootstrap
+</script>
+```
+
 ## 4. Authentication (Auth Plugin)
 
 The optional Auth plugin provides JWT-based session management.

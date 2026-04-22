@@ -218,6 +218,45 @@ GoSPA.remote('action', {});
     GoSPA.remote('action', {});
 </script>
 ```
+
+## CSP Nonce Errors ("Refused to execute script")
+
+### Problem
+You see CSP errors in the browser console and runtime/client scripts do not execute:
+
+```text
+Refused to execute inline script because it violates the following Content Security Policy directive...
+```
+
+### Cause
+One of these is usually true:
+- `script-src` is missing `'nonce-{nonce}'`.
+- A custom `<script>` tag in your layout is missing the per-request nonce.
+- A static/hardcoded nonce is being reused instead of the request nonce.
+
+### Solution
+
+#### 1. Configure CSP with the nonce placeholder
+
+```go
+cspPolicy := "default-src 'self'; script-src 'self' 'nonce-{nonce}'; style-src 'self' 'unsafe-inline'; img-src 'self' data: https:; font-src 'self' data:; connect-src 'self' wss: https:; frame-ancestors 'none'; base-uri 'self'; form-action 'self';"
+app.Fiber.Use(gospafiber.SecurityHeadersMiddleware(cspPolicy))
+```
+
+#### 2. Add nonce to custom scripts in your layout
+
+```templ
+<script src="/static/js/islands.js" type="module" nonce={ gospatempl.GetNonce(ctx) }></script>
+<script type="module" nonce={ gospatempl.GetNonce(ctx) }>
+  // custom bootstrap logic
+</script>
+```
+
+#### 3. Verify header and tag nonces match
+
+Check DevTools:
+- Response header `Content-Security-Policy` includes `script-src ... 'nonce-<value>'`.
+- Rendered `<script>` tags on the same response use that same nonce value.
 # Troubleshooting Remote Actions
 
 ## "ACTION_NOT_FOUND" Error
