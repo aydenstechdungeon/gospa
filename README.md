@@ -147,7 +147,8 @@ Explore the full GoSPA documentation:
 ## Known Issues
 
 - **Nonce**: Nonce is supposedly not getting auto injected into the client HTML, thefore preventing the runtime from being ran.
-
+  User/client/developer-fix: ```cspPolicy := "default-src 'self'; script-src 'self' 'nonce-{nonce}'; style-src 'self' 'unsafe-inline'; img-src 'self' data: https:; font-src 'self' data:; connect-src 'self' wss: https:; frame-ancestors 'none'; base-uri 'self'; form-action 'self';"
+	app.Fiber.Use(gospafiber.SecurityHeadersMiddleware(cspPolicy))``` (code from main.go in the website folder, tailor it for your experience)
 
 ## Accessibility (A11y)
 
