@@ -10,6 +10,7 @@ interface HMRMessage {
   path?: string;
   moduleId?: string;
   event?: string;
+  reloadReason?: "template-safe" | "style-safe" | "runtime-break" | "config-break";
   state?: Record<string, unknown>;
   stateDiff?: Record<string, unknown>; // Delta state updates
   error?: string;
@@ -215,7 +216,7 @@ export class HMRClient {
         break;
 
       case "reload":
-        console.log("[HMR] Full reload required");
+        console.log("[HMR] Full reload required.", msg.reloadReason || "unknown");
         this.preserveAllStates();
         window.location.reload();
         break;
@@ -238,6 +239,13 @@ export class HMRClient {
   private queueUpdate(msg: HMRMessage): void {
     this.updateQueue.push(msg);
     this.processUpdateQueue();
+  }
+
+  /**
+   * Public bridge used by legacy server-injected HMR scripts.
+   */
+  handleUpdate(msg: HMRMessage): void {
+    this.queueUpdate(msg);
   }
 
   /**
@@ -269,6 +277,20 @@ export class HMRClient {
     const moduleId = msg.moduleId;
     if (!moduleId) {
       console.warn("[HMR] Update message missing moduleId");
+      return;
+    }
+
+    if (msg.reloadReason === "style-safe") {
+      const href = msg.path || moduleId;
+      CSSHMR.updateStyle(href);
+      this.showUpdateNotification(`${moduleId} (styles)`);
+      return;
+    }
+
+    if (msg.reloadReason === "template-safe") {
+      const id = moduleId;
+      TemplateHMR.updateTemplate(id, "");
+      this.showUpdateNotification(`${moduleId} (template)`);
       return;
     }
 

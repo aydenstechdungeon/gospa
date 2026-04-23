@@ -25,6 +25,8 @@ const state = reactive({
 // Navigation options
 export interface NavigateOptions {
   replace?: boolean;
+  scroll?: boolean;
+  /** @deprecated Use `scroll` instead. */
   scrollToTop?: boolean;
   preserveState?: boolean;
 }
@@ -171,6 +173,7 @@ const hoverPrefetchTimers = new Map<string, number>();
 let prefetchObserver: IntersectionObserver | null = null;
 const pendingRequests = new Map<string, Promise<PageData | null>>();
 let clickDelegateContainer: Element | Document = document;
+let warnedScrollToTopDeprecation = false;
 
 export function setNavigationOptions(config: NavigationOptions): void {
   // Clear URL parsing cache if being disabled
@@ -407,6 +410,8 @@ function isInternalLink(link: HTMLAnchorElement): boolean {
 interface PageData {
   doc: Document;
   title: string;
+  cacheTags: string[];
+  cacheKeys: string[];
 }
 
 // Prefetch cache
@@ -415,6 +420,45 @@ interface PrefetchEntry {
   expiresAt: number;
 }
 const prefetchCache = new Map<string, PrefetchEntry>();
+const prefetchTagIndex = new Map<string, Set<string>>();
+const prefetchKeyIndex = new Map<string, Set<string>>();
+
+function deletePrefetchByPath(path: string): boolean {
+  const entry = prefetchCache.get(path);
+  if (!entry) return false;
+
+  for (const tag of entry.data.cacheTags) {
+    const set = prefetchTagIndex.get(tag);
+    if (!set) continue;
+    set.delete(path);
+    if (set.size === 0) prefetchTagIndex.delete(tag);
+  }
+
+  for (const key of entry.data.cacheKeys) {
+    const set = prefetchKeyIndex.get(key);
+    if (!set) continue;
+    set.delete(path);
+    if (set.size === 0) prefetchKeyIndex.delete(key);
+  }
+
+  prefetchCache.delete(path);
+  return true;
+}
+
+function indexPrefetch(path: string, data: PageData): void {
+  for (const tag of data.cacheTags) {
+    if (!prefetchTagIndex.has(tag)) {
+      prefetchTagIndex.set(tag, new Set());
+    }
+    prefetchTagIndex.get(tag)!.add(path);
+  }
+  for (const key of data.cacheKeys) {
+    if (!prefetchKeyIndex.has(key)) {
+      prefetchKeyIndex.set(key, new Set());
+    }
+    prefetchKeyIndex.get(key)!.add(path);
+  }
+}
 
 // Fetch page content from server
 async function fetchPageFromServer(
@@ -457,8 +501,18 @@ async function fetchPageFromServer(
       const parser = new DOMParser();
       const doc = parser.parseFromString(html, "text/html");
       const title = doc.querySelector("title")?.textContent || "";
+      const cacheTagsHeader = response.headers.get("x-gospa-cache-tags") ?? "";
+      const cacheKeysHeader = response.headers.get("x-gospa-cache-keys") ?? "";
+      const cacheTags = cacheTagsHeader
+        .split(",")
+        .map((v) => v.trim())
+        .filter(Boolean);
+      const cacheKeys = cacheKeysHeader
+        .split(",")
+        .map((v) => v.trim())
+        .filter(Boolean);
 
-      return { doc, title };
+      return { doc, title, cacheTags, cacheKeys };
     } catch (error) {
       if (typeof GOSPA_DEBUG !== "undefined" && GOSPA_DEBUG) {
         console.error("[GoSPA] Navigation error:", error);
@@ -1046,9 +1100,10 @@ async function performDOMUpdateWithTransitions(
   const viewCfg = navigationOptionsConfig.viewTransitions;
   const canTransition = viewCfg.enabled && "startViewTransition" in document;
 
+  const shouldScrollToTop = resolveScrollPreference(options);
   const update = async () => {
     await updateDOM(data);
-    if (options.scrollToTop !== false) {
+    if (shouldScrollToTop) {
       window.scrollTo(0, 0);
     }
   };
@@ -1070,6 +1125,28 @@ async function performDOMUpdateWithTransitions(
     }
     await update();
   }
+}
+
+function resolveScrollPreference(options: NavigateOptions): boolean {
+  if (typeof options.scroll === "boolean") {
+    return options.scroll;
+  }
+
+  if (typeof options.scrollToTop === "boolean") {
+    if (
+      typeof GOSPA_DEBUG !== "undefined" &&
+      GOSPA_DEBUG &&
+      !warnedScrollToTopDeprecation
+    ) {
+      warnedScrollToTopDeprecation = true;
+      console.warn(
+        "[GoSPA] navigate(..., { scrollToTop }) is deprecated. Use { scroll } instead.",
+      );
+    }
+    return options.scrollToTop;
+  }
+
+  return true;
 }
 
 // Navigate to a new path
@@ -1219,7 +1296,7 @@ function handlePopState(_event: PopStateEvent): void {
         preferFresh: true,
       });
       if (data) {
-        await performDOMUpdateWithTransitions(data, { scrollToTop: false });
+        await performDOMUpdateWithTransitions(data, { scroll: false });
 
         updateActiveLinks();
 
@@ -1504,7 +1581,7 @@ export async function prefetch(path: string): Promise<void> {
 
   const existing = prefetchCache.get(path);
   if (existing && existing.expiresAt > Date.now()) return;
-  if (existing) prefetchCache.delete(path);
+  if (existing) deletePrefetchByPath(path);
 
   const data = await fetchPageFromServer(path);
   if (data) {
@@ -1514,13 +1591,58 @@ export async function prefetch(path: string): Promise<void> {
     );
     const expiresAt = Date.now() + ttl;
     prefetchCache.set(path, { data, expiresAt });
+    indexPrefetch(path, data);
     setTimeout(() => {
       const current = prefetchCache.get(path);
       if (current && current.expiresAt <= Date.now()) {
-        prefetchCache.delete(path);
+        deletePrefetchByPath(path);
       }
     }, ttl + 50);
   }
+}
+
+async function postInvalidatePayload(
+  payload: Record<string, string>,
+): Promise<void> {
+  try {
+    await fetch("/_gospa/invalidate", {
+      method: "POST",
+      credentials: "same-origin",
+      headers: {
+        "Content-Type": "application/json",
+        Accept: "application/json",
+      },
+      body: JSON.stringify(payload),
+    });
+  } catch (error) {
+    if (typeof GOSPA_DEBUG !== "undefined" && GOSPA_DEBUG) {
+      console.warn("[GoSPA] Server invalidation request failed:", error);
+    }
+  }
+}
+
+export async function invalidate(path: string): Promise<boolean> {
+  const removed = deletePrefetchByPath(path);
+  await postInvalidatePayload({ path });
+  return removed;
+}
+
+export async function invalidateTag(tag: string): Promise<number> {
+  const targets = Array.from(prefetchTagIndex.get(tag) ?? []);
+  for (const path of targets) {
+    deletePrefetchByPath(path);
+  }
+  await postInvalidatePayload({ tag });
+  return targets.length;
+}
+
+export async function invalidateKey(key: string): Promise<number> {
+  const targets = Array.from(prefetchKeyIndex.get(key) ?? []);
+  for (const path of targets) {
+    deletePrefetchByPath(path);
+  }
+  await postInvalidatePayload({ key });
+  return targets.length;
 }
 
 // Export navigation state as reactive
@@ -1537,6 +1659,9 @@ export function createNavigationState() {
     forward,
     go,
     prefetch,
+    invalidate,
+    invalidateTag,
+    invalidateKey,
   };
 }
 

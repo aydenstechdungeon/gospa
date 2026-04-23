@@ -99,6 +99,12 @@ type App struct {
 	pprShellIndex map[string]struct{}
 	// pprShellMu protects pprShellCache, pprShellKeys, and pprShellIndex.
 	pprShellMu sync.RWMutex
+	// cacheIndexMu protects cacheTagIndex and cacheKeyIndex.
+	cacheIndexMu sync.RWMutex
+	// cacheTagIndex maps logical tags to cached route keys.
+	cacheTagIndex map[string]map[string]struct{}
+	// cacheKeyIndex maps logical keys to cached route keys.
+	cacheKeyIndex map[string]map[string]struct{}
 	// pprShellBuilding guards against duplicate PPR shell builds under concurrent load.
 	pprShellBuilding sync.Map
 	// ctx is the application-level context, canceled on Shutdown.
@@ -196,6 +202,8 @@ func New(config Config) *App {
 		pprShellCache:       make(map[string]pprEntry),
 		pprShellKeys:        make([]string, 0),
 		pprShellIndex:       make(map[string]struct{}),
+		cacheTagIndex:       make(map[string]map[string]struct{}),
+		cacheKeyIndex:       make(map[string]map[string]struct{}),
 	}
 	app.ctx, app.cancel = context.WithCancel(context.Background())
 
@@ -399,6 +407,8 @@ func (a *App) setupRoutes() {
 	}
 	a.Fiber.Post(a.Config.RemotePrefix+"/:name", rhAny[0], rhAny[1:]...)
 
+	a.Fiber.Post("/_gospa/invalidate", fiber.SessionMiddleware(), a.handleInvalidate)
+
 	if _, err := os.Stat(a.Config.StaticDir); err == nil {
 		a.Fiber.Use(a.Config.StaticPrefix, static.New(a.Config.StaticDir, static.Config{
 			Compress: true,
@@ -526,6 +536,38 @@ func (a *App) handleRemoteAction(c fiberpkg.Ctx) error {
 	return c.JSON(fiberpkg.Map{
 		"data": result,
 		"code": "SUCCESS",
+	})
+}
+
+func (a *App) handleInvalidate(c fiberpkg.Ctx) error {
+	var payload struct {
+		Path string `json:"path"`
+		Tag  string `json:"tag"`
+		Key  string `json:"key"`
+	}
+	if err := c.Bind().Body(&payload); err != nil {
+		return c.Status(fiberpkg.StatusBadRequest).JSON(fiberpkg.Map{
+			"error": "Invalid invalidation payload",
+			"code":  "INVALID_INVALIDATION_PAYLOAD",
+		})
+	}
+
+	invalidated := 0
+	if payload.Path != "" {
+		if a.Invalidate(payload.Path) > 0 {
+			invalidated++
+		}
+	}
+	if payload.Tag != "" {
+		invalidated += a.InvalidateTag(payload.Tag)
+	}
+	if payload.Key != "" {
+		invalidated += a.InvalidateKey(payload.Key)
+	}
+
+	return c.JSON(fiberpkg.Map{
+		"ok":          true,
+		"invalidated": invalidated,
 	})
 }
 
@@ -783,6 +825,33 @@ func (a *App) handleFormAction(c fiberpkg.Ctx, r *routing.Route) error {
 
 	lc := &fiberLoadContext{c: c}
 	result, err := action(lc)
+	responsePayload := routing.ActionResponse{
+		Data: result,
+		Code: "SUCCESS",
+	}
+	if actionResp, ok := result.(routing.ActionResponse); ok {
+		responsePayload = actionResp
+		if responsePayload.Code == "" {
+			responsePayload.Code = "SUCCESS"
+		}
+	} else if actionResp, ok := result.(*routing.ActionResponse); ok && actionResp != nil {
+		responsePayload = *actionResp
+		if responsePayload.Code == "" {
+			responsePayload.Code = "SUCCESS"
+		}
+	}
+
+	applyRevalidation := func() {
+		for _, path := range responsePayload.Revalidate {
+			a.Invalidate(path)
+		}
+		for _, tag := range responsePayload.RevalidateTags {
+			a.InvalidateTag(tag)
+		}
+		for _, key := range responsePayload.RevalidateKeys {
+			a.InvalidateKey(key)
+		}
+	}
 
 	// Check if AJAX (progressive enhancement)
 	if c.Get("X-Gospa-Enhance") != "" {
@@ -792,16 +861,23 @@ func (a *App) handleFormAction(c fiberpkg.Ctx, r *routing.Route) error {
 				"code":  "ACTION_FAILED",
 			})
 		}
-		return c.JSON(fiberpkg.Map{
-			"data": result,
-			"code": "SUCCESS",
-		})
+		applyRevalidation()
+		return c.JSON(responsePayload)
 	}
 
 	// Standard form submission: redirect back to the page
 	if err != nil {
 		a.Logger().Error("Form action error", "path", r.Path, "action", actionName, "err", err)
 		fiber.SetFlash(c, "error", err.Error())
+		return c.Redirect().Status(fiberpkg.StatusSeeOther).To(c.Path())
+	}
+	applyRevalidation()
+	if responsePayload.Redirect != nil && responsePayload.Redirect.To != "" {
+		status := responsePayload.Redirect.Status
+		if status == 0 {
+			status = fiberpkg.StatusSeeOther
+		}
+		return c.Redirect().Status(status).To(responsePayload.Redirect.To)
 	}
 
 	return c.Redirect().Status(fiberpkg.StatusSeeOther).To(c.Path())
@@ -934,6 +1010,18 @@ func (f *fiberLoadContext) Header(key string) string {
 
 func (f *fiberLoadContext) Cookie(key string) string {
 	return f.c.Cookies(key)
+}
+
+func (f *fiberLoadContext) FormValue(key string, defaultValue ...string) string {
+	v := f.c.FormValue(key)
+	if v == "" && len(defaultValue) > 0 {
+		return defaultValue[0]
+	}
+	return v
+}
+
+func (f *fiberLoadContext) Method() string {
+	return f.c.Method()
 }
 
 func (f *fiberLoadContext) Path() string {

@@ -50,13 +50,14 @@ type HMRFileChangeEvent struct {
 
 // HMRMessage represents a message sent to clients.
 type HMRMessage struct {
-	Type      string `json:"type"` // "update", "reload", "error", "state-preserve", "connected"
-	Path      string `json:"path,omitempty"`
-	ModuleID  string `json:"moduleId,omitempty"`
-	Event     string `json:"event,omitempty"`
-	State     any    `json:"state,omitempty"`
-	Error     string `json:"error,omitempty"`
-	Timestamp int64  `json:"timestamp"`
+	Type         string `json:"type"` // "update", "reload", "error", "state-preserve", "connected"
+	Path         string `json:"path,omitempty"`
+	ModuleID     string `json:"moduleId,omitempty"`
+	Event        string `json:"event,omitempty"`
+	ReloadReason string `json:"reloadReason,omitempty"` // "template-safe" | "style-safe" | "runtime-break" | "config-break"
+	State        any    `json:"state,omitempty"`
+	Error        string `json:"error,omitempty"`
+	Timestamp    int64  `json:"timestamp"`
 }
 
 // HMRUpdatePayload contains update information.
@@ -279,17 +280,21 @@ func (mgr *HMRManager) processChanges() {
 		mgr.debounceMap[event.Path] = time.Now()
 		mgr.debounceMu.Unlock()
 
-		// Determine update type
-		updateType := mgr.determineUpdateType(event.Path)
+		// Determine update type and reason
+		updateType, reloadReason := mgr.determineUpdateType(event.Path)
 		moduleID := mgr.pathToModuleID(event.Path)
 
 		// Build update message
 		msg := HMRMessage{
-			Type:      "update",
-			Path:      event.Path,
-			ModuleID:  moduleID,
-			Event:     event.EventType,
-			Timestamp: time.Now().UnixMilli(),
+			Type:         "update",
+			Path:         event.Path,
+			ModuleID:     moduleID,
+			Event:        event.EventType,
+			ReloadReason: reloadReason,
+			Timestamp:    time.Now().UnixMilli(),
+		}
+		if reloadReason == "runtime-break" || reloadReason == "config-break" {
+			msg.Type = "reload"
 		}
 
 		// Include state preservation info for components
@@ -337,16 +342,18 @@ func (mgr *HMRManager) cleanupDebounceMap() {
 }
 
 // determineUpdateType determines the type of update needed.
-func (mgr *HMRManager) determineUpdateType(path string) string {
+func (mgr *HMRManager) determineUpdateType(path string) (string, string) {
 	switch {
 	case strings.HasSuffix(path, ".templ"):
-		return "template"
+		return "template", "template-safe"
+	case strings.HasSuffix(path, ".go"):
+		return "full", "config-break"
 	case strings.HasSuffix(path, ".ts") || strings.HasSuffix(path, ".js"):
-		return "script"
+		return "script", "runtime-break"
 	case strings.HasSuffix(path, ".css"):
-		return "style"
+		return "style", "style-safe"
 	default:
-		return "full"
+		return "full", "config-break"
 	}
 }
 
@@ -588,7 +595,7 @@ func (mgr *HMRManager) generateHMRScript(nonce string) string {
 				}
 				break;
 			case 'reload':
-				console.log('[HMR] Full reload required');
+				console.log('[HMR] Full reload required. reason=', msg.reloadReason || 'unknown');
 				window.location.reload();
 				break;
 			case 'error':

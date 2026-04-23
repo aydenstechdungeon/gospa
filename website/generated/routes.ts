@@ -189,6 +189,48 @@ export function buildQuery(params: RouteQuery): string {
 }
 
 // ============================================
+// Route Data & Actions Contracts
+// ============================================
+
+/**
+ * Per-route metadata for load/action availability.
+ */
+export interface RouteDataContract {
+  hasLoad: boolean;
+  hasActions: boolean;
+  actions: readonly string[];
+}
+
+export const routeDataContracts: Partial<Record<RoutePath, RouteDataContract>> = {
+};
+
+export type RouteLoadData<T extends RoutePath> = Record<string, unknown>;
+
+/**
+ * Fetch typed load data for a route (server Load chain only).
+ */
+export async function loadRouteData<T extends RoutePath>(
+  path: T,
+  init?: RequestInit,
+): Promise<RouteLoadData<T>> {
+  const dataURL = new URL(path, window.location.origin);
+  dataURL.searchParams.set('__data', '1');
+  const res = await fetch(dataURL.toString(), {
+    ...init,
+    credentials: init?.credentials ?? 'same-origin',
+    headers: {
+      Accept: 'application/json',
+      ...(init?.headers || {}),
+    },
+  });
+  if (!res.ok) {
+    throw new Error(`Failed to load route data (${res.status})`);
+  }
+  const payload = await res.json() as { data?: Record<string, unknown> };
+  return (payload.data ?? {}) as RouteLoadData<T>;
+}
+
+// ============================================
 // Route Builder Functions
 // ============================================
 

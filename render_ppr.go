@@ -10,9 +10,10 @@ import (
 	templpkg "github.com/aydenstechdungeon/gospa/templ"
 )
 
-func (a *App) storePprShell(key string, shell []byte) {
+func (a *App) storePprShell(key string, shell []byte, tags, keys []string) {
 	if a.Config.Storage != nil && !a.Config.Prefork {
 		_ = a.Config.Storage.Set(a.Context(), "gospa:ppr:"+key, shell, 0)
+		a.indexCacheEntry(key, tags, keys)
 		return
 	}
 
@@ -30,7 +31,10 @@ func (a *App) storePprShell(key string, shell []byte) {
 			evictCount = 1
 		}
 		for i := 0; i < evictCount && i < len(a.pprShellKeys); i++ {
-			delete(a.pprShellCache, a.pprShellKeys[i])
+			evictedKey := a.pprShellKeys[i]
+			delete(a.pprShellCache, evictedKey)
+			delete(a.pprShellIndex, evictedKey)
+			a.dropCacheIndex(evictedKey)
 		}
 		a.pprShellKeys = append([]string(nil), a.pprShellKeys[evictCount:]...)
 	}
@@ -42,7 +46,9 @@ func (a *App) storePprShell(key string, shell []byte) {
 		}
 	}
 	a.pprShellKeys = append(a.pprShellKeys, key)
+	a.pprShellIndex[key] = struct{}{}
 	a.pprShellCache[key] = pprEntry{html: shell, createdAt: time.Now()}
+	a.indexCacheEntry(key, tags, keys)
 }
 
 func (a *App) applyPPRSlots(ctx context.Context, route *routing.Route, shell []byte, path string, opts routing.RouteOptions) ([]byte, error) {

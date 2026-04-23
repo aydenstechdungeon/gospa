@@ -4,10 +4,11 @@ import (
 	"time"
 )
 
-func (a *App) storeSsgEntry(key string, html []byte) {
+func (a *App) storeSsgEntry(key string, html []byte, tags, keys []string) {
 	if a.Config.Storage != nil && !a.Config.Prefork {
 		entry := ssgEntry{html: html, createdAt: time.Now()}
 		_ = a.Config.Storage.Set(a.Context(), "gospa:ssg:"+key, encodeSsgEntry(entry), 0)
+		a.indexCacheEntry(key, tags, keys)
 		return
 	}
 
@@ -30,6 +31,7 @@ func (a *App) storeSsgEntry(key string, html []byte) {
 			delete(a.ssgCache, evictedKey)
 			// PERF FIX: O(1) removal from the index map instead of O(n) scan.
 			delete(a.ssgCacheIndex, evictedKey)
+			a.dropCacheIndex(evictedKey)
 		}
 		a.ssgCacheKeys = append([]string(nil), a.ssgCacheKeys[evictCount:]...)
 	}
@@ -49,4 +51,5 @@ func (a *App) storeSsgEntry(key string, html []byte) {
 	a.ssgCacheKeys = append(a.ssgCacheKeys, key)
 	a.ssgCacheIndex[key] = struct{}{}
 	a.ssgCache[key] = ssgEntry{html: html, createdAt: time.Now()}
+	a.indexCacheEntry(key, tags, keys)
 }

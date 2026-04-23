@@ -20,8 +20,11 @@ await navigate('/about');
 // With options
 await navigate('/dashboard', {
   replace: true,      // Replace history entry
-  scrollToTop: true   // Scroll to top after navigation
+  scroll: true        // Scroll to top after navigation
 });
+
+// Deprecated alias (supported during migration)
+await navigate('/dashboard', { scrollToTop: true });
 
 // History navigation
 back();              // Go back one page
@@ -43,6 +46,16 @@ prefetch(['/blog/post-1', '/blog/post-2']);
 
 // Prefetch all links matching a selector
 prefetchLinks('a[data-prefetch]');`, "typescript", " prefetch.ts")
+		</section>
+
+		<section class="space-y-6">
+			<h2 class="text-2xl font-bold" id="invalidation">Cache Invalidation</h2>
+			<p class="text-[var(--text-secondary)]">Invalidate route cache entries by path, tag, or key.</p>
+			@components.CodeBlock(`import { invalidate, invalidateTag, invalidateKey } from '@gospa/client';
+
+await invalidate('/dashboard');
+await invalidateTag('route:/dashboard');
+await invalidateKey('path:/dashboard');`, "typescript", " invalidate.ts")
 		</section>
 
 		<section class="space-y-6">

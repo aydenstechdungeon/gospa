@@ -17,7 +17,12 @@ templ Page() {
 
 		<section class="space-y-6">
 			<h2 class="text-2xl font-bold">Navigation Functions</h2>
-			@components.CodeBlock("import { \n\tnavigate, \n\tprefetch, \n\tback, \n\tforward,\n\treplace\n} from '@gospa/client';\n\n// Navigate to a new page\nnavigate('/about');\nnavigate('/blog/my-post', { replace: true });\n\n// Prefetch a route\nprefetch('/dashboard');\n\n// History navigation\nback();\nforward();\n\n// Replace without history\nreplace('/login');", " typescript", " navigation.ts")
+			@components.CodeBlock("import { \n\tnavigate, \n\tprefetch, \n\tback, \n\tforward,\n\treplace\n} from '@gospa/client';\n\n// Navigate to a new page\nnavigate('/about');\nnavigate('/blog/my-post', { replace: true });\nnavigate('/settings', { scroll: false });\n// Deprecated alias: { scrollToTop: false }\n\n// Prefetch a route\nprefetch('/dashboard');\n\n// History navigation\nback();\nforward();\n\n// Replace without history\nreplace('/login');", " typescript", " navigation.ts")
+		</section>
+
+		<section class="space-y-6">
+			<h2 class="text-2xl font-bold">Invalidation API</h2>
+			@components.CodeBlock("import { invalidate, invalidateTag, invalidateKey } from '@gospa/client';\n\nawait invalidate('/blog/hello-world');\nawait invalidateTag('route:/blog/hello-world');\nawait invalidateKey('path:/blog/hello-world');", " typescript", " invalidation.ts")
 		</section>
 
 		<section class="space-y-6">

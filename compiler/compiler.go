@@ -354,6 +354,15 @@ func (c *GospaCompiler) Compile(opts CompileOptions, input string) (templ, ts st
 	if parsed.FrontMatter != nil {
 		if frontType := strings.TrimSpace(parsed.FrontMatter["type"]); frontType != "" {
 			componentType = ComponentType(strings.ToLower(frontType))
+			switch componentType {
+			case ComponentTypeIsland, ComponentTypePage, ComponentTypeLayout, ComponentTypeStatic, ComponentTypeServer:
+				// supported
+			default:
+				return "", "", fmt.Errorf(
+					"unsupported frontmatter type %q (supported: island, page, layout, static, server)",
+					frontType,
+				)
+			}
 		}
 		if hydrateRaw := strings.TrimSpace(parsed.FrontMatter["hydrate"]); hydrateRaw != "" {
 			switch {
@@ -400,6 +409,9 @@ func (c *GospaCompiler) Compile(opts CompileOptions, input string) (templ, ts st
 	if componentType == ComponentTypeIsland && !opts.ServerOnly && !opts.Hydrate {
 		// default hydration for islands unless explicitly disabled
 		opts.Hydrate = true
+	}
+	if strings.TrimSpace(opts.HydrateMode) == "" {
+		opts.HydrateMode = defaultHydrateModeForType(componentType)
 	}
 
 	// 0. Detect Runtime Tier
@@ -699,6 +711,17 @@ func inferPackage(t ComponentType) string {
 		return "layouts"
 	default:
 		return "components"
+	}
+}
+
+func defaultHydrateModeForType(t ComponentType) string {
+	switch t {
+	case ComponentTypeIsland:
+		return "immediate"
+	case ComponentTypePage:
+		return "immediate"
+	default:
+		return ""
 	}
 }
 

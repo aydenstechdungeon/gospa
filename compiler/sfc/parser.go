@@ -175,6 +175,13 @@ func Parse(input string) (*SFC, error) {
 					return nil, fmt.Errorf("multiple <script lang=\"ts\"> blocks are not supported")
 				}
 				sfc.ScriptTS = b
+			default:
+				return nil, fmt.Errorf(
+					"unsupported <script> language %q at %d:%d (supported: go, ts/js)",
+					b.Lang,
+					b.Line+1,
+					b.Column+1,
+				)
 			}
 		case "style":
 			if sfc.Style.Content != "" {

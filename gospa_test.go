@@ -235,12 +235,12 @@ func TestStoreSsgEntry_FIFO_Eviction(t *testing.T) {
 	defer func() { _ = app.Fiber.Shutdown() }()
 
 	// Fill the cache to capacity
-	app.storeSsgEntry("/page1", []byte("html1"))
-	app.storeSsgEntry("/page2", []byte("html2"))
-	app.storeSsgEntry("/page3", []byte("html3"))
+	app.storeSsgEntry("/page1", []byte("html1"), nil, nil)
+	app.storeSsgEntry("/page2", []byte("html2"), nil, nil)
+	app.storeSsgEntry("/page3", []byte("html3"), nil, nil)
 
 	// Adding a 4th should evict the first
-	app.storeSsgEntry("/page4", []byte("html4"))
+	app.storeSsgEntry("/page4", []byte("html4"), nil, nil)
 
 	app.ssgCacheMu.RLock()
 	defer app.ssgCacheMu.RUnlock()
@@ -260,7 +260,7 @@ func TestStoreSsgEntry_Unlimited(t *testing.T) {
 
 	for i := 0; i < 10; i++ {
 		key := "/page" + string(rune('0'+i))
-		app.storeSsgEntry(key, []byte("html"))
+		app.storeSsgEntry(key, []byte("html"), nil, nil)
 	}
 
 	app.ssgCacheMu.RLock()
@@ -276,8 +276,8 @@ func TestStoreSsgEntry_DuplicateKeyNoExtraTrack(t *testing.T) {
 	app.Config.Storage = nil // force in-memory path
 	defer func() { _ = app.Fiber.Shutdown() }()
 
-	app.storeSsgEntry("/dupe", []byte("v1"))
-	app.storeSsgEntry("/dupe", []byte("v2"))
+	app.storeSsgEntry("/dupe", []byte("v1"), nil, nil)
+	app.storeSsgEntry("/dupe", []byte("v2"), nil, nil)
 
 	app.ssgCacheMu.RLock()
 	defer app.ssgCacheMu.RUnlock()

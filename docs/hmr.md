@@ -42,5 +42,10 @@ if (import.meta.hot) {
 
 ## Troubleshooting
 
-- **Full Reloads**: If the HMR system cannot safely apply an update (e.g., changes to internal framework logic), it will trigger a full page reload to ensure consistency.
+- **Full Reloads**: If the HMR system cannot safely apply an update, it triggers a full page reload with a reason code:
+  - `runtime-break`
+  - `config-break`
+- **Safe Hot Updates**: Template/style updates are classified as:
+  - `template-safe`
+  - `style-safe`
 - **Connection Issues**: The HMR client will attempt to reconnect automatically if the WebSocket connection is lost.

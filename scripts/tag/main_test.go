@@ -52,6 +52,7 @@ replace github.com/aydenstechdungeon/gospa v0.1.0 => ../gospa
 		t.Fatal("expected updateModFile to report changed=true")
 	}
 
+	//nolint:gosec // path is created from t.TempDir() in this test
 	data, err := os.ReadFile(path)
 	if err != nil {
 		t.Fatalf("read go.mod failed: %v", err)
@@ -78,6 +79,7 @@ see github.com/aydenstechdungeon/gospa/plugin/image@v0.1.0
 		t.Fatal("expected updateOtherFile to report changed=true")
 	}
 
+	//nolint:gosec // path is created from t.TempDir() in this test
 	data, err := os.ReadFile(path)
 	if err != nil {
 		t.Fatalf("read README failed: %v", err)

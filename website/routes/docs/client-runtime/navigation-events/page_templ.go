@@ -43,8 +43,11 @@ await navigate('/about');
 // With options
 await navigate('/dashboard', {
   replace: true,      // Replace history entry
-  scrollToTop: true   // Scroll to top after navigation
+  scroll: true        // Scroll to top after navigation
 });
+
+// Deprecated alias (supported during migration)
+await navigate('/dashboard', { scrollToTop: true });
 
 // History navigation
 back();              // Go back one page
@@ -71,7 +74,19 @@ prefetchLinks('a[data-prefetch]');`, "typescript", " prefetch.ts").Render(ctx, t
 		if templ_7745c5c3_Err != nil {
 			return templ_7745c5c3_Err
 		}
-		templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 3, "</section><section class=\"space-y-6\"><h2 class=\"text-2xl font-bold\" id=\"navigation-state\">Navigation State</h2><p class=\"text-[var(--text-secondary)]\">Track and manage navigation state reactively.</p>")
+		templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 3, "</section><section class=\"space-y-6\"><h2 class=\"text-2xl font-bold\" id=\"invalidation\">Cache Invalidation</h2><p class=\"text-[var(--text-secondary)]\">Invalidate route cache entries by path, tag, or key.</p>")
+		if templ_7745c5c3_Err != nil {
+			return templ_7745c5c3_Err
+		}
+		templ_7745c5c3_Err = components.CodeBlock(`import { invalidate, invalidateTag, invalidateKey } from '@gospa/client';
+
+await invalidate('/dashboard');
+await invalidateTag('route:/dashboard');
+await invalidateKey('path:/dashboard');`, "typescript", " invalidate.ts").Render(ctx, templ_7745c5c3_Buffer)
+		if templ_7745c5c3_Err != nil {
+			return templ_7745c5c3_Err
+		}
+		templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 4, "</section><section class=\"space-y-6\"><h2 class=\"text-2xl font-bold\" id=\"navigation-state\">Navigation State</h2><p class=\"text-[var(--text-secondary)]\">Track and manage navigation state reactively.</p>")
 		if templ_7745c5c3_Err != nil {
 			return templ_7745c5c3_Err
 		}
@@ -92,7 +107,7 @@ const state = nav.getState();`, "typescript", " nav-state.ts").Render(ctx, templ
 		if templ_7745c5c3_Err != nil {
 			return templ_7745c5c3_Err
 		}
-		templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 4, "</section><section class=\"space-y-6\"><h2 class=\"text-2xl font-bold\" id=\"lifecycle\">Lifecycle Callbacks</h2><p class=\"text-[var(--text-secondary)]\">Register callbacks that run before or after navigation.</p>")
+		templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 5, "</section><section class=\"space-y-6\"><h2 class=\"text-2xl font-bold\" id=\"lifecycle\">Lifecycle Callbacks</h2><p class=\"text-[var(--text-secondary)]\">Register callbacks that run before or after navigation.</p>")
 		if templ_7745c5c3_Err != nil {
 			return templ_7745c5c3_Err
 		}
@@ -119,85 +134,85 @@ unsubAfter();`, "typescript", " lifecycle.ts").Render(ctx, templ_7745c5c3_Buffer
 		if templ_7745c5c3_Err != nil {
 			return templ_7745c5c3_Err
 		}
-		templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 5, "</section><section class=\"space-y-6\"><h2 class=\"text-2xl font-bold\" id=\"dom-events\">Global DOM Events</h2><p class=\"text-[var(--text-secondary)]\">The runtime dispatches custom events on the document.</p><div class=\"overflow-x-auto\"><table class=\"w-full border-collapse\"><thead><tr class=\"border-b border-[var(--border)]\"><th class=\"text-left py-3 px-4 font-semibold\">Event</th><th class=\"text-left py-3 px-4 font-semibold\">Detail</th><th class=\"text-left py-3 px-4 font-semibold\">Description</th></tr></thead> <tbody class=\"text-[var(--text-secondary)]\"><tr class=\"border-b border-[var(--border)]\"><td class=\"py-3 px-4\"><code class=\"text-[var(--accent-primary)]\">gospa:navigated</code></td><td class=\"py-3 px-4\"><code>")
+		templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 6, "</section><section class=\"space-y-6\"><h2 class=\"text-2xl font-bold\" id=\"dom-events\">Global DOM Events</h2><p class=\"text-[var(--text-secondary)]\">The runtime dispatches custom events on the document.</p><div class=\"overflow-x-auto\"><table class=\"w-full border-collapse\"><thead><tr class=\"border-b border-[var(--border)]\"><th class=\"text-left py-3 px-4 font-semibold\">Event</th><th class=\"text-left py-3 px-4 font-semibold\">Detail</th><th class=\"text-left py-3 px-4 font-semibold\">Description</th></tr></thead> <tbody class=\"text-[var(--text-secondary)]\"><tr class=\"border-b border-[var(--border)]\"><td class=\"py-3 px-4\"><code class=\"text-[var(--accent-primary)]\">gospa:navigated</code></td><td class=\"py-3 px-4\"><code>")
 		if templ_7745c5c3_Err != nil {
 			return templ_7745c5c3_Err
 		}
 		var templ_7745c5c3_Var2 string
 		templ_7745c5c3_Var2, templ_7745c5c3_Err = templ.JoinStringErrs("{")
 		if templ_7745c5c3_Err != nil {
-			return templ.Error{Err: templ_7745c5c3_Err, FileName: `routes/docs/client-runtime/navigation-events/page.templ`, Line: 107, Col: 39}
+			return templ.Error{Err: templ_7745c5c3_Err, FileName: `routes/docs/client-runtime/navigation-events/page.templ`, Line: 120, Col: 39}
 		}
 		_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ.EscapeString(templ_7745c5c3_Var2))
 		if templ_7745c5c3_Err != nil {
 			return templ_7745c5c3_Err
 		}
-		templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 6, "path, state")
+		templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 7, "path, state")
 		if templ_7745c5c3_Err != nil {
 			return templ_7745c5c3_Err
 		}
 		var templ_7745c5c3_Var3 string
 		templ_7745c5c3_Var3, templ_7745c5c3_Err = templ.JoinStringErrs("}")
 		if templ_7745c5c3_Err != nil {
-			return templ.Error{Err: templ_7745c5c3_Err, FileName: `routes/docs/client-runtime/navigation-events/page.templ`, Line: 107, Col: 55}
+			return templ.Error{Err: templ_7745c5c3_Err, FileName: `routes/docs/client-runtime/navigation-events/page.templ`, Line: 120, Col: 55}
 		}
 		_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ.EscapeString(templ_7745c5c3_Var3))
 		if templ_7745c5c3_Err != nil {
 			return templ_7745c5c3_Err
 		}
-		templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 7, "</code></td><td class=\"py-3 px-4\">After successful navigation</td></tr><tr class=\"border-b border-[var(--border)]\"><td class=\"py-3 px-4\"><code class=\"text-[var(--accent-primary)]\">gospa:navigation-start</code></td><td class=\"py-3 px-4\"><code>")
+		templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 8, "</code></td><td class=\"py-3 px-4\">After successful navigation</td></tr><tr class=\"border-b border-[var(--border)]\"><td class=\"py-3 px-4\"><code class=\"text-[var(--accent-primary)]\">gospa:navigation-start</code></td><td class=\"py-3 px-4\"><code>")
 		if templ_7745c5c3_Err != nil {
 			return templ_7745c5c3_Err
 		}
 		var templ_7745c5c3_Var4 string
 		templ_7745c5c3_Var4, templ_7745c5c3_Err = templ.JoinStringErrs("{")
 		if templ_7745c5c3_Err != nil {
-			return templ.Error{Err: templ_7745c5c3_Err, FileName: `routes/docs/client-runtime/navigation-events/page.templ`, Line: 112, Col: 39}
+			return templ.Error{Err: templ_7745c5c3_Err, FileName: `routes/docs/client-runtime/navigation-events/page.templ`, Line: 125, Col: 39}
 		}
 		_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ.EscapeString(templ_7745c5c3_Var4))
 		if templ_7745c5c3_Err != nil {
 			return templ_7745c5c3_Err
 		}
-		templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 8, "from, to")
+		templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 9, "from, to")
 		if templ_7745c5c3_Err != nil {
 			return templ_7745c5c3_Err
 		}
 		var templ_7745c5c3_Var5 string
 		templ_7745c5c3_Var5, templ_7745c5c3_Err = templ.JoinStringErrs("}")
 		if templ_7745c5c3_Err != nil {
-			return templ.Error{Err: templ_7745c5c3_Err, FileName: `routes/docs/client-runtime/navigation-events/page.templ`, Line: 112, Col: 52}
+			return templ.Error{Err: templ_7745c5c3_Err, FileName: `routes/docs/client-runtime/navigation-events/page.templ`, Line: 125, Col: 52}
 		}
 		_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ.EscapeString(templ_7745c5c3_Var5))
 		if templ_7745c5c3_Err != nil {
 			return templ_7745c5c3_Err
 		}
-		templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 9, "</code></td><td class=\"py-3 px-4\">Before navigation starts</td></tr><tr class=\"border-b border-[var(--border)]\"><td class=\"py-3 px-4\"><code class=\"text-[var(--accent-primary)]\">gospa:navigation-error</code></td><td class=\"py-3 px-4\"><code>")
+		templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 10, "</code></td><td class=\"py-3 px-4\">Before navigation starts</td></tr><tr class=\"border-b border-[var(--border)]\"><td class=\"py-3 px-4\"><code class=\"text-[var(--accent-primary)]\">gospa:navigation-error</code></td><td class=\"py-3 px-4\"><code>")
 		if templ_7745c5c3_Err != nil {
 			return templ_7745c5c3_Err
 		}
 		var templ_7745c5c3_Var6 string
 		templ_7745c5c3_Var6, templ_7745c5c3_Err = templ.JoinStringErrs("{")
 		if templ_7745c5c3_Err != nil {
-			return templ.Error{Err: templ_7745c5c3_Err, FileName: `routes/docs/client-runtime/navigation-events/page.templ`, Line: 117, Col: 39}
+			return templ.Error{Err: templ_7745c5c3_Err, FileName: `routes/docs/client-runtime/navigation-events/page.templ`, Line: 130, Col: 39}
 		}
 		_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ.EscapeString(templ_7745c5c3_Var6))
 		if templ_7745c5c3_Err != nil {
 			return templ_7745c5c3_Err
 		}
-		templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 10, "error, path")
+		templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 11, "error, path")
 		if templ_7745c5c3_Err != nil {
 			return templ_7745c5c3_Err
 		}
 		var templ_7745c5c3_Var7 string
 		templ_7745c5c3_Var7, templ_7745c5c3_Err = templ.JoinStringErrs("}")
 		if templ_7745c5c3_Err != nil {
-			return templ.Error{Err: templ_7745c5c3_Err, FileName: `routes/docs/client-runtime/navigation-events/page.templ`, Line: 117, Col: 55}
+			return templ.Error{Err: templ_7745c5c3_Err, FileName: `routes/docs/client-runtime/navigation-events/page.templ`, Line: 130, Col: 55}
 		}
 		_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ.EscapeString(templ_7745c5c3_Var7))
 		if templ_7745c5c3_Err != nil {
 			return templ_7745c5c3_Err
 		}
-		templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 11, "</code></td><td class=\"py-3 px-4\">Navigation failed</td></tr></tbody></table></div>")
+		templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 12, "</code></td><td class=\"py-3 px-4\">Navigation failed</td></tr></tbody></table></div>")
 		if templ_7745c5c3_Err != nil {
 			return templ_7745c5c3_Err
 		}
@@ -208,7 +223,7 @@ unsubAfter();`, "typescript", " lifecycle.ts").Render(ctx, templ_7745c5c3_Buffer
 		if templ_7745c5c3_Err != nil {
 			return templ_7745c5c3_Err
 		}
-		templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 12, "</section><section class=\"space-y-6\"><h2 class=\"text-2xl font-bold\" id=\"events\">Event Handling</h2><p class=\"text-[var(--text-secondary)]\">Advanced event handling with modifiers and delegation.</p>")
+		templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 13, "</section><section class=\"space-y-6\"><h2 class=\"text-2xl font-bold\" id=\"events\">Event Handling</h2><p class=\"text-[var(--text-secondary)]\">Advanced event handling with modifiers and delegation.</p>")
 		if templ_7745c5c3_Err != nil {
 			return templ_7745c5c3_Err
 		}
@@ -245,7 +260,7 @@ window.addEventListener('scroll', throttledScroll);`, "typescript", " events.ts"
 		if templ_7745c5c3_Err != nil {
 			return templ_7745c5c3_Err
 		}
-		templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 13, "</section><section class=\"space-y-6\"><h2 class=\"text-2xl font-bold\" id=\"event-modifiers\">Event Modifiers</h2><p class=\"text-[var(--text-secondary)]\">Chain modifiers for complex event handling.</p>")
+		templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 14, "</section><section class=\"space-y-6\"><h2 class=\"text-2xl font-bold\" id=\"event-modifiers\">Event Modifiers</h2><p class=\"text-[var(--text-secondary)]\">Chain modifiers for complex event handling.</p>")
 		if templ_7745c5c3_Err != nil {
 			return templ_7745c5c3_Err
 		}
@@ -264,7 +279,7 @@ on(modal, 'click:once:prevent', (e) => {
 		if templ_7745c5c3_Err != nil {
 			return templ_7745c5c3_Err
 		}
-		templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 14, "</section><section class=\"space-y-6\"><h2 class=\"text-2xl font-bold\" id=\"keys\">Keyboard Events</h2><p class=\"text-[var(--text-secondary)]\">Keyboard shortcuts and key combinations.</p>")
+		templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 15, "</section><section class=\"space-y-6\"><h2 class=\"text-2xl font-bold\" id=\"keys\">Keyboard Events</h2><p class=\"text-[var(--text-secondary)]\">Keyboard shortcuts and key combinations.</p>")
 		if templ_7745c5c3_Err != nil {
 			return templ_7745c5c3_Err
 		}
@@ -292,7 +307,7 @@ onKey(document, ['ArrowUp', 'ArrowDown'], (e) => {
 		if templ_7745c5c3_Err != nil {
 			return templ_7745c5c3_Err
 		}
-		templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 15, "</section><section class=\"space-y-6\"><h2 class=\"text-2xl font-bold\" id=\"init\">Manual Initialization</h2><p class=\"text-[var(--text-secondary)]\">Set up navigation manually for custom scenarios.</p>")
+		templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 16, "</section><section class=\"space-y-6\"><h2 class=\"text-2xl font-bold\" id=\"init\">Manual Initialization</h2><p class=\"text-[var(--text-secondary)]\">Set up navigation manually for custom scenarios.</p>")
 		if templ_7745c5c3_Err != nil {
 			return templ_7745c5c3_Err
 		}
@@ -310,7 +325,7 @@ destroyNavigation();`, "typescript", " init.ts").Render(ctx, templ_7745c5c3_Buff
 		if templ_7745c5c3_Err != nil {
 			return templ_7745c5c3_Err
 		}
-		templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 16, "</section><section class=\"space-y-4\"><h2 class=\"text-2xl font-bold\" id=\"options\">Navigation Options</h2><p class=\"text-[var(--text-secondary)]\">Configure navigation behavior at runtime via data attributes or JavaScript.</p><div class=\"overflow-x-auto\"><table class=\"w-full text-sm border border-[var(--border)] rounded-lg\"><thead class=\"bg-[var(--bg-tertiary)]\"><tr><th class=\"px-4 py-2 text-left font-semibold\">Option</th><th class=\"px-4 py-2 text-left font-semibold\">Default</th><th class=\"px-4 py-2 text-left font-semibold\">Description</th></tr></thead> <tbody class=\"divide-y divide-[var(--border)]\"><tr><td class=\"px-4 py-2 font-mono text-[var(--accent-primary)]\">data-gospa-progress</td><td class=\"px-4 py-2\">true</td><td class=\"px-4 py-2\">Show/hide the progress bar during navigation (set to \" false\"to disable)</td></tr><tr><td class=\"px-4 py-2 font-mono text-[var(--accent-primary)]\">data-gospa-prefetch</td><td class=\"px-4 py-2\">Enabled</td><td class=\"px-4 py-2\">Prefetch links on hover/viewport entry (set to \" false\"to disable)</td></tr><tr><td class=\"px-4 py-2 font-mono text-[var(--accent-primary)]\">data-gospa-view-transition</td><td class=\"px-4 py-2\">Enabled</td><td class=\"px-4 py-2\">Enable native View Transitions with smooth fades (set to \" false\"to disable)</td></tr></tbody></table></div><p class=\"text-[var(--text-secondary)] mt-4\">These options can be set on individual links via data attributes, or globally via the <code class=\"text-[var(--accent-primary)]\">initNavigation()</code> function.</p>")
+		templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 17, "</section><section class=\"space-y-4\"><h2 class=\"text-2xl font-bold\" id=\"options\">Navigation Options</h2><p class=\"text-[var(--text-secondary)]\">Configure navigation behavior at runtime via data attributes or JavaScript.</p><div class=\"overflow-x-auto\"><table class=\"w-full text-sm border border-[var(--border)] rounded-lg\"><thead class=\"bg-[var(--bg-tertiary)]\"><tr><th class=\"px-4 py-2 text-left font-semibold\">Option</th><th class=\"px-4 py-2 text-left font-semibold\">Default</th><th class=\"px-4 py-2 text-left font-semibold\">Description</th></tr></thead> <tbody class=\"divide-y divide-[var(--border)]\"><tr><td class=\"px-4 py-2 font-mono text-[var(--accent-primary)]\">data-gospa-progress</td><td class=\"px-4 py-2\">true</td><td class=\"px-4 py-2\">Show/hide the progress bar during navigation (set to \" false\"to disable)</td></tr><tr><td class=\"px-4 py-2 font-mono text-[var(--accent-primary)]\">data-gospa-prefetch</td><td class=\"px-4 py-2\">Enabled</td><td class=\"px-4 py-2\">Prefetch links on hover/viewport entry (set to \" false\"to disable)</td></tr><tr><td class=\"px-4 py-2 font-mono text-[var(--accent-primary)]\">data-gospa-view-transition</td><td class=\"px-4 py-2\">Enabled</td><td class=\"px-4 py-2\">Enable native View Transitions with smooth fades (set to \" false\"to disable)</td></tr></tbody></table></div><p class=\"text-[var(--text-secondary)] mt-4\">These options can be set on individual links via data attributes, or globally via the <code class=\"text-[var(--accent-primary)]\">initNavigation()</code> function.</p>")
 		if templ_7745c5c3_Err != nil {
 			return templ_7745c5c3_Err
 		}
@@ -329,7 +344,7 @@ initNavigation({
 		if templ_7745c5c3_Err != nil {
 			return templ_7745c5c3_Err
 		}
-		templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 17, "</section><div class=\"flex justify-between mt-16\"><a href=\"/docs/client-runtime/dom-bindings\" class=\"group flex items-center gap-3 px-6 py-3 rounded-xl border border-[var(--border)] bg-[var(--bg-secondary)] hover:border-[var(--accent-primary)]/50 transition-all\"><svg xmlns=\"http://www.w3.org/2000/svg\" width=\"20\" height=\"20\" viewBox=\"0 0 24 24\" fill=\"none\" stroke=\"currentColor\" stroke-width=\"2\" stroke-linecap=\"round\" stroke-linejoin=\"round\" class=\"text-[var(--text-muted)] group-hover:text-[var(--accent-primary)] transition-colors\"><path d=\" M19 12H5\"></path><path d=\" m12 19-7-7 7-7\"></path></svg><div><div class=\"text-[var(--text-muted)] text-xs uppercase tracking-widest font-bold mb-1\">Previous</div><div class=\"font-bold group-hover:text-[var(--accent-primary)] transition-colors\">DOM Bindings</div></div></a> <a href=\"/docs/client-runtime/transitions\" class=\"group flex items-center gap-3 px-6 py-3 rounded-xl border border-[var(--border)] bg-[var(--bg-secondary)] hover:border-[var(--accent-primary)]/50 transition-all text-right\"><div><div class=\"text-[var(--text-muted)] text-xs uppercase tracking-widest font-bold mb-1\">Next</div><div class=\"font-bold group-hover:text-[var(--accent-primary)] transition-colors\">Transitions</div></div><svg xmlns=\"http://www.w3.org/2000/svg\" width=\"20\" height=\"20\" viewBox=\"0 0 24 24\" fill=\"none\" stroke=\"currentColor\" stroke-width=\"2\" stroke-linecap=\"round\" stroke-linejoin=\"round\" class=\"text-[var(--text-muted)] group-hover:text-[var(--accent-primary)] transition-colors\"><path d=\" M5 12h14\"></path><path d=\" m12 5 7 7-7 7\"></path></svg></a></div></div>")
+		templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 18, "</section><div class=\"flex justify-between mt-16\"><a href=\"/docs/client-runtime/dom-bindings\" class=\"group flex items-center gap-3 px-6 py-3 rounded-xl border border-[var(--border)] bg-[var(--bg-secondary)] hover:border-[var(--accent-primary)]/50 transition-all\"><svg xmlns=\"http://www.w3.org/2000/svg\" width=\"20\" height=\"20\" viewBox=\"0 0 24 24\" fill=\"none\" stroke=\"currentColor\" stroke-width=\"2\" stroke-linecap=\"round\" stroke-linejoin=\"round\" class=\"text-[var(--text-muted)] group-hover:text-[var(--accent-primary)] transition-colors\"><path d=\" M19 12H5\"></path><path d=\" m12 19-7-7 7-7\"></path></svg><div><div class=\"text-[var(--text-muted)] text-xs uppercase tracking-widest font-bold mb-1\">Previous</div><div class=\"font-bold group-hover:text-[var(--accent-primary)] transition-colors\">DOM Bindings</div></div></a> <a href=\"/docs/client-runtime/transitions\" class=\"group flex items-center gap-3 px-6 py-3 rounded-xl border border-[var(--border)] bg-[var(--bg-secondary)] hover:border-[var(--accent-primary)]/50 transition-all text-right\"><div><div class=\"text-[var(--text-muted)] text-xs uppercase tracking-widest font-bold mb-1\">Next</div><div class=\"font-bold group-hover:text-[var(--accent-primary)] transition-colors\">Transitions</div></div><svg xmlns=\"http://www.w3.org/2000/svg\" width=\"20\" height=\"20\" viewBox=\"0 0 24 24\" fill=\"none\" stroke=\"currentColor\" stroke-width=\"2\" stroke-linecap=\"round\" stroke-linejoin=\"round\" class=\"text-[var(--text-muted)] group-hover:text-[var(--accent-primary)] transition-colors\"><path d=\" M5 12h14\"></path><path d=\" m12 5 7 7-7 7\"></path></svg></a></div></div>")
 		if templ_7745c5c3_Err != nil {
 			return templ_7745c5c3_Err
 		}
