@@ -7,6 +7,65 @@ import (
 	"testing"
 )
 
+func TestParseTagArgs(t *testing.T) {
+	tests := []struct {
+		name      string
+		args      []string
+		wantSkip  bool
+		wantTag   string
+		expectErr bool
+	}{
+		{
+			name:     "flag before tag",
+			args:     []string{"-skip-tag", "v1.2.3"},
+			wantSkip: true,
+			wantTag:  "v1.2.3",
+		},
+		{
+			name:     "flag after tag",
+			args:     []string{"v1.2.3", "-skip-tag"},
+			wantSkip: true,
+			wantTag:  "v1.2.3",
+		},
+		{
+			name:    "tag only",
+			args:    []string{"v1.2.3"},
+			wantTag: "v1.2.3",
+		},
+		{
+			name:      "missing tag",
+			args:      []string{"-skip-tag"},
+			expectErr: true,
+		},
+		{
+			name:      "too many args",
+			args:      []string{"v1.2.3", "v1.2.4"},
+			expectErr: true,
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			gotSkip, gotTag, err := parseTagArgs(tt.args)
+			if tt.expectErr {
+				if err == nil {
+					t.Fatal("expected error, got nil")
+				}
+				return
+			}
+			if err != nil {
+				t.Fatalf("parseTagArgs returned error: %v", err)
+			}
+			if gotSkip != tt.wantSkip {
+				t.Fatalf("skip mismatch: got %v want %v", gotSkip, tt.wantSkip)
+			}
+			if gotTag != tt.wantTag {
+				t.Fatalf("tag mismatch: got %q want %q", gotTag, tt.wantTag)
+			}
+		})
+	}
+}
+
 func TestUpdateVersionFile(t *testing.T) {
 	tmp := t.TempDir()
 	oldWD, err := os.Getwd()

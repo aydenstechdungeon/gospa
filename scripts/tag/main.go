@@ -2,6 +2,7 @@
 package main
 
 import (
+	"errors"
 	"flag"
 	"fmt"
 	"io/fs"
@@ -13,15 +14,12 @@ import (
 )
 
 func main() {
-	var skipTag bool
-	flag.BoolVar(&skipTag, "skip-tag", false, "only update version in code, skip git commit, tag and push")
-	flag.Parse()
-
-	if len(flag.Args()) < 1 {
-		fmt.Println("Usage: go run scripts/tag.go [-skip-tag] <tag>")
+	skipTag, newTag, err := parseTagArgs(os.Args[1:])
+	if err != nil {
+		fmt.Println("Usage: go run scripts/tag/main.go [-skip-tag] <tag>")
+		fmt.Println("Error:", err)
 		os.Exit(1)
 	}
-	newTag := flag.Arg(0)
 	if !strings.HasPrefix(newTag, "v") {
 		fmt.Println("Error: tag must start with 'v' (e.g. v0.1.0)")
 		os.Exit(1)
@@ -182,6 +180,33 @@ func main() {
 
 	pushTag(newTag)
 	fmt.Println("\nSuccessfully updated tag", newTag)
+}
+
+func parseTagArgs(args []string) (bool, string, error) {
+	fs := flag.NewFlagSet("tag", flag.ContinueOnError)
+	fs.SetOutput(os.Stderr)
+
+	var skipTag bool
+	fs.BoolVar(&skipTag, "skip-tag", false, "only update version in code, skip git commit, tag and push")
+
+	ordered := make([]string, 0, len(args))
+	positionals := make([]string, 0, 1)
+	for _, arg := range args {
+		if strings.HasPrefix(arg, "-") {
+			ordered = append(ordered, arg)
+			continue
+		}
+		positionals = append(positionals, arg)
+	}
+	ordered = append(ordered, positionals...)
+
+	if err := fs.Parse(ordered); err != nil {
+		return false, "", err
+	}
+	if fs.NArg() != 1 {
+		return false, "", errors.New("expected exactly one <tag> argument")
+	}
+	return skipTag, fs.Arg(0), nil
 }
 
 func pushTag(newTag string) {
