@@ -164,14 +164,43 @@
     // Highlight matched text in snippet
     function highlightSnippet(snippet, query) {
         const terms = query.toLowerCase().split(/\s+/).filter(t => t.length > 0);
-        let highlighted = snippet;
+        let highlighted = escapeHTML(snippet);
 
         terms.forEach(term => {
-            const regex = new RegExp(`(${escapeRegex(term)})`, 'gi');
+            const escapedTerm = escapeRegex(escapeHTML(term));
+            if (!escapedTerm) return;
+            const regex = new RegExp(`(${escapedTerm})`, 'gi');
             highlighted = highlighted.replace(regex, '<mark class="bg-[var(--accent-primary)]/20 text-[var(--accent-primary)] px-0.5 rounded">$1</mark>');
         });
 
         return highlighted;
+    }
+
+    function escapeHTML(value) {
+        return String(value).replace(/[&<>"']/g, (char) => {
+            switch (char) {
+                case '&': return '&amp;';
+                case '<': return '&lt;';
+                case '>': return '&gt;';
+                case '"': return '&quot;';
+                case "'": return '&#39;';
+                default: return char;
+            }
+        });
+    }
+
+    function sanitizeURL(url) {
+        if (typeof url !== 'string' || url.trim() === '') return '#';
+        try {
+            const parsed = new URL(url, window.location.origin);
+            if (parsed.protocol !== 'http:' && parsed.protocol !== 'https:') return '#';
+            if (parsed.origin === window.location.origin) {
+                return `${parsed.pathname}${parsed.search}${parsed.hash}`;
+            }
+            return parsed.toString();
+        } catch {
+            return '#';
+        }
     }
 
     function escapeRegex(string) {
@@ -437,11 +466,14 @@
             list.innerHTML = results.map(res => {
                 const snippet = getContextSnippet(res, query);
                 const highlightedSnippet = highlightSnippet(snippet, query);
+                const safeTitle = escapeHTML(res.item.title);
+                const safeSection = escapeHTML(res.item.section || '');
+                const safeURL = sanitizeURL(res.item.url);
                 return `
-                <a href="${res.item.url}" class="block p-4 hover:bg-[var(--bg-tertiary)] transition-all border-b border-[var(--border)] last:border-0 group">
+                <a href="${safeURL}" class="block p-4 hover:bg-[var(--bg-tertiary)] transition-all border-b border-[var(--border)] last:border-0 group">
                     <div class="flex items-center gap-2">
-                        <div class="font-bold text-[var(--accent-primary)] group-hover:underline">${res.item.title}</div>
-                        ${res.item.section ? `<span class="text-xs text-[var(--text-muted)]">— ${res.item.section}</span>` : ''}
+                        <div class="font-bold text-[var(--accent-primary)] group-hover:underline">${safeTitle}</div>
+                        ${safeSection ? `<span class="text-xs text-[var(--text-muted)]">— ${safeSection}</span>` : ''}
                     </div>
                     <div class="text-sm text-[var(--text-secondary)] mt-1.5 leading-relaxed">${highlightedSnippet}</div>
                 </a>

@@ -42,7 +42,6 @@ app := gospa.New(gospa.Config{
     Prefork: true,
     Storage: redis.NewStore(rdb),
     PubSub:  redis.NewPubSub(rdb),
-    SimpleRuntime:   true,
     CompressState:   true,
     CacheTemplates:  true,
     HydrationMode:   "lazy",

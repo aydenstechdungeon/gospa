@@ -764,7 +764,7 @@ func (a *App) registerPageRoute(r *routing.Route) {
 }
 
 func (a *App) handleFormAction(c fiberpkg.Ctx, r *routing.Route) error {
-	actionName := c.Query("/_action")
+	actionName := c.Query("_action")
 	if actionName == "" {
 		actionName = "default"
 	}

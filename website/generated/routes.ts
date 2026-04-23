@@ -478,7 +478,18 @@ export function docsWebsocketRoute(): string {
 /**
  * Route matching cache to avoid redundant iterations.
  */
+const ROUTE_MATCH_CACHE_MAX = 1000;
 const routeMatchCache = new Map<string, boolean>();
+
+function setRouteMatchCache(cacheKey: string, value: boolean): void {
+  if (routeMatchCache.size >= ROUTE_MATCH_CACHE_MAX) {
+    const oldestKey = routeMatchCache.keys().next().value;
+    if (oldestKey !== undefined) {
+      routeMatchCache.delete(oldestKey);
+    }
+  }
+  routeMatchCache.set(cacheKey, value);
+}
 
 /**
  * Check if a path matches a route pattern.
@@ -493,7 +504,7 @@ export function matchRoute(pattern: string, path: string): boolean {
   const pathParts = path.split('/').filter(Boolean);
   
   if (patternParts.length !== pathParts.length) {
-    routeMatchCache.set(cacheKey, false);
+    setRouteMatchCache(cacheKey, false);
     return false;
   }
   
@@ -502,12 +513,12 @@ export function matchRoute(pattern: string, path: string): boolean {
     const pathPart = pathParts[i];
     
     if (!patternPart.startsWith(':') && patternPart !== pathPart) {
-      routeMatchCache.set(cacheKey, false);
+      setRouteMatchCache(cacheKey, false);
       return false;
     }
   }
   
-  routeMatchCache.set(cacheKey, true);
+  setRouteMatchCache(cacheKey, true);
   return true;
 }
 
@@ -603,11 +614,16 @@ export function getLinkProps<T extends RoutePath>(
   path: T,
   ...args: [...RouteParams<T> extends never ? [] : [params: RouteParams<T>], query?: RouteQuery]
 ): { href: string } {
-  let href = buildRoute(path, ...(args.length > 0 && typeof args[0] === 'object' && !('search' in args[0]) ? [args[0]] : []));
+  const hasParams = path.includes(':');
+  const params = hasParams && args.length > 0 && typeof args[0] === 'object' && args[0] !== null
+    ? (args[0] as RouteParams<T>)
+    : undefined;
+  let href = buildRoute(path, ...(params ? [params] : []));
   
-  const query = args.find(a => typeof a === 'object' && !('toString' in a)) as RouteQuery | undefined;
+  const queryIndex = hasParams ? 1 : 0;
+  const query = args[queryIndex] as RouteQuery | undefined;
   
-  if (query) {
+  if (query && typeof query === 'object') {
     href += buildQuery(query);
   }
   

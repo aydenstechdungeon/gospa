@@ -66,27 +66,27 @@ func Page() templ.Component {
 			return templ_7745c5c3_Err
 		}
 		templ_7745c5c3_Err = components.CodeBlock(`{
-  "$schema": " https://json-schema.org/draft/2020-12/schema",
-  "type": " object",
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "type": "object",
   "properties": {
     "email": {
-      "type": " string",
-      "format": " email",
+      "type": "string",
+      "format": "email",
       "minLength": 5,
       "maxLength": 255
     },
     "password": {
-      "type": " string",
+      "type": "string",
       "minLength": 8,
       "maxLength": 100
     },
     "age": {
-      "type": " integer",
+      "type": "integer",
       "minimum": 18,
       "maximum": 120
     }
   },
-  "required": [" email", " password"]
+  "required": ["email", "password"]
 }`, "json", " schemas/user.json").Render(ctx, templ_7745c5c3_Buffer)
 		if templ_7745c5c3_Err != nil {
 			return templ_7745c5c3_Err

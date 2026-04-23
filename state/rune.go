@@ -43,7 +43,7 @@ type subEntry[T any] struct {
 type Rune[T any] struct {
 	mu          sync.RWMutex
 	value       T
-	valueAtomic atomic.Pointer[T]
+	valueAtomic atomic.Value
 	subscribers []subEntry[T]
 	// ID uniquely identifies this rune for client-side synchronization
 	id string
@@ -76,7 +76,7 @@ func NewRune[T any](initial T) *Rune[T] {
 		id:          generateRuneID(),
 		nextSubID:   1,
 	}
-	r.valueAtomic.Store(&r.value)
+	r.valueAtomic.Store(initial)
 	return r
 }
 
@@ -84,8 +84,10 @@ func NewRune[T any](initial T) *Rune[T] {
 // This is thread-safe and can be called concurrently.
 func (r *Rune[T]) Get() T {
 	// Optimization: Lock-free read for hot path
-	if ptr := r.valueAtomic.Load(); ptr != nil {
-		return *ptr
+	if v := r.valueAtomic.Load(); v != nil {
+		if typed, ok := v.(T); ok {
+			return typed
+		}
 	}
 	r.mu.RLock()
 	defer r.mu.RUnlock()
@@ -117,7 +119,7 @@ func (r *Rune[T]) Set(value T) {
 		return
 	}
 	r.value = value
-	r.valueAtomic.Store(&r.value)
+	r.valueAtomic.Store(value)
 	r.dirty = true
 	r.version++
 
@@ -296,6 +298,7 @@ func (r *Rune[T]) Update(fn func(T) T) {
 		return
 	}
 	r.value = newValue
+	r.valueAtomic.Store(newValue)
 	r.dirty = true
 	r.version++
 
@@ -307,7 +310,9 @@ func (r *Rune[T]) Update(fn func(T) T) {
 
 	subs := make([]func(T), 0, len(r.subscribers))
 	for _, s := range r.subscribers {
-		subs = append(subs, s.fn)
+		if s.fn != nil {
+			subs = append(subs, s.fn)
+		}
 	}
 	r.dirty = false
 	r.mu.Unlock()

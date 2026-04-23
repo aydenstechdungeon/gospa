@@ -29,7 +29,7 @@ GoSPA (Go Spa and Go S-P-A are the only valid pronunciations)  brings Svelte-lik
 
 - **Native Reactivity** - `Rune`, `Derived`, `Effect` primitives that work exactly like Svelte 5.
 - **WebSocket Sync** - Transparent client-server state synchronization with GZIP delta patching.
-- **SFC System** - Single File Components (`.gospa`) with scoped CSS and Go-based logic.
+- **SFC System (Alpha)** - Single File Components (`.gospa`) with scoped CSS and Go-based logic.
 - **File-Based Routing** - SvelteKit-style directory structure for `.templ` and `.gospa` files.
 - **Hybrid Rendering** - Mix SSR, SSG, ISR, and PPR on a per-page basis.
 - **Type-Safe RPC** - Call server functions directly from the client without boilerplate endpoints.
@@ -90,6 +90,8 @@ go run github.com/aydenstechdungeon/gospa/cmd/gospa@latest dev
 ```
 
 GoSPA automatically compiles this to a reactive Templ component and a TypeScript hydration island.
+
+> `.gospa` SFCs are currently alpha. For production apps today, prefer `.templ` route/components and use SFCs selectively.
 
 ## Comparison
 

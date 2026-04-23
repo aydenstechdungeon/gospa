@@ -1,3 +1,8 @@
+import {
+  __require,
+  __toESM
+} from "./islands-3hqyeswk.js";
+
 // generated/islands.ts
 function registerLazySetup(name, loader) {
   window.__GOSPA_SETUPS__ = window.__GOSPA_SETUPS__ || {};
@@ -9,4 +14,4 @@ function registerLazySetup(name, loader) {
     }
   };
 }
-registerLazySetup("routesdocsgospasfcpage", () => import("./routesdocsgospasfcpage.ts?v=" + Date.now()));
+registerLazySetup("routesdocsgospasfcpage", () => import("./routesdocsgospasfcpage-rf6ae6v7.js"));

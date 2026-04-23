@@ -4,6 +4,8 @@
 package routes
 
 import (
+	"strconv"
+
 	"github.com/a-h/templ"
 	"github.com/aydenstechdungeon/gospa/routing"
 	"github.com/aydenstechdungeon/gospa/website/routes/docs"
@@ -292,6 +294,12 @@ func init() {
 		if v, ok := props["debug"].(bool); ok {
 			return v
 		}
+		if v, ok := props["debug"].(string); ok {
+			parsed, err := strconv.ParseBool(v)
+			if err == nil {
+				return parsed
+			}
+		}
 		return false
 	}(), func() string {
 		if v, ok := props["hydrationMode"].(string); ok {
@@ -301,6 +309,12 @@ func init() {
 	}(), func() int {
 		if v, ok := props["hydrationTimeout"].(int); ok {
 			return v
+		}
+		if v, ok := props["hydrationTimeout"].(string); ok {
+			parsed, err := strconv.ParseInt(v, 10, 64)
+			if err == nil {
+				return int(parsed)
+			}
 		}
 		return 0
 	}(), func() string {

@@ -213,9 +213,7 @@ func stripHTML(html string) string {
 	re := regexp.MustCompile(`<[^>]+>`)
 	text := re.ReplaceAllString(html, " ")
 
-	// Clean up entities
-	text = strings.ReplaceAll(text, "&lt;", "<")
-	text = strings.ReplaceAll(text, "&gt;", ">")
+	// Keep angle brackets escaped to avoid recreating tags in downstream consumers.
 	text = strings.ReplaceAll(text, "&amp;", "&")
 	text = strings.ReplaceAll(text, "&quot;", `"`)
 	text = strings.ReplaceAll(text, "&#39;", "'")

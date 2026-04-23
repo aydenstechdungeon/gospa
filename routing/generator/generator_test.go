@@ -1,6 +1,8 @@
 package generator
 
 import (
+	"os"
+	"path/filepath"
 	"testing"
 )
 
@@ -30,7 +32,11 @@ func TestFilePathToURLPath(t *testing.T) {
 		expected string
 	}{
 		{".", "page.templ", "/"},
+		{".", "+page.templ", "/"},
 		{"blog", "page.templ", "/blog"},
+		{"blog", "+page.templ", "/blog"},
+		{"blog", "+layout.templ", "/blog"},
+		{"blog", "+error.templ", "/blog"},
 		{"blog/_id", "page.templ", "/blog/:id"},
 		{"(auth)/login", "page.templ", "/login"},
 		{"blog", "post.templ", "/blog/post"},
@@ -53,5 +59,45 @@ func TestParseRoute(t *testing.T) {
 	}
 	if len(route.RouteParams) != 1 || route.RouteParams[0] != "id" {
 		t.Errorf("expected RouteParams [id], got %v", route.RouteParams)
+	}
+}
+
+func TestParseRoute_ErrorBoundary(t *testing.T) {
+	route := parseRoute("+error.templ", ".")
+	if !route.IsError {
+		t.Fatal("expected +error.templ to be classified as IsError=true")
+	}
+	if route.URLPath != "/" {
+		t.Fatalf("expected root +error.templ URLPath '/', got %q", route.URLPath)
+	}
+}
+
+func TestScanRoutes_SeparatesPageAndErrorBoundaries(t *testing.T) {
+	tmpDir := t.TempDir()
+	if err := os.WriteFile(filepath.Join(tmpDir, "+page.templ"), []byte("package routes"), 0600); err != nil {
+		t.Fatalf("write +page.templ: %v", err)
+	}
+	if err := os.WriteFile(filepath.Join(tmpDir, "+error.templ"), []byte("package routes"), 0600); err != nil {
+		t.Fatalf("write +error.templ: %v", err)
+	}
+
+	routes, err := scanRoutes(tmpDir)
+	if err != nil {
+		t.Fatalf("scanRoutes error: %v", err)
+	}
+
+	var pageCount, errorCount int
+	for _, rt := range routes {
+		if rt.IsError {
+			errorCount++
+		} else if !rt.IsLayout {
+			pageCount++
+		}
+	}
+	if pageCount != 1 {
+		t.Fatalf("expected 1 page route, got %d", pageCount)
+	}
+	if errorCount != 1 {
+		t.Fatalf("expected 1 error boundary route, got %d", errorCount)
 	}
 }
