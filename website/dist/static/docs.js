@@ -5,6 +5,9 @@
     let fuse = null;
     let sidebarScrollPos = 0;
     let searchInitializationPromise = null;
+    let globalActionsInitialized = false;
+    let appInitialized = false;
+    const PREF_LANG_KEY = 'gospa-pref-lang';
 
     async function initSearch() {
         if (searchIndex) return;
@@ -285,11 +288,34 @@
         });
     }
 
+    function getCookieValue(name) {
+        const match = document.cookie.match(new RegExp(`(?:^|; )${name}=([^;]*)`));
+        return match ? decodeURIComponent(match[1]) : null;
+    }
+
+    function getPreferredLang() {
+        const stored = localStorage.getItem(PREF_LANG_KEY);
+        if (stored === 'js' || stored === 'ts') return stored;
+
+        const cookie = getCookieValue(PREF_LANG_KEY);
+        if (cookie === 'js' || cookie === 'ts') return cookie;
+
+        return 'js';
+    }
+
+    function setPreferredLang(lang) {
+        localStorage.setItem(PREF_LANG_KEY, lang);
+        document.cookie = `${PREF_LANG_KEY}=${encodeURIComponent(lang)}; Path=/; Max-Age=31536000; SameSite=Lax`;
+    }
+
     function initGlobalActions() {
+        if (globalActionsInitialized) return;
+        globalActionsInitialized = true;
+
         // eslint-disable-next-line no-unused-vars
         window.switchLang = function switchLang(_btn, lang) {
-            const targetLang = lang || localStorage.getItem('gospa-pref-lang') || 'js';
-            localStorage.setItem('gospa-pref-lang', targetLang);
+            const targetLang = lang === 'ts' || lang === 'js' ? lang : getPreferredLang();
+            setPreferredLang(targetLang);
 
             const activeClasses = ['bg-[var(--accent-primary)]', 'text-white'];
             const inactiveClasses = ['bg-[var(--bg-primary)]', 'text-[var(--text-secondary)]', 'hover:text-[var(--text-primary)]'];
@@ -344,13 +370,23 @@
         }, 0);
     });
 
-    // Also run on initial load
-    window.addEventListener('load', () => {
+    function initApp() {
+        if (appInitialized) return;
+        appInitialized = true;
+
         initRuntime();
         initGlobalActions();
         initAsyncCSS();
         updateToC();
-    });
+    }
+
+    // Run regardless of whether this async script executes before or after window load.
+    if (document.readyState === 'loading') {
+        document.addEventListener('DOMContentLoaded', initApp, { once: true });
+        window.addEventListener('load', initApp, { once: true });
+    } else {
+        initApp();
+    }
 
     // Strategy: Lazy load search on interaction or intent (hover)
     function openSearch() {
