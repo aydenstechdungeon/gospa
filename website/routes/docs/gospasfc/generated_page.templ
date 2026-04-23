@@ -16,7 +16,7 @@ var _ = title
 }}
 
 {{ if r := state.FromContext(ctx); r != nil { pMap := map[string]interface{}{}; r.Register("routesdocsgospasfcpage", pMap, nil) } }}
-	<div data-gospa-island="routesdocsgospasfcpage" class="">
+	<div data-gospa-island="routesdocsgospasfcpage" class="" data-gospa-mode="immediate">
 		<div class="space-y-12">
 		<header>
 			<h1 class="text-4xl font-bold tracking-tight mb-4 text-transparent bg-clip-text bg-gradient-to-r from-[var(--accent-primary)] to-[var(--accent-secondary)]">[Alpha] { title }</h1>

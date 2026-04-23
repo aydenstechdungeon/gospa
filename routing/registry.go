@@ -75,6 +75,8 @@ type LoadContext interface {
 	Query(key string, defaultValue ...string) string
 	Header(key string) string
 	Cookie(key string) string
+	FormValue(key string, defaultValue ...string) string
+	Method() string
 	Path() string
 }
 
@@ -83,6 +85,29 @@ type LoadFunc func(c LoadContext) (map[string]interface{}, error)
 
 // ActionFunc is a function that handles a form action.
 type ActionFunc func(c LoadContext) (interface{}, error)
+
+// ActionRedirect describes a redirect response for progressive-enhanced forms.
+type ActionRedirect struct {
+	To     string `json:"to"`
+	Status int    `json:"status,omitempty"`
+}
+
+// ActionValidationError contains form and field-level validation details.
+type ActionValidationError struct {
+	FieldErrors map[string]string `json:"fieldErrors,omitempty"`
+	FormError   string            `json:"formError,omitempty"`
+}
+
+// ActionResponse is the structured response contract for form actions.
+type ActionResponse struct {
+	Data           interface{}            `json:"data,omitempty"`
+	Code           string                 `json:"code,omitempty"`
+	Redirect       *ActionRedirect        `json:"redirect,omitempty"`
+	Validation     *ActionValidationError `json:"validation,omitempty"`
+	Revalidate     []string               `json:"revalidate,omitempty"`
+	RevalidateTags []string               `json:"revalidateTags,omitempty"`
+	RevalidateKeys []string               `json:"revalidateKeys,omitempty"`
+}
 
 // HookFunc is a function that handles a server-side hook (middleware).
 type HookFunc func(c fiberpkg.Ctx) error

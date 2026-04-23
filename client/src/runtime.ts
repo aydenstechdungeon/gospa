@@ -72,6 +72,16 @@ import {
 export { remote, remoteAction, configureRemote, getRemotePrefix };
 export type { RemoteOptions, RemoteResult };
 
+// Forms / Actions enhancement
+export {
+  enhanceForm,
+  enhanceForms,
+  type ActionEnhanceSuccess,
+  type ActionRedirect,
+  type ActionValidationError,
+  type FormEnhanceOptions,
+} from "./forms.ts";
+
 // Navigation
 import type { NavigateOptions, NavigationOptions } from "./navigation.ts";
 export type { NavigateOptions, NavigationOptions };
@@ -130,6 +140,27 @@ export async function prefetch(path: string) {
   if (syncMod) return syncMod.prefetch(path);
   const mod = await getFrameworkFeatures();
   return mod.prefetch(path);
+}
+
+export async function invalidate(path: string) {
+  const syncMod = getFrameworkFeaturesSync();
+  if (syncMod) return syncMod.invalidate(path);
+  const mod = await getFrameworkFeatures();
+  return mod.invalidate(path);
+}
+
+export async function invalidateTag(tag: string) {
+  const syncMod = getFrameworkFeaturesSync();
+  if (syncMod) return syncMod.invalidateTag(tag);
+  const mod = await getFrameworkFeatures();
+  return mod.invalidateTag(tag);
+}
+
+export async function invalidateKey(key: string) {
+  const syncMod = getFrameworkFeaturesSync();
+  if (syncMod) return syncMod.invalidateKey(key);
+  const mod = await getFrameworkFeatures();
+  return mod.invalidateKey(key);
 }
 
 // Islands & Priority

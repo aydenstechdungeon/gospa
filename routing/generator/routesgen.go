@@ -52,6 +52,13 @@ func (g *RouteTypeScriptGenerator) GenerateRoutesFile(outputDir string) error {
 
 	// Generate route builder
 	sb.WriteString("\n// ============================================\n")
+	sb.WriteString("// Route Data & Actions Contracts\n")
+	sb.WriteString("// ============================================\n\n")
+
+	g.generateRouteDataContracts(&sb)
+
+	// Generate route builder
+	sb.WriteString("\n// ============================================\n")
 	sb.WriteString("// Route Builder Functions\n")
 	sb.WriteString("// ============================================\n\n")
 
@@ -81,6 +88,59 @@ func (g *RouteTypeScriptGenerator) GenerateRoutesFile(outputDir string) error {
 	// Write to file
 	outPath := filepath.Join(outputDir, "routes.ts")
 	return os.WriteFile(outPath, []byte(sb.String()), 0600)
+}
+
+func (g *RouteTypeScriptGenerator) generateRouteDataContracts(sb *strings.Builder) {
+	sb.WriteString("/**\n")
+	sb.WriteString(" * Per-route metadata for load/action availability.\n")
+	sb.WriteString(" */\n")
+	sb.WriteString("export interface RouteDataContract {\n")
+	sb.WriteString("  hasLoad: boolean;\n")
+	sb.WriteString("  hasActions: boolean;\n")
+	sb.WriteString("  actions: readonly string[];\n")
+	sb.WriteString("}\n\n")
+
+	sb.WriteString("export const routeDataContracts: Partial<Record<RoutePath, RouteDataContract>> = {\n")
+	for _, route := range g.routes {
+		if route.IsLayout {
+			continue
+		}
+		if !route.HasLoader && !route.HasActions {
+			continue
+		}
+		fmt.Fprintf(sb, "  %q: {\n", route.URLPath)
+		fmt.Fprintf(sb, "    hasLoad: %v,\n", route.HasLoader)
+		fmt.Fprintf(sb, "    hasActions: %v,\n", route.HasActions)
+		fmt.Fprintf(sb, "    actions: %v,\n", g.formatStringArray(route.Actions))
+		sb.WriteString("  },\n")
+	}
+	sb.WriteString("};\n\n")
+
+	sb.WriteString("export type RouteLoadData<T extends RoutePath> = Record<string, unknown>;\n\n")
+
+	sb.WriteString("/**\n")
+	sb.WriteString(" * Fetch typed load data for a route (server Load chain only).\n")
+	sb.WriteString(" */\n")
+	sb.WriteString("export async function loadRouteData<T extends RoutePath>(\n")
+	sb.WriteString("  path: T,\n")
+	sb.WriteString("  init?: RequestInit,\n")
+	sb.WriteString("): Promise<RouteLoadData<T>> {\n")
+	sb.WriteString("  const dataURL = new URL(path, window.location.origin);\n")
+	sb.WriteString("  dataURL.searchParams.set('__data', '1');\n")
+	sb.WriteString("  const res = await fetch(dataURL.toString(), {\n")
+	sb.WriteString("    ...init,\n")
+	sb.WriteString("    credentials: init?.credentials ?? 'same-origin',\n")
+	sb.WriteString("    headers: {\n")
+	sb.WriteString("      Accept: 'application/json',\n")
+	sb.WriteString("      ...(init?.headers || {}),\n")
+	sb.WriteString("    },\n")
+	sb.WriteString("  });\n")
+	sb.WriteString("  if (!res.ok) {\n")
+	sb.WriteString("    throw new Error(`Failed to load route data (${res.status})`);\n")
+	sb.WriteString("  }\n")
+	sb.WriteString("  const payload = await res.json() as { data?: Record<string, unknown> };\n")
+	sb.WriteString("  return (payload.data ?? {}) as RouteLoadData<T>;\n")
+	sb.WriteString("}\n")
 }
 
 // generateRoutePaths generates the route path type definitions.

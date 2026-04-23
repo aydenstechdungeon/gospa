@@ -15,8 +15,11 @@ await navigate('/about');
 // With options
 await navigate('/dashboard', {
   replace: true,      // Replace history entry
-  scrollToTop: true   // Scroll to top after navigation
+  scroll: true        // Scroll to top after navigation
 });
+
+// Deprecated alias (still supported for one minor release)
+await navigate('/dashboard', { scrollToTop: true });
 
 // History navigation
 back();              // Go back one page
@@ -39,6 +42,18 @@ prefetch(['/blog/post-1', '/blog/post-2']);
 
 // Prefetch all links matching a selector
 prefetchLinks('a[data-prefetch]');
+```
+
+## Cache Invalidation
+
+Explicitly invalidate client/server navigation caches.
+
+```typescript
+import { invalidate, invalidateTag, invalidateKey } from '@gospa/client';
+
+await invalidate('/dashboard');
+await invalidateTag('route:/dashboard');
+await invalidateKey('path:/dashboard');
 ```
 
 ## Navigation State

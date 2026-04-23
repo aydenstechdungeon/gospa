@@ -9,6 +9,7 @@ export * from "./priority.ts";
 export * from "./streaming.ts";
 export * from "./resource.ts";
 export * from "./remote.ts";
+export * from "./forms.ts";
 export * from "./signals.ts";
 export * from "./store.ts";
 export * from "./dom.ts";

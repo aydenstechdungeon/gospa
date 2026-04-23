@@ -94,3 +94,61 @@ func TestHandleFormAction_FallsBackToDefaultForUnknownAction(t *testing.T) {
 		t.Fatalf("expected default action to run, got %v", payload.Data["which"])
 	}
 }
+
+func TestHandleFormAction_EnhancedStructuredResponse(t *testing.T) {
+	app := New(Config{})
+	defer func() { _ = app.Fiber.Shutdown() }()
+
+	routePath := fmt.Sprintf("/test-form-action-structured-%d", time.Now().UnixNano())
+	route := &routing.Route{Path: routePath}
+
+	routing.RegisterAction(routePath, "default", func(_ routing.LoadContext) (interface{}, error) {
+		return routing.ActionResponse{
+			Data: map[string]interface{}{"ok": true},
+			Validation: &routing.ActionValidationError{
+				FieldErrors: map[string]string{"email": "invalid"},
+			},
+			Revalidate:     []string{"/dashboard"},
+			RevalidateTags: []string{"route:/dashboard"},
+			RevalidateKeys: []string{"path:/dashboard"},
+		}, nil
+	})
+
+	app.Post(routePath, func(c fiberpkg.Ctx) error {
+		return app.handleFormAction(c, route)
+	})
+
+	req := httptest.NewRequest(http.MethodPost, routePath, nil)
+	req.Header.Set("X-Gospa-Enhance", "1")
+
+	resp, err := app.Fiber.Test(req)
+	if err != nil {
+		t.Fatalf("request failed: %v", err)
+	}
+	defer func() { _ = resp.Body.Close() }()
+
+	if resp.StatusCode != http.StatusOK {
+		t.Fatalf("expected status 200, got %d", resp.StatusCode)
+	}
+
+	var payload struct {
+		Data           map[string]interface{}         `json:"data"`
+		Validation     *routing.ActionValidationError `json:"validation"`
+		Revalidate     []string                       `json:"revalidate"`
+		RevalidateTags []string                       `json:"revalidateTags"`
+		RevalidateKeys []string                       `json:"revalidateKeys"`
+	}
+	if err := json.NewDecoder(resp.Body).Decode(&payload); err != nil {
+		t.Fatalf("failed to decode response: %v", err)
+	}
+
+	if payload.Data["ok"] != true {
+		t.Fatalf("expected ok=true data payload, got %v", payload.Data["ok"])
+	}
+	if payload.Validation == nil || payload.Validation.FieldErrors["email"] != "invalid" {
+		t.Fatalf("expected validation errors in response")
+	}
+	if len(payload.Revalidate) != 1 || payload.Revalidate[0] != "/dashboard" {
+		t.Fatalf("expected revalidate path hints in response")
+	}
+}

@@ -2,13 +2,14 @@ package templ
 
 import (
 	"context"
+	"strconv"
 	"strings"
 	"testing"
 
 	ahtempl "github.com/a-h/templ"
 )
 
-func renderComponent(t *testing.T, c ahtempl.Component, ctx context.Context) string {
+func renderComponent(ctx context.Context, t *testing.T, c ahtempl.Component) string {
 	t.Helper()
 	var b strings.Builder
 	if err := c.Render(ctx, &b); err != nil {
@@ -30,55 +31,55 @@ func TestRenderBasics(t *testing.T) {
 	ctx := WithNonce(context.Background(), "nonce-123")
 
 	tests := []struct {
-		name     string
+		name      string
 		component ahtempl.Component
-		contains []string
+		contains  []string
 	}{
 		{
-			name:     "runtime script with nonce and escaped src",
+			name:      "runtime script with nonce and escaped src",
 			component: RuntimeScript(`/app.js?x=<tag>`),
-			contains: []string{`<script src="/app.js?x=&lt;tag&gt;" type="module" nonce="nonce-123"></script>`},
+			contains:  []string{`<script src="/app.js?x=&lt;tag&gt;" type="module" nonce="nonce-123"></script>`},
 		},
 		{
-			name:     "inline runtime script with nonce",
+			name:      "inline runtime script with nonce",
 			component: RuntimeScriptInline(`window.x=1;`),
-			contains: []string{`<script nonce="nonce-123">window.x=1;</script>`},
+			contains:  []string{`<script nonce="nonce-123">window.x=1;</script>`},
 		},
 		{
-			name:     "css link escapes href",
+			name:      "css link escapes href",
 			component: CSS(`/style.css?v=<bad>`),
-			contains: []string{`<link rel="stylesheet" href="/style.css?v=&lt;bad&gt;">`},
+			contains:  []string{`<link rel="stylesheet" href="/style.css?v=&lt;bad&gt;">`},
 		},
 		{
-			name:     "inline css with nonce",
+			name:      "inline css with nonce",
 			component: CSSInline(`body{margin:0}`),
-			contains: []string{`<style nonce="nonce-123">body{margin:0}</style>`},
+			contains:  []string{`<style nonce="nonce-123">body{margin:0}</style>`},
 		},
 		{
-			name:     "meta escapes values",
+			name:      "meta escapes values",
 			component: Meta(`desc`, `x<y`),
-			contains: []string{`<meta name="desc" content="x&lt;y">`},
+			contains:  []string{`<meta name="desc" content="x&lt;y">`},
 		},
 		{
-			name:     "meta property escapes values",
+			name:      "meta property escapes values",
 			component: MetaProperty(`og:title`, `a<b`),
-			contains: []string{`<meta property="og:title" content="a&lt;b">`},
+			contains:  []string{`<meta property="og:title" content="a&lt;b">`},
 		},
 		{
-			name:     "title escapes value",
+			name:      "title escapes value",
 			component: Title(`hello <world>`),
-			contains: []string{`<title>hello &lt;world&gt;</title>`},
+			contains:  []string{`<title>hello &lt;world&gt;</title>`},
 		},
 		{
-			name:     "favicon escapes href",
+			name:      "favicon escapes href",
 			component: Favicon(`/favicon.ico?x=<1>`),
-			contains: []string{`<link rel="icon" href="/favicon.ico?x=&lt;1&gt;">`},
+			contains:  []string{`<link rel="icon" href="/favicon.ico?x=&lt;1&gt;">`},
 		},
 	}
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			out := renderComponent(t, tt.component, ctx)
+			out := renderComponent(ctx, t, tt.component)
 			assertContainsAll(t, out, tt.contains...)
 		})
 	}
@@ -89,7 +90,7 @@ func TestHeadAndPages(t *testing.T) {
 	head := Head(Title("My App"), Meta("description", "app"))
 	body := Fragment(TextContent("hello"))
 
-	html := renderComponent(t, HTMLPage("en", head, body), ctx)
+	html := renderComponent(ctx, t, HTMLPage("en", head, body))
 	assertContainsAll(t, html,
 		`<!DOCTYPE html><html lang="en"><head>`,
 		`<title>My App</title>`,
@@ -97,13 +98,13 @@ func TestHeadAndPages(t *testing.T) {
 		`</head><body>hello</body></html>`,
 	)
 
-	empty := renderComponent(t, HTMLPage("fr", nil, nil), ctx)
+	empty := renderComponent(ctx, t, HTMLPage("fr", nil, nil))
 	assertContainsAll(t, empty, `<!DOCTYPE html><html lang="fr"><head></head><body></body></html>`)
 }
 
 func TestSPAPage(t *testing.T) {
 	ctx := WithNonce(context.Background(), "nonce-spa")
-	out := renderComponent(t, SPAPage(SPAConfig{
+	out := renderComponent(ctx, t, SPAPage(SPAConfig{
 		Lang:        "en",
 		Title:       `GoSPA <Docs>`,
 		Meta:        []MetaTag{{Name: "description", Content: "site"}},
@@ -113,7 +114,7 @@ func TestSPAPage(t *testing.T) {
 		RootID:      "app",
 		RuntimeSrc:  "/runtime.js",
 		AutoInit:    true,
-	}), ctx)
+	}))
 
 	assertContainsAll(t, out,
 		`<!DOCTYPE html><html lang="en"><head>`,
@@ -133,9 +134,9 @@ func TestSPAPage(t *testing.T) {
 
 func TestRawHTMLAndTextContent(t *testing.T) {
 	ctx := context.Background()
-	assertContainsAll(t, renderComponent(t, Raw(`<b>x</b>`), ctx), `<b>x</b>`)
-	assertContainsAll(t, renderComponent(t, HTMLContent(`<em>safe</em>`), ctx), `<em>safe</em>`)
-	assertContainsAll(t, renderComponent(t, TextContent(`<em>escape</em>`), ctx), `&lt;em&gt;escape&lt;/em&gt;`)
+	assertContainsAll(t, renderComponent(ctx, t, Raw(`<b>x</b>`)), `<b>x</b>`)
+	assertContainsAll(t, renderComponent(ctx, t, HTMLContent(`<em>safe</em>`)), `<em>safe</em>`)
+	assertContainsAll(t, renderComponent(ctx, t, TextContent(`<em>escape</em>`)), `&lt;em&gt;escape&lt;/em&gt;`)
 }
 
 func TestAttributeHelpers(t *testing.T) {
@@ -193,29 +194,29 @@ func TestControlFlowHelpers(t *testing.T) {
 	ctx := context.Background()
 
 	frag := Fragment(TextContent("a"), TextContent("b"))
-	assertContainsAll(t, renderComponent(t, frag, ctx), "ab")
-	assertContainsAll(t, renderComponent(t, Empty(), ctx), "")
+	assertContainsAll(t, renderComponent(ctx, t, frag), "ab")
+	assertContainsAll(t, renderComponent(ctx, t, Empty()), "")
 
-	assertContainsAll(t, renderComponent(t, When(true, TextContent("yes")), ctx), "yes")
-	assertContainsAll(t, renderComponent(t, When(false, TextContent("no")), ctx), "")
-	assertContainsAll(t, renderComponent(t, WhenElse(true, TextContent("t"), TextContent("f")), ctx), "t")
-	assertContainsAll(t, renderComponent(t, WhenElse(false, TextContent("t"), TextContent("f")), ctx), "f")
+	assertContainsAll(t, renderComponent(ctx, t, When(true, TextContent("yes"))), "yes")
+	assertContainsAll(t, renderComponent(ctx, t, When(false, TextContent("no"))), "")
+	assertContainsAll(t, renderComponent(ctx, t, WhenElse(true, TextContent("t"), TextContent("f"))), "t")
+	assertContainsAll(t, renderComponent(ctx, t, WhenElse(false, TextContent("t"), TextContent("f"))), "f")
 
-	forOut := renderComponent(t, For([]int{1, 2, 3}, func(v, _ int) ahtempl.Component {
-		return TextContent(string(rune('0' + v)))
-	}), ctx)
+	forOut := renderComponent(ctx, t, For([]int{1, 2, 3}, func(v, _ int) ahtempl.Component {
+		return TextContent(strconv.Itoa(v))
+	}))
 	assertContainsAll(t, forOut, "123")
 
-	keyed := renderComponent(t, ForKey([]string{"a", "b"}, func(s string) string { return "k-" + s }, func(s string, _ int) ahtempl.Component {
+	keyed := renderComponent(ctx, t, ForKey([]string{"a", "b"}, func(s string) string { return "k-" + s }, func(s string, _ int) ahtempl.Component {
 		return TextContent(s)
-	}), ctx)
+	}))
 	assertContainsAll(t, keyed, `<template data-key="k-a">a</template>`, `<template data-key="k-b">b</template>`)
 
-	sw := renderComponent(t, Switch(
+	sw := renderComponent(ctx, t, Switch(
 		Case(false, TextContent("no")),
 		Case(true, TextContent("yes")),
 		Default(TextContent("default")),
-	), ctx)
+	))
 	assertContainsAll(t, sw, "yes")
 }
 
@@ -232,7 +233,7 @@ func TestHeadManagerAndHeadHelpers(t *testing.T) {
 		AddHeadInlineStyle("body{margin:0}").
 		AddHeadElement(HeadElement{Tag: "custom-tag", Content: "C", Key: "custom", Priority: 1})
 
-	out := renderComponent(t, h.Render(), ctx)
+	out := renderComponent(ctx, t, h.Render())
 	assertContainsAll(t, out,
 		`<title data-gospa-head="title">Page</title>`,
 		`name="description"`,
@@ -259,14 +260,14 @@ func TestHeadManagerAndHeadHelpers(t *testing.T) {
 		t.Fatalf("min helper failed")
 	}
 
-	headOut := renderComponent(t, Fragment(
+	headOut := renderComponent(context.Background(), t, Fragment(
 		HeadTitle("T"),
 		HeadMeta("description", "d"),
 		HeadMetaProp("og:site_name", "gospa"),
 		HeadLink("canonical", "/home", map[string]string{"hreflang": "en"}),
 		HeadScript("/bundle.js", true, true),
 		HeadStyle("/style.css"),
-	), context.Background())
+	))
 	assertContainsAll(t, headOut,
 		`<title data-gospa-head="title">T</title>`,
 		`data-gospa-head="meta-description"`,
@@ -280,4 +281,3 @@ func TestHeadManagerAndHeadHelpers(t *testing.T) {
 		`data-gospa-head="style-/style.css"`,
 	)
 }
-

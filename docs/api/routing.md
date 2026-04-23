@@ -50,4 +50,8 @@ Automatically registers all routes from your file system.
 
 ### TS Routes (`generated/routes.ts`)
 
-Provides `buildPath`, `matchRoute`, and `findRoute` on the client.
+Provides `buildPath`, `matchRoute`, `findRoute`, plus route data contracts:
+
+- `routeDataContracts`
+- `loadRouteData(path)`
+- `RouteLoadData<T>`

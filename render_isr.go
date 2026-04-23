@@ -42,5 +42,8 @@ func (a *App) backgroundRevalidate(cacheKey string, routeSnap interface{}) {
 		a.Logger().Error("ISR background render error", "path", cacheKey, "err", err)
 		return
 	}
-	a.storeSsgEntry(cacheKey, freshHTML)
+	strategy := string(routing.GetRouteOptions(route.Path).Strategy)
+	tags := a.defaultCacheTags(cacheKey, strategy)
+	keys := a.defaultCacheKeys(cacheKey)
+	a.storeSsgEntry(cacheKey, freshHTML, tags, keys)
 }

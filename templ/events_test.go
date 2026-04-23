@@ -39,7 +39,7 @@ func TestEventHelpers(t *testing.T) {
 	}
 
 	keys := OnKeys(map[string]string{"Enter": "submit", "Escape": "cancel"})["data-on-key"].(string)
-	if !(strings.Contains(keys, "Enter:submit") && strings.Contains(keys, "Escape:cancel")) {
+	if !strings.Contains(keys, "Enter:submit") || !strings.Contains(keys, "Escape:cancel") {
 		t.Fatalf("OnKeys failed: %q", keys)
 	}
 
@@ -74,4 +74,3 @@ func TestEventHelpers(t *testing.T) {
 		t.Fatal("EventModifiers failed")
 	}
 }
-

@@ -50,3 +50,15 @@ navigate('/new-path', {
     scroll: false 
 });
 ```
+
+`scrollToTop` remains supported as a deprecated alias for `scroll` during migration.
+
+## Invalidation API
+
+```typescript
+import { invalidate, invalidateTag, invalidateKey } from '@gospa/client';
+
+await invalidate('/blog/hello-world');
+await invalidateTag('route:/blog/hello-world');
+await invalidateKey('path:/blog/hello-world');
+```

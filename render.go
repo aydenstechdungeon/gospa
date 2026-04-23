@@ -154,6 +154,20 @@ func (a *App) renderRoute(c gofiber.Ctx, route *routing.Route, routeParams map[s
 		routeParams = map[string]interface{}{}
 	}
 
+	tier, tierReason := a.resolveTierWithReason(opts, layouts)
+	c.Set("X-GoSPA-Runtime-Tier", tier)
+	c.Set("X-GoSPA-Runtime-Tier-Reason", tierReason)
+	c.Set("X-GoSPA-Runtime-Script", a.getRuntimePathForTier(tier))
+	if a.Config.DevMode {
+		a.Logger().Debug(
+			"runtime decision",
+			"path", c.Path(),
+			"tier", tier,
+			"reason", tierReason,
+			"script", a.getRuntimePathForTier(tier),
+		)
+	}
+
 	// Resolve data load chain
 	loadedProps, err := a.resolveLoadChain(c, route, layouts)
 	if err != nil {
@@ -164,6 +178,20 @@ func (a *App) renderRoute(c gofiber.Ctx, route *routing.Route, routeParams map[s
 	// Merge with route params (route params take precedence for ID fields etc)
 	for k, v := range routeParams {
 		loadedProps[k] = v
+	}
+	cacheTags := a.defaultCacheTags(route.Path, string(effStrategy))
+	cacheKeys := a.defaultCacheKeys(cacheKey)
+	c.Set("X-GoSPA-Cache-Tags", strings.Join(cacheTags, ","))
+	c.Set("X-GoSPA-Cache-Keys", strings.Join(cacheKeys, ","))
+
+	if c.Query("__data") == "1" {
+		return c.JSON(gofiber.Map{
+			"data":      loadedProps,
+			"path":      c.Path(),
+			"routePath": route.Path,
+			"cacheTags": cacheTags,
+			"cacheKeys": cacheKeys,
+		})
 	}
 
 	// 4. Inject Flash messages into the component state
@@ -181,7 +209,6 @@ func (a *App) renderRoute(c gofiber.Ctx, route *routing.Route, routeParams map[s
 
 	c.Set("Content-Type", "text/html")
 
-	tier := a.resolveTier(opts, layouts)
 	rootLayoutFunc := routing.GetRootLayout()
 	if rootLayoutFunc != nil {
 		rootProps := a.buildRootLayoutProps(c, routeParams, tier)
@@ -206,7 +233,7 @@ func (a *App) renderRoute(c gofiber.Ctx, route *routing.Route, routeParams map[s
 				htmlBytes = bytes.ReplaceAll(htmlBytes, []byte(nonce), []byte("__GOSPA_NONCE_PLACEHOLDER__"))
 			}
 
-			a.storeSsgEntry(cacheKey, htmlBytes)
+			a.storeSsgEntry(cacheKey, htmlBytes, cacheTags, cacheKeys)
 			c.Set("Cache-Control", "public, max-age=31536000, immutable")
 			return c.Send(buf.Bytes())
 		}
@@ -232,7 +259,7 @@ func (a *App) renderRoute(c gofiber.Ctx, route *routing.Route, routeParams map[s
 				htmlBytes = bytes.ReplaceAll(htmlBytes, []byte(nonce), []byte("__GOSPA_NONCE_PLACEHOLDER__"))
 			}
 
-			a.storeSsgEntry(cacheKey, htmlBytes)
+			a.storeSsgEntry(cacheKey, htmlBytes, cacheTags, cacheKeys)
 			c.Set("Cache-Control", fmt.Sprintf("public, s-maxage=%d, stale-while-revalidate=%d", ttlSec, ttlSec))
 			return c.Send(buf.Bytes())
 		}
@@ -272,7 +299,7 @@ func (a *App) renderRoute(c gofiber.Ctx, route *routing.Route, routeParams map[s
 					shellBytes = bytes.ReplaceAll(shellBytes, []byte(nonce), []byte("__GOSPA_NONCE_PLACEHOLDER__"))
 				}
 
-				a.storePprShell(cacheKey, shellBytes)
+				a.storePprShell(cacheKey, shellBytes, cacheTags, cacheKeys)
 				result, err := a.applyPPRSlots(ctx, route, shellBuf.Bytes(), c.Path(), opts)
 				if err != nil {
 					a.Logger().Error("PPR slot error", "err", err)
@@ -494,23 +521,32 @@ func (a *App) resolveLoadChain(c gofiber.Ctx, route *routing.Route, layouts []*r
 }
 
 func (a *App) resolveTier(opts routing.RouteOptions, layouts []*routing.Route) string {
+	tier, _ := a.resolveTierWithReason(opts, layouts)
+	return tier
+}
+
+func (a *App) resolveTierWithReason(opts routing.RouteOptions, layouts []*routing.Route) (string, string) {
 	maxLevel := tierToLevel(string(a.Config.RuntimeTier))
+	reasonParts := []string{fmt.Sprintf("config:%s", levelToTier(maxLevel))}
 	if pLevel := tierToLevel(opts.RuntimeTier); pLevel > maxLevel {
 		maxLevel = pLevel
+		reasonParts = append(reasonParts, fmt.Sprintf("page:%s", opts.RuntimeTier))
 	}
 	for _, l := range layouts {
 		if lTier := routing.GetLayoutTier(l.Path); lTier != "" {
 			if level := tierToLevel(lTier); level > maxLevel {
 				maxLevel = level
+				reasonParts = append(reasonParts, fmt.Sprintf("layout:%s=%s", l.Path, lTier))
 			}
 		}
 	}
 	if rootTier := routing.GetLayoutTier(""); rootTier != "" {
 		if level := tierToLevel(rootTier); level > maxLevel {
 			maxLevel = level
+			reasonParts = append(reasonParts, fmt.Sprintf("root:%s", rootTier))
 		}
 	}
-	return levelToTier(maxLevel)
+	return levelToTier(maxLevel), strings.Join(reasonParts, " -> ")
 }
 
 // tierToLevel converts a runtime tier string to a numeric level for comparison.

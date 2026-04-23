@@ -26,7 +26,7 @@ func TestBindingHelpers(t *testing.T) {
 		t.Fatal("ClassBinding failed")
 	}
 	classes := ClassBindings(map[string]string{"active": "isActive", "disabled": "isDisabled"})["data-bind-class"].(string)
-	if !(strings.Contains(classes, "active:isActive") && strings.Contains(classes, "disabled:isDisabled")) {
+	if !strings.Contains(classes, "active:isActive") || !strings.Contains(classes, "disabled:isDisabled") {
 		t.Fatalf("ClassBindings failed: %q", classes)
 	}
 	if StyleBinding("color", "textColor")["data-bind-style"] != "color:textColor" {
@@ -46,7 +46,7 @@ func TestBindingHelpers(t *testing.T) {
 		t.Fatal("AttrBinding failed")
 	}
 	attrs := AttrBindings(map[string]string{"href": "url", "title": "label"})["data-bind-attr"].(string)
-	if !(strings.Contains(attrs, "href:url") && strings.Contains(attrs, "title:label")) {
+	if !strings.Contains(attrs, "href:url") || !strings.Contains(attrs, "title:label") {
 		t.Fatalf("AttrBindings failed: %q", attrs)
 	}
 	if PropBinding("disabled", "isDisabled")["data-bind-prop"] != "disabled:isDisabled" {
@@ -107,7 +107,7 @@ func TestComponentState(t *testing.T) {
 		t.Fatal("StateAttrs failed")
 	}
 
-	out := renderComponent(t, cs.InitScript(), WithNonce(context.Background(), "nonce-bind"))
+	out := renderComponent(WithNonce(context.Background(), "nonce-bind"), t, cs.InitScript())
 	if !strings.Contains(out, `nonce="nonce-bind"`) || !strings.Contains(out, `data-component-init="cmp-1"`) ||
 		!strings.Contains(out, `window.__GOSPA_STATE__=`) {
 		t.Fatalf("InitScript output invalid: %s", out)
@@ -122,4 +122,3 @@ func TestUnsafeHelpers(t *testing.T) {
 		t.Fatal("UnsafeAttr failed")
 	}
 }
-

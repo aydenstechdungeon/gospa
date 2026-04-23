@@ -5,6 +5,9 @@
     let fuse = null;
     let sidebarScrollPos = 0;
     let searchInitializationPromise = null;
+    let globalActionsInitialized = false;
+    let appInitialized = false;
+    const PREF_LANG_KEY = 'gospa-pref-lang';
 
     async function initSearch() {
         if (searchIndex) return;
@@ -164,14 +167,43 @@
     // Highlight matched text in snippet
     function highlightSnippet(snippet, query) {
         const terms = query.toLowerCase().split(/\s+/).filter(t => t.length > 0);
-        let highlighted = snippet;
+        let highlighted = escapeHTML(snippet);
 
         terms.forEach(term => {
-            const regex = new RegExp(`(${escapeRegex(term)})`, 'gi');
+            const escapedTerm = escapeRegex(escapeHTML(term));
+            if (!escapedTerm) return;
+            const regex = new RegExp(`(${escapedTerm})`, 'gi');
             highlighted = highlighted.replace(regex, '<mark class="bg-[var(--accent-primary)]/20 text-[var(--accent-primary)] px-0.5 rounded">$1</mark>');
         });
 
         return highlighted;
+    }
+
+    function escapeHTML(value) {
+        return String(value).replace(/[&<>"']/g, (char) => {
+            switch (char) {
+                case '&': return '&amp;';
+                case '<': return '&lt;';
+                case '>': return '&gt;';
+                case '"': return '&quot;';
+                case "'": return '&#39;';
+                default: return char;
+            }
+        });
+    }
+
+    function sanitizeURL(url) {
+        if (typeof url !== 'string' || url.trim() === '') return '#';
+        try {
+            const parsed = new URL(url, window.location.origin);
+            if (parsed.protocol !== 'http:' && parsed.protocol !== 'https:') return '#';
+            if (parsed.origin === window.location.origin) {
+                return `${parsed.pathname}${parsed.search}${parsed.hash}`;
+            }
+            return parsed.toString();
+        } catch {
+            return '#';
+        }
     }
 
     function escapeRegex(string) {
@@ -256,11 +288,34 @@
         });
     }
 
+    function getCookieValue(name) {
+        const match = document.cookie.match(new RegExp(`(?:^|; )${name}=([^;]*)`));
+        return match ? decodeURIComponent(match[1]) : null;
+    }
+
+    function getPreferredLang() {
+        const stored = localStorage.getItem(PREF_LANG_KEY);
+        if (stored === 'js' || stored === 'ts') return stored;
+
+        const cookie = getCookieValue(PREF_LANG_KEY);
+        if (cookie === 'js' || cookie === 'ts') return cookie;
+
+        return 'js';
+    }
+
+    function setPreferredLang(lang) {
+        localStorage.setItem(PREF_LANG_KEY, lang);
+        document.cookie = `${PREF_LANG_KEY}=${encodeURIComponent(lang)}; Path=/; Max-Age=31536000; SameSite=Lax`;
+    }
+
     function initGlobalActions() {
+        if (globalActionsInitialized) return;
+        globalActionsInitialized = true;
+
         // eslint-disable-next-line no-unused-vars
         window.switchLang = function switchLang(_btn, lang) {
-            const targetLang = lang || localStorage.getItem('gospa-pref-lang') || 'js';
-            localStorage.setItem('gospa-pref-lang', targetLang);
+            const targetLang = lang === 'ts' || lang === 'js' ? lang : getPreferredLang();
+            setPreferredLang(targetLang);
 
             const activeClasses = ['bg-[var(--accent-primary)]', 'text-white'];
             const inactiveClasses = ['bg-[var(--bg-primary)]', 'text-[var(--text-secondary)]', 'hover:text-[var(--text-primary)]'];
@@ -315,13 +370,23 @@
         }, 0);
     });
 
-    // Also run on initial load
-    window.addEventListener('load', () => {
+    function initApp() {
+        if (appInitialized) return;
+        appInitialized = true;
+
         initRuntime();
         initGlobalActions();
         initAsyncCSS();
         updateToC();
-    });
+    }
+
+    // Run regardless of whether this async script executes before or after window load.
+    if (document.readyState === 'loading') {
+        document.addEventListener('DOMContentLoaded', initApp, { once: true });
+        window.addEventListener('load', initApp, { once: true });
+    } else {
+        initApp();
+    }
 
     // Strategy: Lazy load search on interaction or intent (hover)
     function openSearch() {
@@ -437,11 +502,14 @@
             list.innerHTML = results.map(res => {
                 const snippet = getContextSnippet(res, query);
                 const highlightedSnippet = highlightSnippet(snippet, query);
+                const safeTitle = escapeHTML(res.item.title);
+                const safeSection = escapeHTML(res.item.section || '');
+                const safeURL = sanitizeURL(res.item.url);
                 return `
-                <a href="${res.item.url}" class="block p-4 hover:bg-[var(--bg-tertiary)] transition-all border-b border-[var(--border)] last:border-0 group">
+                <a href="${safeURL}" class="block p-4 hover:bg-[var(--bg-tertiary)] transition-all border-b border-[var(--border)] last:border-0 group">
                     <div class="flex items-center gap-2">
-                        <div class="font-bold text-[var(--accent-primary)] group-hover:underline">${res.item.title}</div>
-                        ${res.item.section ? `<span class="text-xs text-[var(--text-muted)]">— ${res.item.section}</span>` : ''}
+                        <div class="font-bold text-[var(--accent-primary)] group-hover:underline">${safeTitle}</div>
+                        ${safeSection ? `<span class="text-xs text-[var(--text-muted)]">— ${safeSection}</span>` : ''}
                     </div>
                     <div class="text-sm text-[var(--text-secondary)] mt-1.5 leading-relaxed">${highlightedSnippet}</div>
                 </a>

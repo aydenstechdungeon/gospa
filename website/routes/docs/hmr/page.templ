@@ -89,7 +89,8 @@ CSSHMR.updateStyle('/static/css/main.css');`, "typescript", " styles.ts")
 			<div>
 				<h2 class="text-2xl font-bold mb-4 border-b border-[var(--border)] pb-2 italic mono">Troubleshooting</h2>
 				<ul class="list-disc list-inside space-y-3 text-[var(--text-secondary)]">
-					<li><strong class="text-[var(--text-primary)]">Full Page Reload</strong>: If a module cannot be hot-swapped (e.g., changes to internal Go logic or complex dependency graphs), HMR falls back to a full page reload.</li>
+					<li><strong class="text-[var(--text-primary)]">Full Page Reload</strong>: If a module cannot be hot-swapped, HMR falls back to a full reload with reason codes like <code>runtime-break</code> or <code>config-break</code>.</li>
+					<li><strong class="text-[var(--text-primary)]">Safe Updates</strong>: Template/style changes are classified as <code>template-safe</code> or <code>style-safe</code> and stay hot when possible.</li>
 					<li><strong class="text-[var(--text-primary)]">Connection Lost</strong>: The client will attempt to reconnect with exponential backoff. If the server is restarted, the client refreshes the page to ensure synchronization.</li>
 					<li><strong class="text-[var(--text-primary)]">Console Logs</strong>: Enable ` + "`"+ `debug: true` + "`"+ ` in HMRClientConfig to see the internal HMR event log in the browser console.</li>
 				</ul>
