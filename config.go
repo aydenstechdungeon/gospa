@@ -5,15 +5,16 @@ import (
 	"log/slog"
 	"time"
 
+	fiberpkg "github.com/gofiber/fiber/v3"
+
 	"github.com/aydenstechdungeon/gospa/compiler"
 	"github.com/aydenstechdungeon/gospa/fiber"
 	"github.com/aydenstechdungeon/gospa/routing"
 	"github.com/aydenstechdungeon/gospa/store"
-	fiberpkg "github.com/gofiber/fiber/v3"
 )
 
 // Version is the current version of GoSPA.
-const Version = "0.1.37"
+const Version = "0.1.38"
 
 // Serialization format constants.
 const (
