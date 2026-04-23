@@ -16,6 +16,7 @@ require (
 require github.com/gofiber/contrib/v3/websocket v1.1.0
 
 require (
+	github.com/alicebob/miniredis/v2 v2.37.0
 	github.com/goccy/go-json v0.10.5
 	github.com/tliron/glsp v0.2.2
 	github.com/vmihailenco/msgpack/v5 v5.4.1
@@ -38,6 +39,7 @@ require (
 	github.com/tliron/commonlog v0.2.8 // indirect
 	github.com/tliron/kutil v0.3.11 // indirect
 	github.com/vmihailenco/tagparser/v2 v2.0.0 // indirect
+	github.com/yuin/gopher-lua v1.1.1 // indirect
 	golang.org/x/term v0.40.0 // indirect
 )
 

@@ -2,9 +2,9 @@ package fiber
 
 import (
 	"bytes"
-	"encoding/base64"
 	"crypto/rand"
 	"crypto/subtle"
+	"encoding/base64"
 	"encoding/hex"
 	stdjson "encoding/json"
 	"fmt"
@@ -697,14 +697,19 @@ func generateComponentID() string {
 	return fmt.Sprintf("gospa_%d_%s", time.Now().UnixNano(), randomString(8))
 }
 
-// randomString generates a cryptographically secure random string of given length.
+// randomString generates a random string of given length.
+// It uses crypto/rand when available and falls back to a time-based value if entropy fails.
 func randomString(length int) string {
 	const charset = "abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789"
 	b := make([]byte, length)
 	randomBytes := make([]byte, length)
 
 	if _, err := rand.Read(randomBytes); err != nil {
-		panic(fmt.Sprintf("failed to generate secure random: %v", err))
+		seed := time.Now().UnixNano()
+		for i := 0; i < length; i++ {
+			b[i] = charset[int((seed+int64(i*17))%int64(len(charset)))]
+		}
+		return string(b)
 	}
 
 	for i := 0; i < length; {
@@ -714,7 +719,9 @@ func randomString(length int) string {
 			i++
 		} else {
 			if _, err := rand.Read(randomBytes[i : i+1]); err != nil {
-				panic(fmt.Sprintf("failed to generate secure random: %v", err))
+				seed := time.Now().UnixNano()
+				b[i] = charset[int((seed+int64(i*31))%int64(len(charset)))]
+				i++
 			}
 		}
 	}

@@ -59,13 +59,14 @@ func startStateNotificationDispatcher() {
 		}
 		stateNotificationQueue = make(chan stateNotification, notificationQueueSize)
 		stateDispatchRunning.Store(true)
+		queue := stateNotificationQueue
 		for i := 0; i < workerCount; i++ {
-			go func() {
-				for notification := range stateNotificationQueue {
+			go func(q <-chan stateNotification) {
+				for notification := range q {
 					safelyRunStateNotification(notification)
 				}
 				stateDispatchRunning.Store(false)
-			}()
+			}(queue)
 		}
 	})
 }
@@ -95,8 +96,15 @@ func safelyRunStateNotification(notification stateNotification) {
 
 func enqueueStateNotification(notification stateNotification) {
 	startStateNotificationDispatcher()
+	stateDispatchMu.Lock()
+	queue := stateNotificationQueue
+	stateDispatchMu.Unlock()
+	if queue == nil {
+		safelyRunStateNotification(notification)
+		return
+	}
 	select {
-	case stateNotificationQueue <- notification:
+	case queue <- notification:
 	default:
 		// Fallback to synchronous dispatch to preserve state consistency under load.
 		// This applies backpressure instead of silently dropping updates.

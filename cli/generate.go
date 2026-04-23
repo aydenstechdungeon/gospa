@@ -273,14 +273,12 @@ func generateIslandsEntry(outputDir string, names []string, devMode bool) error 
 	sb.WriteString("  };\n")
 	sb.WriteString("}\n\n")
 
+	_ = devMode
 	for _, name := range names {
 		importPath := fmt.Sprintf("./%s.ts", name)
-		if devMode {
-			// In dev mode, append a timestamp evaluated in JS to force module reload on re-imports during HMR
-			fmt.Fprintf(&sb, "registerLazySetup('%s', () => import('%s?v=' + Date.now()));\n", name, importPath)
-		} else {
-			fmt.Fprintf(&sb, "registerLazySetup('%s', () => import('%s'));\n", name, importPath)
-		}
+		// Keep the import specifier static so Bun/esbuild can rewrite it to emitted JS chunks.
+		// Dynamic query-string expressions prevent static analysis and can cause runtime .ts 404s.
+		fmt.Fprintf(&sb, "registerLazySetup('%s', () => import('%s'));\n", name, importPath)
 	}
 
 	entryPath := filepath.Join(outputDir, "islands.ts")

@@ -67,27 +67,27 @@ templ Page() {
 		<section class="space-y-6">
 			<h2 class="text-2xl font-bold border-b border-[var(--border)] pb-2">Schema Definition</h2>
 			@components.CodeBlock(`{
-  "$schema": " https://json-schema.org/draft/2020-12/schema",
-  "type": " object",
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "type": "object",
   "properties": {
     "email": {
-      "type": " string",
-      "format": " email",
+      "type": "string",
+      "format": "email",
       "minLength": 5,
       "maxLength": 255
     },
     "password": {
-      "type": " string",
+      "type": "string",
       "minLength": 8,
       "maxLength": 100
     },
     "age": {
-      "type": " integer",
+      "type": "integer",
       "minimum": 18,
       "maximum": 120
     }
   },
-  "required": [" email", " password"]
+  "required": ["email", "password"]
 }`, "json", " schemas/user.json")
 		</section>
 

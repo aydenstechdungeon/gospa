@@ -5,6 +5,7 @@ declare global {
 import { reactive } from "./signals.ts";
 import { Idiomorph } from "./idiomorph.ts";
 import { toHTMLString } from "./html-policy.ts";
+import { getSetup } from "./runtime-core.ts";
 
 function getCSPNonce(): string | undefined {
   const nonceScript = document.querySelector("script[nonce]") as
@@ -476,7 +477,15 @@ async function fetchPageFromServer(
 async function getPageData(
   path: string,
   signal?: AbortSignal,
+  options: { preferFresh?: boolean } = {},
 ): Promise<PageData | null> {
+  if (options.preferFresh) {
+    const fresh = await fetchPageFromServer(path, signal);
+    if (fresh) {
+      return fresh;
+    }
+  }
+
   const cached = prefetchCache.get(path);
   if (cached && cached.expiresAt > Date.now()) {
     prefetchCache.delete(path);
@@ -509,6 +518,9 @@ async function reconcileDOM(data: PageData): Promise<void> {
   // and preserve as much state as possible.
   const currentLayouts = Array.from(document.querySelectorAll("[data-gospa-layout]")).reverse();
   const incomingLayouts = Array.from(incomingDoc.querySelectorAll("[data-gospa-layout]")).reverse();
+  const incomingLayoutsByID = new Map(
+    incomingLayouts.map((el) => [el.getAttribute("data-gospa-layout") || "", el]),
+  );
   const currentLayoutIds = currentLayouts.map((el) => el.getAttribute("data-gospa-layout") || "");
   const incomingLayoutIds = incomingLayouts.map((el) => el.getAttribute("data-gospa-layout") || "");
 
@@ -524,7 +536,7 @@ async function reconcileDOM(data: PageData): Promise<void> {
     // morph at the 'docs' level so the sidebar (outside this container)
     // is completely untouched by the morph.
     if (layoutId === "docs") {
-      const matchingNewEl = incomingLayouts.find(el => el.getAttribute("data-gospa-layout") === "docs");
+      const matchingNewEl = incomingLayoutsByID.get("docs");
       if (matchingNewEl) {
         morphTarget = currentEl;
         newContent = matchingNewEl;
@@ -533,7 +545,7 @@ async function reconcileDOM(data: PageData): Promise<void> {
       continue;
     }
 
-    const matchingNewEl = incomingLayouts.find(el => el.getAttribute("data-gospa-layout") === layoutId);
+    const matchingNewEl = incomingLayoutsByID.get(layoutId || "");
 
     if (matchingNewEl) {
       morphTarget = currentEl;
@@ -962,6 +974,58 @@ async function initNewContent(
   executeScripts(container);
 
   await initCriticalContent(container);
+  // Re-run island setup for newly swapped content so SPA navigation mirrors
+  // hard-refresh hydration behavior for page .gospa TypeScript blocks.
+  const islandRoots = container.querySelectorAll("[data-gospa-island]");
+  islandRoots.forEach((root) => {
+    const el = root as HTMLElement;
+    if (el.closest("[data-gospa-permanent]")) return;
+
+    const name = el.getAttribute("data-gospa-island");
+    if (!name) return;
+
+    const setup = getSetup(name);
+    if (!setup) return;
+
+    let stateData: Record<string, any> = {};
+    const stateAttr = el.getAttribute("data-gospa-state");
+    if (stateAttr) {
+      try {
+        stateData = JSON.parse(stateAttr);
+      } catch {
+        /* ignore malformed state payload */
+      }
+    }
+
+    let propsData: Record<string, any> = {};
+    const propsAttr = el.getAttribute("data-gospa-props");
+    if (propsAttr) {
+      try {
+        propsData = JSON.parse(propsAttr);
+      } catch {
+        /* ignore malformed props payload */
+      }
+    }
+
+    try {
+      const maybePromise = (setup as any)(el, propsData, stateData);
+      if (
+        maybePromise &&
+        typeof (maybePromise as Promise<unknown>).then === "function"
+      ) {
+        (maybePromise as Promise<unknown>).catch((error) => {
+          if (typeof GOSPA_DEBUG !== "undefined" && GOSPA_DEBUG) {
+            console.error("[GoSPA] Island setup failed:", name, error);
+          }
+        });
+      }
+    } catch (error) {
+      if (typeof GOSPA_DEBUG !== "undefined" && GOSPA_DEBUG) {
+        console.error("[GoSPA] Island setup failed:", name, error);
+      }
+    }
+  });
+
   if (
     !navigationOptionsConfig.lazyRuntimeInitialization.enabled ||
     !navigationOptionsConfig.lazyRuntimeInitialization.deferBindings
@@ -1051,7 +1115,9 @@ export async function navigate(
 
     // 2. Fetch Phase
     progressBar.start();
-    const data = await getPageData(path, state.abortController.signal);
+    const data = await getPageData(path, state.abortController.signal, {
+      preferFresh: true,
+    });
 
     if (!data) {
       progressBar.finish();
@@ -1149,7 +1215,9 @@ function handlePopState(_event: PopStateEvent): void {
   progressBar.start();
   (async () => {
     try {
-      const data = await getPageData(path, state.abortController!.signal);
+      const data = await getPageData(path, state.abortController!.signal, {
+        preferFresh: true,
+      });
       if (data) {
         await performDOMUpdateWithTransitions(data, { scrollToTop: false });
 

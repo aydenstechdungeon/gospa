@@ -90,7 +90,6 @@ Presets:
 | `CompressState` | `bool` |
 | `StateDiffing` | `bool` |
 | `CacheTemplates` | `bool` |
-| `SimpleRuntime` | `bool` |
 | `SimpleRuntimeSVGs` | `bool` |
 | `DisableSanitization` | `bool` |
 | `WSReconnectDelay` | `time.Duration` |
@@ -130,7 +129,7 @@ Presets:
 - **`RoutesFS`**: Embed routes with `//go:embed`.
 - **`CompressState` / `StateDiffing`**: Bandwidth optimizations for WebSocket state sync.
 - **`SerializationFormat`**: `"json"` (default) or `"msgpack"` for WebSocket payloads.
-- **`SimpleRuntime` / `SimpleRuntimeSVGs` / `DisableSanitization`**: Trade-offs for bundle size and trust model; see [Security](../configuration/scaling).
+- **`SimpleRuntimeSVGs` / `DisableSanitization`**: Trade-offs for runtime sanitization trust model; see [Security](../configuration/scaling).
 - **`WSReconnectDelay` / `WSMaxReconnect` / `WSHeartbeat`**: Passed to the client; if unset/zero at runtime, HTML injection applies **1s / 10 / 30s** defaults when embedding config.
 - **`RemoteActionMiddleware`**: Required in production for remote actions unless `AllowUnauthenticatedRemoteActions` is set.
 - **`EnableCSRF`**: Defaults to `true`; wired in `gospa.New`.

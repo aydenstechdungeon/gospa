@@ -49,7 +49,7 @@ docs/
 - [Components & Islands](islands.md)
 - [File-based Routing](routing.md)
 - [Remote Actions](api/remote-actions.md)
-- [Single File Components (.gospa)](gospasfc.md)
+- [Single File Components (.gospa, alpha)](gospasfc.md)
 
 ### Advanced Features
 - [Security & Hardening](security.md)

@@ -26,6 +26,7 @@ type RouteInfo struct {
 	URLPath      string      // URL path (e.g., /blog/:id)
 	ComponentFn  string      // Component function name (e.g., BlogPage)
 	IsLayout     bool        // True if this is a layout file
+	IsError      bool        // True if this is an error boundary file
 	IsDynamic    bool        // True if route has dynamic segments
 	DynamicParam string      // The dynamic parameter name if any
 	Params       []FuncParam // Function parameters parsed from _templ.go
@@ -109,8 +110,8 @@ func Generate(routesDir string) error {
 // scanRoutes scans the routes directory for .templ files.
 func scanRoutes(routesDir string) ([]RouteInfo, error) {
 	type routeKey struct {
-		urlPath  string
-		isLayout bool
+		urlPath   string
+		routeKind string
 	}
 	bestRoutes := make(map[routeKey]RouteInfo)
 
@@ -182,7 +183,13 @@ func scanRoutes(routesDir string) ([]RouteInfo, error) {
 			}
 		}
 
-		key := routeKey{urlPath: route.URLPath, isLayout: route.IsLayout}
+		routeKind := "page"
+		if route.IsLayout {
+			routeKind = "layout"
+		} else if route.IsError {
+			routeKind = "error"
+		}
+		key := routeKey{urlPath: route.URLPath, routeKind: routeKind}
 		existing, ok := bestRoutes[key]
 		if !ok {
 			bestRoutes[key] = route
@@ -229,6 +236,7 @@ func parseRoute(relPath, routesDir string) RouteInfo {
 	// Check if it's a layout
 	route.IsLayout = cleanFilename == "layout.templ" || cleanFilename == "root_layout.templ" ||
 		cleanFilename == "generated_layout.templ" || cleanFilename == "generated_root_layout.templ"
+	route.IsError = cleanFilename == "error.templ"
 
 	// Determine package name and import path based on directory
 	// For subdirectory routes like blog/page.templ, the package should be "blog"
@@ -407,7 +415,7 @@ func filePathToURLPath(dir, filename string) string {
 	// Add the page name if it's not an index page
 	base := strings.TrimSuffix(cleanFilename, ".templ")
 	base = strings.TrimPrefix(base, "generated_")
-	if base != "page" && base != "layout" && base != "root_layout" {
+	if base != "page" && base != "layout" && base != "root_layout" && base != "error" {
 		urlParts = append(urlParts, base)
 	}
 
@@ -539,12 +547,15 @@ func generateCode(routes []RouteInfo, routesDir string, hasHooks bool) (string, 
 	}
 	fmt.Fprintf(&sb, "package %s\n\n", pkgName)
 
-	// Group routes by directory
-	var pages, layouts []RouteInfo
+	// Group routes by type
+	var pages, layouts, errors []RouteInfo
 	for _, route := range routes {
-		if route.IsLayout {
+		switch {
+		case route.IsLayout:
 			layouts = append(layouts, route)
-		} else {
+		case route.IsError:
+			errors = append(errors, route)
+		default:
 			pages = append(pages, route)
 		}
 	}
@@ -564,6 +575,21 @@ func generateCode(routes []RouteInfo, routesDir string, hasHooks bool) (string, 
 			break
 		}
 	}
+	needsStrconv := false
+	for _, route := range routes {
+		for _, p := range route.Params {
+			switch p.Type {
+			case "int", "int64", "int32", "bool", "float64", "float32":
+				needsStrconv = true
+			}
+			if needsStrconv {
+				break
+			}
+		}
+		if needsStrconv {
+			break
+		}
+	}
 
 	// Collect unique import paths for subdirectory packages
 	imports := make(map[string]string) // importPath -> packageName
@@ -572,6 +598,9 @@ func generateCode(routes []RouteInfo, routesDir string, hasHooks bool) (string, 
 	if needsContextIO {
 		imports["context"] = ""
 		imports["io"] = ""
+	}
+	if needsStrconv {
+		imports["strconv"] = ""
 	}
 
 	// Get module path from go.mod
@@ -647,6 +676,7 @@ func generateCode(routes []RouteInfo, routesDir string, hasHooks bool) (string, 
 
 	_ = pages   // Use the pages variable
 	_ = layouts // Use the layouts variable
+	_ = errors  // Use the errors variable
 
 	// Register pages
 	if len(pages) > 0 {
@@ -673,6 +703,16 @@ func generateCode(routes []RouteInfo, routesDir string, hasHooks bool) (string, 
 					fmt.Fprintf(&sb, "\trouting.RegisterAction(%q, %q, %sActions[%q])\n", route.URLPath, actionName, pkgPrefix, actionName)
 				}
 			}
+		}
+	}
+
+	// Register error boundaries
+	if len(errors) > 0 {
+		sb.WriteString("\n\t// Register error boundaries\n")
+		for _, route := range errors {
+			fmt.Fprintf(&sb, "\trouting.RegisterError(%q, func(props map[string]interface{}) templ.Component {\n", route.URLPath)
+			fmt.Fprintf(&sb, "\t\treturn %s\n", generatePageCallWithPackage(route))
+			sb.WriteString("\t})\n")
 		}
 	}
 
@@ -784,22 +824,40 @@ func generatePageCallWithPackage(route RouteInfo) string {
 		if v, ok := props["%s"].(%s); ok {
 			return v
 		}
+		if v, ok := props["%s"].(string); ok {
+			parsed, err := strconv.ParseInt(v, 10, 64)
+			if err == nil {
+				return %s(parsed)
+			}
+		}
 		return 0
-	}()`, param.Type, param.Name, param.Type))
+	}()`, param.Type, param.Name, param.Type, param.Name, param.Type))
 		case "bool":
 			args = append(args, fmt.Sprintf(`func() bool {
 		if v, ok := props["%s"].(bool); ok {
 			return v
 		}
+		if v, ok := props["%s"].(string); ok {
+			parsed, err := strconv.ParseBool(v)
+			if err == nil {
+				return parsed
+			}
+		}
 		return false
-	}()`, param.Name))
+	}()`, param.Name, param.Name))
 		case "float64", "float32":
 			args = append(args, fmt.Sprintf(`func() %s {
 		if v, ok := props["%s"].(%s); ok {
 			return v
 		}
+		if v, ok := props["%s"].(string); ok {
+			parsed, err := strconv.ParseFloat(v, 64)
+			if err == nil {
+				return %s(parsed)
+			}
+		}
 		return 0.0
-	}()`, param.Type, param.Name, param.Type))
+	}()`, param.Type, param.Name, param.Type, param.Name, param.Type))
 		case "templ.Component":
 			args = append(args, fmt.Sprintf(`func() templ.Component {
 		if v, ok := props["%s"].(templ.Component); ok {
@@ -845,22 +903,40 @@ func generateLayoutCallArgsWithPackage(route RouteInfo) string {
 		if v, ok := props["%s"].(%s); ok {
 			return v
 		}
+		if v, ok := props["%s"].(string); ok {
+			parsed, err := strconv.ParseInt(v, 10, 64)
+			if err == nil {
+				return %s(parsed)
+			}
+		}
 		return 0
-	}()`, param.Type, param.Name, param.Type))
+	}()`, param.Type, param.Name, param.Type, param.Name, param.Type))
 		case "bool":
 			args = append(args, fmt.Sprintf(`func() bool {
 		if v, ok := props["%s"].(bool); ok {
 			return v
 		}
+		if v, ok := props["%s"].(string); ok {
+			parsed, err := strconv.ParseBool(v)
+			if err == nil {
+				return parsed
+			}
+		}
 		return false
-	}()`, param.Name))
+	}()`, param.Name, param.Name))
 		case "float64", "float32":
 			args = append(args, fmt.Sprintf(`func() %s {
 		if v, ok := props["%s"].(%s); ok {
 			return v
 		}
+		if v, ok := props["%s"].(string); ok {
+			parsed, err := strconv.ParseFloat(v, 64)
+			if err == nil {
+				return %s(parsed)
+			}
+		}
 		return 0.0
-	}()`, param.Type, param.Name, param.Type))
+	}()`, param.Type, param.Name, param.Type, param.Name, param.Type))
 		case "map[string]interface{}":
 			args = append(args, fmt.Sprintf(`func() map[string]interface{} {
 		if v, ok := props["%s"].(map[string]interface{}); ok {

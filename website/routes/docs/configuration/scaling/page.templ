@@ -96,7 +96,7 @@ templ Page() {
 						</tr>
 					</thead>
 					<tbody class="divide-y divide-[var(--border)]">
-						<tr><td class="px-4 py-2 font-mono text-[var(--accent-primary)]">HydrationMode</td><td class=" px-4 py-2">string</td><td class=" px-4 py-2">""</td><td class=" px-4 py-2">Hydration strategy: " immediate", " lazy", " visible", " idle"</td></tr>
+						<tr><td class="px-4 py-2 font-mono text-[var(--accent-primary)]">HydrationMode</td><td class=" px-4 py-2">string</td><td class=" px-4 py-2">""</td><td class=" px-4 py-2">Hydration strategy: "immediate", "lazy", "visible", "idle"</td></tr>
 						<tr><td class="px-4 py-2 font-mono text-[var(--accent-primary)]">HydrationTimeout</td><td class=" px-4 py-2">int</td><td class=" px-4 py-2">0</td><td class=" px-4 py-2">Milliseconds before force hydrate</td></tr>
 					</tbody>
 				</table>
@@ -106,9 +106,9 @@ templ Page() {
 		<section class="space-y-6">
 			<h2 class="text-2xl font-bold border-b border-[var(--border)] pb-2">Prefork Best Practices</h2>
 			<div class="space-y-4">
-				<p class="text-[var(--text-secondary)]">Prefork mode maximizes performance by spawning a worker process { " for"} each CPU core. To ensure consistency across workers, follow these rules:</p>
+				<p class="text-[var(--text-secondary)]">Prefork mode maximizes performance by spawning a worker process for each CPU core. To ensure consistency across workers, follow these rules:</p>
 				<ul class="space-y-3 text-sm text-[var(--text-secondary)] list-disc list-inside ml-4">
-					<li><strong>External Storage:</strong> You MUST use an external storage backend like Redis { "for"} session and client state. In-memory state is isolated per process.</li>
+					<li><strong>External Storage:</strong> You MUST use an external storage backend like Redis for session and client state. In-memory state is isolated per process.</li>
 					<li><strong>External PubSub:</strong> WebSocket broadcasting requires a shared broker (e.g. Redis PubSub) to reach clients connected to different worker processes.</li>
 					<li><strong>Avoid Global Variables:</strong> Mutable global variables are the primary source of bugs in Prefork mode. Each process has its own copy. Move shared logic to external databases or coordinated state.</li>
 					<li><strong>Port Sharing:</strong> Fiber handles SO_REUSEPORT automatically, but ensure your OS allows multiple processes to bind to the same port.</li>
@@ -120,7 +120,7 @@ templ Page() {
 			<h2 class="text-2xl font-bold">Examples</h2>
 			
 			<h3 class="text-xl font-semibold">High-Performance (Cluster Mode via Prefork)</h3>
-			@components.CodeBlock("import \" github.com/aydenstechdungeon/gospa/store/redis\"\n\napp := gospa.New(gospa.Config{\n    Prefork:         true,\n    Storage:         redis.NewStore(rdb),\n    PubSub:          redis.NewPubSub(rdb),\n    SimpleRuntime:   true,\n    CompressState:   true,\n    StateDiffing:    true,\n    CacheTemplates:  true,\n    HydrationMode:   \" lazy\",\n})", " go", " main.go")
+			@components.CodeBlock("import \"github.com/aydenstechdungeon/gospa/store/redis\"\n\napp := gospa.New(gospa.Config{\n    Prefork:        true,\n    Storage:        redis.NewStore(rdb),\n    PubSub:         redis.NewPubSub(rdb),\n    CompressState:  true,\n    StateDiffing:   true,\n    CacheTemplates: true,\n    HydrationMode:  \"lazy\",\n})", "go", "main.go")
 		</section>
 
 		@prevNext("/docs/configuration/websocket", "")

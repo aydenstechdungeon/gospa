@@ -32,6 +32,27 @@ func TestFilePathToURLPath_NestedPage(t *testing.T) {
 	}
 }
 
+func TestFilePathToURLPath_PlusAliases(t *testing.T) {
+	r := NewRouter("./routes")
+	tests := []struct {
+		input    string
+		routeTyp RouteType
+		expected string
+	}{
+		{"+page.templ", RouteTypePage, "/"},
+		{"dashboard/+page.templ", RouteTypePage, "/dashboard"},
+		{"dashboard/+layout.templ", RouteTypeLayout, "/dashboard"},
+		{"dashboard/+error.templ", RouteTypeError, "/dashboard"},
+	}
+
+	for _, tt := range tests {
+		got := r.filePathToURLPath(tt.input, tt.routeTyp)
+		if got != tt.expected {
+			t.Errorf("filePathToURLPath(%q) = %q, want %q", tt.input, got, tt.expected)
+		}
+	}
+}
+
 func TestFilePathToURLPath_DynamicSegment(t *testing.T) {
 	r := NewRouter("./routes")
 
@@ -162,6 +183,24 @@ func TestRouterScan_Basic(t *testing.T) {
 	pages := r.GetPages()
 	if len(pages) != 3 {
 		t.Errorf("expected 3 pages, got %d", len(pages))
+	}
+}
+
+func TestRouterScan_PlusPagePreferredOverLegacy(t *testing.T) {
+	fs := makeFS(
+		"blog/page.templ",
+		"blog/+page.templ",
+	)
+	r := NewRouter(fs)
+	if err := r.Scan(); err != nil {
+		t.Fatalf("Scan() error: %v", err)
+	}
+	pages := r.GetPages()
+	if len(pages) != 1 {
+		t.Fatalf("expected 1 page, got %d", len(pages))
+	}
+	if pages[0].File != "blog/+page.templ" {
+		t.Fatalf("expected +page.templ to win, got %q", pages[0].File)
 	}
 }
 
