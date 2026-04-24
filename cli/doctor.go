@@ -7,6 +7,8 @@ import (
 	"os/exec"
 	"path/filepath"
 	"strings"
+
+	"github.com/aydenstechdungeon/gospa/compiler"
 )
 
 // DoctorConfig controls CLI doctor checks.
@@ -16,6 +18,7 @@ type DoctorConfig struct {
 	JSONOutput   bool   // JSON output
 	Quiet        bool   // Only show errors
 	CheckUpdates bool   // Check for package updates
+	Strict       bool   // Enable strict preflight checks
 }
 
 // Doctor inspects the current project for common setup issues.
@@ -31,7 +34,11 @@ func Doctor(config *DoctorConfig) {
 
 	if !config.Quiet && !config.JSONOutput {
 		printer.Title("GoSPA Doctor")
-		printer.Subtitle("Checking Go, Node.js tooling, project layout, and runtime entrypoints...")
+		mode := "standard"
+		if config.Strict {
+			mode = "strict"
+		}
+		printer.Subtitle("Checking Go, Node.js tooling, project layout, and runtime entrypoints (%s mode)...", mode)
 	}
 
 	checks := []doctorCheck{
@@ -52,6 +59,9 @@ func Doctor(config *DoctorConfig) {
 	// Add update checks if requested
 	if config.CheckUpdates {
 		checks = append(checks, checkForUpdates()...)
+	}
+	if config.Strict {
+		checks = append(checks, strictDoctorChecks(config)...)
 	}
 
 	if config.JSONOutput {
@@ -94,6 +104,16 @@ func Doctor(config *DoctorConfig) {
 
 	if !config.Quiet {
 		fmt.Println("\nGoSPA Doctor found no blocking setup issues.")
+	}
+}
+
+func strictDoctorChecks(config *DoctorConfig) []doctorCheck {
+	return []doctorCheck{
+		checkAnyFile(".", []string{"generated/routes.ts"}, true, "route graph artifacts"),
+		checkCSPNonceConfig(),
+		checkWebSocketPathConfig(),
+		checkPreforkStoragePubSubConfig(),
+		checkSFCStrict(config.RoutesDir),
 	}
 }
 
@@ -406,5 +426,174 @@ func checkIslandsBundle() doctorCheck {
 		Name:     "islands bundle",
 		Required: false,
 		Detail:   islandsOutput,
+	}
+}
+
+func checkCSPNonceConfig() doctorCheck {
+	const mainPath = "main.go"
+	content, err := os.ReadFile(mainPath)
+	if err != nil {
+		return doctorCheck{
+			Name:     "CSP nonce policy",
+			Required: true,
+			Err:      fmt.Errorf("cannot read %s: %v", mainPath, err),
+		}
+	}
+	source := string(content)
+	if !strings.Contains(source, "SecurityHeadersMiddleware(") {
+		return doctorCheck{
+			Name:     "CSP nonce policy",
+			Required: true,
+			Err:      fmt.Errorf("missing SecurityHeadersMiddleware in %s", mainPath),
+		}
+	}
+	if !strings.Contains(source, "{nonce}") {
+		return doctorCheck{
+			Name:     "CSP nonce policy",
+			Required: true,
+			Err:      fmt.Errorf("SecurityHeadersMiddleware policy should include {nonce} placeholder"),
+		}
+	}
+	return doctorCheck{
+		Name:     "CSP nonce policy",
+		Required: true,
+		Detail:   "nonce placeholder detected",
+	}
+}
+
+func checkWebSocketPathConfig() doctorCheck {
+	const mainPath = "main.go"
+	content, err := os.ReadFile(mainPath)
+	if err != nil {
+		return doctorCheck{
+			Name:     "WebSocket path",
+			Required: false,
+			Err:      fmt.Errorf("cannot read %s: %v", mainPath, err),
+		}
+	}
+	source := string(content)
+	if strings.Contains(source, "WebSocketPath: \"\"") {
+		return doctorCheck{
+			Name:     "WebSocket path",
+			Required: true,
+			Err:      fmt.Errorf("WebSocketPath is explicitly empty"),
+		}
+	}
+	if strings.Contains(source, "WebSocketPath:") {
+		return doctorCheck{
+			Name:     "WebSocket path",
+			Required: true,
+			Detail:   "explicit WebSocketPath detected",
+		}
+	}
+	return doctorCheck{
+		Name:     "WebSocket path",
+		Required: true,
+		Detail:   "using framework default /_gospa/ws",
+	}
+}
+
+func checkPreforkStoragePubSubConfig() doctorCheck {
+	const mainPath = "main.go"
+	content, err := os.ReadFile(mainPath)
+	if err != nil {
+		return doctorCheck{
+			Name:     "Prefork storage/pubsub consistency",
+			Required: false,
+			Err:      fmt.Errorf("cannot read %s: %v", mainPath, err),
+		}
+	}
+	source := string(content)
+	if !strings.Contains(source, "Prefork: true") {
+		return doctorCheck{
+			Name:     "Prefork storage/pubsub consistency",
+			Required: false,
+			Detail:   "prefork not explicitly enabled",
+		}
+	}
+	hasStorage := strings.Contains(source, "Storage:")
+	hasPubSub := strings.Contains(source, "PubSub:")
+	if !hasStorage || !hasPubSub {
+		return doctorCheck{
+			Name:     "Prefork storage/pubsub consistency",
+			Required: true,
+			Err:      fmt.Errorf("prefork enabled but Storage/PubSub is not fully configured"),
+		}
+	}
+	return doctorCheck{
+		Name:     "Prefork storage/pubsub consistency",
+		Required: true,
+		Detail:   "prefork + storage/pubsub configuration detected",
+	}
+}
+
+func checkSFCStrict(routesDir string) doctorCheck {
+	dirs := []string{}
+	if strings.TrimSpace(routesDir) != "" {
+		dirs = append(dirs, routesDir)
+	}
+	dirs = append(dirs, "components")
+
+	var gospaFiles []string
+	for _, base := range dirs {
+		info, err := os.Stat(base)
+		if err != nil || !info.IsDir() {
+			continue
+		}
+		_ = filepath.Walk(base, func(path string, info os.FileInfo, err error) error {
+			if err != nil {
+				return nil
+			}
+			if info.IsDir() {
+				name := info.Name()
+				if strings.HasPrefix(name, ".") || name == "vendor" || name == "node_modules" || name == "generated" {
+					return filepath.SkipDir
+				}
+				return nil
+			}
+			if strings.HasSuffix(path, ".gospa") {
+				gospaFiles = append(gospaFiles, path)
+			}
+			return nil
+		})
+	}
+
+	if len(gospaFiles) == 0 {
+		return doctorCheck{
+			Name:     "SFC strict diagnostics",
+			Required: true,
+			Detail:   "no .gospa files detected",
+		}
+	}
+
+	c := compiler.NewCompiler()
+	for _, file := range gospaFiles {
+		content, err := os.ReadFile(filepath.Clean(file))
+		if err != nil {
+			return doctorCheck{
+				Name:     "SFC strict diagnostics",
+				Required: true,
+				Err:      fmt.Errorf("%s: read failed: %v", file, err),
+			}
+		}
+		name := strings.TrimSuffix(filepath.Base(file), ".gospa")
+		_, _, err = c.Compile(compiler.CompileOptions{
+			Type:     compiler.ComponentTypeIsland,
+			Name:     name,
+			IslandID: name,
+		}, string(content))
+		if err != nil {
+			return doctorCheck{
+				Name:     "SFC strict diagnostics",
+				Required: true,
+				Err:      fmt.Errorf("%s: %v", file, err),
+			}
+		}
+	}
+
+	return doctorCheck{
+		Name:     "SFC strict diagnostics",
+		Required: true,
+		Detail:   fmt.Sprintf("%d .gospa files validated", len(gospaFiles)),
 	}
 }

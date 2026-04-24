@@ -1,6 +1,7 @@
 package sfc
 
 import (
+	"errors"
 	"testing"
 )
 
@@ -186,5 +187,40 @@ func TestTemplateParser_ComplexExpressions(t *testing.T) {
 	}
 	if expr.Content != ` "prop": { "key": "value" } ` {
 		t.Fatalf("Unexpected expression content: %q", expr.Content)
+	}
+}
+
+func TestTemplateParser_InvalidEventDirectiveHint(t *testing.T) {
+	input := `<button @click={inc}>+</button>`
+	p := NewTemplateParser(input, 0, 0, 0)
+	_, err := p.Parse()
+	if err == nil {
+		t.Fatal("expected parse error for @click syntax")
+	}
+	var diag *DiagnosticError
+	if !errors.As(err, &diag) {
+		t.Fatalf("expected DiagnosticError, got %T (%v)", err, err)
+	}
+	if diag.Line != 1 || diag.Column == 0 {
+		t.Fatalf("expected line/column, got %d:%d", diag.Line, diag.Column)
+	}
+	if diag.Suggestion == "" || diag.Snippet == "" {
+		t.Fatalf("expected suggestion/snippet, got %#v", diag)
+	}
+}
+
+func TestTemplateParser_UnknownDirectiveHint(t *testing.T) {
+	input := `{#iff ok}<div/> {/iff}`
+	p := NewTemplateParser(input, 0, 0, 0)
+	_, err := p.Parse()
+	if err == nil {
+		t.Fatal("expected parse error for unknown directive")
+	}
+	var diag *DiagnosticError
+	if !errors.As(err, &diag) {
+		t.Fatalf("expected DiagnosticError, got %T (%v)", err, err)
+	}
+	if diag.Suggestion == "" {
+		t.Fatalf("expected suggestion for unknown directive, got %#v", diag)
 	}
 }

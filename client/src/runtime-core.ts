@@ -149,6 +149,11 @@ export function getSetup(name: string): IslandSetupFn | undefined {
 let isInitialized = false;
 export let config: RuntimeConfig = {};
 
+function shouldAutoInitDocument(): boolean {
+  if (typeof document === "undefined") return false;
+  return document.querySelector("[data-gospa-root], [data-gospa-component], [data-gospa-island]") !== null;
+}
+
 // Lazy-loaded aggregate features bundle
 let featuresModule: Promise<typeof import("./framework-features.ts")> | null =
   null;
@@ -175,8 +180,8 @@ export function init(userConfig: Partial<RuntimeConfig> = {}): void {
   isInitialized = true;
   config = { ...config, ...userConfig };
 
-  // Auto-initialize if requested via data-gospa-auto
-  if (typeof document !== "undefined" && document.documentElement.hasAttribute("data-gospa-auto")) {
+  // Auto-initialize when GoSPA markers are present.
+  if (shouldAutoInitDocument()) {
     autoInit();
   }
 }
@@ -416,9 +421,9 @@ export async function getTransitions() {
 if (typeof document !== "undefined") {
   if (document.readyState === "loading") {
     document.addEventListener("DOMContentLoaded", () => {
-      if (document.documentElement.hasAttribute("data-gospa-auto")) autoInit();
+      if (shouldAutoInitDocument()) autoInit();
     });
-  } else if (document.documentElement.hasAttribute("data-gospa-auto")) {
+  } else if (shouldAutoInitDocument()) {
     autoInit();
   }
 }

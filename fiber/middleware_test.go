@@ -253,3 +253,77 @@ func TestStateMiddleware_IgnoresInvalidCSRFTokensForInlineScript(t *testing.T) {
 		t.Fatalf("expected invalid csrf token to be omitted from inline script, got %s", string(body))
 	}
 }
+
+func TestStateMiddleware_IncludesStartupSelfChecks(t *testing.T) {
+	config := Config{
+		StateKey:        "gospa.state",
+		RuntimeScript:   "/_gospa/runtime.js",
+		EnableWebSocket: true,
+		WebSocketPath:   "/_gospa/ws",
+		ExpectCSPNonce:  true,
+		StartupChecks:   true,
+	}
+
+	app := gofiber.New()
+	app.Use(func(c gofiber.Ctx) error {
+		c.Locals("gospa.csp_nonce", "nonce-boot-check")
+		stateMap := state.NewStateMap()
+		c.Locals(config.StateKey, stateMap)
+		return c.Next()
+	})
+	app.Use(StateMiddleware(config))
+	app.Get("/", func(c gofiber.Ctx) error {
+		c.Set("Content-Type", "text/html")
+		return c.SendString("<html><body><div data-gospa-root></div></body></html>")
+	})
+
+	resp, err := app.Test(httptest.NewRequest("GET", "/", nil))
+	if err != nil {
+		t.Fatalf("request failed: %v", err)
+	}
+	defer func() { _ = resp.Body.Close() }()
+
+	body, _ := io.ReadAll(resp.Body)
+	bodyStr := string(body)
+	if !strings.Contains(bodyStr, "gospa-startup-overlay") {
+		t.Fatalf("expected startup self-check overlay code in body: %s", bodyStr)
+	}
+	if !strings.Contains(bodyStr, "/_gospa/ws") {
+		t.Fatalf("expected websocket path in startup checks: %s", bodyStr)
+	}
+}
+
+func TestStateMiddleware_AppendsScriptsWhenBodyTagMissing(t *testing.T) {
+	config := Config{
+		StateKey:      "gospa.state",
+		RuntimeScript: "/_gospa/runtime.js",
+		StartupChecks: true,
+	}
+
+	app := gofiber.New()
+	app.Use(func(c gofiber.Ctx) error {
+		stateMap := state.NewStateMap()
+		c.Locals(config.StateKey, stateMap)
+		return c.Next()
+	})
+	app.Use(StateMiddleware(config))
+	app.Get("/", func(c gofiber.Ctx) error {
+		c.Set("Content-Type", "text/html")
+		return c.SendString("<html><main>no body tag</main></html>")
+	})
+
+	resp, err := app.Test(httptest.NewRequest("GET", "/", nil))
+	if err != nil {
+		t.Fatalf("request failed: %v", err)
+	}
+	defer func() { _ = resp.Body.Close() }()
+
+	body, _ := io.ReadAll(resp.Body)
+	bodyStr := string(body)
+	if !strings.Contains(bodyStr, `window.__GOSPA_STATE__`) {
+		t.Fatalf("expected injected state script, got: %s", bodyStr)
+	}
+	if !strings.Contains(bodyStr, `src="/_gospa/runtime.js"`) {
+		t.Fatalf("expected injected runtime script, got: %s", bodyStr)
+	}
+}

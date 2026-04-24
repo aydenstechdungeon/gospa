@@ -16,7 +16,8 @@ function getCSPNonce(): string | undefined {
 
 // Navigation state
 const state = reactive({
-  currentPath: window.location.pathname,
+  currentPath:
+    window.location.pathname + window.location.search + window.location.hash,
   isNavigating: false,
   pendingNavigation: null as Promise<boolean> | null,
   abortController: null as AbortController | null,
@@ -76,6 +77,24 @@ export interface ScriptExecutionConfig {
   executeMarkedOnly?: boolean;
 }
 
+export interface PendingUIConfig {
+  enabled?: boolean;
+  delay?: number;
+  minVisibleDuration?: number;
+}
+
+export interface FocusRestorationConfig {
+  enabled?: boolean;
+  selector?: string;
+  preventScroll?: boolean;
+}
+
+export interface ScrollRestorationConfig {
+  useHistoryScrollRestoration?: boolean;
+  restoreOnPopState?: boolean;
+  useHashAnchors?: boolean;
+}
+
 export interface NavigationOptions {
   speculativePrefetching?: SpeculativePrefetchingConfig;
   urlParsingCache?: URLParsingCacheConfig;
@@ -85,6 +104,9 @@ export interface NavigationOptions {
   viewTransitions?: ViewTransitionsConfig;
   progressBar?: ProgressBarConfig;
   scriptExecution?: ScriptExecutionConfig;
+  pendingUI?: PendingUIConfig;
+  focusRestoration?: FocusRestorationConfig;
+  scrollRestoration?: ScrollRestorationConfig;
 }
 
 // Navigation event handlers
@@ -141,6 +163,21 @@ const DEFAULT_NAVIGATION_OPTIONS: Required<NavigationOptions> = {
   scriptExecution: {
     executeMarkedOnly: true,
   },
+  pendingUI: {
+    enabled: true,
+    delay: 120,
+    minVisibleDuration: 180,
+  },
+  focusRestoration: {
+    enabled: true,
+    selector: "h1, [data-gospa-page-content], main, [data-gospa-root]",
+    preventScroll: true,
+  },
+  scrollRestoration: {
+    useHistoryScrollRestoration: true,
+    restoreOnPopState: true,
+    useHashAnchors: true,
+  },
 };
 
 let navigationOptionsConfig: Required<NavigationOptions> = {
@@ -161,6 +198,9 @@ let navigationOptionsConfig: Required<NavigationOptions> = {
   viewTransitions: { ...DEFAULT_NAVIGATION_OPTIONS.viewTransitions },
   progressBar: { ...DEFAULT_NAVIGATION_OPTIONS.progressBar },
   scriptExecution: { ...DEFAULT_NAVIGATION_OPTIONS.scriptExecution },
+  pendingUI: { ...DEFAULT_NAVIGATION_OPTIONS.pendingUI },
+  focusRestoration: { ...DEFAULT_NAVIGATION_OPTIONS.focusRestoration },
+  scrollRestoration: { ...DEFAULT_NAVIGATION_OPTIONS.scrollRestoration },
 };
 
 interface CachedURL {
@@ -225,6 +265,18 @@ export function setNavigationOptions(config: NavigationOptions): void {
     scriptExecution: {
       ...navigationOptionsConfig.scriptExecution,
       ...(config.scriptExecution ?? {}),
+    },
+    pendingUI: {
+      ...navigationOptionsConfig.pendingUI,
+      ...(config.pendingUI ?? {}),
+    },
+    focusRestoration: {
+      ...navigationOptionsConfig.focusRestoration,
+      ...(config.focusRestoration ?? {}),
+    },
+    scrollRestoration: {
+      ...navigationOptionsConfig.scrollRestoration,
+      ...(config.scrollRestoration ?? {}),
     },
   };
 }
@@ -304,7 +356,171 @@ class ProgressBar {
 }
 
 const progressBar = new ProgressBar();
-const scrollPositions = new Map<string, number>();
+interface ScrollPosition {
+  x: number;
+  y: number;
+}
+
+const scrollPositions = new Map<string, ScrollPosition>();
+let pendingShowTimer: number | null = null;
+let pendingVisibleAt = 0;
+let pendingVisible = false;
+let activeNavigationToken = 0;
+
+function getNavigationContainer(): Element {
+  return (
+    document.querySelector("[data-gospa-page-content], [data-gospa-root]") ||
+    document.body
+  );
+}
+
+function dispatchNavigationEvent(
+  type: string,
+  detail: Record<string, unknown>,
+): void {
+  document.dispatchEvent(new CustomEvent(type, { detail }));
+}
+
+function startPendingUI(container: Element, token: number): void {
+  const pendingCfg = navigationOptionsConfig.pendingUI;
+  document.documentElement.setAttribute("data-gospa-navigating", "true");
+
+  if (!pendingCfg.enabled) {
+    container.setAttribute("data-gospa-loading", "true");
+    return;
+  }
+
+  if (pendingShowTimer) {
+    clearTimeout(pendingShowTimer);
+    pendingShowTimer = null;
+  }
+
+  const show = () => {
+    if (token !== activeNavigationToken) return;
+    container.setAttribute("data-gospa-loading", "true");
+    document.documentElement.setAttribute("data-gospa-pending", "true");
+    pendingVisibleAt = Date.now();
+    pendingVisible = true;
+  };
+
+  const delay = Math.max(0, pendingCfg.delay ?? 0);
+  if (delay === 0) {
+    show();
+    return;
+  }
+
+  pendingShowTimer = window.setTimeout(() => {
+    pendingShowTimer = null;
+    show();
+  }, delay);
+}
+
+async function stopPendingUI(container: Element, token: number): Promise<void> {
+  if (pendingShowTimer) {
+    clearTimeout(pendingShowTimer);
+    pendingShowTimer = null;
+  }
+
+  if (pendingVisible && navigationOptionsConfig.pendingUI.enabled) {
+    const minVisible = Math.max(
+      0,
+      navigationOptionsConfig.pendingUI.minVisibleDuration ?? 0,
+    );
+    const elapsed = Date.now() - pendingVisibleAt;
+    if (elapsed < minVisible) {
+      await new Promise((resolve) => setTimeout(resolve, minVisible - elapsed));
+    }
+  }
+
+  if (token !== activeNavigationToken) return;
+
+  pendingVisible = false;
+  container.removeAttribute("data-gospa-loading");
+  document.documentElement.removeAttribute("data-gospa-pending");
+  document.documentElement.removeAttribute("data-gospa-navigating");
+}
+
+function ensureFocusable(element: HTMLElement): () => void {
+  if (element.hasAttribute("tabindex")) {
+    return () => {};
+  }
+  element.setAttribute("tabindex", "-1");
+  return () => {
+    if (element.getAttribute("tabindex") === "-1") {
+      element.removeAttribute("tabindex");
+    }
+  };
+}
+
+function restoreFocusAfterNavigation(): void {
+  const cfg = navigationOptionsConfig.focusRestoration;
+  if (!cfg.enabled) return;
+
+  const selector = cfg.selector?.trim();
+  if (!selector) return;
+
+  const target = document.querySelector(selector);
+  if (!(target instanceof HTMLElement)) return;
+
+  const cleanupTabIndex = ensureFocusable(target);
+  target.focus({ preventScroll: cfg.preventScroll ?? true });
+
+  setTimeout(() => {
+    if (document.activeElement !== target) {
+      cleanupTabIndex();
+    }
+  }, 0);
+}
+
+function scrollToHashTarget(path: string): boolean {
+  const cfg = navigationOptionsConfig.scrollRestoration;
+  if (!cfg.useHashAnchors) return false;
+
+  let hash = "";
+  try {
+    hash = new URL(path, window.location.origin).hash;
+  } catch {
+    hash = "";
+  }
+  if (!hash || hash === "#") return false;
+
+  const decoded = decodeURIComponent(hash.slice(1));
+  const escapedNameSelector =
+    typeof CSS !== "undefined" && typeof CSS.escape === "function"
+      ? CSS.escape(decoded)
+      : decoded.replace(/["\\]/g, "\\$&");
+  const target =
+    document.getElementById(decoded) ||
+    document.querySelector(`[name="${escapedNameSelector}"]`);
+  if (!(target instanceof HTMLElement)) return false;
+
+  target.scrollIntoView({ block: "start", inline: "nearest" });
+  return true;
+}
+
+function applyScrollAfterNavigation(
+  path: string,
+  options: NavigateOptions,
+  source: "navigate" | "popstate",
+): void {
+  if (source === "popstate") {
+    if (navigationOptionsConfig.scrollRestoration.restoreOnPopState) {
+      const savedPos = scrollPositions.get(path);
+      if (savedPos) {
+        window.scrollTo(savedPos.x, savedPos.y);
+        return;
+      }
+    }
+    if (scrollToHashTarget(path)) return;
+    window.scrollTo(0, 0);
+    return;
+  }
+
+  const shouldScrollToTop = resolveScrollPreference(options);
+  if (!shouldScrollToTop) return;
+  if (scrollToHashTarget(path)) return;
+  window.scrollTo(0, 0);
+}
 
 function getCachedURL(href: string): URL | null {
   const cacheCfg = navigationOptionsConfig.urlParsingCache;
@@ -661,27 +877,13 @@ async function updateDOM(data: PageData): Promise<void> {
     document.title = data.title;
   }
 
-  const rootEl = document.querySelector("[data-gospa-root]");
-  const contentEl = document.querySelector("[data-gospa-page-content]");
-  const mainEl = document.querySelector("main");
-  const container = rootEl || contentEl || mainEl || document.body;
-  
-  container.removeAttribute("data-gospa-loading");
+  const container = getNavigationContainer();
 
   await reconcileDOM(data);
 
-  document.documentElement.removeAttribute("data-gospa-navigating");
-
   updateHead(data.doc);
   updateActiveLinks();
-
-  const focusTarget = document.querySelector(
-    "h1, [data-gospa-page-content], main",
-  ) as HTMLElement;
-  if (focusTarget) {
-    focusTarget.tabIndex = -1;
-    focusTarget.focus({ preventScroll: true });
-  }
+  restoreFocusAfterNavigation();
 
   await initNewContent(container);
 }
@@ -1095,18 +1297,10 @@ async function initNewContent(
 
 async function performDOMUpdateWithTransitions(
   data: PageData,
-  options: NavigateOptions,
 ): Promise<void> {
   const viewCfg = navigationOptionsConfig.viewTransitions;
   const canTransition = viewCfg.enabled && "startViewTransition" in document;
-
-  const shouldScrollToTop = resolveScrollPreference(options);
-  const update = async () => {
-    await updateDOM(data);
-    if (shouldScrollToTop) {
-      window.scrollTo(0, 0);
-    }
-  };
+  const update = async () => updateDOM(data);
 
   if (!canTransition) {
     await update();
@@ -1165,13 +1359,25 @@ export async function navigate(
   }
   state.abortController = new AbortController();
   state.pendingNavigation = null;
+  const fromPath = state.currentPath;
+  const navigationToken = ++activeNavigationToken;
+  const startedAt = Date.now();
 
   state.isNavigating = true;
   beforeNavCallbacks.forEach((cb) => cb(path));
+  dispatchNavigationEvent("gospa:navigation-start", {
+    from: fromPath,
+    to: path,
+    source: "navigate",
+    replace: Boolean(options.replace),
+  });
 
   try {
     // Store scroll position of the OLD path
-    scrollPositions.set(state.currentPath, window.scrollY);
+    scrollPositions.set(state.currentPath, {
+      x: window.scrollX,
+      y: window.scrollY,
+    });
 
     // 1. Instant Feedback Phase
     if (options.replace) {
@@ -1183,12 +1389,8 @@ export async function navigate(
     state.currentPath = path;
     updateActiveLinks();
 
-    const container =
-      document.querySelector(
-        "[data-gospa-page-content], [data-gospa-root]",
-      ) || document.body;
-    container.setAttribute("data-gospa-loading", "true");
-    document.documentElement.setAttribute("data-gospa-navigating", "true");
+    const container = getNavigationContainer();
+    startPendingUI(container, navigationToken);
 
     // 2. Fetch Phase
     progressBar.start();
@@ -1198,35 +1400,49 @@ export async function navigate(
 
     if (!data) {
       progressBar.finish();
-      container.removeAttribute("data-gospa-loading");
-      document.documentElement.removeAttribute("data-gospa-navigating");
+      await stopPendingUI(container, navigationToken);
       window.location.href = path;
       return false;
     }
 
     // 3. Update Phase
-    await performDOMUpdateWithTransitions(data, options);
+    await performDOMUpdateWithTransitions(data);
+    applyScrollAfterNavigation(path, options, "navigate");
 
     updateActiveLinks();
 
     progressBar.finish();
+    await stopPendingUI(container, navigationToken);
     afterNavCallbacks.forEach((cb) => cb(path));
-    document.dispatchEvent(
-      new CustomEvent("gospa:navigated", { detail: { path } }),
-    );
+    const durationMs = Date.now() - startedAt;
+    dispatchNavigationEvent("gospa:navigated", {
+      path,
+      from: fromPath,
+      to: path,
+      source: "navigate",
+      durationMs,
+    });
+    dispatchNavigationEvent("gospa:navigation-end", {
+      from: fromPath,
+      to: path,
+      source: "navigate",
+      durationMs,
+    });
 
     return true;
   } catch (error) {
     progressBar.finish();
-    const container =
-      document.querySelector(
-        "[data-gospa-page-content], [data-gospa-root]",
-      ) || document.body;
-    container.removeAttribute("data-gospa-loading");
+    await stopPendingUI(getNavigationContainer(), navigationToken);
 
     if ((error as Error).name === "AbortError") {
       return false;
     }
+    dispatchNavigationEvent("gospa:navigation-error", {
+      from: fromPath,
+      to: path,
+      source: "navigate",
+      error: String(error),
+    });
     if (typeof GOSPA_DEBUG !== "undefined" && GOSPA_DEBUG) {
       console.error("[GoSPA] Navigation error:", error);
     }
@@ -1264,7 +1480,11 @@ export function isNavigating(): boolean {
 
 // Handle popstate (back/forward button)
 function handlePopState(_event: PopStateEvent): void {
-  const path = window.location.pathname;
+  const path =
+    window.location.pathname + window.location.search + window.location.hash;
+  const fromPath = state.currentPath;
+  const navigationToken = ++activeNavigationToken;
+  const startedAt = Date.now();
 
   // Abort any in-flight navigation immediately
   if (state.abortController) {
@@ -1279,15 +1499,18 @@ function handlePopState(_event: PopStateEvent): void {
   }
 
   state.currentPath = path;
+  state.isNavigating = true;
   updateActiveLinks();
 
-  const container =
-    document.querySelector("[data-gospa-page-content], [data-gospa-root]") ||
-    document.body;
-  container.setAttribute("data-gospa-loading", "true");
-  document.documentElement.setAttribute("data-gospa-navigating", "true");
+  const container = getNavigationContainer();
+  startPendingUI(container, navigationToken);
 
   beforeNavCallbacks.forEach((cb) => cb(path));
+  dispatchNavigationEvent("gospa:navigation-start", {
+    from: fromPath,
+    to: path,
+    source: "popstate",
+  });
 
   progressBar.start();
   (async () => {
@@ -1296,30 +1519,43 @@ function handlePopState(_event: PopStateEvent): void {
         preferFresh: true,
       });
       if (data) {
-        await performDOMUpdateWithTransitions(data, { scroll: false });
+        await performDOMUpdateWithTransitions(data);
+        applyScrollAfterNavigation(path, { scroll: false }, "popstate");
 
         updateActiveLinks();
 
         progressBar.finish();
-        const savedPos = scrollPositions.get(path);
-        if (savedPos !== undefined) {
-          window.scrollTo(0, savedPos);
-        }
+        await stopPendingUI(container, navigationToken);
         afterNavCallbacks.forEach((cb) => cb(path));
-        document.dispatchEvent(
-          new CustomEvent("gospa:navigated", { detail: { path } }),
-        );
+        const durationMs = Date.now() - startedAt;
+        dispatchNavigationEvent("gospa:navigated", {
+          path,
+          from: fromPath,
+          to: path,
+          source: "popstate",
+          durationMs,
+        });
+        dispatchNavigationEvent("gospa:navigation-end", {
+          from: fromPath,
+          to: path,
+          source: "popstate",
+          durationMs,
+        });
       } else {
         progressBar.finish();
-        container.removeAttribute("data-gospa-loading");
-        document.documentElement.removeAttribute("data-gospa-navigating");
+        await stopPendingUI(container, navigationToken);
         window.location.reload();
       }
     } catch (error) {
       if ((error as Error).name === "AbortError") return;
       progressBar.finish();
-      container.removeAttribute("data-gospa-loading");
-      document.documentElement.removeAttribute("data-gospa-navigating");
+      await stopPendingUI(container, navigationToken);
+      dispatchNavigationEvent("gospa:navigation-error", {
+        from: fromPath,
+        to: path,
+        source: "popstate",
+        error: String(error),
+      });
       if (typeof GOSPA_DEBUG !== "undefined" && GOSPA_DEBUG) {
         console.error("[GoSPA] Popstate navigation error:", error);
       }
@@ -1479,6 +1715,14 @@ export function initNavigation(): void {
     }
   }
 
+  if (navigationOptionsConfig.scrollRestoration.useHistoryScrollRestoration) {
+    try {
+      window.history.scrollRestoration = "manual";
+    } catch {
+      // Ignore environments that do not support this flag.
+    }
+  }
+
   setupSpeculativePrefetching();
   void registerNavigationServiceWorker();
 
@@ -1526,6 +1770,15 @@ export function destroyNavigation(): void {
   teardownSpeculativePrefetching();
   document.getElementById("gospa-snappy-transitions")?.remove();
   document.documentElement.removeAttribute("data-gospa-spa");
+  document.documentElement.removeAttribute("data-gospa-pending");
+  document.documentElement.removeAttribute("data-gospa-navigating");
+  if (navigationOptionsConfig.scrollRestoration.useHistoryScrollRestoration) {
+    try {
+      window.history.scrollRestoration = "auto";
+    } catch {
+      // Ignore unsupported environments.
+    }
+  }
 }
 
 // Prefetch a page for faster navigation

@@ -73,24 +73,24 @@ import "github.com/aydenstechdungeon/gospa/website/components"
 				</p>
 				@components.CodeBlock(`<script lang="go">
   var query = $state("")
-  var items = $state([]string{"Apple", "Banana", "Cherry", "Date"})
+  var items = []string{"Apple", "Banana", "Cherry", "Date"}
+</script>
+
+<script lang="ts">
+  import { $derived } from "@gospa/runtime"
   
-  var filtered = $derived(func() []string {
-    var result []string
-    for _, item := range items {
-      if strings.Contains(strings.ToLower(item), strings.ToLower(query)) {
-        result = append(result, item)
-      }
-    }
-    return result
-  }())
+  const filtered = $derived(() => {
+    const q = query.toLowerCase().trim()
+    if (!q) return items
+    return items.filter((item) => item.toLowerCase().includes(q))
+  })
 </script>
 
 <template>
   <div class="search-box">
     <input on:input={func(e *gospa.Event) { query = e.Value }} placeholder="Search..." />
     <ul>
-      {for _, item := range filtered}
+      {for _, item := range filtered.get()}
         <li>{item}</li>
       {/for}
     </ul>
@@ -106,17 +106,25 @@ import "github.com/aydenstechdungeon/gospa/website/components"
 				<p class="text-[var(--text-secondary)] mb-6">
 					Integrate external JavaScript libraries using the <code>$effect</code> rune to initialize them after the component hydrates.
 				</p>
-				@components.CodeBlock(`<script lang="go">
-  var data = $state([]int{10, 20, 30})
+				@components.CodeBlock(`<script lang="ts">
+  import { onMount } from "@gospa/runtime"
   
-  $effect(func() {
-    // This code will be translated to a TS client effect
-    // Initialize your library here
-    const ctx = document.getElementById('myChart');
+  const data = [10, 20, 30]
+  
+  onMount(() => {
+    // Initialize Chart.js on client after hydration.
+    const canvas = document.getElementById("myChart") as HTMLCanvasElement | null
+    if (!canvas) return
+    const ctx = canvas.getContext("2d")
+    if (!ctx) return
+    
     new Chart(ctx, {
-      type: 'bar',
-      data: { datasets: [{ data: $state.get(data) }] }
-    });
+      type: "bar",
+      data: {
+        labels: ["A", "B", "C"],
+        datasets: [{ data }]
+      }
+    })
   })
 </script>
 
@@ -134,8 +142,6 @@ import "github.com/aydenstechdungeon/gospa/website/components"
 					Handle data on the server with Go and perform complex client-side calculations or DOM manipulations with TypeScript.
 				</p>
 				@components.CodeBlock(`<script lang="go">
-  package mycomponent
-  
   // Go state that hydrates from the server
   var serverData = $state("Initial Server Data")
 </script>

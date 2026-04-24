@@ -114,7 +114,7 @@ func Parse(input string) (*SFC, error) {
 				endTagBytes := []byte("</" + tagName + ">")
 				endIdx := findEndTagSkippingStrings(rawInput, contentOffset, endTagBytes, stringRanges)
 				if endIdx == -1 {
-					return nil, fmt.Errorf("unclosed <%s> block starting at offset %d", tagName, baseOffset)
+					return nil, parseErrorAtOffset(posIndex, baseOffset, "unclosed <"+tagName+"> block", "Add a closing </"+tagName+"> tag.", "")
 				}
 
 				content := string(rawInput[contentOffset : contentOffset+endIdx])
@@ -167,30 +167,33 @@ func Parse(input string) (*SFC, error) {
 			switch lang {
 			case "go":
 				if sfc.Script.Content != "" {
-					return nil, fmt.Errorf("multiple <script lang=\"go\"> blocks are not supported")
+					return nil, parseErrorAtBlock(b, "multiple <script lang=\"go\"> blocks are not supported", "Keep one Go script block and merge declarations.", "")
 				}
 				sfc.Script = b
 			case "ts":
 				if sfc.ScriptTS.Content != "" {
-					return nil, fmt.Errorf("multiple <script lang=\"ts\"> blocks are not supported")
+					return nil, parseErrorAtBlock(b, "multiple <script lang=\"ts\"> blocks are not supported", "Keep one TS/JS script block and merge logic.", "")
 				}
 				sfc.ScriptTS = b
 			default:
-				return nil, fmt.Errorf(
-					"unsupported <script> language %q at %d:%d (supported: go, ts/js)",
-					b.Lang,
+				return nil, newDiagnosticError(
 					b.Line+1,
 					b.Column+1,
+					fmt.Sprintf("unsupported <script> language %q", b.Lang),
+					"Use lang=\"go\" for server logic or lang=\"ts\" (or lang=\"js\") for client logic.",
+					`<script lang="ts">
+  // client code
+</script>`,
 				)
 			}
 		case "style":
 			if sfc.Style.Content != "" {
-				return nil, fmt.Errorf("multiple <style> blocks are not supported")
+				return nil, parseErrorAtBlock(b, "multiple <style> blocks are not supported", "Merge styles into a single <style> block.", "")
 			}
 			sfc.Style = b
 		case "template":
 			if explicitTemplate {
-				return nil, fmt.Errorf("multiple <template> blocks are not supported")
+				return nil, parseErrorAtBlock(b, "multiple <template> blocks are not supported", "Keep one <template> block and compose inside it.", "")
 			}
 			explicitTemplate = true
 			sfc.Template = b
@@ -208,10 +211,19 @@ func Parse(input string) (*SFC, error) {
 	}
 
 	if sfc.Template.Content == "" && sfc.Script.Content == "" && sfc.ScriptTS.Content == "" {
-		return nil, fmt.Errorf("SFC is empty")
+		return nil, newDiagnosticError(1, 1, "SFC is empty", "Add at least a <template> block.", "<template>\n  <div>Hello</div>\n</template>")
 	}
 
 	return sfc, nil
+}
+
+func parseErrorAtOffset(posIndex *positionIndex, offset int, message, suggestion, snippet string) error {
+	line, col := posIndex.OffsetToPosition(offset)
+	return newDiagnosticError(line+1, col+1, message, suggestion, snippet)
+}
+
+func parseErrorAtBlock(block Block, message, suggestion, snippet string) error {
+	return newDiagnosticError(block.Line+1, block.Column+1, message, suggestion, snippet)
 }
 
 func extractLangFromToken(t html.Token, tagName string) string {

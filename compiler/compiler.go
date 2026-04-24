@@ -421,6 +421,9 @@ func (c *GospaCompiler) Compile(opts CompileOptions, input string) (templ, ts st
 
 	// 1. Process Reactive DSL in Script and extract Props/State
 	scriptContent := parsed.Script.Content
+	if err := validateReactiveUsage(scriptContent, parsed.Script); err != nil {
+		return "", "", err
+	}
 
 	// SafeMode: validate script content before processing
 	if opts.SafeMode {
