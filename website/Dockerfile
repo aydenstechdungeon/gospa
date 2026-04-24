@@ -50,10 +50,11 @@ COPY --from=cli-builder /usr/local/bin/gospa /usr/local/bin/gospa
 # This is required because 'website/' depends on the parent framework via 'replace'
 COPY . .
 
-# 5. Build the website for production
-# This generates 'dist/server' and builds Tailwind v4 / client JS assets
+# 5. Generate route/type artifacts and build the website for production
+# We generate inside Docker because generated/ is intentionally excluded from
+# build context in .dockerignore for faster/cleaner image builds.
 WORKDIR /build/website
-RUN gospa build -o dist
+RUN gospa generate -o generated && gospa build -o dist
 
 # 6. Normalize artifact structure for runtime
 # We copy source assets first, then overlay build artifacts (dist/) to ensure 
