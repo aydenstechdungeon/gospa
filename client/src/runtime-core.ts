@@ -82,7 +82,7 @@ export interface RuntimeConfig {
   wsHeartbeat?: number;
   /** Hydration mode ('immediate', 'idle', 'visible') */
   hydration?: {
-    mode: "immediate" | "idle" | "visible";
+    mode: "immediate" | "idle" | "visible" | "manual" | "progressive" | "lazy";
     timeout?: number;
   };
   /** Callback for WebSocket connection errors */
@@ -93,6 +93,13 @@ export interface RuntimeConfig {
   disableSanitization?: boolean;
   /** WebSocket serialization format */
   serializationFormat?: "json" | "msgpack";
+  /** Unified transport fallback settings (WebSocket -> SSE -> polling). */
+  transport?: {
+    enabled?: boolean;
+    sseUrl?: string;
+    pollUrl?: string;
+    pollInterval?: number;
+  };
 }
 
 /** Component definition from server */
@@ -179,6 +186,27 @@ export function init(userConfig: Partial<RuntimeConfig> = {}): void {
   }
   isInitialized = true;
   config = { ...config, ...userConfig };
+
+  if (config.wsUrl && (config.transport?.enabled ?? true)) {
+    void getFrameworkFeatures()
+      .then((mod) => {
+        if (typeof mod.initTransport !== "function") return;
+        mod.initTransport({
+          wsUrl: config.wsUrl,
+          sseUrl: config.transport?.sseUrl,
+          pollUrl: config.transport?.pollUrl,
+          pollInterval: config.transport?.pollInterval,
+          wsReconnectDelay: config.wsReconnectDelay,
+          wsMaxReconnect: config.wsMaxReconnect,
+          wsHeartbeat: config.wsHeartbeat,
+          serializationFormat: config.serializationFormat,
+          debug: Boolean(config.debug),
+        });
+      })
+      .catch(() => {
+        // Keep runtime boot resilient if transport module fails to load.
+      });
+  }
 
   // Auto-initialize when GoSPA markers are present.
   if (shouldAutoInitDocument()) {

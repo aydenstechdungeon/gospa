@@ -9,6 +9,7 @@ import (
 	"log/slog"
 	"os"
 	"path/filepath"
+	"reflect"
 	"strings"
 	"sync"
 
@@ -107,9 +108,17 @@ type App struct {
 	cacheKeyIndex map[string]map[string]struct{}
 	// pprShellBuilding guards against duplicate PPR shell builds under concurrent load.
 	pprShellBuilding sync.Map
+	// cacheStatsMu protects route and slot cache metrics.
+	cacheStatsMu sync.RWMutex
+	// routeCacheStats tracks cache metrics by route path.
+	routeCacheStats map[string]*routeCacheStats
+	// slotCacheStats tracks dynamic slot render stats by "path#slot" key.
+	slotCacheStats map[string]*slotCacheStat
 	// ctx is the application-level context, canceled on Shutdown.
 	ctx    context.Context
 	cancel context.CancelFunc
+	// startupErr stores configuration failures that should block server startup.
+	startupErr error
 }
 
 var defaultApp *App
@@ -118,7 +127,7 @@ var defaultOnce sync.Once
 // New creates a new GoSPA application with the given configuration.
 func New(config Config) *App {
 	applyDefaultConfig(&config)
-	validateAndLogConfig(&config)
+	startupErr := validateAndLogConfig(&config)
 
 	fiber.SetConnectionRateLimiter(config.WSConnBurst, config.WSConnRateLimit)
 	state.SetNotificationQueueSize(config.NotificationBufferSize)
@@ -204,8 +213,14 @@ func New(config Config) *App {
 		pprShellIndex:       make(map[string]struct{}),
 		cacheTagIndex:       make(map[string]map[string]struct{}),
 		cacheKeyIndex:       make(map[string]map[string]struct{}),
+		routeCacheStats:     make(map[string]*routeCacheStats),
+		slotCacheStats:      make(map[string]*slotCacheStat),
+		startupErr:          startupErr,
 	}
 	app.ctx, app.cancel = context.WithCancel(context.Background())
+	if startupErr != nil {
+		app.Logger().Error("GoSPA startup validation failed", "err", startupErr)
+	}
 
 	app.setupMiddleware()
 
@@ -263,7 +278,7 @@ func applyDefaultConfig(config *Config) {
 	}
 
 	if config.HydrationMode == "" {
-		config.HydrationMode = "immediate"
+		config.HydrationMode = "visible"
 	}
 
 	if config.WSMaxMessageSize == 0 {
@@ -280,10 +295,11 @@ func applyDefaultConfig(config *Config) {
 	}
 }
 
-func validateAndLogConfig(config *Config) {
+func validateAndLogConfig(config *Config) error {
 	if config.Logger == nil {
 		config.Logger = slog.Default()
 	}
+	var validationErr error
 
 	// Validation: HydrationTimeout must be within 0-10s to prevent hanging or UI jank
 	if config.HydrationTimeout < 0 {
@@ -291,6 +307,17 @@ func validateAndLogConfig(config *Config) {
 	} else if config.HydrationTimeout > 10000 {
 		config.Logger.Warn("HydrationTimeout is too high (>10s). Capping to 10 seconds for UX safety.", "value", config.HydrationTimeout)
 		config.HydrationTimeout = 10000
+	}
+	switch strings.ToLower(strings.TrimSpace(config.HydrationMode)) {
+	case "", "visible", "lazy":
+		config.HydrationMode = "visible"
+	case "immediate", "manual", "idle":
+		// Keep as-is.
+	case "progressive":
+		config.HydrationMode = "visible"
+	default:
+		config.Logger.Warn("Unknown HydrationMode, defaulting to visible progressive hydration", "mode", config.HydrationMode)
+		config.HydrationMode = "visible"
 	}
 
 	// GOSPA_WS_INSECURE env var provides a quick override for development.
@@ -314,6 +341,68 @@ func validateAndLogConfig(config *Config) {
 	if config.DisableSanitization {
 		config.Logger.Warn("DisableSanitization is enabled — client-side HTML sanitization is OFF. This creates XSS vulnerabilities.")
 	}
+
+	routeOptions := routing.GetAllRouteOptions()
+	for path, opts := range routeOptions {
+		strategy := opts.Strategy
+		if strategy == "" {
+			strategy = config.DefaultRenderStrategy
+		}
+		if strategy == "" {
+			strategy = routing.StrategySSR
+		}
+		needsTemplateCache := strategy == routing.StrategySSG || strategy == routing.StrategyISR || strategy == routing.StrategyPPR
+		if needsTemplateCache && !config.CacheTemplates {
+			validationErr = errors.Join(validationErr, fmt.Errorf("route %q uses %s but CacheTemplates=false; enable CacheTemplates or change strategy", path, strategy))
+		}
+		if strategy == routing.StrategySSG && config.SSGCacheTTL == 0 {
+			config.Logger.Warn("SSG route caches forever because SSGCacheTTL=0", "path", path)
+		}
+	}
+
+	if config.Prefork && isInMemoryStorage(config.Storage) {
+		config.Logger.Warn("Prefork with in-memory cache/storage detected: render caches are process-local; use distributed Storage for seamless ISR/SSG/PPR")
+	}
+
+	if config.StrictProduction {
+		if config.DevMode {
+			validationErr = errors.Join(validationErr, fmt.Errorf("StrictProduction requires DevMode=false"))
+		}
+		if config.PublicOrigin == "" {
+			validationErr = errors.Join(validationErr, fmt.Errorf("StrictProduction requires PublicOrigin"))
+		}
+		if config.AllowInsecureWS {
+			validationErr = errors.Join(validationErr, fmt.Errorf("StrictProduction forbids AllowInsecureWS=true"))
+		}
+		if len(config.AllowedOrigins) == 0 {
+			validationErr = errors.Join(validationErr, fmt.Errorf("StrictProduction requires AllowedOrigins to be set"))
+		}
+		if !strings.Contains(config.ContentSecurityPolicy, "{nonce}") {
+			validationErr = errors.Join(validationErr, fmt.Errorf("StrictProduction requires CSP policy containing {nonce}"))
+		}
+		if config.DisableSanitization {
+			validationErr = errors.Join(validationErr, fmt.Errorf("StrictProduction forbids DisableSanitization=true"))
+		}
+		if !config.AllowUnauthenticatedRemoteActions && config.RemoteActionMiddleware == nil {
+			validationErr = errors.Join(validationErr, fmt.Errorf("StrictProduction requires RemoteActionMiddleware unless AllowUnauthenticatedRemoteActions=true"))
+		}
+		if config.ISRTimeout <= 0 {
+			validationErr = errors.Join(validationErr, fmt.Errorf("StrictProduction requires ISRTimeout > 0"))
+		}
+	}
+
+	return validationErr
+}
+
+func isInMemoryStorage(storage store.Storage) bool {
+	if storage == nil {
+		return true
+	}
+	t := reflect.TypeOf(storage)
+	if t == nil {
+		return true
+	}
+	return strings.Contains(strings.ToLower(t.String()), "memorystorage")
 }
 
 // setupRoutes configures core internal routes.
@@ -408,6 +497,8 @@ func (a *App) setupRoutes() {
 	a.Fiber.Post(a.Config.RemotePrefix+"/:name", rhAny[0], rhAny[1:]...)
 
 	a.Fiber.Post("/_gospa/invalidate", fiber.SessionMiddleware(), a.handleInvalidate)
+	a.Fiber.Get("/__gospa/cache", a.handleCacheStats)
+	a.Fiber.Get("/_gospa/poll", a.handleTransportPoll)
 
 	if _, err := os.Stat(a.Config.StaticDir); err == nil {
 		a.Fiber.Use(a.Config.StaticPrefix, static.New(a.Config.StaticDir, static.Config{
@@ -686,6 +777,9 @@ func (a *App) Logger() *slog.Logger {
 
 // Run starts the GoSPA application on the specified address.
 func (a *App) Run(addr string) error {
+	if a.startupErr != nil {
+		return fmt.Errorf("gospa startup validation failed: %w", a.startupErr)
+	}
 	if err := plugin.TriggerHook(plugin.BeforeServe, map[string]interface{}{
 		"fiber":  a.Fiber,
 		"config": a.Config,
@@ -703,6 +797,9 @@ func (a *App) Run(addr string) error {
 
 // RunTLS starts the GoSPA application on the specified address with TLS.
 func (a *App) RunTLS(addr, certFile, keyFile string) error {
+	if a.startupErr != nil {
+		return fmt.Errorf("gospa startup validation failed: %w", a.startupErr)
+	}
 	if err := plugin.TriggerHook(plugin.BeforeServe, map[string]interface{}{
 		"fiber":  a.Fiber,
 		"config": a.Config,

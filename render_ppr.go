@@ -70,8 +70,10 @@ func (a *App) applyPPRSlots(ctx context.Context, route *routing.Route, shell []b
 		var slotBuf bytes.Buffer
 		if err := slotFn(slotProps).Render(ctx, &slotBuf); err != nil {
 			a.Logger().Error("PPR slot render error", "slot", slotName, "err", err)
+			a.recordSlotRender(path, slotName, true)
 			continue
 		}
+		a.recordSlotRender(path, slotName, false)
 		placeholder := []byte(templpkg.SlotPlaceholder(slotName))
 		open := []byte(fmt.Sprintf(`<div data-gospa-slot="%s">`, slotName))
 		closeTag := []byte(`</div>`)

@@ -73,6 +73,14 @@ func Build(config *BuildConfig) {
 		fmt.Fprintln(os.Stderr, "Error: Not a GoSPA project. Run 'gospa create' first.")
 		os.Exit(1)
 	}
+	if os.Getenv("GOSPA_SKIP_PREFLIGHT") != "1" {
+		Verify(&VerifyConfig{
+			RoutesDir:  "./routes",
+			Strict:     true,
+			JSONOutput: false,
+			Quiet:      false,
+		})
+	}
 
 	// Use defaults if config is nil
 	if config == nil {

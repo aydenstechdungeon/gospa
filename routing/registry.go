@@ -296,6 +296,17 @@ func (r *Registry) GetRouteOptions(path string) RouteOptions {
 	return RouteOptions{Strategy: StrategySSR}
 }
 
+// GetAllRouteOptions returns a copy of all registered route options keyed by path.
+func (r *Registry) GetAllRouteOptions() map[string]RouteOptions {
+	r.pagesMu.RLock()
+	defer r.pagesMu.RUnlock()
+	out := make(map[string]RouteOptions, len(r.pageOptions))
+	for k, v := range r.pageOptions {
+		out[k] = v
+	}
+	return out
+}
+
 // RegisterLayout registers a layout component for a route path.
 func (r *Registry) RegisterLayout(path string, fn LayoutFunc) {
 	r.RegisterLayoutWithOptions(path, fn, "")
@@ -442,6 +453,11 @@ func RegisterPageWithOptions(path string, fn ComponentFunc, opts RouteOptions) {
 // GetRouteOptions returns route options from the global registry.
 func GetRouteOptions(path string) RouteOptions {
 	return globalRegistry.GetRouteOptions(path)
+}
+
+// GetAllRouteOptions returns all route options from the global registry.
+func GetAllRouteOptions() map[string]RouteOptions {
+	return globalRegistry.GetAllRouteOptions()
 }
 
 // RegisterLayout registers a layout component in the global registry.

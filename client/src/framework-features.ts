@@ -2,6 +2,7 @@
 // Combines non-essential but common features into a single chunk to reduce HTTP requests
 
 export * from "./websocket.ts";
+export * from "./transport.ts";
 export * from "./navigation.ts";
 export * from "./transition.ts";
 export * from "./island.ts";

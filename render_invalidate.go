@@ -175,6 +175,7 @@ func (a *App) invalidateCacheKey(cacheKey string) int {
 	}
 
 	if invalidated > 0 {
+		a.recordCacheInvalidation(cacheKey)
 		a.dropCacheIndex(cacheKey)
 	}
 	return invalidated
