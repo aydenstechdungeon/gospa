@@ -22,6 +22,7 @@ const window = new GlobalWindow();
 (globalThis as any).HTMLInputElement = window.HTMLInputElement;
 (globalThis as any).HTMLFormElement = window.HTMLFormElement;
 (globalThis as any).KeyboardEvent = window.KeyboardEvent;
+(globalThis as any).MouseEvent = window.MouseEvent;
 (globalThis as any).Event = window.Event;
 (globalThis as any).FormData = window.FormData;
 
@@ -44,7 +45,7 @@ describe("events", () => {
     const handler = mock((_e: Event) => {});
     const cleanup = on(button, "click:prevent:stop", handler);
 
-    const event = new window.MouseEvent("click", {
+    const event = new MouseEvent("click", {
       bubbles: true,
       cancelable: true,
     });
@@ -59,7 +60,7 @@ describe("events", () => {
     expect(handler).toHaveBeenCalledTimes(1);
 
     cleanup();
-    button.dispatchEvent(new window.MouseEvent("click", { bubbles: true }));
+    button.dispatchEvent(new MouseEvent("click", { bubbles: true }));
     expect(handler).toHaveBeenCalledTimes(1);
   });
 
@@ -72,8 +73,8 @@ describe("events", () => {
     const handler = mock((_e: Event) => {});
     on(parent, "click:self", handler);
 
-    child.dispatchEvent(new window.MouseEvent("click", { bubbles: true }));
-    parent.dispatchEvent(new window.MouseEvent("click", { bubbles: true }));
+    child.dispatchEvent(new MouseEvent("click", { bubbles: true }));
+    parent.dispatchEvent(new MouseEvent("click", { bubbles: true }));
 
     expect(handler).toHaveBeenCalledTimes(1);
   });
@@ -88,8 +89,8 @@ describe("events", () => {
 
     offAll(input);
 
-    input.dispatchEvent(new window.MouseEvent("click"));
-    input.dispatchEvent(new window.Event("change"));
+    input.dispatchEvent(new MouseEvent("click"));
+    input.dispatchEvent(new Event("change"));
 
     expect(clickHandler).toHaveBeenCalledTimes(0);
     expect(changeHandler).toHaveBeenCalledTimes(0);
@@ -98,16 +99,16 @@ describe("events", () => {
   it("debounce and throttle control event burst behavior", async () => {
     const debouncedFn = mock(() => {});
     const d = debounce(debouncedFn, 10);
-    d.handler(new window.Event("input"));
-    d.handler(new window.Event("input"));
+    d.handler(new Event("input"));
+    d.handler(new Event("input"));
     await new Promise((resolve) => setTimeout(resolve, 20));
     expect(debouncedFn).toHaveBeenCalledTimes(1);
 
     const throttledFn = mock(() => {});
     const t = throttle(throttledFn, 15);
-    t.handler(new window.Event("click"));
-    t.handler(new window.Event("click"));
-    t.handler(new window.Event("click"));
+    t.handler(new Event("click"));
+    t.handler(new Event("click"));
+    t.handler(new Event("click"));
     await new Promise((resolve) => setTimeout(resolve, 30));
     expect(throttledFn).toHaveBeenCalledTimes(2);
 
@@ -123,7 +124,7 @@ describe("events", () => {
     bindEvent(input, "input", r, transformers.value);
 
     input.value = "next";
-    input.dispatchEvent(new window.Event("input"));
+    input.dispatchEvent(new Event("input"));
 
     expect(r.get()).toBe("next");
   });
@@ -140,8 +141,8 @@ describe("events", () => {
     const handler = mock((_e: Event) => {});
     const cleanup = delegate(root, ".ok", "click", handler);
 
-    ok.dispatchEvent(new window.MouseEvent("click", { bubbles: true }));
-    nope.dispatchEvent(new window.MouseEvent("click", { bubbles: true }));
+    ok.dispatchEvent(new MouseEvent("click", { bubbles: true }));
+    nope.dispatchEvent(new MouseEvent("click", { bubbles: true }));
 
     expect(handler).toHaveBeenCalledTimes(1);
 
@@ -154,11 +155,11 @@ describe("events", () => {
       preventDefault: true,
     });
 
-    const enter = new window.KeyboardEvent("keydown", {
+    const enter = new KeyboardEvent("keydown", {
       key: "Enter",
       cancelable: true,
     });
-    const tab = new window.KeyboardEvent("keydown", {
+    const tab = new KeyboardEvent("keydown", {
       key: "Tab",
       cancelable: true,
     });
@@ -191,7 +192,7 @@ describe("events", () => {
     };
 
     setupEventDelegation(root);
-    btn.dispatchEvent(new window.MouseEvent("click", { bubbles: true }));
+    btn.dispatchEvent(new MouseEvent("click", { bubbles: true }));
 
     expect(save).toHaveBeenCalledTimes(1);
   });
