@@ -4,6 +4,7 @@ import (
 	"compress/gzip"
 	"crypto/sha256"
 	"encoding/json"
+	"errors"
 	"fmt"
 	"io"
 	"io/fs"
@@ -123,15 +124,30 @@ func BuildWithConfig(config *BuildConfig) (*BuildSummary, error) {
 		return nil, fmt.Errorf("failed to create output directory: %w", err)
 	}
 
-	// Step 1: Generate templ files
-	fmt.Println("Generating templ files...")
-	if err := regenerateTempl(); err != nil {
-		return nil, fmt.Errorf("failed to generate templ files: %w", err)
+	// Step 1: Generate templates/types only when inputs changed
+	needsGenerate, err := needsTypeGeneration()
+	if err != nil {
+		return nil, fmt.Errorf("failed to check type generation state: %w", err)
 	}
-
-	// Step 2: Generate TypeScript types
-	fmt.Println("Generating TypeScript types...")
-	runGenerate()
+	if needsGenerate {
+		fmt.Println("Generating TypeScript types...")
+		// Generate() already runs templ internally, so this avoids duplicate templ runs.
+		runGenerate()
+	} else {
+		fmt.Println("Skipping TypeScript generation (no input changes)")
+		needsTempl, templErr := needsTemplRegeneration()
+		if templErr != nil {
+			return nil, fmt.Errorf("failed to check templ generation state: %w", templErr)
+		}
+		if needsTempl {
+			fmt.Println("Generating templ files...")
+			if err := regenerateTempl(); err != nil {
+				return nil, fmt.Errorf("failed to generate templ files: %w", err)
+			}
+		} else {
+			fmt.Println("Skipping templ generation (no input changes)")
+		}
+	}
 
 	// Step 3: Unified Bun Build (Runtime + Islands)
 	fmt.Println("Building client assets (Runtime & Islands)...")
@@ -139,16 +155,17 @@ func BuildWithConfig(config *BuildConfig) (*BuildSummary, error) {
 		fmt.Fprintf(os.Stderr, "Warning: Unified client build failed: %v\n", err)
 	}
 
-	// Step 3.5: Ensure dependencies are tidied after generation
-	// Skip if GOSPA_SKIP_MOD_TIDY is set (useful for offline builds or when go.mod has replace directives)
-	if os.Getenv("GOSPA_SKIP_MOD_TIDY") == "" {
+	// Step 3.5: Optional dependency tidy (off by default to avoid slow/mutating normal builds)
+	if os.Getenv("GOSPA_RUN_MOD_TIDY") == "1" {
 		fmt.Println("Tidying module dependencies...")
 		tidyCmd := exec.Command("go", "mod", "tidy")
 		tidyCmd.Stdout = os.Stdout
 		tidyCmd.Stderr = os.Stderr
 		if err := tidyCmd.Run(); err != nil {
-			fmt.Fprintf(os.Stderr, "Warning: go mod tidy failed: %v (set GOSPA_SKIP_MOD_TIDY=1 to skip)\n", err)
+			fmt.Fprintf(os.Stderr, "Warning: go mod tidy failed: %v\n", err)
 		}
+	} else {
+		fmt.Println("Skipping go mod tidy (set GOSPA_RUN_MOD_TIDY=1 to enable)")
 	}
 
 	// Step 4: Build Go binary
@@ -340,6 +357,9 @@ func buildGoBinary(config *BuildConfig) (string, error) {
 		"-o", outputPath,
 		".",
 	}
+	if os.Getenv("GOSPA_BUILDVCS") == "0" || os.Getenv("GOSPA_DISABLE_BUILDVCS") == "1" {
+		args = append(args, "-buildvcs=false")
+	}
 
 	// Add build tags if specified
 	if config.Tags != "" {
@@ -496,47 +516,55 @@ func compressStaticAssets(config *BuildConfig) (int, error) {
 		return 0, err
 	}
 
-	// Track errors from both compression passes
+	type compressionJob struct {
+		path   string
+		brotli bool
+	}
+
 	var (
-		gzipErr   error
-		brotliErr error
-		wg        sync.WaitGroup
-		sem       = make(chan struct{}, 10) // Concurrency limit per algorithm
+		firstErr error
+		errOnce  sync.Once
+		wg       sync.WaitGroup
 	)
+	setErr := func(err error) {
+		if err != nil {
+			errOnce.Do(func() { firstErr = err })
+		}
+	}
+
+	workerCount := runtime.NumCPU()
+	if workerCount < 2 {
+		workerCount = 2
+	}
+	if workerCount > 16 {
+		workerCount = 16
+	}
+
+	jobs := make(chan compressionJob, workerCount*2)
+	for range workerCount {
+		wg.Add(1)
+		go func() {
+			defer wg.Done()
+			for job := range jobs {
+				if job.brotli {
+					setErr(compressFileBrotli(job.path))
+					continue
+				}
+				setErr(compressFileGzip(job.path))
+			}
+		}()
+	}
 
 	for _, file := range files {
-		// Parallel Gzip
-		wg.Add(1)
-		sem <- struct{}{}
-		go func(path string) {
-			defer wg.Done()
-			defer func() { <-sem }()
-			if err := compressFileGzip(path); err != nil {
-				gzipErr = err
-			}
-		}(file)
-
-		// Parallel Brotli
-		wg.Add(1)
-		sem <- struct{}{}
-		go func(path string) {
-			defer wg.Done()
-			defer func() { <-sem }()
-			if err := compressFileBrotli(path); err != nil {
-				brotliErr = err
-			}
-		}(file)
+		jobs <- compressionJob{path: file, brotli: false}
+		jobs <- compressionJob{path: file, brotli: true}
 	}
+	close(jobs)
 	wg.Wait()
 
-	// Return first error encountered, or nil
-	if gzipErr != nil {
-		return 0, gzipErr
+	if firstErr != nil {
+		return 0, firstErr
 	}
-	if brotliErr != nil {
-		return 0, brotliErr
-	}
-
 	// Count is the number of unique files compressed (not compression algorithms)
 	return len(files), nil
 }
@@ -1003,6 +1031,7 @@ func Watch() {
 
 	// Debounce timer for build events
 	var debounceTimer *time.Timer
+	var debounceCh <-chan time.Time
 	const debounceInterval = 500 * time.Millisecond
 
 	for {
@@ -1012,31 +1041,167 @@ func Watch() {
 			return
 		case event := <-watcher.Events:
 			fmt.Printf("\nFile changed: %s\n", event.File)
-			// Reset debounce timer
-			if debounceTimer != nil {
-				debounceTimer.Stop()
-			}
-			debounceTimer = time.NewTimer(debounceInterval)
-			// Wait for debounce interval, then build asynchronously
-			go func(_ FileEvent) {
-				<-time.After(debounceInterval)
-				buildMu.Lock()
-				if isBuilding {
-					buildMu.Unlock()
-					return
+			// Single debounce mechanism: reset one timer and handle its channel in this loop.
+			if debounceTimer == nil {
+				debounceTimer = time.NewTimer(debounceInterval)
+			} else {
+				if !debounceTimer.Stop() {
+					select {
+					case <-debounceTimer.C:
+					default:
+					}
 				}
-				isBuilding = true
+				debounceTimer.Reset(debounceInterval)
+			}
+			debounceCh = debounceTimer.C
+		case <-debounceCh:
+			debounceCh = nil
+			buildMu.Lock()
+			if isBuilding {
 				buildMu.Unlock()
+				continue
+			}
+			isBuilding = true
+			buildMu.Unlock()
 
-				Build(nil)
+			Build(nil)
 
-				buildMu.Lock()
-				isBuilding = false
-				buildMu.Unlock()
-				fmt.Println("✓ Rebuilt")
-			}(event)
+			buildMu.Lock()
+			isBuilding = false
+			buildMu.Unlock()
+			fmt.Println("✓ Rebuilt")
 		case err := <-watcher.Errors:
 			fmt.Fprintf(os.Stderr, "Watcher error: %v\n", err)
 		}
 	}
+}
+
+func needsTemplRegeneration() (bool, error) {
+	var templFiles []string
+	err := filepath.WalkDir(".", func(path string, d fs.DirEntry, walkErr error) error {
+		if walkErr != nil {
+			return walkErr
+		}
+		if shouldSkipBuildScan(path, d) {
+			return filepath.SkipDir
+		}
+		if d.IsDir() {
+			return nil
+		}
+		if strings.HasSuffix(path, ".templ") {
+			templFiles = append(templFiles, path)
+		}
+		return nil
+	})
+	if err != nil {
+		return false, err
+	}
+	if len(templFiles) == 0 {
+		return false, nil
+	}
+
+	for _, templFile := range templFiles {
+		base := strings.TrimSuffix(templFile, ".templ")
+		generatedPath := base + "_templ.go"
+		srcInfo, err := os.Stat(templFile)
+		if err != nil {
+			return false, err
+		}
+		outInfo, err := os.Stat(generatedPath)
+		if err != nil {
+			if errors.Is(err, os.ErrNotExist) {
+				return true, nil
+			}
+			return false, err
+		}
+		if srcInfo.ModTime().After(outInfo.ModTime()) {
+			return true, nil
+		}
+	}
+
+	return false, nil
+}
+
+func needsTypeGeneration() (bool, error) {
+	latestInput, hasInput, err := latestInputMTime(".", []string{".go", ".templ", ".gospa"})
+	if err != nil {
+		return false, err
+	}
+	if !hasInput {
+		return false, nil
+	}
+
+	requiredOutputs := []string{
+		filepath.Join("generated", "types.ts"),
+		filepath.Join("generated", "islands.ts"),
+	}
+	for _, output := range requiredOutputs {
+		info, statErr := os.Stat(output)
+		if statErr != nil {
+			if errors.Is(statErr, os.ErrNotExist) {
+				return true, nil
+			}
+			return false, statErr
+		}
+		if latestInput.After(info.ModTime()) {
+			return true, nil
+		}
+	}
+	return false, nil
+}
+
+func latestInputMTime(root string, exts []string) (time.Time, bool, error) {
+	allowed := make(map[string]struct{}, len(exts))
+	for _, ext := range exts {
+		allowed[ext] = struct{}{}
+	}
+
+	var latest time.Time
+	var found bool
+	err := filepath.WalkDir(root, func(path string, d fs.DirEntry, walkErr error) error {
+		if walkErr != nil {
+			return walkErr
+		}
+		if shouldSkipBuildScan(path, d) {
+			return filepath.SkipDir
+		}
+		if d.IsDir() {
+			return nil
+		}
+		if _, ok := allowed[strings.ToLower(filepath.Ext(path))]; !ok {
+			return nil
+		}
+		info, err := d.Info()
+		if err != nil {
+			return err
+		}
+		if !found || info.ModTime().After(latest) {
+			latest = info.ModTime()
+			found = true
+		}
+		return nil
+	})
+	if err != nil {
+		return time.Time{}, false, err
+	}
+	return latest, found, nil
+}
+
+func shouldSkipBuildScan(path string, d fs.DirEntry) bool {
+	if !d.IsDir() {
+		return false
+	}
+	name := d.Name()
+	if name == "." {
+		return false
+	}
+	if strings.HasPrefix(name, ".") {
+		return true
+	}
+	switch name {
+	case "node_modules", "vendor", "dist", "examples":
+		return true
+	}
+	normalized := filepath.ToSlash(path)
+	return strings.Contains(normalized, "/examples/")
 }
