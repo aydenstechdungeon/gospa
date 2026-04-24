@@ -30,6 +30,11 @@ func (a *App) renderRoute(c gofiber.Ctx, route *routing.Route, routeParams map[s
 	if effStrategy == "" {
 		effStrategy = routing.StrategySSR
 	}
+	if !a.Config.CacheTemplates && (effStrategy == routing.StrategySSG || effStrategy == routing.StrategyISR || effStrategy == routing.StrategyPPR) {
+		return c.Status(gofiber.StatusInternalServerError).SendString(
+			fmt.Sprintf("render strategy %q requires CacheTemplates=true", effStrategy),
+		)
+	}
 
 	// 1. SSG Strategy
 	if a.Config.CacheTemplates && effStrategy == routing.StrategySSG {
@@ -50,6 +55,7 @@ func (a *App) renderRoute(c gofiber.Ctx, route *routing.Route, routeParams map[s
 		}
 
 		if hit {
+			a.recordCacheHit(cacheKey)
 			c.Set("Content-Type", "text/html")
 			c.Set("Cache-Control", "public, max-age=31536000, immutable")
 
@@ -62,6 +68,7 @@ func (a *App) renderRoute(c gofiber.Ctx, route *routing.Route, routeParams map[s
 
 			return c.Send(entry.html)
 		}
+		a.recordCacheMiss(cacheKey)
 	}
 
 	// 2. ISR Strategy
@@ -93,9 +100,12 @@ func (a *App) renderRoute(c gofiber.Ctx, route *routing.Route, routeParams map[s
 		}
 
 		if hit {
+			a.recordCacheHit(cacheKey)
 			age := time.Since(entry.createdAt)
 			if ttl > 0 && age >= ttl {
+				a.recordCacheStaleServed(cacheKey)
 				if _, alreadyRunning := a.isrRevalidating.LoadOrStore(cacheKey, true); !alreadyRunning {
+					a.recordCacheRevalidation(cacheKey)
 					go a.backgroundRevalidate(cacheKey, route) // #nosec //nolint:gosec // intentional: background revalidation uses independent context
 				}
 			}
@@ -110,6 +120,7 @@ func (a *App) renderRoute(c gofiber.Ctx, route *routing.Route, routeParams map[s
 
 			return c.Send(entry.html)
 		}
+		a.recordCacheMiss(cacheKey)
 	}
 
 	// 3. PPR Strategy
@@ -132,6 +143,7 @@ func (a *App) renderRoute(c gofiber.Ctx, route *routing.Route, routeParams map[s
 		}
 
 		if shellHit {
+			a.recordCacheHit(cacheKey)
 			result, err := a.applyPPRSlots(ctx, route, shell, c.Path(), opts)
 			if err != nil {
 				a.Logger().Error("PPR slot error", "err", err)
@@ -147,6 +159,7 @@ func (a *App) renderRoute(c gofiber.Ctx, route *routing.Route, routeParams map[s
 
 			return c.Send(result)
 		}
+		a.recordCacheMiss(cacheKey)
 	}
 
 	layouts := a.Router.ResolveLayoutChain(route)
@@ -413,9 +426,15 @@ runtime.init({
 	hydration: {
 		mode: %s,
 		timeout: %d
+	},
+	transport: {
+		enabled: true,
+		sseUrl: %s,
+		pollUrl: %s,
+		pollInterval: %d
 	}
 });
-</script>`, nonceFmt, toJS(runtimePathForPage), toJS(a.Config.NavigationOptions), toJS(c.Locals("gospa.csrf_token")), toJS(wsURL), toJS(string(a.Config.SerializationFormat)), a.Config.DevMode, a.Config.SimpleRuntimeSVGs, a.Config.DisableSanitization, wsRD, wsMR, wsHB, toJS(a.Config.HydrationMode), a.Config.HydrationTimeout)
+</script>`, nonceFmt, toJS(runtimePathForPage), toJS(a.Config.NavigationOptions), toJS(c.Locals("gospa.csrf_token")), toJS(wsURL), toJS(string(a.Config.SerializationFormat)), a.Config.DevMode, a.Config.SimpleRuntimeSVGs, a.Config.DisableSanitization, wsRD, wsMR, wsHB, toJS(a.Config.HydrationMode), a.Config.HydrationTimeout, toJS("/_sse/connect"), toJS("/_gospa/poll"), 5000)
 
 	// Islands bundle — loads and registers all island setup functions
 	// Only include if the file exists (islands are optional)

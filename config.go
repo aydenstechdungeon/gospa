@@ -14,7 +14,7 @@ import (
 )
 
 // Version is the current version of GoSPA.
-const Version = "0.1.38"
+const Version = "0.1.39"
 
 // Serialization format constants.
 const (
@@ -177,6 +177,8 @@ type Config struct {
 	EnableCSRF            bool
 	ContentSecurityPolicy string
 	PublicOrigin          string
+	// StrictProduction enforces hard startup validation for production deployments.
+	StrictProduction bool
 	// AllowInsecureWS allows unsecure ws:// connections even on https:// pages.
 	// This is useful for development setups with reverse proxies that don't support wss://.
 	AllowInsecureWS bool
@@ -266,6 +268,20 @@ func ProductionConfig() Config {
 	config.WSHeartbeat = 30 * time.Second
 	config.SSGCacheMaxEntries = 500
 	config.ContentSecurityPolicy = fiber.StrictContentSecurityPolicy
+	return config
+}
+
+// StrictProductionConfig returns a hardened production baseline that fails fast
+// on missing security and runtime safety settings.
+func StrictProductionConfig() Config {
+	config := ProductionConfig()
+	config.StrictProduction = true
+	config.AllowInsecureWS = false
+	config.AllowUnauthenticatedRemoteActions = false
+	config.DisableSanitization = false
+	config.EnableCSRF = true
+	config.ISRTimeout = 30 * time.Second
+	config.DefaultRevalidateAfter = 5 * time.Minute
 	return config
 }
 

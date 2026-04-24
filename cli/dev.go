@@ -32,6 +32,14 @@ func Dev(config *DevConfig) {
 		fmt.Fprintln(os.Stderr, "Error: Not a GoSPA project. Run 'gospa create' first.")
 		os.Exit(1)
 	}
+	if os.Getenv("GOSPA_SKIP_PREFLIGHT") != "1" {
+		Verify(&VerifyConfig{
+			RoutesDir:  "./routes",
+			Strict:     true,
+			JSONOutput: false,
+			Quiet:      false,
+		})
+	}
 
 	// Trigger BeforeDev hook
 	if err := plugin.TriggerHook(plugin.BeforeDev, nil); err != nil {
@@ -345,8 +353,11 @@ func (dw *DevWatcher) run() {
 				return
 			}
 
-			// Ignore generated files explicitly
-			if strings.Contains(event.Name, "generated_") || strings.HasSuffix(event.Name, ".templ.go") {
+			// Ignore generated files explicitly to avoid hot-reload loops.
+			// templ outputs *_templ.go files; route/type generators use generated_* names.
+			if strings.Contains(event.Name, "generated_") ||
+				strings.HasSuffix(event.Name, ".templ.go") ||
+				strings.HasSuffix(event.Name, "_templ.go") {
 				continue
 			}
 
@@ -487,6 +498,13 @@ func handleFileChange(ctx context.Context, event FileEvent, restartCh chan struc
 	case <-ctx.Done():
 		return
 	default:
+	}
+
+	// Ignore generated files defensively in case they slip past watcher-level filters.
+	if strings.Contains(event.File, "generated_") ||
+		strings.HasSuffix(event.File, ".templ.go") ||
+		strings.HasSuffix(event.File, "_templ.go") {
+		return
 	}
 
 	ext := filepath.Ext(event.File)

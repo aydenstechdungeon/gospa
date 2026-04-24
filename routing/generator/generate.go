@@ -22,21 +22,22 @@ var (
 
 // RouteInfo holds information about a discovered route.
 type RouteInfo struct {
-	FilePath     string      // Relative path to .templ file
-	URLPath      string      // URL path (e.g., /blog/:id)
-	ComponentFn  string      // Component function name (e.g., BlogPage)
-	IsLayout     bool        // True if this is a layout file
-	IsError      bool        // True if this is an error boundary file
-	IsDynamic    bool        // True if route has dynamic segments
-	DynamicParam string      // The dynamic parameter name if any
-	Params       []FuncParam // Function parameters parsed from _templ.go
-	RouteParams  []string    // Dynamic route parameters extracted from URL path (e.g., ["id"] from /blog/:id)
-	PackageName  string      // Package name for this route (e.g., "routes" or "blog")
-	ImportPath   string      // Import path for subdirectory packages
-	HasLoader    bool        // True if this route has a server-side Load function
-	HasActions   bool        // True if this route has server-side form actions
-	Actions      []string    // List of action names discovered in Actions map
-	RuntimeTier  string      // Client runtime tier needed by this component
+	FilePath       string      // Relative path to .templ file
+	URLPath        string      // URL path (e.g., /blog/:id)
+	ComponentFn    string      // Component function name (e.g., BlogPage)
+	IsLayout       bool        // True if this is a layout file
+	IsError        bool        // True if this is an error boundary file
+	IsDynamic      bool        // True if route has dynamic segments
+	DynamicParam   string      // The dynamic parameter name if any
+	Params         []FuncParam // Function parameters parsed from _templ.go
+	RouteParams    []string    // Dynamic route parameters extracted from URL path (e.g., ["id"] from /blog/:id)
+	PackageName    string      // Package name for this route (e.g., "routes" or "blog")
+	ImportPath     string      // Import path for subdirectory packages
+	HasLoader      bool        // True if this route has a server-side Load function
+	HasActions     bool        // True if this route has server-side form actions
+	Actions        []string    // List of action names discovered in Actions map
+	RuntimeTier    string      // Client runtime tier needed by this component
+	HasPageOptions bool        // True if route defines PageOptions in a companion options file
 }
 
 // FuncParam represents a function parameter.
@@ -168,6 +169,17 @@ func scanRoutes(routesDir string) ([]RouteInfo, error) {
 						route.HasActions = true
 						route.Actions = actions
 					}
+				}
+			}
+		}
+
+		// Detect colocated page options metadata for pages.
+		if !route.IsLayout && !route.IsError {
+			for _, candidate := range []string{"+page.options.go", "page.options.go"} {
+				optionsFile := filepath.Join(dir, candidate)
+				if _, err := os.Stat(optionsFile); err == nil && hasPageOptionsVariable(optionsFile) {
+					route.HasPageOptions = true
+					break
 				}
 			}
 		}
@@ -665,6 +677,17 @@ func generateCode(routes []RouteInfo, routesDir string, hasHooks bool) (string, 
 	sb.WriteString(")\n\n")
 
 	// init function
+	sb.WriteString("func mergeRouteOptions(base routing.RouteOptions, override routing.RouteOptions) routing.RouteOptions {\n")
+	sb.WriteString("\tif override.Strategy != \"\" {\n\t\tbase.Strategy = override.Strategy\n\t}\n")
+	sb.WriteString("\tif override.RevalidateAfter > 0 {\n\t\tbase.RevalidateAfter = override.RevalidateAfter\n\t}\n")
+	sb.WriteString("\tif len(override.DynamicSlots) > 0 {\n\t\tbase.DynamicSlots = override.DynamicSlots\n\t}\n")
+	sb.WriteString("\tif len(override.DeferredSlots) > 0 {\n\t\tbase.DeferredSlots = override.DeferredSlots\n\t}\n")
+	sb.WriteString("\tif override.RuntimeTier != \"\" {\n\t\tbase.RuntimeTier = override.RuntimeTier\n\t}\n")
+	sb.WriteString("\tif override.RateLimit != nil {\n\t\tbase.RateLimit = override.RateLimit\n\t}\n")
+	sb.WriteString("\treturn base\n")
+	sb.WriteString("}\n\n")
+
+	// init function
 	sb.WriteString("func init() {\n")
 
 	if hasHooks {
@@ -684,7 +707,7 @@ func generateCode(routes []RouteInfo, routesDir string, hasHooks bool) (string, 
 		for _, route := range pages {
 			fmt.Fprintf(&sb, "\trouting.RegisterPageWithOptions(%q, func(props map[string]interface{}) templ.Component {\n", route.URLPath)
 			fmt.Fprintf(&sb, "\t\treturn %s\n", generatePageCallWithPackage(route))
-			fmt.Fprintf(&sb, "\t}, routing.RouteOptions{RuntimeTier: %q})\n", route.RuntimeTier)
+			fmt.Fprintf(&sb, "\t}, %s)\n", generateRouteOptionsExpression(route))
 
 			if route.HasLoader {
 				pkgPrefix := ""
@@ -765,6 +788,44 @@ func generateCode(routes []RouteInfo, routesDir string, hasHooks bool) (string, 
 	sb.WriteString("}\n")
 
 	return sb.String(), nil
+}
+
+func generateRouteOptionsExpression(route RouteInfo) string {
+	baseExpr := fmt.Sprintf("routing.RouteOptions{RuntimeTier: %q}", route.RuntimeTier)
+	if !route.HasPageOptions {
+		return baseExpr
+	}
+	pkgPrefix := ""
+	if route.PackageName != "routes" && route.ImportPath != "" {
+		pkgPrefix = route.PackageName + "."
+	}
+	return fmt.Sprintf("mergeRouteOptions(%s, %sPageOptions)", baseExpr, pkgPrefix)
+}
+
+func hasPageOptionsVariable(path string) bool {
+	fset := token.NewFileSet()
+	node, err := parser.ParseFile(fset, path, nil, parser.AllErrors)
+	if err != nil {
+		return false
+	}
+	for _, decl := range node.Decls {
+		gen, ok := decl.(*ast.GenDecl)
+		if !ok || gen.Tok != token.VAR {
+			continue
+		}
+		for _, spec := range gen.Specs {
+			vs, ok := spec.(*ast.ValueSpec)
+			if !ok {
+				continue
+			}
+			for _, name := range vs.Names {
+				if name != nil && name.Name == "PageOptions" {
+					return true
+				}
+			}
+		}
+	}
+	return false
 }
 
 // getModuleInfo reads the module path from go.mod file and returns the module name and root path.

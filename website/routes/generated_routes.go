@@ -73,6 +73,28 @@ import (
 	docswebsocket "github.com/aydenstechdungeon/gospa/website/routes/docs/websocket"
 )
 
+func mergeRouteOptions(base routing.RouteOptions, override routing.RouteOptions) routing.RouteOptions {
+	if override.Strategy != "" {
+		base.Strategy = override.Strategy
+	}
+	if override.RevalidateAfter > 0 {
+		base.RevalidateAfter = override.RevalidateAfter
+	}
+	if len(override.DynamicSlots) > 0 {
+		base.DynamicSlots = override.DynamicSlots
+	}
+	if len(override.DeferredSlots) > 0 {
+		base.DeferredSlots = override.DeferredSlots
+	}
+	if override.RuntimeTier != "" {
+		base.RuntimeTier = override.RuntimeTier
+	}
+	if override.RateLimit != nil {
+		base.RateLimit = override.RateLimit
+	}
+	return base
+}
+
 func init() {
 	// Register pages
 	routing.RegisterPageWithOptions("/", func(props map[string]interface{}) templ.Component {

@@ -41,7 +41,7 @@ func main() {
 		RoutesDir:             "./routes",
 		DevMode:               devMode,
 		AppName:               "GoSPA Documentation",
-		CacheTemplates:        !devMode,            // Enable template caching in production
+		CacheTemplates:        true,                // Required for SSG/ISR/PPR strategies, including dev
 		DefaultRenderStrategy: routing.StrategySSG, // Make the entire docs site static by default
 		RuntimeTier:           gospa.RuntimeTierFull,
 		SSGCacheMaxEntries:    -1,    // Cache all pages without eviction

@@ -21,6 +21,11 @@ type DoctorConfig struct {
 	Strict       bool   // Enable strict preflight checks
 }
 
+type doctorRunResult struct {
+	checks     []doctorCheck
+	hasFailure bool
+}
+
 // Doctor inspects the current project for common setup issues.
 func Doctor(config *DoctorConfig) {
 	printer := NewColorPrinter()
@@ -41,6 +46,59 @@ func Doctor(config *DoctorConfig) {
 		printer.Subtitle("Checking Go, Node.js tooling, project layout, and runtime entrypoints (%s mode)...", mode)
 	}
 
+	result := runDoctorChecks(config)
+	checks := result.checks
+	hasFailure := result.hasFailure
+
+	if config.JSONOutput {
+		outputDoctorJSON(checks)
+		return
+	}
+
+	for _, check := range checks {
+		if check.Err != nil {
+			if check.Required {
+				printer.Error("%s: %v", check.Name, check.Err)
+				continue
+			}
+			if !config.Quiet {
+				printer.Warning("%s: %v", check.Name, check.Err)
+			}
+			continue
+		}
+
+		if !config.Quiet {
+			if check.Detail != "" {
+				printer.Success("%s: %s", check.Name, check.Detail)
+			} else {
+				printer.Success("%s", check.Name)
+			}
+		}
+	}
+
+	// Auto-fix if requested
+	if config.Fix {
+		fixHasFailure, edits := doctorFix(config)
+		hasFailure = fixHasFailure || hasFailure
+		if !config.JSONOutput && len(edits) > 0 {
+			fmt.Println("\nDoctor --fix edited files:")
+			for _, edit := range edits {
+				fmt.Printf("- %s\n", edit)
+			}
+		}
+	}
+
+	if hasFailure {
+		fmt.Fprintln(os.Stderr, "\nGoSPA Doctor found blocking setup issues.")
+		os.Exit(1)
+	}
+
+	if !config.Quiet {
+		fmt.Println("\nGoSPA Doctor found no blocking setup issues.")
+	}
+}
+
+func runDoctorChecks(config *DoctorConfig) doctorRunResult {
 	checks := []doctorCheck{
 		checkBinary("go", true),
 		checkNodeTooling(),
@@ -63,48 +121,31 @@ func Doctor(config *DoctorConfig) {
 	if config.Strict {
 		checks = append(checks, strictDoctorChecks(config)...)
 	}
-
-	if config.JSONOutput {
-		outputDoctorJSON(checks)
-		return
-	}
-
 	hasFailure := false
 	for _, check := range checks {
-		if check.Err != nil {
-			if check.Required {
-				printer.Error("%s: %v", check.Name, check.Err)
-				hasFailure = true
-				continue
-			}
-			if !config.Quiet {
-				printer.Warning("%s: %v", check.Name, check.Err)
-			}
-			continue
-		}
-
-		if !config.Quiet {
-			if check.Detail != "" {
-				printer.Success("%s: %s", check.Name, check.Detail)
-			} else {
-				printer.Success("%s", check.Name)
-			}
+		if check.Required && check.Err != nil {
+			hasFailure = true
 		}
 	}
+	return doctorRunResult{checks: checks, hasFailure: hasFailure}
+}
 
-	// Auto-fix if requested
-	if config.Fix {
-		hasFailure = doctorFix(config) || hasFailure
+func safeWriteProjectFile(relPath string, data []byte, perm os.FileMode) error {
+	root, err := os.Getwd()
+	if err != nil {
+		return err
 	}
-
-	if hasFailure {
-		fmt.Fprintln(os.Stderr, "\nGoSPA Doctor found blocking setup issues.")
-		os.Exit(1)
+	rootAbs, err := filepath.Abs(root)
+	if err != nil {
+		return err
 	}
-
-	if !config.Quiet {
-		fmt.Println("\nGoSPA Doctor found no blocking setup issues.")
+	targetAbs := filepath.Clean(filepath.Join(rootAbs, relPath))
+	rootPrefix := rootAbs + string(os.PathSeparator)
+	if targetAbs != rootAbs && !strings.HasPrefix(targetAbs, rootPrefix) {
+		return fmt.Errorf("refusing to write outside project root: %s", relPath)
 	}
+	//nolint:gosec // targetAbs is constrained to the current project root by the check above.
+	return os.WriteFile(targetAbs, data, perm)
 }
 
 func strictDoctorChecks(config *DoctorConfig) []doctorCheck {
@@ -146,9 +187,18 @@ func outputDoctorJSON(checks []doctorCheck) {
 }
 
 // doctorFix attempts to auto-fix detected issues
-func doctorFix(config *DoctorConfig) bool {
+func doctorFix(config *DoctorConfig) (bool, []string) {
 	hasFailure := false
 	fixed := false
+	edited := make([]string, 0, 8)
+	addEdited := func(path string) {
+		for _, existing := range edited {
+			if existing == path {
+				return
+			}
+		}
+		edited = append(edited, path)
+	}
 
 	// Fix missing directories
 	if _, err := os.Stat(config.RoutesDir); os.IsNotExist(err) {
@@ -158,6 +208,7 @@ func doctorFix(config *DoctorConfig) bool {
 			hasFailure = true
 		} else {
 			fixed = true
+			addEdited(config.RoutesDir)
 		}
 	}
 
@@ -173,11 +224,65 @@ func doctorFix(config *DoctorConfig) bool {
 	}
 }
 `
-		if err := os.WriteFile("package.json", []byte(defaultPkgJSON), 0600); err != nil {
+		if err := safeWriteProjectFile("package.json", []byte(defaultPkgJSON), 0600); err != nil {
 			fmt.Fprintf(os.Stderr, "Failed to create package.json: %v\n", err)
 			hasFailure = true
 		} else {
 			fixed = true
+			addEdited("package.json")
+		}
+	}
+
+	// Ensure JWT_SECRET onboarding exists for production guidance.
+	if _, err := os.Stat(".env.example"); os.IsNotExist(err) {
+		const envExample = "JWT_SECRET=replace-with-a-strong-secret\n"
+		if writeErr := safeWriteProjectFile(".env.example", []byte(envExample), 0600); writeErr != nil {
+			fmt.Fprintf(os.Stderr, "Failed to create .env.example: %v\n", writeErr)
+			hasFailure = true
+		} else {
+			fixed = true
+			addEdited(".env.example")
+		}
+	} else if data, readErr := os.ReadFile(".env.example"); readErr == nil {
+		if !strings.Contains(string(data), "JWT_SECRET=") {
+			updated := strings.TrimRight(string(data), "\n") + "\nJWT_SECRET=replace-with-a-strong-secret\n"
+			if writeErr := safeWriteProjectFile(".env.example", []byte(updated), 0600); writeErr != nil {
+				fmt.Fprintf(os.Stderr, "Failed to update .env.example: %v\n", writeErr)
+				hasFailure = true
+			} else {
+				fixed = true
+				addEdited(".env.example")
+			}
+		}
+	}
+
+	// Fix common CSP nonce mismatch by moving from default policy to strict nonce policy.
+	if mainGo, err := os.ReadFile("main.go"); err == nil {
+		source := string(mainGo)
+		if strings.Contains(source, "SecurityHeadersMiddleware(") &&
+			strings.Contains(source, "fiber.DefaultContentSecurityPolicy") &&
+			!strings.Contains(source, "{nonce}") {
+			updated := strings.Replace(source, "fiber.DefaultContentSecurityPolicy", "fiber.StrictContentSecurityPolicy", 1)
+			if writeErr := safeWriteProjectFile("main.go", []byte(updated), 0600); writeErr != nil {
+				fmt.Fprintf(os.Stderr, "Failed to update main.go CSP policy: %v\n", writeErr)
+				hasFailure = true
+			} else {
+				fixed = true
+				addEdited("main.go")
+			}
+		}
+	}
+
+	// Build missing islands bundle when an entry exists but output is missing.
+	if _, entryErr := os.Stat("generated/islands.ts"); entryErr == nil {
+		if _, outErr := os.Stat("static/js/islands.js"); os.IsNotExist(outErr) {
+			if buildErr := BuildIslands(&BuildConfig{OutputDir: "static", Env: "development"}, nil); buildErr != nil {
+				fmt.Fprintf(os.Stderr, "Failed to auto-build islands bundle: %v\n", buildErr)
+				hasFailure = true
+			} else {
+				fixed = true
+				addEdited("static/js/islands.js")
+			}
 		}
 	}
 
@@ -185,7 +290,7 @@ func doctorFix(config *DoctorConfig) bool {
 		fmt.Println("✓ Auto-fix complete")
 	}
 
-	return hasFailure
+	return hasFailure, edited
 }
 
 // checkForUpdates returns checks for package updates
