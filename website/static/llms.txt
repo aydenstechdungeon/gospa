@@ -25,7 +25,7 @@
 ### SFC Components
 
 [gospasfc](docs/gospasfc.md)
-  - Size: 2091 bytes
+  - Size: 1556 bytes
 
 [advanced](docs/gospasfc/advanced.md)
   - Size: 914 bytes
@@ -58,7 +58,7 @@
   - Size: 1054 bytes
 
 [navigation](docs/routing/navigation.md)
-  - Size: 1406 bytes
+  - Size: 1741 bytes
 
 [layouts](docs/routing/layouts.md)
   - Size: 2131 bytes
@@ -91,22 +91,22 @@
   - Size: 3828 bytes
 
 [navigation-events](docs/client-runtime/navigation-events.md)
-  - Size: 3227 bytes
+  - Size: 4364 bytes
 
 [websocket](docs/client-runtime/websocket.md)
-  - Size: 1514 bytes
+  - Size: 2423 bytes
 
 [transitions](docs/client-runtime/transitions.md)
   - Size: 2045 bytes
 
 [overview](docs/client-runtime/overview.md)
-  - Size: 2760 bytes
+  - Size: 1717 bytes
 
 
 ### Configuration
 
 [scaling](docs/configuration/scaling.md)
-  - Size: 2112 bytes
+  - Size: 2085 bytes
 
 [basic](docs/configuration/basic.md)
   - Size: 1695 bytes
@@ -120,8 +120,8 @@
 
 ### Plugins
 
-[qrcode](docs/plugins/qrcode.md)
-  - Size: 386 bytes
+[postcss](docs/plugins/postcss.md)
+  - Size: 1034 bytes
 
 [plugins](docs/plugins.md)
   - Size: 1884 bytes
@@ -135,14 +135,14 @@
 [seo](docs/plugins/seo.md)
   - Size: 724 bytes
 
+[qrcode](docs/plugins/qrcode.md)
+  - Size: 386 bytes
+
 [auth](docs/plugins/auth.md)
   - Size: 973 bytes
 
 [image](docs/plugins/image.md)
   - Size: 1029 bytes
-
-[postcss](docs/plugins/postcss.md)
-  - Size: 1034 bytes
 
 
 ### Reactive Primitives
@@ -162,26 +162,26 @@
 
 ### API Reference
 
-[sse](docs/api/sse.md)
-  - Size: 1900 bytes
+[state](docs/api/state.md)
+  - Size: 23 bytes
 
-[remote-actions](docs/api/remote-actions.md)
-  - Size: 2130 bytes
+[routing](docs/api/routing.md)
+  - Size: 1132 bytes
 
 [client](docs/api/client.md)
-  - Size: 21 bytes
+  - Size: 859 bytes
 
 [core](docs/api/core.md)
-  - Size: 34088 bytes
+  - Size: 33981 bytes
 
 [fiber](docs/api/fiber.md)
   - Size: 24 bytes
 
-[routing](docs/api/routing.md)
-  - Size: 1054 bytes
+[remote-actions](docs/api/remote-actions.md)
+  - Size: 2130 bytes
 
-[state](docs/api/state.md)
-  - Size: 23 bytes
+[sse](docs/api/sse.md)
+  - Size: 1900 bytes
 
 [websocket](docs/api/websocket.md)
   - Size: 2232 bytes
@@ -193,34 +193,10 @@
 ### Troubleshooting
 
 [troubleshooting](docs/troubleshooting.md)
-  - Size: 64708 bytes
+  - Size: 66075 bytes
 
 
 ### Other
-
-[security](docs/security.md)
-  - Size: 5883 bytes
-
-[hmr](docs/hmr.md)
-  - Size: 1642 bytes
-
-[errors](docs/errors.md)
-  - Size: 1302 bytes
-
-[devtools](docs/devtools.md)
-  - Size: 1945 bytes
-
-[README](docs/README.md)
-  - Size: 2693 bytes
-
-[faq](docs/faq.md)
-  - Size: 1575 bytes
-
-[cli](docs/cli.md)
-  - Size: 18978 bytes
-
-[components](docs/components.md)
-  - Size: 13710 bytes
 
 [runtime](docs/runtime.md)
   - Size: 1929 bytes
@@ -228,8 +204,32 @@
 [params](docs/params.md)
   - Size: 1809 bytes
 
-[rendering](docs/rendering.md)
-  - Size: 12488 bytes
+[cli](docs/cli.md)
+  - Size: 19387 bytes
+
+[devtools](docs/devtools.md)
+  - Size: 1945 bytes
+
+[README](docs/README.md)
+  - Size: 2759 bytes
+
+[faq](docs/faq.md)
+  - Size: 1550 bytes
+
+[root](docs/root.md)
+  - Size: 2109 bytes
+
+[components](docs/components.md)
+  - Size: 13710 bytes
+
+[security](docs/security.md)
+  - Size: 6397 bytes
+
+[errors](docs/errors.md)
+  - Size: 1302 bytes
+
+[hmr](docs/hmr.md)
+  - Size: 1733 bytes
 
 [runtime](docs/internals/runtime.md)
   - Size: 2189 bytes
@@ -237,13 +237,16 @@
 [islands](docs/islands.md)
   - Size: 7749 bytes
 
+[fiber-to-gospa](docs/migration/fiber-to-gospa.md)
+  - Size: 1277 bytes
+
 [storage](docs/storage.md)
   - Size: 2462 bytes
 
-[root](docs/root.md)
-  - Size: 2109 bytes
+[rendering](docs/rendering.md)
+  - Size: 12488 bytes
 
 
 ## File Summary
 
-Total documentation files: 68
+Total documentation files: 69

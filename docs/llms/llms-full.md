@@ -27,6 +27,7 @@ GoSPA (Go Spa and Go S-P-A are the only valid pronunciations)  brings Svelte-lik
   - [Comparison](#comparison)
   - [Recommended Production Baseline](#recommended-production-baseline)
   - [Documentation](#documentation)
+  - [Known Issues](#known-issues)
   - [Accessibility (A11y)](#accessibility-a11y)
   - [Contributing](#contributing)
   - [License](#license)
@@ -35,7 +36,7 @@ GoSPA (Go Spa and Go S-P-A are the only valid pronunciations)  brings Svelte-lik
 
 - **Native Reactivity** - `Rune`, `Derived`, `Effect` primitives that work exactly like Svelte 5.
 - **WebSocket Sync** - Transparent client-server state synchronization with GZIP delta patching.
-- **SFC System** - Single File Components (`.gospa`) with scoped CSS and Go-based logic.
+- **SFC System (Alpha)** - Single File Components (`.gospa`) with scoped CSS and Go-based logic.
 - **File-Based Routing** - SvelteKit-style directory structure for `.templ` and `.gospa` files.
 - **Hybrid Rendering** - Mix SSR, SSG, ISR, and PPR on a per-page basis.
 - **Type-Safe RPC** - Call server functions directly from the client without boilerplate endpoints.
@@ -97,6 +98,8 @@ go run github.com/aydenstechdungeon/gospa/cmd/gospa@latest dev
 
 GoSPA automatically compiles this to a reactive Templ component and a TypeScript hydration island.
 
+> `.gospa` SFCs are currently alpha. For production apps today, prefer `.templ` route/components and use SFCs selectively.
+
 ## Comparison
 
 | Feature | GoSPA | HTMX | Alpine | SvelteKit | MoonZoon |
@@ -129,6 +132,8 @@ config.AppName = "myapp"
 
 For prefork deployments, add external `Storage` and `PubSub` backends so state and realtime traffic stay consistent across workers.
 
+Dynamic HTML (`data-bind="html:*"` and stream HTML chunks) is escaped by default in the runtime. If you need to render raw HTML, only use trusted server-controlled content.
+
 ## Documentation
 
 Explore the full GoSPA documentation:
@@ -147,6 +152,26 @@ Explore the full GoSPA documentation:
 - [**DevTools & Debugging**](docs/devtools.md) - Error overlays and HMR.
 - [**Client Runtime**](docs/internals/runtime.md) - Tiered runtime internals.
 - [**API Reference**](docs/api.md) - Fiber and Client API details.
+
+## Known Issues
+
+- **CSP nonce mismatch can block runtime scripts**
+  - Symptom: Browser console shows CSP violations such as `Refused to execute inline script` or `Refused to load the script`.
+  - Cause: custom CSP policy does not include `'nonce-{nonce}'`, or custom inline/module scripts are missing the per-request nonce.
+  - Manual Developer Fix:
+
+```go
+cspPolicy := "default-src 'self'; script-src 'self' 'nonce-{nonce}'; style-src 'self' 'unsafe-inline'; img-src 'self' data: https:; font-src 'self' data:; connect-src 'self' wss: https:; frame-ancestors 'none'; base-uri 'self'; form-action 'self';"
+app.Fiber.Use(gospafiber.SecurityHeadersMiddleware(cspPolicy))
+```
+
+```templ
+<script type="module" nonce={ gospatempl.GetNonce(ctx) }>
+  // custom client bootstrap code
+</script>
+```
+
+  Use the same nonce source (`gospatempl.GetNonce(ctx)`) for every custom inline or module script in your layout.
 
 ## Accessibility (A11y)
 
@@ -219,7 +244,7 @@ docs/
 - [Components & Islands](islands.md)
 - [File-based Routing](routing.md)
 - [Remote Actions](api/remote-actions.md)
-- [Single File Components (.gospa)](gospasfc.md)
+- [Single File Components (.gospa, alpha)](gospasfc.md)
 
 ### Advanced Features
 - [Security & Hardening](security.md)
@@ -228,6 +253,7 @@ docs/
 - [Plugin Architecture](plugins.md)
 - [Dev Tools & HMR](devtools.md)
 - [Runtime Lifecycle](runtime.md)
+- [Fiber Migration Checklist](migration/fiber-to-gospa.md)
 
 ### Reference
 - [Full API Reference](api.md)
@@ -827,66 +853,58 @@ flowchart TD
 
 # GoSPA SFC (Single File Components)
 
-GoSPA Single File Components (SFCs) provide a powerful way to define interactive UI components with minimal overhead. SFCs combine HTML, CSS, and TypeScript reactivity into a single, cohesive file.
+GoSPA supports `.gospa` Single File Components, but this system is currently **alpha**.
 
-## SFC Components
+For production apps today, prefer `.templ` route/components and use `.gospa` only when you specifically want SFC ergonomics and are comfortable with alpha behavior.
 
-A GoSPA SFC component is typically defined using a standard `templ` component combined with data-attributes that GoSPA's client-side runtime recognizes.
+## Current recommendation
 
-### Example:
+- Stable/default path: `.templ` + Go + islands/runtime features.
+- Experimental path: `.gospa` SFCs compiled into Templ and hydration code.
+
+## `.gospa` format (alpha)
+
+```svelte
+<script lang="go">
+  var count = $state(0)
+  func increment() { count++ }
+</script>
+
+<template>
+  <button on:click={increment}>Count is {count}</button>
+</template>
+
+<style>
+  button { padding: 1rem; border-radius: 8px; }
+</style>
+```
+
+The compiler turns this into generated templ output and client hydration code.
+
+## Stable templ-based equivalent
+
+If you want mature behavior today, use templ components and GoSPA runtime attributes directly:
+
 ```templ
 package components
 
 templ Counter(initial int) {
-    <div data-gospa-component="Counter" data-gospa-state={ templ.JSONString(map[string]interface{}{"count": initial}) }>
-        <button data-on:click="count++">Increment</button>
-        <span data-bind="text:count">{ fmt.Sprint(initial) }</span>
-    </div>
+  <div data-gospa-component="Counter" data-gospa-state={ templ.JSONString(map[string]interface{}{"count": initial}) }>
+    <button data-on:click="count++">Increment</button>
+    <span data-bind="text:count">{ fmt.Sprint(initial) }</span>
+  </div>
 }
 ```
 
-## Data Bindings
+## Runtime bindings and events
 
-GoSPA provides several data-binding attributes to connect your HTML to its reactive state:
+GoSPA runtime attributes supported in templ include:
 
-- `data-bind="text:key"`: Bind an element's text content.
-- `data-bind="html:key"`: Bind an element's HTML content (automatically sanitized).
-- `data-bind="class:name:key"`: Toggle a CSS class based on a reactive boolean.
-- `data-model="key"`: Two-way data binding for input elements.
-
-## Event Handlers
-
-Events are registered using the `data-on:*` syntax.
-
-```templ
-<button data-on:click="open = !open">Toggle</button>
-<input data-on:input.debounce.500ms="search($el.value)" />
-```
-
-### Event Modifiers
-GoSPA supports several event modifiers:
-- `.prevent`: Calls `event.preventDefault()`.
-- `.stop`: Calls `event.stopPropagation()`.
-- `.debounce.XXXms`: Debounces the event handler.
-- `.throttle.XXXms`: Throttles the event handler.
-
-## Islands
-
-To make an SFC component interactive, you can also define an "Island" setup function in TypeScript.
-
-```typescript
-import { $state, registerSetup } from "@gospa/client";
-
-registerSetup("Counter", (el, props, state) => {
-    const count = $state(state.count || 0);
-    
-    el.querySelector("button")?.addEventListener("click", () => {
-        count.set(count.get() + 1);
-    });
-});
-```
-
-GoSPA will automatically hydrate your island when it enters the viewport (if configured to do so).
+- `data-bind="text:key"`
+- `data-bind="html:key"` (sanitized)
+- `data-bind="class:name:key"`
+- `data-model="key"`
+- `data-on:<event>` handlers with modifiers like `.prevent`, `.stop`, `.debounce.*`, `.throttle.*`
 
 
 <!-- FILE: docs/gospasfc/advanced.md -->
@@ -1401,6 +1419,18 @@ navigate('/new-path', {
     replace: true,
     scroll: false 
 });
+```
+
+`scrollToTop` remains supported as a deprecated alias for `scroll` during migration.
+
+## Invalidation API
+
+```typescript
+import { invalidate, invalidateTag, invalidateKey } from '@gospa/client';
+
+await invalidate('/blog/hello-world');
+await invalidateTag('route:/blog/hello-world');
+await invalidateKey('path:/blog/hello-world');
 ```
 
 
@@ -1924,8 +1954,11 @@ await navigate('/about');
 // With options
 await navigate('/dashboard', {
   replace: true,      // Replace history entry
-  scrollToTop: true   // Scroll to top after navigation
+  scroll: true        // Scroll to top after navigation
 });
+
+// Deprecated alias (still supported for one minor release)
+await navigate('/dashboard', { scrollToTop: true });
 
 // History navigation
 back();              // Go back one page
@@ -1948,6 +1981,18 @@ prefetch(['/blog/post-1', '/blog/post-2']);
 
 // Prefetch all links matching a selector
 prefetchLinks('a[data-prefetch]');
+```
+
+## Cache Invalidation
+
+Explicitly invalidate client/server navigation caches.
+
+```typescript
+import { invalidate, invalidateTag, invalidateKey } from '@gospa/client';
+
+await invalidate('/dashboard');
+await invalidateTag('route:/dashboard');
+await invalidateKey('path:/dashboard');
 ```
 
 ## Navigation State
@@ -1990,9 +2035,20 @@ The runtime dispatches custom events on the document.
 
 | Event | Detail | Description |
 |-------|--------|-------------|
-| `gospa:navigated` | `{path, state}` | After successful navigation |
-| `gospa:navigation-start` | `{from, to}` | Before navigation starts |
-| `gospa:navigation-error` | `{error, path}` | Navigation failed |
+| `gospa:navigation-start` | `{from, to, source, replace}` | Before navigation fetch starts |
+| `gospa:navigated` | `{path, from, to, source, durationMs}` | After successful navigation |
+| `gospa:navigation-end` | `{from, to, source, durationMs}` | Navigation lifecycle finished successfully |
+| `gospa:navigation-error` | `{from, to, source, error}` | Navigation failed |
+
+## Deterministic Defaults
+
+GoSPA now applies deterministic navigation defaults out of the box:
+
+- `pendingUI`: delayed pending indicator (`delay: 120ms`) with minimum visible duration (`180ms`) to reduce flicker.
+- `focusRestoration`: focuses `h1`/page container/main after morph so keyboard and screen-reader behavior stays consistent.
+- `scrollRestoration`: sets `history.scrollRestoration = "manual"`, restores scroll on `popstate`, and supports hash-anchor scrolling.
+
+You can override these via `setNavigationOptions` or `window.__GOSPA_CONFIG__.navigationOptions`.
 
 ## Event Handling
 
@@ -2061,7 +2117,8 @@ const ws = initWebSocket({
   url: 'ws://localhost:3000/ws',
   reconnect: true,
   maxReconnectAttempts: 10,
-  heartbeatInterval: 30000
+  heartbeatInterval: 30000,
+  telemetry: true
 });
 
 // Connect
@@ -2076,7 +2133,32 @@ await ws.connect();
 | `reconnect` | boolean | true | Auto-reconnect on disconnect |
 | `reconnectInterval` | number | 1000 | Base reconnection interval (ms) |
 | `maxReconnectAttempts` | number | 10 | Maximum reconnection attempts |
+| `reconnectBackoffMultiplier` | number | 2 | Exponential backoff multiplier |
+| `reconnectJitterRatio` | number | 0.2 | Random jitter ratio applied to reconnect delay |
+| `reconnectMaxDelay` | number | 30000 | Max reconnect delay (ms) |
 | `heartbeatInterval` | number | 30000 | Heartbeat ping interval (ms) |
+| `staleStateGuard` | boolean | true | Drop stale server state messages |
+| `staleReplayWindowMs` | number | 20000 | Replay tolerance window for out-of-order messages |
+| `telemetry` | boolean | true | Emit websocket telemetry events |
+| `onTelemetry` | function | `() => {}` | Callback for telemetry payloads |
+
+## Built-in Telemetry
+
+When telemetry is enabled, the runtime emits `window` events:
+
+- `gospa:ws-telemetry` with payload `{ type, timestamp, detail }`
+
+Event types:
+
+- `connect`
+- `disconnect`
+- `reconnect-scheduled`
+- `reconnect-attempt`
+- `latency`
+- `stale-message-dropped`
+- `invalid-message`
+- `patch-failure`
+- `decompress-failure`
 
 ## Synced Rune
 
@@ -2208,7 +2290,6 @@ GoSPA provides multiple runtime variants to balance security, performance, and b
 The **`@gospa/client`** package [exports](https://github.com/aydenstechdungeon/gospa/blob/main/client/package.json) only:
 
 - `@gospa/client` → default runtime (`dist/runtime.js`)
-- `@gospa/client/runtime-secure` → DOMPurify-enabled runtime (`dist/runtime-secure.js`)
 
 Additional bundles (`runtime-core.js`, `runtime-micro.js`, `runtime-simple.js`) are built into `dist/` for **embedding** in the Go binary; they are **not** separate npm import paths unless you vendor the files.
 
@@ -2246,48 +2327,12 @@ import { init, Rune, navigate } from '@gospa/client';
 init();
 ```
 
-### Secure Runtime (`@gospa/client/runtime-secure`)
-
-The secure runtime includes DOMPurify for HTML sanitization. Use this when displaying user-generated content.
-
-**File (build output):** `runtime-secure.js`
-
-**Features:**
-- DOMPurify HTML sanitization
-- Protection against XSS attacks
-- Safe rendering of user-generated content
-- All core features (WebSocket, Navigation, Transitions)
-
-**Size:**
-- Uncompressed: ~35 KB
-- Gzipped: ~13 KB
-
-**When to use:**
-- Rendering user-generated HTML content
-- Social media apps with comments
-- Forums, wikis, CMS with rich text
-- Any app displaying untrusted HTML
-
-```typescript
-// Browser-style (no bundler)
-import * as GoSPA from "/_gospa/runtime-secure.js";
-GoSPA.init();
-
-// npm style (with bundler)
-import { init, sanitize } from '@gospa/client/runtime-secure';
-init();
-
-// Sanitize user content
-const cleanHtml = await GoSPA.sanitize(userComment);
-```
-
 ## Security Model Comparison
 
 | Import / bundle | Sanitizer | Trust model | Use case |
 |-----------------|-----------|-------------|----------|
-| `@gospa/client` | None (optional `setSanitizer`) | Trust server (Templ) | Most apps with CSP |
-| `@gospa/client/runtime-secure` | DOMPurify | Sanitize UGC | User-generated HTML |
-| Embedded `runtime-core` / `micro` | Varies | Custom | Workers, embeds |
+| `@gospa/client` | None (no bundled sanitizer) | Trust server (Templ) + escaped dynamic HTML by default | Most apps with CSP |
+| Embedded `runtime-core` / `micro` | None | Custom | Workers, embeds |
 
 
 <!-- FILE: docs/configuration/scaling.md -->
@@ -2337,7 +2382,6 @@ app := gospa.New(gospa.Config{
     Prefork: true,
     Storage: redis.NewStore(rdb),
     PubSub:  redis.NewPubSub(rdb),
-    SimpleRuntime:   true,
     CompressState:   true,
     CacheTemplates:  true,
     HydrationMode:   "lazy",
@@ -2490,29 +2534,63 @@ GoSPA supports multiple rendering strategies per route (configured via `+page` o
 For more details, see the [Rendering Strategy Guide](rendering.md).
 
 
-<!-- FILE: docs/plugins/qrcode.md -->
+<!-- FILE: docs/plugins/postcss.md -->
 ================================================================================
 
-# QR Code Plugin
+# PostCSS Plugin
 
-Pure Go QR code generation plugin for URLs, OTP/TOTP setup, and general use.
+PostCSS processing with Tailwind CSS v4 integration and additional plugins.
 
 ## Installation
 
 ```bash
-gospa add qrcode
+gospa add:postcss
 ```
 
-## Usage
+## Configuration
 
-```go
-import "github.com/aydenstechdungeon/gospa/plugin/qrcode"
+```yaml
+plugins:
+  postcss:
+    input: ./styles/main.css
+    output: ./static/css/main.css
+    plugins:
+      typography: true
+      forms: true
+      autoprefixer: true
+```
 
-// Generate a QR code as data URL
-dataURL, _ := qrcode.GenerateDataURL("https://example.com")
+## Critical CSS
 
-// Generate for OTP/TOTP setup
-qrDataURL, _ := qrcode.ForOTP(otpURL)
+The PostCSS plugin supports critical CSS extraction to improve page load performance:
+
+```yaml
+plugins:
+  postcss:
+    criticalCSS:
+      enabled: true
+      criticalOutput: ./static/css/critical.css
+      nonCriticalOutput: ./static/css/non-critical.css
+```
+
+### Usage in Layout
+
+```templ
+@templ.Raw("<style>" + postcss.CriticalCSS("./static/css/critical.css") + "</style>")
+@templ.Raw(postcss.AsyncCSS("/static/css/non-critical.css"))
+```
+
+## Bundle Splitting
+
+Split CSS into separate bundles for multi-page applications:
+
+```yaml
+plugins:
+  postcss:
+    bundles:
+      - name: marketing
+        input: ./styles/marketing.css
+        content: [./routes/marketing/**/*.templ]
 ```
 
 
@@ -2707,6 +2785,32 @@ The plugin automatically HTML-escapes all metadata including titles, description
 | `seo:structured` | `ss` | Generate JSON-LD |
 
 
+<!-- FILE: docs/plugins/qrcode.md -->
+================================================================================
+
+# QR Code Plugin
+
+Pure Go QR code generation plugin for URLs, OTP/TOTP setup, and general use.
+
+## Installation
+
+```bash
+gospa add qrcode
+```
+
+## Usage
+
+```go
+import "github.com/aydenstechdungeon/gospa/plugin/qrcode"
+
+// Generate a QR code as data URL
+dataURL, _ := qrcode.GenerateDataURL("https://example.com")
+
+// Generate for OTP/TOTP setup
+qrDataURL, _ := qrcode.ForOTP(otpURL)
+```
+
+
 <!-- FILE: docs/plugins/auth.md -->
 ================================================================================
 
@@ -2794,66 +2898,6 @@ plugins:
 ## Requirements
 
 `cgo` must be enabled with `libwebp` and `libheif` installed on the system for WebP and AVIF support.
-
-
-<!-- FILE: docs/plugins/postcss.md -->
-================================================================================
-
-# PostCSS Plugin
-
-PostCSS processing with Tailwind CSS v4 integration and additional plugins.
-
-## Installation
-
-```bash
-gospa add:postcss
-```
-
-## Configuration
-
-```yaml
-plugins:
-  postcss:
-    input: ./styles/main.css
-    output: ./static/css/main.css
-    plugins:
-      typography: true
-      forms: true
-      autoprefixer: true
-```
-
-## Critical CSS
-
-The PostCSS plugin supports critical CSS extraction to improve page load performance:
-
-```yaml
-plugins:
-  postcss:
-    criticalCSS:
-      enabled: true
-      criticalOutput: ./static/css/critical.css
-      nonCriticalOutput: ./static/css/non-critical.css
-```
-
-### Usage in Layout
-
-```templ
-@templ.Raw("<style>" + postcss.CriticalCSS("./static/css/critical.css") + "</style>")
-@templ.Raw(postcss.AsyncCSS("/static/css/non-critical.css"))
-```
-
-## Bundle Splitting
-
-Split CSS into separate bundles for multi-page applications:
-
-```yaml
-plugins:
-  postcss:
-    bundles:
-      - name: marketing
-        input: ./styles/marketing.css
-        content: [./routes/marketing/**/*.templ]
-```
 
 
 <!-- FILE: docs/reactive-primitives/js.md -->
@@ -3130,148 +3174,115 @@ new PreEffect(() => {
 GoSPA uses a bounded worker queue for server-side notifications to prevent bottlenecks. Notifications fall back to synchronous execution under heavy load (backpressure).
 
 
-<!-- FILE: docs/api/sse.md -->
+<!-- FILE: docs/api/state.md -->
 ================================================================================
 
-# Server-Sent Events (SSE)
-
-GoSPA provides a robust Server-Sent Events (SSE) system for real-time, one-way communication from the server to your clients. SSE is a lightweight alternative to WebSockets when bi-directional communication is not required.
-
-## SSE Architecture
-
-SSE in GoSPA is managed by the `SSEBroker`. It handles client connections, heartbeats to keep connections alive, and event distribution.
-
-### Configuration
-```go
-app := gospa.New(gospa.Config{
-    SSE: &fiber.SSEConfig{
-        EventBufferSize:    100,
-        HeartbeatInterval:  30 * time.Second,
-        OnConnect:          func(c *fiber.SSEClient) { /* ... */ },
-    },
-})
-```
-
-## Sending Events
-
-You can push events to specific topics or directly to individual clients.
-
-```go
-// Push to a global topic
-app.SSE().Publish("notifications", fiber.SSEEvent{
-    Event: "new_message",
-    Data:  map[string]string{"from": "Alice", "text": "Hello!"},
-})
-
-// Push to a specific client
-app.SSE().SendToClient(clientID, fiber.SSEEvent{
-    Data: "Your account has been updated",
-})
-```
-
-## Client-Side Consumption
-
-GoSPA provides a standard way to consume SSE streams in your component's reactive logic.
-
-```typescript
-import { onMount } from "@gospa/client";
-
-onMount(() => {
-    const eventSource = new EventSource("/_gospa/sse/notifications");
-    
-    eventSource.onmessage = (event) => {
-        const data = JSON.parse(event.data);
-        console.log("New SSE Event:", data);
-    };
-
-    return () => eventSource.close();
-});
-```
-
-## Scalability and Distributed Environments
-
-The `SSEBroker` can be configured with a `store.PubSub` backend (such as Redis) to synchronize events across multiple application instances. This ensures that a client connected to Server A will still receive events published by Server B.
-
-```go
-broker := fiber.NewSSEBroker(&fiber.SSEConfig{
-    PubSub: store.NewRedisPubSub(redisClient),
-})
-```
+# State Management API
 
 
-<!-- FILE: docs/api/remote-actions.md -->
+<!-- FILE: docs/api/routing.md -->
 ================================================================================
 
-# Remote Actions
+# Routing API Reference
 
-Remote Actions are a powerful way for your client-side code to invoke server-side Go functions. They are the primary way to perform mutations and complex logic in a GoSPA application.
+Low-level API for parameter extraction, validation, and URL construction.
 
-## Registering Remote Actions
+## Params
 
-Remote Actions are registered on the server using `routing.RegisterRemoteAction`. All actions must have a name and a handler function.
-
-```go
-import "github.com/aydenstechdungeon/gospa/routing"
-
-routing.RegisterRemoteAction("greet", func(ctx context.Context, rc routing.RemoteContext, input interface{}) (interface{}, error) {
-    name := input.(string)
-    return "Hello, " + name, nil
-})
-```
-
-## Invoking From the Client
-
-GoSPA provides a type-safe bridge for calling remote actions from your TypeScript code.
-
-```typescript
-import { remoteAction } from "@gospa/client";
-
-async function sayHello() {
-    const result = await remoteAction("greet", "World");
-    console.log(result); // "Hello, World"
-}
-```
-
-## Security and Rate Limiting
-
-### RemoteActionMiddleware (Production)
-In production mode, GoSPA enforces the use of `RemoteActionMiddleware` to protect your actions. If an action is invoked without this middleware, the framework will block the request and return a `StatusUnauthorized` (401) error.
+Type-safe parameter map with conversion methods.
 
 ```go
-app := gospa.New(gospa.Config{
-    RemoteActionMiddleware: func(c fiber.Ctx) error {
-        // Authenticate user before allowing the action
-        if !isAuthenticated(c) {
-            return c.Status(401).SendString("Unauthorized")
-        }
-        return c.Next()
-    },
-})
+id := params.GetInt("id")
+name := params.GetString("name")
+isAdmin := params.GetBool("admin")
 ```
 
-### Rate Limiting
-All remote actions are automatically rate-limited per IP to prevent abuse and DoS attacks. The default limits (burst=50, refill=20/sec) can be customized:
+## QueryParams
+
+Handle URL query string parameters.
 
 ```go
-fiber.SetRemoteActionRateLimiter(100.0, 50.0)
+qp := routing.NewQueryParams(url.Query())
+page := qp.GetInt("page")
+search := qp.Get("q")
 ```
 
-## Type-Safe Bridge
+## PathBuilder
 
-By running `gospa generate`, the framework scans your Go code for `RegisterRemoteAction` calls and generates a TypeScript interface for all your action definitions. This ensures full type-safety for both inputs and outputs.
+Construct safe URLs from patterns and parameters.
 
-```typescript
-// generated bridge
-export interface RemoteActions {
-    greet: (input: string) => Promise<string>;
-}
+```go
+builder := routing.NewPathBuilder("/users/:id/posts/:postId")
+builder.Param("id", "1")
+builder.Param("postId", "42")
+path := builder.Build() // "/users/1/posts/42"
 ```
+
+## Route Matching
+
+### ParamExtractor
+
+```go
+extractor := routing.NewParamExtractor("/users/:id")
+params, ok := extractor.Extract("/users/123")
+```
+
+## Generated Artifacts
+
+### Go Route Registry (`routes/generated_routes.go`)
+
+Automatically registers all routes from your file system.
+
+### TS Routes (`generated/routes.ts`)
+
+Provides `buildPath`, `matchRoute`, `findRoute`, plus route data contracts:
+
+- `routeDataContracts`
+- `loadRouteData(path)`
+- `RouteLoadData<T>`
 
 
 <!-- FILE: docs/api/client.md -->
 ================================================================================
 
 # Client Runtime API
+
+## Navigation
+
+```typescript
+import { navigate } from '@gospa/client';
+
+await navigate('/dashboard', { replace: true, scroll: false });
+// Deprecated alias: { scrollToTop: false }
+```
+
+## Invalidation
+
+```typescript
+import { invalidate, invalidateTag, invalidateKey } from '@gospa/client';
+
+await invalidate('/dashboard');
+await invalidateTag('route:/dashboard');
+await invalidateKey('path:/dashboard');
+```
+
+## Progressive Form Actions
+
+```typescript
+import { enhanceForms } from '@gospa/client';
+
+enhanceForms('form[data-gospa-enhance]', {
+  onValidation(validation) {
+    console.log(validation.fieldErrors, validation.formError);
+  },
+  onSuccess(result) {
+    console.log(result.data);
+  },
+});
+```
+
+Structured server responses use `routing.ActionResponse` and may include
+`data`, `validation`, `redirect`, and `revalidate*` hints.
 
 
 <!-- FILE: docs/api/core.md -->
@@ -3369,7 +3380,6 @@ Presets:
 | `CompressState` | `bool` |
 | `StateDiffing` | `bool` |
 | `CacheTemplates` | `bool` |
-| `SimpleRuntime` | `bool` |
 | `SimpleRuntimeSVGs` | `bool` |
 | `DisableSanitization` | `bool` |
 | `WSReconnectDelay` | `time.Duration` |
@@ -3409,7 +3419,7 @@ Presets:
 - **`RoutesFS`**: Embed routes with `//go:embed`.
 - **`CompressState` / `StateDiffing`**: Bandwidth optimizations for WebSocket state sync.
 - **`SerializationFormat`**: `"json"` (default) or `"msgpack"` for WebSocket payloads.
-- **`SimpleRuntime` / `SimpleRuntimeSVGs` / `DisableSanitization`**: Trade-offs for bundle size and trust model; see [Security](../configuration/scaling).
+- **`SimpleRuntimeSVGs` / `DisableSanitization`**: Trade-offs for runtime sanitization trust model; see [Security](../configuration/scaling.md).
 - **`WSReconnectDelay` / `WSMaxReconnect` / `WSHeartbeat`**: Passed to the client; if unset/zero at runtime, HTML injection applies **1s / 10 / 30s** defaults when embedding config.
 - **`RemoteActionMiddleware`**: Required in production for remote actions unless `AllowUnauthenticatedRemoteActions` is set.
 - **`EnableCSRF`**: Defaults to `true`; wired in `gospa.New`.
@@ -4489,7 +4499,7 @@ GoSPA.transformers.stopPropagation
 
 ### Event Handling Patterns
 
-GoSPA sanitizes HTML during SPA navigation using DOMPurify, which strips inline event handlers (`onclick`, `onmouseover`, etc.) for security. Use these patterns instead:
+GoSPA does not rely on inline event handlers for navigation or hydration. Use these patterns instead:
 
 **Inside Components (data-on):**
 
@@ -4738,68 +4748,142 @@ hmr := fiber.GetHMR()
 # Fiber Integration API
 
 
-<!-- FILE: docs/api/routing.md -->
+<!-- FILE: docs/api/remote-actions.md -->
 ================================================================================
 
-# Routing API Reference
+# Remote Actions
 
-Low-level API for parameter extraction, validation, and URL construction.
+Remote Actions are a powerful way for your client-side code to invoke server-side Go functions. They are the primary way to perform mutations and complex logic in a GoSPA application.
 
-## Params
+## Registering Remote Actions
 
-Type-safe parameter map with conversion methods.
-
-```go
-id := params.GetInt("id")
-name := params.GetString("name")
-isAdmin := params.GetBool("admin")
-```
-
-## QueryParams
-
-Handle URL query string parameters.
+Remote Actions are registered on the server using `routing.RegisterRemoteAction`. All actions must have a name and a handler function.
 
 ```go
-qp := routing.NewQueryParams(url.Query())
-page := qp.GetInt("page")
-search := qp.Get("q")
+import "github.com/aydenstechdungeon/gospa/routing"
+
+routing.RegisterRemoteAction("greet", func(ctx context.Context, rc routing.RemoteContext, input interface{}) (interface{}, error) {
+    name := input.(string)
+    return "Hello, " + name, nil
+})
 ```
 
-## PathBuilder
+## Invoking From the Client
 
-Construct safe URLs from patterns and parameters.
+GoSPA provides a type-safe bridge for calling remote actions from your TypeScript code.
+
+```typescript
+import { remoteAction } from "@gospa/client";
+
+async function sayHello() {
+    const result = await remoteAction("greet", "World");
+    console.log(result); // "Hello, World"
+}
+```
+
+## Security and Rate Limiting
+
+### RemoteActionMiddleware (Production)
+In production mode, GoSPA enforces the use of `RemoteActionMiddleware` to protect your actions. If an action is invoked without this middleware, the framework will block the request and return a `StatusUnauthorized` (401) error.
 
 ```go
-builder := routing.NewPathBuilder("/users/:id/posts/:postId")
-builder.Param("id", "1")
-builder.Param("postId", "42")
-path := builder.Build() // "/users/1/posts/42"
+app := gospa.New(gospa.Config{
+    RemoteActionMiddleware: func(c fiber.Ctx) error {
+        // Authenticate user before allowing the action
+        if !isAuthenticated(c) {
+            return c.Status(401).SendString("Unauthorized")
+        }
+        return c.Next()
+    },
+})
 ```
 
-## Route Matching
-
-### ParamExtractor
+### Rate Limiting
+All remote actions are automatically rate-limited per IP to prevent abuse and DoS attacks. The default limits (burst=50, refill=20/sec) can be customized:
 
 ```go
-extractor := routing.NewParamExtractor("/users/:id")
-params, ok := extractor.Extract("/users/123")
+fiber.SetRemoteActionRateLimiter(100.0, 50.0)
 ```
 
-## Generated Artifacts
+## Type-Safe Bridge
 
-### Go Route Registry (`routes/generated_routes.go`)
+By running `gospa generate`, the framework scans your Go code for `RegisterRemoteAction` calls and generates a TypeScript interface for all your action definitions. This ensures full type-safety for both inputs and outputs.
 
-Automatically registers all routes from your file system.
+```typescript
+// generated bridge
+export interface RemoteActions {
+    greet: (input: string) => Promise<string>;
+}
+```
 
-### TS Routes (`generated/routes.ts`)
 
-Provides `buildPath`, `matchRoute`, and `findRoute` on the client.
-
-
-<!-- FILE: docs/api/state.md -->
+<!-- FILE: docs/api/sse.md -->
 ================================================================================
 
-# State Management API
+# Server-Sent Events (SSE)
+
+GoSPA provides a robust Server-Sent Events (SSE) system for real-time, one-way communication from the server to your clients. SSE is a lightweight alternative to WebSockets when bi-directional communication is not required.
+
+## SSE Architecture
+
+SSE in GoSPA is managed by the `SSEBroker`. It handles client connections, heartbeats to keep connections alive, and event distribution.
+
+### Configuration
+```go
+app := gospa.New(gospa.Config{
+    SSE: &fiber.SSEConfig{
+        EventBufferSize:    100,
+        HeartbeatInterval:  30 * time.Second,
+        OnConnect:          func(c *fiber.SSEClient) { /* ... */ },
+    },
+})
+```
+
+## Sending Events
+
+You can push events to specific topics or directly to individual clients.
+
+```go
+// Push to a global topic
+app.SSE().Publish("notifications", fiber.SSEEvent{
+    Event: "new_message",
+    Data:  map[string]string{"from": "Alice", "text": "Hello!"},
+})
+
+// Push to a specific client
+app.SSE().SendToClient(clientID, fiber.SSEEvent{
+    Data: "Your account has been updated",
+})
+```
+
+## Client-Side Consumption
+
+GoSPA provides a standard way to consume SSE streams in your component's reactive logic.
+
+```typescript
+import { onMount } from "@gospa/client";
+
+onMount(() => {
+    const eventSource = new EventSource("/_gospa/sse/notifications");
+    
+    eventSource.onmessage = (event) => {
+        const data = JSON.parse(event.data);
+        console.log("New SSE Event:", data);
+    };
+
+    return () => eventSource.close();
+});
+```
+
+## Scalability and Distributed Environments
+
+The `SSEBroker` can be configured with a `store.PubSub` backend (such as Redis) to synchronize events across multiple application instances. This ensures that a client connected to Server A will still receive events published by Server B.
+
+```go
+broker := fiber.NewSSEBroker(&fiber.SSEConfig{
+    PubSub: store.NewRedisPubSub(redisClient),
+})
+```
 
 
 <!-- FILE: docs/api/websocket.md -->
@@ -5131,6 +5215,45 @@ GoSPA.remote('action', {});
     GoSPA.remote('action', {});
 </script>
 ```
+
+## CSP Nonce Errors ("Refused to execute script")
+
+### Problem
+You see CSP errors in the browser console and runtime/client scripts do not execute:
+
+```text
+Refused to execute inline script because it violates the following Content Security Policy directive...
+```
+
+### Cause
+One of these is usually true:
+- `script-src` is missing `'nonce-{nonce}'`.
+- A custom `<script>` tag in your layout is missing the per-request nonce.
+- A static/hardcoded nonce is being reused instead of the request nonce.
+
+### Solution
+
+#### 1. Configure CSP with the nonce placeholder
+
+```go
+cspPolicy := "default-src 'self'; script-src 'self' 'nonce-{nonce}'; style-src 'self' 'unsafe-inline'; img-src 'self' data: https:; font-src 'self' data:; connect-src 'self' wss: https:; frame-ancestors 'none'; base-uri 'self'; form-action 'self';"
+app.Fiber.Use(gospafiber.SecurityHeadersMiddleware(cspPolicy))
+```
+
+#### 2. Add nonce to custom scripts in your layout
+
+```templ
+<script src="/static/js/islands.js" type="module" nonce={ gospatempl.GetNonce(ctx) }></script>
+<script type="module" nonce={ gospatempl.GetNonce(ctx) }>
+  // custom bootstrap logic
+</script>
+```
+
+#### 3. Verify header and tag nonces match
+
+Check DevTools:
+- Response header `Content-Security-Policy` includes `script-src ... 'nonce-<value>'`.
+- Rendered `<script>` tags on the same response use that same nonce value.
 # Troubleshooting Remote Actions
 
 ## "ACTION_NOT_FOUND" Error
@@ -8133,371 +8256,132 @@ Examples:
 ```
 
 
-<!-- FILE: docs/security.md -->
+<!-- FILE: docs/runtime.md -->
 ================================================================================
 
-# Security Guide
+# Client Runtime Lifecycle
 
-GoSPA is designed with security as a first-class citizen. This guide outlines the built-in security features and your responsibilities as a developer to ensure a secure deployment.
+GoSPA's client-side runtime is a high-performance, modular system that handles reactivity, hydration, and communication.
 
-## 1. Production Hardening
+## Initialization
 
-When deploying GoSPA to production, ensure that `DevMode` is set to `false` in your `gospa.Config`.
+The GoSPA runtime is usually initialized automatically when a client lands on a GoSPA page.
 
-- **Insecure Settings Enforcement**: In production, GoSPA automatically ignores `AllowInsecureWS` (forcing `wss://`) and `AllowUnauthenticatedRemoteActions`.
-- **Logger**: Use a structured logger (`slog.Default()` or similar) to track security events without leaking sensitive data in logs.
+```typescript
+import GoSPA from "@gospa/client";
 
-### Checklist
-- [ ] Set `DevMode: false`.
-- [ ] Provide a strong `JWT_SECRET` environment variable (for the Auth plugin).
-- [ ] Configure `PublicOrigin` to match your production domain.
-- [ ] Set `AllowedOrigins` to restrict CORS.
-
-## 2. CSRF Protection
-
-GoSPA includes robust CSRF (Cross-Site Request Forgery) protection for both AJAX/WebSocket requests and standard HTML form submissions.
-
-### How it Works
-1. `CSRFSetTokenMiddleware` sets an `HttpOnly`, `SameSite: Strict` cookie named `csrf_token`.
-2. `CSRFTokenMiddleware` validates incoming mutating requests (POST, PUT, DELETE, PATCH).
-
-### Usage
-- **AJAX/Fetch**: Include the `X-CSRF-Token` header.
-- **HTML Forms**: Include a hidden input named `_csrf`. GoSPA provides the token in the global state as `window.__GOSPA_CSRF_TOKEN__`.
-
-```html
-<form method="POST" action="/update">
-  <input type="hidden" name="_csrf" value={csrfToken} />
-  <!-- ... -->
-</form>
-```
-
-## 3. Content Security Policy (CSP)
-
-GoSPA supports strict CSPs by automatically generating per-request **Nonces**.
-
-### Automated Nonce Injection
-GoSPA's `SecurityHeadersMiddleware` generates a unique nonce for every request. This nonce is:
-1. Added to the `Content-Security-Policy` header.
-2. Injected into the framework-managed `<script>` tags for state hydration and runtime initialization.
-
-### Configuring a Strict Policy
-Instead of using `'unsafe-inline'`, use the `{nonce}` placeholder in your policy:
-
-```go
-config.ContentSecurityPolicy = "default-src 'self'; script-src 'self' 'nonce-{nonce}'; ..."
-```
-
-## 4. Authentication (Auth Plugin)
-
-The optional Auth plugin provides JWT-based session management.
-
-- **Storage**: Sessions are stored in a `store.Storage` backend (Memory by default, Redis recommended for multi-node setups).
-- **Cookies**: Session tokens are stored in `HttpOnly`, `Secure` cookies to mitigate XSS-based token theft.
-
-## 5. SFC Trust Boundary
-
-`.gospa` (Single File Components) are compiled into Go source code. 
-
-> [!CAUTION]
-> **Never compile untrusted SFCs.**
-> Treat SFCs as part of your application source code. If you must compile SFCs from semi-trusted sources, enable `SafeMode` in common compiler options to restrict available Go primitives within the component script.
-
-## 6. Real-time Security (WebSockets)
-
-- **Rate Limiting**: GoSPA includes a built-in token-bucket rate limiter for WebSocket connections to prevent DoS.
-- **Message Validation**: Inbound WebSocket messages are validated for JSON nesting depth and field lengths to prevent stack overflow and memory exhaustion attacks.
-
-## 7. XSS Mitigation (New)
-
-GoSPA enforces a "Secure by Default" posture for HTML rendering to mitigate Cross-Site Scripting (XSS) attacks.
-
-### Mandatory Sanitization
-All partial DOM updates during SPA navigation and dynamic HTML bindings (`data-bind="html:*"`) are automatically scrubbed using `DOMPurify`. This prevents the execution of malicious scripts injected into server-side HTML fragments.
-
-### Trust Boundary
-If you absolutely must render raw, unsanitized HTML, you must explicitly opt-out by using a trusted wrapper or dedicated primitive. **Always verify the source of untrusted HTML before bypassing the sanitizer.**
-
-## 8. Prototype Pollution Protection
-
-When hydrating component state from the server, GoSPA uses a `safeJSONParse` utility. This utility automatically strips dangerous keys like `__proto__`, `constructor`, and `prototype` from the incoming JSON payload, preventing attackers from hijacking the JavaScript prototype chain.
-
-## 9. Sensitive Data Redaction
-
-To prevent accidental data leakage during development, the GoSPA error overlay automatically redacts sensitive headers in its UI representation. Redacted headers include:
-- `Authorization`
-- `Cookie` / `Set-Cookie`
-- `X-Api-Key`
-- `X-Csrf-Token`
-
-## 10. SafeMode (Compiler Sandboxing)
-
-GoSPA includes a `SafeMode` option for the SFC compiler to prevent "sandbox escapes" when compiling `.gospa` files from semi-trusted sources (e.g. CMS-managed components).
-
-### Protected Resources
-When `SafeMode` is enabled, the compiler enforces the following restrictions:
-
-1. **Blocked Packages**: Any `import` statement referencing dangerous packages is blocked. 
-    - `os`, `os/exec` (Prevents RCE)
-    - `unsafe`, `reflect` (Prevents memory manipulation)
-    - `syscall` (Prevents direct OS interaction)
-    - `net`, `http` (Prevents SSRF/Exfiltration)
-    - **CGo**: `import "C"` is strictly forbidden.
-    - **Dot Imports**: `import . "pkg"` is blocked to prevent namespace pollution and shadowing of built-ins.
-
-2. **Dangerous Call Validation**: The compiler uses regex-based validation to block calls that could lead to resource exhaustion or bypasses, even if the package itself isn't blocked (e.g. certain `fmt` or `log` patterns).
-
-3. **Restricted Variable Access**: Runes are limited to the component's internal scope.
-
-### Enabling SafeMode
-```go
-opts := compiler.CompileOptions{
-    SafeMode: true,
-    // ...
-}
-```
-
-> [!WARNING]
-> While `SafeMode` provides a significant layer of defense, Go is a powerful language. **Never compile truly malicious code.** SafeMode is intended for *semi-trusted* environments where you want to prevent accidental or common malicious patterns from compromised configuration sources.
-
-
-<!-- FILE: docs/hmr.md -->
-================================================================================
-
-# Hot Module Replacement (HMR)
-
-GoSPA includes a built-in HMR system that allows you to update your application in real-time without losing state.
-
-## How it Works
-
-The HMR system consists of three parts:
-1.  **File Watcher**: Monitors your source files (`.templ`, `.go`, `.ts`, `.js`, `.css`) for changes.
-2.  **Server Hub**: Orchestrates updates and broadcasts change events to connected clients.
-3.  **Client Runtime**: Receives update events and applies them dynamically to the DOM.
-
-## Configuration
-
-HMR is enabled by default in development mode. You can configure it in your `gospa.Config`:
-
-```go
-app := gospa.New(gospa.Config{
-    DevMode: true,
-    HMR: gospa.HMRConfig{
-        Enabled:      true,
-        WatchPaths:   []string{"./routes", "./islands", "./static"},
-        DebounceTime: 500 * time.Millisecond,
+GoSPA.init({
+    wsUrl: "/_gospa/ws",
+    debug: true,
+    hydration: {
+        mode: "idle", // 'immediate', 'idle', or 'visible'
+        timeout: 5000,
     },
-})
+});
 ```
 
-## State Preservation
+### Automatic Initialization
+If you add the `data-gospa-auto` attribute to your `<html>` or `<body>` tag, GoSPA will automatically scan and initialize your application on DOM ready.
 
-GoSPA's HMR system is designed to preserve your application's reactive state across updates. When a component is updated, its state is serialized, stored, and then re-applied to the new version of the component.
+## Hydration
 
-### Registering for State Preservation
+Hydration is the process of attaching reactive logic to server-rendered HTML. GoSPA supports three main hydration modes:
 
-You can manually register state for preservation using the `window.__gospaHMR` API:
+1.  **Immediate**: Hydrate all islands as soon as the runtime loads.
+2.  **Idle**: Hydrate islands only when the browser is idle (using `requestIdleCallback`).
+3.  **Visible**: Hydrate islands only when they enter the viewport (using `IntersectionObserver`).
+
+### Strategic Hydration
+For large applications, you can also manually trigger hydration:
+
+```typescript
+import { hydrateIsland } from "@gospa/client";
+
+// Hydrate a specific island by ID or Name
+await hydrateIsland("shopping-cart");
+```
+
+## Lifecycle Hooks
+
+GoSPA component islands provide several hooks to interact with the runtime's lifecycle:
+
+- **`onMount`**: Runs once after the island has been hydrated and attached to the DOM.
+- **`onDestroy`**: Runs before the island is removed from the DOM or the page is unnavigated.
+- **`onUpdate`**: Runs whenever a reactive dependency inside the island's scope changes.
+
+## Global Object
+
+In the browser, GoSPA exposes a global `GoSPA` object that allows you to interact with the runtime from existing legacy scripts or the browser's developer console.
 
 ```javascript
-if (import.meta.hot) {
-    import.meta.hot.dispose((data) => {
-        data.myState = currentLocalState;
-    });
+window.GoSPA.inspect(); // Opens the debug panel
+```
+
+
+<!-- FILE: docs/params.md -->
+================================================================================
+
+# Route Parameters
+
+GoSPA supports dynamic route parameters that allow you to capture segments of a URL and use them in your components and data loaders.
+
+## Parameter Syntax
+
+### 1. File-System Syntax
+Used in your `routes/` directory structure:
+- **Named Parameters**: `[id]`. Matches a single segment.
+- **Optional Parameters**: `[[id]]`. Matches zero or one segment.
+- **Catch-all Parameters**: `[...rest]`. Matches one or more segments.
+- **Optional Catch-all**: `[[...rest]]`. Matches zero or more segments.
+
+### 2. Programmatic / Router Syntax
+Used when matching routes internally, in `BuildURL`, or when manually registering routes:
+- **Named Parameters**: `:id`.
+- **Optional Parameters**: `:id?`.
+- **Catch-all Parameters**: `*rest`.
+- **Catch-all (Tail)**: `*`.
+
+## Accessing Parameters
+
+### In Components
+
+Parameters are passed directly to your component functions as part of the `props` map.
+
+```svelte
+// routes/blog/[slug]/page.templ
+<script lang="go">
+    param slug string
+</script>
+
+<template>
+    <h1>Post: {slug}</h1>
+</template>
+```
+
+### In Data Loaders
+
+Use the `LoadContext` to access parameters in your `+page.server.go` or `+layout.server.go` files.
+
+```go
+func Load(c routing.LoadContext) (map[string]interface{}, error) {
+    slug := c.Param("slug")
+    post, err := db.GetPostBySlug(slug)
+    return map[string]interface{}{
+        "post": post,
+    }, err
 }
 ```
 
-## Troubleshooting
+## Priority & Matching
 
-- **Full Reloads**: If the HMR system cannot safely apply an update (e.g., changes to internal framework logic), it will trigger a full page reload to ensure consistency.
-- **Connection Issues**: The HMR client will attempt to reconnect automatically if the WebSocket connection is lost.
+GoSPA uses a scoring system to determine which route matches a given URL:
 
+1. **Static segments** have the highest priority.
+2. **Required dynamic segments** (`:param`) are next.
+3. **Optional dynamic segments** (`:?param`) are lower priority.
+4. **Catch-all segments** (`*param`) have the lowest priority.
 
-<!-- FILE: docs/errors.md -->
-================================================================================
-
-# Error Handling
-
-GoSPA provides a robust error handling system designed to maintain application reliability across server and client boundaries.
-
-## Server-Side Errors
-
-### Error Boundaries
-GoSPA uses a `withErrorBoundary` utility to wrap routes and components. If a component crashes during rendering, the framework will catch the error and display a fallback component.
-
-```go
-routing.RegisterError("/dashboard", MyDashboardError)
-```
-
-### Dev Mode Error Overlay
-In development mode, a full-page overlay displays the error message, stack trace, and relevant request metadata. Sensitive information like `Authorization` and `Cookie` headers are automatically redacted for security.
-
-## Client-Side Errors
-
-### Boundary Management
-The client-side runtime mirrors the server's error boundaries. If a client-side component crashes (e.g., in `onMount`), the runtime will catch the error and attempt to recover or display a fallback.
-
-```typescript
-import { onComponentError } from "@gospa/client";
-
-onComponentError((id, error) => {
-    console.error(`Component ${id} failed:`, error);
-});
-```
-
-### WebSocket Failures
-GoSPA automatically handles WebSocket connection failures with exponential backoff and automatic reconnection. In-flight messages are queued and re-sent once the connection is restored.
-
-
-<!-- FILE: docs/devtools.md -->
-================================================================================
-
-# DevTools & Debugging
-
-GoSPA includes an integrated suite of development tools to help you build, debug, and monitor your application's state, connectivity, and performance.
-
-## Error Overlay
-
-In development mode (`DevMode: true`), GoSPA will display a full-page error overlay if a server-side route or component crashes.
-
-### Key Features
-- **Stack Trace**: Directly see where in your Go or Templ code the error occurred.
-- **Sensitive Header Redaction**: For security, headers like `Authorization` and `Cookie` are automatically redacted before being displayed.
-- **Auto-Reconnection**: If the server restarts (e.g., during development), the overlay will automatically reload once the server is back online.
-
-## HMR (Hot Module Replacement)
-
-HMR is enabled by default in development mode. It allows you to update your application's code and see changes in real-time without losing state.
-
-### State Persistence
-GoSPA's HMR system is carefully designed to preserve your reactive runes. When a component is updated, its state is serialized and re-applied to the new version, ensuring a seamless editing experience.
-
-## Performance Monitoring
-
-The client-side runtime includes a performance monitoring utility to track hydration time, state update latency, and network performance.
-
-```typescript
-import { measure } from "@gospa/client";
-
-const result = await measure("heavyTask", async () => {
-    // Perform complex logic...
-});
-```
-
-## Debug Panel
-
-You can toggle a built-in debug panel by pressing `Ctrl + Shift + D` (or your configured hotkey). This panel allows you to:
-- **Inspect State**: View the current values of all global and component-level reactive runes.
-- **Monitor WebSockets**: See real-time message traffic and connection status.
-- **Hydration Stats**: Check how many island components were hydrated and their individual hydration times.
-- **Memory Usage**: Monitor the number of active `Effect` and `EffectScope` instances.
-
-
-<!-- FILE: docs/README.md -->
-================================================================================
-
-# GoSPA Documentation
-
-This directory is the **authoritative** Markdown documentation for GoSPA.
-
-## Source-of-truth policy
-
-- `docs/**` is canonical for technical content, APIs, and version requirements.
-- `website/routes/docs/**` is a rendered presentation layer and must not diverge semantically from `docs/**`.
-- Any docs change that affects URLs, taxonomy, or prerequisites must update both markdown links and website routes/search index in the same change.
-
-## How to use these docs
-
-1. **Start:** [Quick start](getstarted/quickstart.md)
-2. **Configure:** [Configuration reference](configuration.md)
-3. **API surface:** [Core API](api.md) + [CLI](cli.md) + [Plugins](plugins.md)
-4. **Ship:** [Security Guide](security.md), [Troubleshooting](troubleshooting.md)
-
-## Structure
-
-```
-docs/
-├── api.md               # Fiber & Client API Reference
-├── routing.md           # File-based routing & rendering
-├── state-management.md  # Reactive state synchronization
-├── reactive-primitives.md # Rune, Derived, Effect, EffectScope
-├── api/remote-actions.md # Type-safe RPC / Remote Actions
-├── api/websocket.md      # High-performance real-time sync
-├── api/sse.md            # Server-Sent Events guide
-├── plugins.md           # Framework extensions & lifecycle
-├── devtools.md          # Debugging, Error Overlay, HMR
-├── runtime.md           # Client runtime lifecycle & hydration
-├── security.md          # Security hardening & best practices
-├── errors.md            # Error handling & boundaries
-├── gospasfc.md          # GoSPA Single File Components
-├── params.md            # Route parameters & query strings
-├── root.md              # Root layout & nesting
-└── faq.md               # Frequently asked questions
-```
-
-## Quick navigation
-
-### Getting started
-- [Installation](getstarted/installation.md)
-- [Quick start](getstarted/quickstart.md)
-
-### Core concepts
-- [Reactive Primitives](reactive-primitives.md)
-- [State Management](state-management.md)
-- [Components & Islands](islands.md)
-- [File-based Routing](routing.md)
-- [Remote Actions](api/remote-actions.md)
-- [Single File Components (.gospa)](gospasfc.md)
-
-### Advanced Features
-- [Security & Hardening](security.md)
-- [Realtime (WebSockets)](api/websocket.md)
-- [Server-Sent Events (SSE)](api/sse.md)
-- [Plugin Architecture](plugins.md)
-- [Dev Tools & HMR](devtools.md)
-- [Runtime Lifecycle](runtime.md)
-
-### Reference
-- [Full API Reference](api.md)
-- [Configuration Reference](configuration.md)
-- [CLI Reference](cli.md)
-
-### Support
-- [General Troubleshooting](troubleshooting.md)
-- [FAQ](faq.md)
-- [Error Handling](errors.md)
-
-
-<!-- FILE: docs/faq.md -->
-================================================================================
-
-# FAQ (Frequently Asked Questions)
-
-## Core Concepts
-
-### Is GoSPA a Single Page Application (SPA)?
-Yes, GoSPA is a Single Page Application framework that uses file-based routing and real-time state synchronization to deliver an interactive user experience without full-page reloads.
-
-### Does GoSPA support SSR?
-Yes, Server-Side Rendering (SSR) is the default rendering strategy for all GoSPA routes. This ensures optimal performance and SEO out of the box.
-
-### Can I use GoSPA with existing Go/Fiber projects?
-Yes! GoSPA is designed to be integrated into any existing Go/Fiber application. You can use it for specific routes or as the foundation for your entire UI.
-
-## Reactivity
-
-### Is GoSPA's reactivity system similar to Svelte?
-Yes, GoSPA's reactivity is inspired by Svelte 5's signal-based architecture (`$state`, `$derived`, `$effect`). It uses modern JavaScript Proxies to achieve fine-grained, auto-tracking reactivity.
-
-### How do I prevent memory leaks?
-GoSPA automatically manages reactive scopes for all island components. If you are building custom advanced logic, always use the `EffectScope` primitive to group and dispose of effects.
-
-## Security
-
-### Does GoSPA include CSRF protection?
-Yes! GoSPA includes built-in CSRF protection that is compatible with both standard HTML forms and dynamic AJAX/Remote Action requests.
-
-### Is GoSPA secure against XSS?
-Yes. GoSPA enforces mandatory HTML sanitization using `DOMPurify` for all navigation and dynamic HTML bindings. This "Secure by Default" posture significantly reduces the risk of script injection.
+If multiple routes match, the one with the highest priority (lowest score) is chosen.
 
 
 <!-- FILE: docs/cli.md -->
@@ -9069,6 +8953,7 @@ gospa doctor [options]
 | Flag | Short | Default | Description |
 |------|-------|---------|-------------|
 | `--routes-dir` | - | `./routes` | Routes directory to validate |
+| `--strict` | - | `false` | Enable strict preflight checks (CSP, WS, prefork, route graph, SFC diagnostics) |
 | `--help` | `-h` | - | Show help for this command |
 
 ### What it checks
@@ -9077,6 +8962,12 @@ gospa doctor [options]
 2. **Project Layout**: `go.mod`, `main.go`, and routes directory existence.
 3. **Runtime**: Presence of client runtime entrypoints (`src/runtime.ts`, etc.).
 4. **Dependencies**: `package.json` for Bun and system libraries like `libwebp`/`libheif` (via `pkg-config`).
+5. **Strict mode (`--strict`)**:
+   - route graph artifacts (`generated/routes.ts`)
+   - CSP nonce placeholder checks
+   - websocket path sanity
+   - prefork storage/pubsub consistency
+   - `.gospa` compile diagnostics (line/column + suggested fixes)
 
 ### Examples
 
@@ -9086,6 +8977,9 @@ gospa doctor
 
 # Validate custom routes directory
 gospa doctor --routes-dir ./src/routes
+
+# Strict preflight gate
+gospa doctor --strict
 ```
 
 ---
@@ -9251,6 +9145,222 @@ gospa build
 # 7. Run production binary
 ./dist/server
 ```
+
+
+<!-- FILE: docs/devtools.md -->
+================================================================================
+
+# DevTools & Debugging
+
+GoSPA includes an integrated suite of development tools to help you build, debug, and monitor your application's state, connectivity, and performance.
+
+## Error Overlay
+
+In development mode (`DevMode: true`), GoSPA will display a full-page error overlay if a server-side route or component crashes.
+
+### Key Features
+- **Stack Trace**: Directly see where in your Go or Templ code the error occurred.
+- **Sensitive Header Redaction**: For security, headers like `Authorization` and `Cookie` are automatically redacted before being displayed.
+- **Auto-Reconnection**: If the server restarts (e.g., during development), the overlay will automatically reload once the server is back online.
+
+## HMR (Hot Module Replacement)
+
+HMR is enabled by default in development mode. It allows you to update your application's code and see changes in real-time without losing state.
+
+### State Persistence
+GoSPA's HMR system is carefully designed to preserve your reactive runes. When a component is updated, its state is serialized and re-applied to the new version, ensuring a seamless editing experience.
+
+## Performance Monitoring
+
+The client-side runtime includes a performance monitoring utility to track hydration time, state update latency, and network performance.
+
+```typescript
+import { measure } from "@gospa/client";
+
+const result = await measure("heavyTask", async () => {
+    // Perform complex logic...
+});
+```
+
+## Debug Panel
+
+You can toggle a built-in debug panel by pressing `Ctrl + Shift + D` (or your configured hotkey). This panel allows you to:
+- **Inspect State**: View the current values of all global and component-level reactive runes.
+- **Monitor WebSockets**: See real-time message traffic and connection status.
+- **Hydration Stats**: Check how many island components were hydrated and their individual hydration times.
+- **Memory Usage**: Monitor the number of active `Effect` and `EffectScope` instances.
+
+
+<!-- FILE: docs/README.md -->
+================================================================================
+
+# GoSPA Documentation
+
+This directory is the **authoritative** Markdown documentation for GoSPA.
+
+## Source-of-truth policy
+
+- `docs/**` is canonical for technical content, APIs, and version requirements.
+- `website/routes/docs/**` is a rendered presentation layer and must not diverge semantically from `docs/**`.
+- Any docs change that affects URLs, taxonomy, or prerequisites must update both markdown links and website routes/search index in the same change.
+
+## How to use these docs
+
+1. **Start:** [Quick start](getstarted/quickstart.md)
+2. **Configure:** [Configuration reference](configuration.md)
+3. **API surface:** [Core API](api.md) + [CLI](cli.md) + [Plugins](plugins.md)
+4. **Ship:** [Security Guide](security.md), [Troubleshooting](troubleshooting.md)
+
+## Structure
+
+```
+docs/
+├── api.md               # Fiber & Client API Reference
+├── routing.md           # File-based routing & rendering
+├── state-management.md  # Reactive state synchronization
+├── reactive-primitives.md # Rune, Derived, Effect, EffectScope
+├── api/remote-actions.md # Type-safe RPC / Remote Actions
+├── api/websocket.md      # High-performance real-time sync
+├── api/sse.md            # Server-Sent Events guide
+├── plugins.md           # Framework extensions & lifecycle
+├── devtools.md          # Debugging, Error Overlay, HMR
+├── runtime.md           # Client runtime lifecycle & hydration
+├── security.md          # Security hardening & best practices
+├── errors.md            # Error handling & boundaries
+├── gospasfc.md          # GoSPA Single File Components
+├── params.md            # Route parameters & query strings
+├── root.md              # Root layout & nesting
+└── faq.md               # Frequently asked questions
+```
+
+## Quick navigation
+
+### Getting started
+- [Installation](getstarted/installation.md)
+- [Quick start](getstarted/quickstart.md)
+
+### Core concepts
+- [Reactive Primitives](reactive-primitives.md)
+- [State Management](state-management.md)
+- [Components & Islands](islands.md)
+- [File-based Routing](routing.md)
+- [Remote Actions](api/remote-actions.md)
+- [Single File Components (.gospa, alpha)](gospasfc.md)
+
+### Advanced Features
+- [Security & Hardening](security.md)
+- [Realtime (WebSockets)](api/websocket.md)
+- [Server-Sent Events (SSE)](api/sse.md)
+- [Plugin Architecture](plugins.md)
+- [Dev Tools & HMR](devtools.md)
+- [Runtime Lifecycle](runtime.md)
+- [Fiber Migration Checklist](migration/fiber-to-gospa.md)
+
+### Reference
+- [Full API Reference](api.md)
+- [Configuration Reference](configuration.md)
+- [CLI Reference](cli.md)
+
+### Support
+- [General Troubleshooting](troubleshooting.md)
+- [FAQ](faq.md)
+- [Error Handling](errors.md)
+
+
+<!-- FILE: docs/faq.md -->
+================================================================================
+
+# FAQ (Frequently Asked Questions)
+
+## Core Concepts
+
+### Is GoSPA a Single Page Application (SPA)?
+Yes, GoSPA is a Single Page Application framework that uses file-based routing and real-time state synchronization to deliver an interactive user experience without full-page reloads.
+
+### Does GoSPA support SSR?
+Yes, Server-Side Rendering (SSR) is the default rendering strategy for all GoSPA routes. This ensures optimal performance and SEO out of the box.
+
+### Can I use GoSPA with existing Go/Fiber projects?
+Yes! GoSPA is designed to be integrated into any existing Go/Fiber application. You can use it for specific routes or as the foundation for your entire UI.
+
+## Reactivity
+
+### Is GoSPA's reactivity system similar to Svelte?
+Yes, GoSPA's reactivity is inspired by Svelte 5's signal-based architecture (`$state`, `$derived`, `$effect`). It uses modern JavaScript Proxies to achieve fine-grained, auto-tracking reactivity.
+
+### How do I prevent memory leaks?
+GoSPA automatically manages reactive scopes for all island components. If you are building custom advanced logic, always use the `EffectScope` primitive to group and dispose of effects.
+
+## Security
+
+### Does GoSPA include CSRF protection?
+Yes! GoSPA includes built-in CSRF protection that is compatible with both standard HTML forms and dynamic AJAX/Remote Action requests.
+
+### Is GoSPA secure against XSS?
+Yes, with the default runtime policy. Dynamic HTML bindings and stream HTML updates escape content by default, and raw HTML rendering requires an explicit trusted wrapper.
+
+
+<!-- FILE: docs/root.md -->
+================================================================================
+
+# Framework Root & Layouts
+
+GoSPA's core architecture begins with a root layout component that wraps every page and is the entry point for both server-side rendering and client-side hydration.
+
+## Root Layout
+
+The root layout is typically defined in `routes/layout.templ`. This is where you declare your HTML document structure, including the `<html>`, `<head>`, and `<body>` tags.
+
+```templ
+package routes
+
+import "github.com/aydenstechdungeon/gospa/fiber"
+
+templ RootLayout(children templ.Component, props map[string]interface{}) {
+    <!DOCTYPE html>
+    <html lang="en" data-gospa-auto>
+        <head>
+            <meta charset="utf-8" />
+            <title>My GoSPA App</title>
+            @fiber.RuntimeScript()
+        </head>
+        <body>
+            <div id="root">
+                @children
+            </div>
+        </body>
+    </html>
+}
+```
+
+## Nested Layouts
+
+Directories under `routes/` can also contain their own `layout.templ` files. These layouts are automatically nested, allowing you to create complex UI hierarchies with ease.
+
+### Layout Nesting example:
+1.  **`routes/layout.templ`**: The top-level layout.
+2.  **`routes/admin/layout.templ`**: A layout for all admin-specific pages.
+3.  **`routes/admin/settings/page.templ`**: The settings page.
+
+The `settings` page will be rendered inside the `admin` layout, which will then be rendered inside the `root` layout.
+
+## Data Loading for Layouts
+
+Like pages, layouts can have their own server-side `Load` function to fetch data that is common to all their children (e.g., user session or site-wide configuration).
+
+```go
+func Load(c routing.LoadContext) (map[string]interface{}, error) {
+    user := getCurrentUser()
+    return map[string]interface{}{"user": user}, nil
+}
+```
+
+## Special Components
+
+The root layout is the ideal place to include global components that are used on every page:
+- **`@fiber.RuntimeScript()`**: Injects the GoSPA client-side runtime.
+- **`@fiber.HMRScript()`**: Injects the HMR connection in development mode.
+- **Global Error Handlers**: Define how fatal rendering crashes are displayed at the top level.
 
 
 <!-- FILE: docs/components.md -->
@@ -9845,132 +9955,643 @@ This order is critical for **State Propagation**. If a parent component's `$effe
 > Use the `OnMount` hook to fetch data or initialize third-party libraries that require child DOM elements to be present.
 
 
-<!-- FILE: docs/runtime.md -->
+<!-- FILE: docs/security.md -->
 ================================================================================
 
-# Client Runtime Lifecycle
+# Security Guide
 
-GoSPA's client-side runtime is a high-performance, modular system that handles reactivity, hydration, and communication.
+GoSPA is designed with security as a first-class citizen. This guide outlines the built-in security features and your responsibilities as a developer to ensure a secure deployment.
 
-## Initialization
+## 1. Production Hardening
 
-The GoSPA runtime is usually initialized automatically when a client lands on a GoSPA page.
+When deploying GoSPA to production, ensure that `DevMode` is set to `false` in your `gospa.Config`.
 
-```typescript
-import GoSPA from "@gospa/client";
+- **Insecure Settings Enforcement**: In production, GoSPA automatically ignores `AllowInsecureWS` (forcing `wss://`) and `AllowUnauthenticatedRemoteActions`.
+- **Logger**: Use a structured logger (`slog.Default()` or similar) to track security events without leaking sensitive data in logs.
 
-GoSPA.init({
-    wsUrl: "/_gospa/ws",
-    debug: true,
-    hydration: {
-        mode: "idle", // 'immediate', 'idle', or 'visible'
-        timeout: 5000,
-    },
-});
+### Checklist
+- [ ] Set `DevMode: false`.
+- [ ] Provide a strong `JWT_SECRET` environment variable (for the Auth plugin).
+- [ ] Configure `PublicOrigin` to match your production domain.
+- [ ] Set `AllowedOrigins` to restrict CORS.
+
+## 2. CSRF Protection
+
+GoSPA includes robust CSRF (Cross-Site Request Forgery) protection for both AJAX/WebSocket requests and standard HTML form submissions.
+
+### How it Works
+1. `CSRFSetTokenMiddleware` sets an `HttpOnly`, `SameSite: Strict` cookie named `csrf_token`.
+2. `CSRFTokenMiddleware` validates incoming mutating requests (POST, PUT, DELETE, PATCH).
+
+### Usage
+- **AJAX/Fetch**: Include the `X-CSRF-Token` header.
+- **HTML Forms**: Include a hidden input named `_csrf`. GoSPA provides the token in the global state as `window.__GOSPA_CSRF_TOKEN__`.
+
+```html
+<form method="POST" action="/update">
+  <input type="hidden" name="_csrf" value={csrfToken} />
+  <!-- ... -->
+</form>
 ```
 
-### Automatic Initialization
-If you add the `data-gospa-auto` attribute to your `<html>` or `<body>` tag, GoSPA will automatically scan and initialize your application on DOM ready.
+## 3. Content Security Policy (CSP)
 
-## Hydration
+GoSPA supports strict CSPs by automatically generating per-request **Nonces**.
 
-Hydration is the process of attaching reactive logic to server-rendered HTML. GoSPA supports three main hydration modes:
+### Automated Nonce Injection
+GoSPA's `SecurityHeadersMiddleware` generates a unique nonce for every request. This nonce is:
+1. Added to the `Content-Security-Policy` header.
+2. Injected into the framework-managed `<script>` tags for state hydration and runtime initialization.
 
-1.  **Immediate**: Hydrate all islands as soon as the runtime loads.
-2.  **Idle**: Hydrate islands only when the browser is idle (using `requestIdleCallback`).
-3.  **Visible**: Hydrate islands only when they enter the viewport (using `IntersectionObserver`).
-
-### Strategic Hydration
-For large applications, you can also manually trigger hydration:
-
-```typescript
-import { hydrateIsland } from "@gospa/client";
-
-// Hydrate a specific island by ID or Name
-await hydrateIsland("shopping-cart");
-```
-
-## Lifecycle Hooks
-
-GoSPA component islands provide several hooks to interact with the runtime's lifecycle:
-
-- **`onMount`**: Runs once after the island has been hydrated and attached to the DOM.
-- **`onDestroy`**: Runs before the island is removed from the DOM or the page is unnavigated.
-- **`onUpdate`**: Runs whenever a reactive dependency inside the island's scope changes.
-
-## Global Object
-
-In the browser, GoSPA exposes a global `GoSPA` object that allows you to interact with the runtime from existing legacy scripts or the browser's developer console.
-
-```javascript
-window.GoSPA.inspect(); // Opens the debug panel
-```
-
-
-<!-- FILE: docs/params.md -->
-================================================================================
-
-# Route Parameters
-
-GoSPA supports dynamic route parameters that allow you to capture segments of a URL and use them in your components and data loaders.
-
-## Parameter Syntax
-
-### 1. File-System Syntax
-Used in your `routes/` directory structure:
-- **Named Parameters**: `[id]`. Matches a single segment.
-- **Optional Parameters**: `[[id]]`. Matches zero or one segment.
-- **Catch-all Parameters**: `[...rest]`. Matches one or more segments.
-- **Optional Catch-all**: `[[...rest]]`. Matches zero or more segments.
-
-### 2. Programmatic / Router Syntax
-Used when matching routes internally, in `BuildURL`, or when manually registering routes:
-- **Named Parameters**: `:id`.
-- **Optional Parameters**: `:id?`.
-- **Catch-all Parameters**: `*rest`.
-- **Catch-all (Tail)**: `*`.
-
-## Accessing Parameters
-
-### In Components
-
-Parameters are passed directly to your component functions as part of the `props` map.
-
-```svelte
-// routes/blog/[slug]/page.templ
-<script lang="go">
-    param slug string
-</script>
-
-<template>
-    <h1>Post: {slug}</h1>
-</template>
-```
-
-### In Data Loaders
-
-Use the `LoadContext` to access parameters in your `+page.server.go` or `+layout.server.go` files.
+### Configuring a Strict Policy
+Instead of using `'unsafe-inline'`, use the `{nonce}` placeholder in your policy:
 
 ```go
-func Load(c routing.LoadContext) (map[string]interface{}, error) {
-    slug := c.Param("slug")
-    post, err := db.GetPostBySlug(slug)
-    return map[string]interface{}{
-        "post": post,
-    }, err
+config.ContentSecurityPolicy = "default-src 'self'; script-src 'self' 'nonce-{nonce}'; ..."
+```
+
+### Common Nonce Pitfall
+If you use a custom root layout, CSP can still fail even with `SecurityHeadersMiddleware` enabled.
+
+Typical failure mode:
+- Browser logs `Refused to execute inline script` or `Refused to load the script`.
+- Framework scripts load, but custom inline/module script blocks fail.
+
+Fix:
+1. Keep `'nonce-{nonce}'` in `script-src`.
+2. Add the generated nonce to every custom inline/module script tag.
+
+```templ
+<script src="/static/js/app.js" type="module" nonce={ gospatempl.GetNonce(ctx) }></script>
+<script type="module" nonce={ gospatempl.GetNonce(ctx) }>
+  // custom bootstrap
+</script>
+```
+
+## 4. Authentication (Auth Plugin)
+
+The optional Auth plugin provides JWT-based session management.
+
+- **Storage**: Sessions are stored in a `store.Storage` backend (Memory by default, Redis recommended for multi-node setups).
+- **Cookies**: Session tokens are stored in `HttpOnly`, `Secure` cookies to mitigate XSS-based token theft.
+
+## 5. SFC Trust Boundary
+
+`.gospa` (Single File Components) are compiled into Go source code. 
+
+> [!CAUTION]
+> **Never compile untrusted SFCs.**
+> Treat SFCs as part of your application source code. If you must compile SFCs from semi-trusted sources, enable `SafeMode` in common compiler options to restrict available Go primitives within the component script.
+
+## 6. Real-time Security (WebSockets)
+
+- **Rate Limiting**: GoSPA includes a built-in token-bucket rate limiter for WebSocket connections to prevent DoS.
+- **Message Validation**: Inbound WebSocket messages are validated for JSON nesting depth and field lengths to prevent stack overflow and memory exhaustion attacks.
+
+## 7. XSS Mitigation (New)
+
+GoSPA enforces a "Secure by Default" posture for HTML rendering to mitigate Cross-Site Scripting (XSS) attacks.
+
+### HTML Rendering Policy
+GoSPA does not bundle a runtime sanitizer by default. Dynamic HTML bindings and stream HTML updates escape content unless you explicitly mark content as trusted with runtime policy helpers.
+
+### Trust Boundary
+If you absolutely must render raw HTML, only pass server-controlled content through trusted wrappers. Never pass user input directly into HTML bindings.
+
+## 8. Prototype Pollution Protection
+
+When hydrating component state from the server, GoSPA uses a `safeJSONParse` utility. This utility automatically strips dangerous keys like `__proto__`, `constructor`, and `prototype` from the incoming JSON payload, preventing attackers from hijacking the JavaScript prototype chain.
+
+## 9. Sensitive Data Redaction
+
+To prevent accidental data leakage during development, the GoSPA error overlay automatically redacts sensitive headers in its UI representation. Redacted headers include:
+- `Authorization`
+- `Cookie` / `Set-Cookie`
+- `X-Api-Key`
+- `X-Csrf-Token`
+
+## 10. SafeMode (Compiler Sandboxing)
+
+GoSPA includes a `SafeMode` option for the SFC compiler to prevent "sandbox escapes" when compiling `.gospa` files from semi-trusted sources (e.g. CMS-managed components).
+
+### Protected Resources
+When `SafeMode` is enabled, the compiler enforces the following restrictions:
+
+1. **Blocked Packages**: Any `import` statement referencing dangerous packages is blocked. 
+    - `os`, `os/exec` (Prevents RCE)
+    - `unsafe`, `reflect` (Prevents memory manipulation)
+    - `syscall` (Prevents direct OS interaction)
+    - `net`, `http` (Prevents SSRF/Exfiltration)
+    - **CGo**: `import "C"` is strictly forbidden.
+    - **Dot Imports**: `import . "pkg"` is blocked to prevent namespace pollution and shadowing of built-ins.
+
+2. **Dangerous Call Validation**: The compiler uses regex-based validation to block calls that could lead to resource exhaustion or bypasses, even if the package itself isn't blocked (e.g. certain `fmt` or `log` patterns).
+
+3. **Restricted Variable Access**: Runes are limited to the component's internal scope.
+
+### Enabling SafeMode
+```go
+opts := compiler.CompileOptions{
+    SafeMode: true,
+    // ...
 }
 ```
 
-## Priority & Matching
+> [!WARNING]
+> While `SafeMode` provides a significant layer of defense, Go is a powerful language. **Never compile truly malicious code.** SafeMode is intended for *semi-trusted* environments where you want to prevent accidental or common malicious patterns from compromised configuration sources.
 
-GoSPA uses a scoring system to determine which route matches a given URL:
 
-1. **Static segments** have the highest priority.
-2. **Required dynamic segments** (`:param`) are next.
-3. **Optional dynamic segments** (`:?param`) are lower priority.
-4. **Catch-all segments** (`*param`) have the lowest priority.
+<!-- FILE: docs/errors.md -->
+================================================================================
 
-If multiple routes match, the one with the highest priority (lowest score) is chosen.
+# Error Handling
+
+GoSPA provides a robust error handling system designed to maintain application reliability across server and client boundaries.
+
+## Server-Side Errors
+
+### Error Boundaries
+GoSPA uses a `withErrorBoundary` utility to wrap routes and components. If a component crashes during rendering, the framework will catch the error and display a fallback component.
+
+```go
+routing.RegisterError("/dashboard", MyDashboardError)
+```
+
+### Dev Mode Error Overlay
+In development mode, a full-page overlay displays the error message, stack trace, and relevant request metadata. Sensitive information like `Authorization` and `Cookie` headers are automatically redacted for security.
+
+## Client-Side Errors
+
+### Boundary Management
+The client-side runtime mirrors the server's error boundaries. If a client-side component crashes (e.g., in `onMount`), the runtime will catch the error and attempt to recover or display a fallback.
+
+```typescript
+import { onComponentError } from "@gospa/client";
+
+onComponentError((id, error) => {
+    console.error(`Component ${id} failed:`, error);
+});
+```
+
+### WebSocket Failures
+GoSPA automatically handles WebSocket connection failures with exponential backoff and automatic reconnection. In-flight messages are queued and re-sent once the connection is restored.
+
+
+<!-- FILE: docs/hmr.md -->
+================================================================================
+
+# Hot Module Replacement (HMR)
+
+GoSPA includes a built-in HMR system that allows you to update your application in real-time without losing state.
+
+## How it Works
+
+The HMR system consists of three parts:
+1.  **File Watcher**: Monitors your source files (`.templ`, `.go`, `.ts`, `.js`, `.css`) for changes.
+2.  **Server Hub**: Orchestrates updates and broadcasts change events to connected clients.
+3.  **Client Runtime**: Receives update events and applies them dynamically to the DOM.
+
+## Configuration
+
+HMR is enabled by default in development mode. You can configure it in your `gospa.Config`:
+
+```go
+app := gospa.New(gospa.Config{
+    DevMode: true,
+    HMR: gospa.HMRConfig{
+        Enabled:      true,
+        WatchPaths:   []string{"./routes", "./islands", "./static"},
+        DebounceTime: 500 * time.Millisecond,
+    },
+})
+```
+
+## State Preservation
+
+GoSPA's HMR system is designed to preserve your application's reactive state across updates. When a component is updated, its state is serialized, stored, and then re-applied to the new version of the component.
+
+### Registering for State Preservation
+
+You can manually register state for preservation using the `window.__gospaHMR` API:
+
+```javascript
+if (import.meta.hot) {
+    import.meta.hot.dispose((data) => {
+        data.myState = currentLocalState;
+    });
+}
+```
+
+## Troubleshooting
+
+- **Full Reloads**: If the HMR system cannot safely apply an update, it triggers a full page reload with a reason code:
+  - `runtime-break`
+  - `config-break`
+- **Safe Hot Updates**: Template/style updates are classified as:
+  - `template-safe`
+  - `style-safe`
+- **Connection Issues**: The HMR client will attempt to reconnect automatically if the WebSocket connection is lost.
+
+
+<!-- FILE: docs/internals/runtime.md -->
+================================================================================
+
+# Client Runtime Internals
+
+GoSPA uses a tiered client-side runtime to balance performance and functionality. Depending on your page's complexity, you can choose between different "tiers" to minimize the JavaScript payload.
+
+## Runtime Tiers
+
+| Tier | Size (minified) | Description | Features |
+| :--- | :--- | :--- | :--- |
+| **Micro** | ~1KB | Extremely minimal runtime for static pages. | Core SPA navigation, simple event delegation. |
+| **Core** | ~13KB | Standard runtime for reactive applications. | Runes, Effects, Derived, and basic DOM synchronization. |
+| **Full** | ~52KB | Full-featured runtime for complex SPAs. | WebSockets, state sync, HMR, and advanced UI components. |
+
+## Tier Selection
+
+The runtime tier is determined automatically based on the requirements of the page and its layouts. You can also manually specify a tier in your `.templ` or `.gospa` files using the `@gospa:tier` directive:
+
+```svelte
+// page.templ
+// @gospa:tier core
+
+<template>
+    <h1>My Reactive Page</h1>
+</template>
+```
+
+### Hierarchy Rules
+1. If any component in the layout chain (Root -> Layouts -> Page) requires a higher tier, the higher tier is used.
+2. If `WebSocket` or `Remote Actions` are used, the runtime automatically upgrades to **Full**.
+3. If no reactive primitives are used, it defaults to **Micro**.
+
+## Hydration Mode
+
+GoSPA supports different hydration modes to control when and how components become interactive:
+
+- **Lazy**: Hydrates only when the component enters the viewport (using `IntersectionObserver`).
+- **Immediate**: Hydrates as soon as the runtime loads (default).
+- **Manual**: Hydrates only when explicitly triggered via `GoSPA.hydrate(id)`.
+
+Configured in `gospa.Config`:
+```go
+config.HydrationMode = gospa.HydrationLazy
+```
+
+## Internal Architecture
+
+The runtime is built as a set of ES modules. Critical chunks are preloaded using `Link: rel=modulepreload` headers to reduce Time-to-Interactive (TTI).
+
+- **Reactivity Engine**: Based on a signal-based dependency tracker.
+- **Micro-task Scheduler**: Batches DOM updates to prevent layout thrashing.
+- **GZIP Delta Patching**: When using WebSockets, only the diffs of state changes are sent to the client.
+
+
+<!-- FILE: docs/islands.md -->
+================================================================================
+
+# Island Hydration & Streaming SSR
+
+GoSPA implements a partial hydration (Islands Architecture) system, allowing you to ship static HTML by default and selectively hydrate interactive components based on viewport visibility, idle time, or user interaction.
+
+---
+
+## Islands Architecture
+
+An **island** is an interactive component that is loaded and hydrated on the client. The server renders the HTML placeholder; the client loads the JavaScript module and calls its `hydrate` or `mount` function.
+
+### DOM Attributes
+
+Mark an element as an island using `data-gospa-island`:
+
+```html
+<div
+  data-gospa-island="Counter"
+  data-gospa-mode="visible"
+  data-gospa-priority="high"
+  data-gospa-props='{"initial": 10}'
+  data-gospa-state='{"count": 0}'
+  data-gospa-threshold="200"
+  id="my-counter"
+>
+  <!-- Server-rendered placeholder content here -->
+  <p>Loading...</p>
+</div>
+```
+
+| Attribute | Type | Description |
+|-----------|------|-------------|
+| `data-gospa-island` | string | **Required.** Island name — maps to `/islands/{name}.js` |
+| `data-gospa-mode` | string | Hydration mode (see below, default: `immediate`) |
+| `data-gospa-priority` | string | Queue priority: `high`, `normal`, `low` (default: `normal`) |
+| `data-gospa-threshold` | number | Intersection margin in px for `visible` mode (default: 200) |
+| `data-gospa-defer` | number | ms delay for `idle` mode (default: 2000) |
+| `data-gospa-client-only` | boolean | Skip server rendering entirely |
+| `data-gospa-server-only` | boolean | Never hydrate — render only |
+
+> [!NOTE]
+> Initial props and state are now served via a centralized `window.__GOSPA_DATA__` registry to reduce DOM bloat. Individual `data-gospa-props` attributes are deprecated but still supported for manually injected islands.
+
+### Hydration Modes
+
+| Mode | Description |
+|------|-------------|
+| `immediate` | (Default) Hydrate when the island is discovered |
+| `visible` | Hydrate when the element enters the viewport (uses `IntersectionObserver`) |
+| `idle` | Hydrate when the browser is idle (uses `requestIdleCallback`, falls back to `setTimeout`) |
+| `interaction` | Hydrate on first user event: `mouseenter`, `touchstart`, `focusin`, or `click` |
+| `lazy` | Never auto-hydrate — call `hydrateIsland(id)` manually |
+
+### Priority Queue
+
+When multiple islands are scheduled for `immediate` hydration, they are processed in priority order:
+
+| Priority | Use Case |
+|----------|----------|
+| `high` | Navigation, purchase buttons, search — hydrate first |
+| `normal` | (Default) General interactive components |
+| `low` | Below-the-fold, non-essential widgets |
+
+---
+
+## Island Module Convention
+
+Island modules must be ES modules served at `/islands/{name}.js` (configurable via `moduleBasePath`).
+
+```typescript
+// /islands/Counter.ts
+export default {
+    hydrate(element: Element, props: Record<string, unknown>, state: Record<string, unknown>) {
+        const btn = element.querySelector('button')!;
+        let count = (state.count as number) ?? (props.initial as number) ?? 0;
+
+        const render = () => btn.textContent = `Count: ${count}`;
+        render();
+        btn.addEventListener('click', () => { count++; render(); });
+    }
+}
+```
+
+Both `hydrate` and `mount` are accepted (either on the default export or as named exports). `hydrate` takes precedence.
+
+---
+
+## Event Delegation
+
+GoSPA uses **root-level event delegation** for island events. This means `on:click`, `on:input`, etc., do not attach listeners to individual DOM nodes. Instead, a single listener at the root manages all island events.
+
+Benefits:
+- **Zero Listener Overhead**: Memory usage stays flat regardless of component count.
+- **Instant Interaction**: Events work even before specific island JS has loaded (if handlers are globally registered).
+- **Smooth Hydration**: No need to re-bind listeners after DOM updates.
+
+---
+
+## Client API
+
+### `initIslands(config?) → IslandManager`
+
+Initializes the global island manager. Auto-discovers all `[data-gospa-island]` elements in the DOM.
+
+```typescript
+import { initIslands } from './island.ts';
+
+const manager = initIslands({
+    moduleBasePath: '/islands',   // Where to load island JS from
+    defaultTimeout: 30000,        // ms until hydration times out
+    debug: true,                  // Enable console logging
+    // Custom loader for bundlers that handle imports differently:
+    moduleLoader: async (name) => import(`./islands/${name}`),
+});
+```
+
+### `getIslandManager() → IslandManager | null`
+
+Returns the global island manager.
+
+### `hydrateIsland(idOrName) → Promise<IslandHydrationResult | null>`
+
+Manually triggers hydration for a specific island (by DOM `id` or island name):
+
+```typescript
+import { hydrateIsland } from './island.ts';
+
+// Hydrate the lazy island when user clicks "Show chart"
+document.getElementById('show-chart')?.addEventListener('click', async () => {
+    const result = await hydrateIsland('Chart');
+    if (!result?.success) console.error('Chart hydration failed:', result?.error);
+});
+```
+
+### `IslandManager` Methods
+
+```typescript
+manager.discoverIslands()               // Scan DOM for new islands
+manager.hydrateIsland(data)             // Hydrate a specific island data object
+manager.hydrate(idOrName)               // Hydrate by id or name string
+manager.isHydrated(id)                  // Check if an island is already hydrated
+manager.getIslands()                    // All discovered islands
+manager.getIsland(id)                   // Get island data by id
+manager.destroy()                       // Clean up observers and listeners
+```
+
+### Browser Globals
+
+```js
+// Available at runtime when island.ts is loaded
+window.__GOSPA_ISLAND_MANAGER__.init(config?)   // == initIslands
+window.__GOSPA_ISLAND_MANAGER__.get()           // == getIslandManager
+window.__GOSPA_ISLAND_MANAGER__.hydrate(name)   // == hydrateIsland
+```
+
+### Events
+
+```typescript
+// Fired on the island element when hydration completes
+element.addEventListener('gospa:hydrated', (ev: CustomEvent) => {
+    console.log('hydrated:', ev.detail.island); // IslandElementData
+});
+```
+
+---
+
+## Streaming SSR
+
+GoSPA's `StreamingManager` handles progressive hydration from server-streamed HTML chunks. It is usually initialized automatically; each chunk type triggers a different action:
+
+| Chunk Type | Action |
+|------------|--------|
+| `html` | Updates a specific DOM element by `id` with new innerHTML |
+| `island` | Registers and schedules the island for hydration per its mode |
+| `script` | Dynamically injects and executes a `<script>` tag |
+| `state` | Merges the payload into the global `__GOSPA_STATE__` |
+| `error` | Logs a server-side rendering error to the console |
+
+### Manual Setup
+
+```typescript
+import { initStreaming } from './streaming.ts';
+
+const streamer = initStreaming({
+    hydrationTimeout: 5000,  // ms before island hydration times out
+    enableLogging: true,
+});
+
+// Manually hydrate an island that arrived via streaming
+await streamer.hydrate('IslandId');
+
+// Check hydration status
+console.log(streamer.getHydratedIslands()); // Set<string>
+console.log(streamer.isHydrated('IslandId')); // boolean
+```
+
+---
+
+## Auto-Initialize
+
+If a `<script data-gospa-islands>` tag is present, `initIslands()` is called automatically when the DOM is ready. Otherwise, call it manually before the page finishes loading.
+
+---
+
+## Notes
+
+- Islands do **not** require a framework. They can be Svelte, Preact, Vanilla JS, or any library that runs in a browser `<script type="module">`.
+- Islands discovered after `initIslands()` (e.g. via SPA navigation) can be re-scanned with `manager.discoverIslands()`.
+- Setting `data-gospa-server-only="true"` skips hydration entirely — useful for purely decorative server-rendered components.
+
+
+<!-- FILE: docs/migration/fiber-to-gospa.md -->
+================================================================================
+
+# Fiber to GoSPA Migration Checklist
+
+Use this checklist when integrating GoSPA into an existing Fiber app.
+
+## 1) Preflight
+
+- Run `gospa verify` and resolve blocking issues.
+- Ensure `SecurityHeadersMiddleware(...)` policy includes `{nonce}`.
+- If `Prefork: true`, configure both `Storage` and `PubSub`.
+
+## 2) Route Surface
+
+- Keep existing Fiber APIs and static routes unchanged.
+- Move UI routes into `routes/` as `.templ` or `.gospa`.
+- Generate route artifacts with `gospa generate`.
+
+## 3) SFC Syntax Migration
+
+- Convert legacy template event syntax to GoSPA directives.
+- Dry run:
+
+```bash
+go run ./scripts/codemod-sfc-events
+```
+
+- Apply changes:
+
+```bash
+go run ./scripts/codemod-sfc-events --write
+```
+
+- Supported rewrites:
+  - `@click={...}` -> `on:click={...}`
+  - `on-click={...}` -> `on:click={...}`
+  - `x-on:click={...}` -> `on:click={...}`
+
+## 4) Runtime Integration
+
+- Add GoSPA middleware before registering routes.
+- Keep websocket path consistent between server config and runtime.
+- Run `gospa doctor --strict` before `gospa dev` and CI builds.
+
+## 5) Verification Gate
+
+- Compile and generate:
+
+```bash
+gospa generate
+```
+
+- Strict diagnostics:
+
+```bash
+gospa doctor --strict
+```
+
+- Confirm no `.gospa` diagnostics and no runtime preflight warnings.
+
+
+<!-- FILE: docs/storage.md -->
+================================================================================
+
+# Storage & PubSub
+
+GoSPA provides a flexible storage and publish-subscribe system to handle session state, rate limiting, and real-time broadcasting across single or multiple processes.
+
+## Storage Interface
+
+The `store.Storage` interface defines a simple key-value store optimized for high-performance state management.
+
+```go
+type Storage interface {
+    Get(ctx context.Context, key string) ([]byte, error)
+    Set(ctx context.Context, key string, val []byte, exp time.Duration) error
+    Delete(ctx context.Context, key string) error
+}
+```
+
+### Implementations
+
+- **MemoryStorage**: Default in-memory implementation. Features $O(1)$ scaling and LRU eviction for zero-TTL entries. Best for single-process development.
+- **Redis Store**: Production-grade implementation using Redis. Required for horizontal scaling and `prefork` mode to ensure state consistency across worker processes.
+
+## PubSub Interface
+
+The `store.PubSub` interface enables message broadcasting across the application.
+
+```go
+type PubSub interface {
+    Publish(ctx context.Context, channel string, message []byte) error
+    Subscribe(ctx context.Context, channel string, handler func(message []byte)) (Unsubscribe, error)
+}
+```
+
+### Implementations
+
+- **MemoryPubSub**: Local in-memory broadcasting. Handlers are invoked asynchronously with panic recovery.
+- **Redis PubSub**: Distributed broadcasting using Redis. Required for real-time features (WebSocket, SSE) in multi-process/prefork environments.
+
+## Multi-Process (Prefork) Configuration
+
+When using `Config.Prefork: true`, you **MUST** provide external Redis backends to maintain consistency.
+
+```go
+import (
+    "github.com/aydenstechdungeon/gospa"
+    "github.com/aydenstechdungeon/gospa/store/redis"
+    goredis "github.com/redis/go-redis/v9"
+)
+
+func main() {
+    rdb := goredis.NewClient(&goredis.Options{Addr: "localhost:6379"})
+    
+    app := gospa.New(gospa.Config{
+        Prefork: true,
+        Storage: redis.NewStore(rdb),
+        PubSub:  redis.NewPubSub(rdb),
+    })
+    
+    app.Run(":3000")
+}
+```
+
+## Security & Reliability
+
+- **Context Awareness**: All operations support `context.Context` for proper timeout and cancellation propagation.
+- **Panic Recovery**: PubSub handlers are wrapped in `recover()` blocks to prevent consumer errors from crashing the application.
+- **LRU Eviction**: In-memory storage automatically prunes zero-TTL entries using an LRU policy when reaching `maxEntries` (default: 10,000).
 
 
 <!-- FILE: docs/rendering.md -->
@@ -10310,407 +10931,5 @@ templ Page(props map[string]interface{}) {
 | Shell | Cached (SSG/ISR) | Any (SSR/SSG/ISR) |
 | Latency | Per-request render of slots | Zero-latency initial shell response |
 | Use Case | Mixed static/dynamic content | Slow data sources, high-latency APIs |
-
-
-<!-- FILE: docs/internals/runtime.md -->
-================================================================================
-
-# Client Runtime Internals
-
-GoSPA uses a tiered client-side runtime to balance performance and functionality. Depending on your page's complexity, you can choose between different "tiers" to minimize the JavaScript payload.
-
-## Runtime Tiers
-
-| Tier | Size (minified) | Description | Features |
-| :--- | :--- | :--- | :--- |
-| **Micro** | ~1KB | Extremely minimal runtime for static pages. | Core SPA navigation, simple event delegation. |
-| **Core** | ~13KB | Standard runtime for reactive applications. | Runes, Effects, Derived, and basic DOM synchronization. |
-| **Full** | ~52KB | Full-featured runtime for complex SPAs. | WebSockets, state sync, HMR, and advanced UI components. |
-
-## Tier Selection
-
-The runtime tier is determined automatically based on the requirements of the page and its layouts. You can also manually specify a tier in your `.templ` or `.gospa` files using the `@gospa:tier` directive:
-
-```svelte
-// page.templ
-// @gospa:tier core
-
-<template>
-    <h1>My Reactive Page</h1>
-</template>
-```
-
-### Hierarchy Rules
-1. If any component in the layout chain (Root -> Layouts -> Page) requires a higher tier, the higher tier is used.
-2. If `WebSocket` or `Remote Actions` are used, the runtime automatically upgrades to **Full**.
-3. If no reactive primitives are used, it defaults to **Micro**.
-
-## Hydration Mode
-
-GoSPA supports different hydration modes to control when and how components become interactive:
-
-- **Lazy**: Hydrates only when the component enters the viewport (using `IntersectionObserver`).
-- **Immediate**: Hydrates as soon as the runtime loads (default).
-- **Manual**: Hydrates only when explicitly triggered via `GoSPA.hydrate(id)`.
-
-Configured in `gospa.Config`:
-```go
-config.HydrationMode = gospa.HydrationLazy
-```
-
-## Internal Architecture
-
-The runtime is built as a set of ES modules. Critical chunks are preloaded using `Link: rel=modulepreload` headers to reduce Time-to-Interactive (TTI).
-
-- **Reactivity Engine**: Based on a signal-based dependency tracker.
-- **Micro-task Scheduler**: Batches DOM updates to prevent layout thrashing.
-- **GZIP Delta Patching**: When using WebSockets, only the diffs of state changes are sent to the client.
-
-
-<!-- FILE: docs/islands.md -->
-================================================================================
-
-# Island Hydration & Streaming SSR
-
-GoSPA implements a partial hydration (Islands Architecture) system, allowing you to ship static HTML by default and selectively hydrate interactive components based on viewport visibility, idle time, or user interaction.
-
----
-
-## Islands Architecture
-
-An **island** is an interactive component that is loaded and hydrated on the client. The server renders the HTML placeholder; the client loads the JavaScript module and calls its `hydrate` or `mount` function.
-
-### DOM Attributes
-
-Mark an element as an island using `data-gospa-island`:
-
-```html
-<div
-  data-gospa-island="Counter"
-  data-gospa-mode="visible"
-  data-gospa-priority="high"
-  data-gospa-props='{"initial": 10}'
-  data-gospa-state='{"count": 0}'
-  data-gospa-threshold="200"
-  id="my-counter"
->
-  <!-- Server-rendered placeholder content here -->
-  <p>Loading...</p>
-</div>
-```
-
-| Attribute | Type | Description |
-|-----------|------|-------------|
-| `data-gospa-island` | string | **Required.** Island name — maps to `/islands/{name}.js` |
-| `data-gospa-mode` | string | Hydration mode (see below, default: `immediate`) |
-| `data-gospa-priority` | string | Queue priority: `high`, `normal`, `low` (default: `normal`) |
-| `data-gospa-threshold` | number | Intersection margin in px for `visible` mode (default: 200) |
-| `data-gospa-defer` | number | ms delay for `idle` mode (default: 2000) |
-| `data-gospa-client-only` | boolean | Skip server rendering entirely |
-| `data-gospa-server-only` | boolean | Never hydrate — render only |
-
-> [!NOTE]
-> Initial props and state are now served via a centralized `window.__GOSPA_DATA__` registry to reduce DOM bloat. Individual `data-gospa-props` attributes are deprecated but still supported for manually injected islands.
-
-### Hydration Modes
-
-| Mode | Description |
-|------|-------------|
-| `immediate` | (Default) Hydrate when the island is discovered |
-| `visible` | Hydrate when the element enters the viewport (uses `IntersectionObserver`) |
-| `idle` | Hydrate when the browser is idle (uses `requestIdleCallback`, falls back to `setTimeout`) |
-| `interaction` | Hydrate on first user event: `mouseenter`, `touchstart`, `focusin`, or `click` |
-| `lazy` | Never auto-hydrate — call `hydrateIsland(id)` manually |
-
-### Priority Queue
-
-When multiple islands are scheduled for `immediate` hydration, they are processed in priority order:
-
-| Priority | Use Case |
-|----------|----------|
-| `high` | Navigation, purchase buttons, search — hydrate first |
-| `normal` | (Default) General interactive components |
-| `low` | Below-the-fold, non-essential widgets |
-
----
-
-## Island Module Convention
-
-Island modules must be ES modules served at `/islands/{name}.js` (configurable via `moduleBasePath`).
-
-```typescript
-// /islands/Counter.ts
-export default {
-    hydrate(element: Element, props: Record<string, unknown>, state: Record<string, unknown>) {
-        const btn = element.querySelector('button')!;
-        let count = (state.count as number) ?? (props.initial as number) ?? 0;
-
-        const render = () => btn.textContent = `Count: ${count}`;
-        render();
-        btn.addEventListener('click', () => { count++; render(); });
-    }
-}
-```
-
-Both `hydrate` and `mount` are accepted (either on the default export or as named exports). `hydrate` takes precedence.
-
----
-
-## Event Delegation
-
-GoSPA uses **root-level event delegation** for island events. This means `on:click`, `on:input`, etc., do not attach listeners to individual DOM nodes. Instead, a single listener at the root manages all island events.
-
-Benefits:
-- **Zero Listener Overhead**: Memory usage stays flat regardless of component count.
-- **Instant Interaction**: Events work even before specific island JS has loaded (if handlers are globally registered).
-- **Smooth Hydration**: No need to re-bind listeners after DOM updates.
-
----
-
-## Client API
-
-### `initIslands(config?) → IslandManager`
-
-Initializes the global island manager. Auto-discovers all `[data-gospa-island]` elements in the DOM.
-
-```typescript
-import { initIslands } from './island.ts';
-
-const manager = initIslands({
-    moduleBasePath: '/islands',   // Where to load island JS from
-    defaultTimeout: 30000,        // ms until hydration times out
-    debug: true,                  // Enable console logging
-    // Custom loader for bundlers that handle imports differently:
-    moduleLoader: async (name) => import(`./islands/${name}`),
-});
-```
-
-### `getIslandManager() → IslandManager | null`
-
-Returns the global island manager.
-
-### `hydrateIsland(idOrName) → Promise<IslandHydrationResult | null>`
-
-Manually triggers hydration for a specific island (by DOM `id` or island name):
-
-```typescript
-import { hydrateIsland } from './island.ts';
-
-// Hydrate the lazy island when user clicks "Show chart"
-document.getElementById('show-chart')?.addEventListener('click', async () => {
-    const result = await hydrateIsland('Chart');
-    if (!result?.success) console.error('Chart hydration failed:', result?.error);
-});
-```
-
-### `IslandManager` Methods
-
-```typescript
-manager.discoverIslands()               // Scan DOM for new islands
-manager.hydrateIsland(data)             // Hydrate a specific island data object
-manager.hydrate(idOrName)               // Hydrate by id or name string
-manager.isHydrated(id)                  // Check if an island is already hydrated
-manager.getIslands()                    // All discovered islands
-manager.getIsland(id)                   // Get island data by id
-manager.destroy()                       // Clean up observers and listeners
-```
-
-### Browser Globals
-
-```js
-// Available at runtime when island.ts is loaded
-window.__GOSPA_ISLAND_MANAGER__.init(config?)   // == initIslands
-window.__GOSPA_ISLAND_MANAGER__.get()           // == getIslandManager
-window.__GOSPA_ISLAND_MANAGER__.hydrate(name)   // == hydrateIsland
-```
-
-### Events
-
-```typescript
-// Fired on the island element when hydration completes
-element.addEventListener('gospa:hydrated', (ev: CustomEvent) => {
-    console.log('hydrated:', ev.detail.island); // IslandElementData
-});
-```
-
----
-
-## Streaming SSR
-
-GoSPA's `StreamingManager` handles progressive hydration from server-streamed HTML chunks. It is usually initialized automatically; each chunk type triggers a different action:
-
-| Chunk Type | Action |
-|------------|--------|
-| `html` | Updates a specific DOM element by `id` with new innerHTML |
-| `island` | Registers and schedules the island for hydration per its mode |
-| `script` | Dynamically injects and executes a `<script>` tag |
-| `state` | Merges the payload into the global `__GOSPA_STATE__` |
-| `error` | Logs a server-side rendering error to the console |
-
-### Manual Setup
-
-```typescript
-import { initStreaming } from './streaming.ts';
-
-const streamer = initStreaming({
-    hydrationTimeout: 5000,  // ms before island hydration times out
-    enableLogging: true,
-});
-
-// Manually hydrate an island that arrived via streaming
-await streamer.hydrate('IslandId');
-
-// Check hydration status
-console.log(streamer.getHydratedIslands()); // Set<string>
-console.log(streamer.isHydrated('IslandId')); // boolean
-```
-
----
-
-## Auto-Initialize
-
-If a `<script data-gospa-islands>` tag is present, `initIslands()` is called automatically when the DOM is ready. Otherwise, call it manually before the page finishes loading.
-
----
-
-## Notes
-
-- Islands do **not** require a framework. They can be Svelte, Preact, Vanilla JS, or any library that runs in a browser `<script type="module">`.
-- Islands discovered after `initIslands()` (e.g. via SPA navigation) can be re-scanned with `manager.discoverIslands()`.
-- Setting `data-gospa-server-only="true"` skips hydration entirely — useful for purely decorative server-rendered components.
-
-
-<!-- FILE: docs/storage.md -->
-================================================================================
-
-# Storage & PubSub
-
-GoSPA provides a flexible storage and publish-subscribe system to handle session state, rate limiting, and real-time broadcasting across single or multiple processes.
-
-## Storage Interface
-
-The `store.Storage` interface defines a simple key-value store optimized for high-performance state management.
-
-```go
-type Storage interface {
-    Get(ctx context.Context, key string) ([]byte, error)
-    Set(ctx context.Context, key string, val []byte, exp time.Duration) error
-    Delete(ctx context.Context, key string) error
-}
-```
-
-### Implementations
-
-- **MemoryStorage**: Default in-memory implementation. Features $O(1)$ scaling and LRU eviction for zero-TTL entries. Best for single-process development.
-- **Redis Store**: Production-grade implementation using Redis. Required for horizontal scaling and `prefork` mode to ensure state consistency across worker processes.
-
-## PubSub Interface
-
-The `store.PubSub` interface enables message broadcasting across the application.
-
-```go
-type PubSub interface {
-    Publish(ctx context.Context, channel string, message []byte) error
-    Subscribe(ctx context.Context, channel string, handler func(message []byte)) (Unsubscribe, error)
-}
-```
-
-### Implementations
-
-- **MemoryPubSub**: Local in-memory broadcasting. Handlers are invoked asynchronously with panic recovery.
-- **Redis PubSub**: Distributed broadcasting using Redis. Required for real-time features (WebSocket, SSE) in multi-process/prefork environments.
-
-## Multi-Process (Prefork) Configuration
-
-When using `Config.Prefork: true`, you **MUST** provide external Redis backends to maintain consistency.
-
-```go
-import (
-    "github.com/aydenstechdungeon/gospa"
-    "github.com/aydenstechdungeon/gospa/store/redis"
-    goredis "github.com/redis/go-redis/v9"
-)
-
-func main() {
-    rdb := goredis.NewClient(&goredis.Options{Addr: "localhost:6379"})
-    
-    app := gospa.New(gospa.Config{
-        Prefork: true,
-        Storage: redis.NewStore(rdb),
-        PubSub:  redis.NewPubSub(rdb),
-    })
-    
-    app.Run(":3000")
-}
-```
-
-## Security & Reliability
-
-- **Context Awareness**: All operations support `context.Context` for proper timeout and cancellation propagation.
-- **Panic Recovery**: PubSub handlers are wrapped in `recover()` blocks to prevent consumer errors from crashing the application.
-- **LRU Eviction**: In-memory storage automatically prunes zero-TTL entries using an LRU policy when reaching `maxEntries` (default: 10,000).
-
-
-<!-- FILE: docs/root.md -->
-================================================================================
-
-# Framework Root & Layouts
-
-GoSPA's core architecture begins with a root layout component that wraps every page and is the entry point for both server-side rendering and client-side hydration.
-
-## Root Layout
-
-The root layout is typically defined in `routes/layout.templ`. This is where you declare your HTML document structure, including the `<html>`, `<head>`, and `<body>` tags.
-
-```templ
-package routes
-
-import "github.com/aydenstechdungeon/gospa/fiber"
-
-templ RootLayout(children templ.Component, props map[string]interface{}) {
-    <!DOCTYPE html>
-    <html lang="en" data-gospa-auto>
-        <head>
-            <meta charset="utf-8" />
-            <title>My GoSPA App</title>
-            @fiber.RuntimeScript()
-        </head>
-        <body>
-            <div id="root">
-                @children
-            </div>
-        </body>
-    </html>
-}
-```
-
-## Nested Layouts
-
-Directories under `routes/` can also contain their own `layout.templ` files. These layouts are automatically nested, allowing you to create complex UI hierarchies with ease.
-
-### Layout Nesting example:
-1.  **`routes/layout.templ`**: The top-level layout.
-2.  **`routes/admin/layout.templ`**: A layout for all admin-specific pages.
-3.  **`routes/admin/settings/page.templ`**: The settings page.
-
-The `settings` page will be rendered inside the `admin` layout, which will then be rendered inside the `root` layout.
-
-## Data Loading for Layouts
-
-Like pages, layouts can have their own server-side `Load` function to fetch data that is common to all their children (e.g., user session or site-wide configuration).
-
-```go
-func Load(c routing.LoadContext) (map[string]interface{}, error) {
-    user := getCurrentUser()
-    return map[string]interface{}{"user": user}, nil
-}
-```
-
-## Special Components
-
-The root layout is the ideal place to include global components that are used on every page:
-- **`@fiber.RuntimeScript()`**: Injects the GoSPA client-side runtime.
-- **`@fiber.HMRScript()`**: Injects the HMR connection in development mode.
-- **Global Error Handlers**: Define how fatal rendering crashes are displayed at the top level.
 
 

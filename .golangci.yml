@@ -1,4 +1,4 @@
-version: 2
+version: "2"
 run:
   # Pin Go version to match go.mod, preventing pre-release toolchain typecheck failures.
   # The system uses go1.26.0-X (pre-release) which does not satisfy the `go1.26` build
@@ -14,38 +14,37 @@ linters:
     - misspell    # Catches typos
     - gosec       # Basic security checks
     - nolintlint  # Ensures nolint comments are valid
-
-issues:
-  exclude-rules:
-    - path: _test\.go
-      linters:
-        - errcheck # Often ignored in tests
-    # False positive: CGO pointer syntax triggers dupSubExpr
-    - path: plugin/image/encode_cgo\.go
-      linters:
-        - gocritic
-      text: "dupSubExpr"
-    # False positive: os.Args[1] is CLI input, not user-controlled web input
-    - path: cmd/gospa/main\.go
-      linters:
-        - gosec
-      text: "G705"
-    # Config field names that happen to contain "secret" - not actual secrets
-    - path: fiber/websocket\.go
-      linters:
-        - gosec
-      text: "G117"
-    - path: plugin/auth/auth\.go
-      linters:
-        - gosec
-      text: "G117"
-    # Package names that conflict with Go stdlib - intentional for this project
-    - path: (embed|image|plugin)\.go
-      linters:
-        - revive
-      text: "var-naming"
-    # Nolint directives for gosec path traversal - paths come from trusted config
-    - path: (plugin/postcss/postcss\.go|gospa\.go|cli/build\.go|scripts/tag/main\.go|state/pruning\.go)
-      linters:
-        - nolintlint
-      text: "directive.*is unused"
+  exclusions:
+    rules:
+      - path: _test\.go
+        linters:
+          - errcheck # Often ignored in tests
+      # False positive: CGO pointer syntax triggers dupSubExpr
+      - path: plugin/image/encode_cgo\.go
+        linters:
+          - gocritic
+        text: "dupSubExpr"
+      # False positive: os.Args[1] is CLI input, not user-controlled web input
+      - path: cmd/gospa/main\.go
+        linters:
+          - gosec
+        text: "G705"
+      # Config field names that happen to contain "secret" - not actual secrets
+      - path: fiber/websocket\.go
+        linters:
+          - gosec
+        text: "G117"
+      - path: plugin/auth/auth\.go
+        linters:
+          - gosec
+        text: "G117"
+      # Package names that conflict with Go stdlib - intentional for this project
+      - path: (embed|image|plugin)\.go
+        linters:
+          - revive
+        text: "var-naming"
+      # Nolint directives for gosec path traversal - paths come from trusted config
+      - path: (plugin/postcss/postcss\.go|gospa\.go|cli/build\.go|scripts/tag/main\.go|state/pruning\.go)
+        linters:
+          - nolintlint
+        text: "directive.*is unused"
