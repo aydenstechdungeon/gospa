@@ -14,7 +14,8 @@ const ws = initWebSocket({
   url: 'ws://localhost:3000/ws',
   reconnect: true,
   maxReconnectAttempts: 10,
-  heartbeatInterval: 30000
+  heartbeatInterval: 30000,
+  telemetry: true
 });
 
 // Connect
@@ -29,7 +30,32 @@ await ws.connect();
 | `reconnect` | boolean | true | Auto-reconnect on disconnect |
 | `reconnectInterval` | number | 1000 | Base reconnection interval (ms) |
 | `maxReconnectAttempts` | number | 10 | Maximum reconnection attempts |
+| `reconnectBackoffMultiplier` | number | 2 | Exponential backoff multiplier |
+| `reconnectJitterRatio` | number | 0.2 | Random jitter ratio applied to reconnect delay |
+| `reconnectMaxDelay` | number | 30000 | Max reconnect delay (ms) |
 | `heartbeatInterval` | number | 30000 | Heartbeat ping interval (ms) |
+| `staleStateGuard` | boolean | true | Drop stale server state messages |
+| `staleReplayWindowMs` | number | 20000 | Replay tolerance window for out-of-order messages |
+| `telemetry` | boolean | true | Emit websocket telemetry events |
+| `onTelemetry` | function | `() => {}` | Callback for telemetry payloads |
+
+## Built-in Telemetry
+
+When telemetry is enabled, the runtime emits `window` events:
+
+- `gospa:ws-telemetry` with payload `{ type, timestamp, detail }`
+
+Event types:
+
+- `connect`
+- `disconnect`
+- `reconnect-scheduled`
+- `reconnect-attempt`
+- `latency`
+- `stale-message-dropped`
+- `invalid-message`
+- `patch-failure`
+- `decompress-failure`
 
 ## Synced Rune
 

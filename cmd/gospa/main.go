@@ -138,6 +138,7 @@ func main() {
 		jsonOutput := fs.Bool("json", false, "JSON output")
 		quiet := fs.Bool("quiet", false, "Only show errors")
 		checkUpdates := fs.Bool("check-updates", false, "Check for package updates")
+		strict := fs.Bool("strict", false, "Enable strict setup checks")
 		_ = fs.Parse(os.Args[2:])
 		cli.Doctor(&cli.DoctorConfig{
 			RoutesDir:    *routesDir,
@@ -145,6 +146,20 @@ func main() {
 			JSONOutput:   *jsonOutput,
 			Quiet:        *quiet,
 			CheckUpdates: *checkUpdates,
+			Strict:       *strict,
+		})
+	case "verify":
+		fs := flag.NewFlagSet("verify", flag.ExitOnError)
+		routesDir := fs.String("routes-dir", "./routes", "Routes directory to validate")
+		jsonOutput := fs.Bool("json", false, "JSON output")
+		quiet := fs.Bool("quiet", false, "Only show errors")
+		strict := fs.Bool("strict", true, "Enable strict setup checks")
+		_ = fs.Parse(os.Args[2:])
+		cli.Verify(&cli.VerifyConfig{
+			RoutesDir:  *routesDir,
+			JSONOutput: *jsonOutput,
+			Quiet:      *quiet,
+			Strict:     *strict,
 		})
 	case "prune":
 		fs := flag.NewFlagSet("prune", flag.ExitOnError)
@@ -279,6 +294,7 @@ Commands:
   generate        Generate routes and client artifacts
   serve           Serve production build
   doctor          Validate local project/tooling setup
+  verify          Run strict preflight checks (dev/CI gate)
   prune           Analyze and prune unused state
   clean           Remove generated/build artifacts
   config          Config file management

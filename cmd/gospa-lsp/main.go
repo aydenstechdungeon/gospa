@@ -2,7 +2,9 @@
 package main
 
 import (
+	"errors"
 	"log"
+	"math"
 
 	"github.com/aydenstechdungeon/gospa/compiler/sfc"
 	"github.com/tliron/glsp"
@@ -88,12 +90,20 @@ func validate(context *glsp.Context, uri string, text string) {
 
 	_, err := sfc.Parse(text)
 	if err != nil {
-		// Try to find if the error message contains info about where it happened.
-		// For now, we'll just put it at 0:0 since sfc.Parse doesn't return offset yet for errors.
+		start := protocol.Position{Line: 0, Character: 0}
+		end := protocol.Position{Line: 0, Character: 1}
+		var diagErr *sfc.DiagnosticError
+		if errors.As(err, &diagErr) {
+			line := clampIntToUint32(diagErr.Line - 1)
+			char := clampIntToUint32(diagErr.Column - 1)
+			start = protocol.Position{Line: line, Character: char}
+			end = protocol.Position{Line: line, Character: char + 1}
+		}
+
 		diagnostics = append(diagnostics, protocol.Diagnostic{
 			Range: protocol.Range{
-				Start: protocol.Position{Line: 0, Character: 0},
-				End:   protocol.Position{Line: 0, Character: 1},
+				Start: start,
+				End:   end,
 			},
 			Message:  err.Error(),
 			Severity: &diagnosticsSeverityError,
@@ -154,4 +164,14 @@ var (
 
 func ptr[T any](v T) *T {
 	return &v
+}
+
+func clampIntToUint32(v int) uint32 {
+	if v <= 0 {
+		return 0
+	}
+	if uint64(v) > math.MaxUint32 {
+		return math.MaxUint32
+	}
+	return uint32(uint64(v))
 }

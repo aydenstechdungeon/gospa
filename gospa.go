@@ -663,6 +663,10 @@ func (a *App) setupMiddleware() {
 	spaConfig := fiber.DefaultConfig()
 	spaConfig.DevMode = a.Config.DevMode
 	spaConfig.RuntimeScript = a.Config.RuntimeScript
+	spaConfig.EnableWebSocket = a.Config.EnableWebSocket
+	spaConfig.WebSocketPath = a.Config.WebSocketPath
+	spaConfig.ExpectCSPNonce = strings.Contains(a.Config.ContentSecurityPolicy, "{nonce}")
+	spaConfig.StartupChecks = true
 	spaConfig.BuildManifest = a.Config.BuildManifest
 	a.Fiber.Use(fiber.SPAMiddleware(spaConfig))
 }

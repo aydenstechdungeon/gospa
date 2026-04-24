@@ -30,6 +30,14 @@ var csrfTokenPattern = regexp.MustCompile(`^[A-Fa-f0-9]{64}$`)
 type Config struct {
 	// RuntimeScript is the path to the client runtime script
 	RuntimeScript string
+	// EnableWebSocket indicates websocket support is expected by the page bootstrap.
+	EnableWebSocket bool
+	// WebSocketPath is the websocket endpoint path.
+	WebSocketPath string
+	// ExpectCSPNonce enables startup diagnostics for nonce-based CSP setups.
+	ExpectCSPNonce bool
+	// StartupChecks injects runtime self-check diagnostics.
+	StartupChecks bool
 	// StateKey is the context key for storing state
 	StateKey string
 	// ComponentIDKey is the context key for component IDs
@@ -47,12 +55,15 @@ type Config struct {
 // DefaultConfig returns the default configuration.
 func DefaultConfig() Config {
 	return Config{
-		RuntimeScript:  "/_gospa/runtime.js",
-		StateKey:       "gospa.state",
-		ComponentIDKey: "gospa.componentID",
-		DevMode:        false,
-		DefaultState:   make(map[string]interface{}),
-		Logger:         slog.Default(),
+		RuntimeScript:   "/_gospa/runtime.js",
+		EnableWebSocket: true,
+		WebSocketPath:   "/_gospa/ws",
+		StartupChecks:   true,
+		StateKey:        "gospa.state",
+		ComponentIDKey:  "gospa.componentID",
+		DevMode:         false,
+		DefaultState:    make(map[string]interface{}),
+		Logger:          slog.Default(),
 	}
 }
 
@@ -128,15 +139,25 @@ func StateMiddleware(config Config) gofiber.Handler {
 		}
 		stateScript += `</script>`
 
+		runtimePath := config.RuntimeScript
+		if strings.HasPrefix(runtimePath, "/_gospa/runtime.js") {
+			opts := routing.GetRouteOptions(c.Path())
+			if opts.RuntimeTier != "" && opts.RuntimeTier != "full" {
+				runtimePath = "/_gospa/runtime-" + opts.RuntimeTier + ".js"
+			}
+		}
+
+		if config.StartupChecks {
+			stateScript += buildStartupSelfCheckScript(nonceAttr, startupCheckOptions{
+				RuntimeScript:   runtimePath,
+				WebSocketPath:   config.WebSocketPath,
+				EnableWebSocket: config.EnableWebSocket,
+				ExpectCSPNonce:  config.ExpectCSPNonce,
+			})
+		}
+
 		// Always inject the runtime script if not already present in the HTML.
 		if config.RuntimeScript != "" && !bytes.Contains(body, []byte(config.RuntimeScript)) {
-			runtimePath := config.RuntimeScript
-			if strings.HasPrefix(runtimePath, "/_gospa/runtime.js") {
-				opts := routing.GetRouteOptions(c.Path())
-				if opts.RuntimeTier != "" && opts.RuntimeTier != "full" {
-					runtimePath = "/_gospa/runtime-" + opts.RuntimeTier + ".js"
-				}
-			}
 			stateScript += `<script src="` + runtimePath + `" type="module"` + nonceAttr + `></script>`
 		}
 
@@ -147,12 +168,79 @@ func StateMiddleware(config Config) gofiber.Handler {
 			}
 		}
 
-		// Inject before </body>
-		body = bytes.Replace(body, []byte("</body>"), append([]byte(stateScript), []byte("</body>")...), 1)
+		// Inject before </body>, or append when a body tag is not present.
+		if bytes.Contains(body, []byte("</body>")) {
+			body = bytes.Replace(body, []byte("</body>"), append([]byte(stateScript), []byte("</body>")...), 1)
+		} else {
+			body = append(body, []byte(stateScript)...)
+		}
 		c.Response().SetBody(body)
 
 		return err
 	}
+}
+
+type startupCheckOptions struct {
+	RuntimeScript   string
+	WebSocketPath   string
+	EnableWebSocket bool
+	ExpectCSPNonce  bool
+}
+
+func buildStartupSelfCheckScript(nonceAttr string, opts startupCheckOptions) string {
+	encodedRuntime, _ := stdjson.Marshal(opts.RuntimeScript)
+	encodedWSPath, _ := stdjson.Marshal(opts.WebSocketPath)
+	return fmt.Sprintf(`<script%s>(function(){
+const runtimePath = %s;
+const wsPath = %s;
+const issues = [];
+const hasNonce = !!(document.currentScript && (document.currentScript.nonce || document.currentScript.getAttribute('nonce')));
+const hasHydrationMarkers = document.querySelector('[data-gospa-root], [data-gospa-component], [data-gospa-island]') !== null;
+
+function renderOverlay(title, lines) {
+  if (document.getElementById('gospa-startup-overlay')) return;
+  const wrap = document.createElement('div');
+  wrap.id = 'gospa-startup-overlay';
+  wrap.setAttribute('role', 'alert');
+  wrap.style.cssText = 'position:fixed;inset:16px;z-index:2147483647;background:#130f16;color:#fff;border:2px solid #ef4444;border-radius:12px;padding:16px;font:13px/1.5 ui-monospace, SFMono-Regular, Menlo, monospace;white-space:pre-wrap;overflow:auto;box-shadow:0 20px 50px rgba(0,0,0,.45)';
+  const heading = document.createElement('div');
+  heading.style.cssText = 'font-size:14px;font-weight:700;margin-bottom:8px;color:#fecaca';
+  heading.textContent = title;
+  const body = document.createElement('div');
+  body.textContent = lines.join('\n');
+  wrap.appendChild(heading);
+  wrap.appendChild(body);
+  document.body.appendChild(wrap);
+}
+
+if (%t && !hasNonce) {
+  issues.push('Missing CSP nonce on GoSPA bootstrap script.');
+  issues.push('Fix: enable SecurityHeadersMiddleware with a policy containing {nonce}.');
+}
+if (!hasHydrationMarkers) {
+  issues.push('No hydration markers were found in the DOM.');
+  issues.push('Fix: ensure server output includes data-gospa-root/component/island markers.');
+}
+if (%t && (!wsPath || wsPath.trim() === '')) {
+  issues.push('WebSocket is enabled but WebSocketPath is empty.');
+  issues.push('Fix: set gospa.Config.WebSocketPath (for example: "/_gospa/ws").');
+}
+if (issues.length > 0) {
+  renderOverlay('GoSPA startup self-check failed', issues);
+}
+
+setTimeout(function() {
+  const runtimeObj = (window).__GOSPA_RUNTIME_ESM__ || (window).GoSPA || (window).__GOSPA__;
+  if (!runtimeObj) {
+    renderOverlay('GoSPA runtime failed to initialize', [
+      'Runtime object not found after startup timeout.',
+      'Expected runtime script: ' + runtimePath,
+      'Fix: ensure this script URL resolves and is allowed by CSP.',
+      'If using custom HTML, include <script type="module" src="' + runtimePath + '"></script>.'
+    ]);
+  }
+}, 1500);
+})();</script>`, nonceAttr, encodedRuntime, encodedWSPath, opts.ExpectCSPNonce, opts.EnableWebSocket)
 }
 
 // RuntimeMiddleware serves the client runtime script.

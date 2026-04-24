@@ -47,6 +47,23 @@ export interface StateMessage {
   success?: boolean;
 }
 
+export type WSTelemetryEventType =
+  | "connect"
+  | "disconnect"
+  | "reconnect-scheduled"
+  | "reconnect-attempt"
+  | "latency"
+  | "stale-message-dropped"
+  | "invalid-message"
+  | "patch-failure"
+  | "decompress-failure";
+
+export interface WSTelemetryEvent {
+  type: WSTelemetryEventType;
+  timestamp: number;
+  detail?: Record<string, unknown>;
+}
+
 // Validate WebSocket message structure
 function validateMessage(raw: unknown): StateMessage | null {
   if (!raw || typeof raw !== "object" || Array.isArray(raw)) {
@@ -115,7 +132,14 @@ export interface WebSocketConfig {
   reconnect?: boolean;
   reconnectInterval?: number;
   maxReconnectAttempts?: number;
+  reconnectBackoffMultiplier?: number;
+  reconnectJitterRatio?: number;
+  reconnectMaxDelay?: number;
   heartbeatInterval?: number;
+  staleStateGuard?: boolean;
+  staleReplayWindowMs?: number;
+  telemetry?: boolean;
+  onTelemetry?: (event: WSTelemetryEvent) => void;
   onOpen?: () => void;
   onClose?: (event: CloseEvent) => void;
   onError?: (error: Event) => void;
@@ -196,13 +220,24 @@ export class WSClient {
   private sessionData: SessionData | null = null;
   private beforeUnloadHandler: (() => void) | null = null;
   private droppedQueuedMessages = 0;
+  private lastServerTimestamp = 0;
+  private lastPingSentAt: number | null = null;
+  private lastConnectAt = 0;
+  private allowReconnect = true;
 
   constructor(config: WebSocketConfig) {
     this.config = {
       reconnect: true,
       reconnectInterval: 1000,
       maxReconnectAttempts: 10,
+      reconnectBackoffMultiplier: 2,
+      reconnectJitterRatio: 0.2,
+      reconnectMaxDelay: 30000,
       heartbeatInterval: 30000,
+      staleStateGuard: true,
+      staleReplayWindowMs: 20000,
+      telemetry: true,
+      onTelemetry: () => {},
       onOpen: () => {},
       onClose: () => {},
       onError: () => {},
@@ -250,6 +285,50 @@ export class WSClient {
     window.addEventListener("beforeunload", this.beforeUnloadHandler);
   }
 
+  private emitTelemetry(
+    type: WSTelemetryEventType,
+    detail: Record<string, unknown> = {},
+  ): void {
+    if (!this.config.telemetry) return;
+    const event: WSTelemetryEvent = {
+      type,
+      timestamp: Date.now(),
+      detail,
+    };
+
+    this.config.onTelemetry(event);
+    try {
+      window.dispatchEvent(
+        new CustomEvent("gospa:ws-telemetry", {
+          detail: event,
+        }),
+      );
+    } catch {
+      // Ignore environments where CustomEvent is not available.
+    }
+  }
+
+  private isStateBearingMessage(message: StateMessage): boolean {
+    return Boolean(
+      message.state ||
+        message.diff ||
+        message.patch ||
+        message.type === "init" ||
+        message.type === "update" ||
+        message.type === "sync",
+    );
+  }
+
+  private isStaleMessage(message: StateMessage): boolean {
+    if (!this.config.staleStateGuard) return false;
+    if (typeof message.timestamp !== "number") return false;
+    if (this.lastServerTimestamp === 0) return false;
+    if (message.timestamp >= this.lastServerTimestamp) return false;
+
+    const replayWindow = Math.max(0, this.config.staleReplayWindowMs);
+    return this.lastServerTimestamp - message.timestamp > replayWindow;
+  }
+
   get state(): ConnectionState {
     return this.connectionState.get();
   }
@@ -287,6 +366,7 @@ export class WSClient {
       }
 
       this.connectionState.set("connecting");
+      this.allowReconnect = true;
 
       // SECURITY: Do NOT pass session token in URL - it leaks in logs/referrers
       // Instead, send it as the first message after connection opens
@@ -303,6 +383,11 @@ export class WSClient {
 
       this.ws.onopen = () => {
         this.connectionState.set("connected");
+        this.lastConnectAt = Date.now();
+        this.emitTelemetry("connect", {
+          reconnectAttempts: this.reconnectAttempts,
+          url: this.config.url,
+        });
 
         // Only reset attempts after the connection has been stable for a while.
         // This prevents immediate failures from resetting the backoff.
@@ -351,9 +436,16 @@ export class WSClient {
           clearTimeout(this.stableConnectionTimer);
           this.stableConnectionTimer = null;
         }
+        this.emitTelemetry("disconnect", {
+          code: event.code,
+          reason: event.reason || "",
+          wasClean: event.wasClean,
+          uptimeMs: this.lastConnectAt > 0 ? Date.now() - this.lastConnectAt : 0,
+        });
         this.config.onClose(event);
 
         if (
+          this.allowReconnect &&
           this.config.reconnect &&
           this.reconnectAttempts < this.config.maxReconnectAttempts
         ) {
@@ -379,6 +471,7 @@ export class WSClient {
   }
 
   disconnect(): void {
+    this.allowReconnect = false;
     if (this.reconnectTimer) {
       clearTimeout(this.reconnectTimer);
       this.reconnectTimer = null;
@@ -404,13 +497,21 @@ export class WSClient {
     // Exponential backoff: base * 2^(attempts-1) with jitter
     // Min 1s, Max 30s
     const baseDelay = this.config.reconnectInterval;
+    const backoff = Math.max(1, this.config.reconnectBackoffMultiplier);
     const expDelay = Math.min(
-      baseDelay * Math.pow(2, this.reconnectAttempts - 1),
-      30000,
+      baseDelay * Math.pow(backoff, this.reconnectAttempts - 1),
+      this.config.reconnectMaxDelay,
     );
-    // Add jitter (±20%)
-    const jitter = expDelay * 0.2 * (Math.random() * 2 - 1);
+    // Add jitter (default ±20%)
+    const jitterRatio = Math.max(0, this.config.reconnectJitterRatio);
+    const jitter = expDelay * jitterRatio * (Math.random() * 2 - 1);
     const delay = Math.max(1000, expDelay + jitter);
+    this.emitTelemetry("reconnect-scheduled", {
+      attempt: this.reconnectAttempts,
+      delayMs: Math.round(delay),
+      baseDelayMs: baseDelay,
+      maxDelayMs: this.config.reconnectMaxDelay,
+    });
 
     console.warn(
       `[GoSPA] WebSocket disconnected. Reconnecting in ${Math.round(delay)}ms (attempt ${this.reconnectAttempts})...`,
@@ -419,6 +520,9 @@ export class WSClient {
     this.reconnectTimer = setTimeout(() => {
       this.reconnectTimer = null;
       if (this.connectionState.get() === "disconnected") {
+        this.emitTelemetry("reconnect-attempt", {
+          attempt: this.reconnectAttempts,
+        });
         this.connect().catch(() => {});
       }
     }, delay);
@@ -426,7 +530,8 @@ export class WSClient {
 
   private startHeartbeat(): void {
     this.heartbeatTimer = setInterval(() => {
-      this.send({ type: "ping" });
+      this.lastPingSentAt = Date.now();
+      this.send({ type: "ping", timestamp: this.lastPingSentAt });
     }, this.config.heartbeatInterval);
   }
 
@@ -532,6 +637,9 @@ export class WSClient {
       // SECURITY: Validate message structure before processing
       const message = validateMessage(raw);
       if (!message) {
+        this.emitTelemetry("invalid-message", {
+          reason: "schema_validation_failed",
+        });
         console.debug(
           "[GoSPA] Received invalid WebSocket message, ignoring:",
           raw,
@@ -553,6 +661,9 @@ export class WSClient {
           const decompressed = await response.arrayBuffer();
           return this.handleMessage(decompressed);
         } catch (err) {
+          this.emitTelemetry("decompress-failure", {
+            error: String(err),
+          });
           console.error("[GoSPA] Failed to decompress message:", err);
           return;
         }
@@ -560,7 +671,33 @@ export class WSClient {
 
       // Handle pong
       if (message.type === "pong") {
+        if (this.lastPingSentAt !== null) {
+          this.emitTelemetry("latency", {
+            latencyMs: Math.max(0, Date.now() - this.lastPingSentAt),
+          });
+          this.lastPingSentAt = null;
+        }
         return;
+      }
+
+      if (this.isStaleMessage(message)) {
+        this.emitTelemetry("stale-message-dropped", {
+          messageTimestamp: message.timestamp,
+          lastServerTimestamp: this.lastServerTimestamp,
+        });
+        return;
+      }
+      if (
+        typeof message.timestamp === "number" &&
+        message.timestamp > this.lastServerTimestamp
+      ) {
+        this.lastServerTimestamp = message.timestamp;
+      }
+
+      if (message.type === "patch" && !message.patch) {
+        this.emitTelemetry("patch-failure", {
+          reason: "patch_message_missing_patch_payload",
+        });
       }
 
       // Save session data when server sends it (init message with session token)
@@ -590,6 +727,16 @@ export class WSClient {
             pending.resolve(message.data);
           }
         }
+      }
+
+      if (
+        this.isStateBearingMessage(message) &&
+        typeof message.timestamp === "number"
+      ) {
+        this.lastServerTimestamp = Math.max(
+          this.lastServerTimestamp,
+          message.timestamp,
+        );
       }
 
       this.config.onMessage(message);

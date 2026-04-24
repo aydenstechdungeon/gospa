@@ -564,6 +564,7 @@ gospa doctor [options]
 | Flag | Short | Default | Description |
 |------|-------|---------|-------------|
 | `--routes-dir` | - | `./routes` | Routes directory to validate |
+| `--strict` | - | `false` | Enable strict preflight checks (CSP, WS, prefork, route graph, SFC diagnostics) |
 | `--help` | `-h` | - | Show help for this command |
 
 ### What it checks
@@ -572,6 +573,12 @@ gospa doctor [options]
 2. **Project Layout**: `go.mod`, `main.go`, and routes directory existence.
 3. **Runtime**: Presence of client runtime entrypoints (`src/runtime.ts`, etc.).
 4. **Dependencies**: `package.json` for Bun and system libraries like `libwebp`/`libheif` (via `pkg-config`).
+5. **Strict mode (`--strict`)**:
+   - route graph artifacts (`generated/routes.ts`)
+   - CSP nonce placeholder checks
+   - websocket path sanity
+   - prefork storage/pubsub consistency
+   - `.gospa` compile diagnostics (line/column + suggested fixes)
 
 ### Examples
 
@@ -581,6 +588,9 @@ gospa doctor
 
 # Validate custom routes directory
 gospa doctor --routes-dir ./src/routes
+
+# Strict preflight gate
+gospa doctor --strict
 ```
 
 ---

@@ -202,7 +202,10 @@ func (p *TemplateParser) parseTag() (Node, error) {
 		// Component @Component
 		p.pos++
 		name := p.parseIdentifier()
-		attrs := p.parseAttributes()
+		attrs, err := p.parseAttributes()
+		if err != nil {
+			return nil, err
+		}
 
 		var children []Node
 		selfClosing := false
@@ -232,7 +235,10 @@ func (p *TemplateParser) parseTag() (Node, error) {
 	}
 
 	tagName := p.parseIdentifier()
-	attrs := p.parseAttributes()
+	attrs, err := p.parseAttributes()
+	if err != nil {
+		return nil, err
+	}
 
 	selfClosing := p.consume("/")
 	if !p.consume(">") {
@@ -366,6 +372,14 @@ func (p *TemplateParser) parseCurly() (Node, error) {
 			}
 			p.setPos(&node.BaseNode, start, p.pos)
 			return node, nil
+		default:
+			suggestion := "Supported directives are {#if ...}, {#each ... as ...}, and {#snippet Name(...)}."
+			snippet := "{#if condition}\n  ...\n{/if}"
+			if keyword == "await" {
+				suggestion = "{#await} is not implemented yet in the alpha compiler."
+				snippet = "<!-- Replace with {#if loading}... -->"
+			}
+			return nil, p.errorWithHint("unknown directive #"+keyword, suggestion, snippet)
 		}
 	}
 
@@ -394,7 +408,7 @@ func (p *TemplateParser) parseText() Node {
 	return node
 }
 
-func (p *TemplateParser) parseAttributes() []Attribute {
+func (p *TemplateParser) parseAttributes() ([]Attribute, error) {
 	var attrs []Attribute
 	for {
 		p.skipWhitespace()
@@ -402,9 +416,33 @@ func (p *TemplateParser) parseAttributes() []Attribute {
 			break
 		}
 
+		if p.input[p.pos] == '@' {
+			start := p.pos
+			p.pos++ // skip @
+			event := p.parseIdentifierWithDots()
+			if event == "" {
+				event = "event"
+			}
+			line, col := p.absolutePosition(start)
+			return nil, newDiagnosticError(
+				line,
+				col,
+				"invalid event binding syntax @"+event,
+				"Use GoSPA event directives with on:<event>.",
+				fmt.Sprintf(`<button on:%s={handler}>...</button>`, event),
+			)
+		}
+
 		name := p.parseIdentifier()
 		if name == "" {
 			break
+		}
+		if strings.HasPrefix(name, "on-") {
+			return nil, p.errorWithHint(
+				"invalid event directive "+name,
+				"Use on:<event> instead of on-<event>.",
+				fmt.Sprintf(`<button on:%s={handler}>...</button>`, strings.TrimPrefix(name, "on-")),
+			)
 		}
 
 		p.skipWhitespace()
@@ -436,7 +474,7 @@ func (p *TemplateParser) parseAttributes() []Attribute {
 			attrs = append(attrs, Attribute{Name: name})
 		}
 	}
-	return attrs
+	return attrs, nil
 }
 
 func (p *TemplateParser) parseIdentifier() string {
@@ -536,8 +574,22 @@ func (p *TemplateParser) setPos(base *BaseNode, start, end int) {
 }
 
 func (p *TemplateParser) error(msg string) error {
-	line, col := p.posIndex.OffsetToPosition(p.pos)
-	return fmt.Errorf("at %d:%d: %s", line+p.baseLine, col+p.baseColumn, msg)
+	return p.errorWithHint(msg, "", "")
+}
+
+func (p *TemplateParser) errorWithHint(msg, suggestion, snippet string) error {
+	line, col := p.absolutePosition(p.pos)
+	return newDiagnosticError(line, col, msg, suggestion, snippet)
+}
+
+func (p *TemplateParser) absolutePosition(pos int) (line, col int) {
+	relLine, relCol := p.posIndex.OffsetToPosition(pos)
+	line = relLine + p.baseLine + 1
+	col = relCol + 1
+	if relLine == 0 {
+		col += p.baseColumn
+	}
+	return line, col
 }
 
 func isVoidTag(tag string) bool {

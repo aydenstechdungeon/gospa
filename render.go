@@ -396,6 +396,7 @@ func (a *App) renderRoute(c gofiber.Ctx, route *routing.Route, routeParams map[s
 	_, _ = fmt.Fprintf(&out, `<script src="%s" type="module"%s></script>`, runtimePathForPage, nonceFmt)
 	_, _ = fmt.Fprintf(&out, `<script type="module"%s>
 import * as runtime from %s;
+window.__GOSPA_RUNTIME_ESM__ = runtime;
 window.__GOSPA_CONFIG__ = {
 	navigationOptions: %s,
 	csrfToken: %s,

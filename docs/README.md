@@ -58,6 +58,7 @@ docs/
 - [Plugin Architecture](plugins.md)
 - [Dev Tools & HMR](devtools.md)
 - [Runtime Lifecycle](runtime.md)
+- [Fiber Migration Checklist](migration/fiber-to-gospa.md)
 
 ### Reference
 - [Full API Reference](api.md)

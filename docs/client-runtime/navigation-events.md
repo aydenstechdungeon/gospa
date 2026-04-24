@@ -96,9 +96,20 @@ The runtime dispatches custom events on the document.
 
 | Event | Detail | Description |
 |-------|--------|-------------|
-| `gospa:navigated` | `{path, state}` | After successful navigation |
-| `gospa:navigation-start` | `{from, to}` | Before navigation starts |
-| `gospa:navigation-error` | `{error, path}` | Navigation failed |
+| `gospa:navigation-start` | `{from, to, source, replace}` | Before navigation fetch starts |
+| `gospa:navigated` | `{path, from, to, source, durationMs}` | After successful navigation |
+| `gospa:navigation-end` | `{from, to, source, durationMs}` | Navigation lifecycle finished successfully |
+| `gospa:navigation-error` | `{from, to, source, error}` | Navigation failed |
+
+## Deterministic Defaults
+
+GoSPA now applies deterministic navigation defaults out of the box:
+
+- `pendingUI`: delayed pending indicator (`delay: 120ms`) with minimum visible duration (`180ms`) to reduce flicker.
+- `focusRestoration`: focuses `h1`/page container/main after morph so keyboard and screen-reader behavior stays consistent.
+- `scrollRestoration`: sets `history.scrollRestoration = "manual"`, restores scroll on `popstate`, and supports hash-anchor scrolling.
+
+You can override these via `setNavigationOptions` or `window.__GOSPA_CONFIG__.navigationOptions`.
 
 ## Event Handling
 
