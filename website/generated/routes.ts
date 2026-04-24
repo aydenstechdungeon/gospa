@@ -189,48 +189,6 @@ export function buildQuery(params: RouteQuery): string {
 }
 
 // ============================================
-// Route Data & Actions Contracts
-// ============================================
-
-/**
- * Per-route metadata for load/action availability.
- */
-export interface RouteDataContract {
-  hasLoad: boolean;
-  hasActions: boolean;
-  actions: readonly string[];
-}
-
-export const routeDataContracts: Partial<Record<RoutePath, RouteDataContract>> = {
-};
-
-export type RouteLoadData<T extends RoutePath> = Record<string, unknown>;
-
-/**
- * Fetch typed load data for a route (server Load chain only).
- */
-export async function loadRouteData<T extends RoutePath>(
-  path: T,
-  init?: RequestInit,
-): Promise<RouteLoadData<T>> {
-  const dataURL = new URL(path, window.location.origin);
-  dataURL.searchParams.set('__data', '1');
-  const res = await fetch(dataURL.toString(), {
-    ...init,
-    credentials: init?.credentials ?? 'same-origin',
-    headers: {
-      Accept: 'application/json',
-      ...(init?.headers || {}),
-    },
-  });
-  if (!res.ok) {
-    throw new Error(`Failed to load route data (${res.status})`);
-  }
-  const payload = await res.json() as { data?: Record<string, unknown> };
-  return (payload.data ?? {}) as RouteLoadData<T>;
-}
-
-// ============================================
 // Route Builder Functions
 // ============================================
 
@@ -520,18 +478,7 @@ export function docsWebsocketRoute(): string {
 /**
  * Route matching cache to avoid redundant iterations.
  */
-const ROUTE_MATCH_CACHE_MAX = 1000;
 const routeMatchCache = new Map<string, boolean>();
-
-function setRouteMatchCache(cacheKey: string, value: boolean): void {
-  if (routeMatchCache.size >= ROUTE_MATCH_CACHE_MAX) {
-    const oldestKey = routeMatchCache.keys().next().value;
-    if (oldestKey !== undefined) {
-      routeMatchCache.delete(oldestKey);
-    }
-  }
-  routeMatchCache.set(cacheKey, value);
-}
 
 /**
  * Check if a path matches a route pattern.
@@ -546,7 +493,7 @@ export function matchRoute(pattern: string, path: string): boolean {
   const pathParts = path.split('/').filter(Boolean);
   
   if (patternParts.length !== pathParts.length) {
-    setRouteMatchCache(cacheKey, false);
+    routeMatchCache.set(cacheKey, false);
     return false;
   }
   
@@ -555,12 +502,12 @@ export function matchRoute(pattern: string, path: string): boolean {
     const pathPart = pathParts[i];
     
     if (!patternPart.startsWith(':') && patternPart !== pathPart) {
-      setRouteMatchCache(cacheKey, false);
+      routeMatchCache.set(cacheKey, false);
       return false;
     }
   }
   
-  setRouteMatchCache(cacheKey, true);
+  routeMatchCache.set(cacheKey, true);
   return true;
 }
 
@@ -656,16 +603,11 @@ export function getLinkProps<T extends RoutePath>(
   path: T,
   ...args: [...RouteParams<T> extends never ? [] : [params: RouteParams<T>], query?: RouteQuery]
 ): { href: string } {
-  const hasParams = path.includes(':');
-  const params = hasParams && args.length > 0 && typeof args[0] === 'object' && args[0] !== null
-    ? (args[0] as RouteParams<T>)
-    : undefined;
-  let href = buildRoute(path, ...(params ? [params] : []));
+  let href = buildRoute(path, ...(args.length > 0 && typeof args[0] === 'object' && !('search' in args[0]) ? [args[0]] : []));
   
-  const queryIndex = hasParams ? 1 : 0;
-  const query = args[queryIndex] as RouteQuery | undefined;
+  const query = args.find(a => typeof a === 'object' && !('toString' in a)) as RouteQuery | undefined;
   
-  if (query && typeof query === 'object') {
+  if (query) {
     href += buildQuery(query);
   }
   

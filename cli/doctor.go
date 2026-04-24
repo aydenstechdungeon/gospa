@@ -150,11 +150,28 @@ func safeWriteProjectFile(relPath string, data []byte, perm os.FileMode) error {
 
 func strictDoctorChecks(config *DoctorConfig) []doctorCheck {
 	return []doctorCheck{
-		checkAnyFile(".", []string{"generated/routes.ts"}, true, "route graph artifacts"),
+		checkRouteGraphArtifacts(),
 		checkCSPNonceConfig(),
 		checkWebSocketPathConfig(),
 		checkPreforkStoragePubSubConfig(),
 		checkSFCStrict(config.RoutesDir),
+	}
+}
+
+func checkRouteGraphArtifacts() doctorCheck {
+	const artifactPath = "generated/routes.ts"
+	info, err := os.Stat(artifactPath)
+	if err == nil && !info.IsDir() {
+		return doctorCheck{
+			Name:     "route graph artifacts",
+			Detail:   artifactPath,
+			Required: true,
+		}
+	}
+	return doctorCheck{
+		Name:     "route graph artifacts",
+		Required: true,
+		Err:      fmt.Errorf("%s missing; run `gospa generate` before `gospa build`", artifactPath),
 	}
 }
 
