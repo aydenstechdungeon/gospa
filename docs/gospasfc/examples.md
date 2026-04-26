@@ -5,13 +5,15 @@
 ```svelte
 <script lang="go">
   var count = $state(0)
+  func increment() { count++ }
+  func decrement() { count-- }
 </script>
 
 <template>
   <div class="counter">
     <p>Count: {count}</p>
-    <button on:click={func() { count++ }}>+</button>
-    <button on:click={func() { count-- }}>-</button>
+    <button on:click={increment}>+</button>
+    <button on:click={decrement}>-</button>
   </div>
 </template>
 
@@ -25,14 +27,15 @@
 ```svelte
 <script lang="go">
   var email = $state("")
-  var error = $derived(len(email) < 5 && len(email) > 0)
+  var error = $state(false)
+  func validateEmail() { error = email == "" }
 </script>
 
 <template>
   <form>
-    <input type="email" data-model="email" />
+    <input type="email" data-model="email" on:input={validateEmail} />
     {#if error}
-      <span class="error">Email too short</span>
+      <span class="error">Email is required</span>
     {/if}
   </form>
 </template>

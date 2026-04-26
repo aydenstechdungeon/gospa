@@ -15,7 +15,7 @@ import "github.com/aydenstechdungeon/gospa/website/components"
 			</div>
 			<h1 class="text-4xl font-bold tracking-tight mb-4 text-transparent bg-clip-text bg-gradient-to-r from-[var(--accent-primary)] to-[var(--accent-secondary)]">API Reference</h1>
 				<p class="text-xl text-[var(--text-secondary)] leading-relaxed">
-					Code-verified contracts for SFC module exports, action responses, and client helpers.
+					Code-verified contracts for SFC module exports, action responses, and <code>@gospa/client</code> helper APIs.
 				</p>
 				<p class="text-sm text-[var(--text-muted)] mt-3">
 					Need the full parser/compiler/runtime contract? See <a href="/docs/gospasfc/system-reference" class="text-[var(--accent-primary)] font-semibold hover:underline">SFC System Reference</a>.
@@ -37,6 +37,23 @@ func ActionSave(c routing.LoadContext) (any, error)`, "go", "module-exports.go")
 				</ul>
 			</div>
 
+			<div class="rounded-xl border border-[var(--border)] bg-[var(--bg-secondary)] p-6">
+				<h2 class="text-2xl font-bold mb-4">LoadContext API</h2>
+				@components.CodeBlock(`Param(key string) string
+Params() map[string]string
+Query(key string, defaultValue ...string) string
+QueryValues() map[string][]string
+Header(key string) string
+Headers() map[string]string
+SetHeader(key, value string)
+Cookie(key string) string
+SetCookie(key, value string, maxAge int, path string, httpOnly, secure bool)
+FormValue(key string, defaultValue ...string) string
+Method() string
+Path() string
+Local(key string) interface{}`, "go", "load-context.go")
+			</div>
+
 				<div class="rounded-xl border border-[var(--border)] bg-[var(--bg-secondary)] p-6">
 					<h2 class="text-2xl font-bold mb-4">Action Envelope</h2>
 					@components.CodeBlock("type ActionResponse struct {\n  Data           interface{}\n  Code           string\n  Error          string\n  Redirect       *ActionRedirect\n  Validation     *ActionValidationError\n  Revalidate     []string\n  RevalidateTags []string\n  RevalidateKeys []string\n}", "go", "action-response.go")
@@ -51,6 +68,8 @@ func ActionSave(c routing.LoadContext) (any, error)`, "go", "module-exports.go")
 					<li><code>enhanceForm</code> serializes GET form data into query params and aborts stale concurrent submits.</li>
 					<li><code>callRouteAction(path, action, ...)</code> appends <code>_action</code> and sends progressive-enhancement headers.</li>
 					<li><code>loadRouteData(path)</code> fetches <code>?__data=1</code> and throws on non-OK responses.</li>
+					<li><code>on:&lt;event&gt;</code> handlers resolve through generated island handler maps (currently derived from transformed Go-script function names).</li>
+					<li><code>preloadData</code>, <code>preloadCode</code>, <code>goto</code>, <code>beforeNavigate</code>, <code>afterNavigate</code>, and <code>invalidateAll</code> are exported from route helpers.</li>
 				</ul>
 			</div>
 

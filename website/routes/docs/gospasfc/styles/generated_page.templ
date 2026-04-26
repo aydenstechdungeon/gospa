@@ -46,18 +46,17 @@ templ Page() {
 			<div>
 				<h2 class="text-2xl font-bold mb-4 border-b border-[var(--border)] pb-2 italic mono">Global Styles</h2>
 				<p class="text-[var(--text-secondary)] mb-6">
-					If you need to define styles that affect elements globally, use the <code>:global()</code> selector. This will prevent the compiler from hashing the selector.
+					Use app-level shared stylesheets for global selectors. SFC <code>&lt;style&gt;</code> blocks are component-scoped by default.
 				</p>
-				@components.CodeBlock(`<style>
-  :global(body) {
-    margin: 0;
-    overflow-x: hidden;
-  }
+				@components.CodeBlock(`/* styles/main.css */
+body {
+  margin: 0;
+  overflow-x: hidden;
+}
 
-  :global(.theme-dark) .btn {
-    border-color: white;
-  }
-</style>`, "svelte", "Global.gospa")
+.theme-dark .btn {
+  border-color: white;
+}`, "css", "main.css")
 			</div>
 
 			<div>

@@ -20,7 +20,7 @@ func main() {
 		if err != nil {
 			return err
 		}
-		if !d.IsDir() && strings.HasSuffix(d.Name(), "page.templ") {
+		if !d.IsDir() && (d.Name() == "page.templ" || d.Name() == "page.gospa") {
 			rel, _ := filepath.Rel(websiteDocsDir, filepath.Dir(path))
 			if rel == "." {
 				rel = "root"

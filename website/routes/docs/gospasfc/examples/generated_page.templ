@@ -33,32 +33,34 @@ templ Page() {
 				<p class="text-[var(--text-secondary)] mb-6">
 					Manage complex form state using the <code>$state</code> rune and conditional rendering.
 				</p>
-				@components.CodeBlock(`<script lang="go">
+@components.CodeBlock(`<script lang="go">
   var step = $state(1)
   var formData = $state(map[string]string{})
 
   func next() { step++ }
   func prev() { step-- }
+  func setDemoName() { formData["name"] = "Ada" }
+  func setDemoEmail() { formData["email"] = "ada@example.com" }
 </script>
 
 <template>
   <div class="form-container">
-    {if step == 1}
+    {#if step == 1}
       <section>
         <h3>Step 1: Identity</h3>
-        <input on:input={func(e *gospa.Event) { formData["name"] = e.Value }} placeholder="Name" />
+        <button on:click={setDemoName}>Use Demo Name</button>
         <button on:click={next}>Next</button>
       </section>
-    {else if step == 2}
+    {:else if step == 2}
       <section>
         <h3>Step 2: Contact</h3>
-        <input on:input={func(e *gospa.Event) { formData["email"] = e.Value }} placeholder="Email" />
+        <button on:click={setDemoEmail}>Use Demo Email</button>
         <div class="flex gap-2">
           <button on:click={prev}>Back</button>
           <button on:click={next}>Submit</button>
         </div>
       </section>
-    {else}
+    {:else}
       <section>
         <h3>Success!</h3>
         <p>Thanks, {formData["name"]}!</p>
@@ -119,13 +121,14 @@ func ActionArchive(c routing.LoadContext) (interface{}, error) {
 				<p class="text-[var(--text-secondary)] mb-6">
 					Use <code>$derived</code> to automatically filter a list based on user input.
 				</p>
-				@components.CodeBlock(`<script lang="go">
+@components.CodeBlock(`<script lang="go">
   var query = $state("")
   var items = []string{"Apple", "Banana", "Cherry", "Date"}
+  func setApple() { query = "apple" }
 </script>
 
 <script lang="ts">
-  import { $derived } from "@gospa/runtime"
+  import { $derived } from "@gospa/client"
   
   const filtered = $derived(() => {
     const q = query.toLowerCase().trim()
@@ -136,11 +139,11 @@ func ActionArchive(c routing.LoadContext) (interface{}, error) {
 
 <template>
   <div class="search-box">
-    <input on:input={func(e *gospa.Event) { query = e.Value }} placeholder="Search..." />
+    <button on:click={setApple}>Filter to Apple</button>
     <ul>
-      {for _, item := range filtered.get()}
+      {#each filtered.get() as item}
         <li>{item}</li>
-      {/for}
+      {/each}
     </ul>
   </div>
 </template>`, "svelte", "SearchFilter.gospa")
@@ -155,11 +158,11 @@ func ActionArchive(c routing.LoadContext) (interface{}, error) {
 					Integrate external JavaScript libraries using the <code>$effect</code> rune to initialize them after the component hydrates.
 				</p>
 				@components.CodeBlock(`<script lang="ts">
-  import { onMount } from "@gospa/runtime"
+  import { $effect } from "@gospa/client"
   
   const data = [10, 20, 30]
   
-  onMount(() => {
+  $effect(() => {
     // Initialize Chart.js on client after hydration.
     const canvas = document.getElementById("myChart") as HTMLCanvasElement | null
     if (!canvas) return
@@ -173,6 +176,7 @@ func ActionArchive(c routing.LoadContext) (interface{}, error) {
         datasets: [{ data }]
       }
     })
+    return () => {}
   })
 </script>
 
@@ -195,7 +199,7 @@ func ActionArchive(c routing.LoadContext) (interface{}, error) {
 </script>
 
 <script lang="ts">
-  import { $state, $derived } from "@gospa/runtime"
+  import { $state, $derived } from "@gospa/client"
   
   // Client-only state
   const clientTime = $state(Date.now())

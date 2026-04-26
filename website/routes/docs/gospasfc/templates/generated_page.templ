@@ -41,19 +41,19 @@ templ Page() {
 			<div>
 				<h2 class="text-2xl font-bold mb-4 border-b border-[var(--border)] pb-2 italic mono">Control Flow</h2>
 				<p class="text-[var(--text-secondary)] mb-6">
-					Directly include Go control flow logic within your templates using Templ's <code>if</code>, <code>else</code>, and <code>for</code> directives.
+					Use SFC block directives for conditional and list rendering.
 				</p>
 				@components.CodeBlock(`<template>
-  {if count > 10}
+  {#if count > 10}
     <p>Danger: Count too high!</p>
-  {else}
+  {:else}
     <p>Safe level.</p>
   {/if}
 
   <ul>
-    {for _, item := range items}
+    {#each items as item}
       <li>{item.Name}</li>
-    {/for}
+    {/each}
   </ul>
 </template>`, "svelte", "Control.gospa")
 			</div>
@@ -61,7 +61,7 @@ templ Page() {
 			<div>
 				<h2 class="text-2xl font-bold mb-4 border-b border-[var(--border)] pb-2 italic mono">Event Binding</h2>
 				<p class="text-[var(--text-secondary)] mb-6">
-					Bind user interactions to Go functions or TypeScript actions using the <code>on:&lt;event&gt;</code> syntax.
+					Bind user interactions using <code>on:&lt;event&gt;</code> and named handler functions.
 				</p>
 				<table class="w-full text-sm text-left text-[var(--text-secondary)] mb-6">
 					<thead class="text-xs uppercase bg-[var(--bg-secondary)] text-[var(--text-primary)]">

@@ -21,6 +21,8 @@ You can have both a Go script (for SSR/Runes) and a TS script for manual DOM log
 </script>
 ```
 
+Note: `on:<event>` template handler names are resolved through the generated island handler registry. Prefer named handlers declared in the Go instance script for delegated template events.
+
 ## Generated Runtime Bridge
 
 Generated SFC code injects runtime helpers when available:

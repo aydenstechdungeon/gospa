@@ -37,12 +37,13 @@ hydrate: true
 
 <script lang="go">
   var name = $state("World")
+  func setAda() { name = "Ada" }
 </script>
 
 <template>
   <div class="card">
     <h1>Hello, {name}!</h1>
-    <input on:input={func(e *gospa.Event) { name = e.Value }} value={name} />
+    <button on:click={setAda}>Use Demo Name</button>
   </div>
 </template>
 

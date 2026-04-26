@@ -9,13 +9,18 @@ The compiler transforms Go logic into efficient TypeScript.
 - `int`, `float64` → `number`
 - `string` → `string`
 - `bool` → `boolean`
-- `map[string]any` → `Record<string, any>`
+- other Go types currently fall back to `any`
 
 ### Expression Translation
 
+Current compiler rewrites include:
+
 - `fmt.Printf(...)` → `console.log(...)`
-- `len(arr)` → `arr.length`
-- `append(arr, item)` → `[...arr, item]`
+- `fmt.Sprint(...)` / `fmt.Sprintf(...)` → `String(...)` (best-effort fallback)
+- `for _, item := range items` → `for (const item of items)`
+- `:=` → `=`
+
+The compiler does not currently implement full Go→TS semantic translation (for example, `len(...)` and `append(...)` are not special-cased).
 
 ## Security & Trust Boundary
 

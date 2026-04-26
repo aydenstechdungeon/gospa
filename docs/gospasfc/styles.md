@@ -14,12 +14,11 @@ Selectors only affect elements within the component template.
 
 ## Global Styles
 
-Use `:global()` to define styles that affect the whole page:
+Put global rules in app-level/global stylesheets (`styles/main.css`, route-level shared CSS, or Tailwind layers). SFC `<style>` blocks are component-scoped by default.
 
 ```css
-<style>
-  :global(body) { background: #000; }
-</style>
+/* styles/main.css */
+body { background: #000; }
 ```
 
 ## Integration with Tailwind

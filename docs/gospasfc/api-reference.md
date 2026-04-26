@@ -4,6 +4,10 @@ This page documents the SFC API contracts as implemented in code (`compiler/modu
 
 For a complete parser/compiler/runtime walkthrough, see [SFC System Reference](system-reference.md).
 
+Client package reference:
+
+- npm package name: `@gospa/client`
+
 ## SFC file contract (`.gospa`)
 
 Parser/compiler support:
@@ -35,6 +39,14 @@ Hydration modes:
 - `visible`
 - `idle`
 - `interaction`
+
+## SFC event directive contract
+
+- Template syntax: `on:<event>={handlerName}`
+- Compiler lowering: `on:click={increment}` -> `data-gospa-on="click:increment"`
+- Runtime resolution looks up handler names on island handler registries.
+- Current generation path derives handler registries from transformed Go-script function names.
+- Use named function handlers. Inline function literals are not part of the current delegated handler lookup contract.
 
 Frontmatter keys consumed by compiler:
 
@@ -135,6 +147,15 @@ Key semantics:
 - Validation errors populate `aria-invalid` and `data-gospa-error`.
 - Revalidation hints (`revalidate*`) are applied before `onSuccess`.
 
+`options` callbacks:
+
+- `optimistic(form, formData)`
+- `onPending(form)`
+- `onSuccess(result, form, response)`
+- `onValidation(validation, form, response)`
+- `onRedirect(redirect, form, response)`
+- `onError(error, form, response?)`
+
 ### `callRouteAction(path, action, body?, init?)`
 
 - Appends `_action=<action>` query param.
@@ -147,6 +168,24 @@ Key semantics:
 
 - Fetches `?__data=1` endpoint with `Accept: application/json`.
 - Throws if response is not OK.
+
+### Additional route helper exports (`client/src/route-helpers.ts`)
+
+```ts
+function preloadData<T = Record<string, unknown>>(path: string, init?: RequestInit): Promise<T>;
+function preloadCode(path: string): Promise<void>;
+function goto(to: string, options?: NavigateOptions): Promise<boolean>;
+function refresh(init?: RequestInit): Promise<void>;
+function prefetchOnHover(
+  selector: string,
+  options?: { delay?: number; preloadCode?: boolean; preloadData?: boolean }
+): () => void;
+
+// re-exported aliases from navigation
+const beforeNavigate: typeof onBeforeNavigate;
+const afterNavigate: typeof onAfterNavigate;
+function invalidateAll(): Promise<void>;
+```
 
 ## M1 helper APIs (stable)
 
