@@ -155,9 +155,10 @@ func (p *TemplateParser) parseParenArgs(required bool) ([]Attribute, error) {
 			if p.pos >= len(p.input) {
 				return nil, p.error("unterminated backtick string argument")
 			}
-			attr.Value = p.input[start:p.pos]
+			// Keep the raw backtick string literal so codegen emits a valid operand.
+			attr.Value = "`" + p.input[start:p.pos] + "`"
 			p.pos++                  // skip closing `
-			attr.IsExpression = true // Mark as expression to preserve raw value
+			attr.IsExpression = true // Emit as expression literal (not quoted again)
 		case p.pos < len(p.input) && p.input[p.pos] == '"':
 			// Double-quoted string
 			p.pos++ // skip opening "
@@ -217,12 +218,14 @@ func (p *TemplateParser) parseTag() (Node, error) {
 		}
 
 		if !selfClosing {
-			children, _ = p.parseNodes("")
-			// GoSPA currently uses @Name(...) { children } style in Templ
-			// But in SFC template it's <@Component /> or <@Component>...</@Component>
-			// Wait, GoSPA compiler.go:219 uses PascalCase components <Component>
-			// and @snippet(args) for snippet calls.
-			// Let's stick to what compiler.go expects.
+			endTag := "</@" + name + ">"
+			children, err = p.parseNodes(endTag)
+			if err != nil {
+				return nil, err
+			}
+			if !p.consume(endTag) {
+				return nil, p.error("expected " + endTag)
+			}
 		}
 
 		node := &ComponentNode{
@@ -323,6 +326,62 @@ func (p *TemplateParser) parseCurly() (Node, error) {
 			p.setPos(&node.BaseNode, start, p.pos)
 			return node, nil
 
+		case "await":
+			p.skipWhitespace()
+			expr := p.consumeUntil("}")
+			if !p.consume("}") {
+				return nil, p.error("expected }")
+			}
+
+			node := &AwaitNode{
+				Expression: strings.TrimSpace(expr),
+			}
+
+			// Initial content before {:then}/{:catch} is pending block.
+			pending, err := p.parseNodes("")
+			if err != nil {
+				return nil, err
+			}
+			node.Pending = pending
+
+			for {
+				if p.consume("{:then") {
+					p.skipWhitespace()
+					node.ThenVar = strings.TrimSpace(p.parseIdentifier())
+					p.skipWhitespace()
+					if !p.consume("}") {
+						return nil, p.error("expected }")
+					}
+					thenNodes, err := p.parseNodes("")
+					if err != nil {
+						return nil, err
+					}
+					node.Then = thenNodes
+					continue
+				}
+				if p.consume("{:catch") {
+					p.skipWhitespace()
+					node.CatchVar = strings.TrimSpace(p.parseIdentifier())
+					p.skipWhitespace()
+					if !p.consume("}") {
+						return nil, p.error("expected }")
+					}
+					catchNodes, err := p.parseNodes("")
+					if err != nil {
+						return nil, err
+					}
+					node.Catch = catchNodes
+					continue
+				}
+				break
+			}
+
+			if !p.consume("{/await}") {
+				return nil, p.error("expected {/await}")
+			}
+			p.setPos(&node.BaseNode, start, p.pos)
+			return node, nil
+
 		case "each":
 			p.skipWhitespace()
 			iteratee := p.consumeUntil(" as ")
@@ -373,12 +432,8 @@ func (p *TemplateParser) parseCurly() (Node, error) {
 			p.setPos(&node.BaseNode, start, p.pos)
 			return node, nil
 		default:
-			suggestion := "Supported directives are {#if ...}, {#each ... as ...}, and {#snippet Name(...)}."
+			suggestion := "Supported directives are {#if ...}, {#await ...}, {#each ... as ...}, and {#snippet Name(...)}."
 			snippet := "{#if condition}\n  ...\n{/if}"
-			if keyword == "await" {
-				suggestion = "{#await} is not implemented yet in the alpha compiler."
-				snippet = "<!-- Replace with {#if loading}... -->"
-			}
 			return nil, p.errorWithHint("unknown directive #"+keyword, suggestion, snippet)
 		}
 	}
@@ -503,27 +558,96 @@ func (p *TemplateParser) consumeUntil(delimiter string) string {
 	start := p.pos
 
 	if delimiter == "}" || delimiter == ")" {
-		var open byte
-		if delimiter == "}" {
-			open = '{'
-		} else {
-			open = '('
-		}
-		depth := 0
+		delim := delimiter[0]
+		stack := make([]byte, 0, 8)
+
+		inSingle := false
+		inDouble := false
+		inBacktick := false
+		escaped := false
+		inLineComment := false
+		inBlockComment := false
 
 		for p.pos < len(p.input) {
 			ch := p.input[p.pos]
-			switch ch {
-			case open:
-				depth++
-			case delimiter[0]:
-				if depth == 0 {
-					return p.input[start:p.pos]
+
+			if inLineComment {
+				p.pos++
+				if ch == '\n' {
+					inLineComment = false
 				}
-				depth--
+				continue
+			}
+			if inBlockComment {
+				if ch == '*' && p.pos+1 < len(p.input) && p.input[p.pos+1] == '/' {
+					inBlockComment = false
+					p.pos += 2
+					continue
+				}
+				p.pos++
+				continue
+			}
+
+			if inSingle || inDouble || inBacktick {
+				p.pos++
+				if escaped {
+					escaped = false
+					continue
+				}
+				if ch == '\\' && !inBacktick {
+					escaped = true
+					continue
+				}
+				if inSingle && ch == '\'' {
+					inSingle = false
+				}
+				if inDouble && ch == '"' {
+					inDouble = false
+				}
+				if inBacktick && ch == '`' {
+					inBacktick = false
+				}
+				continue
+			}
+
+			if ch == '/' && p.pos+1 < len(p.input) {
+				next := p.input[p.pos+1]
+				if next == '/' {
+					inLineComment = true
+					p.pos += 2
+					continue
+				}
+				if next == '*' {
+					inBlockComment = true
+					p.pos += 2
+					continue
+				}
+			}
+
+			if ch == delim && len(stack) == 0 {
+				return p.input[start:p.pos]
+			}
+
+			switch ch {
+			case '\'':
+				inSingle = true
+			case '"':
+				inDouble = true
+			case '`':
+				inBacktick = true
+			case '{', '(', '[':
+				stack = append(stack, ch)
+			case '}', ')', ']':
+				if len(stack) > 0 {
+					top := stack[len(stack)-1]
+					if isMatchingPair(top, ch) {
+						stack = stack[:len(stack)-1]
+					}
+				}
 			}
 			p.pos++
 		}
+
 		return p.input[start:]
 	}
 
@@ -535,6 +659,12 @@ func (p *TemplateParser) consumeUntil(delimiter string) string {
 	}
 	p.pos += idx
 	return p.input[start:p.pos]
+}
+
+func isMatchingPair(open, closing byte) bool {
+	return (open == '{' && closing == '}') ||
+		(open == '(' && closing == ')') ||
+		(open == '[' && closing == ']')
 }
 
 // consumeEscapedUntil consumes characters until the delimiter is found,

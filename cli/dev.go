@@ -511,16 +511,8 @@ func handleFileChange(ctx context.Context, event FileEvent, restartCh chan struc
 
 	switch ext {
 	case ".templ", ".gospa":
-		fmt.Printf("%s changed, triggering templ regeneration...\n", ext)
+		fmt.Printf("%s changed, regenerating artifacts without server restart...\n", ext)
 		watcher.triggerTemplRegen()
-
-		// Restart server (unless disabled)
-		if !noRestart {
-			select {
-			case restartCh <- struct{}{}:
-			default:
-			}
-		}
 
 	case ".go":
 		fmt.Println("Go file changed, restarting server...")

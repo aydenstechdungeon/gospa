@@ -196,4 +196,56 @@ describe("events", () => {
 
     expect(save).toHaveBeenCalledTimes(1);
   });
+
+  it("setupEventDelegation falls back to island name when id is missing", () => {
+    document.body.innerHTML = `
+      <div id="root">
+        <div data-gospa-island="Counter">
+          <button id="btn" data-gospa-on="click:save"></button>
+        </div>
+      </div>
+    `;
+
+    const root = document.getElementById("root")!;
+    const btn = document.getElementById("btn")!;
+
+    const save = mock((_e: Event) => {});
+    (window as any)["__GOSPA_ISLAND_Counter__"] = {
+      handlers: {
+        save,
+      },
+    };
+
+    setupEventDelegation(root);
+    btn.dispatchEvent(new MouseEvent("click", { bubbles: true }));
+
+    expect(save).toHaveBeenCalledTimes(1);
+  });
+
+  it("setupEventDelegation prefers handlers attached to island element", () => {
+    document.body.innerHTML = `
+      <div id="root">
+        <div id="isl-1" data-gospa-island="Counter">
+          <button id="btn" data-gospa-on="click:save"></button>
+        </div>
+      </div>
+    `;
+
+    const root = document.getElementById("root")!;
+    const island = document.getElementById("isl-1")!;
+    const btn = document.getElementById("btn")!;
+
+    const saveLocal = mock((_e: Event) => {});
+    const saveGlobal = mock((_e: Event) => {});
+    (island as any).__gospaHandlers = { save: saveLocal };
+    (window as any)["__GOSPA_ISLAND_isl-1__"] = {
+      handlers: { save: saveGlobal },
+    };
+
+    setupEventDelegation(root);
+    btn.dispatchEvent(new MouseEvent("click", { bubbles: true }));
+
+    expect(saveLocal).toHaveBeenCalledTimes(1);
+    expect(saveGlobal).toHaveBeenCalledTimes(0);
+  });
 });

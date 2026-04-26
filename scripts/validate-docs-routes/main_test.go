@@ -17,6 +17,12 @@ func TestCollectDocsRoutes(t *testing.T) {
 	if err := os.WriteFile(filepath.Join(root, "routing", "api", "page.templ"), []byte("nested"), 0600); err != nil {
 		t.Fatalf("write nested page.templ failed: %v", err)
 	}
+	if err := os.MkdirAll(filepath.Join(root, "routing", "advanced"), 0750); err != nil {
+		t.Fatalf("mkdir advanced failed: %v", err)
+	}
+	if err := os.WriteFile(filepath.Join(root, "routing", "advanced", "page.gospa"), []byte("nested gospa"), 0600); err != nil {
+		t.Fatalf("write nested page.gospa failed: %v", err)
+	}
 
 	routes, err := collectDocsRoutes(root)
 	if err != nil {
@@ -27,6 +33,9 @@ func TestCollectDocsRoutes(t *testing.T) {
 	}
 	if !routes["/docs/routing/api"] {
 		t.Fatal("expected nested /docs/routing/api route")
+	}
+	if !routes["/docs/routing/advanced"] {
+		t.Fatal("expected nested /docs/routing/advanced route from page.gospa")
 	}
 }
 
@@ -64,5 +73,34 @@ func TestLoadSearchEntriesRejectsUnsafePaths(t *testing.T) {
 
 	if _, err := loadSearchEntries("../docs_search_index.json"); err == nil {
 		t.Fatal("expected parent-relative path to be rejected")
+	}
+}
+
+func TestCheckGospaDocsSync(t *testing.T) {
+	tmp := t.TempDir()
+	docsRoot := filepath.Join(tmp, "docs", "gospasfc")
+	if err := os.MkdirAll(filepath.Join(docsRoot, "nested"), 0750); err != nil {
+		t.Fatalf("mkdir failed: %v", err)
+	}
+	if err := os.WriteFile(filepath.Join(docsRoot, "getting-started.md"), []byte("ok"), 0600); err != nil {
+		t.Fatalf("write failed: %v", err)
+	}
+	if err := os.WriteFile(filepath.Join(docsRoot, "nested", "advanced.md"), []byte("ok"), 0600); err != nil {
+		t.Fatalf("write failed: %v", err)
+	}
+
+	routes := map[string]bool{
+		"/docs":                          true,
+		"/docs/gospasfc":                 true,
+		"/docs/gospasfc/getting-started": true,
+		"/docs/gospasfc/nested/advanced": true,
+	}
+
+	failures, err := checkGospaDocsSync(routes, docsRoot, "/docs/gospasfc")
+	if err != nil {
+		t.Fatalf("checkGospaDocsSync returned error: %v", err)
+	}
+	if len(failures) != 0 {
+		t.Fatalf("expected no sync failures, got %v", failures)
 	}
 }

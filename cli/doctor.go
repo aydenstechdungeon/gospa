@@ -3,12 +3,18 @@ package cli
 import (
 	"encoding/json"
 	"fmt"
+	"go/ast"
+	"go/parser"
+	"go/token"
+	"io/fs"
 	"os"
 	"os/exec"
+	"path"
 	"path/filepath"
 	"strings"
 
 	"github.com/aydenstechdungeon/gospa/compiler"
+	"github.com/aydenstechdungeon/gospa/compiler/sfc"
 )
 
 // DoctorConfig controls CLI doctor checks.
@@ -155,6 +161,8 @@ func strictDoctorChecks(config *DoctorConfig) []doctorCheck {
 		checkWebSocketPathConfig(),
 		checkPreforkStoragePubSubConfig(),
 		checkSFCStrict(config.RoutesDir),
+		checkSFCModuleServerConflicts(config.RoutesDir),
+		checkSFCModuleScriptImports(config.RoutesDir),
 	}
 }
 
@@ -718,4 +726,197 @@ func checkSFCStrict(routesDir string) doctorCheck {
 		Required: true,
 		Detail:   fmt.Sprintf("%d .gospa files validated", len(gospaFiles)),
 	}
+}
+
+func checkSFCModuleServerConflicts(routesDir string) doctorCheck {
+	baseDir := strings.TrimSpace(routesDir)
+	if baseDir == "" {
+		baseDir = "./routes"
+	}
+
+	info, err := os.Stat(baseDir)
+	if err != nil || !info.IsDir() {
+		return doctorCheck{
+			Name:     "SFC module/server conflict",
+			Required: true,
+			Detail:   "routes directory not found; skipping",
+		}
+	}
+
+	var checked int
+	routesFS := os.DirFS(baseDir)
+	walkErr := fs.WalkDir(routesFS, ".", func(relPath string, d fs.DirEntry, err error) error {
+		if err != nil {
+			return nil
+		}
+		if d.IsDir() {
+			name := d.Name()
+			if (relPath != "." && strings.HasPrefix(name, ".")) || name == "vendor" || name == "node_modules" || name == "generated" {
+				return fs.SkipDir
+			}
+			return nil
+		}
+		if !strings.HasSuffix(relPath, ".gospa") {
+			return nil
+		}
+
+		content, readErr := fs.ReadFile(routesFS, relPath)
+		if readErr != nil {
+			return fmt.Errorf("%s: read failed: %w", filepath.Join(baseDir, filepath.FromSlash(relPath)), readErr)
+		}
+		parsed, parseErr := sfc.Parse(string(content))
+		if parseErr != nil {
+			return fmt.Errorf("%s: parse failed: %w", filepath.Join(baseDir, filepath.FromSlash(relPath)), parseErr)
+		}
+		if strings.TrimSpace(parsed.ScriptModule.Content) == "" {
+			return nil
+		}
+
+		checked++
+		dir := path.Dir(relPath)
+		base := strings.TrimPrefix(path.Base(relPath), "+")
+		switch {
+		case strings.HasPrefix(base, "page."):
+			if _, statErr := fs.Stat(routesFS, path.Join(dir, "+page.server.go")); statErr == nil {
+				return fmt.Errorf("%s: module script conflicts with +page.server.go", filepath.Join(baseDir, filepath.FromSlash(relPath)))
+			}
+		case strings.HasPrefix(base, "layout."):
+			if _, statErr := fs.Stat(routesFS, path.Join(dir, "+layout.server.go")); statErr == nil {
+				return fmt.Errorf("%s: module script conflicts with +layout.server.go", filepath.Join(baseDir, filepath.FromSlash(relPath)))
+			}
+		}
+
+		return nil
+	})
+	if walkErr != nil {
+		return doctorCheck{
+			Name:     "SFC module/server conflict",
+			Required: true,
+			Err:      walkErr,
+		}
+	}
+
+	return doctorCheck{
+		Name:     "SFC module/server conflict",
+		Required: true,
+		Detail:   fmt.Sprintf("%d module scripts validated", checked),
+	}
+}
+
+func checkSFCModuleScriptImports(routesDir string) doctorCheck {
+	baseDir := strings.TrimSpace(routesDir)
+	if baseDir == "" {
+		baseDir = "./routes"
+	}
+
+	info, err := os.Stat(baseDir)
+	if err != nil || !info.IsDir() {
+		return doctorCheck{
+			Name:     "SFC module import usage",
+			Required: true,
+			Detail:   "routes directory not found; skipping",
+		}
+	}
+
+	var checked int
+	routesFS := os.DirFS(baseDir)
+	walkErr := fs.WalkDir(routesFS, ".", func(relPath string, d fs.DirEntry, err error) error {
+		if err != nil {
+			return nil
+		}
+		if d.IsDir() {
+			name := d.Name()
+			if (relPath != "." && strings.HasPrefix(name, ".")) || name == "vendor" || name == "node_modules" || name == "generated" {
+				return fs.SkipDir
+			}
+			return nil
+		}
+		if !strings.HasSuffix(relPath, ".gospa") {
+			return nil
+		}
+
+		content, readErr := fs.ReadFile(routesFS, relPath)
+		if readErr != nil {
+			return fmt.Errorf("%s: read failed: %w", filepath.Join(baseDir, filepath.FromSlash(relPath)), readErr)
+		}
+		parsedSFC, parseErr := sfc.Parse(string(content))
+		if parseErr != nil {
+			return fmt.Errorf("%s: parse failed: %w", filepath.Join(baseDir, filepath.FromSlash(relPath)), parseErr)
+		}
+
+		moduleCode := strings.TrimSpace(parsedSFC.ScriptModule.Content)
+		if moduleCode == "" {
+			return nil
+		}
+		checked++
+
+		if err := validateModuleImportsUsed(moduleCode); err != nil {
+			return fmt.Errorf("%s: %w", filepath.Join(baseDir, filepath.FromSlash(relPath)), err)
+		}
+
+		return nil
+	})
+	if walkErr != nil {
+		return doctorCheck{
+			Name:     "SFC module import usage",
+			Required: true,
+			Err:      walkErr,
+		}
+	}
+
+	return doctorCheck{
+		Name:     "SFC module import usage",
+		Required: true,
+		Detail:   fmt.Sprintf("%d module scripts validated", checked),
+	}
+}
+
+func validateModuleImportsUsed(moduleCode string) error {
+	src := "package p\n" + moduleCode
+	fset := token.NewFileSet()
+	file, err := parser.ParseFile(fset, "", src, parser.AllErrors)
+	if err != nil {
+		return fmt.Errorf("module script parse failed: %w", err)
+	}
+
+	type importSpec struct {
+		name string
+		path string
+	}
+	var imports []importSpec
+	for _, imp := range file.Imports {
+		rawPath := strings.Trim(imp.Path.Value, "\"")
+		alias := ""
+		if imp.Name != nil {
+			alias = imp.Name.Name
+		}
+		if alias == "_" || alias == "." {
+			continue
+		}
+		if alias == "" {
+			parts := strings.Split(rawPath, "/")
+			alias = parts[len(parts)-1]
+		}
+		imports = append(imports, importSpec{name: alias, path: rawPath})
+	}
+	if len(imports) == 0 {
+		return nil
+	}
+
+	used := make(map[string]bool, len(imports))
+	ast.Inspect(file, func(n ast.Node) bool {
+		if x, ok := n.(*ast.SelectorExpr); ok {
+			if id, ok := x.X.(*ast.Ident); ok {
+				used[id.Name] = true
+			}
+		}
+		return true
+	})
+
+	for _, imp := range imports {
+		if !used[imp.name] {
+			return fmt.Errorf("unused import %q in module script (from %q)", imp.name, imp.path)
+		}
+	}
+	return nil
 }

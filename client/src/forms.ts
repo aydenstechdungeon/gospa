@@ -1,4 +1,5 @@
 import { invalidate, invalidateKey, invalidateTag } from "./navigation.ts";
+import { emitRuntimeSignal } from "./runtime-signals.ts";
 
 export interface ActionValidationError {
   fieldErrors?: Record<string, string>;
@@ -42,7 +43,12 @@ export interface FormEnhanceOptions<T = unknown> {
   ) => void;
 }
 
-async function applyRevalidationHints(payload: ActionEnhanceSuccess): Promise<void> {
+const activeControllers = new WeakMap<HTMLFormElement, AbortController>();
+const submitEpoch = new WeakMap<HTMLFormElement, number>();
+
+async function applyRevalidationHints(
+  payload: ActionEnhanceSuccess,
+): Promise<void> {
   if (payload.revalidate) {
     for (const path of payload.revalidate) {
       await invalidate(path);
@@ -75,13 +81,57 @@ function applyFieldErrors(
 ): void {
   clearFieldErrors(form);
   for (const [field, message] of Object.entries(validation.fieldErrors ?? {})) {
+    const safeField =
+      typeof CSS !== "undefined" && typeof CSS.escape === "function"
+        ? CSS.escape(field)
+        : field.replace(/["\\]/g, "\\$&");
     const target = form.querySelector(
-      `[name="${CSS.escape(field)}"]`,
+      `[name="${safeField}"]`,
     ) as HTMLElement | null;
     if (!target) continue;
     target.setAttribute("aria-invalid", "true");
     target.setAttribute("data-gospa-error", message);
   }
+}
+
+function validationFromPayload(
+  payload: unknown,
+): ActionValidationError | undefined {
+  if (!payload || typeof payload !== "object") {
+    return undefined;
+  }
+
+  const typed = payload as ActionEnhanceSuccess;
+  if (typed.validation) {
+    return typed.validation;
+  }
+
+  const data = typed.data;
+  if (!data || typeof data !== "object") {
+    return undefined;
+  }
+
+  const source = data as {
+    fieldErrors?: Record<string, unknown>;
+    formError?: unknown;
+  };
+  const fieldErrors: Record<string, string> = {};
+  if (source.fieldErrors && typeof source.fieldErrors === "object") {
+    for (const [key, value] of Object.entries(source.fieldErrors)) {
+      if (typeof value === "string" && value) {
+        fieldErrors[key] = value;
+      }
+    }
+  }
+  const formError =
+    typeof source.formError === "string" ? source.formError : undefined;
+  if (!formError && Object.keys(fieldErrors).length === 0) {
+    return undefined;
+  }
+  return {
+    fieldErrors: Object.keys(fieldErrors).length > 0 ? fieldErrors : undefined,
+    formError,
+  };
 }
 
 export function enhanceForm<T = unknown>(
@@ -101,7 +151,11 @@ export function enhanceForm<T = unknown>(
     }
 
     const actionOverride = submitter?.getAttribute("formaction") ?? undefined;
-    const target = actionOverride || options.action || form.action || window.location.pathname;
+    const target =
+      actionOverride ||
+      options.action ||
+      form.action ||
+      window.location.pathname;
     const url = new URL(target, window.location.origin);
     const actionName =
       submitter?.getAttribute("data-gospa-action") ||
@@ -110,23 +164,62 @@ export function enhanceForm<T = unknown>(
       "default";
     url.searchParams.set("_action", actionName);
 
+    const priorController = activeControllers.get(form);
+    if (priorController) {
+      priorController.abort();
+    }
+    const controller = new AbortController();
+    activeControllers.set(form, controller);
+    const nextEpoch = (submitEpoch.get(form) ?? 0) + 1;
+    submitEpoch.set(form, nextEpoch);
+    const epoch = nextEpoch;
+
     options.onPending?.(form);
     options.optimistic?.(form, formData);
+    emitRuntimeSignal("gospa:action-pending", {
+      action: actionName,
+      path: url.pathname,
+      method: (form.method || "POST").toUpperCase(),
+    });
 
     let response: Response | undefined;
     try {
-      response = await fetch(url.toString(), {
-        method: (form.method || "POST").toUpperCase(),
-        body: formData,
+      const method = (form.method || "POST").toUpperCase();
+      const requestInit: RequestInit = {
+        method,
         credentials: "same-origin",
+        signal: controller.signal,
         headers: {
           "X-Gospa-Enhance": "1",
           Accept: "application/json",
         },
-      });
+      };
+      if (method === "GET" || method === "HEAD") {
+        for (const [key, value] of formData.entries()) {
+          if (typeof value === "string") {
+            url.searchParams.append(key, value);
+          }
+        }
+      } else {
+        requestInit.body = formData;
+      }
+
+      response = await fetch(url.toString(), requestInit);
     } catch (error) {
+      if ((error as Error)?.name === "AbortError") {
+        emitRuntimeSignal("gospa:action-aborted", { action: actionName });
+        return;
+      }
       const msg = error instanceof Error ? error.message : "Network error";
       options.onError?.(msg, form);
+      emitRuntimeSignal("gospa:action-error", {
+        action: actionName,
+        path: url.pathname,
+        error: msg,
+      });
+      return;
+    }
+    if (epoch !== submitEpoch.get(form)) {
       return;
     }
 
@@ -138,11 +231,31 @@ export function enhanceForm<T = unknown>(
     }
 
     if (!response.ok) {
+      const validation = validationFromPayload(payload);
+      if (validation) {
+        applyFieldErrors(form, validation);
+        options.onValidation?.(validation, form, response);
+        emitRuntimeSignal("gospa:action-validation", {
+          action: actionName,
+          path: url.pathname,
+          status: response.status,
+          validation,
+        });
+        return;
+      }
       const errMsg =
-        payload && "error" in payload && typeof (payload as any).error === "string"
+        payload &&
+        "error" in payload &&
+        typeof (payload as any).error === "string"
           ? (payload as any).error
           : `Action failed with HTTP ${response.status}`;
       options.onError?.(errMsg, form, response);
+      emitRuntimeSignal("gospa:action-error", {
+        action: actionName,
+        path: url.pathname,
+        status: response.status,
+        error: errMsg,
+      });
       return;
     }
 
@@ -152,6 +265,12 @@ export function enhanceForm<T = unknown>(
     if (result.validation) {
       applyFieldErrors(form, result.validation);
       options.onValidation?.(result.validation, form, response);
+      emitRuntimeSignal("gospa:action-validation", {
+        action: actionName,
+        path: url.pathname,
+        status: response.status,
+        validation: result.validation,
+      });
       return;
     }
 
@@ -159,6 +278,12 @@ export function enhanceForm<T = unknown>(
 
     if (result.redirect?.to) {
       options.onRedirect?.(result.redirect, form, response);
+      emitRuntimeSignal("gospa:action-redirect", {
+        action: actionName,
+        from: url.pathname,
+        to: result.redirect.to,
+        status: result.redirect.status ?? response.status,
+      });
       if (!options.onRedirect) {
         window.location.assign(result.redirect.to);
       }
@@ -166,10 +291,23 @@ export function enhanceForm<T = unknown>(
     }
 
     options.onSuccess?.(result, form, response);
+    emitRuntimeSignal("gospa:action-success", {
+      action: actionName,
+      path: url.pathname,
+      status: response.status,
+    });
   };
 
   form.addEventListener("submit", onSubmit);
-  return () => form.removeEventListener("submit", onSubmit);
+  return () => {
+    form.removeEventListener("submit", onSubmit);
+    const active = activeControllers.get(form);
+    if (active) {
+      active.abort();
+      activeControllers.delete(form);
+    }
+    submitEpoch.delete(form);
+  };
 }
 
 export function enhanceForms<T = unknown>(
@@ -184,4 +322,3 @@ export function enhanceForms<T = unknown>(
     for (const cleanup of cleanups) cleanup();
   };
 }
-

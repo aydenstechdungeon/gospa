@@ -10,7 +10,11 @@ interface HMRMessage {
   path?: string;
   moduleId?: string;
   event?: string;
-  reloadReason?: "template-safe" | "style-safe" | "runtime-break" | "config-break";
+  reloadReason?:
+    | "template-safe"
+    | "style-safe"
+    | "runtime-break"
+    | "config-break";
   state?: Record<string, unknown>;
   stateDiff?: Record<string, unknown>; // Delta state updates
   error?: string;
@@ -84,7 +88,9 @@ export class HMRClient {
 
   constructor(config: HMRClientConfig = {}) {
     this.config = {
-      wsUrl: config.wsUrl || `${window.location.protocol === 'https:' ? 'wss:' : 'ws:'}//${window.location.host}/__hmr`,
+      wsUrl:
+        config.wsUrl ||
+        `${window.location.protocol === "https:" ? "wss:" : "ws:"}//${window.location.host}/__hmr`,
       reconnectInterval: config.reconnectInterval || 1000,
       maxReconnectAttempts: config.maxReconnectAttempts || 10,
       onUpdate: config.onUpdate || (() => {}),
@@ -216,7 +222,10 @@ export class HMRClient {
         break;
 
       case "reload":
-        console.log("[HMR] Full reload required.", msg.reloadReason || "unknown");
+        console.log(
+          "[HMR] Full reload required.",
+          msg.reloadReason || "unknown",
+        );
         this.preserveAllStates();
         window.location.reload();
         break;

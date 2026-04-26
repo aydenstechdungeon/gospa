@@ -77,11 +77,11 @@ func TestCompileCounter(t *testing.T) {
 		t.Errorf("Templ missing island attribute")
 	}
 
-	if !strings.Contains(ts, "state.$state(0)") {
+	if !strings.Contains(ts, "__gospa_state(0)") {
 		t.Errorf("TS missing reactive state")
 	}
 
-	if !strings.Contains(ts, "state.$derived(() => count * 2)") {
+	if !strings.Contains(ts, "__gospa_derived(() => count * 2)") {
 		t.Errorf("TS missing derived state")
 	}
 
@@ -215,6 +215,43 @@ func TestParseRejectsDuplicateGoScripts(t *testing.T) {
 	}
 }
 
+func TestParseAcceptsModuleScript(t *testing.T) {
+	input := `
+<script context="module" lang="go">
+  func Load(c routing.LoadContext) (map[string]interface{}, error) { return map[string]interface{}{}, nil }
+</script>
+<script lang="go">
+  var count = $state(1)
+</script>
+<template><div>{count}</div></template>
+`
+	parsed, err := sfc.Parse(input)
+	if err != nil {
+		t.Fatalf("expected parser to accept module script: %v", err)
+	}
+	if parsed.ScriptModule.Context != "module" {
+		t.Fatalf("expected module context, got %q", parsed.ScriptModule.Context)
+	}
+	if parsed.ScriptModule.Lang != "go" {
+		t.Fatalf("expected module script lang go, got %q", parsed.ScriptModule.Lang)
+	}
+}
+
+func TestParseRejectsDuplicateModuleScripts(t *testing.T) {
+	input := `
+<script context="module" lang="go">func Load(c routing.LoadContext) (map[string]interface{}, error) { return nil, nil }</script>
+<script context="module" lang="go">func ActionDefault(c routing.LoadContext) (interface{}, error) { return nil, nil }</script>
+<template><div>ok</div></template>
+`
+	_, err := sfc.Parse(input)
+	if err == nil {
+		t.Fatal("expected parse failure for duplicate module scripts")
+	}
+	if !strings.Contains(err.Error(), "multiple <script context=\"module\" lang=\"go\">") {
+		t.Fatalf("unexpected error: %v", err)
+	}
+}
+
 func TestCompilePageNoIslandAndNoTS(t *testing.T) {
 	c := NewCompiler()
 	input := `<template><h1>Hello</h1></template>`
@@ -255,6 +292,32 @@ func TestCompileLayoutIncludesChildrenAndNoTS(t *testing.T) {
 	}
 	if strings.TrimSpace(ts) != "" {
 		t.Fatalf("layout should not generate TS output: %s", ts)
+	}
+}
+
+func TestCompileLowersOnDirectiveToDelegationAttribute(t *testing.T) {
+	c := NewCompiler()
+	input := `
+<script lang="go">
+  func increment() {}
+</script>
+<template><button on:click={increment}>+</button></template>
+`
+	templ, _, err := c.Compile(CompileOptions{
+		Type:     ComponentTypeIsland,
+		Name:     "Counter",
+		IslandID: "Counter",
+		PkgName:  "islands",
+		Hydrate:  true,
+	}, input)
+	if err != nil {
+		t.Fatalf("compile failed: %v", err)
+	}
+	if !strings.Contains(templ, `data-gospa-on="click:increment"`) {
+		t.Fatalf("expected lowered runtime event attribute, got: %s", templ)
+	}
+	if strings.Contains(templ, " on:click=") {
+		t.Fatalf("expected on:click to be lowered away, got: %s", templ)
 	}
 }
 
@@ -454,5 +517,108 @@ func TestCompileLegacy(t *testing.T) {
 
 	if ts == "" {
 		t.Error("CompileLegacy should produce TS for an island by default")
+	}
+}
+
+func TestCompile_ComponentCallExpressionArgStaysExpression(t *testing.T) {
+	c := NewCompiler()
+	templ, _, err := c.Compile(CompileOptions{
+		Type:    ComponentTypePage,
+		Name:    "ExprArgs",
+		PkgName: "pages",
+	}, `<template>@Child({count})</template>`)
+	if err != nil {
+		t.Fatalf("compile failed: %v", err)
+	}
+	if !strings.Contains(templ, "@Child(count)") {
+		t.Fatalf("expected expression arg to remain expression, got: %s", templ)
+	}
+	if strings.Contains(templ, "@Child(`count`)") {
+		t.Fatalf("expression arg should not be stringified, got: %s", templ)
+	}
+}
+
+func TestCompile_ComponentCallBacktickArgStaysStringLiteral(t *testing.T) {
+	c := NewCompiler()
+	templ, _, err := c.Compile(CompileOptions{
+		Type:    ComponentTypePage,
+		Name:    "CodeBlockArg",
+		PkgName: "pages",
+	}, `<template>@components.CodeBlock(`+"`"+`import "x"`+"`"+`, "go", "sample.go")</template>`)
+	if err != nil {
+		t.Fatalf("compile failed: %v", err)
+	}
+	if !strings.Contains(templ, "@components.CodeBlock(`import \"x\"`, \"go\", \"sample.go\")") {
+		t.Fatalf("expected backtick arg to stay a valid string literal, got: %s", templ)
+	}
+}
+
+func TestCompileRejectsInvalidModuleLoadSignature(t *testing.T) {
+	c := NewCompiler()
+	input := `
+<script context="module" lang="go">
+  func Load(c routing.LoadContext) (interface{}, error) {
+    return nil, nil
+  }
+</script>
+<template><div>bad</div></template>
+`
+	_, _, err := c.Compile(CompileOptions{
+		Type:    ComponentTypePage,
+		Name:    "BadModule",
+		PkgName: "routes",
+	}, input)
+	if err == nil {
+		t.Fatal("expected compile failure for invalid module Load signature")
+	}
+	if !strings.Contains(err.Error(), "invalid module export Load") {
+		t.Fatalf("unexpected error: %v", err)
+	}
+}
+
+func TestCompileRejectsModuleMethodExport(t *testing.T) {
+	c := NewCompiler()
+	input := `
+<script context="module" lang="go">
+  type S struct{}
+  func (s S) Load(c routing.LoadContext) (map[string]interface{}, error) {
+    return map[string]interface{}{}, nil
+  }
+</script>
+<template><div>bad</div></template>
+`
+	_, _, err := c.Compile(CompileOptions{
+		Type:    ComponentTypePage,
+		Name:    "BadModuleMethod",
+		PkgName: "routes",
+	}, input)
+	if err == nil {
+		t.Fatal("expected compile failure for method export")
+	}
+	if !strings.Contains(err.Error(), "top-level function") {
+		t.Fatalf("unexpected error: %v", err)
+	}
+}
+
+func TestCompileRejectsLowercaseModuleActionSuffix(t *testing.T) {
+	c := NewCompiler()
+	input := `
+<script context="module" lang="go">
+  func Actionsave(c routing.LoadContext) (interface{}, error) {
+    return nil, nil
+  }
+</script>
+<template><div>bad</div></template>
+`
+	_, _, err := c.Compile(CompileOptions{
+		Type:    ComponentTypePage,
+		Name:    "BadModuleActionName",
+		PkgName: "routes",
+	}, input)
+	if err == nil {
+		t.Fatal("expected compile failure for invalid action export name")
+	}
+	if !strings.Contains(err.Error(), "suffix must start with an uppercase letter") {
+		t.Fatalf("unexpected error: %v", err)
 	}
 }

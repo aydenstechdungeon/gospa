@@ -4,6 +4,8 @@
 package routes
 
 import (
+	"strconv"
+
 	"github.com/a-h/templ"
 	"github.com/aydenstechdungeon/gospa/routing"
 	"github.com/aydenstechdungeon/gospa/website/routes/docs"
@@ -32,10 +34,12 @@ import (
 	docsgetstartedstructure "github.com/aydenstechdungeon/gospa/website/routes/docs/getstarted/structure"
 	docsgospasfc "github.com/aydenstechdungeon/gospa/website/routes/docs/gospasfc"
 	docsgospasfcadvanced "github.com/aydenstechdungeon/gospa/website/routes/docs/gospasfc/advanced"
+	docsgospasfcapireference "github.com/aydenstechdungeon/gospa/website/routes/docs/gospasfc/api-reference"
 	docsgospasfcexamples "github.com/aydenstechdungeon/gospa/website/routes/docs/gospasfc/examples"
 	docsgospasfcgettingstarted "github.com/aydenstechdungeon/gospa/website/routes/docs/gospasfc/getting-started"
 	docsgospasfcreactivity "github.com/aydenstechdungeon/gospa/website/routes/docs/gospasfc/reactivity"
 	docsgospasfcstyles "github.com/aydenstechdungeon/gospa/website/routes/docs/gospasfc/styles"
+	docsgospasfcsystemreference "github.com/aydenstechdungeon/gospa/website/routes/docs/gospasfc/system-reference"
 	docsgospasfctemplates "github.com/aydenstechdungeon/gospa/website/routes/docs/gospasfc/templates"
 	docsgospasfctypescript "github.com/aydenstechdungeon/gospa/website/routes/docs/gospasfc/typescript"
 	docshmr "github.com/aydenstechdungeon/gospa/website/routes/docs/hmr"
@@ -71,200 +75,228 @@ import (
 	docswebsocket "github.com/aydenstechdungeon/gospa/website/routes/docs/websocket"
 )
 
+func mergeRouteOptions(base routing.RouteOptions, override routing.RouteOptions) routing.RouteOptions {
+	if override.Strategy != "" {
+		base.Strategy = override.Strategy
+	}
+	if override.RevalidateAfter > 0 {
+		base.RevalidateAfter = override.RevalidateAfter
+	}
+	if len(override.DynamicSlots) > 0 {
+		base.DynamicSlots = override.DynamicSlots
+	}
+	if len(override.DeferredSlots) > 0 {
+		base.DeferredSlots = override.DeferredSlots
+	}
+	if override.RuntimeTier != "" {
+		base.RuntimeTier = override.RuntimeTier
+	}
+	if override.RateLimit != nil {
+		base.RateLimit = override.RateLimit
+	}
+	return base
+}
+
 func init() {
 	// Register pages
-	routing.RegisterPage("/", func(props map[string]interface{}) templ.Component {
+	routing.RegisterPageWithOptions("/", func(props map[string]interface{}) templ.Component {
 		return Page()
-	})
-	routing.RegisterPage("/docs", func(props map[string]interface{}) templ.Component {
+	}, routing.RouteOptions{RuntimeTier: ""})
+	routing.RegisterPageWithOptions("/docs", func(props map[string]interface{}) templ.Component {
 		return docs.Page()
-	})
-	routing.RegisterPage("/docs/api", func(props map[string]interface{}) templ.Component {
+	}, routing.RouteOptions{RuntimeTier: ""})
+	routing.RegisterPageWithOptions("/docs/api", func(props map[string]interface{}) templ.Component {
 		return docsapi.Page()
-	})
-	routing.RegisterPage("/docs/api/client", func(props map[string]interface{}) templ.Component {
+	}, routing.RouteOptions{RuntimeTier: ""})
+	routing.RegisterPageWithOptions("/docs/api/client", func(props map[string]interface{}) templ.Component {
 		return docsapiclient.Page()
-	})
-	routing.RegisterPage("/docs/api/core", func(props map[string]interface{}) templ.Component {
+	}, routing.RouteOptions{RuntimeTier: ""})
+	routing.RegisterPageWithOptions("/docs/api/core", func(props map[string]interface{}) templ.Component {
 		return docsapicore.Page()
-	})
-	routing.RegisterPage("/docs/api/fiber", func(props map[string]interface{}) templ.Component {
+	}, routing.RouteOptions{RuntimeTier: ""})
+	routing.RegisterPageWithOptions("/docs/api/fiber", func(props map[string]interface{}) templ.Component {
 		return docsapifiber.Page()
-	})
-	routing.RegisterPage("/docs/api/routing", func(props map[string]interface{}) templ.Component {
+	}, routing.RouteOptions{RuntimeTier: ""})
+	routing.RegisterPageWithOptions("/docs/api/routing", func(props map[string]interface{}) templ.Component {
 		return docsapirouting.Page()
-	})
-	routing.RegisterPage("/docs/api/state", func(props map[string]interface{}) templ.Component {
+	}, routing.RouteOptions{RuntimeTier: ""})
+	routing.RegisterPageWithOptions("/docs/api/state", func(props map[string]interface{}) templ.Component {
 		return docsapistate.Page()
-	})
-	routing.RegisterPage("/docs/cli", func(props map[string]interface{}) templ.Component {
+	}, routing.RouteOptions{RuntimeTier: ""})
+	routing.RegisterPageWithOptions("/docs/cli", func(props map[string]interface{}) templ.Component {
 		return docscli.Page()
-	})
-	routing.RegisterPage("/docs/client-runtime/dom-bindings", func(props map[string]interface{}) templ.Component {
+	}, routing.RouteOptions{RuntimeTier: ""})
+	routing.RegisterPageWithOptions("/docs/client-runtime/dom-bindings", func(props map[string]interface{}) templ.Component {
 		return docsclientruntimedombindings.Page()
-	})
-	routing.RegisterPage("/docs/client-runtime/navigation-events", func(props map[string]interface{}) templ.Component {
+	}, routing.RouteOptions{RuntimeTier: ""})
+	routing.RegisterPageWithOptions("/docs/client-runtime/navigation-events", func(props map[string]interface{}) templ.Component {
 		return docsclientruntimenavigationevents.Page()
-	})
-	routing.RegisterPage("/docs/client-runtime/overview", func(props map[string]interface{}) templ.Component {
+	}, routing.RouteOptions{RuntimeTier: ""})
+	routing.RegisterPageWithOptions("/docs/client-runtime/overview", func(props map[string]interface{}) templ.Component {
 		return docsclientruntimeoverview.Page()
-	})
-	routing.RegisterPage("/docs/client-runtime/transitions", func(props map[string]interface{}) templ.Component {
+	}, routing.RouteOptions{RuntimeTier: ""})
+	routing.RegisterPageWithOptions("/docs/client-runtime/transitions", func(props map[string]interface{}) templ.Component {
 		return docsclientruntimetransitions.Page()
-	})
-	routing.RegisterPage("/docs/client-runtime/websocket", func(props map[string]interface{}) templ.Component {
+	}, routing.RouteOptions{RuntimeTier: ""})
+	routing.RegisterPageWithOptions("/docs/client-runtime/websocket", func(props map[string]interface{}) templ.Component {
 		return docsclientruntimewebsocket.Page()
-	})
-	routing.RegisterPage("/docs/components", func(props map[string]interface{}) templ.Component {
+	}, routing.RouteOptions{RuntimeTier: ""})
+	routing.RegisterPageWithOptions("/docs/components", func(props map[string]interface{}) templ.Component {
 		return docscomponents.Page()
-	})
-	routing.RegisterPage("/docs/configuration", func(props map[string]interface{}) templ.Component {
+	}, routing.RouteOptions{RuntimeTier: ""})
+	routing.RegisterPageWithOptions("/docs/configuration", func(props map[string]interface{}) templ.Component {
 		return docsconfiguration.Page()
-	})
-	routing.RegisterPage("/docs/configuration/basic", func(props map[string]interface{}) templ.Component {
+	}, routing.RouteOptions{RuntimeTier: ""})
+	routing.RegisterPageWithOptions("/docs/configuration/basic", func(props map[string]interface{}) templ.Component {
 		return docsconfigurationbasic.Page()
-	})
-	routing.RegisterPage("/docs/configuration/scaling", func(props map[string]interface{}) templ.Component {
+	}, routing.RouteOptions{RuntimeTier: ""})
+	routing.RegisterPageWithOptions("/docs/configuration/scaling", func(props map[string]interface{}) templ.Component {
 		return docsconfigurationscaling.Page()
-	})
-	routing.RegisterPage("/docs/configuration/websocket", func(props map[string]interface{}) templ.Component {
+	}, routing.RouteOptions{RuntimeTier: ""})
+	routing.RegisterPageWithOptions("/docs/configuration/websocket", func(props map[string]interface{}) templ.Component {
 		return docsconfigurationwebsocket.Page()
-	})
-	routing.RegisterPage("/docs/devtools", func(props map[string]interface{}) templ.Component {
+	}, routing.RouteOptions{RuntimeTier: ""})
+	routing.RegisterPageWithOptions("/docs/devtools", func(props map[string]interface{}) templ.Component {
 		return docsdevtools.Page()
-	})
-	routing.RegisterPage("/docs/errors", func(props map[string]interface{}) templ.Component {
+	}, routing.RouteOptions{RuntimeTier: ""})
+	routing.RegisterPageWithOptions("/docs/errors", func(props map[string]interface{}) templ.Component {
 		return docserrors.Page()
-	})
-	routing.RegisterPage("/docs/faq", func(props map[string]interface{}) templ.Component {
+	}, routing.RouteOptions{RuntimeTier: ""})
+	routing.RegisterPageWithOptions("/docs/faq", func(props map[string]interface{}) templ.Component {
 		return docsfaq.Page()
-	})
-	routing.RegisterPage("/docs/getstarted/installation", func(props map[string]interface{}) templ.Component {
+	}, routing.RouteOptions{RuntimeTier: ""})
+	routing.RegisterPageWithOptions("/docs/getstarted/installation", func(props map[string]interface{}) templ.Component {
 		return docsgetstartedinstallation.Page()
-	})
-	routing.RegisterPage("/docs/getstarted/quickstart", func(props map[string]interface{}) templ.Component {
+	}, routing.RouteOptions{RuntimeTier: ""})
+	routing.RegisterPageWithOptions("/docs/getstarted/quickstart", func(props map[string]interface{}) templ.Component {
 		return docsgetstartedquickstart.Page()
-	})
-	routing.RegisterPage("/docs/getstarted/structure", func(props map[string]interface{}) templ.Component {
+	}, routing.RouteOptions{RuntimeTier: ""})
+	routing.RegisterPageWithOptions("/docs/getstarted/structure", func(props map[string]interface{}) templ.Component {
 		return docsgetstartedstructure.Page()
-	})
-	routing.RegisterPage("/docs/gospasfc", func(props map[string]interface{}) templ.Component {
+	}, routing.RouteOptions{RuntimeTier: ""})
+	routing.RegisterPageWithOptions("/docs/gospasfc", func(props map[string]interface{}) templ.Component {
 		return docsgospasfc.Page()
-	})
-	routing.RegisterPage("/docs/gospasfc/advanced", func(props map[string]interface{}) templ.Component {
+	}, routing.RouteOptions{RuntimeTier: ""})
+	routing.RegisterPageWithOptions("/docs/gospasfc/advanced", func(props map[string]interface{}) templ.Component {
 		return docsgospasfcadvanced.Page()
-	})
-	routing.RegisterPage("/docs/gospasfc/examples", func(props map[string]interface{}) templ.Component {
+	}, routing.RouteOptions{RuntimeTier: ""})
+	routing.RegisterPageWithOptions("/docs/gospasfc/api-reference", func(props map[string]interface{}) templ.Component {
+		return docsgospasfcapireference.Page()
+	}, routing.RouteOptions{RuntimeTier: ""})
+	routing.RegisterPageWithOptions("/docs/gospasfc/examples", func(props map[string]interface{}) templ.Component {
 		return docsgospasfcexamples.Page()
-	})
-	routing.RegisterPage("/docs/gospasfc/getting-started", func(props map[string]interface{}) templ.Component {
+	}, routing.RouteOptions{RuntimeTier: ""})
+	routing.RegisterPageWithOptions("/docs/gospasfc/getting-started", func(props map[string]interface{}) templ.Component {
 		return docsgospasfcgettingstarted.Page()
-	})
-	routing.RegisterPage("/docs/gospasfc/reactivity", func(props map[string]interface{}) templ.Component {
+	}, routing.RouteOptions{RuntimeTier: ""})
+	routing.RegisterPageWithOptions("/docs/gospasfc/reactivity", func(props map[string]interface{}) templ.Component {
 		return docsgospasfcreactivity.Page()
-	})
-	routing.RegisterPage("/docs/gospasfc/styles", func(props map[string]interface{}) templ.Component {
+	}, routing.RouteOptions{RuntimeTier: ""})
+	routing.RegisterPageWithOptions("/docs/gospasfc/styles", func(props map[string]interface{}) templ.Component {
 		return docsgospasfcstyles.Page()
-	})
-	routing.RegisterPage("/docs/gospasfc/templates", func(props map[string]interface{}) templ.Component {
+	}, routing.RouteOptions{RuntimeTier: ""})
+	routing.RegisterPageWithOptions("/docs/gospasfc/system-reference", func(props map[string]interface{}) templ.Component {
+		return docsgospasfcsystemreference.Page()
+	}, routing.RouteOptions{RuntimeTier: ""})
+	routing.RegisterPageWithOptions("/docs/gospasfc/templates", func(props map[string]interface{}) templ.Component {
 		return docsgospasfctemplates.Page()
-	})
-	routing.RegisterPage("/docs/gospasfc/typescript", func(props map[string]interface{}) templ.Component {
+	}, routing.RouteOptions{RuntimeTier: ""})
+	routing.RegisterPageWithOptions("/docs/gospasfc/typescript", func(props map[string]interface{}) templ.Component {
 		return docsgospasfctypescript.Page()
-	})
-	routing.RegisterPage("/docs/hmr", func(props map[string]interface{}) templ.Component {
+	}, routing.RouteOptions{RuntimeTier: ""})
+	routing.RegisterPageWithOptions("/docs/hmr", func(props map[string]interface{}) templ.Component {
 		return docshmr.Page()
-	})
-	routing.RegisterPage("/docs/islands", func(props map[string]interface{}) templ.Component {
+	}, routing.RouteOptions{RuntimeTier: ""})
+	routing.RegisterPageWithOptions("/docs/islands", func(props map[string]interface{}) templ.Component {
 		return docsislands.Page()
-	})
-	routing.RegisterPage("/docs/params", func(props map[string]interface{}) templ.Component {
+	}, routing.RouteOptions{RuntimeTier: ""})
+	routing.RegisterPageWithOptions("/docs/params", func(props map[string]interface{}) templ.Component {
 		return docsparams.Page()
-	})
-	routing.RegisterPage("/docs/plugins", func(props map[string]interface{}) templ.Component {
+	}, routing.RouteOptions{RuntimeTier: ""})
+	routing.RegisterPageWithOptions("/docs/plugins", func(props map[string]interface{}) templ.Component {
 		return docsplugins.Page()
-	})
-	routing.RegisterPage("/docs/plugins/auth", func(props map[string]interface{}) templ.Component {
+	}, routing.RouteOptions{RuntimeTier: ""})
+	routing.RegisterPageWithOptions("/docs/plugins/auth", func(props map[string]interface{}) templ.Component {
 		return docspluginsauth.Page()
-	})
-	routing.RegisterPage("/docs/plugins/image", func(props map[string]interface{}) templ.Component {
+	}, routing.RouteOptions{RuntimeTier: ""})
+	routing.RegisterPageWithOptions("/docs/plugins/image", func(props map[string]interface{}) templ.Component {
 		return docspluginsimage.Page()
-	})
-	routing.RegisterPage("/docs/plugins/postcss", func(props map[string]interface{}) templ.Component {
+	}, routing.RouteOptions{RuntimeTier: ""})
+	routing.RegisterPageWithOptions("/docs/plugins/postcss", func(props map[string]interface{}) templ.Component {
 		return docspluginspostcss.Page()
-	})
-	routing.RegisterPage("/docs/plugins/qrcode", func(props map[string]interface{}) templ.Component {
+	}, routing.RouteOptions{RuntimeTier: ""})
+	routing.RegisterPageWithOptions("/docs/plugins/qrcode", func(props map[string]interface{}) templ.Component {
 		return docspluginsqrcode.Page()
-	})
-	routing.RegisterPage("/docs/plugins/seo", func(props map[string]interface{}) templ.Component {
+	}, routing.RouteOptions{RuntimeTier: ""})
+	routing.RegisterPageWithOptions("/docs/plugins/seo", func(props map[string]interface{}) templ.Component {
 		return docspluginsseo.Page()
-	})
-	routing.RegisterPage("/docs/plugins/tailwind", func(props map[string]interface{}) templ.Component {
+	}, routing.RouteOptions{RuntimeTier: ""})
+	routing.RegisterPageWithOptions("/docs/plugins/tailwind", func(props map[string]interface{}) templ.Component {
 		return docspluginstailwind.Page()
-	})
-	routing.RegisterPage("/docs/plugins/validation", func(props map[string]interface{}) templ.Component {
+	}, routing.RouteOptions{RuntimeTier: ""})
+	routing.RegisterPageWithOptions("/docs/plugins/validation", func(props map[string]interface{}) templ.Component {
 		return docspluginsvalidation.Page()
-	})
-	routing.RegisterPage("/docs/reactive-primitives", func(props map[string]interface{}) templ.Component {
+	}, routing.RouteOptions{RuntimeTier: ""})
+	routing.RegisterPageWithOptions("/docs/reactive-primitives", func(props map[string]interface{}) templ.Component {
 		return docsreactiveprimitives.Page()
-	})
-	routing.RegisterPage("/docs/reactive-primitives/advanced", func(props map[string]interface{}) templ.Component {
+	}, routing.RouteOptions{RuntimeTier: ""})
+	routing.RegisterPageWithOptions("/docs/reactive-primitives/advanced", func(props map[string]interface{}) templ.Component {
 		return docsreactiveprimitivesadvanced.Page()
-	})
-	routing.RegisterPage("/docs/reactive-primitives/go", func(props map[string]interface{}) templ.Component {
+	}, routing.RouteOptions{RuntimeTier: ""})
+	routing.RegisterPageWithOptions("/docs/reactive-primitives/go", func(props map[string]interface{}) templ.Component {
 		return docsreactiveprimitivesgo.Page()
-	})
-	routing.RegisterPage("/docs/reactive-primitives/js", func(props map[string]interface{}) templ.Component {
+	}, routing.RouteOptions{RuntimeTier: ""})
+	routing.RegisterPageWithOptions("/docs/reactive-primitives/js", func(props map[string]interface{}) templ.Component {
 		return docsreactiveprimitivesjs.Page()
-	})
-	routing.RegisterPage("/docs/remote-actions", func(props map[string]interface{}) templ.Component {
+	}, routing.RouteOptions{RuntimeTier: ""})
+	routing.RegisterPageWithOptions("/docs/remote-actions", func(props map[string]interface{}) templ.Component {
 		return docsremoteactions.Page()
-	})
-	routing.RegisterPage("/docs/rendering", func(props map[string]interface{}) templ.Component {
+	}, routing.RouteOptions{RuntimeTier: ""})
+	routing.RegisterPageWithOptions("/docs/rendering", func(props map[string]interface{}) templ.Component {
 		return docsrendering.Page()
-	})
-	routing.RegisterPage("/docs/routing", func(props map[string]interface{}) templ.Component {
+	}, routing.RouteOptions{RuntimeTier: ""})
+	routing.RegisterPageWithOptions("/docs/routing", func(props map[string]interface{}) templ.Component {
 		return docsrouting.Page()
-	})
-	routing.RegisterPage("/docs/routing/api", func(props map[string]interface{}) templ.Component {
+	}, routing.RouteOptions{RuntimeTier: ""})
+	routing.RegisterPageWithOptions("/docs/routing/api", func(props map[string]interface{}) templ.Component {
 		return docsroutingapi.Page()
-	})
-	routing.RegisterPage("/docs/routing/dynamic", func(props map[string]interface{}) templ.Component {
+	}, routing.RouteOptions{RuntimeTier: ""})
+	routing.RegisterPageWithOptions("/docs/routing/dynamic", func(props map[string]interface{}) templ.Component {
 		return docsroutingdynamic.Page()
-	})
-	routing.RegisterPage("/docs/routing/layouts", func(props map[string]interface{}) templ.Component {
+	}, routing.RouteOptions{RuntimeTier: ""})
+	routing.RegisterPageWithOptions("/docs/routing/layouts", func(props map[string]interface{}) templ.Component {
 		return docsroutinglayouts.Page()
-	})
-	routing.RegisterPage("/docs/routing/navigation", func(props map[string]interface{}) templ.Component {
+	}, routing.RouteOptions{RuntimeTier: ""})
+	routing.RegisterPageWithOptions("/docs/routing/navigation", func(props map[string]interface{}) templ.Component {
 		return docsroutingnavigation.Page()
-	})
-	routing.RegisterPage("/docs/runtime", func(props map[string]interface{}) templ.Component {
+	}, routing.RouteOptions{RuntimeTier: ""})
+	routing.RegisterPageWithOptions("/docs/runtime", func(props map[string]interface{}) templ.Component {
 		return docsruntime.Page()
-	})
-	routing.RegisterPage("/docs/sse", func(props map[string]interface{}) templ.Component {
+	}, routing.RouteOptions{RuntimeTier: ""})
+	routing.RegisterPageWithOptions("/docs/sse", func(props map[string]interface{}) templ.Component {
 		return docssse.Page()
-	})
-	routing.RegisterPage("/docs/state-management", func(props map[string]interface{}) templ.Component {
+	}, routing.RouteOptions{RuntimeTier: ""})
+	routing.RegisterPageWithOptions("/docs/state-management", func(props map[string]interface{}) templ.Component {
 		return docsstatemanagement.Page()
-	})
-	routing.RegisterPage("/docs/state-management/client", func(props map[string]interface{}) templ.Component {
+	}, routing.RouteOptions{RuntimeTier: ""})
+	routing.RegisterPageWithOptions("/docs/state-management/client", func(props map[string]interface{}) templ.Component {
 		return docsstatemanagementclient.Page()
-	})
-	routing.RegisterPage("/docs/state-management/patterns", func(props map[string]interface{}) templ.Component {
+	}, routing.RouteOptions{RuntimeTier: ""})
+	routing.RegisterPageWithOptions("/docs/state-management/patterns", func(props map[string]interface{}) templ.Component {
 		return docsstatemanagementpatterns.Page()
-	})
-	routing.RegisterPage("/docs/state-management/server", func(props map[string]interface{}) templ.Component {
+	}, routing.RouteOptions{RuntimeTier: ""})
+	routing.RegisterPageWithOptions("/docs/state-management/server", func(props map[string]interface{}) templ.Component {
 		return docsstatemanagementserver.Page()
-	})
-	routing.RegisterPage("/docs/state-management/sync", func(props map[string]interface{}) templ.Component {
+	}, routing.RouteOptions{RuntimeTier: ""})
+	routing.RegisterPageWithOptions("/docs/state-management/sync", func(props map[string]interface{}) templ.Component {
 		return docsstatemanagementsync.Page()
-	})
-	routing.RegisterPage("/docs/troubleshooting", func(props map[string]interface{}) templ.Component {
+	}, routing.RouteOptions{RuntimeTier: ""})
+	routing.RegisterPageWithOptions("/docs/troubleshooting", func(props map[string]interface{}) templ.Component {
 		return docstroubleshooting.Page()
-	})
-	routing.RegisterPage("/docs/websocket", func(props map[string]interface{}) templ.Component {
+	}, routing.RouteOptions{RuntimeTier: ""})
+	routing.RegisterPageWithOptions("/docs/websocket", func(props map[string]interface{}) templ.Component {
 		return docswebsocket.Page()
-	})
+	}, routing.RouteOptions{RuntimeTier: ""})
 
 	// Register layouts
 	routing.RegisterRootLayout(func(children templ.Component, props map[string]interface{}) templ.Component {
@@ -292,6 +324,12 @@ func init() {
 		if v, ok := props["debug"].(bool); ok {
 			return v
 		}
+		if v, ok := props["debug"].(string); ok {
+			parsed, err := strconv.ParseBool(v)
+			if err == nil {
+				return parsed
+			}
+		}
 		return false
 	}(), func() string {
 		if v, ok := props["hydrationMode"].(string); ok {
@@ -302,6 +340,12 @@ func init() {
 		if v, ok := props["hydrationTimeout"].(int); ok {
 			return v
 		}
+		if v, ok := props["hydrationTimeout"].(string); ok {
+			parsed, err := strconv.ParseInt(v, 10, 64)
+			if err == nil {
+				return int(parsed)
+			}
+		}
 		return 0
 	}(), func() string {
 		if v, ok := props["serializationFormat"].(string); ok {
@@ -309,13 +353,13 @@ func init() {
 		}
 		return ""
 	}())
-	})
-	routing.RegisterLayout("/docs", func(children templ.Component, props map[string]interface{}) templ.Component {
+	}, "")
+	routing.RegisterLayoutWithOptions("/docs", func(children templ.Component, props map[string]interface{}) templ.Component {
 		return docs.DocsLayout(children, func() string {
 		if v, ok := props["path"].(string); ok {
 			return v
 		}
 		return ""
 	}())
-	})
+	}, "")
 }

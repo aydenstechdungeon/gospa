@@ -1,4 +1,8 @@
-import { initWebSocket, type StateMessage, type WSClient } from "./websocket.ts";
+import {
+  initWebSocket,
+  type StateMessage,
+  type WSClient,
+} from "./websocket.ts";
 import { createSSEClient, type SSEClient } from "./sse.ts";
 
 export type TransportMode = "ws" | "sse" | "polling" | "none";
@@ -87,7 +91,9 @@ export class TransportManager {
         serializationFormat: this.config.serializationFormat,
         onConnectionFailed: () => {
           if (this.stopped) return;
-          this.log("WebSocket exhausted reconnects; switching transport fallback");
+          this.log(
+            "WebSocket exhausted reconnects; switching transport fallback",
+          );
           this.startSSE() || this.startPolling();
         },
         onMessage: (msg: StateMessage) => {

@@ -48,6 +48,34 @@ hydrate: true
 			</div>
 
 			<div>
+				<h2 class="text-2xl font-bold mb-4 border-b border-[var(--border)] pb-2 italic mono">Route Server Module</h2>
+				<p class="text-[var(--text-secondary)] mb-6">
+					For route files like <code>+page.gospa</code> and <code>+layout.gospa</code>, define server exports in <code>&lt;script context="module" lang="go"&gt;</code>.
+				</p>
+				@components.CodeBlock(`<script context="module" lang="go">
+import (
+  "github.com/aydenstechdungeon/gospa/routing"
+  "github.com/aydenstechdungeon/gospa/routing/kit"
+)
+
+func Load(c routing.LoadContext) (map[string]interface{}, error) {
+  return map[string]interface{}{"id": c.Param("id")}, nil
+}
+
+func ActionDefault(c routing.LoadContext) (interface{}, error) {
+  return map[string]interface{}{"ok": true}, nil
+}
+
+func ActionDelete(c routing.LoadContext) (interface{}, error) {
+  return nil, kit.Redirect(303, "/users")
+}
+</script>`, "svelte", "server-module.gospa")
+				<p class="text-sm text-[var(--text-secondary)] mt-4">
+					Signatures are strict. <code>Load</code> must return <code>(map[string]interface{}, error)</code>; actions return <code>(interface{}, error)</code>.
+				</p>
+			</div>
+
+			<div>
 				<h2 class="text-2xl font-bold mb-4 border-b border-[var(--border)] pb-2 italic mono">Basic Workflow</h2>
 				<div class="grid md:grid-cols-3 gap-6">
 					<div class="p-6 rounded-2xl bg-[var(--bg-secondary)] border border-[var(--border)]">
@@ -77,6 +105,13 @@ hydrate: true
 					You can generate new SFC components using the CLI to ensure consistency and speed up development.
 				</p>
 				@components.CodeBlock(`gospa generate component MyComponent --island`, "bash", "cli")
+			</div>
+
+			<div class="rounded-xl border border-[var(--border)] bg-[var(--bg-secondary)] p-6">
+				<h3 class="text-lg font-bold mb-2">Conflict Rule</h3>
+				<p class="text-[var(--text-secondary)] text-sm">
+					If a route has module exports in <code>+page.gospa</code>/<code>+layout.gospa</code> and also includes <code>+page.server.go</code>/<code>+layout.server.go</code>, generation fails. Keep one source of truth per route.
+				</p>
 			</div>
 
 			<div class="flex justify-between items-center pt-8">

@@ -65,6 +65,49 @@ import "github.com/aydenstechdungeon/gospa/website/components"
 
 			<div>
 				<h2 class="text-2xl font-bold mb-4 flex items-center gap-3">
+					<div class="w-8 h-8 rounded-lg bg-emerald-500/10 flex items-center justify-center text-emerald-500 text-sm">05</div>
+					Full Route: <code>+page.gospa</code> with Load + Named Actions
+				</h2>
+				<p class="text-[var(--text-secondary)] mb-6">
+					A complete SvelteKit-like route setup using module exports and <code>?_action=...</code> forms.
+				</p>
+				@components.CodeBlock(`---
+type: page
+package: posts
+---
+
+<script context="module" lang="go">
+import (
+  "github.com/aydenstechdungeon/gospa/routing"
+  "github.com/aydenstechdungeon/gospa/routing/kit"
+)
+
+func Load(c routing.LoadContext) (map[string]interface{}, error) {
+  return map[string]interface{}{"slug": c.Param("slug")}, nil
+}
+
+func ActionDefault(c routing.LoadContext) (interface{}, error) {
+  return map[string]interface{}{"saved": true}, nil
+}
+
+func ActionArchive(c routing.LoadContext) (interface{}, error) {
+  return nil, kit.Redirect(303, "/posts")
+}
+</script>
+
+<template>
+  <h1>Post {slug}</h1>
+  <form method="post">
+    <button type="submit">Save</button>
+  </form>
+  <form method="post" action="?_action=archive">
+    <button type="submit">Archive</button>
+  </form>
+</template>`, "svelte", "+page.gospa")
+			</div>
+
+			<div>
+				<h2 class="text-2xl font-bold mb-4 flex items-center gap-3">
 					<div class="w-8 h-8 rounded-lg bg-purple-500/10 flex items-center justify-center text-purple-500 text-sm">02</div>
 					Real-time Search Filter
 				</h2>

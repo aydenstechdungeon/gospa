@@ -6,12 +6,23 @@ import { reactive } from "./signals.ts";
 import { Idiomorph } from "./idiomorph.ts";
 import { toHTMLString } from "./html-policy.ts";
 import { getSetup } from "./runtime-core.ts";
+import { emitRuntimeSignal } from "./runtime-signals.ts";
 
 function getCSPNonce(): string | undefined {
-  const nonceScript = document.querySelector("script[nonce]") as
-    | HTMLScriptElement
-    | null;
+  const nonceScript = document.querySelector(
+    "script[nonce]",
+  ) as HTMLScriptElement | null;
   return nonceScript?.nonce || nonceScript?.getAttribute("nonce") || undefined;
+}
+
+function getCookie(name: string): string | undefined {
+  const cookie = document.cookie
+    .split("; ")
+    .find((row) => row.startsWith(`${name}=`));
+
+  return cookie
+    ? decodeURIComponent(cookie.split("=").slice(1).join("="))
+    : undefined;
 }
 
 // Navigation state
@@ -107,6 +118,12 @@ export interface NavigationOptions {
   pendingUI?: PendingUIConfig;
   focusRestoration?: FocusRestorationConfig;
   scrollRestoration?: ScrollRestorationConfig;
+}
+
+export interface HoverPrefetchOptions {
+  delay?: number;
+  preloadCode?: boolean;
+  preloadData?: boolean;
 }
 
 // Navigation event handlers
@@ -214,6 +231,7 @@ let prefetchObserver: IntersectionObserver | null = null;
 const pendingRequests = new Map<string, Promise<PageData | null>>();
 let clickDelegateContainer: Element | Document = document;
 let warnedScrollToTopDeprecation = false;
+let navigationInitialized = false;
 
 export function setNavigationOptions(config: NavigationOptions): void {
   // Clear URL parsing cache if being disabled
@@ -290,7 +308,7 @@ class ProgressBar {
   start() {
     if (!navigationOptionsConfig.progressBar.enabled) return;
     this.reset();
-    
+
     const cfg = navigationOptionsConfig.progressBar;
     this.showTimeout = window.setTimeout(() => {
       this.showTimeout = null;
@@ -762,11 +780,9 @@ async function getPageData(
     prefetchCache.set(path, cached);
     return cached.data;
   }
-  if (cached) prefetchCache.delete(path);
+  if (cached) deletePrefetchByPath(path);
   return fetchPageFromServer(path, signal);
 }
-
-
 
 // Content is trusted - Templ auto-escapes on the server
 // For user-generated content, the server is expected to provide safe HTML.
@@ -780,19 +796,50 @@ async function sanitizeHTML(html: unknown): Promise<string> {
   return toHTMLString(html);
 }
 
+function detectHydrationMismatchSignal(
+  currentDoc: Document,
+  incomingDoc: Document,
+): void {
+  const currentIslands = currentDoc.querySelectorAll(
+    "[data-gospa-island]",
+  ).length;
+  const incomingIslands = incomingDoc.querySelectorAll(
+    "[data-gospa-island]",
+  ).length;
+  if (Math.abs(currentIslands - incomingIslands) < 3) return;
+  emitRuntimeSignal("gospa:hydration-mismatch", {
+    kind: "island-count-drift",
+    currentIslands,
+    incomingIslands,
+    path: window.location.pathname,
+  });
+}
+
 // Smart Morphing with Layout Reconciliation
 async function reconcileDOM(data: PageData): Promise<void> {
   const incomingDoc = data.doc;
+  detectHydrationMismatchSignal(document, incomingDoc);
 
   // Find the deepest common layout container to avoid full-page flashes
   // and preserve as much state as possible.
-  const currentLayouts = Array.from(document.querySelectorAll("[data-gospa-layout]")).reverse();
-  const incomingLayouts = Array.from(incomingDoc.querySelectorAll("[data-gospa-layout]")).reverse();
+  const currentLayouts = Array.from(
+    document.querySelectorAll("[data-gospa-layout]"),
+  ).reverse();
+  const incomingLayouts = Array.from(
+    incomingDoc.querySelectorAll("[data-gospa-layout]"),
+  ).reverse();
   const incomingLayoutsByID = new Map(
-    incomingLayouts.map((el) => [el.getAttribute("data-gospa-layout") || "", el]),
+    incomingLayouts.map((el) => [
+      el.getAttribute("data-gospa-layout") || "",
+      el,
+    ]),
   );
-  const currentLayoutIds = currentLayouts.map((el) => el.getAttribute("data-gospa-layout") || "");
-  const incomingLayoutIds = incomingLayouts.map((el) => el.getAttribute("data-gospa-layout") || "");
+  const currentLayoutIds = currentLayouts.map(
+    (el) => el.getAttribute("data-gospa-layout") || "",
+  );
+  const incomingLayoutIds = incomingLayouts.map(
+    (el) => el.getAttribute("data-gospa-layout") || "",
+  );
 
   let morphTarget: Element | null = null;
   let newContent: Element | null = null;
@@ -801,7 +848,7 @@ async function reconcileDOM(data: PageData): Promise<void> {
   // to preserve/update surrounding context (like a sidebar in 'main').
   for (const currentEl of currentLayouts) {
     const layoutId = currentEl.getAttribute("data-gospa-layout");
-    
+
     // If we're already in docs and moving to another docs page,
     // morph at the 'docs' level so the sidebar (outside this container)
     // is completely untouched by the morph.
@@ -826,23 +873,31 @@ async function reconcileDOM(data: PageData): Promise<void> {
 
   // Fallback to designated root/content containers if no common layout found
   if (!morphTarget) {
-    morphTarget = document.querySelector("[data-gospa-root]") || 
-                  document.querySelector("[data-gospa-page-content]") || 
-                  document.querySelector("main") || 
-                  document.body;
-    
-    newContent = incomingDoc.querySelector("[data-gospa-root]") || 
-                 incomingDoc.querySelector("[data-gospa-page-content]") || 
-                 incomingDoc.querySelector("main") || 
-                 incomingDoc.body;
+    morphTarget =
+      document.querySelector("[data-gospa-root]") ||
+      document.querySelector("[data-gospa-page-content]") ||
+      document.querySelector("main") ||
+      document.body;
+
+    newContent =
+      incomingDoc.querySelector("[data-gospa-root]") ||
+      incomingDoc.querySelector("[data-gospa-page-content]") ||
+      incomingDoc.querySelector("main") ||
+      incomingDoc.body;
   }
 
   if (typeof GOSPA_DEBUG !== "undefined" && GOSPA_DEBUG) {
     console.debug("[GoSPA] Layout reconciliation", {
       currentLayoutIds,
       incomingLayoutIds,
-      morphTarget: morphTarget?.getAttribute("data-gospa-layout") || morphTarget?.nodeName || null,
-      newContent: newContent?.getAttribute("data-gospa-layout") || newContent?.nodeName || null,
+      morphTarget:
+        morphTarget?.getAttribute("data-gospa-layout") ||
+        morphTarget?.nodeName ||
+        null,
+      newContent:
+        newContent?.getAttribute("data-gospa-layout") ||
+        newContent?.nodeName ||
+        null,
     });
   }
 
@@ -851,23 +906,32 @@ async function reconcileDOM(data: PageData): Promise<void> {
       callbacks: {
         beforeNodeMorphed: (oldNode, newNode) => {
           // Compatibility with data-gospa-permanent
-          if (oldNode instanceof Element && oldNode.hasAttribute("data-gospa-permanent")) {
+          if (
+            oldNode instanceof Element &&
+            oldNode.hasAttribute("data-gospa-permanent")
+          ) {
             return false;
           }
           // Skip child diffing for inner-morph nodes
-          if (oldNode instanceof Element && oldNode.getAttribute("data-gospa-morph") === "inner") {
+          if (
+            oldNode instanceof Element &&
+            oldNode.getAttribute("data-gospa-morph") === "inner"
+          ) {
             return false;
           }
           return true;
         },
         afterNodeMorphed: (oldNode, newNode) => {
           // Replace innerHTML for inner-morph nodes (avoids diffing large text blocks)
-          if (oldNode instanceof Element && oldNode.getAttribute("data-gospa-morph") === "inner" &&
-              newNode instanceof Element) {
+          if (
+            oldNode instanceof Element &&
+            oldNode.getAttribute("data-gospa-morph") === "inner" &&
+            newNode instanceof Element
+          ) {
             oldNode.innerHTML = newNode.innerHTML;
           }
-        }
-      }
+        },
+      },
     });
   }
 }
@@ -900,18 +964,22 @@ function updateActiveLinks() {
     const href = link.getAttribute("href");
     const hrefNormalized = (href || "").split(/[?#]/)[0].replace(/\/$/, "");
 
-    const isActive = hrefNormalized === currentPathNormalized || (
-      hrefNormalized !== "" && 
-      hrefNormalized !== "/" &&
-      hrefNormalized !== "/docs" &&
-      currentPathNormalized.startsWith(hrefNormalized + "/")
-    );
+    const isActive =
+      hrefNormalized === currentPathNormalized ||
+      (hrefNormalized !== "" &&
+        hrefNormalized !== "/" &&
+        hrefNormalized !== "/docs" &&
+        currentPathNormalized.startsWith(hrefNormalized + "/"));
 
     const activeClassesAttr = link.getAttribute("data-gospa-active");
     const inactiveClassesAttr = link.getAttribute("data-gospa-inactive");
 
-    const activeClasses = activeClassesAttr ? activeClassesAttr.split(" ").filter(Boolean) : ["gospa-active"];
-    const inactiveClasses = inactiveClassesAttr ? inactiveClassesAttr.split(" ").filter(Boolean) : [];
+    const activeClasses = activeClassesAttr
+      ? activeClassesAttr.split(" ").filter(Boolean)
+      : ["gospa-active"];
+    const inactiveClasses = inactiveClassesAttr
+      ? inactiveClassesAttr.split(" ").filter(Boolean)
+      : [];
 
     if (isActive) {
       if (activeClasses.length > 0) link.classList.add(...activeClasses);
@@ -971,7 +1039,7 @@ function updateHead(newDoc: Document): void {
   const neededMetaHttpEquivs = new Set<string>();
   const neededStyleIds = new Set<string>();
   const neededScriptSrcs = new Set<string>();
-  let hasInlineManagedScript = false;
+  const neededInlineScriptKeys = new Set<string>();
 
   // 2. Smart reconciliation for link tags (CSS)
   // Never remove existing stylesheets to avoid FOUC (Flash of Unstyled Content)
@@ -1053,23 +1121,32 @@ function updateHead(newDoc: Document): void {
     const src = el.getAttribute("src");
     if (src) {
       neededScriptSrcs.add(src);
-    } else {
-      hasInlineManagedScript = true;
+    }
+    const inlineKey = src
+      ? ""
+      : `${el.getAttribute("type") ?? ""}::${el.getAttribute("id") ?? ""}::${el.textContent ?? ""}`;
+    if (inlineKey) {
+      neededInlineScriptKeys.add(inlineKey);
     }
 
     const existingEl = src
       ? document.head.querySelector(`script[src="${escapeSelectorValue(src)}"]`)
-      : null;
+      : document.head.querySelector(
+          `script[data-gospa-head][data-gospa-inline-key="${escapeSelectorValue(inlineKey)}"]`,
+        );
 
     if (!existingEl) {
       const script = document.createElement("script");
+      Array.from(el.attributes).forEach((attr) =>
+        script.setAttribute(attr.name, attr.value),
+      );
+      if (inlineKey) {
+        script.setAttribute("data-gospa-inline-key", inlineKey);
+      }
       const nonce = getCSPNonce();
       if (nonce) {
         script.nonce = nonce;
       }
-      Array.from(el.attributes).forEach((attr) =>
-        script.setAttribute(attr.name, attr.value),
-      );
       script.textContent = el.textContent;
       document.head.appendChild(script);
     }
@@ -1101,7 +1178,9 @@ function updateHead(newDoc: Document): void {
       const src = el.getAttribute("src");
       shouldRemove = src
         ? !neededScriptSrcs.has(src)
-        : !hasInlineManagedScript;
+        : !neededInlineScriptKeys.has(
+            el.getAttribute("data-gospa-inline-key") ?? "",
+          );
     } else {
       shouldRemove = true;
     }
@@ -1125,14 +1204,14 @@ function executeScripts(container: Element | Document): void {
     }
 
     const newScript = document.createElement("script");
-    const nonce = getCSPNonce();
-    if (nonce) {
-      newScript.nonce = nonce;
-    }
     // Copy all attributes
     Array.from(oldScript.attributes).forEach((attr) => {
       newScript.setAttribute(attr.name, attr.value);
     });
+    const nonce = getCSPNonce();
+    if (nonce) {
+      newScript.nonce = nonce;
+    }
     // Copy script content
     newScript.textContent = oldScript.textContent;
 
@@ -1146,6 +1225,31 @@ function executeScripts(container: Element | Document): void {
 // Initialize new content (re-run runtime setup)
 // Track initialized elements to avoid duplicate listeners without expensive cloning
 const initializedElements = new WeakSet<Element>();
+const ISLAND_INIT_ATTR = "data-gospa-island-initialized";
+
+function getNavigationDataRegistry(): any[] | null {
+  const globalRegistry = (window as any).__GOSPA_DATA__;
+  if (Array.isArray(globalRegistry)) {
+    return globalRegistry;
+  }
+
+  const script = document.getElementById("__GOSPA_DATA__");
+  if (!script || !script.textContent) {
+    return null;
+  }
+
+  try {
+    const parsed = JSON.parse(script.textContent);
+    if (Array.isArray(parsed)) {
+      (window as any).__GOSPA_DATA__ = parsed;
+      return parsed;
+    }
+  } catch {
+    // Ignore malformed data registry and keep attribute fallbacks.
+  }
+
+  return null;
+}
 
 async function initCriticalContent(
   container: Element | Document = document,
@@ -1244,8 +1348,22 @@ async function initNewContent(
     if (!setup) return;
 
     let stateData: Record<string, any> = {};
+    let propsData: Record<string, any> = {};
+
+    const registry = getNavigationDataRegistry();
+    if (Array.isArray(registry)) {
+      const islandKey = el.id || name;
+      const islandData = registry.find(
+        (d: any) => d.id === islandKey || d.id === name,
+      );
+      if (islandData) {
+        stateData = islandData.state ?? {};
+        propsData = islandData.props ?? {};
+      }
+    }
+
     const stateAttr = el.getAttribute("data-gospa-state");
-    if (stateAttr) {
+    if (stateAttr && Object.keys(stateData).length === 0) {
       try {
         stateData = JSON.parse(stateAttr);
       } catch {
@@ -1253,9 +1371,8 @@ async function initNewContent(
       }
     }
 
-    let propsData: Record<string, any> = {};
     const propsAttr = el.getAttribute("data-gospa-props");
-    if (propsAttr) {
+    if (propsAttr && Object.keys(propsData).length === 0) {
       try {
         propsData = JSON.parse(propsAttr);
       } catch {
@@ -1265,6 +1382,7 @@ async function initNewContent(
 
     try {
       const maybePromise = (setup as any)(el, propsData, stateData);
+      el.setAttribute(ISLAND_INIT_ATTR, "true");
       if (
         maybePromise &&
         typeof (maybePromise as Promise<unknown>).then === "function"
@@ -1281,6 +1399,7 @@ async function initNewContent(
       }
     }
   });
+  syncIslandLifecycleWithManager();
 
   if (
     !navigationOptionsConfig.lazyRuntimeInitialization.enabled ||
@@ -1295,9 +1414,26 @@ async function initNewContent(
   });
 }
 
-async function performDOMUpdateWithTransitions(
-  data: PageData,
-): Promise<void> {
+function syncIslandLifecycleWithManager(): void {
+  const managerAPI = (window as any).__GOSPA_ISLAND_MANAGER__;
+  if (!managerAPI || typeof managerAPI.get !== "function") {
+    return;
+  }
+
+  const manager = managerAPI.get();
+  if (!manager) {
+    return;
+  }
+
+  if (typeof manager.pruneDisconnectedIslands === "function") {
+    manager.pruneDisconnectedIslands();
+  }
+  if (typeof manager.discoverIslands === "function") {
+    manager.discoverIslands();
+  }
+}
+
+async function performDOMUpdateWithTransitions(data: PageData): Promise<void> {
   const viewCfg = navigationOptionsConfig.viewTransitions;
   const canTransition = viewCfg.enabled && "startViewTransition" in document;
   const update = async () => updateDOM(data);
@@ -1364,6 +1500,11 @@ export async function navigate(
   const startedAt = Date.now();
 
   state.isNavigating = true;
+  emitRuntimeSignal("gospa:navigation-start", {
+    from: fromPath,
+    to: path,
+    source: "navigate",
+  });
   beforeNavCallbacks.forEach((cb) => cb(path));
   dispatchNavigationEvent("gospa:navigation-start", {
     from: fromPath,
@@ -1428,6 +1569,12 @@ export async function navigate(
       source: "navigate",
       durationMs,
     });
+    emitRuntimeSignal("gospa:navigation-end", {
+      from: fromPath,
+      to: path,
+      source: "navigate",
+      durationMs,
+    });
 
     return true;
   } catch (error) {
@@ -1446,6 +1593,12 @@ export async function navigate(
     if (typeof GOSPA_DEBUG !== "undefined" && GOSPA_DEBUG) {
       console.error("[GoSPA] Navigation error:", error);
     }
+    emitRuntimeSignal("gospa:navigation-error", {
+      from: fromPath,
+      to: path,
+      source: "navigate",
+      error: String(error),
+    });
     return false;
   } finally {
     state.isNavigating = false;
@@ -1500,6 +1653,11 @@ function handlePopState(_event: PopStateEvent): void {
 
   state.currentPath = path;
   state.isNavigating = true;
+  emitRuntimeSignal("gospa:navigation-start", {
+    from: fromPath,
+    to: path,
+    source: "popstate",
+  });
   updateActiveLinks();
 
   const container = getNavigationContainer();
@@ -1541,6 +1699,12 @@ function handlePopState(_event: PopStateEvent): void {
           source: "popstate",
           durationMs,
         });
+        emitRuntimeSignal("gospa:navigation-end", {
+          from: fromPath,
+          to: path,
+          source: "popstate",
+          durationMs,
+        });
       } else {
         progressBar.finish();
         await stopPendingUI(container, navigationToken);
@@ -1559,6 +1723,12 @@ function handlePopState(_event: PopStateEvent): void {
       if (typeof GOSPA_DEBUG !== "undefined" && GOSPA_DEBUG) {
         console.error("[GoSPA] Popstate navigation error:", error);
       }
+      emitRuntimeSignal("gospa:navigation-error", {
+        from: fromPath,
+        to: path,
+        source: "popstate",
+        error: String(error),
+      });
     } finally {
       state.isNavigating = false;
       state.pendingNavigation = null;
@@ -1694,6 +1864,9 @@ async function registerNavigationServiceWorker(): Promise<void> {
 
 // Initialize navigation
 export function initNavigation(): void {
+  if (navigationInitialized) return;
+  navigationInitialized = true;
+
   // Setup link click handler
   const root = document.querySelector(
     "[data-gospa-page-content], [data-gospa-root]",
@@ -1727,7 +1900,10 @@ export function initNavigation(): void {
   void registerNavigationServiceWorker();
 
   // Inject snappy transition styles if enabled
-  if (navigationOptionsConfig.viewTransitions.enabled && !document.getElementById("gospa-snappy-transitions")) {
+  if (
+    navigationOptionsConfig.viewTransitions.enabled &&
+    !document.getElementById("gospa-snappy-transitions")
+  ) {
     const style = document.createElement("style");
     style.id = "gospa-snappy-transitions";
     style.textContent = `
@@ -1762,6 +1938,9 @@ export function initNavigation(): void {
 
 // Cleanup navigation
 export function destroyNavigation(): void {
+  if (!navigationInitialized) return;
+  navigationInitialized = false;
+
   clickDelegateContainer.removeEventListener(
     "click",
     handleLinkClick as EventListener,
@@ -1854,17 +2033,74 @@ export async function prefetch(path: string): Promise<void> {
   }
 }
 
+// Bind hover-based prefetch behavior to links matching selector.
+export function prefetchOnHover(
+  selector: string,
+  options: HoverPrefetchOptions = {},
+): () => void {
+  const delay = Math.max(
+    0,
+    options.delay ??
+      navigationOptionsConfig.speculativePrefetching.hoverDelay ??
+      60,
+  );
+  const preloadCode = options.preloadCode ?? true;
+  const preloadData = options.preloadData ?? true;
+  if (!preloadCode && !preloadData) {
+    return () => {};
+  }
+
+  const timers = new WeakMap<Element, number>();
+
+  const listener = (event: MouseEvent) => {
+    const target = event.target;
+    if (!(target instanceof Element)) return;
+    const candidate = target.closest(selector);
+    if (
+      !(candidate instanceof HTMLAnchorElement) ||
+      !isInternalLink(candidate)
+    ) {
+      return;
+    }
+    if (timers.has(candidate)) return;
+
+    const href = candidate.getAttribute("href");
+    if (!href) return;
+
+    const timer = window.setTimeout(() => {
+      timers.delete(candidate);
+      if (preloadCode || preloadData) {
+        void prefetch(href);
+      }
+    }, delay);
+    timers.set(candidate, timer);
+  };
+
+  document.addEventListener("mouseover", listener);
+
+  return () => {
+    document.removeEventListener("mouseover", listener);
+    // WeakMap keys are GC-managed; listener removal is sufficient cleanup.
+  };
+}
+
 async function postInvalidatePayload(
-  payload: Record<string, string>,
+  payload: Record<string, string | boolean>,
 ): Promise<void> {
   try {
+    const csrfToken =
+      (window as any).__GOSPA_CONFIG__?.csrfToken || getCookie("csrf_token");
+    const headers: Record<string, string> = {
+      "Content-Type": "application/json",
+      Accept: "application/json",
+    };
+    if (csrfToken) {
+      headers["X-CSRF-Token"] = csrfToken;
+    }
     await fetch("/_gospa/invalidate", {
       method: "POST",
       credentials: "same-origin",
-      headers: {
-        "Content-Type": "application/json",
-        Accept: "application/json",
-      },
+      headers,
       body: JSON.stringify(payload),
     });
   } catch (error) {
@@ -1898,6 +2134,16 @@ export async function invalidateKey(key: string): Promise<number> {
   return targets.length;
 }
 
+export async function invalidateAll(): Promise<number> {
+  const removed = prefetchCache.size;
+  prefetchCache.clear();
+  prefetchTagIndex.clear();
+  prefetchKeyIndex.clear();
+  await postInvalidatePayload({ all: true });
+  emitRuntimeSignal("gospa:invalidate-all", { removed });
+  return removed;
+}
+
 // Export navigation state as reactive
 export function createNavigationState() {
   return {
@@ -1915,6 +2161,7 @@ export function createNavigationState() {
     invalidate,
     invalidateTag,
     invalidateKey,
+    invalidateAll,
   };
 }
 

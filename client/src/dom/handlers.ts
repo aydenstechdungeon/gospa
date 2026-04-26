@@ -12,7 +12,6 @@ export type BindingHandler = (
 
 import { toHTMLString } from "../html-policy.ts";
 
-
 export const handlers: Record<string, BindingHandler> = {
   text: (element, value) => {
     if (element instanceof HTMLElement || element instanceof SVGElement) {

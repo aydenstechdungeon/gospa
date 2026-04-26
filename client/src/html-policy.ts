@@ -6,9 +6,9 @@ export interface TrustedHTMLValue {
 function isTrustedHTMLValue(value: unknown): value is TrustedHTMLValue {
   return Boolean(
     value &&
-      typeof value === "object" &&
-      (value as { __gospaTrustedHTML?: unknown }).__gospaTrustedHTML === true &&
-      typeof (value as { html?: unknown }).html === "string",
+    typeof value === "object" &&
+    (value as { __gospaTrustedHTML?: unknown }).__gospaTrustedHTML === true &&
+    typeof (value as { html?: unknown }).html === "string",
   );
 }
 

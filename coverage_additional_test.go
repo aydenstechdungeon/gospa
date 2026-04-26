@@ -175,7 +175,7 @@ func TestResolveLoadChainMergesInOrder(t *testing.T) {
 
 	var got map[string]interface{}
 	app.Get("/load-chain/:id", func(c fiberpkg.Ctx) error {
-		props, err := app.resolveLoadChain(c, &routing.Route{Path: routePath}, []*routing.Route{{Path: layoutPath}})
+		props, _, err := app.resolveLoadChain(c, &routing.Route{Path: routePath}, []*routing.Route{{Path: layoutPath}})
 		if err != nil {
 			return c.Status(http.StatusInternalServerError).SendString(err.Error())
 		}

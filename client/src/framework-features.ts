@@ -11,6 +11,17 @@ export * from "./streaming.ts";
 export * from "./resource.ts";
 export * from "./remote.ts";
 export * from "./forms.ts";
+export {
+  loadRouteData,
+  callRouteAction,
+  preloadData,
+  preloadCode,
+  goto,
+  refresh,
+  beforeNavigate,
+  afterNavigate,
+  invalidateAll,
+} from "./route-helpers.ts";
 export * from "./signals.ts";
 export * from "./store.ts";
 export * from "./dom.ts";

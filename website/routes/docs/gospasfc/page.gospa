@@ -65,7 +65,18 @@ package: gospasfc
 					<p class="text-[var(--text-secondary)] text-sm mb-4">Practical UI patterns and real-world recipes built with GoSPA SFC.</p>
 					<span class="text-[var(--accent-primary)] text-sm font-bold flex items-center gap-1">Read more <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12h14"></path><path d="m12 5 7 7-7 7"></path></svg></span>
 				</a>
-			</div>
+
+					<a href="/docs/gospasfc/api-reference" class="group p-6 rounded-2xl bg-[var(--bg-secondary)] border border-[var(--border)] hover:border-[var(--accent-primary)]/50 transition-all">
+						<h3 class="text-xl font-bold mb-2 group-hover:text-[var(--accent-primary)] transition-colors">📚 API Reference</h3>
+						<p class="text-[var(--text-secondary)] text-sm mb-4">Exact SFC API contracts validated against compiler, router, and runtime implementation.</p>
+						<span class="text-[var(--accent-primary)] text-sm font-bold flex items-center gap-1">Read more <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12h14"></path><path d="m12 5 7 7-7 7"></path></svg></span>
+					</a>
+					<a href="/docs/gospasfc/system-reference" class="group p-6 rounded-2xl bg-[var(--bg-secondary)] border border-[var(--border)] hover:border-[var(--accent-primary)]/50 transition-all">
+						<h3 class="text-xl font-bold mb-2 group-hover:text-[var(--accent-primary)] transition-colors">🧭 System Reference</h3>
+						<p class="text-[var(--text-secondary)] text-sm mb-4">Full implementation-level contract: parser grammar, compiler pipeline, route generation, and action runtime behavior.</p>
+						<span class="text-[var(--accent-primary)] text-sm font-bold flex items-center gap-1">Read more <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12h14"></path><path d="m12 5 7 7-7 7"></path></svg></span>
+					</a>
+				</div>
 
 			<div class="mt-12 p-8 rounded-3xl bg-gradient-to-br from-[var(--bg-secondary)] via-[var(--surface)] to-[var(--bg-secondary)] border border-[var(--border)] relative overflow-hidden">
 				<div class="absolute top-0 right-0 w-64 h-64 bg-[var(--accent-primary)]/5 blur-3xl rounded-full -mr-32 -mt-32"></div>

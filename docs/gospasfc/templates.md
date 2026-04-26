@@ -1,6 +1,6 @@
 # SFC Templates
 
-The `<template>` block uses Go's logic via **Templ** integration, with Svelte-aligned control flow syntax.
+The `<template>` block is parsed into a GoSPA template AST and compiled into Templ output.
 
 ## Control Flow
 
@@ -26,15 +26,23 @@ The `<template>` block uses Go's logic via **Templ** integration, with Svelte-al
 </ul>
 ```
 
+### Snippet Blocks
+
+```svelte
+{#snippet Badge(label)}
+  <span class="badge">{label}</span>
+{/snippet}
+```
+
 ### Await Blocks
 
 ```svelte
-{#await promise}
+{#await profilePromise}
   <p>Loading...</p>
-{:then result}
-  <p>Result: {result}</p>
-{:catch error}
-  <p>Error: {error.message}</p>
+{:then profile}
+  <p>{profile.Name}</p>
+{:catch err}
+  <p>{err.Error()}</p>
 {/await}
 ```
 
@@ -47,6 +55,8 @@ Bind user interactions using `on:<event>`:
 <input on:input={func(e *gospa.Event) { value = e.Value }} />
 ```
 
+`on:<event>` is lowered to `data-gospa-on="event:handler"` in generated output.
+
 ## Expressions
 
-Use standard curly braces for expressions: `{ variable }`. Go functions and variables are directly accessible.
+Use standard curly braces for expressions: `{ variable }`. Go functions and variables from the instance script are accessible.

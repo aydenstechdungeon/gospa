@@ -17,6 +17,7 @@ import (
 	"github.com/aydenstechdungeon/gospa/fiber"
 	"github.com/aydenstechdungeon/gospa/plugin"
 	"github.com/aydenstechdungeon/gospa/routing"
+	"github.com/aydenstechdungeon/gospa/routing/kit"
 	"github.com/aydenstechdungeon/gospa/state"
 	"github.com/aydenstechdungeon/gospa/store"
 	json "github.com/goccy/go-json"
@@ -497,7 +498,9 @@ func (a *App) setupRoutes() {
 	a.Fiber.Post(a.Config.RemotePrefix+"/:name", rhAny[0], rhAny[1:]...)
 
 	a.Fiber.Post("/_gospa/invalidate", fiber.SessionMiddleware(), a.handleInvalidate)
-	a.Fiber.Get("/__gospa/cache", a.handleCacheStats)
+	if a.Config.DevMode {
+		a.Fiber.Get("/__gospa/cache", a.handleCacheStats)
+	}
 	a.Fiber.Get("/_gospa/poll", a.handleTransportPoll)
 
 	if _, err := os.Stat(a.Config.StaticDir); err == nil {
@@ -635,6 +638,7 @@ func (a *App) handleInvalidate(c fiberpkg.Ctx) error {
 		Path string `json:"path"`
 		Tag  string `json:"tag"`
 		Key  string `json:"key"`
+		All  bool   `json:"all"`
 	}
 	if err := c.Bind().Body(&payload); err != nil {
 		return c.Status(fiberpkg.StatusBadRequest).JSON(fiberpkg.Map{
@@ -654,6 +658,9 @@ func (a *App) handleInvalidate(c fiberpkg.Ctx) error {
 	}
 	if payload.Key != "" {
 		invalidated += a.InvalidateKey(payload.Key)
+	}
+	if payload.All {
+		invalidated += a.InvalidateAll()
 	}
 
 	return c.JSON(fiberpkg.Map{
@@ -924,8 +931,19 @@ func (a *App) handleFormAction(c fiberpkg.Ctx, r *routing.Route) error {
 		return c.Status(fiberpkg.StatusNotFound).SendString("Action not found")
 	}
 
-	lc := &fiberLoadContext{c: c}
-	result, err := action(lc)
+	baseCtx := &fiberLoadContext{c: c}
+	lc := &helperLoadContext{LoadContext: baseCtx, parentData: nil}
+	scope := kit.NewExecutionScope()
+	scope.SetParentData(nil)
+	var result interface{}
+	var err error
+	runErr := scope.Run(func() error {
+		result, err = action(lc)
+		return nil
+	})
+	if runErr != nil {
+		err = runErr
+	}
 	responsePayload := routing.ActionResponse{
 		Data: result,
 		Code: "SUCCESS",
@@ -956,18 +974,52 @@ func (a *App) handleFormAction(c fiberpkg.Ctx, r *routing.Route) error {
 
 	// Check if AJAX (progressive enhancement)
 	if c.Get("X-Gospa-Enhance") != "" {
+		if redirectErr, ok := kit.AsRedirect(err); ok {
+			responsePayload.Code = "REDIRECT"
+			responsePayload.Redirect = &routing.ActionRedirect{
+				To:     redirectErr.Location,
+				Status: redirectErr.Status,
+			}
+			return c.JSON(responsePayload)
+		}
+		if failErr, ok := kit.AsFail(err); ok {
+			responsePayload.Code = "FAIL"
+			responsePayload.Data = failErr.Data
+			if v := coerceActionValidation(failErr.Data); v != nil {
+				responsePayload.Validation = v
+			}
+			return c.Status(failErr.Status).JSON(responsePayload)
+		}
+		if httpErr, ok := kit.AsError(err); ok {
+			responsePayload.Code = "FAIL"
+			responsePayload.Error = "Request failed"
+			responsePayload.Data = httpErr.Body
+			return c.Status(httpErr.Status).JSON(responsePayload)
+		}
 		if err != nil {
-			return c.Status(fiberpkg.StatusInternalServerError).JSON(fiberpkg.Map{
-				"error": err.Error(),
-				"code":  "ACTION_FAILED",
-			})
+			responsePayload.Code = "FAIL"
+			responsePayload.Error = "Internal server error"
+			if a.Config.DevMode {
+				responsePayload.Error = err.Error()
+			}
+			return c.Status(fiberpkg.StatusInternalServerError).JSON(responsePayload)
 		}
 		applyRevalidation()
 		return c.JSON(responsePayload)
 	}
 
 	// Standard form submission: redirect back to the page
+	if redirectErr, ok := kit.AsRedirect(err); ok {
+		return c.Redirect().Status(redirectErr.Status).To(redirectErr.Location)
+	}
 	if err != nil {
+		if failErr, ok := kit.AsFail(err); ok {
+			fiber.SetFlash(c, "error", fmt.Sprintf("%v", failErr.Data))
+			return c.Redirect().Status(fiberpkg.StatusSeeOther).To(c.Path())
+		}
+		if httpErr, ok := kit.AsError(err); ok {
+			return a.renderError(c, httpErr.Status, fmt.Errorf("HTTP %d", httpErr.Status))
+		}
 		a.Logger().Error("Form action error", "path", r.Path, "action", actionName, "err", err)
 		fiber.SetFlash(c, "error", err.Error())
 		return c.Redirect().Status(fiberpkg.StatusSeeOther).To(c.Path())
@@ -982,6 +1034,56 @@ func (a *App) handleFormAction(c fiberpkg.Ctx, r *routing.Route) error {
 	}
 
 	return c.Redirect().Status(fiberpkg.StatusSeeOther).To(c.Path())
+}
+
+func coerceActionValidation(data interface{}) *routing.ActionValidationError {
+	if data == nil {
+		return nil
+	}
+
+	if v, ok := data.(routing.ActionValidationError); ok {
+		return &v
+	}
+	if v, ok := data.(*routing.ActionValidationError); ok && v != nil {
+		return v
+	}
+
+	switch typed := data.(type) {
+	case map[string]interface{}:
+		return validationFromGenericMap(typed)
+	case map[string]string:
+		return &routing.ActionValidationError{FieldErrors: typed}
+	default:
+		return nil
+	}
+}
+
+func validationFromGenericMap(m map[string]interface{}) *routing.ActionValidationError {
+	if len(m) == 0 {
+		return nil
+	}
+	out := &routing.ActionValidationError{}
+	if raw, ok := m["formError"].(string); ok && raw != "" {
+		out.FormError = raw
+	}
+	if rawFieldErrors, ok := m["fieldErrors"].(map[string]interface{}); ok {
+		fields := make(map[string]string, len(rawFieldErrors))
+		for key, value := range rawFieldErrors {
+			if msg, ok := value.(string); ok && msg != "" {
+				fields[key] = msg
+			}
+		}
+		if len(fields) > 0 {
+			out.FieldErrors = fields
+		}
+	}
+	if rawFieldErrors, ok := m["fieldErrors"].(map[string]string); ok && len(rawFieldErrors) > 0 {
+		out.FieldErrors = rawFieldErrors
+	}
+	if out.FormError == "" && len(out.FieldErrors) == 0 {
+		return nil
+	}
+	return out
 }
 
 // Get registers a GET route with the specified path and handlers.
@@ -1101,16 +1203,75 @@ func (f *fiberLoadContext) Param(key string) string {
 	return f.c.Params(key)
 }
 
+func (f *fiberLoadContext) Params() map[string]string {
+	if accessor, ok := any(f.c).(interface{ AllParams() map[string]string }); ok {
+		all := accessor.AllParams()
+		if all == nil {
+			return map[string]string{}
+		}
+		out := make(map[string]string, len(all))
+		for k, v := range all {
+			out[k] = v
+		}
+		return out
+	}
+	return map[string]string{}
+}
+
 func (f *fiberLoadContext) Query(key string, defaultValue ...string) string {
 	return f.c.Query(key, defaultValue...)
+}
+
+func (f *fiberLoadContext) QueryValues() map[string][]string {
+	if accessor, ok := any(f.c).(interface{ Queries() map[string]string }); ok {
+		raw := accessor.Queries()
+		out := make(map[string][]string, len(raw))
+		for k, v := range raw {
+			out[k] = []string{v}
+		}
+		return out
+	}
+	return map[string][]string{}
 }
 
 func (f *fiberLoadContext) Header(key string) string {
 	return f.c.Get(key)
 }
 
+func (f *fiberLoadContext) Headers() map[string]string {
+	out := map[string]string{}
+	for k, v := range f.c.Request().Header.All() {
+		out[string(k)] = string(v)
+	}
+	return out
+}
+
+func (f *fiberLoadContext) SetHeader(key, value string) {
+	if key == "" {
+		return
+	}
+	f.c.Set(key, value)
+}
+
 func (f *fiberLoadContext) Cookie(key string) string {
 	return f.c.Cookies(key)
+}
+
+func (f *fiberLoadContext) SetCookie(key, value string, maxAge int, path string, httpOnly, secure bool) {
+	if key == "" {
+		return
+	}
+	if path == "" {
+		path = "/"
+	}
+	f.c.Cookie(&fiberpkg.Cookie{
+		Name:     key,
+		Value:    value,
+		Path:     path,
+		MaxAge:   maxAge,
+		HTTPOnly: httpOnly,
+		Secure:   secure,
+	})
 }
 
 func (f *fiberLoadContext) FormValue(key string, defaultValue ...string) string {
@@ -1127,4 +1288,8 @@ func (f *fiberLoadContext) Method() string {
 
 func (f *fiberLoadContext) Path() string {
 	return f.c.Path()
+}
+
+func (f *fiberLoadContext) Local(key string) interface{} {
+	return f.c.Locals(key)
 }

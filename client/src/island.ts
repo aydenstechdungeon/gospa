@@ -7,6 +7,8 @@ import { getSetup } from "./runtime-core";
 import { safeJSONParse } from "./utils/json.ts";
 import { EffectScope } from "./state/scope.ts";
 
+const ISLAND_INIT_ATTR = "data-gospa-island-initialized";
+
 // Island hydration modes
 export type IslandHydrationMode =
   | "immediate"
@@ -97,6 +99,30 @@ export interface IslandManagerConfig {
   debug?: boolean;
 }
 
+function getCentralDataRegistry(): any[] | null {
+  const globalRegistry = (window as any).__GOSPA_DATA__;
+  if (Array.isArray(globalRegistry)) {
+    return globalRegistry;
+  }
+
+  const script = document.getElementById("__GOSPA_DATA__");
+  if (!script || !script.textContent) {
+    return null;
+  }
+
+  try {
+    const parsed = safeJSONParse(script.textContent);
+    if (Array.isArray(parsed)) {
+      (window as any).__GOSPA_DATA__ = parsed;
+      return parsed;
+    }
+  } catch {
+    // Ignore malformed bootstrap payload and keep attribute fallbacks active.
+  }
+
+  return null;
+}
+
 // Hydration queue item
 interface HydrationQueueItem {
   island: IslandElementData;
@@ -152,6 +178,8 @@ export class IslandManager {
    * Discover all islands in the DOM.
    */
   discoverIslands(): IslandElementData[] {
+    this.pruneDisconnectedIslands();
+
     const elements = document.querySelectorAll("[data-gospa-island]");
     const discovered: IslandElementData[] = [];
 
@@ -159,6 +187,9 @@ export class IslandManager {
       const data = this.parseIslandElement(element);
       if (data && !this.islands.has(data.id)) {
         this.islands.set(data.id, data);
+        if (data.element.getAttribute(ISLAND_INIT_ATTR) === "true") {
+          this.hydrated.add(data.id);
+        }
         discovered.push(data);
         this.log("Discovered island:", data.name, data.id);
       }
@@ -174,7 +205,15 @@ export class IslandManager {
    * Parse island data from DOM element.
    */
   private parseIslandElement(element: Element): IslandElementData | null {
-    const id = element.id || this.generateId();
+    let id = element.id;
+    if (!id) {
+      id = this.generateId();
+      if (element instanceof HTMLElement) {
+        element.id = id;
+      } else {
+        element.setAttribute("id", id);
+      }
+    }
     const name = element.getAttribute("data-gospa-island");
     if (!name) return null;
 
@@ -189,7 +228,7 @@ export class IslandManager {
     let state: Record<string, unknown> | undefined;
 
     // Try to get data from centralized registry first
-    const registry = (window as any).__GOSPA_DATA__;
+    const registry = getCentralDataRegistry();
     if (Array.isArray(registry)) {
       // Find island by ID or by name (if ID is auto-generated)
       const islandData = registry.find(
@@ -417,9 +456,13 @@ export class IslandManager {
   destroyIsland(id: string): void {
     const island = this.islands.get(id);
     if (island) {
+      this.cancelDeferredHydration(id, island);
+      this.rejectQueuedHydration(id);
+
       if (island.scope) {
         island.scope.dispose();
       }
+      this.cleanupIslandHandlerGlobals(island);
       this.hydrated.delete(id);
       this.pending.delete(id);
       this.islands.delete(id);
@@ -436,6 +479,22 @@ export class IslandManager {
         this.destroyIsland(id);
       }
     });
+  }
+
+  /**
+   * Remove islands whose elements are no longer connected to the DOM.
+   */
+  pruneDisconnectedIslands(): void {
+    const toDestroy: string[] = [];
+    this.islands.forEach((island, id) => {
+      if (!island.element.isConnected) {
+        toDestroy.push(id);
+      }
+    });
+
+    for (const id of toDestroy) {
+      this.destroyIsland(id);
+    }
   }
 
   /**
@@ -621,15 +680,71 @@ export class IslandManager {
     }
     this.interactionListeners.clear();
 
-    // Clear reference maps
-    this.islands.clear();
-    this.hydrated.clear();
-    this.pending.clear();
+    // Clear island references and registered handlers.
+    for (const id of Array.from(this.islands.keys())) {
+      this.destroyIsland(id);
+    }
     this.queue.critical = [];
     this.queue.high = [];
     this.queue.normal = [];
     this.queue.low = [];
     this.queue.deferred = [];
+  }
+
+  private cancelDeferredHydration(id: string, island: IslandElementData): void {
+    const idle = this.idleCallbacks.get(id);
+    if (idle !== undefined) {
+      if ("cancelIdleCallback" in window) {
+        (window as any).cancelIdleCallback(idle);
+      } else {
+        clearTimeout(idle as number);
+      }
+      this.idleCallbacks.delete(id);
+    }
+
+    const interactionListener = this.interactionListeners.get(id);
+    if (interactionListener) {
+      const events = ["mouseenter", "touchstart", "focusin", "click"];
+      for (const event of events) {
+        island.element.removeEventListener(event, interactionListener);
+      }
+      this.interactionListeners.delete(id);
+    }
+  }
+
+  private rejectQueuedHydration(id: string): void {
+    const cancelErr = new Error(
+      `island "${id}" destroyed before hydration completed`,
+    );
+    (Object.keys(this.queue) as IslandPriority[]).forEach((priority) => {
+      const remaining: HydrationQueueItem[] = [];
+      for (const item of this.queue[priority]) {
+        if (item.island.id === id) {
+          item.reject(cancelErr);
+        } else {
+          remaining.push(item);
+        }
+      }
+      this.queue[priority] = remaining;
+    });
+  }
+
+  private cleanupIslandHandlerGlobals(island: IslandElementData): void {
+    const elementWithHandlers = island.element as Element & {
+      __gospaHandlers?: unknown;
+    };
+    delete elementWithHandlers.__gospaHandlers;
+
+    if (typeof window === "undefined") {
+      return;
+    }
+
+    const w = window as any;
+    const keyCandidates = [island.id, island.name];
+    keyCandidates.forEach((key) => {
+      if (!key) return;
+      delete w[`__GOSPA_ISLAND_${key}__`];
+    });
   }
 }
 

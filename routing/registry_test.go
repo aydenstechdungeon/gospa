@@ -6,6 +6,7 @@ import (
 	"testing"
 
 	"github.com/a-h/templ"
+	fiber "github.com/gofiber/fiber/v3"
 )
 
 // stubComponent returns a no-op templ.Component for test use.
@@ -220,6 +221,38 @@ func TestRegistry_ThreadSafety(_ *testing.T) {
 		_ = reg.HasLayout("/concurrent")
 	}
 	<-done
+}
+
+func TestRegistry_GetActionsReturnsCopy(t *testing.T) {
+	reg := NewRegistry()
+	reg.RegisterAction("/posts", "create", func(_ LoadContext) (interface{}, error) {
+		return nil, nil
+	})
+
+	actions := reg.GetActions("/posts")
+	if len(actions) != 1 {
+		t.Fatalf("expected one action, got %d", len(actions))
+	}
+	delete(actions, "create")
+
+	if reg.GetAction("/posts", "create") == nil {
+		t.Fatal("mutating returned actions map should not mutate registry state")
+	}
+}
+
+func TestRegistry_GetHooksReturnsCopy(t *testing.T) {
+	reg := NewRegistry()
+	reg.RegisterHook(func(_ fiber.Ctx) error { return nil })
+
+	hooks := reg.GetHooks()
+	if len(hooks) != 1 {
+		t.Fatalf("expected one hook, got %d", len(hooks))
+	}
+	hooks[0] = nil
+
+	if got := reg.GetHooks(); len(got) != 1 || got[0] == nil {
+		t.Fatal("mutating returned hooks slice should not mutate registry state")
+	}
 }
 
 // ─── Global Registry ──────────────────────────────────────────────────────────

@@ -30,10 +30,43 @@
 
 <template>
   <form>
-    <input type="email" bind:value={email} />
+    <input type="email" data-model="email" />
     {#if error}
       <span class="error">Email too short</span>
     {/if}
+  </form>
+</template>
+```
+
+## Route `+page.gospa` with `Load` + Named Actions
+
+```svelte
+<script context="module" lang="go">
+import (
+  "github.com/aydenstechdungeon/gospa/routing"
+  "github.com/aydenstechdungeon/gospa/routing/kit"
+)
+
+func Load(c routing.LoadContext) (map[string]interface{}, error) {
+  return map[string]interface{}{"slug": c.Param("slug")}, nil
+}
+
+func ActionDefault(c routing.LoadContext) (interface{}, error) {
+  return map[string]interface{}{"saved": true}, nil
+}
+
+func ActionArchive(c routing.LoadContext) (interface{}, error) {
+  return nil, kit.Redirect(303, "/posts")
+}
+</script>
+
+<template>
+  <h1>Post {slug}</h1>
+  <form method="post">
+    <button type="submit">Save</button>
+  </form>
+  <form method="post" action="?_action=archive">
+    <button type="submit">Archive</button>
   </form>
 </template>
 ```

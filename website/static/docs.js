@@ -7,7 +7,10 @@
     let searchInitializationPromise = null;
     let globalActionsInitialized = false;
     let appInitialized = false;
-    const PREF_LANG_KEY = 'gospa-pref-lang';
+    let langObserverInitialized = false;
+    let langSyncScheduled = false;
+    const DEFAULT_LANG = 'js';
+    let preferredLangRune = null;
 
     async function initSearch() {
         if (searchIndex) return;
@@ -283,37 +286,54 @@
                 },
                 serializationFormat,
             });
+            initPreferredLangRune();
         }).catch((error) => {
             console.error('Failed to initialize GoSPA runtime:', error);
         });
     }
 
-    function getCookieValue(name) {
-        const match = document.cookie.match(new RegExp(`(?:^|; )${name}=([^;]*)`));
-        return match ? decodeURIComponent(match[1]) : null;
+    function normalizeLang(lang) {
+        return lang === 'ts' ? 'ts' : DEFAULT_LANG;
+    }
+
+    function initPreferredLangRune() {
+        if (preferredLangRune) return true;
+        if (!window.GoSPA || typeof window.GoSPA.Rune !== 'function') return false;
+        preferredLangRune = new window.GoSPA.Rune(DEFAULT_LANG);
+        return true;
     }
 
     function getPreferredLang() {
-        const stored = localStorage.getItem(PREF_LANG_KEY);
-        if (stored === 'js' || stored === 'ts') return stored;
-
-        const cookie = getCookieValue(PREF_LANG_KEY);
-        if (cookie === 'js' || cookie === 'ts') return cookie;
-
-        return 'js';
+        if (!preferredLangRune) return DEFAULT_LANG;
+        return normalizeLang(preferredLangRune.get());
     }
 
     function setPreferredLang(lang) {
-        localStorage.setItem(PREF_LANG_KEY, lang);
-        document.cookie = `${PREF_LANG_KEY}=${encodeURIComponent(lang)}; Path=/; Max-Age=31536000; SameSite=Lax`;
+        const normalized = normalizeLang(lang);
+        if (!preferredLangRune) return;
+        preferredLangRune.set(normalized);
     }
 
     function initGlobalActions() {
         if (globalActionsInitialized) return;
         globalActionsInitialized = true;
+        initPreferredLangRune();
+
+        const scheduleLangSync = () => {
+            if (langSyncScheduled) return;
+            langSyncScheduled = true;
+
+            requestAnimationFrame(() => {
+                langSyncScheduled = false;
+                if (window.switchLang) {
+                    window.switchLang(null);
+                }
+            });
+        };
 
         // eslint-disable-next-line no-unused-vars
         window.switchLang = function switchLang(_btn, lang) {
+            if (!initPreferredLangRune()) return;
             const targetLang = lang === 'ts' || lang === 'js' ? lang : getPreferredLang();
             setPreferredLang(targetLang);
 
@@ -346,9 +366,29 @@
             });
         };
 
-        const initLang = () => window.switchLang(null);
+        const initLang = () => scheduleLangSync();
         initLang();
         document.addEventListener('gospa:navigated', initLang);
+
+        // Navigation lifecycle can intentionally delay gospa:navigated.
+        // Apply preferred language as soon as dual-code blocks are inserted.
+        if (!langObserverInitialized) {
+            langObserverInitialized = true;
+
+            const observer = new MutationObserver((mutations) => {
+                for (const mutation of mutations) {
+                    for (const node of mutation.addedNodes) {
+                        if (!(node instanceof Element)) continue;
+                        if (node.matches('[data-dual-code-block]') || node.querySelector('[data-dual-code-block]')) {
+                            scheduleLangSync();
+                            return;
+                        }
+                    }
+                }
+            });
+
+            observer.observe(document.body, { childList: true, subtree: true });
+        }
     }
 
     // Listen for GoSPA navigation

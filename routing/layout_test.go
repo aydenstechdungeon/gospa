@@ -69,7 +69,9 @@ func TestLayoutHelpers_PathAndSegmentUtilities(t *testing.T) {
 		},
 		{
 			name: "isParentPath checks parent relationship",
-			fn:   func() bool { return isParentPath("/", "/any/path") && isParentPath("/a", "/a/b") && !isParentPath("/a", "/ab") },
+			fn: func() bool {
+				return isParentPath("/", "/any/path") && isParentPath("/a", "/a/b") && !isParentPath("/a", "/ab")
+			},
 		},
 	}
 

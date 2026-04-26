@@ -28,6 +28,36 @@ func (a *App) defaultCacheKeys(routePath string) []string {
 	}
 }
 
+func dependencyTags(depends []string) []string {
+	if len(depends) == 0 {
+		return nil
+	}
+	out := make([]string, 0, len(depends))
+	for _, dep := range depends {
+		trimmed := strings.TrimSpace(dep)
+		if trimmed == "" {
+			continue
+		}
+		out = append(out, "dep:"+trimmed)
+	}
+	return out
+}
+
+func dependencyKeys(depends []string) []string {
+	if len(depends) == 0 {
+		return nil
+	}
+	out := make([]string, 0, len(depends))
+	for _, dep := range depends {
+		trimmed := strings.TrimSpace(dep)
+		if trimmed == "" {
+			continue
+		}
+		out = append(out, "dep:"+trimmed)
+	}
+	return out
+}
+
 func (a *App) indexCacheEntry(cacheKey string, tags, keys []string) {
 	a.cacheIndexMu.Lock()
 	defer a.cacheIndexMu.Unlock()
@@ -136,6 +166,33 @@ func (a *App) InvalidateKey(key string) int {
 		}
 	}
 	return count
+}
+
+// InvalidateAll removes all in-memory route caches and clears index mappings.
+// Returns number of entries removed across SSG and PPR caches.
+func (a *App) InvalidateAll() int {
+	invalidated := 0
+
+	a.ssgCacheMu.Lock()
+	invalidated += len(a.ssgCache)
+	a.ssgCache = make(map[string]ssgEntry)
+	a.ssgCacheKeys = a.ssgCacheKeys[:0]
+	a.ssgCacheIndex = make(map[string]struct{})
+	a.ssgCacheMu.Unlock()
+
+	a.pprShellMu.Lock()
+	invalidated += len(a.pprShellCache)
+	a.pprShellCache = make(map[string]pprEntry)
+	a.pprShellKeys = a.pprShellKeys[:0]
+	a.pprShellIndex = make(map[string]struct{})
+	a.pprShellMu.Unlock()
+
+	a.cacheIndexMu.Lock()
+	a.cacheTagIndex = make(map[string]map[string]struct{})
+	a.cacheKeyIndex = make(map[string]map[string]struct{})
+	a.cacheIndexMu.Unlock()
+
+	return invalidated
 }
 
 func (a *App) invalidateCacheKey(cacheKey string) int {

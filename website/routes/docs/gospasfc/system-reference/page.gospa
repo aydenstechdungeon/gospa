@@ -1,0 +1,109 @@
+---
+package systemreference
+---
+<script lang="go">
+import "github.com/aydenstechdungeon/gospa/website/components"
+</script>
+
+<template>
+	<div class="space-y-12">
+		<header>
+			<div class="flex items-center gap-2 mb-4">
+				<span class="px-2 py-1 rounded bg-[var(--accent-primary)]/10 text-[var(--accent-primary)] text-xs font-bold uppercase tracking-wider">Features</span>
+				<span class="text-[var(--text-muted)] text-sm">/</span>
+				<span class="text-[var(--text-muted)] text-sm font-medium">Gospa SFC</span>
+			</div>
+			<h1 class="text-4xl font-bold tracking-tight mb-4 text-transparent bg-clip-text bg-gradient-to-r from-[var(--accent-primary)] to-[var(--accent-secondary)]">System Reference</h1>
+			<p class="text-xl text-[var(--text-secondary)] leading-relaxed">
+				Implementation-level contracts for parser behavior, compiler transforms, route generation, and action runtime flow.
+			</p>
+		</header>
+
+		<section class="space-y-8">
+			<div class="rounded-xl border border-[var(--border)] bg-[var(--bg-secondary)] p-6">
+				<h2 class="text-2xl font-bold mb-4">Pipeline</h2>
+				<ol class="space-y-2 text-[var(--text-secondary)] list-decimal list-inside">
+					<li>Parse SFC blocks and frontmatter.</li>
+					<li>Validate module exports and signatures.</li>
+					<li>Parse template into AST (`if`, `await`, `each`, `snippet`, component nodes).</li>
+					<li>Lower directives (`on:&lt;event&gt;` to <code>data-gospa-on</code>).</li>
+					<li>Transform Go reactive DSL and generate Templ + optional TS.</li>
+					<li>Register route loaders/actions and execute action envelopes at runtime.</li>
+				</ol>
+				<p class="text-sm text-[var(--text-muted)] mt-4">
+					Canonical markdown: <code>docs/gospasfc/system-reference.md</code>
+				</p>
+			</div>
+
+			<div class="rounded-xl border border-[var(--border)] bg-[var(--bg-secondary)] p-6">
+				<h2 class="text-2xl font-bold mb-4">SFC File Contract</h2>
+				<ul class="space-y-2 text-[var(--text-secondary)]">
+					<li>Max input size: 2 MB.</li>
+					<li>At most one block each: <code>&lt;template&gt;</code>, <code>&lt;style&gt;</code>, instance Go script, TS/JS script, module Go script.</li>
+					<li>If no explicit template exists, top-level markup becomes implicit template content.</li>
+					<li>Only <code>context=\"module\"</code> is supported for script context.</li>
+					<li>Module script must be <code>lang=\"go\"</code>.</li>
+				</ul>
+			</div>
+
+			<div class="rounded-xl border border-[var(--border)] bg-[var(--bg-secondary)] p-6">
+				<h2 class="text-2xl font-bold mb-4">Template Rules</h2>
+				@components.CodeBlock(`{#if ...}{:else if ...}{:else}{/if}
+{#await expr}{:then v}{:catch err}{/await}
+{#each items as item}{/each}
+{#snippet Name(args)}{/snippet}
+@components.CodeBlock("...", "go", "x.go")
+<@Card title="x">...</@Card>`, "svelte", "template-features.gospa")
+				<ul class="space-y-2 text-[var(--text-secondary)] mt-4">
+					<li><code>&#64;click</code> and <code>on-click</code> are rejected. Use <code>on:click</code>.</li>
+					<li><code>on:&lt;event&gt;</code> lowers to <code>data-gospa-on=\"event:handler\"</code>.</li>
+					<li>Unknown directives fail with diagnostics.</li>
+				</ul>
+			</div>
+
+			<div class="rounded-xl border border-[var(--border)] bg-[var(--bg-secondary)] p-6">
+				<h2 class="text-2xl font-bold mb-4">Module Exports and Actions</h2>
+				@components.CodeBlock(`func Load(c routing.LoadContext) (map[string]interface{}, error)
+func Load(c routing.LoadContext) (map[string]any, error)
+func ActionDefault(c routing.LoadContext) (interface{}, error)
+func ActionSave(c routing.LoadContext) (any, error)`, "go", "module-contract.go")
+				<ul class="space-y-2 text-[var(--text-secondary)] mt-4">
+					<li>Functions must be top-level, not methods.</li>
+					<li><code>Action</code> alone is invalid.</li>
+					<li><code>Action&lt;Name&gt;</code> suffix must start uppercase.</li>
+					<li>Route generator maps <code>ActionSave</code> to action name <code>save</code>.</li>
+				</ul>
+			</div>
+
+			<div class="rounded-xl border border-[var(--border)] bg-[var(--bg-secondary)] p-6">
+				<h2 class="text-2xl font-bold mb-4">Form Action Runtime Flow</h2>
+				<ul class="space-y-2 text-[var(--text-secondary)]">
+					<li>POST handler resolves <code>_action</code>; empty falls back to <code>default</code>.</li>
+					<li>If named action is missing, server attempts <code>default</code> before 404.</li>
+					<li>Enhanced requests (<code>X-Gospa-Enhance: 1</code>) return JSON envelopes.</li>
+					<li>Non-enhanced requests use redirect/flash browser flow.</li>
+				</ul>
+			</div>
+
+			<div class="rounded-xl border border-[var(--border)] bg-[var(--bg-secondary)] p-6">
+				<h2 class="text-2xl font-bold mb-4">Client Helpers</h2>
+				<ul class="space-y-2 text-[var(--text-secondary)]">
+					<li><code>enhanceForm</code> chooses action from submitter <code>data-gospa-action</code>, then submitter value, then form dataset, then <code>default</code>.</li>
+					<li><code>enhanceForm</code> aborts stale concurrent submits and applies validation attrs (<code>aria-invalid</code>, <code>data-gospa-error</code>).</li>
+					<li><code>callRouteAction</code> appends <code>_action</code> and sends enhancement headers.</li>
+				</ul>
+			</div>
+
+			<div class="flex justify-between items-center pt-8">
+				<a href="/docs/gospasfc/api-reference" class="flex flex-col items-start gap-1 p-4 rounded-xl border border-[var(--border)] hover:bg-[var(--bg-secondary)] transition-all">
+					<span class="text-xs text-[var(--text-muted)] font-bold uppercase tracking-widest">Previous</span>
+					<span class="font-bold text-[var(--accent-primary)]">API Reference</span>
+				</a>
+				<a href="/docs/gospasfc" class="flex flex-col items-end gap-1 p-4 rounded-xl border border-[var(--border)] hover:bg-[var(--bg-secondary)] transition-all">
+					<span class="text-xs text-[var(--text-muted)] font-bold uppercase tracking-widest">Next</span>
+					<span class="font-bold text-[var(--accent-primary)]">SFC Overview</span>
+				</a>
+			</div>
+		</section>
+	</div>
+</template>

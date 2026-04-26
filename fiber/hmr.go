@@ -346,6 +346,11 @@ func (mgr *HMRManager) determineUpdateType(path string) (string, string) {
 	switch {
 	case strings.HasSuffix(path, ".templ"):
 		return "template", "template-safe"
+	case strings.HasSuffix(path, ".gospa"):
+		// Heuristic: treat SFC source edits as template-safe to preserve stateful
+		// dev loops for most markup/style changes. Runtime-breaking script edits
+		// still get caught by client-side update failures and fallback reloads.
+		return "template", "template-safe"
 	case strings.HasSuffix(path, ".go"):
 		return "full", "config-break"
 	case strings.HasSuffix(path, ".ts") || strings.HasSuffix(path, ".js"):
@@ -524,9 +529,13 @@ func (mgr *HMRManager) HMREndpoint() fiberpkg.Handler {
 // HMRMiddleware returns middleware that adds HMR script to HTML responses.
 func (mgr *HMRManager) HMRMiddleware() fiberpkg.Handler {
 	return func(c fiberpkg.Ctx) error {
+		if err := c.Next(); err != nil {
+			return err
+		}
+
 		// Only process HTML responses
 		if !strings.Contains(c.GetRespHeader("Content-Type"), "text/html") {
-			return c.Next()
+			return nil
 		}
 
 		// Add HMR script before </body> using bytes for efficiency
@@ -538,7 +547,7 @@ func (mgr *HMRManager) HMRMiddleware() fiberpkg.Handler {
 		bodyTag := []byte("</body>")
 		idx := bytes.LastIndex(body, bodyTag)
 		if idx == -1 {
-			return c.SendString(string(body))
+			return nil
 		}
 
 		// Build new body: content before </body> + script + </body>
@@ -547,7 +556,8 @@ func (mgr *HMRManager) HMRMiddleware() fiberpkg.Handler {
 		buf.WriteString(hmrScript)
 		buf.Write(body[idx:])
 
-		return c.SendString(buf.String())
+		c.Response().SetBody(buf.Bytes())
+		return nil
 	}
 }
 

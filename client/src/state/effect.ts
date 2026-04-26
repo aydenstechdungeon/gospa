@@ -2,6 +2,7 @@ import type { Rune, Unsubscribe } from "./rune.ts";
 import { type Notifier } from "./batch.ts";
 import { currentScope } from "./scope.ts";
 import type { Disposable } from "./disposal.ts";
+import { emitRuntimeSignal } from "../runtime-signals.ts";
 
 /**
  * Declare global debug constant for build-time stripping.
@@ -79,6 +80,7 @@ export class Effect implements Notifier, Disposable {
 
   private _run(): void {
     if (!this._active || this._disposed) return;
+    emitRuntimeSignal("gospa:effect-run", { id: this._id, phase: "start" });
 
     // Run cleanup if exists
     if (this._cleanup) {
@@ -99,6 +101,7 @@ export class Effect implements Notifier, Disposable {
 
     try {
       this._cleanup = this._fn();
+      emitRuntimeSignal("gospa:effect-run", { id: this._id, phase: "end" });
     } finally {
       popEffect();
     }

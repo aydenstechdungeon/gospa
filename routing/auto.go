@@ -205,7 +205,8 @@ func (r *Router) parseRoute(relPath string) (*Route, error) {
 		routeType = RouteTypePage
 	case cleanFileName == "layout.templ" || cleanFileName == "layout.gospa":
 		routeType = RouteTypeLayout
-	case cleanFileName == "error.templ" || cleanFileName == "error.gospa":
+	case cleanFileName == "error.templ" || cleanFileName == "error.gospa" ||
+		cleanFileName == "_error.templ" || cleanFileName == "_error.gospa":
 		routeType = RouteTypeError
 	case fileName == "_middleware.go" || fileName == "+middleware.go":
 		routeType = RouteTypeMiddleware
@@ -263,6 +264,12 @@ func (r *Router) filePathToURLPath(relPath string, _ RouteType) string {
 			path = dirPath
 		}
 	case cleanFileName == "error":
+		if dirPath == "." {
+			path = ""
+		} else {
+			path = dirPath
+		}
+	case cleanFileName == "_error":
 		if dirPath == "." {
 			path = ""
 		} else {
@@ -541,65 +548,89 @@ func compileRouteSegments(pattern string) []routeSegment {
 }
 
 func matchRouteSegments(pattern []routeSegment, pathSegs []string) (map[string]string, bool) {
-	var params map[string]string
-	i, j := 0, 0
-	for i < len(pattern) {
+	cloneParams := func(src map[string]string) map[string]string {
+		if src == nil {
+			return make(map[string]string)
+		}
+		out := make(map[string]string, len(src)+1)
+		for k, v := range src {
+			out[k] = v
+		}
+		return out
+	}
+
+	var walk func(i, j int, params map[string]string) (map[string]string, bool)
+	walk = func(i, j int, params map[string]string) (map[string]string, bool) {
+		if i == len(pattern) {
+			if j == len(pathSegs) {
+				if params == nil {
+					return map[string]string{}, true
+				}
+				return params, true
+			}
+			return nil, false
+		}
+
 		seg := pattern[i]
 		switch seg.kind {
-		case segmentOptionalCatchAll:
-			if params == nil {
-				params = make(map[string]string)
-			}
-			if j >= len(pathSegs) {
-				params[seg.value] = ""
-			} else {
-				params[seg.value] = strings.Join(pathSegs[j:], "/")
-			}
-			return params, true
-		case segmentCatchAll:
-			if params == nil {
-				params = make(map[string]string)
-			}
-			params[seg.value] = strings.Join(pathSegs[j:], "/")
-			return params, true
-		case segmentOptionalParam:
-			if params == nil {
-				params = make(map[string]string)
-			}
-			if j >= len(pathSegs) {
-				params[seg.value] = ""
-				i++
-				continue
-			}
-			params[seg.value] = pathSegs[j]
-			i++
-			j++
-		case segmentParam:
-			if j >= len(pathSegs) {
-				return nil, false
-			}
-			if params == nil {
-				params = make(map[string]string)
-			}
-			params[seg.value] = pathSegs[j]
-			i++
-			j++
 		case segmentStatic:
 			if j >= len(pathSegs) || seg.value != pathSegs[j] {
 				return nil, false
 			}
-			i++
-			j++
-		}
-	}
+			return walk(i+1, j+1, params)
 
-	if j != len(pathSegs) {
+		case segmentParam:
+			if j >= len(pathSegs) {
+				return nil, false
+			}
+			next := cloneParams(params)
+			next[seg.value] = pathSegs[j]
+			return walk(i+1, j+1, next)
+
+		case segmentOptionalParam:
+			// Try consuming first; fall back to omission when suffix segments require it.
+			if j < len(pathSegs) {
+				withValue := cloneParams(params)
+				withValue[seg.value] = pathSegs[j]
+				if out, ok := walk(i+1, j+1, withValue); ok {
+					return out, true
+				}
+			}
+			withoutValue := cloneParams(params)
+			withoutValue[seg.value] = ""
+			return walk(i+1, j, withoutValue)
+
+		case segmentCatchAll:
+			// Required catch-all must capture at least one segment.
+			if j >= len(pathSegs) {
+				return nil, false
+			}
+			// Greedy but backtracking, so suffix segments can still match.
+			for k := len(pathSegs); k > j; k-- {
+				next := cloneParams(params)
+				next[seg.value] = strings.Join(pathSegs[j:k], "/")
+				if out, ok := walk(i+1, k, next); ok {
+					return out, true
+				}
+			}
+			return nil, false
+
+		case segmentOptionalCatchAll:
+			// Greedy with backtracking; may also capture empty.
+			for k := len(pathSegs); k >= j; k-- {
+				next := cloneParams(params)
+				next[seg.value] = strings.Join(pathSegs[j:k], "/")
+				if out, ok := walk(i+1, k, next); ok {
+					return out, true
+				}
+			}
+			return nil, false
+		}
+
 		return nil, false
 	}
-	if params == nil {
-		return map[string]string{}, true
-	}
-	return params, true
+
+	return walk(0, 0, nil)
 }
 
 // GetRoutes returns all routes.
