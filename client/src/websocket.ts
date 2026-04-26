@@ -1,5 +1,23 @@
 import { Rune, batch } from "./state.ts";
-import { decode, encode } from "@msgpack/msgpack";
+
+type MsgPackModule = typeof import("@msgpack/msgpack");
+let msgPackModulePromise: Promise<MsgPackModule> | null = null;
+let cachedMsgPackModule: MsgPackModule | null = null;
+
+async function getMsgPackModule(): Promise<MsgPackModule> {
+  if (cachedMsgPackModule) return cachedMsgPackModule;
+  if (!msgPackModulePromise) {
+    msgPackModulePromise = import("@msgpack/msgpack").then((mod) => {
+      cachedMsgPackModule = mod;
+      return mod;
+    });
+  }
+  return msgPackModulePromise;
+}
+
+function getMsgPackModuleSync(): MsgPackModule | null {
+  return cachedMsgPackModule;
+}
 
 // Connection states
 export type ConnectionState =
@@ -311,11 +329,11 @@ export class WSClient {
   private isStateBearingMessage(message: StateMessage): boolean {
     return Boolean(
       message.state ||
-        message.diff ||
-        message.patch ||
-        message.type === "init" ||
-        message.type === "update" ||
-        message.type === "sync",
+      message.diff ||
+      message.patch ||
+      message.type === "init" ||
+      message.type === "update" ||
+      message.type === "sync",
     );
   }
 
@@ -340,7 +358,11 @@ export class WSClient {
   private stableConnectionTimer: ReturnType<typeof setTimeout> | null = null;
   private reconnectTimer: ReturnType<typeof setTimeout> | null = null;
 
-  connect(): Promise<void> {
+  async connect(): Promise<void> {
+    if (this.config.serializationFormat === "msgpack") {
+      await getMsgPackModule();
+    }
+
     return new Promise((resolve, reject) => {
       // If already connected or connecting, don't start another one
       if (
@@ -440,7 +462,8 @@ export class WSClient {
           code: event.code,
           reason: event.reason || "",
           wasClean: event.wasClean,
-          uptimeMs: this.lastConnectAt > 0 ? Date.now() - this.lastConnectAt : 0,
+          uptimeMs:
+            this.lastConnectAt > 0 ? Date.now() - this.lastConnectAt : 0,
         });
         this.config.onClose(event);
 
@@ -586,7 +609,17 @@ export class WSClient {
   send(message: StateMessage): void {
     if (this.ws?.readyState === WebSocket.OPEN) {
       if (this.config.serializationFormat === "msgpack") {
-        this.ws.send(encode(message));
+        const msgpack = getMsgPackModuleSync();
+        if (!msgpack) {
+          this.enqueueMessage(message);
+          void getMsgPackModule()
+            .then(() => this.flushMessageQueue())
+            .catch((error) => {
+              console.error("[GoSPA] Failed to load msgpack encoder:", error);
+            });
+          return;
+        }
+        this.ws.send(msgpack.encode(message));
       } else {
         this.ws.send(JSON.stringify(message));
       }
@@ -625,8 +658,9 @@ export class WSClient {
         this.config.serializationFormat === "msgpack" &&
         (data instanceof ArrayBuffer || data instanceof Uint8Array)
       ) {
+        const msgpack = await getMsgPackModule();
         const buffer = data instanceof ArrayBuffer ? data : data.buffer;
-        raw = decode(new Uint8Array(buffer));
+        raw = msgpack.decode(new Uint8Array(buffer));
       } else if (data instanceof Blob) {
         const buffer = await data.arrayBuffer();
         return this.handleMessage(buffer);

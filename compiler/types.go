@@ -14,7 +14,7 @@ var (
 	// DerivedRegex matches GoSPA $derived() declarations.
 	DerivedRegex = regexp.MustCompile(`\$derived\((.*?)\)`)
 	// EffectRegex matches GoSPA $effect() declarations.
-	EffectRegex = regexp.MustCompile(`(?s)\$effect\(func\(\)\s*\{(.*?)\}\)`)
+	EffectRegex = regexp.MustCompile(`(?s)\$effect\(\s*func\(\)\s*\{(.*?)\}\s*\)`)
 	// CSSDotRegex matches CSS class selectors.
 	CSSDotRegex = regexp.MustCompile(`\.([a-zA-Z][a-zA-Z0-9-_]*)`)
 	// ReactiveLabelRegex matches GoSPA $: reactive labels.

@@ -5,6 +5,7 @@ import (
 	"crypto/sha256"
 	"encoding/hex"
 	"fmt"
+	_ "github.com/aydenstechdungeon/gospa/website/routes" // Import routes to trigger init()
 	"log"
 	"os"
 	"path/filepath"
@@ -12,8 +13,6 @@ import (
 	"strings"
 	"sync"
 	"time"
-
-	_ "github.com/aydenstechdungeon/gospa/website/routes" // Import routes to trigger init()
 
 	"github.com/aydenstechdungeon/gospa"
 	gospafiber "github.com/aydenstechdungeon/gospa/fiber"

@@ -424,6 +424,9 @@ func (c *GospaCompiler) Compile(opts CompileOptions, input string) (templ, ts st
 	if err := validateReactiveUsage(scriptContent, parsed.Script); err != nil {
 		return "", "", err
 	}
+	if err := c.validateModuleScriptExports(parsed.ScriptModule); err != nil {
+		return "", "", err
+	}
 
 	// SafeMode: validate script content before processing
 	if opts.SafeMode {
@@ -436,6 +439,11 @@ func (c *GospaCompiler) Compile(opts CompileOptions, input string) (templ, ts st
 		if parsed.ScriptTS.Content != "" {
 			if err := ValidateSafeTSScript(parsed.ScriptTS.Content); err != nil {
 				return "", "", fmt.Errorf("safe mode violation in TS script: %w", err)
+			}
+		}
+		if parsed.ScriptModule.Content != "" {
+			if err := c.validateSafeScriptCached(validationCache, parsed.ScriptModule.Content); err != nil {
+				return "", "", fmt.Errorf("safe mode violation in module script: %w", err)
 			}
 		}
 	}
@@ -540,17 +548,33 @@ func (c *GospaCompiler) codegenTemplate(nodes []sfc.Node, hash string) string {
 			}
 
 			for _, attr := range n.Attributes {
+				attrName := attr.Name
+				attrValue := attr.Value
+				attrIsExpression := attr.IsExpression
+
+				// Lower SFC event directives to runtime delegation attributes.
+				// Example: on:click={increment} -> data-gospa-on="click:increment"
+				if strings.HasPrefix(attrName, "on:") {
+					eventName := strings.TrimPrefix(attrName, "on:")
+					handlerName := strings.TrimSpace(attrValue)
+					if eventName != "" && handlerName != "" {
+						attrName = "data-gospa-on"
+						attrValue = eventName + ":" + handlerName
+						attrIsExpression = false
+					}
+				}
+
 				sb.WriteString(" ")
-				sb.WriteString(attr.Name)
-				if attr.Value != "" || attr.IsExpression {
+				sb.WriteString(attrName)
+				if attrValue != "" || attrIsExpression {
 					sb.WriteString("=")
-					if attr.IsExpression {
+					if attrIsExpression {
 						sb.WriteString("{")
 					} else {
 						sb.WriteString("\"")
 					}
-					sb.WriteString(attr.Value)
-					if attr.IsExpression {
+					sb.WriteString(attrValue)
+					if attrIsExpression {
 						sb.WriteString("}")
 					} else {
 						sb.WriteString("\"")
@@ -588,6 +612,49 @@ func (c *GospaCompiler) codegenTemplate(nodes []sfc.Node, hash string) string {
 				sb.WriteString(c.codegenTemplate(n.Else, hash))
 			}
 			sb.WriteString("\n}")
+		case *sfc.AwaitNode:
+			sb.WriteString("{\n")
+			sb.WriteString("__gospaAwaitResolve := func(v any) (any, error, bool) {\n")
+			sb.WriteString("switch x := v.(type) {\n")
+			sb.WriteString("case interface{ AwaitResult() (any, error, bool) }:\n")
+			sb.WriteString("return x.AwaitResult()\n")
+			sb.WriteString("case interface{ Await() (any, error) }:\n")
+			sb.WriteString("v, err := x.Await()\n")
+			sb.WriteString("return v, err, false\n")
+			sb.WriteString("case interface{ Pending() bool }:\n")
+			sb.WriteString("if x.Pending() {\n")
+			sb.WriteString("return nil, nil, true\n")
+			sb.WriteString("}\n")
+			sb.WriteString("return x, nil, false\n")
+			sb.WriteString("case error:\n")
+			sb.WriteString("return nil, x, false\n")
+			sb.WriteString("default:\n")
+			sb.WriteString("return x, nil, false\n")
+			sb.WriteString("}\n")
+			sb.WriteString("}\n")
+			sb.WriteString("__gospaAwaitVal, __gospaAwaitErr, __gospaAwaitPending := __gospaAwaitResolve(")
+			sb.WriteString(strings.TrimSpace(n.Expression))
+			sb.WriteString(")\n")
+			sb.WriteString("if __gospaAwaitPending {\n")
+			sb.WriteString(c.codegenTemplate(n.Pending, hash))
+			sb.WriteString("\n} else if __gospaAwaitErr != nil {\n")
+			if n.CatchVar != "" {
+				sb.WriteString(n.CatchVar)
+				sb.WriteString(" := __gospaAwaitErr\n")
+			}
+			sb.WriteString(c.codegenTemplate(n.Catch, hash))
+			sb.WriteString("\n} else {\n")
+			if n.ThenVar != "" {
+				sb.WriteString(n.ThenVar)
+				sb.WriteString(" := __gospaAwaitVal\n")
+			}
+			if len(n.Then) > 0 {
+				sb.WriteString(c.codegenTemplate(n.Then, hash))
+			} else {
+				sb.WriteString(c.codegenTemplate(n.Pending, hash))
+			}
+			sb.WriteString("\n}\n")
+			sb.WriteString("}")
 		case *sfc.EachNode:
 			sb.WriteString("for _, ")
 			sb.WriteString(n.As)
@@ -610,10 +677,7 @@ func (c *GospaCompiler) codegenTemplate(nodes []sfc.Node, hash string) string {
 				// For positional arguments (from @Component(...) syntax), don't output the name
 				if strings.HasPrefix(attr.Name, "_arg") {
 					if attr.IsExpression {
-						// Wrap in backticks for raw string literals in templ
-						sb.WriteString("`")
 						sb.WriteString(attr.Value)
-						sb.WriteString("`")
 					} else {
 						sb.WriteString("\"")
 						sb.WriteString(attr.Value)
@@ -1114,6 +1178,17 @@ func (c *GospaCompiler) validateTemplateNodesWithCache(nodes []sfc.Node, cache m
 				}
 			}
 			err = c.validateTemplateNodesWithCache(n.Else, cache)
+		case *sfc.AwaitNode:
+			if err = c.validateSafeScriptCached(cache, n.Expression); err != nil {
+				return err
+			}
+			if err = c.validateTemplateNodesWithCache(n.Pending, cache); err != nil {
+				return err
+			}
+			if err = c.validateTemplateNodesWithCache(n.Then, cache); err != nil {
+				return err
+			}
+			err = c.validateTemplateNodesWithCache(n.Catch, cache)
 		case *sfc.EachNode:
 			if err = c.validateSafeScriptCached(cache, n.Iteratee); err != nil {
 				return err
@@ -1186,18 +1261,18 @@ func (c *GospaCompiler) generateTS(islandID, script string, fromGo bool, _ strin
 
 	if fromGo {
 		// 1. Basic conversion from Go reactive runes to TS
-		// We use state.$state etc to avoid collision and use our runtime
+		// We call local helpers (__gospa_state/__gospa_derived/__gospa_effect)
+		// that resolve to runtime APIs when available and safely fall back.
 		tsScript = PropsRegex.ReplaceAllString(tsScript, "let { $1 } = props")
-		tsScript = StateRegex.ReplaceAllString(tsScript, "let $1 = state.$$state($2)")
-		tsScript = DerivedRegex.ReplaceAllString(tsScript, "state.$$derived(() => $1)")
-		// Effects remain as state.$effect
-		tsScript = EffectRegex.ReplaceAllString(tsScript, "state.$$effect(() => {$1})")
+		tsScript = StateRegex.ReplaceAllString(tsScript, "let $1 = __gospa_state($2)")
+		tsScript = DerivedRegex.ReplaceAllString(tsScript, "__gospa_derived(() => $1)")
+		tsScript = EffectRegex.ReplaceAllString(tsScript, "__gospa_effect(() => {$1})")
 
 		// Convert Go func to JS function
 		tsScript = goFuncRegex.ReplaceAllString(tsScript, "function $1($2) {")
 
-		// Reactive labels $: name = expr -> const name = state.$derived(() => expr)
-		tsScript = ReactiveLabelRegex.ReplaceAllString(tsScript, "const $1 = state.$derived(() => $2)")
+		// Reactive labels $: name = expr -> const name = __gospa_derived(() => expr)
+		tsScript = ReactiveLabelRegex.ReplaceAllString(tsScript, "const $1 = __gospa_derived(() => $2)")
 
 		// Clean up Go-isms
 		tsScript = goForRangeRegex.ReplaceAllString(tsScript, "for (const $1 of $2) {")
@@ -1221,11 +1296,27 @@ func (c *GospaCompiler) generateTS(islandID, script string, fromGo bool, _ strin
 	}
 
 	return header + fmt.Sprintf(`function __gospa_setup_%s(element: Element, { props, state }: { props: Record<string, any>; state: any }) {
+    const __gospa_runtime = (window as any).__GOSPA_RUNTIME_ESM__ || {};
+    const __gospa_state = typeof __gospa_runtime.$state === "function"
+      ? __gospa_runtime.$state.bind(__gospa_runtime)
+      : (initial: any) => ({ value: initial });
+    const __gospa_derived = typeof __gospa_runtime.$derived === "function"
+      ? __gospa_runtime.$derived.bind(__gospa_runtime)
+      : (compute: () => any) => compute;
+    const __gospa_effect = typeof __gospa_runtime.$effect === "function"
+      ? __gospa_runtime.$effect.bind(__gospa_runtime)
+      : (fn: () => any) => {
+          fn();
+          return () => {};
+        };
+
 %s
 
     // Event delegation registration
     const __GOSPA_HANDLERS__ = %s;
-    (window as any)["__GOSPA_ISLAND_" + "%s" + "__"] = { handlers: __GOSPA_HANDLERS__ };
+    (element as any).__gospaHandlers = __GOSPA_HANDLERS__;
+    const __gospaIslandKey = (element as HTMLElement).id || (element as HTMLElement).getAttribute("data-gospa-island") || "%s";
+    (window as any)["__GOSPA_ISLAND_" + __gospaIslandKey + "__"] = { handlers: __GOSPA_HANDLERS__ };
     
     // Scoped hydration selector
     const scope = (selector: string) => element.querySelector(selector + '.' + '%s');
@@ -1460,11 +1551,18 @@ func (c *GospaCompiler) detectRuntimeTier(parsed *sfc.SFC) RuntimeTier {
 
 	// Core Tier: DOM bindings, events, or lifecycle hooks
 	if strings.Contains(template, "@on:") ||
+		strings.Contains(template, "on:") ||
 		strings.Contains(template, "@bind") ||
+		strings.Contains(template, "bind:") ||
 		strings.Contains(template, "@class") ||
+		strings.Contains(template, "class:") ||
 		strings.Contains(template, "@style") ||
+		strings.Contains(template, "style:") ||
 		strings.Contains(template, "@attr") ||
 		strings.Contains(template, "@use:") ||
+		strings.Contains(template, "data-gospa-on") ||
+		strings.Contains(template, "data-bind") ||
+		strings.Contains(template, "data-model") ||
 		strings.Contains(ts, "onMount") ||
 		strings.Contains(ts, "onDestroy") {
 		return RuntimeTierCore

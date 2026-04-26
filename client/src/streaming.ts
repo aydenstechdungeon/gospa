@@ -38,9 +38,9 @@ interface StreamingManagerOptions {
 }
 
 function getCSPNonce(): string | undefined {
-  const nonceScript = document.querySelector("script[nonce]") as
-    | HTMLScriptElement
-    | null;
+  const nonceScript = document.querySelector(
+    "script[nonce]",
+  ) as HTMLScriptElement | null;
   return nonceScript?.nonce || nonceScript?.getAttribute("nonce") || undefined;
 }
 

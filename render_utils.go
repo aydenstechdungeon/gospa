@@ -168,14 +168,25 @@ func (a *App) buildRootLayoutProps(c gofiber.Ctx, params map[string]interface{},
 	return props
 }
 
-func (a *App) buildPageHTML(ctx context.Context, route *routing.Route, params map[string]interface{}) ([]byte, error) {
+func (a *App) buildPageHTML(ctx context.Context, route *routing.Route, params map[string]interface{}, requestPath string) ([]byte, error) {
 	layouts := a.Router.ResolveLayoutChain(route)
 	if params == nil {
 		params = map[string]interface{}{}
 	}
-	path := route.Path
-	content := a.buildPageContent(route, params, path)
-	content = a.wrapWithLayouts(content, layouts, params, path)
+	path := requestPath
+	if path == "" {
+		path = route.Path
+	}
+	loadContext := newStaticLoadContext(path, params)
+	loadedProps, _, err := a.resolveLoadChainWithContext(loadContext, route, layouts)
+	if err != nil {
+		return nil, err
+	}
+	for k, v := range params {
+		loadedProps[k] = v
+	}
+	content := a.buildPageContent(route, loadedProps, path)
+	content = a.wrapWithLayouts(content, layouts, loadedProps, path)
 
 	rootLayoutFunc := routing.GetRootLayout()
 	if rootLayoutFunc == nil {
@@ -202,6 +213,11 @@ func (a *App) buildPageHTML(ctx context.Context, route *routing.Route, params ma
 	}
 	for k, v := range params {
 		rootProps[k] = v
+	}
+	for k, v := range loadedProps {
+		if _, exists := rootProps[k]; !exists {
+			rootProps[k] = v
+		}
 	}
 
 	wrapped := rootLayoutFunc(content, rootProps)

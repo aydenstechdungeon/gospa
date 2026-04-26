@@ -49,7 +49,9 @@ docs/
 - [Components & Islands](islands.md)
 - [File-based Routing](routing.md)
 - [Remote Actions](api/remote-actions.md)
-- [Single File Components (.gospa, alpha)](gospasfc.md)
+- [Single File Components (.gospa)](gospasfc.md)
+- [SFC API Reference](gospasfc/api-reference.md)
+- [SFC System Reference](gospasfc/system-reference.md)
 
 ### Advanced Features
 - [Security & Hardening](security.md)
@@ -59,6 +61,7 @@ docs/
 - [Dev Tools & HMR](devtools.md)
 - [Runtime Lifecycle](runtime.md)
 - [Fiber Migration Checklist](migration/fiber-to-gospa.md)
+- [SvelteKit Migration Guide](migration/sveltekit-to-gospa.md)
 
 ### Reference
 - [Full API Reference](api.md)

@@ -6,7 +6,9 @@
     ".": {
       "import": "./dist/runtime.js",
       "types": "./dist/runtime.d.ts"
-    }
+    },
+    "./core": "./dist/runtime-core.js",
+    "./micro": "./dist/runtime-micro.js"
   },
   "files": [
     "dist"
@@ -18,7 +20,7 @@
     "lint": "eslint . --ext .ts",
     "test": "bun test",
     "test:watch": "bun test --watch",
-    "build": "rm -f ./dist/*.js ./dist/*.js.gz ./dist/*.js.br && bun build ./src/runtime.ts ./src/runtime-core.ts ./src/runtime-micro.ts --outdir ./dist --target browser --minify --splitting --format esm --define \"GOSPA_DEBUG=false\"",
+    "build": "rm -f ./dist/*.js ./dist/*.js.gz ./dist/*.js.br && bun build ./src/runtime.ts ./src/runtime-core.ts ./src/runtime-micro.ts --outdir ./dist --target browser --minify --splitting --format esm --define \"GOSPA_DEBUG=false\" --define \"process.env.NODE_ENV='production'\" --define \"NODE_ENV='production'\"",
     "compress": "find ./dist -name '*.js' -exec gzip -k -f -9 {} \\; && find ./dist -name '*.js' -exec brotli -k -f -9 {} \\;",
     "build:embed": "bun run build && bun run compress && cp -r ./dist/* ../embed/",
     "build:empty": "rm -f ../embed/*.js && rm -f ../embed/*.gz && rm -f ../embed/*.br && bun run build:embed"

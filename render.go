@@ -6,12 +6,14 @@ import (
 	"encoding/json"
 	"fmt"
 	"html"
+	"net/url"
 	"os"
 	"strings"
 	"time"
 
 	gospafiber "github.com/aydenstechdungeon/gospa/fiber"
 	"github.com/aydenstechdungeon/gospa/routing"
+	"github.com/aydenstechdungeon/gospa/routing/kit"
 	"github.com/aydenstechdungeon/gospa/state"
 	templpkg "github.com/aydenstechdungeon/gospa/templ"
 	gofiber "github.com/gofiber/fiber/v3"
@@ -59,14 +61,10 @@ func (a *App) renderRoute(c gofiber.Ctx, route *routing.Route, routeParams map[s
 			c.Set("Content-Type", "text/html")
 			c.Set("Cache-Control", "public, max-age=31536000, immutable")
 
-			// SECURITY: Replace nonces in cached HTML with the current request's nonce
-			// to ensure CSP remains valid across different requests and sessions.
 			currentNonce, _ := c.Locals("gospa.csp_nonce").(string)
-			if currentNonce != "" {
-				return c.Send(a.replaceNonces(entry.html, currentNonce))
-			}
-
-			return c.Send(entry.html)
+			// Always replace placeholders so cached HTML cannot leak
+			// "__GOSPA_NONCE_PLACEHOLDER__" when nonce middleware is disabled.
+			return c.Send(a.replaceNonces(entry.html, currentNonce))
 		}
 		a.recordCacheMiss(cacheKey)
 	}
@@ -112,13 +110,8 @@ func (a *App) renderRoute(c gofiber.Ctx, route *routing.Route, routeParams map[s
 			c.Set("Content-Type", "text/html")
 			c.Set("Cache-Control", fmt.Sprintf("public, s-maxage=%d, stale-while-revalidate=%d", ttlSec, ttlSec))
 
-			// SECURITY: Replace nonces in cached HTML with the current request's nonce.
 			currentNonce, _ := c.Locals("gospa.csp_nonce").(string)
-			if currentNonce != "" {
-				return c.Send(a.replaceNonces(entry.html, currentNonce))
-			}
-
-			return c.Send(entry.html)
+			return c.Send(a.replaceNonces(entry.html, currentNonce))
 		}
 		a.recordCacheMiss(cacheKey)
 	}
@@ -151,11 +144,8 @@ func (a *App) renderRoute(c gofiber.Ctx, route *routing.Route, routeParams map[s
 			c.Set("Content-Type", "text/html")
 			c.Set("Cache-Control", "no-store")
 
-			// SECURITY: Replace nonces in cached shell before applying slots.
 			currentNonce, _ := c.Locals("gospa.csp_nonce").(string)
-			if currentNonce != "" {
-				result = a.replaceNonces(result, currentNonce)
-			}
+			result = a.replaceNonces(result, currentNonce)
 
 			return c.Send(result)
 		}
@@ -182,8 +172,44 @@ func (a *App) renderRoute(c gofiber.Ctx, route *routing.Route, routeParams map[s
 	}
 
 	// Resolve data load chain
-	loadedProps, err := a.resolveLoadChain(c, route, layouts)
+	loadedProps, depKeys, err := a.resolveLoadChain(c, route, layouts)
 	if err != nil {
+		if redirectErr, ok := kit.AsRedirect(err); ok {
+			if c.Query("__data") == "1" {
+				return c.JSON(gofiber.Map{
+					"kind":      "redirect",
+					"status":    redirectErr.Status,
+					"redirect":  redirectErr.Location,
+					"path":      c.Path(),
+					"routePath": route.Path,
+				})
+			}
+			return c.Redirect().Status(redirectErr.Status).To(redirectErr.Location)
+		}
+		if failErr, ok := kit.AsFail(err); ok {
+			if c.Query("__data") == "1" {
+				return c.Status(failErr.Status).JSON(gofiber.Map{
+					"kind":      "fail",
+					"status":    failErr.Status,
+					"data":      failErr.Data,
+					"path":      c.Path(),
+					"routePath": route.Path,
+				})
+			}
+			return a.renderError(c, failErr.Status, err)
+		}
+		if httpErr, ok := kit.AsError(err); ok {
+			if c.Query("__data") == "1" {
+				return c.Status(httpErr.Status).JSON(gofiber.Map{
+					"kind":      "error",
+					"status":    httpErr.Status,
+					"error":     httpErr.Body,
+					"path":      c.Path(),
+					"routePath": route.Path,
+				})
+			}
+			return a.renderError(c, httpErr.Status, fmt.Errorf("HTTP %d", httpErr.Status))
+		}
 		a.Logger().Error("Load error", "err", err)
 		return a.renderError(c, gofiber.StatusInternalServerError, err)
 	}
@@ -194,6 +220,8 @@ func (a *App) renderRoute(c gofiber.Ctx, route *routing.Route, routeParams map[s
 	}
 	cacheTags := a.defaultCacheTags(route.Path, string(effStrategy))
 	cacheKeys := a.defaultCacheKeys(cacheKey)
+	cacheTags = append(cacheTags, dependencyTags(depKeys)...)
+	cacheKeys = append(cacheKeys, dependencyKeys(depKeys)...)
 	c.Set("X-GoSPA-Cache-Tags", strings.Join(cacheTags, ","))
 	c.Set("X-GoSPA-Cache-Keys", strings.Join(cacheKeys, ","))
 
@@ -498,47 +526,172 @@ func (a *App) renderDeferredSlotToBuffer(route *routing.Route, slotName string, 
 }
 
 // resolveLoadChain executes the load functions for a route and its layout chain.
-func (a *App) resolveLoadChain(c gofiber.Ctx, route *routing.Route, layouts []*routing.Route) (map[string]interface{}, error) {
+func (a *App) resolveLoadChain(c gofiber.Ctx, route *routing.Route, layouts []*routing.Route) (map[string]interface{}, []string, error) {
+	return a.resolveLoadChainWithContext(&fiberLoadContext{c: c}, route, layouts)
+}
+
+func (a *App) resolveLoadChainWithContext(lc routing.LoadContext, route *routing.Route, layouts []*routing.Route) (map[string]interface{}, []string, error) {
 	props := make(map[string]interface{})
-	lc := &fiberLoadContext{c: c}
+	scope := kit.NewExecutionScope()
+	runErr := scope.Run(func() error {
+		var immediateParent map[string]interface{}
 
-	// 1. Root Layout Loader
-	if loader := routing.GetLayoutLoad(""); loader != nil {
-		data, err := loader(lc)
-		if err != nil {
-			return nil, err
-		}
-		for k, v := range data {
-			props[k] = v
-		}
-	}
-
-	// 2. Nested Layout Loaders
-	for _, layout := range layouts {
-		if loader := routing.GetLayoutLoad(layout.Path); loader != nil {
-			data, err := loader(lc)
+		// 1. Root Layout Loader
+		if loader := routing.GetLayoutLoad(""); loader != nil {
+			loadCtx := &helperLoadContext{LoadContext: lc, parentData: nil}
+			scope.SetParentData(nil)
+			data, err := loader(loadCtx)
 			if err != nil {
-				return nil, err
+				return err
+			}
+			for k, v := range data {
+				props[k] = v
+			}
+			immediateParent = cloneMap(data)
+		}
+
+		// 2. Nested Layout Loaders
+		for _, layout := range layouts {
+			if loader := routing.GetLayoutLoad(layout.Path); loader != nil {
+				parentData := cloneMap(immediateParent)
+				loadCtx := &helperLoadContext{LoadContext: lc, parentData: parentData}
+				scope.SetParentData(parentData)
+				data, err := loader(loadCtx)
+				if err != nil {
+					return err
+				}
+				for k, v := range data {
+					props[k] = v
+				}
+				immediateParent = cloneMap(data)
+			}
+		}
+
+		// 3. Page Loader
+		if loader := routing.GetLoad(route.Path); loader != nil {
+			parentData := cloneMap(immediateParent)
+			loadCtx := &helperLoadContext{LoadContext: lc, parentData: parentData}
+			scope.SetParentData(parentData)
+			data, err := loader(loadCtx)
+			if err != nil {
+				return err
 			}
 			for k, v := range data {
 				props[k] = v
 			}
 		}
-	}
 
-	// 3. Page Loader
-	if loader := routing.GetLoad(route.Path); loader != nil {
-		data, err := loader(lc)
-		if err != nil {
-			return nil, err
-		}
-		for k, v := range data {
-			props[k] = v
-		}
+		return nil
+	})
+	if runErr != nil {
+		return nil, nil, runErr
 	}
-
-	return props, nil
+	return props, scope.DependsKeys(), nil
 }
+
+type helperLoadContext struct {
+	routing.LoadContext
+	parentData map[string]interface{}
+}
+
+func (h *helperLoadContext) GospaParentData() map[string]interface{} {
+	return cloneMap(h.parentData)
+}
+
+func cloneMap(in map[string]interface{}) map[string]interface{} {
+	if in == nil {
+		return nil
+	}
+	out := make(map[string]interface{}, len(in))
+	for k, v := range in {
+		out[k] = v
+	}
+	return out
+}
+
+type staticLoadContext struct {
+	path   string
+	params map[string]string
+	query  url.Values
+}
+
+func newStaticLoadContext(path string, params map[string]interface{}) *staticLoadContext {
+	outParams := make(map[string]string, len(params))
+	for k, v := range params {
+		outParams[k] = fmt.Sprint(v)
+	}
+
+	query := url.Values{}
+	if parsed, err := url.Parse(path); err == nil {
+		if parsed.Path != "" {
+			path = parsed.Path
+		}
+		if parsed.RawQuery != "" {
+			query = parsed.Query()
+		}
+	}
+
+	return &staticLoadContext{
+		path:   path,
+		params: outParams,
+		query:  query,
+	}
+}
+
+func (s *staticLoadContext) Param(key string) string {
+	return s.params[key]
+}
+
+func (s *staticLoadContext) Params() map[string]string {
+	out := make(map[string]string, len(s.params))
+	for k, v := range s.params {
+		out[k] = v
+	}
+	return out
+}
+
+func (s *staticLoadContext) Query(key string, defaultValue ...string) string {
+	if v := s.query.Get(key); v != "" {
+		return v
+	}
+	if len(defaultValue) > 0 {
+		return defaultValue[0]
+	}
+	return ""
+}
+
+func (s *staticLoadContext) QueryValues() map[string][]string {
+	out := make(map[string][]string, len(s.query))
+	for k, values := range s.query {
+		cp := make([]string, len(values))
+		copy(cp, values)
+		out[k] = cp
+	}
+	return out
+}
+
+func (s *staticLoadContext) Header(string) string { return "" }
+
+func (s *staticLoadContext) Headers() map[string]string { return map[string]string{} }
+
+func (s *staticLoadContext) SetHeader(string, string) {}
+
+func (s *staticLoadContext) Cookie(string) string { return "" }
+
+func (s *staticLoadContext) SetCookie(string, string, int, string, bool, bool) {}
+
+func (s *staticLoadContext) FormValue(_ string, defaultValue ...string) string {
+	if len(defaultValue) > 0 {
+		return defaultValue[0]
+	}
+	return ""
+}
+
+func (s *staticLoadContext) Method() string { return "GET" }
+
+func (s *staticLoadContext) Path() string { return s.path }
+
+func (s *staticLoadContext) Local(string) interface{} { return nil }
 
 func (a *App) resolveTier(opts routing.RouteOptions, layouts []*routing.Route) string {
 	tier, _ := a.resolveTierWithReason(opts, layouts)

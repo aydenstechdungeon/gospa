@@ -2,6 +2,7 @@ import { areEqual } from "./equality.ts";
 import { type Notifier, batchDepth, addToBatch } from "./batch.ts";
 import { type Disposable, trackDisposable } from "./disposal.ts";
 import { currentEffect } from "./effect.ts";
+import { emitRuntimeSignal } from "../runtime-signals.ts";
 
 export type Subscriber<T> = (value: T, oldValue: T) => void;
 export type Unsubscribe = () => void;
@@ -99,12 +100,16 @@ export class Rune<T> implements Notifier, Disposable {
         : value;
     this._hasPendingOldValue = false;
     this._pendingOldValue = undefined;
-    
+
     const subs = this._subscribers;
     for (let i = 0; i < subs.length; i++) {
       const fn = subs[i];
       if (fn) fn(value, old);
     }
+    emitRuntimeSignal("gospa:rune-update", {
+      id: this._id,
+      subscribers: subs.length,
+    });
   }
 
   private _equal(a: T, b: T): boolean {

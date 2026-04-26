@@ -30,6 +30,8 @@ $effect(func() {
 })
 ```
 
+Current Go-script form is strict: `$effect(func() { ... })`.
+
 ## $props()
 
 Access component properties passed from the parent.
@@ -38,6 +40,7 @@ Access component properties passed from the parent.
 var { title, initialCount } = $props()
 ```
 
-## WebSocket Synchronization
+## Notes
 
-Variables marked with `$state()` are automatically synchronized via WebSocket. Updates on the server are reflected in the client's runes automatically.
+- `$state`, `$derived`, and `$effect` are transformed during compilation for server output and hydration code generation.
+- `$props()` supports destructured prop declarations from component inputs.

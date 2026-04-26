@@ -43,6 +43,13 @@ func main() {
 		}
 	}
 
+	syncFailures, err := checkGospaDocsSync(routes, "docs/gospasfc", "/docs/gospasfc")
+	if err != nil {
+		fmt.Fprintf(os.Stderr, "SFC docs sync check failed: %v\n", err)
+		os.Exit(1)
+	}
+	failures = append(failures, syncFailures...)
+
 	if len(failures) > 0 {
 		fmt.Fprintln(os.Stderr, "docs route validation failed:")
 		for _, f := range failures {
@@ -61,7 +68,7 @@ func collectDocsRoutes(root string) (map[string]bool, error) {
 		if err != nil {
 			return err
 		}
-		if d.IsDir() || d.Name() != "page.templ" {
+		if d.IsDir() || (d.Name() != "page.templ" && d.Name() != "page.gospa") {
 			return nil
 		}
 
@@ -81,6 +88,56 @@ func collectDocsRoutes(root string) (map[string]bool, error) {
 	})
 
 	return routes, err
+}
+
+func checkGospaDocsSync(routes map[string]bool, docsRoot, routePrefix string) ([]string, error) {
+	files := make(map[string]bool)
+	err := filepath.WalkDir(docsRoot, func(path string, d fs.DirEntry, err error) error {
+		if err != nil {
+			return err
+		}
+		if d.IsDir() || !strings.HasSuffix(d.Name(), ".md") {
+			return nil
+		}
+
+		rel, relErr := filepath.Rel(docsRoot, path)
+		if relErr != nil {
+			return relErr
+		}
+		name := strings.TrimSuffix(filepath.ToSlash(rel), ".md")
+		files[name] = true
+		return nil
+	})
+	if err != nil {
+		return nil, err
+	}
+
+	var failures []string
+	for rel := range files {
+		expectedRoute := routePrefix
+		if rel != "." && rel != "README" {
+			expectedRoute = routePrefix + "/" + rel
+		}
+		if !routes[expectedRoute] {
+			failures = append(failures, fmt.Sprintf("missing website docs route for %s (%s)", rel, expectedRoute))
+		}
+	}
+
+	for route := range routes {
+		if route != routePrefix && !strings.HasPrefix(route, routePrefix+"/") {
+			continue
+		}
+		rel := strings.TrimPrefix(route, routePrefix)
+		rel = strings.TrimPrefix(rel, "/")
+		if rel == "" {
+			continue
+		}
+		if !files[rel] {
+			failures = append(failures, fmt.Sprintf("missing markdown doc for route %s (expected %s.md)", route, rel))
+		}
+	}
+
+	return failures, nil
 }
 
 func loadSearchEntries(path string) ([]searchEntry, error) {

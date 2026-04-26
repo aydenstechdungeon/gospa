@@ -50,8 +50,11 @@ myapp/
 ├── main.go              # Application entry point
 ├── go.mod               # Go module file
 ├── routes/              # Route components
-│   ├── layout.templ     # Root layout component
-│   └── page.templ       # Home page component
+│   ├── +layout.gospa    # Root layout component
+│   ├── +page.gospa      # Home page component
+│   ├── +root_layout.templ # HTML document shell
+│   ├── +error.templ     # Route error boundary
+│   └── +middleware.go   # Route middleware
 ├── components/          # Reusable components
 ├── lib/                 # Shared libraries
 └── static/              # Static assets
@@ -347,8 +350,8 @@ export interface Route {
 }
 
 export const routes: Route[] = [
-  { path: "/", file: "routes/page.templ", params: [], isDynamic: false, isCatchAll: false },
-  { path: "/users/[id]", file: "routes/users/[id]/page.templ", params: ["id"], isDynamic: true, isCatchAll: false },
+  { path: "/", file: "routes/+page.gospa", params: [], isDynamic: false, isCatchAll: false },
+  { path: "/users/[id]", file: "routes/users/[id]/+page.gospa", params: ["id"], isDynamic: true, isCatchAll: false },
 ];
 
 export function getRoute(path: string): Route | undefined;
@@ -359,10 +362,10 @@ export function buildPath(route: Route, params: Record<string, string>): string;
 
 | File Path | Route Path | Type |
 |-----------|------------|------|
-| `routes/page.templ` / `page.gospa` | `/` | Static |
-| `routes/about/page.gospa` | `/about` | Static |
-| `routes/users/[id]/page.templ` | `/users/[id]` | Dynamic |
-| `routes/docs/[...slug]/page.gospa` | `/docs/[...slug]` | Catch-all |
+| `routes/+page.gospa` | `/` | Static |
+| `routes/about/+page.gospa` | `/about` | Static |
+| `routes/users/[id]/+page.gospa` | `/users/[id]` | Dynamic |
+| `routes/docs/[...slug]/+page.gospa` | `/docs/[...slug]` | Catch-all |
 
 ### Examples
 

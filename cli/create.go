@@ -146,27 +146,27 @@ func createProject(config *ProjectConfig) error {
 		return err
 	}
 
-	// Create routes/page.templ
+	// Create routes/+page.gospa
 	if err := createHomePage(config); err != nil {
 		return err
 	}
 
-	// Create routes/layout.templ
+	// Create routes/+layout.gospa
 	if err := createLayout(config); err != nil {
 		return err
 	}
 
-	// Create routes/root_layout.templ
+	// Create routes/+root_layout.templ
 	if err := createRootLayout(config); err != nil {
 		return err
 	}
 
-	// Create routes/_error.templ
+	// Create routes/+error.templ
 	if err := createErrorPage(config); err != nil {
 		return err
 	}
 
-	// Create routes/_middleware.go
+	// Create routes/+middleware.go
 	if err := createMiddleware(config); err != nil {
 		return err
 	}
@@ -264,53 +264,39 @@ func main() {
 }
 
 func createHomePage(config *ProjectConfig) error {
-	content := `package routes
+	content := `<script lang="go">
+	var count = $state(0)
+	func increment() {
+		count++
+	}
+</script>
 
-templ Page() {
+<template>
 	<div class="welcome-container">
 		<div class="welcome-content">
 			<div class="logo">
 				<svg width="80" height="80" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" xmlns="http://www.w3.org/2000/svg">
-					<circle cx="12" cy="12" r="10"/>
-					<path d="M12 6v6l4 2" stroke-linecap="round"/>
+					<circle cx="12" cy="12" r="10"></circle>
+					<path d="M12 6v6l4 2" stroke-linecap="round"></path>
 				</svg>
 			</div>
 			<h1 class="title">Welcome to GoSPA</h1>
-			<p class="subtitle">
-				A modern reactive framework for building single-page applications with Go.
-			</p>
+			<p class="subtitle">A modern reactive framework for building single-page applications with Go.</p>
 			<div class="actions">
-				<a href="https://gospa.onrender.com/docs" class="btn btn-primary" target="_blank" rel="noopener">
-					Read Documentation →
-				</a>
-			</div>
-			<div class="features">
-				<div class="feature">
-					<span class="feature-icon">⚡</span>
-					<span class="feature-text">Reactive State</span>
-				</div>
-				<div class="feature">
-					<span class="feature-icon">🗂️</span>
-					<span class="feature-text">File-Based Routing</span>
-				</div>
-				<div class="feature">
-					<span class="feature-icon">🔄</span>
-					<span class="feature-text">WebSocket Sync</span>
-				</div>
+				<a href="https://gospa.onrender.com/docs" class="btn btn-primary" target="_blank" rel="noopener">Read Documentation -></a>
+				<button class="btn" on:click={increment}>Count is {count}</button>
 			</div>
 		</div>
 	</div>
-}
+</template>
 `
 
-	path := filepath.Join(config.OutputDir, "routes", "page.templ")
+	path := filepath.Join(config.OutputDir, "routes", "+page.gospa")
 	return os.WriteFile(path, []byte(content), 0600)
 }
 
 func createLayout(config *ProjectConfig) error {
-	content := `package routes
-
-templ Layout(title string) {
+	content := `<template>
 	<div class="layout-wrapper">
 		<header>
 			<nav>
@@ -318,13 +304,13 @@ templ Layout(title string) {
 			</nav>
 		</header>
 		<div class="content">
-			{ children... }
+			@children
 		</div>
 	</div>
-}
+</template>
 `
 
-	path := filepath.Join(config.OutputDir, "routes", "layout.templ")
+	path := filepath.Join(config.OutputDir, "routes", "+layout.gospa")
 	return os.WriteFile(path, []byte(content), 0600)
 }
 
@@ -353,7 +339,7 @@ templ RootLayout(title string) {
 }
 `
 
-	path := filepath.Join(config.OutputDir, "routes", "root_layout.templ")
+	path := filepath.Join(config.OutputDir, "routes", "+root_layout.templ")
 	return os.WriteFile(path, []byte(content), 0600)
 }
 
@@ -369,7 +355,7 @@ templ Error(err string, code string) {
 }
 `
 
-	path := filepath.Join(config.OutputDir, "routes", "_error.templ")
+	path := filepath.Join(config.OutputDir, "routes", "+error.templ")
 	return os.WriteFile(path, []byte(content), 0600)
 }
 
@@ -387,7 +373,7 @@ func Middleware(c fiber.Ctx) error {
 }
 `
 
-	path := filepath.Join(config.OutputDir, "routes", "_middleware.go")
+	path := filepath.Join(config.OutputDir, "routes", "+middleware.go")
 	return os.WriteFile(path, []byte(content), 0600)
 }
 

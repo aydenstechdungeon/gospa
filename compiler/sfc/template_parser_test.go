@@ -16,6 +16,13 @@ func TestTemplateParser(t *testing.T) {
   {#each items as item}
     <li>{item}</li>
   {/each}
+  {#await profilePromise}
+    <p>Loading profile...</p>
+  {:then profile}
+    <p>{profile.Name}</p>
+  {:catch err}
+    <p>{err.Error()}</p>
+  {/await}
   <img src="logo.png" />
   <@MyComponent prop={val} />
 </div>`
@@ -56,6 +63,18 @@ func TestTemplateParser(t *testing.T) {
 	}
 	if !foundEach {
 		t.Error("EachNode not found in div children")
+	}
+
+	// Verify await node
+	foundAwait := false
+	for _, child := range div.Children {
+		if _, ok := child.(*AwaitNode); ok {
+			foundAwait = true
+			break
+		}
+	}
+	if !foundAwait {
+		t.Error("AwaitNode not found in div children")
 	}
 
 	// Verify void tag
@@ -167,6 +186,15 @@ func TestTemplateParser_RejectsAtComponentWithoutParens(t *testing.T) {
 	}
 }
 
+func TestTemplateParser_ComponentTagRequiresClosingTag(t *testing.T) {
+	input := `<@Card><div>Body</div>`
+	p := NewTemplateParser(input, 0, 0, 0)
+	_, err := p.Parse()
+	if err == nil {
+		t.Fatal("expected parse error for unclosed <@Card> tag")
+	}
+}
+
 func TestTemplateParser_ComplexExpressions(t *testing.T) {
 	input := `<div>{ "prop": { "key": "value" } }</div>`
 	p := NewTemplateParser(input, 0, 0, 0)
@@ -186,6 +214,46 @@ func TestTemplateParser_ComplexExpressions(t *testing.T) {
 		t.Fatalf("Expected ExpressionNode, got %T", div.Children[0])
 	}
 	if expr.Content != ` "prop": { "key": "value" } ` {
+		t.Fatalf("Unexpected expression content: %q", expr.Content)
+	}
+}
+
+func TestTemplateParser_ExpressionWithBraceInString(t *testing.T) {
+	input := `<div>{ map[string]string{"k": "}"} }</div>`
+	p := NewTemplateParser(input, 0, 0, 0)
+	nodes, err := p.Parse()
+	if err != nil {
+		t.Fatalf("Parse failed: %v", err)
+	}
+	if len(nodes) != 1 {
+		t.Fatalf("Expected 1 root node, got %d", len(nodes))
+	}
+	div := nodes[0].(*ElementNode)
+	if len(div.Children) != 1 {
+		t.Fatalf("Expected 1 child, got %d", len(div.Children))
+	}
+	expr, ok := div.Children[0].(*ExpressionNode)
+	if !ok {
+		t.Fatalf("Expected ExpressionNode, got %T", div.Children[0])
+	}
+	if expr.Content != ` map[string]string{"k": "}"} ` {
+		t.Fatalf("Unexpected expression content: %q", expr.Content)
+	}
+}
+
+func TestTemplateParser_ExpressionWithCommentContainingDelimiter(t *testing.T) {
+	input := `<div>{ value /* } */ + 1 }</div>`
+	p := NewTemplateParser(input, 0, 0, 0)
+	nodes, err := p.Parse()
+	if err != nil {
+		t.Fatalf("Parse failed: %v", err)
+	}
+	div := nodes[0].(*ElementNode)
+	expr, ok := div.Children[0].(*ExpressionNode)
+	if !ok {
+		t.Fatalf("Expected ExpressionNode, got %T", div.Children[0])
+	}
+	if expr.Content != ` value /* } */ + 1 ` {
 		t.Fatalf("Unexpected expression content: %q", expr.Content)
 	}
 }

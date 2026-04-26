@@ -59,3 +59,23 @@ $effect(count)
 		t.Fatalf("expected diagnostic message and suggestion, got %#v", diag)
 	}
 }
+
+func TestCompileReactiveDiagnostic_EffectAllowsWhitespaceForm(t *testing.T) {
+	c := NewCompiler()
+	input := `<script lang="go">
+$effect( func() {
+    return
+})
+</script>
+<template><div>ok</div></template>`
+
+	_, _, err := c.Compile(CompileOptions{
+		Type:     ComponentTypeIsland,
+		Name:     "Counter",
+		IslandID: "counter",
+		Hydrate:  true,
+	}, input)
+	if err != nil {
+		t.Fatalf("expected compile success, got %v", err)
+	}
+}

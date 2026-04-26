@@ -39,6 +39,25 @@ prefetch('/dashboard');
 invalidate('/dashboard');`, "typescript", " nav.ts")
 		</section>
 
+		<section id="route-helpers" class="space-y-8">
+			<h2 class="text-2xl font-bold border-b border-[var(--border)] pb-2">Route Helper Surface</h2>
+			@components.CodeBlock(`import {
+  loadRouteData,
+  callRouteAction,
+  preloadData,
+  preloadCode,
+  goto,
+  refresh,
+  prefetchOnHover,
+  beforeNavigate,
+  afterNavigate,
+  invalidateAll,
+} from 'gospa';
+
+await refresh();
+const dispose = prefetchOnHover('a[data-prefetch]', { delay: 50 });`, "typescript", " route-helpers.ts")
+		</section>
+
 		<section id="forms" class="space-y-8">
 			<h2 class="text-2xl font-bold border-b border-[var(--border)] pb-2">Progressive Form Actions</h2>
 			@components.CodeBlock(`import { enhanceForms } from 'gospa';

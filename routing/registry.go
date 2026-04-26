@@ -72,12 +72,18 @@ type SlotFunc func(props map[string]interface{}) templ.Component
 // LoadContext provides access to request data for server-side Load functions.
 type LoadContext interface {
 	Param(key string) string
+	Params() map[string]string
 	Query(key string, defaultValue ...string) string
+	QueryValues() map[string][]string
 	Header(key string) string
+	Headers() map[string]string
+	SetHeader(key, value string)
 	Cookie(key string) string
+	SetCookie(key, value string, maxAge int, path string, httpOnly, secure bool)
 	FormValue(key string, defaultValue ...string) string
 	Method() string
 	Path() string
+	Local(key string) interface{}
 }
 
 // LoadFunc is a function that returns data for a page or layout.
@@ -102,6 +108,7 @@ type ActionValidationError struct {
 type ActionResponse struct {
 	Data           interface{}            `json:"data,omitempty"`
 	Code           string                 `json:"code,omitempty"`
+	Error          string                 `json:"error,omitempty"`
 	Redirect       *ActionRedirect        `json:"redirect,omitempty"`
 	Validation     *ActionValidationError `json:"validation,omitempty"`
 	Revalidate     []string               `json:"revalidate,omitempty"`
@@ -189,7 +196,15 @@ func (r *Registry) RegisterAction(pagePath, actionName string, fn ActionFunc) {
 func (r *Registry) GetActions(pagePath string) map[string]ActionFunc {
 	r.actionsMu.RLock()
 	defer r.actionsMu.RUnlock()
-	return r.actions[pagePath]
+	src := r.actions[pagePath]
+	if src == nil {
+		return nil
+	}
+	out := make(map[string]ActionFunc, len(src))
+	for name, fn := range src {
+		out[name] = fn
+	}
+	return out
 }
 
 // GetAction returns a specific action for a page path.
@@ -230,7 +245,9 @@ func (r *Registry) RegisterHook(fn HookFunc) {
 func (r *Registry) GetHooks() []HookFunc {
 	r.hooksMu.RLock()
 	defer r.hooksMu.RUnlock()
-	return r.hooks
+	out := make([]HookFunc, len(r.hooks))
+	copy(out, r.hooks)
+	return out
 }
 
 // Global registration functions

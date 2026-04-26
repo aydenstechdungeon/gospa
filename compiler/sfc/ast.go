@@ -15,6 +15,7 @@ const (
 	NodeText
 	NodeComment
 	NodeIf
+	NodeAwait
 	NodeEach
 	NodeSnippet
 	NodeComponent
@@ -83,6 +84,17 @@ type ElseIfNode struct {
 	BaseNode
 	Condition string
 	Then      []Node
+}
+
+// AwaitNode represents an {#await} block.
+type AwaitNode struct {
+	BaseNode
+	Expression string
+	Pending    []Node
+	ThenVar    string
+	Then       []Node
+	CatchVar   string
+	Catch      []Node
 }
 
 // EachNode represents a {#each} block.

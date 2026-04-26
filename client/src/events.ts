@@ -321,11 +321,22 @@ export function setupEventDelegation(root: Element) {
               // Find the closest island to get its state/functions
               const islandEl = target.closest("[data-gospa-island]");
               if (islandEl) {
-                const islandId = islandEl.id;
-                // This assumes the island is already hydrated and its functions are available
-                const islandInstance = (window as any)[
-                  `__GOSPA_ISLAND_${islandId}__`
-                ];
+                const localHandlers = (islandEl as any).__gospaHandlers as
+                  | Record<string, (event: Event) => void>
+                  | undefined;
+                if (localHandlers && localHandlers[handlerName]) {
+                  localHandlers[handlerName](event);
+                  return;
+                }
+
+                const islandKey =
+                  islandEl.id ||
+                  islandEl.getAttribute("data-gospa-island") ||
+                  "";
+                const islandInstance =
+                  islandKey === ""
+                    ? undefined
+                    : (window as any)[`__GOSPA_ISLAND_${islandKey}__`];
                 if (
                   islandInstance &&
                   islandInstance.handlers &&

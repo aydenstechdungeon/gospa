@@ -15,6 +15,7 @@ import (
 type Block struct {
 	Type       string // "script", "template", "style"
 	Lang       string // e.g., "go", "ts", "css"
+	Context    string // e.g., "module" for <script context="module">
 	Content    string
 	ByteOffset int // Start of the content block in the original source
 	Line       int // 0-indexed line number
@@ -23,11 +24,12 @@ type Block struct {
 
 // SFC represents the parsed structure of a .gospa file.
 type SFC struct {
-	FrontMatter map[string]string
-	Script      Block
-	ScriptTS    Block
-	Template    Block
-	Style       Block
+	FrontMatter  map[string]string
+	Script       Block
+	ScriptModule Block
+	ScriptTS     Block
+	Template     Block
+	Style        Block
 }
 
 // maxSFCInputBytes is the hard ceiling on .gospa source files.
@@ -119,12 +121,15 @@ func Parse(input string) (*SFC, error) {
 
 				content := string(rawInput[contentOffset : contentOffset+endIdx])
 
-				// Extract lang attribute from the current token
+				// Extract script/style/template attributes we care about
 				lang := ""
+				contextAttr := ""
 				for _, attr := range token.Attr {
 					if attr.Key == "lang" {
 						lang = attr.Val
-						break
+					}
+					if attr.Key == "context" {
+						contextAttr = strings.ToLower(strings.TrimSpace(attr.Val))
 					}
 				}
 				if lang == "" {
@@ -134,6 +139,7 @@ func Parse(input string) (*SFC, error) {
 				block := Block{
 					Type:       tagName,
 					Lang:       lang,
+					Context:    contextAttr,
 					Content:    strings.TrimSpace(content), // Trim whitespace
 					ByteOffset: contentOffset,
 				}
@@ -162,8 +168,38 @@ func Parse(input string) (*SFC, error) {
 	for _, b := range topLevelBlocks {
 		switch b.Type {
 		case "script":
+			if b.Context != "" && b.Context != "module" {
+				return nil, parseErrorAtBlock(
+					b,
+					fmt.Sprintf("unsupported <script> context %q", b.Context),
+					`Use context="module" for module/server exports, or remove context for instance scripts.`,
+					`<script context="module" lang="go">
+func Load(c routing.LoadContext) (map[string]interface{}, error) { return nil, nil }
+</script>`,
+				)
+			}
 			lang := normalizeScriptLang(b.Lang)
 			b.Lang = lang
+			if b.Context == "module" {
+				if lang != "go" {
+					return nil, parseErrorAtBlock(
+						b,
+						fmt.Sprintf("module scripts must use lang=\"go\", got %q", b.Lang),
+						`Use <script context="module" lang="go"> for route server exports.`,
+						"",
+					)
+				}
+				if sfc.ScriptModule.Content != "" {
+					return nil, parseErrorAtBlock(
+						b,
+						"multiple <script context=\"module\" lang=\"go\"> blocks are not supported",
+						"Keep one module script block and merge declarations.",
+						"",
+					)
+				}
+				sfc.ScriptModule = b
+				continue
+			}
 			switch lang {
 			case "go":
 				if sfc.Script.Content != "" {
@@ -210,7 +246,7 @@ func Parse(input string) (*SFC, error) {
 		sfc.Template.Line, sfc.Template.Column = posIndex.OffsetToPosition(implicitStartOffset)
 	}
 
-	if sfc.Template.Content == "" && sfc.Script.Content == "" && sfc.ScriptTS.Content == "" {
+	if sfc.Template.Content == "" && sfc.Script.Content == "" && sfc.ScriptTS.Content == "" && sfc.ScriptModule.Content == "" {
 		return nil, newDiagnosticError(1, 1, "SFC is empty", "Add at least a <template> block.", "<template>\n  <div>Hello</div>\n</template>")
 	}
 

@@ -155,16 +155,56 @@ export function getSetup(name: string): IslandSetupFn | undefined {
 // Runtime state
 let isInitialized = false;
 export let config: RuntimeConfig = {};
+const COMPONENT_INIT_ATTR = "data-gospa-initialized";
+const ISLAND_INIT_ATTR = "data-gospa-island-initialized";
 
 function shouldAutoInitDocument(): boolean {
   if (typeof document === "undefined") return false;
-  return document.querySelector("[data-gospa-root], [data-gospa-component], [data-gospa-island]") !== null;
+  return (
+    document.querySelector(
+      "[data-gospa-root], [data-gospa-component], [data-gospa-island]",
+    ) !== null
+  );
 }
 
-// Lazy-loaded aggregate features bundle
-let featuresModule: Promise<typeof import("./framework-features.ts")> | null =
-  null;
-let cachedFeatures: typeof import("./framework-features.ts") | null = null;
+// Lazy-loaded feature bundles
+type AggregateFeatures = typeof import("./framework-features.ts");
+type TransportFeatures = typeof import("./framework-features-transport.ts");
+type NavigationFeatures = typeof import("./framework-features-navigation.ts");
+type TransitionFeatures = typeof import("./framework-features-transitions.ts");
+type IslandFeatures = typeof import("./framework-features-islands.ts");
+type RuntimeExtrasFeatures =
+  typeof import("./framework-features-runtime-extras.ts");
+
+let featuresModule: Promise<AggregateFeatures> | null = null;
+let cachedFeatures: AggregateFeatures | null = null;
+let transportFeaturesModule: Promise<TransportFeatures> | null = null;
+let cachedTransportFeatures: TransportFeatures | null = null;
+let navigationFeaturesModule: Promise<NavigationFeatures> | null = null;
+let cachedNavigationFeatures: NavigationFeatures | null = null;
+let transitionFeaturesModule: Promise<TransitionFeatures> | null = null;
+let cachedTransitionFeatures: TransitionFeatures | null = null;
+let islandFeaturesModule: Promise<IslandFeatures> | null = null;
+let cachedIslandFeatures: IslandFeatures | null = null;
+let runtimeExtrasFeaturesModule: Promise<RuntimeExtrasFeatures> | null = null;
+let cachedRuntimeExtrasFeatures: RuntimeExtrasFeatures | null = null;
+
+function initializeServerDataRegistry(): void {
+  if (typeof window === "undefined" || typeof document === "undefined") return;
+  if (Array.isArray((window as any).__GOSPA_DATA__)) return;
+
+  const script = document.getElementById("__GOSPA_DATA__");
+  if (!script || !script.textContent) return;
+
+  try {
+    const parsed = JSON.parse(script.textContent);
+    if (Array.isArray(parsed)) {
+      (window as any).__GOSPA_DATA__ = parsed;
+    }
+  } catch {
+    // Ignore malformed payload and keep attribute-based fallbacks active.
+  }
+}
 
 /**
  * Declare global debug constant for build-time stripping.
@@ -186,9 +226,10 @@ export function init(userConfig: Partial<RuntimeConfig> = {}): void {
   }
   isInitialized = true;
   config = { ...config, ...userConfig };
+  initializeServerDataRegistry();
 
   if (config.wsUrl && (config.transport?.enabled ?? true)) {
-    void getFrameworkFeatures()
+    void getTransportFeatures()
       .then((mod) => {
         if (typeof mod.initTransport !== "function") return;
         mod.initTransport({
@@ -323,6 +364,7 @@ export function createIsland(id: string, name: string): ComponentInstance {
   ) as HTMLElement;
   if (root) {
     autoBindIsland(id, root);
+    root.setAttribute(COMPONENT_INIT_ATTR, "true");
   }
   return instance;
 }
@@ -350,6 +392,7 @@ export function autoInit(): void {
   const componentRoots = document.querySelectorAll("[data-gospa-component]");
   componentRoots.forEach((root) => {
     const el = root as HTMLElement;
+    if (el.getAttribute(COMPONENT_INIT_ATTR) === "true") return;
     const name = el.getAttribute("data-gospa-component")!;
     const id = el.id || `c-${Math.random().toString(36).substring(2, 9)}`;
     if (!el.id) el.id = id;
@@ -365,11 +408,13 @@ export function autoInit(): void {
       }
     }
     autoBindIsland(id, el);
+    el.setAttribute(COMPONENT_INIT_ATTR, "true");
   });
 
   const islandRoots = document.querySelectorAll("[data-gospa-island]");
   islandRoots.forEach((root) => {
     const el = root as HTMLElement;
+    if (el.getAttribute(ISLAND_INIT_ATTR) === "true") return;
     const name = el.getAttribute("data-gospa-island");
     if (!name) return;
 
@@ -404,6 +449,7 @@ export function autoInit(): void {
         }
 
         setup(el, propsData, stateData);
+        el.setAttribute(ISLAND_INIT_ATTR, "true");
       } catch (e) {
         if (config.debug) console.error("Error initializing island", name, e);
       }
@@ -433,20 +479,95 @@ export async function getFrameworkFeatures() {
   return featuresModule;
 }
 
+export function getTransportFeaturesSync() {
+  return cachedTransportFeatures;
+}
+
+export async function getTransportFeatures() {
+  if (cachedTransportFeatures) return cachedTransportFeatures;
+  if (!transportFeaturesModule) {
+    transportFeaturesModule = import("./framework-features-transport.ts").then(
+      (mod) => {
+        cachedTransportFeatures = mod;
+        return mod;
+      },
+    );
+  }
+  return transportFeaturesModule;
+}
+
+export function getNavigationFeaturesSync() {
+  return cachedNavigationFeatures;
+}
+
+export async function getNavigationFeatures() {
+  if (cachedNavigationFeatures) return cachedNavigationFeatures;
+  if (!navigationFeaturesModule) {
+    navigationFeaturesModule =
+      import("./framework-features-navigation.ts").then((mod) => {
+        cachedNavigationFeatures = mod;
+        return mod;
+      });
+  }
+  return navigationFeaturesModule;
+}
+
+export function getTransitionFeaturesSync() {
+  return cachedTransitionFeatures;
+}
+
+export async function getTransitionFeatures() {
+  if (cachedTransitionFeatures) return cachedTransitionFeatures;
+  if (!transitionFeaturesModule) {
+    transitionFeaturesModule =
+      import("./framework-features-transitions.ts").then((mod) => {
+        cachedTransitionFeatures = mod;
+        return mod;
+      });
+  }
+  return transitionFeaturesModule;
+}
+
+export async function getIslandFeatures() {
+  if (cachedIslandFeatures) return cachedIslandFeatures;
+  if (!islandFeaturesModule) {
+    islandFeaturesModule = import("./framework-features-islands.ts").then(
+      (mod) => {
+        cachedIslandFeatures = mod;
+        return mod;
+      },
+    );
+  }
+  return islandFeaturesModule;
+}
+
+export async function getRuntimeExtrasFeatures() {
+  if (cachedRuntimeExtrasFeatures) return cachedRuntimeExtrasFeatures;
+  if (!runtimeExtrasFeaturesModule) {
+    runtimeExtrasFeaturesModule =
+      import("./framework-features-runtime-extras.ts").then((mod) => {
+        cachedRuntimeExtrasFeatures = mod;
+        return mod;
+      });
+  }
+  return runtimeExtrasFeaturesModule;
+}
+
 export async function getWebSocket() {
-  return getFrameworkFeatures();
+  return getTransportFeatures();
 }
 
 export async function getNavigation() {
-  return getFrameworkFeatures();
+  return getNavigationFeatures();
 }
 
 export async function getTransitions() {
-  return getFrameworkFeatures();
+  return getTransitionFeatures();
 }
 
 // Auto-initialize on DOM ready
 if (typeof document !== "undefined") {
+  initializeServerDataRegistry();
   if (document.readyState === "loading") {
     document.addEventListener("DOMContentLoaded", () => {
       if (shouldAutoInitDocument()) autoInit();

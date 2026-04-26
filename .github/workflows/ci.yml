@@ -105,3 +105,7 @@ jobs:
       - name: Docs route + search index validation
         run: |
           go run ./scripts/validate-docs-routes/main.go
+
+      - name: Helper promotion gate
+        run: |
+          go run ./scripts/validate-helper-promotion/main.go

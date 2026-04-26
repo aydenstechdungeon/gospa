@@ -43,6 +43,7 @@ func TestFilePathToURLPath_PlusAliases(t *testing.T) {
 		{"dashboard/+page.templ", RouteTypePage, "/dashboard"},
 		{"dashboard/+layout.templ", RouteTypeLayout, "/dashboard"},
 		{"dashboard/+error.templ", RouteTypeError, "/dashboard"},
+		{"dashboard/_error.templ", RouteTypeError, "/dashboard"},
 	}
 
 	for _, tt := range tests {
@@ -563,6 +564,62 @@ func TestMatchWithLayout_NoMatch(t *testing.T) {
 	route, layouts, params := r.MatchWithLayout("/nonexistent")
 	if route != nil || layouts != nil || params != nil {
 		t.Error("expected nil route/layouts/params for no match")
+	}
+}
+
+func TestRouterMatch_OptionalParamBeforeRequiredSuffix(t *testing.T) {
+	fs := makeFS("blog/[[slug]]/edit/page.templ")
+	r := NewRouter(fs)
+	if err := r.Scan(); err != nil {
+		t.Fatalf("Scan() error: %v", err)
+	}
+
+	route, params := r.Match("/blog/edit")
+	if route == nil {
+		t.Fatal("expected /blog/edit to match optional-param route")
+	}
+	if route.Path != "/blog/:?slug/edit" {
+		t.Fatalf("unexpected route: %s", route.Path)
+	}
+	if params["slug"] != "" {
+		t.Fatalf("expected empty slug when omitted, got %q", params["slug"])
+	}
+
+	route, params = r.Match("/blog/post-1/edit")
+	if route == nil {
+		t.Fatal("expected /blog/post-1/edit to match optional-param route")
+	}
+	if params["slug"] != "post-1" {
+		t.Fatalf("expected slug=post-1, got %q", params["slug"])
+	}
+}
+
+func TestRouterMatch_OptionalCatchAllWithSuffix(t *testing.T) {
+	fs := makeFS("docs/[[...rest]]/tail/page.templ")
+	r := NewRouter(fs)
+	if err := r.Scan(); err != nil {
+		t.Fatalf("Scan() error: %v", err)
+	}
+
+	route, params := r.Match("/docs/tail")
+	if route == nil {
+		t.Fatal("expected /docs/tail to match optional catch-all route")
+	}
+	if params["rest"] != "" {
+		t.Fatalf("expected empty rest when omitted, got %q", params["rest"])
+	}
+
+	route, params = r.Match("/docs/a/b/tail")
+	if route == nil {
+		t.Fatal("expected /docs/a/b/tail to match optional catch-all route")
+	}
+	if params["rest"] != "a/b" {
+		t.Fatalf("expected rest=a/b, got %q", params["rest"])
+	}
+
+	route, _ = r.Match("/docs/anything")
+	if route != nil {
+		t.Fatal("expected /docs/anything not to match due to required trailing /tail")
 	}
 }
 

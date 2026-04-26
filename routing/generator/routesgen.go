@@ -117,6 +117,50 @@ func (g *RouteTypeScriptGenerator) generateRouteDataContracts(sb *strings.Builde
 	sb.WriteString("};\n\n")
 
 	sb.WriteString("export type RouteLoadData<T extends RoutePath> = Record<string, unknown>;\n\n")
+	sb.WriteString("export type RouteActionName<T extends RoutePath> =\n")
+	for _, route := range g.routes {
+		if route.IsLayout || len(route.Actions) == 0 {
+			continue
+		}
+		fmt.Fprintf(sb, "  T extends %q ? %s :\n", route.URLPath, g.formatStringUnion(route.Actions))
+	}
+	sb.WriteString("  never;\n\n")
+
+	sb.WriteString("export interface RouteActionRedirect {\n")
+	sb.WriteString("  to: string;\n")
+	sb.WriteString("  status?: number;\n")
+	sb.WriteString("}\n\n")
+
+	sb.WriteString("export interface RouteActionValidationError {\n")
+	sb.WriteString("  fieldErrors?: Record<string, string>;\n")
+	sb.WriteString("  formError?: string;\n")
+	sb.WriteString("}\n\n")
+
+	sb.WriteString("export interface RouteActionResponse<T = unknown> {\n")
+	sb.WriteString("  data?: T;\n")
+	sb.WriteString("  code?: string;\n")
+	sb.WriteString("  error?: string;\n")
+	sb.WriteString("  redirect?: RouteActionRedirect;\n")
+	sb.WriteString("  validation?: RouteActionValidationError;\n")
+	sb.WriteString("  revalidate?: string[];\n")
+	sb.WriteString("  revalidateTags?: string[];\n")
+	sb.WriteString("  revalidateKeys?: string[];\n")
+	sb.WriteString("}\n\n")
+
+	sb.WriteString("export interface RouteActionOptions extends RequestInit {\n")
+	sb.WriteString("  throwOnError?: boolean;\n")
+	sb.WriteString("}\n\n")
+
+	sb.WriteString("export class RouteActionError<T = unknown> extends Error {\n")
+	sb.WriteString("  readonly status: number;\n")
+	sb.WriteString("  readonly payload: RouteActionResponse<T>;\n")
+	sb.WriteString("  constructor(status: number, payload: RouteActionResponse<T>, message?: string) {\n")
+	sb.WriteString("    super(message ?? `Route action failed (${status})`);\n")
+	sb.WriteString("    this.name = 'RouteActionError';\n")
+	sb.WriteString("    this.status = status;\n")
+	sb.WriteString("    this.payload = payload;\n")
+	sb.WriteString("  }\n")
+	sb.WriteString("}\n\n")
 
 	sb.WriteString("/**\n")
 	sb.WriteString(" * Fetch typed load data for a route (server Load chain only).\n")
@@ -140,6 +184,42 @@ func (g *RouteTypeScriptGenerator) generateRouteDataContracts(sb *strings.Builde
 	sb.WriteString("  }\n")
 	sb.WriteString("  const payload = await res.json() as { data?: Record<string, unknown> };\n")
 	sb.WriteString("  return (payload.data ?? {}) as RouteLoadData<T>;\n")
+	sb.WriteString("}\n")
+
+	sb.WriteString("\n/**\n")
+	sb.WriteString(" * Call a route form action with route/action-name type safety.\n")
+	sb.WriteString(" */\n")
+	sb.WriteString("export async function callRouteAction<\n")
+	sb.WriteString("  T extends RoutePath,\n")
+	sb.WriteString("  A extends RouteActionName<T>,\n")
+	sb.WriteString("  R = unknown,\n")
+	sb.WriteString(">(\n")
+	sb.WriteString("  path: T,\n")
+	sb.WriteString("  action: A,\n")
+	sb.WriteString("  body?: BodyInit | null,\n")
+	sb.WriteString("  init?: RouteActionOptions,\n")
+	sb.WriteString("): Promise<RouteActionResponse<R>> {\n")
+	sb.WriteString("  const actionURL = new URL(path, window.location.origin);\n")
+	sb.WriteString("  actionURL.searchParams.set('_action', String(action));\n")
+	sb.WriteString("  const throwOnError = init?.throwOnError !== false;\n")
+	sb.WriteString("  const requestInit = { ...(init || {}) };\n")
+	sb.WriteString("  delete (requestInit as RouteActionOptions).throwOnError;\n")
+	sb.WriteString("  const res = await fetch(actionURL.toString(), {\n")
+	sb.WriteString("    method: requestInit.method ?? 'POST',\n")
+	sb.WriteString("    credentials: requestInit.credentials ?? 'same-origin',\n")
+	sb.WriteString("    ...requestInit,\n")
+	sb.WriteString("    headers: {\n")
+	sb.WriteString("      Accept: 'application/json',\n")
+	sb.WriteString("      'X-Gospa-Enhance': '1',\n")
+	sb.WriteString("      ...(requestInit.headers || {}),\n")
+	sb.WriteString("    },\n")
+	sb.WriteString("    body: body ?? requestInit.body ?? null,\n")
+	sb.WriteString("  });\n")
+	sb.WriteString("  const payload = await res.json().catch(() => ({}));\n")
+	sb.WriteString("  if (!res.ok && throwOnError) {\n")
+	sb.WriteString("    throw new RouteActionError<R>(res.status, payload as RouteActionResponse<R>, (payload as { error?: string }).error);\n")
+	sb.WriteString("  }\n")
+	sb.WriteString("  return payload as RouteActionResponse<R>;\n")
 	sb.WriteString("}\n")
 }
 
@@ -581,6 +661,21 @@ func (g *RouteTypeScriptGenerator) formatStringArray(arr []string) string {
 		fmt.Fprintf(&sb, "%q", s)
 	}
 	sb.WriteString("]")
+	return sb.String()
+}
+
+func (g *RouteTypeScriptGenerator) formatStringUnion(arr []string) string {
+	if len(arr) == 0 {
+		return "never"
+	}
+
+	var sb strings.Builder
+	for i, s := range arr {
+		if i > 0 {
+			sb.WriteString(" | ")
+		}
+		fmt.Fprintf(&sb, "%q", s)
+	}
 	return sb.String()
 }
 

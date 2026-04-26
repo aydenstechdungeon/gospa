@@ -4,35 +4,35 @@ GoSPA uses an opinionated file-based routing system inspired by SvelteKit and Ne
 
 ## Pages and Layouts
 
-Every directory under your `routes/` folder represents a route. The actual content is defined in `page.templ` and `layout.templ` files.
+Every directory under your `routes/` folder represents a route. The recommended convention is the `+` file naming style used by SvelteKit-compatible flows.
 
 ### Route structure example:
 ```text
 routes/
-├── layout.templ      (Root layout for all pages)
-├── page.templ        (Home page at /)
+├── +layout.gospa      (Root layout for all pages)
+├── +page.gospa        (Home page at /)
 ├── about/
-│   └── page.templ    (About page at /about)
+│   └── +page.gospa    (About page at /about)
 └── dashboard/
-    ├── layout.templ  (Nested dashboard layout)
+    ├── +layout.gospa  (Nested dashboard layout)
     └── settings/
-        └── page.templ (Settings page at /dashboard/settings)
+        └── +page.gospa (Settings page at /dashboard/settings)
 ```
 
 ## Special Files
 
-- **`page.templ`**: Defines the main component for a route.
-- **`layout.templ`**: Defines a wrapper for all child pages in that directory.
-- **`loading.templ`**: Defines a component to show while the page's `Load` function is running.
-- **`error.templ`**: Defines a component to show if a route or layout crashes.
-- **`server.go`**: Contains server-side Go logic like `Load` and `Action` functions for the route.
+- **`+page.gospa` / `+page.templ`**: Defines the main component for a route.
+- **`+layout.gospa` / `+layout.templ`**: Defines a wrapper for all child pages in that directory.
+- **`+loading.gospa` / `loading.templ`**: Defines a component to show while the page's `Load` function is running.
+- **`+error.gospa` / `+error.templ`**: Defines a component to show if a route or layout crashes.
+- **`+page.server.go`**: Contains server-side Go logic like `Load` and `Action` functions for the route.
 
 ## Path Parameters
 
 Dynamic routes use square brackets to indicate parameters.
 
 ### Example:
-- `routes/blog/[slug]/page.templ` matches `/blog/my-first-post` where `slug` is "my-first-post".
+- `routes/blog/[slug]/+page.gospa` matches `/blog/my-first-post` where `slug` is "my-first-post".
 
 You can access parameters in your `Load` function:
 ```go
@@ -67,4 +67,4 @@ Route middleware allows you to intercept requests before they reach your compone
 ```go
 routing.RegisterMiddleware("/admin", auth.AuthMiddleware)
 ```
-GoSPA ensures middleare for `/admin` correctly chains into `/admin/settings`.
+GoSPA ensures middleware for `/admin` correctly chains into `/admin/settings`.

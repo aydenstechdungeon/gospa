@@ -9,9 +9,6 @@
 
 ### Getting Started
 
-[structure](docs/getstarted/structure.md)
-  - Size: 3430 bytes
-
 [quickstart](docs/getstarted/quickstart.md)
   - Size: 2622 bytes
 
@@ -21,44 +18,53 @@
 [tutorial](docs/getstarted/tutorial.md)
   - Size: 8321 bytes
 
+[structure](docs/getstarted/structure.md)
+  - Size: 3430 bytes
+
 
 ### SFC Components
 
-[gospasfc](docs/gospasfc.md)
-  - Size: 1556 bytes
+[examples](docs/gospasfc/examples.md)
+  - Size: 1484 bytes
 
 [advanced](docs/gospasfc/advanced.md)
-  - Size: 914 bytes
+  - Size: 2036 bytes
 
-[examples](docs/gospasfc/examples.md)
-  - Size: 678 bytes
+[gospasfc](docs/gospasfc.md)
+  - Size: 4210 bytes
+
+[api-reference](docs/gospasfc/api-reference.md)
+  - Size: 6279 bytes
 
 [getting-started](docs/gospasfc/getting-started.md)
-  - Size: 1645 bytes
+  - Size: 4298 bytes
 
 [reactivity](docs/gospasfc/reactivity.md)
-  - Size: 893 bytes
+  - Size: 981 bytes
 
 [styles](docs/gospasfc/styles.md)
   - Size: 661 bytes
 
+[system-reference](docs/gospasfc/system-reference.md)
+  - Size: 11597 bytes
+
 [templates](docs/gospasfc/templates.md)
-  - Size: 914 bytes
+  - Size: 1097 bytes
 
 [typescript](docs/gospasfc/typescript.md)
-  - Size: 759 bytes
+  - Size: 872 bytes
 
 
 ### Routing
 
-[routing](docs/routing.md)
-  - Size: 2555 bytes
+[navigation](docs/routing/navigation.md)
+  - Size: 1741 bytes
 
 [api](docs/routing/api.md)
   - Size: 1054 bytes
 
-[navigation](docs/routing/navigation.md)
-  - Size: 1741 bytes
+[routing](docs/routing.md)
+  - Size: 2661 bytes
 
 [layouts](docs/routing/layouts.md)
   - Size: 2131 bytes
@@ -93,14 +99,14 @@
 [navigation-events](docs/client-runtime/navigation-events.md)
   - Size: 4364 bytes
 
-[websocket](docs/client-runtime/websocket.md)
-  - Size: 2423 bytes
+[overview](docs/client-runtime/overview.md)
+  - Size: 1717 bytes
 
 [transitions](docs/client-runtime/transitions.md)
   - Size: 2045 bytes
 
-[overview](docs/client-runtime/overview.md)
-  - Size: 1717 bytes
+[websocket](docs/client-runtime/websocket.md)
+  - Size: 2423 bytes
 
 
 ### Configuration
@@ -120,8 +126,8 @@
 
 ### Plugins
 
-[postcss](docs/plugins/postcss.md)
-  - Size: 1034 bytes
+[image](docs/plugins/image.md)
+  - Size: 1029 bytes
 
 [plugins](docs/plugins.md)
   - Size: 1884 bytes
@@ -138,11 +144,11 @@
 [qrcode](docs/plugins/qrcode.md)
   - Size: 386 bytes
 
+[postcss](docs/plugins/postcss.md)
+  - Size: 1034 bytes
+
 [auth](docs/plugins/auth.md)
   - Size: 973 bytes
-
-[image](docs/plugins/image.md)
-  - Size: 1029 bytes
 
 
 ### Reactive Primitives
@@ -162,14 +168,14 @@
 
 ### API Reference
 
-[state](docs/api/state.md)
-  - Size: 23 bytes
+[websocket](docs/api/websocket.md)
+  - Size: 2232 bytes
 
-[routing](docs/api/routing.md)
-  - Size: 1132 bytes
+[api](docs/api.md)
+  - Size: 2163 bytes
 
 [client](docs/api/client.md)
-  - Size: 859 bytes
+  - Size: 1658 bytes
 
 [core](docs/api/core.md)
   - Size: 33981 bytes
@@ -180,14 +186,14 @@
 [remote-actions](docs/api/remote-actions.md)
   - Size: 2130 bytes
 
+[routing](docs/api/routing.md)
+  - Size: 1132 bytes
+
 [sse](docs/api/sse.md)
   - Size: 1900 bytes
 
-[websocket](docs/api/websocket.md)
-  - Size: 2232 bytes
-
-[api](docs/api.md)
-  - Size: 2163 bytes
+[state](docs/api/state.md)
+  - Size: 23 bytes
 
 
 ### Troubleshooting
@@ -198,35 +204,38 @@
 
 ### Other
 
-[runtime](docs/runtime.md)
-  - Size: 1929 bytes
+[cli](docs/cli.md)
+  - Size: 19543 bytes
+
+[security](docs/security.md)
+  - Size: 6397 bytes
+
+[root](docs/root.md)
+  - Size: 2109 bytes
 
 [params](docs/params.md)
   - Size: 1809 bytes
 
-[cli](docs/cli.md)
-  - Size: 19387 bytes
+[errors](docs/errors.md)
+  - Size: 1302 bytes
+
+[faq](docs/faq.md)
+  - Size: 1550 bytes
 
 [devtools](docs/devtools.md)
   - Size: 1945 bytes
 
 [README](docs/README.md)
-  - Size: 2759 bytes
+  - Size: 2919 bytes
 
-[faq](docs/faq.md)
-  - Size: 1550 bytes
+[runtime](docs/runtime.md)
+  - Size: 1929 bytes
 
-[root](docs/root.md)
-  - Size: 2109 bytes
+[rendering](docs/rendering.md)
+  - Size: 12488 bytes
 
 [components](docs/components.md)
   - Size: 13710 bytes
-
-[security](docs/security.md)
-  - Size: 6397 bytes
-
-[errors](docs/errors.md)
-  - Size: 1302 bytes
 
 [hmr](docs/hmr.md)
   - Size: 1733 bytes
@@ -243,10 +252,10 @@
 [storage](docs/storage.md)
   - Size: 2462 bytes
 
-[rendering](docs/rendering.md)
-  - Size: 12488 bytes
+[sveltekit-to-gospa](docs/migration/sveltekit-to-gospa.md)
+  - Size: 2936 bytes
 
 
 ## File Summary
 
-Total documentation files: 69
+Total documentation files: 72

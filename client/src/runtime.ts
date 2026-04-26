@@ -13,8 +13,14 @@ import {
   getWebSocket,
   getNavigation,
   getTransitions,
-  getFrameworkFeatures,
-  getFrameworkFeaturesSync,
+  getTransportFeatures,
+  getTransportFeaturesSync,
+  getNavigationFeatures,
+  getNavigationFeaturesSync,
+  getTransitionFeatures,
+  getTransitionFeaturesSync,
+  getIslandFeatures,
+  getRuntimeExtrasFeatures,
 } from "./runtime-core.ts";
 
 export {
@@ -30,14 +36,13 @@ export {
   getTransitions,
 };
 
-import { initNavigation } from "./navigation.ts";
+import "./navigation.ts";
 
 /**
  * Initialize the full GoSPA runtime with navigation and all features.
  */
-export async function init(config: any = {}) {
+export function init(config: any = {}) {
   coreInit(config);
-  initNavigation();
 }
 
 // State Primitives
@@ -81,6 +86,17 @@ export {
   type ActionValidationError,
   type FormEnhanceOptions,
 } from "./forms.ts";
+export {
+  loadRouteData,
+  callRouteAction,
+  preloadData,
+  preloadCode,
+  goto,
+  refresh,
+  prefetchOnHover,
+  beforeNavigate,
+  afterNavigate,
+} from "./route-helpers.ts";
 
 // Navigation
 import type { NavigateOptions, NavigationOptions } from "./navigation.ts";
@@ -100,110 +116,123 @@ export type { Unsubscribe } from "./state.ts";
 
 // WebSocket Full API
 export async function initWebSocket(config: any) {
-  const syncMod = getFrameworkFeaturesSync();
+  const syncMod = getTransportFeaturesSync();
   if (syncMod) return syncMod.initWebSocket(config);
-  const mod = await getFrameworkFeatures();
+  const mod = await getTransportFeatures();
   return mod.initWebSocket(config);
 }
 
 export async function getWebSocketClient() {
-  const syncMod = getFrameworkFeaturesSync();
+  const syncMod = getTransportFeaturesSync();
   if (syncMod) return syncMod.getWebSocketClient();
-  const mod = await getFrameworkFeatures();
+  const mod = await getTransportFeatures();
   return mod.getWebSocketClient();
 }
 
 export async function sendAction(name: string, payload?: any) {
-  const syncMod = getFrameworkFeaturesSync();
+  const syncMod = getTransportFeaturesSync();
   if (syncMod) return syncMod.sendAction(name, payload);
-  const mod = await getFrameworkFeatures();
+  const mod = await getTransportFeatures();
   return mod.sendAction(name, payload);
 }
 
 // Navigation Full API
 export async function navigate(to: string, options?: any) {
-  const syncMod = getFrameworkFeaturesSync();
+  const syncMod = getNavigationFeaturesSync();
   if (syncMod) return syncMod.navigate(to, options);
-  const mod = await getFrameworkFeatures();
+  const mod = await getNavigationFeatures();
   return mod.navigate(to, options);
 }
 
 export async function back() {
-  const syncMod = getFrameworkFeaturesSync();
+  const syncMod = getNavigationFeaturesSync();
   if (syncMod) return syncMod.back();
-  const mod = await getFrameworkFeatures();
+  const mod = await getNavigationFeatures();
   return mod.back();
 }
 
 export async function prefetch(path: string) {
-  const syncMod = getFrameworkFeaturesSync();
+  const syncMod = getNavigationFeaturesSync();
   if (syncMod) return syncMod.prefetch(path);
-  const mod = await getFrameworkFeatures();
+  const mod = await getNavigationFeatures();
   return mod.prefetch(path);
 }
 
 export async function invalidate(path: string) {
-  const syncMod = getFrameworkFeaturesSync();
+  const syncMod = getNavigationFeaturesSync();
   if (syncMod) return syncMod.invalidate(path);
-  const mod = await getFrameworkFeatures();
+  const mod = await getNavigationFeatures();
   return mod.invalidate(path);
 }
 
 export async function invalidateTag(tag: string) {
-  const syncMod = getFrameworkFeaturesSync();
+  const syncMod = getNavigationFeaturesSync();
   if (syncMod) return syncMod.invalidateTag(tag);
-  const mod = await getFrameworkFeatures();
+  const mod = await getNavigationFeatures();
   return mod.invalidateTag(tag);
 }
 
 export async function invalidateKey(key: string) {
-  const syncMod = getFrameworkFeaturesSync();
+  const syncMod = getNavigationFeaturesSync();
   if (syncMod) return syncMod.invalidateKey(key);
-  const mod = await getFrameworkFeatures();
+  const mod = await getNavigationFeatures();
   return mod.invalidateKey(key);
+}
+
+export async function invalidateAll() {
+  const syncMod = getNavigationFeaturesSync();
+  if (syncMod && typeof syncMod.invalidateAll === "function") {
+    return syncMod.invalidateAll();
+  }
+  const mod = await getNavigationFeatures();
+  if (typeof mod.invalidateAll === "function") {
+    return mod.invalidateAll();
+  }
+  return 0;
 }
 
 // Islands & Priority
 export async function initIslands(config?: any) {
-  const mod = await getFrameworkFeatures();
+  const mod = await getIslandFeatures();
   return mod.initIslands(config);
 }
 
-
 export async function getIslandManager() {
-  const mod = await getFrameworkFeatures();
+  const mod = await getIslandFeatures();
   return mod.getIslandManager();
 }
 
 export async function hydrateIsland(idOrName: string) {
-  const mod = await getFrameworkFeatures();
+  const mod = await getIslandFeatures();
   return mod.hydrateIsland(idOrName);
 }
 
 // Streaming
 export async function initStreaming(config?: any) {
-  const mod = await getFrameworkFeatures();
+  const mod = await getIslandFeatures();
   return mod.initStreaming(config);
 }
 
 // Transitions
 export async function setupTransitions(root?: Element) {
-  const mod = await getFrameworkFeatures();
+  const syncMod = getTransitionFeaturesSync();
+  if (syncMod) return syncMod.setupTransitions(root);
+  const mod = await getTransitionFeatures();
   return mod.setupTransitions(root);
 }
 
 export const fade = async (el: Element, params?: any) =>
-  (await getFrameworkFeatures()).fade(el, params);
+  (await getTransitionFeatures()).fade(el, params);
 export const fly = async (el: Element, params?: any) =>
-  (await getFrameworkFeatures()).fly(el, params);
+  (await getTransitionFeatures()).fly(el, params);
 export const slide = async (el: Element, params?: any) =>
-  (await getFrameworkFeatures()).slide(el, params);
+  (await getTransitionFeatures()).slide(el, params);
 export const scale = async (el: Element, params?: any) =>
-  (await getFrameworkFeatures()).scale(el, params);
+  (await getTransitionFeatures()).scale(el, params);
 export const blur = async (el: Element, params?: any) =>
-  (await getFrameworkFeatures()).blur(el, params);
+  (await getTransitionFeatures()).blur(el, params);
 export const crossfade = async (el: Element, params?: any) =>
-  (await getFrameworkFeatures()).crossfade(el, params);
+  (await getTransitionFeatures()).crossfade(el, params);
 
 // Signal-based reactivity
 import {
@@ -216,7 +245,6 @@ import {
   isReactive,
   reactiveArray,
 } from "./signals.ts";
-
 
 export {
   reactive,
@@ -272,29 +300,28 @@ export {
 
 // WebSocket tab sharing
 export async function createTabSync(config?: any) {
-  const mod = await getFrameworkFeatures();
+  const mod = await getRuntimeExtrasFeatures();
   return mod.createTabSync(config);
 }
 
 // IndexedDB persistence
 export async function createIndexedDBPersistence(config?: any) {
-  const mod = await getFrameworkFeatures();
+  const mod = await getRuntimeExtrasFeatures();
   return mod.createIndexedDBPersistence(config);
 }
-
 
 // Accessibility
 export async function announce(
   message: string,
   politeness?: "polite" | "assertive",
 ) {
-  const mod = await getFrameworkFeatures();
+  const mod = await getRuntimeExtrasFeatures();
   return mod.announce(message, politeness);
 }
 
 // Performance monitoring
 export async function measure(name: string, fn: any, metadata?: any) {
-  const mod = await getFrameworkFeatures();
+  const mod = await getRuntimeExtrasFeatures();
   return mod.measure(name, fn, metadata);
 }
 

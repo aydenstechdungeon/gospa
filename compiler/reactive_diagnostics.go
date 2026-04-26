@@ -35,6 +35,8 @@ var reactiveHints = []reactiveHint{
 	},
 }
 
+var effectInvocationRegex = regexp.MustCompile(`(?s)^\$effect\(\s*func\(\)\s*\{.*?\}\s*\)`)
+
 func validateReactiveUsage(script string, block sfc.Block) error {
 	for _, hint := range reactiveHints {
 		loc := hint.pattern.FindStringSubmatchIndex(script)
@@ -56,10 +58,9 @@ func validateReactiveUsage(script string, block sfc.Block) error {
 		}
 	}
 
-	if idx := strings.Index(script, "$effect("); idx >= 0 {
-		fragment := script[idx:]
-		// Keep this strict but lightweight: in alpha we only support func()-form.
-		if !strings.HasPrefix(strings.TrimSpace(fragment), "$effect(func()") {
+	for idx := strings.Index(script, "$effect("); idx >= 0; {
+		fragment := strings.TrimSpace(script[idx:])
+		if !effectInvocationRegex.MatchString(fragment) {
 			line, col := localToAbsolutePosition(script, idx, block)
 			return &sfc.DiagnosticError{
 				Line:       line,
@@ -69,6 +70,11 @@ func validateReactiveUsage(script string, block sfc.Block) error {
 				Snippet:    "$effect(func() {\n  // side effect\n})",
 			}
 		}
+		next := strings.Index(script[idx+8:], "$effect(")
+		if next == -1 {
+			break
+		}
+		idx += 8 + next
 	}
 
 	return nil

@@ -14,4 +14,4 @@ function registerLazySetup(name, loader) {
     }
   };
 }
-registerLazySetup("routesdocsgospasfcpage", () => import("./routesdocsgospasfcpage-rf6ae6v7.js"));
+registerLazySetup("routesdocsgospasfcpage", () => import("./routesdocsgospasfcpage-0kf0ejwm.js"));

@@ -2,6 +2,8 @@
 
 Add custom client-side logic using `<script lang="ts">` or `<script lang="js">`.
 
+`lang="js"` is accepted and normalized to TypeScript handling internally.
+
 ## Mixed Scripts
 
 You can have both a Go script (for SSR/Runes) and a TS script for manual DOM logic.
@@ -12,20 +14,20 @@ You can have both a Go script (for SSR/Runes) and a TS script for manual DOM log
 </script>
 
 <script lang="ts">
-  import { onMount } from '@gospa/client';
-  
-  onMount(() => {
-    console.log("Component hydrated!");
+  const btn = document.querySelector("button");
+  btn?.addEventListener("click", () => {
+    console.log("clicked");
   });
 </script>
 ```
 
-## Hydration Hooks
+## Generated Runtime Bridge
 
-The generated TypeScript code includes lifecycle hooks for hydration.
+Generated SFC code injects runtime helpers when available:
 
-- **`onMount`**: Runs after the component is hydrated in the DOM.
-- **`onDestroy`**: Runs before the component is removed.
+- `__gospa_state(...)` -> runtime `$state(...)`
+- `__gospa_derived(...)` -> runtime `$derived(...)`
+- `__gospa_effect(...)` -> runtime `$effect(...)`
 
 ## Type Generation
 

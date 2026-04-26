@@ -37,10 +37,12 @@ export type RoutePath =
   | "/docs/getstarted/structure"
   | "/docs/gospasfc"
   | "/docs/gospasfc/advanced"
+  | "/docs/gospasfc/api-reference"
   | "/docs/gospasfc/examples"
   | "/docs/gospasfc/getting-started"
   | "/docs/gospasfc/reactivity"
   | "/docs/gospasfc/styles"
+  | "/docs/gospasfc/system-reference"
   | "/docs/gospasfc/templates"
   | "/docs/gospasfc/typescript"
   | "/docs/hmr"
@@ -107,10 +109,12 @@ export interface RouteMap {
   DocsGetstartedStructure: "/docs/getstarted/structure";
   DocsGospasfc: "/docs/gospasfc";
   DocsGospasfcAdvanced: "/docs/gospasfc/advanced";
+  DocsGospasfcApi-reference: "/docs/gospasfc/api-reference";
   DocsGospasfcExamples: "/docs/gospasfc/examples";
   DocsGospasfcGetting-started: "/docs/gospasfc/getting-started";
   DocsGospasfcReactivity: "/docs/gospasfc/reactivity";
   DocsGospasfcStyles: "/docs/gospasfc/styles";
+  DocsGospasfcSystem-reference: "/docs/gospasfc/system-reference";
   DocsGospasfcTemplates: "/docs/gospasfc/templates";
   DocsGospasfcTypescript: "/docs/gospasfc/typescript";
   DocsHmr: "/docs/hmr";
@@ -186,6 +190,123 @@ export function buildQuery(params: RouteQuery): string {
   }
   const query = searchParams.toString();
   return query ? `?${query}` : '';
+}
+
+// ============================================
+// Route Data & Actions Contracts
+// ============================================
+
+/**
+ * Per-route metadata for load/action availability.
+ */
+export interface RouteDataContract {
+  hasLoad: boolean;
+  hasActions: boolean;
+  actions: readonly string[];
+}
+
+export const routeDataContracts: Partial<Record<RoutePath, RouteDataContract>> = {
+};
+
+export type RouteLoadData<T extends RoutePath> = Record<string, unknown>;
+
+export type RouteActionName<T extends RoutePath> =
+  never;
+
+export interface RouteActionRedirect {
+  to: string;
+  status?: number;
+}
+
+export interface RouteActionValidationError {
+  fieldErrors?: Record<string, string>;
+  formError?: string;
+}
+
+export interface RouteActionResponse<T = unknown> {
+  data?: T;
+  code?: string;
+  error?: string;
+  redirect?: RouteActionRedirect;
+  validation?: RouteActionValidationError;
+  revalidate?: string[];
+  revalidateTags?: string[];
+  revalidateKeys?: string[];
+}
+
+export interface RouteActionOptions extends RequestInit {
+  throwOnError?: boolean;
+}
+
+export class RouteActionError<T = unknown> extends Error {
+  readonly status: number;
+  readonly payload: RouteActionResponse<T>;
+  constructor(status: number, payload: RouteActionResponse<T>, message?: string) {
+    super(message ?? `Route action failed (${status})`);
+    this.name = 'RouteActionError';
+    this.status = status;
+    this.payload = payload;
+  }
+}
+
+/**
+ * Fetch typed load data for a route (server Load chain only).
+ */
+export async function loadRouteData<T extends RoutePath>(
+  path: T,
+  init?: RequestInit,
+): Promise<RouteLoadData<T>> {
+  const dataURL = new URL(path, window.location.origin);
+  dataURL.searchParams.set('__data', '1');
+  const res = await fetch(dataURL.toString(), {
+    ...init,
+    credentials: init?.credentials ?? 'same-origin',
+    headers: {
+      Accept: 'application/json',
+      ...(init?.headers || {}),
+    },
+  });
+  if (!res.ok) {
+    throw new Error(`Failed to load route data (${res.status})`);
+  }
+  const payload = await res.json() as { data?: Record<string, unknown> };
+  return (payload.data ?? {}) as RouteLoadData<T>;
+}
+
+/**
+ * Call a route form action with route/action-name type safety.
+ */
+export async function callRouteAction<
+  T extends RoutePath,
+  A extends RouteActionName<T>,
+  R = unknown,
+>(
+  path: T,
+  action: A,
+  body?: BodyInit | null,
+  init?: RouteActionOptions,
+): Promise<RouteActionResponse<R>> {
+  const actionURL = new URL(path, window.location.origin);
+  actionURL.searchParams.set('_action', String(action));
+  const throwOnError = init?.throwOnError !== false;
+  const requestInit = { ...(init || {}) };
+  delete (requestInit as RouteActionOptions).throwOnError;
+  const res = await fetch(actionURL.toString(), {
+    method: requestInit.method ?? 'POST',
+    credentials: requestInit.credentials ?? 'same-origin',
+    ...requestInit,
+    headers: {
+      Accept: 'application/json',
+      'X-Gospa-Enhance': '1',
+      ...(requestInit.headers || {}),
+    },
+    body: body ?? requestInit.body ?? null,
+  });
+  const payload = await res.json().catch(() => ({}));
+  if (!res.ok && throwOnError) {
+    throw new RouteActionError<R>(res.status, payload as RouteActionResponse<R>, (payload as { error?: string }).error);
+  }
+  return payload as RouteActionResponse<R>;
 }
 
 // ============================================
@@ -322,6 +443,10 @@ export function docsGospasfcAdvancedRoute(): string {
   return "/docs/gospasfc/advanced";
 }
 
+export function docsGospasfcApi-referenceRoute(): string {
+  return "/docs/gospasfc/api-reference";
+}
+
 export function docsGospasfcExamplesRoute(): string {
   return "/docs/gospasfc/examples";
 }
@@ -336,6 +461,10 @@ export function docsGospasfcReactivityRoute(): string {
 
 export function docsGospasfcStylesRoute(): string {
   return "/docs/gospasfc/styles";
+}
+
+export function docsGospasfcSystem-referenceRoute(): string {
+  return "/docs/gospasfc/system-reference";
 }
 
 export function docsGospasfcTemplatesRoute(): string {
@@ -478,7 +607,18 @@ export function docsWebsocketRoute(): string {
 /**
  * Route matching cache to avoid redundant iterations.
  */
+const ROUTE_MATCH_CACHE_MAX = 1000;
 const routeMatchCache = new Map<string, boolean>();
+
+function setRouteMatchCache(cacheKey: string, value: boolean): void {
+  if (routeMatchCache.size >= ROUTE_MATCH_CACHE_MAX) {
+    const oldestKey = routeMatchCache.keys().next().value;
+    if (oldestKey !== undefined) {
+      routeMatchCache.delete(oldestKey);
+    }
+  }
+  routeMatchCache.set(cacheKey, value);
+}
 
 /**
  * Check if a path matches a route pattern.
@@ -493,7 +633,7 @@ export function matchRoute(pattern: string, path: string): boolean {
   const pathParts = path.split('/').filter(Boolean);
   
   if (patternParts.length !== pathParts.length) {
-    routeMatchCache.set(cacheKey, false);
+    setRouteMatchCache(cacheKey, false);
     return false;
   }
   
@@ -502,12 +642,12 @@ export function matchRoute(pattern: string, path: string): boolean {
     const pathPart = pathParts[i];
     
     if (!patternPart.startsWith(':') && patternPart !== pathPart) {
-      routeMatchCache.set(cacheKey, false);
+      setRouteMatchCache(cacheKey, false);
       return false;
     }
   }
   
-  routeMatchCache.set(cacheKey, true);
+  setRouteMatchCache(cacheKey, true);
   return true;
 }
 
@@ -603,11 +743,16 @@ export function getLinkProps<T extends RoutePath>(
   path: T,
   ...args: [...RouteParams<T> extends never ? [] : [params: RouteParams<T>], query?: RouteQuery]
 ): { href: string } {
-  let href = buildRoute(path, ...(args.length > 0 && typeof args[0] === 'object' && !('search' in args[0]) ? [args[0]] : []));
+  const hasParams = path.includes(':');
+  const params = hasParams && args.length > 0 && typeof args[0] === 'object' && args[0] !== null
+    ? (args[0] as RouteParams<T>)
+    : undefined;
+  let href = buildRoute(path, ...(params ? [params] : []));
   
-  const query = args.find(a => typeof a === 'object' && !('toString' in a)) as RouteQuery | undefined;
+  const queryIndex = hasParams ? 1 : 0;
+  const query = args[queryIndex] as RouteQuery | undefined;
   
-  if (query) {
+  if (query && typeof query === 'object') {
     href += buildQuery(query);
   }
   
@@ -795,6 +940,12 @@ export const routes: RouteMeta[] = [
     params: [],
   },
   {
+    path: "/docs/gospasfc/api-reference",
+    name: "DocsGospasfcApi-reference",
+    isDynamic: false,
+    params: [],
+  },
+  {
     path: "/docs/gospasfc/examples",
     name: "DocsGospasfcExamples",
     isDynamic: false,
@@ -815,6 +966,12 @@ export const routes: RouteMeta[] = [
   {
     path: "/docs/gospasfc/styles",
     name: "DocsGospasfcStyles",
+    isDynamic: false,
+    params: [],
+  },
+  {
+    path: "/docs/gospasfc/system-reference",
+    name: "DocsGospasfcSystem-reference",
     isDynamic: false,
     params: [],
   },
