@@ -113,7 +113,7 @@ package components
 
 templ Counter(initial int) {
   <div data-gospa-component="Counter" data-gospa-state={ templ.JSONString(map[string]interface{}{"count": initial}) }>
-    <button data-on:click="count++">Increment</button>
+    <button data-on="click:increment">Increment</button>
     <span data-bind="text:count">{ fmt.Sprint(initial) }</span>
   </div>
 }
@@ -125,9 +125,8 @@ GoSPA runtime attributes supported in templ include:
 
 - `data-bind="text:key"`
 - `data-bind="html:key"` (sanitized)
-- `data-bind="class:name:key"`
 - `data-model="key"`
-- `data-on:<event>` handlers with modifiers like `.prevent`, `.stop`, `.debounce.*`, `.throttle.*`
+- `data-on="event:action"` for navigation/runtime action dispatch
 
 In SFC templates, `on:<event>` is lowered to runtime delegation attributes during compile:
 

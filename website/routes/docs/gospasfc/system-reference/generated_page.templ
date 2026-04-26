@@ -8,10 +8,6 @@ import "github.com/aydenstechdungeon/gospa/website/components"
 type PageProps struct {
 }
 
-templ Name(args any) {
-	
-}
-
 templ Page() {
 
 	<div data-gospa-page="routesdocsgospasfcsystemreferencepage" class="">
@@ -55,17 +51,19 @@ templ Page() {
 				</ul>
 			</div>
 
-			<div class="rounded-xl border border-[var(--border)] bg-[var(--bg-secondary)] p-6">
-				<h2 class="text-2xl font-bold mb-4">Template Rules</h2>
-				@components.CodeBlock(`{#if ...}{:else if ...}{:else}{/if}
+				<div class="rounded-xl border border-[var(--border)] bg-[var(--bg-secondary)] p-6">
+					<h2 class="text-2xl font-bold mb-4">Template Rules</h2>
+					@components.CodeBlock(`{#if ...}{:else if ...}{:else}{/if}
 {#await expr}{:then v}{:catch err}{/await}
 {#each items as item}{/each}
-
+snippet blocks are supported in SFC templates
 @components.CodeBlock("...", "go", "x.go")
 <@Card title="x">...</@Card>`, "svelte", "template-features.gospa")
 				<ul class="space-y-2 text-[var(--text-secondary)] mt-4">
 					<li><code>&#64;click</code> and <code>on-click</code> are rejected. Use <code>on:click</code>.</li>
 					<li><code>on:&lt;event&gt;</code> lowers to <code>data-gospa-on=\"event:handler\"</code>.</li>
+					<li>Use named handler functions for <code>on:&lt;event&gt;</code> so runtime delegation can resolve handlers.</li>
+					<li>Current handler map generation derives names from transformed Go-script functions.</li>
 					<li>Unknown directives fail with diagnostics.</li>
 				</ul>
 			</div>

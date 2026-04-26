@@ -20,8 +20,8 @@ The `<template>` block is parsed into a GoSPA template AST and compiled into Tem
 
 ```svelte
 <ul>
-  {#each items as item, index}
-    <li>{index + 1}: {item.Name}</li>
+  {#each items as item}
+    <li>{item.Name}</li>
   {/each}
 </ul>
 ```
@@ -48,14 +48,18 @@ The `<template>` block is parsed into a GoSPA template AST and compiled into Tem
 
 ## Event Handlers
 
-Bind user interactions using `on:<event>`:
+Bind user interactions using `on:<event>` and a named handler function:
 
 ```svelte
+<script lang="go">
+  func handleClick() {}
+</script>
+
 <button on:click={handleClick}>Click Me</button>
-<input on:input={func(e *gospa.Event) { value = e.Value }} />
 ```
 
 `on:<event>` is lowered to `data-gospa-on="event:handler"` in generated output.
+Use function identifiers as handlers. Inline function literals are not part of the current delegated handler contract.
 
 ## Expressions
 

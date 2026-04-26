@@ -15,10 +15,11 @@ hydrate: true
 <script lang="go">
   // Go logic for server-side state and hydration
   var count = $state(0)
+  func increment() { count++ }
 </script>
 
 <template>
-  <button on:click={func() { count++ }}>
+  <button on:click={increment}>
     Count is {count}
   </button>
 </template>
