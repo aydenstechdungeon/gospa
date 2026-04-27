@@ -103,8 +103,8 @@ async function handleGreet() {
 		templ_7745c5c3_Err = components.CodeBlock(`// Using the global GoSPA object (no import needed)
 async function handleSignup() {
     const result = await GoSPA.remote('createUser', {
-        username: 'ayden',
-        email: 'ayden@example.com'
+        username: 'foo',
+        email: 'foo@bar.com'
     });
     
     if (result.error) {
@@ -116,7 +116,7 @@ async function handleSignup() {
 
 // Using the typed remoteAction helper
 const createUser = GoSPA.remoteAction('createUser');
-const result = await createUser({ username: 'ayden', email: 'ayden@example.com' });`, "javascript", " signup.js").Render(ctx, templ_7745c5c3_Buffer)
+const result = await createUser({ username: 'foo', email: 'foo@bar.com' });`, "javascript", " signup.js").Render(ctx, templ_7745c5c3_Buffer)
 		if templ_7745c5c3_Err != nil {
 			return templ_7745c5c3_Err
 		}
@@ -128,8 +128,8 @@ const result = await createUser({ username: 'ayden', email: 'ayden@example.com' 
 
 async function handleSignup() {
     const result = await remote('createUser', {
-        username: 'ayden',
-        email: 'ayden@example.com'
+        username: 'foo',
+        email: 'foo@bar.com'
     });
     
     if (result.error) {
@@ -140,7 +140,7 @@ async function handleSignup() {
 }
 
 const createUser = remoteAction<{ username: string; email: string }, { id: string }>('createUser');
-const result = await createUser({ username: 'ayden', email: 'ayden@example.com' });`, "typescript", " signup.ts").Render(ctx, templ_7745c5c3_Buffer)
+const result = await createUser({ username: 'foo', email: 'foo@bar.com' });`, "typescript", " signup.ts").Render(ctx, templ_7745c5c3_Buffer)
 		if templ_7745c5c3_Err != nil {
 			return templ_7745c5c3_Err
 		}

@@ -10,113 +10,100 @@ type PageProps struct {
 
 templ Page() {
 {{
-var title = "GoSPA Documentation"
-	println("Hello from Go!")
+var title = "GoSPA SFC"
 var _ = title
 }}
 
 {{ if r := state.FromContext(ctx); r != nil { pMap := map[string]interface{}{}; r.Register("routesdocsgospasfcpage", pMap, nil) } }}
 	<div data-gospa-island="routesdocsgospasfcpage" class="" data-gospa-mode="immediate">
 		<div class="space-y-12">
-		<header>
-			<h1 class="text-4xl font-bold tracking-tight mb-4 text-transparent bg-clip-text bg-gradient-to-r from-[var(--accent-primary)] to-[var(--accent-secondary)]">[Alpha] { title }</h1>
-			<p class="text-xl text-[var(--text-secondary)] leading-relaxed">
-				[Alpha] The ultimate way to build modern Go web applications. Combine logic, templates, and styles in a single, powerful <code>.gospa</code> file.
+		<header class="space-y-3">
+			<p class="mono text-xs tracking-[0.18em] uppercase text-[var(--text-muted)]">Documentation</p>
+			<h1 class="text-4xl font-bold tracking-tight">{ title }</h1>
+			<p class="text-lg text-[var(--text-secondary)] max-w-3xl">
+				Single-file components for GoSPA: one file for logic, template, and scoped styles with deterministic generation.
 			</p>
 		</header>
 
-		<section class="space-y-8">
-			<div class="grid md:grid-cols-2 gap-6">
-				<a href="/docs/gospasfc/getting-started" class="group p-6 rounded-2xl bg-[var(--bg-secondary)] border border-[var(--border)] hover:border-[var(--accent-primary)]/50 transition-all">
-					<h3 class="text-xl font-bold mb-2 group-hover:text-[var(--accent-primary)] transition-colors">🚀 Getting Started</h3>
-					<p class="text-[var(--text-secondary)] text-sm mb-4">Learn the basics of the .gospa format, component types, and the development workflow.</p>
-					<span class="text-[var(--accent-primary)] text-sm font-bold flex items-center gap-1">Read more <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12h14"></path><path d="m12 5 7 7-7 7"></path></svg></span>
+		<section class="space-y-6">
+			<h2 class="text-xl font-bold border-b border-[var(--border)] pb-2">Guides</h2>
+			<nav class="border-y border-[var(--border)] divide-y divide-[var(--border)]">
+				<a href="/docs/gospasfc/getting-started" class="group flex items-start justify-between gap-6 px-4 py-4 hover:bg-[var(--bg-secondary)] transition-colors">
+					<div>
+						<p class="font-semibold">Getting Started</p>
+						<p class="text-sm text-[var(--text-secondary)]">.gospa file format, route modules, and build workflow.</p>
+					</div>
+					<span class="mono text-xs text-[var(--text-muted)] group-hover:text-[var(--accent-primary)]">01</span>
 				</a>
-
-				<a href="/docs/gospasfc/reactivity" class="group p-6 rounded-2xl bg-[var(--bg-secondary)] border border-[var(--border)] hover:border-[var(--accent-primary)]/50 transition-all">
-					<h3 class="text-xl font-bold mb-2 group-hover:text-[var(--accent-primary)] transition-colors">⚡ Runes & Reactivity</h3>
-					<p class="text-[var(--text-secondary)] text-sm mb-4">Deep dive into $state, $derived, and $effect runes for unified reactive logic.</p>
-					<span class="text-[var(--accent-primary)] text-sm font-bold flex items-center gap-1">Read more <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12h14"></path><path d="m12 5 7 7-7 7"></path></svg></span>
+				<a href="/docs/gospasfc/reactivity" class="group flex items-start justify-between gap-6 px-4 py-4 hover:bg-[var(--bg-secondary)] transition-colors">
+					<div>
+						<p class="font-semibold">Runes and Reactivity</p>
+						<p class="text-sm text-[var(--text-secondary)]">$state, $derived, and $effect behavior.</p>
+					</div>
+					<span class="mono text-xs text-[var(--text-muted)] group-hover:text-[var(--accent-primary)]">02</span>
 				</a>
-
-				<a href="/docs/gospasfc/templates" class="group p-6 rounded-2xl bg-[var(--bg-secondary)] border border-[var(--border)] hover:border-[var(--accent-primary)]/50 transition-all">
-					<h3 class="text-xl font-bold mb-2 group-hover:text-[var(--accent-primary)] transition-colors">📄 Template Syntax</h3>
-					<p class="text-[var(--text-secondary)] text-sm mb-4">Master the Templ-based template system with reactive event bindings.</p>
-					<span class="text-[var(--accent-primary)] text-sm font-bold flex items-center gap-1">Read more <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12h14"></path><path d="m12 5 7 7-7 7"></path></svg></span>
+				<a href="/docs/gospasfc/templates" class="group flex items-start justify-between gap-6 px-4 py-4 hover:bg-[var(--bg-secondary)] transition-colors">
+					<div>
+						<p class="font-semibold">Template Syntax</p>
+						<p class="text-sm text-[var(--text-secondary)]">Control flow, bindings, and directives.</p>
+					</div>
+					<span class="mono text-xs text-[var(--text-muted)] group-hover:text-[var(--accent-primary)]">03</span>
 				</a>
-
-				<a href="/docs/gospasfc/styles" class="group p-6 rounded-2xl bg-[var(--bg-secondary)] border border-[var(--border)] hover:border-[var(--accent-primary)]/50 transition-all">
-					<h3 class="text-xl font-bold mb-2 group-hover:text-[var(--accent-primary)] transition-colors">🎨 Scoped CSS</h3>
-					<p class="text-[var(--text-secondary)] text-sm mb-4">How GoSPA handles style isolation and integration with utility frameworks like Tailwind.</p>
-					<span class="text-[var(--accent-primary)] text-sm font-bold flex items-center gap-1">Read more <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12h14"></path><path d="m12 5 7 7-7 7"></path></svg></span>
+				<a href="/docs/gospasfc/styles" class="group flex items-start justify-between gap-6 px-4 py-4 hover:bg-[var(--bg-secondary)] transition-colors">
+					<div>
+						<p class="font-semibold">Scoped CSS</p>
+						<p class="text-sm text-[var(--text-secondary)]">Scoped style behavior and Tailwind usage.</p>
+					</div>
+					<span class="mono text-xs text-[var(--text-muted)] group-hover:text-[var(--accent-primary)]">04</span>
 				</a>
-
-				<a href="/docs/gospasfc/typescript" class="group p-6 rounded-2xl bg-[var(--bg-secondary)] border border-[var(--border)] hover:border-[var(--accent-primary)]/50 transition-all">
-					<h3 class="text-xl font-bold mb-2 group-hover:text-[var(--accent-primary)] transition-colors">📘 TypeScript Integration</h3>
-					<p class="text-[var(--text-secondary)] text-sm mb-4">Bridge Go and TypeScript seamlessly with unified reactive primitives and event handlers.</p>
-					<span class="text-[var(--accent-primary)] text-sm font-bold flex items-center gap-1">Read more <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12h14"></path><path d="m12 5 7 7-7 7"></path></svg></span>
+				<a href="/docs/gospasfc/typescript" class="group flex items-start justify-between gap-6 px-4 py-4 hover:bg-[var(--bg-secondary)] transition-colors">
+					<div>
+						<p class="font-semibold">TypeScript Integration</p>
+						<p class="text-sm text-[var(--text-secondary)]">Generated runtime glue and explicit TS blocks.</p>
+					</div>
+					<span class="mono text-xs text-[var(--text-muted)] group-hover:text-[var(--accent-primary)]">05</span>
 				</a>
-
-				<a href="/docs/gospasfc/advanced" class="group p-6 rounded-2xl bg-[var(--bg-secondary)] border border-[var(--border)] hover:border-[var(--accent-primary)]/50 transition-all">
-					<h3 class="text-xl font-bold mb-2 group-hover:text-[var(--accent-primary)] transition-colors">⚙️ Advanced Usage</h3>
-					<p class="text-[var(--text-secondary)] text-sm mb-4">Deep dive into the compiler pipeline, custom generation, and generated file structure.</p>
-					<span class="text-[var(--accent-primary)] text-sm font-bold flex items-center gap-1">Read more <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12h14"></path><path d="m12 5 7 7-7 7"></path></svg></span>
+				<a href="/docs/gospasfc/advanced" class="group flex items-start justify-between gap-6 px-4 py-4 hover:bg-[var(--bg-secondary)] transition-colors">
+					<div>
+						<p class="font-semibold">Advanced Usage</p>
+						<p class="text-sm text-[var(--text-secondary)]">Compiler pipeline, generated artifacts, migration notes.</p>
+					</div>
+					<span class="mono text-xs text-[var(--text-muted)] group-hover:text-[var(--accent-primary)]">06</span>
 				</a>
-
-				<a href="/docs/gospasfc/examples" class="group p-6 rounded-2xl bg-[var(--bg-secondary)] border border-[var(--border)] hover:border-[var(--accent-primary)]/50 transition-all">
-					<h3 class="text-xl font-bold mb-2 group-hover:text-[var(--accent-primary)] transition-colors">💡 Examples & Recipes</h3>
-					<p class="text-[var(--text-secondary)] text-sm mb-4">Practical UI patterns and real-world recipes built with GoSPA SFC.</p>
-					<span class="text-[var(--accent-primary)] text-sm font-bold flex items-center gap-1">Read more <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12h14"></path><path d="m12 5 7 7-7 7"></path></svg></span>
+				<a href="/docs/gospasfc/examples" class="group flex items-start justify-between gap-6 px-4 py-4 hover:bg-[var(--bg-secondary)] transition-colors">
+					<div>
+						<p class="font-semibold">Examples and Recipes</p>
+						<p class="text-sm text-[var(--text-secondary)]">Practical SFC patterns and route action flows.</p>
+					</div>
+					<span class="mono text-xs text-[var(--text-muted)] group-hover:text-[var(--accent-primary)]">07</span>
 				</a>
+				<a href="/docs/gospasfc/api-reference" class="group flex items-start justify-between gap-6 px-4 py-4 hover:bg-[var(--bg-secondary)] transition-colors">
+					<div>
+						<p class="font-semibold">API Reference</p>
+						<p class="text-sm text-[var(--text-secondary)]">Code-verified export contracts and helper APIs.</p>
+					</div>
+					<span class="mono text-xs text-[var(--text-muted)] group-hover:text-[var(--accent-primary)]">08</span>
+				</a>
+				<a href="/docs/gospasfc/system-reference" class="group flex items-start justify-between gap-6 px-4 py-4 hover:bg-[var(--bg-secondary)] transition-colors">
+					<div>
+						<p class="font-semibold">System Reference</p>
+						<p class="text-sm text-[var(--text-secondary)]">Parser, compiler, route generation, and runtime flow.</p>
+					</div>
+					<span class="mono text-xs text-[var(--text-muted)] group-hover:text-[var(--accent-primary)]">09</span>
+				</a>
+			</nav>
+		</section>
 
-					<a href="/docs/gospasfc/api-reference" class="group p-6 rounded-2xl bg-[var(--bg-secondary)] border border-[var(--border)] hover:border-[var(--accent-primary)]/50 transition-all">
-						<h3 class="text-xl font-bold mb-2 group-hover:text-[var(--accent-primary)] transition-colors">📚 API Reference</h3>
-						<p class="text-[var(--text-secondary)] text-sm mb-4">Exact SFC API contracts validated against compiler, router, and runtime implementation.</p>
-						<span class="text-[var(--accent-primary)] text-sm font-bold flex items-center gap-1">Read more <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12h14"></path><path d="m12 5 7 7-7 7"></path></svg></span>
-					</a>
-					<a href="/docs/gospasfc/system-reference" class="group p-6 rounded-2xl bg-[var(--bg-secondary)] border border-[var(--border)] hover:border-[var(--accent-primary)]/50 transition-all">
-						<h3 class="text-xl font-bold mb-2 group-hover:text-[var(--accent-primary)] transition-colors">🧭 System Reference</h3>
-						<p class="text-[var(--text-secondary)] text-sm mb-4">Full implementation-level contract: parser grammar, compiler pipeline, route generation, and action runtime behavior.</p>
-						<span class="text-[var(--accent-primary)] text-sm font-bold flex items-center gap-1">Read more <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12h14"></path><path d="m12 5 7 7-7 7"></path></svg></span>
-					</a>
-				</div>
-
-			<div class="mt-12 p-8 rounded-3xl bg-gradient-to-br from-[var(--bg-secondary)] via-[var(--surface)] to-[var(--bg-secondary)] border border-[var(--border)] relative overflow-hidden">
-				<div class="absolute top-0 right-0 w-64 h-64 bg-[var(--accent-primary)]/5 blur-3xl rounded-full -mr-32 -mt-32"></div>
-				<h2 class="text-2xl font-bold mb-4 relative z-10">Why Gospa SFC?</h2>
-				<p class="text-[var(--text-secondary)] mb-6 relative z-10">
-					Traditional Go web development often feels fragmented. You have Go files for logic, Templ files for templates, and separate CSS/JS files. Gospa SFC bridges this gap by providing a cohesive, Svelte-inspired experience that compiles to high-performance Go code.
-				</p>
-				<ul class="space-y-4 relative z-10">
-					<li class="flex items-start gap-3">
-						<div class="w-6 h-6 rounded-full bg-cyan-500/10 flex items-center justify-center text-cyan-500 flex-shrink-0 mt-1">
-							<svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"></polyline></svg>
-						</div>
-						<div>
-							<span class="font-bold text-[var(--text-primary)]">Zero-Config Hydration</span>
-							<p class="text-sm text-[var(--text-secondary)]">Mark a component as an <code>island</code> and the compiler handles the rest.</p>
-						</div>
-					</li>
-					<li class="flex items-start gap-3">
-						<div class="w-6 h-6 rounded-full bg-cyan-500/10 flex items-center justify-center text-cyan-500 flex-shrink-0 mt-1">
-							<svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"></polyline></svg>
-						</div>
-						<div>
-							<span class="font-bold text-[var(--text-primary)]">Type Safety</span>
-							<p class="text-sm text-[var(--text-secondary)]">Enjoy full Go type safety in your templates and logic blocks.</p>
-						</div>
-					</li>
-					<li class="flex items-start gap-3">
-						<div class="w-6 h-6 rounded-full bg-cyan-500/10 flex items-center justify-center text-cyan-500 flex-shrink-0 mt-1">
-							<svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"></polyline></svg>
-						</div>
-						<div>
-							<span class="font-bold text-[var(--text-primary)]">Performance First</span>
-							<p class="text-sm text-[var(--text-secondary)]">Direct compilation to Templ means minimal overhead and maximum speed.</p>
-						</div>
-					</li>
-				</ul>
-			</div>
+		<section class="space-y-4 border-l-2 border-[var(--border)] pl-5">
+			<h2 class="text-xl font-bold">Why SFC in GoSPA</h2>
+			<p class="text-[var(--text-secondary)]">
+				SFC keeps page behavior together: load/action exports, reactive state, template markup, and scoped CSS live in one place.
+			</p>
+			<ul class="space-y-2 text-[var(--text-secondary)]">
+				<li>Zero-config island hydration for interactive sections.</li>
+				<li>Strong typing across Go and generated templ code.</li>
+				<li>Predictable build outputs for review and debugging.</li>
+			</ul>
 		</section>
 	</div>
 	</div>

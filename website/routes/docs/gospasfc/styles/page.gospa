@@ -7,23 +7,19 @@ import "github.com/aydenstechdungeon/gospa/website/components"
 
 <template>
 	<div class="space-y-12">
-		<header>
-			<div class="flex items-center gap-2 mb-4">
-				<span class="px-2 py-1 rounded bg-[var(--accent-primary)]/10 text-[var(--accent-primary)] text-xs font-bold uppercase tracking-wider">Features</span>
-				<span class="text-[var(--text-muted)] text-sm">/</span>
-				<span class="text-[var(--text-muted)] text-sm font-medium">Gospa SFC</span>
-			</div>
-			<h1 class="text-4xl font-bold tracking-tight mb-4 text-transparent bg-clip-text bg-gradient-to-r from-[var(--accent-primary)] to-[var(--accent-secondary)]">Scoped CSS</h1>
-			<p class="text-xl text-[var(--text-secondary)] leading-relaxed">
-				Keep your visual styles organized and isolated without the fear of global leakage.
+		<header class="space-y-3">
+			<p class="mono text-xs tracking-[0.18em] uppercase text-[var(--text-muted)]">GoSPA SFC</p>
+			<h1 class="text-4xl font-bold tracking-tight">Scoped CSS</h1>
+			<p class="text-lg text-[var(--text-secondary)] max-w-3xl">
+				Keep component styles local, predictable, and easy to reason about.
 			</p>
 		</header>
 
-		<section class="space-y-8">
-			<div>
-				<h2 class="text-2xl font-bold mb-4 border-b border-[var(--border)] pb-2 italic mono">The &lt;style&gt; Block</h2>
-				<p class="text-[var(--text-secondary)] mb-6">
-					Styles defined within a <code>.gospa</code> file are automatically scoped to that file by default. A unique hash is generated and appended to your selectors during the build process.
+		<section class="space-y-10">
+			<div class="space-y-4">
+				<h2 class="text-2xl font-bold border-b border-[var(--border)] pb-2">Style Block</h2>
+				<p class="text-[var(--text-secondary)]">
+					Selectors in an SFC <code>&lt;style&gt;</code> block are scoped automatically using generated hashes.
 				</p>
 				@components.CodeBlock(`<style>
   .btn {
@@ -38,11 +34,9 @@ import "github.com/aydenstechdungeon/gospa/website/components"
 </template>`, "svelte", "Button.gospa")
 			</div>
 
-			<div>
-				<h2 class="text-2xl font-bold mb-4 border-b border-[var(--border)] pb-2 italic mono">Global Styles</h2>
-				<p class="text-[var(--text-secondary)] mb-6">
-					Use app-level shared stylesheets for global selectors. SFC <code>&lt;style&gt;</code> blocks are component-scoped by default.
-				</p>
+			<div class="space-y-4">
+				<h2 class="text-2xl font-bold border-b border-[var(--border)] pb-2">Global Styles</h2>
+				<p class="text-[var(--text-secondary)]">Keep global selectors in shared app stylesheets.</p>
 				@components.CodeBlock(`/* styles/main.css */
 body {
   margin: 0;
@@ -54,15 +48,15 @@ body {
 }`, "css", "main.css")
 			</div>
 
-			<div>
-				<h2 class="text-2xl font-bold mb-4 border-b border-[var(--border)] pb-2 italic mono">Integration with Utility Frameworks</h2>
-				<p class="text-[var(--text-secondary)] mb-6">
-					GoSPA works perfectly with **Tailwind CSS**. You can use Tailwind's utility classes directly within your templates alongside scoped styles for specific custom design elements.
+			<div class="space-y-4">
+				<h2 class="text-2xl font-bold border-b border-[var(--border)] pb-2">Tailwind Usage</h2>
+				<p class="text-[var(--text-secondary)]">
+					Use utility classes directly in templates, and reserve scoped CSS for custom component internals.
 				</p>
 				@components.CodeBlock(`<template>
-  <div class="flex items-center gap-4 p-4 rounded bg-stone-100">
+  <div class="flex items-center gap-4 p-4 border border-[var(--border)]">
     <div class="user-avatar" />
-    <span class="font-bold">Ayden</span>
+    <span class="font-bold">Foo</span>
   </div>
 </template>
 
@@ -76,15 +70,9 @@ body {
 </style>`, "svelte", "TailwindIntegration.gospa")
 			</div>
 
-			<div class="flex justify-between items-center pt-8">
-				<a href="/docs/gospasfc/templates" class="flex flex-col items-start gap-1 p-4 rounded-xl border border-[var(--border)] hover:bg-[var(--bg-secondary)] transition-all">
-					<span class="text-xs text-[var(--text-muted)] font-bold uppercase tracking-widest">Previous</span>
-					<span class="font-bold text-[var(--accent-primary)]">Template Syntax</span>
-				</a>
-				<a href="/docs/gospasfc/advanced" class="flex flex-col items-end gap-1 p-4 rounded-xl border border-[var(--border)] hover:bg-[var(--bg-secondary)] transition-all">
-					<span class="text-xs text-[var(--text-muted)] font-bold uppercase tracking-widest">Next</span>
-					<span class="font-bold text-[var(--accent-primary)]">Advanced Usage</span>
-				</a>
+			<div class="flex justify-between items-center pt-8 border-t border-[var(--border)] text-sm">
+				<a href="/docs/gospasfc/templates" class="text-[var(--text-secondary)] hover:text-[var(--accent-primary)] transition-colors">← Template Syntax</a>
+				<a href="/docs/gospasfc/advanced" class="text-[var(--text-secondary)] hover:text-[var(--accent-primary)] transition-colors">Advanced Usage →</a>
 			</div>
 		</section>
 	</div>

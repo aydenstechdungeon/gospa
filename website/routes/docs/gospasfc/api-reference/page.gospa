@@ -7,38 +7,34 @@ import "github.com/aydenstechdungeon/gospa/website/components"
 
 <template>
 	<div class="space-y-12">
-			<header>
-			<div class="flex items-center gap-2 mb-4">
-				<span class="px-2 py-1 rounded bg-[var(--accent-primary)]/10 text-[var(--accent-primary)] text-xs font-bold uppercase tracking-wider">Features</span>
-				<span class="text-[var(--text-muted)] text-sm">/</span>
-				<span class="text-[var(--text-muted)] text-sm font-medium">Gospa SFC</span>
-			</div>
-			<h1 class="text-4xl font-bold tracking-tight mb-4 text-transparent bg-clip-text bg-gradient-to-r from-[var(--accent-primary)] to-[var(--accent-secondary)]">API Reference</h1>
-				<p class="text-xl text-[var(--text-secondary)] leading-relaxed">
-					Code-verified contracts for SFC module exports, action responses, and <code>@gospa/client</code> helper APIs.
-				</p>
-				<p class="text-sm text-[var(--text-muted)] mt-3">
-					Need the full parser/compiler/runtime contract? See <a href="/docs/gospasfc/system-reference" class="text-[var(--accent-primary)] font-semibold hover:underline">SFC System Reference</a>.
-				</p>
-			</header>
+		<header class="space-y-3">
+			<p class="mono text-xs tracking-[0.18em] uppercase text-[var(--text-muted)]">GoSPA SFC</p>
+			<h1 class="text-4xl font-bold tracking-tight">API Reference</h1>
+			<p class="text-lg text-[var(--text-secondary)] max-w-3xl">
+				Code-verified contracts for module exports, action responses, and client helper behavior.
+			</p>
+			<p class="text-sm text-[var(--text-muted)]">
+				Need parser/compiler/runtime contracts? <a href="/docs/gospasfc/system-reference" class="text-[var(--accent-primary)] hover:underline">See system reference</a>.
+			</p>
+		</header>
 
-		<section class="space-y-8">
-			<div class="rounded-xl border border-[var(--border)] bg-[var(--bg-secondary)] p-6">
-				<h2 class="text-2xl font-bold mb-4">Module Exports</h2>
+		<section class="space-y-10">
+			<div class="space-y-4">
+				<h2 class="text-2xl font-bold border-b border-[var(--border)] pb-2">Module Exports</h2>
 				@components.CodeBlock(`func Load(c routing.LoadContext) (map[string]interface{}, error)
 func Load(c routing.LoadContext) (map[string]any, error)
 
 func ActionDefault(c routing.LoadContext) (interface{}, error)
 func ActionSave(c routing.LoadContext) (any, error)`, "go", "module-exports.go")
-				<ul class="space-y-2 text-[var(--text-secondary)] mt-4">
+				<ul class="space-y-2 text-[var(--text-secondary)]">
 					<li>Use exactly one <code>&lt;script context="module" lang="go"&gt;</code> block.</li>
 					<li>Module functions must be top-level (methods are rejected).</li>
 					<li><code>Action&lt;Name&gt;</code> suffix must start uppercase.</li>
 				</ul>
 			</div>
 
-			<div class="rounded-xl border border-[var(--border)] bg-[var(--bg-secondary)] p-6">
-				<h2 class="text-2xl font-bold mb-4">LoadContext API</h2>
+			<div class="space-y-4">
+				<h2 class="text-2xl font-bold border-b border-[var(--border)] pb-2">LoadContext API</h2>
 				@components.CodeBlock(`Param(key string) string
 Params() map[string]string
 Query(key string, defaultValue ...string) string
@@ -54,30 +50,27 @@ Path() string
 Local(key string) interface{}`, "go", "load-context.go")
 			</div>
 
-				<div class="rounded-xl border border-[var(--border)] bg-[var(--bg-secondary)] p-6">
-					<h2 class="text-2xl font-bold mb-4">Action Envelope</h2>
-					@components.CodeBlock("type ActionResponse struct {\n  Data           interface{}\n  Code           string\n  Error          string\n  Redirect       *ActionRedirect\n  Validation     *ActionValidationError\n  Revalidate     []string\n  RevalidateTags []string\n  RevalidateKeys []string\n}", "go", "action-response.go")
-				<p class="text-[var(--text-secondary)] mt-4">
-					Enhanced requests (<code>X-Gospa-Enhance: 1</code>) return JSON; <code>kit.Redirect</code> becomes <code>code=REDIRECT</code>, and <code>kit.Fail</code> becomes <code>code=FAIL</code> with HTTP status.
+			<div class="space-y-4">
+				<h2 class="text-2xl font-bold border-b border-[var(--border)] pb-2">Action Envelope</h2>
+				@components.CodeBlock("type ActionResponse struct {\n  Data           interface{}\n  Code           string\n  Error          string\n  Redirect       *ActionRedirect\n  Validation     *ActionValidationError\n  Revalidate     []string\n  RevalidateTags []string\n  RevalidateKeys []string\n}", "go", "action-response.go")
+				<p class="text-[var(--text-secondary)]">
+					Enhanced requests (<code>X-Gospa-Enhance: 1</code>) return JSON. <code>kit.Redirect</code> becomes <code>code=REDIRECT</code>; <code>kit.Fail</code> becomes <code>code=FAIL</code> with HTTP status.
 				</p>
 			</div>
 
-			<div class="rounded-xl border border-[var(--border)] bg-[var(--bg-secondary)] p-6">
-				<h2 class="text-2xl font-bold mb-4">Client Helper Behavior</h2>
+			<div class="space-y-4">
+				<h2 class="text-2xl font-bold border-b border-[var(--border)] pb-2">Client Helper Behavior</h2>
 				<ul class="space-y-2 text-[var(--text-secondary)]">
-					<li><code>enhanceForm</code> serializes GET form data into query params and aborts stale concurrent submits.</li>
-					<li><code>callRouteAction(path, action, ...)</code> appends <code>_action</code> and sends progressive-enhancement headers.</li>
+					<li><code>enhanceForm</code> serializes GET forms into query params and aborts stale submits.</li>
+					<li><code>callRouteAction(path, action, ...)</code> appends <code>_action</code> and sends enhancement headers.</li>
 					<li><code>loadRouteData(path)</code> fetches <code>?__data=1</code> and throws on non-OK responses.</li>
-					<li><code>on:&lt;event&gt;</code> handlers resolve through generated island handler maps (currently derived from transformed Go-script function names).</li>
-					<li><code>preloadData</code>, <code>preloadCode</code>, <code>goto</code>, <code>beforeNavigate</code>, <code>afterNavigate</code>, and <code>invalidateAll</code> are exported from route helpers.</li>
+					<li><code>on:&lt;event&gt;</code> handlers resolve through generated island handler maps.</li>
+					<li><code>preloadData</code>, <code>preloadCode</code>, <code>goto</code>, <code>beforeNavigate</code>, <code>afterNavigate</code>, and <code>invalidateAll</code> are exported route helpers.</li>
 				</ul>
 			</div>
 
-			<div id="m1-helper-apis-stable" class="rounded-xl border border-[var(--border)] bg-[var(--bg-secondary)] p-6">
-				<h2 class="text-2xl font-bold mb-4">M1 Helper APIs (Stable)</h2>
-				<p class="text-[var(--text-secondary)] mb-4">
-					These helpers are implemented and supported for SvelteKit-style parity flows.
-				</p>
+			<div class="space-y-4">
+				<h2 class="text-2xl font-bold border-b border-[var(--border)] pb-2">M1 Helper APIs (Stable)</h2>
 				@components.CodeBlock(`// routing/kit
 func Depends(keys ...string)
 func Untrack(fn func() error) error
@@ -90,33 +83,27 @@ function prefetchOnHover(
   selector: string,
   options?: { delay?: number; preloadCode?: boolean; preloadData?: boolean }
 ): () => void`, "go", "m1-helpers.txt")
-				<ul class="space-y-2 text-[var(--text-secondary)] mt-4">
-					<li><code>kit.Depends</code> keys are indexed as both cache tags and keys with <code>dep:&lt;key&gt;</code>.</li>
+				<ul class="space-y-2 text-[var(--text-secondary)]">
+					<li><code>kit.Depends</code> keys are indexed as cache tags and keys with <code>dep:&lt;key&gt;</code>.</li>
 					<li><code>kit.Parent[T]</code> reads only immediate parent layout load data.</li>
-					<li><code>kit.Error</code> is transported for data/enhanced requests and maps to SSR status rendering.</li>
+					<li><code>kit.Error</code> maps to transport/SSR status semantics.</li>
 				</ul>
 			</div>
 
-			<div id="deterministic-coverage-references" class="rounded-xl border border-[var(--border)] bg-[var(--bg-secondary)] p-6">
-				<h2 class="text-2xl font-bold mb-4">Deterministic Coverage References</h2>
-				<ul class="space-y-2 text-[var(--text-secondary)] mt-4">
+			<div class="space-y-4">
+				<h2 class="text-2xl font-bold border-b border-[var(--border)] pb-2">Deterministic Coverage References</h2>
+				<ul class="space-y-2 text-[var(--text-secondary)]">
 					<li><code>kit.Depends</code>, <code>kit.Untrack</code>, <code>kit.Parent[T]</code>: <code>render_load_helpers_test.go</code></li>
 					<li><code>kit.Error</code>: <code>render_load_helpers_test.go</code>, <code>gospa_form_action_test.go</code></li>
 					<li><code>refresh</code>, <code>prefetchOnHover</code>: <code>client/src/route-helpers.test.ts</code></li>
-					<li>dependency invalidation indexing: <code>render_invalidate_test.go</code></li>
+					<li>Dependency invalidation indexing: <code>render_invalidate_test.go</code></li>
 				</ul>
 			</div>
 
-				<div class="flex justify-between items-center pt-8">
-					<a href="/docs/gospasfc/examples" class="flex flex-col items-start gap-1 p-4 rounded-xl border border-[var(--border)] hover:bg-[var(--bg-secondary)] transition-all">
-						<span class="text-xs text-[var(--text-muted)] font-bold uppercase tracking-widest">Previous</span>
-						<span class="font-bold text-[var(--accent-primary)]">Examples & Guides</span>
-					</a>
-					<a href="/docs/gospasfc/system-reference" class="flex flex-col items-end gap-1 p-4 rounded-xl border border-[var(--border)] hover:bg-[var(--bg-secondary)] transition-all">
-						<span class="text-xs text-[var(--text-muted)] font-bold uppercase tracking-widest">Next</span>
-						<span class="font-bold text-[var(--accent-primary)]">System Reference</span>
-					</a>
-				</div>
+			<div class="flex justify-between items-center pt-8 border-t border-[var(--border)] text-sm">
+				<a href="/docs/gospasfc/examples" class="text-[var(--text-secondary)] hover:text-[var(--accent-primary)] transition-colors">← Examples and Guides</a>
+				<a href="/docs/gospasfc/system-reference" class="text-[var(--text-secondary)] hover:text-[var(--accent-primary)] transition-colors">System Reference →</a>
+			</div>
 		</section>
 	</div>
 </template>

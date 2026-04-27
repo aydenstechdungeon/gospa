@@ -12,23 +12,19 @@ templ Page() {
 
 	<div data-gospa-page="routesdocsgospasfcgettingstartedpage" class="">
 		<div class="space-y-12">
-		<header>
-			<div class="flex items-center gap-2 mb-4">
-				<span class="px-2 py-1 rounded bg-[var(--accent-primary)]/10 text-[var(--accent-primary)] text-xs font-bold uppercase tracking-wider">Features</span>
-				<span class="text-[var(--text-muted)] text-sm">/</span>
-				<span class="text-[var(--text-muted)] text-sm font-medium">[Alpha] Gospa SFC</span>
-			</div>
-			<h1 class="text-4xl font-bold tracking-tight mb-4 text-transparent bg-clip-text bg-gradient-to-r from-[var(--accent-primary)] to-[var(--accent-secondary)]">Getting Started with SFC</h1>
-			<p class="text-xl text-[var(--text-secondary)] leading-relaxed">
-				[Alpha] Everything you need to know about building reactive components using the .gospa format.
+		<header class="space-y-3">
+			<p class="mono text-xs tracking-[0.18em] uppercase text-[var(--text-muted)]">GoSPA SFC</p>
+			<h1 class="text-4xl font-bold tracking-tight">Getting Started</h1>
+			<p class="text-lg text-[var(--text-secondary)] max-w-3xl">
+				Build reactive components with `.gospa` files and let the compiler generate templ and runtime glue.
 			</p>
 		</header>
 
-		<section class="space-y-8">
-			<div>
-				<h2 class="text-2xl font-bold mb-4 border-b border-[var(--border)] pb-2 italic mono">The SFC Format</h2>
-				<p class="text-[var(--text-secondary)] mb-6">
-					A <code class="bg-[var(--surface)] px-1 rounded">.gospa</code> file is a single unit of UI that combines server-side Go logic, reactive templates, and scoped styling.
+		<section class="space-y-10">
+			<div class="space-y-4">
+				<h2 class="text-2xl font-bold border-b border-[var(--border)] pb-2">The SFC Format</h2>
+				<p class="text-[var(--text-secondary)]">
+					A <code class="bg-[var(--surface)] px-1 rounded-xs">.gospa</code> file combines Go logic, reactive template markup, and scoped styles.
 				</p>
 				@components.CodeBlock(`---
 type: island
@@ -41,21 +37,21 @@ hydrate: true
 </script>
 
 <template>
-  <div class="card">
+  <section class="profile">
     <h1>Hello, {name}!</h1>
     <button on:click={setAda}>Use Demo Name</button>
-  </div>
+  </section>
 </template>
 
 <style>
-  .card { padding: 2rem; border-radius: 1rem; border: 1px solid var(--border); }
+  .profile { padding: 2rem; border: 1px solid var(--border); }
   h1 { color: var(--accent-primary); }
 </style>`, "svelte", "Greeting.gospa")
 			</div>
 
-			<div>
-				<h2 class="text-2xl font-bold mb-4 border-b border-[var(--border)] pb-2 italic mono">Route Server Module</h2>
-				<p class="text-[var(--text-secondary)] mb-6">
+			<div class="space-y-4">
+				<h2 class="text-2xl font-bold border-b border-[var(--border)] pb-2">Route Server Module</h2>
+				<p class="text-[var(--text-secondary)]">
 					For route files like <code>+page.gospa</code> and <code>+layout.gospa</code>, define server exports in <code>&lt;script context="module" lang="go"&gt;</code>.
 				</p>
 				@components.CodeBlock(`<script context="module" lang="go">
@@ -76,59 +72,45 @@ func ActionDelete(c routing.LoadContext) (interface{}, error) {
   return nil, kit.Redirect(303, "/users")
 }
 </script>`, "svelte", "server-module.gospa")
-				<p class="text-sm text-[var(--text-secondary)] mt-4">
-					Signatures are strict. <code>Load</code> must return <code>(map[string]interface{  }, error)</code>; actions return <code>(interface{  }, error)</code>.
+				<p class="text-sm text-[var(--text-secondary)]">
+					Signatures are strict. <code>Load</code> returns <code>(map[string]interface{  }, error)</code>; actions return <code>(interface{  }, error)</code>.
 				</p>
 			</div>
 
-			<div>
-				<h2 class="text-2xl font-bold mb-4 border-b border-[var(--border)] pb-2 italic mono">Basic Workflow</h2>
-				<div class="grid md:grid-cols-3 gap-6">
-					<div class="p-6 rounded-2xl bg-[var(--bg-secondary)] border border-[var(--border)]">
-						<div class="w-10 h-10 rounded-full bg-cyan-500/10 flex items-center justify-center text-cyan-500 mb-4 font-bold">1</div>
-						<h3 class="font-bold mb-2">Create File</h3>
-						<p class="text-sm text-[var(--text-secondary)]">Add a <code>.gospa</code> file to your project's <code>routes/</code> or <code>components/</code> directory.</p>
-					</div>
-					<div class="p-6 rounded-2xl bg-[var(--bg-secondary)] border border-[var(--border)]">
-						<div class="w-10 h-10 rounded-full bg-purple-500/10 flex items-center justify-center text-purple-500 mb-4 font-bold">2</div>
-						<h3 class="font-bold mb-2">Define Type</h3>
-						<p class="text-sm text-[var(--text-secondary)]">Use frontmatter to specify if it's a <code>page</code>, <code>island</code>, or <code>layout</code>.</p>
-					</div>
-					<div class="p-6 rounded-2xl bg-[var(--bg-secondary)] border border-[var(--border)]">
-						<div class="w-10 h-10 rounded-full bg-orange-500/10 flex items-center justify-center text-orange-500 mb-4 font-bold">3</div>
-						<h3 class="font-bold mb-2">Auto-Compile</h3>
-						<p class="text-sm text-[var(--text-secondary)]">The GoSPA compiler watches for changes and generates <code>.templ</code> and <code>.ts</code> files automatically.</p>
-					</div>
-				</div>
+			<div class="space-y-4">
+				<h2 class="text-2xl font-bold border-b border-[var(--border)] pb-2">Basic Workflow</h2>
+				<ol class="border-y border-[var(--border)] divide-y divide-[var(--border)]">
+					<li class="px-4 py-4">
+						<p class="font-semibold">1. Create file</p>
+						<p class="text-sm text-[var(--text-secondary)]">Add a <code>.gospa</code> file in <code>routes/</code> or <code>components/</code>.</p>
+					</li>
+					<li class="px-4 py-4">
+						<p class="font-semibold">2. Set type</p>
+						<p class="text-sm text-[var(--text-secondary)]">Use frontmatter to mark it as <code>page</code>, <code>island</code>, or <code>layout</code>.</p>
+					</li>
+					<li class="px-4 py-4">
+						<p class="font-semibold">3. Generate outputs</p>
+						<p class="text-sm text-[var(--text-secondary)]">Compiler emits matching <code>.templ</code> and optional <code>.ts</code> files.</p>
+					</li>
+				</ol>
 			</div>
 
-			<div class="rounded-xl bg-gradient-to-br from-[var(--bg-secondary)] to-[var(--surface)] border border-[var(--border)] p-8">
-				<h2 class="text-2xl font-bold mb-4 flex items-center gap-3">
-					<svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="text-[var(--accent-primary)]"><path d="m18 16 4-4-4-4"></path><path d="m6 8-4 4 4 4"></path><path d="m14.5 4-5 16"></path></svg>
-					CLI Generation
-				</h2>
-				<p class="text-[var(--text-secondary)] mb-6">
-					You can generate new SFC components using the CLI to ensure consistency and speed up development.
-				</p>
+			<div class="space-y-4 border-l-2 border-[var(--border)] pl-5">
+				<h2 class="text-2xl font-bold">CLI Generation</h2>
+				<p class="text-[var(--text-secondary)]">Generate SFC stubs from CLI when you want consistent project structure.</p>
 				@components.CodeBlock(`gospa generate component MyComponent --island`, "bash", "cli")
 			</div>
 
-			<div class="rounded-xl border border-[var(--border)] bg-[var(--bg-secondary)] p-6">
-				<h3 class="text-lg font-bold mb-2">Conflict Rule</h3>
-				<p class="text-[var(--text-secondary)] text-sm">
-					If a route has module exports in <code>+page.gospa</code>/<code>+layout.gospa</code> and also includes <code>+page.server.go</code>/<code>+layout.server.go</code>, generation fails. Keep one source of truth per route.
+			<div class="space-y-2 border-l-2 border-[var(--border)] pl-5">
+				<h3 class="text-lg font-bold">Conflict Rule</h3>
+				<p class="text-sm text-[var(--text-secondary)]">
+					If a route exports server handlers in <code>+page.gospa</code>/<code>+layout.gospa</code> and also has <code>+page.server.go</code>/<code>+layout.server.go</code>, generation fails. Keep one source of truth.
 				</p>
 			</div>
 
-			<div class="flex justify-between items-center pt-8">
-				<a href="/docs/gospasfc" class="flex flex-col items-start gap-1 p-4 rounded-xl border border-[var(--border)] hover:bg-[var(--bg-secondary)] transition-all">
-					<span class="text-xs text-[var(--text-muted)] font-bold uppercase tracking-widest">Previous</span>
-					<span class="font-bold text-[var(--accent-primary)]">Overview</span>
-				</a>
-				<a href="/docs/gospasfc/reactivity" class="flex flex-col items-end gap-1 p-4 rounded-xl border border-[var(--border)] hover:bg-[var(--bg-secondary)] transition-all">
-					<span class="text-xs text-[var(--text-muted)] font-bold uppercase tracking-widest">Next</span>
-					<span class="font-bold text-[var(--accent-primary)]">Runes & Reactivity</span>
-				</a>
+			<div class="flex justify-between items-center pt-8 border-t border-[var(--border)] text-sm">
+				<a href="/docs/gospasfc" class="text-[var(--text-secondary)] hover:text-[var(--accent-primary)] transition-colors">← Overview</a>
+				<a href="/docs/gospasfc/reactivity" class="text-[var(--text-secondary)] hover:text-[var(--accent-primary)] transition-colors">Runes and Reactivity →</a>
 			</div>
 		</section>
 	</div>
