@@ -86,8 +86,7 @@ templ RootLayout(title string, children templ.Component, runtimePath string, pat
 			<meta name="robots" content="index, follow" />
 			<meta name="language" content="English" />
 			
-			<!-- Preload critical assets & Preconnect -->
-			<link rel="preconnect" href="/" crossorigin />
+			<!-- Preload critical assets -->
 			<link rel="preload" href="/static/fonts/InterVariable-subset.woff2" as="font" type="font/woff2" crossorigin="anonymous" fetchpriority="high" />
 
 			<!-- Compiled Tailwind CSS with Critical CSS extraction -->
@@ -107,24 +106,7 @@ templ RootLayout(title string, children templ.Component, runtimePath string, pat
 				}
 			}
 			<script src="/static/js/islands.js" type="module" nonce={ gospatempl.GetNonce(ctx) }></script>
-			<script src={ runtimePath } type="module" nonce={ gospatempl.GetNonce(ctx) }></script>
-			<script type="module" nonce={ gospatempl.GetNonce(ctx) }>
-				requestIdleCallback(() => {
-					const b = document.body.dataset;
-					import(b.gospaRuntimePath).then(m => {
-						m.init({
-							wsUrl: b.gospaWsUrl,
-							serializationFormat: b.gospaSerializationFormat,
-							debug: b.gospaDebug === "true",
-							hydration: {
-								mode: b.gospaHydrationMode,
-								timeout: parseInt(b.gospaHydrationTimeout, 10)
-							}
-						});
-					});
-				}, { timeout: 2000 });
-			</script>
-			<script src="/static/docs.js" async nonce={ gospatempl.GetNonce(ctx) }></script>
+			<script src="/static/docs.js" defer nonce={ gospatempl.GetNonce(ctx) }></script>
 
 			<!-- Canonical URL -->
 			<link rel="canonical" href={ siteURL + path } />
@@ -157,7 +139,9 @@ templ RootLayout(title string, children templ.Component, runtimePath string, pat
 			<meta name="google-site-verification" content="Dn6cwasiI8rWfkU4SLKLrJwfSp8rh4QsZcsA4PSgmkw" />
 			<meta name="keywords" content="Go, Golang, SPA, Single Page Application, SSR, Server-Side Rendering, Reactive, Svelte-like, Framework, Web Development" />
 
-			<link rel="alternate" type="application/ld+json" href="/static/structured-data.json" />
+			<script type="application/ld+json" nonce={ gospatempl.GetNonce(ctx) }>
+				@templ.Raw(`{"@context":"https://schema.org","@type":"SoftwareApplication","name":"` + siteName + `","url":` + jsonQuote(siteURL+path) + `,"description":` + jsonQuote(getPageDescription(path)) + `,"applicationCategory":"DeveloperApplication","offers":{"@type":"Offer","price":"0","priceCurrency":"USD"}}`)
+			</script>
 		</head>
 		<body
 			class="min-h-screen flex flex-col font-sans selection:bg-cyan-500/30"

@@ -85,7 +85,7 @@ helper.Progress(clientID, 75, "Uploading...")`, " go", " handlers.go").Render(ct
 		if templ_7745c5c3_Err != nil {
 			return templ_7745c5c3_Err
 		}
-		templ_7745c5c3_Err = components.CodeBlock(`import { connectSSE } from '@gospa/client';
+		templ_7745c5c3_Err = components.CodeBlock(`import { connectSSE } from '/_gospa/runtime.js';
 
 const sse = connectSSE('notifications', {
   url: '/_sse/connect',
@@ -139,7 +139,7 @@ sse.connect();`, "typescript", " connection.ts").Render(ctx, templ_7745c5c3_Buff
 		if templ_7745c5c3_Err != nil {
 			return templ_7745c5c3_Err
 		}
-		templ_7745c5c3_Err = components.CodeBlock(`import { getSSEManager } from '@gospa/client';
+		templ_7745c5c3_Err = components.CodeBlock(`import { getSSEManager } from '/_gospa/runtime.js';
 
 const manager = getSSEManager();
 manager.setDefaultConfig({ autoReconnect: true });

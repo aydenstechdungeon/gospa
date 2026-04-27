@@ -60,7 +60,7 @@ hub.SendTo("client-123", []byte(" direct_message"))`, " go", " main.go").Render(
 		if templ_7745c5c3_Err != nil {
 			return templ_7745c5c3_Err
 		}
-		templ_7745c5c3_Err = components.CodeBlock(`import { syncedRune, getWSClient } from '@gospa/client';
+		templ_7745c5c3_Err = components.CodeBlock(`import { syncedRune, getWSClient } from '/_gospa/runtime.js';
 
 const ws = getWSClient();
 const count = syncedRune('count', 0, ws);

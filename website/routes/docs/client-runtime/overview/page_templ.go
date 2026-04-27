@@ -31,7 +31,7 @@ func Page() templ.Component {
 			templ_7745c5c3_Var1 = templ.NopComponent
 		}
 		ctx = templ.ClearChildren(ctx)
-		templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 1, "<div class=\"space-y-12\"><header><h1 class=\"text-4xl font-bold tracking-tight mb-4\">Runtime Overview</h1><p class=\"text-xl text-[var(--text-secondary)]\">Complete reference for initializing and configuring the GoSPA client-side runtime.</p></header><section class=\"space-y-6\"><h2 class=\"text-2xl font-bold\">Installation</h2><p class=\"text-[var(--text-secondary)]\">The runtime is automatically injected into your pages by the GoSPA server. No manual installation required for the default runtime. For ES modules, install the client package:</p>")
+		templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 1, "<div class=\"space-y-12\"><header><h1 class=\"text-4xl font-bold tracking-tight mb-4\">Runtime Overview</h1><p class=\"text-xl text-[var(--text-secondary)]\">Complete reference for initializing and configuring the GoSPA client-side runtime.</p></header><section class=\"space-y-6\"><h2 class=\"text-2xl font-bold\">Installation</h2><p class=\"text-[var(--text-secondary)]\">The runtime is automatically injected into your pages by the GoSPA server. No manual installation is required for the default runtime, and there is no standalone npm runtime package. For ES modules, import directly from the server-served runtime module:</p>")
 		if templ_7745c5c3_Err != nil {
 			return templ_7745c5c3_Err
 		}
@@ -44,10 +44,10 @@ func Page() templ.Component {
   console.log(count.get());
 </script>`,
 			`# TypeScript / ES Modules (Bun-first)
-bun add @gospa/client
+# Runtime is built into GoSPA and served at /_gospa/runtime.js
 
-# Import from the client package
-import { Rune, Effect, navigate } from '@gospa/client';`,
+# Import from the runtime module path
+import { Rune, Effect, navigate } from '/_gospa/runtime.js';`,
 			"setup").Render(ctx, templ_7745c5c3_Buffer)
 		if templ_7745c5c3_Err != nil {
 			return templ_7745c5c3_Err
@@ -79,7 +79,7 @@ const unsubscribe = count.subscribe((value, oldValue) => {
 // Cleanup
 unsubscribe();`,
 			`// TypeScript — ES module imports
-import { Rune, rune } from '@gospa/client';
+import { Rune, rune } from '/_gospa/runtime.js';
 
 // Create
 const count = new Rune(0);
@@ -122,7 +122,7 @@ console.log(doubled.get()); // 10
 count.set(10);
 console.log(doubled.get()); // 20 — automatically updated`,
 			`// TypeScript
-import { Rune, Derived, derived } from '@gospa/client';
+import { Rune, Derived, derived } from '/_gospa/runtime.js';
 
 const count = new Rune(5);
 const doubled = new Derived(() => count.get() * 2);
@@ -165,7 +165,7 @@ myEffect.pause();   // Stop reacting
 myEffect.resume();  // Resume reacting
 myEffect.dispose(); // Permanently cleanup`,
 			`// TypeScript
-import { Effect, effect } from '@gospa/client';
+import { Effect, effect } from '/_gospa/runtime.js';
 
 const count = new Rune(0);
 
@@ -191,7 +191,7 @@ myEffect.dispose(); // Permanently cleanup`,
 		if templ_7745c5c3_Err != nil {
 			return templ_7745c5c3_Err
 		}
-		templ_7745c5c3_Err = components.CodeBlock(`import { StateMap } from '@gospa/client';
+		templ_7745c5c3_Err = components.CodeBlock(`import { StateMap } from '/_gospa/runtime.js';
 
 const states = new StateMap();
 
@@ -250,7 +250,7 @@ userResource.reset();`, "typescript", " resource.ts").Render(ctx, templ_7745c5c3
 		if templ_7745c5c3_Err != nil {
 			return templ_7745c5c3_Err
 		}
-		templ_7745c5c3_Err = components.CodeBlock(`import { batch, untrack, watch, inspect } from '@gospa/client';
+		templ_7745c5c3_Err = components.CodeBlock(`import { batch, untrack, watch, inspect } from '/_gospa/runtime.js';
 
 // Batch multiple updates
 batch(() => {
@@ -280,7 +280,7 @@ inspect(count).with((type, value) => {
 		if templ_7745c5c3_Err != nil {
 			return templ_7745c5c3_Err
 		}
-		templ_7745c5c3_Err = components.CodeBlock(`import { init } from '@gospa/client';
+		templ_7745c5c3_Err = components.CodeBlock(`import { init } from '/_gospa/runtime.js';
 
 init({
   wsUrl: 'ws://localhost:3000/ws',

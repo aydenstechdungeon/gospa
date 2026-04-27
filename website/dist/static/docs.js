@@ -9,6 +9,7 @@
     let appInitialized = false;
     let langObserverInitialized = false;
     let langSyncScheduled = false;
+    let disposeScrollSpy = null;
     const DEFAULT_LANG = 'js';
     let preferredLangRune = null;
 
@@ -61,13 +62,14 @@
         if (tocContainer) tocContainer.classList.remove('hidden');
 
         headings.forEach(heading => {
-            const id = heading.id || heading.innerText.toLowerCase().replace(/\s+/g, '-');
+            const headingText = heading.textContent || '';
+            const id = heading.id || headingText.toLowerCase().replace(/\s+/g, '-');
             heading.id = id;
 
             const li = document.createElement('li');
             const a = document.createElement('a');
             a.href = `#${id}`;
-            a.innerText = heading.innerText;
+            a.textContent = headingText;
             a.className = 'hover:text-[var(--accent-primary)] transition-colors block py-1';
 
             if (heading.tagName === 'H3') {
@@ -83,20 +85,32 @@
     }
 
     function initScrollSpy() {
+        if (disposeScrollSpy) {
+            disposeScrollSpy();
+            disposeScrollSpy = null;
+        }
+
         const headings = Array.from(document.querySelectorAll('.prose h2, .prose h3'));
         const tocLinks = Array.from(document.querySelectorAll('#toc a'));
+        if (headings.length === 0 || tocLinks.length === 0) return;
 
-        // Remove existing scroll listener if any
-        window.removeEventListener('scroll', handleScroll);
-        window.addEventListener('scroll', handleScroll);
+        let headingOffsets = [];
+        let rafId = 0;
 
-        function handleScroll() {
+        const recalcOffsets = () => {
+            headingOffsets = headings.map((heading) => ({
+                id: heading.id,
+                top: heading.getBoundingClientRect().top + window.scrollY
+            }));
+        };
+
+        const handleScroll = () => {
             let activeId = null;
             const scrollPos = window.scrollY + 100;
 
-            headings.forEach(heading => {
-                if (scrollPos >= heading.offsetTop) {
-                    activeId = heading.id;
+            headingOffsets.forEach((entry) => {
+                if (scrollPos >= entry.top) {
+                    activeId = entry.id;
                 }
             });
 
@@ -106,7 +120,26 @@
                     link.classList.add('text-[var(--accent-primary)]', 'font-bold');
                 }
             });
-        }
+        };
+
+        const onScroll = () => {
+            if (rafId) return;
+            rafId = requestAnimationFrame(() => {
+                rafId = 0;
+                handleScroll();
+            });
+        };
+
+        recalcOffsets();
+        handleScroll();
+        window.addEventListener('scroll', onScroll, { passive: true });
+        window.addEventListener('resize', recalcOffsets);
+
+        disposeScrollSpy = () => {
+            if (rafId) cancelAnimationFrame(rafId);
+            window.removeEventListener('scroll', onScroll);
+            window.removeEventListener('resize', recalcOffsets);
+        };
     }
 
     // Save sidebar scroll position
@@ -227,15 +260,11 @@
                 }
             };
 
-            // Add listener for future load
             preloadLink.addEventListener('load', activate, { once: true });
 
-            // If already loaded (e.g. from cache) or if we're run late, activate now.
-            // Accessing .sheet is a reliable same-origin signal that the stylesheet is ready.
             if (preloadLink.sheet) {
                 activate();
             } else if (window.performance && window.performance.getEntriesByName) {
-                // Check performance timeline to see if it already finished.
                 if (window.performance.getEntriesByName(preloadLink.href).length > 0) {
                     activate();
                 }
@@ -243,7 +272,6 @@
                 activate();
             }
 
-            // Safety net for engines that fetch the sheet but never dispatch load on the link.
             window.setTimeout(activate, 3000);
         });
     }
@@ -417,7 +445,11 @@
         initRuntime();
         initGlobalActions();
         initAsyncCSS();
-        updateToC();
+        if ('requestIdleCallback' in window) {
+            requestIdleCallback(updateToC, { timeout: 1200 });
+        } else {
+            setTimeout(updateToC, 0);
+        }
     }
 
     // Run regardless of whether this async script executes before or after window load.
