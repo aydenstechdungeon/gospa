@@ -7,7 +7,7 @@ GoSPA's client-side runtime is a high-performance, modular system that handles r
 The GoSPA runtime is usually initialized automatically when a client lands on a GoSPA page.
 
 ```typescript
-import GoSPA from "@gospa/client";
+import * as GoSPA from "/_gospa/runtime.js";
 
 GoSPA.init({
     wsUrl: "/_gospa/ws",
@@ -34,7 +34,7 @@ Hydration is the process of attaching reactive logic to server-rendered HTML. Go
 For large applications, you can also manually trigger hydration:
 
 ```typescript
-import { hydrateIsland } from "@gospa/client";
+import { hydrateIsland } from "/_gospa/runtime.js";
 
 // Hydrate a specific island by ID or Name
 await hydrateIsland("shopping-cart");

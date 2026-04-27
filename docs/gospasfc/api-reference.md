@@ -4,9 +4,9 @@ This page documents the SFC API contracts as implemented in code (`compiler/modu
 
 For a complete parser/compiler/runtime walkthrough, see [SFC System Reference](system-reference.md).
 
-Client package reference:
+Client runtime module reference:
 
-- npm package name: `@gospa/client`
+- Runtime module path: `/_gospa/runtime.js`
 
 ## SFC file contract (`.gospa`)
 
@@ -212,7 +212,7 @@ func Error(status int, body interface{}) error
 - `kit.Parent[T]` reads only the nearest parent layout load payload.
 - `kit.Error` is serialized for `?__data=1` and enhanced actions, and mapped to SSR status rendering.
 
-### Client helpers (`@gospa/client`)
+### Client helpers (`/_gospa/runtime.js`)
 
 ```ts
 // Reload current route data in place.

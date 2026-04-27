@@ -9,7 +9,7 @@ A `Rune` is the base atom of reactivity. It holds a single value and tracks its 
 
 **TypeScript:**
 ```typescript
-import { $state } from "@gospa/client";
+import { $state } from "/_gospa/runtime.js";
 
 const count = $state(0);
 console.log(count.get()); // 0

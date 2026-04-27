@@ -539,7 +539,7 @@ app := gospa.New(gospa.Config{
 If you change this, ensure the client knows:
 
 ```javascript
-import { configureRemote } from '@gospa/client';
+import { configureRemote } from '/_gospa/runtime.js';
 
 configureRemote({ prefix: '/api/rpc' });
 ```
@@ -746,7 +746,7 @@ app.Use(fiber.WebSocketMiddleware())
 #### 3. Check Client Configuration
 
 ```javascript
-import { initWebSocket } from '@gospa/runtime';
+import { initWebSocket } from '/_gospa/runtime.js';
 
 const ws = initWebSocket({
     url: 'ws://localhost:3000/_gospa/ws',
@@ -888,7 +888,7 @@ Calling `connect()` multiple times throws an error or logs a warning.
 Check connection state before connecting:
 
 ```javascript
-import { getWebSocket } from '@gospa/runtime';
+import { getWebSocket } from '/_gospa/runtime.js';
 
 const ws = getWebSocket();
 
@@ -1587,11 +1587,11 @@ app := gospa.New(gospa.Config{
 
 ```javascript
 // BAD - Silent failures
-import { initHMR } from '@gospa/runtime';
+import { initHMR } from '/_gospa/runtime.js';
 initHMR();
 
 // GOOD - Handle errors
-import { initHMR } from '@gospa/runtime';
+import { initHMR } from '/_gospa/runtime.js';
 initHMR({
     onError: (error) => {
         console.error('[HMR] Error:', error);
@@ -1640,7 +1640,7 @@ Check browser Network tab for 404 errors on island module requests.
 
 ```javascript
 // Ensure islands are initialized
-import { initIslands } from '@gospa/runtime';
+import { initIslands } from '/_gospa/runtime.js';
 
 // Auto-initialization with data-gospa-auto on <html>
 // Or manual:
@@ -1745,7 +1745,7 @@ export default {
 Or use GoSPA's built-in protection:
 
 ```javascript
-import { hydrateIsland } from '@gospa/runtime';
+import { hydrateIsland } from '/_gospa/runtime.js';
 
 // This is idempotent - only hydrates once
 await hydrateIsland('counter');
@@ -1776,7 +1776,7 @@ await hydrateIsland('Counter');      // By island name
 Ensure island exists before calling:
 
 ```javascript
-import { getIslandManager } from '@gospa/runtime';
+import { getIslandManager } from '/_gospa/runtime.js';
 
 const manager = getIslandManager();
 const island = manager.getIsland('my-counter');
@@ -1959,7 +1959,7 @@ export default {
 #### 3. Use Global State
 
 ```javascript
-import { getState } from '@gospa/runtime';
+import { getState } from '/_gospa/runtime.js';
 
 export default {
     hydrate(element, props, state) {
@@ -2078,7 +2078,7 @@ document.addEventListener('DOMContentLoaded', () => {
 });
 
 // GOOD - Wait for manager ready
-import { initIslands } from '@gospa/runtime';
+import { initIslands } from '/_gospa/runtime.js';
 
 const manager = initIslands();
 manager.ready().then(() => {
@@ -2142,7 +2142,7 @@ Client state updates don't propagate to the server.
 #### 1. Use Synced Rune
 
 ```javascript
-import { syncedRune, getWebSocket } from '@gospa/runtime';
+import { syncedRune, getWebSocket } from '/_gospa/runtime.js';
 
 const ws = getWebSocket();
 const count = syncedRune('count', 0, ws);
@@ -2154,7 +2154,7 @@ count.set(5);
 #### 2. Manual State Sync
 
 ```javascript
-import { getWebSocket } from '@gospa/runtime';
+import { getWebSocket } from '/_gospa/runtime.js';
 
 const ws = getWebSocket();
 
@@ -2345,7 +2345,7 @@ state.Batch(func() {
 #### 2. Optimistic Updates with Rollback
 
 ```javascript
-import { optimisticUpdate } from '@gospa/runtime';
+import { optimisticUpdate } from '/_gospa/runtime.js';
 
 // Apply immediately, rollback on error
 optimisticUpdate(count, 5, {
@@ -2436,7 +2436,7 @@ Component unmounts but subscriptions remain active.
 #### 1. Always Unsubscribe
 
 ```javascript
-import { getState } from '@gospa/runtime';
+import { getState } from '/_gospa/runtime.js';
 
 const count = getState('count');
 
@@ -2457,7 +2457,7 @@ function destroy() {
 #### 2. Use Effect for Auto-Cleanup
 
 ```javascript
-import { Effect } from '@gospa/runtime';
+import { Effect } from '/_gospa/runtime.js';
 
 const effect = new Effect(() => {
     console.log('Count:', count.get());

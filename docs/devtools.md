@@ -23,7 +23,7 @@ GoSPA's HMR system is carefully designed to preserve your reactive runes. When a
 The client-side runtime includes a performance monitoring utility to track hydration time, state update latency, and network performance.
 
 ```typescript
-import { measure } from "@gospa/client";
+import { measure } from "/_gospa/runtime.js";
 
 const result = await measure("heavyTask", async () => {
     // Perform complex logic...

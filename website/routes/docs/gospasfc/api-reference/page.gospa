@@ -77,7 +77,7 @@ func Untrack(fn func() error) error
 func Parent[T any](c routing.LoadContext) (T, error)
 func Error(status int, body interface{}) error
 
-// @gospa/client
+// /_gospa/runtime.js
 function refresh(init?: RequestInit): Promise<void>
 function prefetchOnHover(
   selector: string,

@@ -7,7 +7,7 @@ Real-time state synchronization between server and client.
 WebSocket client for real-time state synchronization with auto-reconnect and heartbeat support.
 
 ```typescript
-import { initWebSocket, getWebSocketClient } from '@gospa/client';
+import { initWebSocket, getWebSocketClient } from '/_gospa/runtime.js';
 
 // Initialize
 const ws = initWebSocket({
@@ -62,7 +62,7 @@ Event types:
 Create a rune that automatically syncs with the server.
 
 ```typescript
-import { syncedRune } from '@gospa/client';
+import { syncedRune } from '/_gospa/runtime.js';
 
 const count = syncedRune(0, {
   componentId: 'counter',

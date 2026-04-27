@@ -107,7 +107,7 @@ const createUser = GoSPA.remoteAction('createUser');
 const result = await createUser({ username: 'foo', email: 'foo@bar.com' });`, "javascript", " signup.js")
 
 			<h3 class="text-lg font-semibold mt-6 mb-3">TypeScript (with imports)</h3>
-			@components.CodeBlock(`import { remote, remoteAction } from '@gospa/client';
+			@components.CodeBlock(`import { remote, remoteAction } from '/_gospa/runtime.js';
 
 async function handleSignup() {
     const result = await remote('createUser', {

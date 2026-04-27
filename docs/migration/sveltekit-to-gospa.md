@@ -10,7 +10,7 @@ This guide maps common SvelteKit patterns to GoSPA equivalents.
 Client helper:
 
 ```ts
-import { loadRouteData } from "@gospa/client";
+import { loadRouteData } from "/_gospa/runtime.js";
 const data = await loadRouteData("/dashboard");
 ```
 
@@ -22,7 +22,7 @@ const data = await loadRouteData("/dashboard");
 Client helper:
 
 ```ts
-import { callRouteAction } from "@gospa/client";
+import { callRouteAction } from "/_gospa/runtime.js";
 const result = await callRouteAction("/posts", "publish", formData);
 ```
 
@@ -58,7 +58,7 @@ Helper markers: `kit.Parent`, `kit.Depends`, `kit.Untrack`
 ## Navigation lifecycle
 
 - SvelteKit: `beforeNavigate`, `afterNavigate`, `goto`, preloading APIs
-- GoSPA: same helper surface from `@gospa/client`:
+- GoSPA: same helper surface from GoSPA runtime module (`/_gospa/runtime.js`):
   - `beforeNavigate`, `afterNavigate`
   - `goto(path, options?)`
   - `preloadData(path)`, `preloadCode(path)`
@@ -103,6 +103,6 @@ Rules:
 
 1. Port `load` logic into `Load` function exports.
 2. Port `actions` into `ActionDefault` / `Action<Name>`.
-3. Replace client `goto`/preload calls with `@gospa/client` helpers.
+3. Replace client `goto`/preload calls with `/_gospa/runtime.js` helpers.
 4. Switch invalidation to path/tag/key helpers.
 5. Validate enhanced form behavior with `callRouteAction` and `enhanceForm`.

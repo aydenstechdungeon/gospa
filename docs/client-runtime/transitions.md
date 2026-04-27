@@ -19,7 +19,7 @@ GoSPA provides several built-in transition functions.
 Control the timing curve of transitions. Available: `linear`, `cubicOut`, `cubicInOut`, `elasticOut`, `bounceOut`, etc.
 
 ```typescript
-import { fly, cubicOut } from '@gospa/client';
+import { fly, cubicOut } from '/_gospa/runtime.js';
 
 fly(element, { 
   duration: 400, 
@@ -51,7 +51,7 @@ Use HTML attributes to declaratively apply transitions.
 Control transitions programmatically with JavaScript.
 
 ```typescript
-import { transitionIn, transitionOut, fade, fly } from '@gospa/client';
+import { transitionIn, transitionOut, fade, fly } from '/_gospa/runtime.js';
 
 // Enter transition
 transitionIn(element, fade, { duration: 300 });

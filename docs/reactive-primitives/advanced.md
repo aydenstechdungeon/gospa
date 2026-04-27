@@ -9,7 +9,7 @@ Advanced usage of the GoSPA reactive system.
 Batch multiple updates to minimize DOM reflows and WebSocket messages.
 
 ```typescript
-import { batch } from '@gospa/client';
+import { batch } from '/_gospa/runtime.js';
 
 batch(() => {
   count.set(1);
@@ -22,7 +22,7 @@ batch(() => {
 Execute logic without creating a reactive dependency.
 
 ```typescript
-import { untrack } from '@gospa/client';
+import { untrack } from '/_gospa/runtime.js';
 
 $effect(() => {
   const c = count.value; // Tracked

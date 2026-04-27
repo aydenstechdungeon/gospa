@@ -28,7 +28,7 @@ Bind runes to DOM elements manually for more complex scenarios.
 
 ```typescript
 // TypeScript
-import { bindElement, bindTwoWay, rune } from '@gospa/client';
+import { bindElement, bindTwoWay, rune } from '/_gospa/runtime.js';
 
 const element = document.getElementById('count');
 const textRune = rune('Hello');
@@ -47,7 +47,7 @@ bindTwoWay(inputElement, textRune);
 Creates a one-way binding from a rune to a DOM element.
 
 ```typescript
-import { bindElement, rune } from '@gospa/client';
+import { bindElement, rune } from '/_gospa/runtime.js';
 
 const count = rune(0);
 
@@ -74,7 +74,7 @@ bindElement(document.getElementById('item'), isActive, {
 Creates a two-way binding between an input element and a rune.
 
 ```typescript
-import { bindTwoWay, rune } from '@gospa/client';
+import { bindTwoWay, rune } from '/_gospa/runtime.js';
 
 const name = rune('');
 
@@ -91,7 +91,7 @@ bindTwoWay(input, name);
 Render elements conditionally based on rune state.
 
 ```typescript
-import { renderIf, rune } from '@gospa/client';
+import { renderIf, rune } from '/_gospa/runtime.js';
 
 const isLoggedIn = rune(false);
 
@@ -107,7 +107,7 @@ renderIf(document.getElementById('login-form'), isLoggedIn, { inverse: true });
 Render lists from reactive arrays with efficient DOM updates.
 
 ```typescript
-import { renderList, rune } from '@gospa/client';
+import { renderList, rune } from '/_gospa/runtime.js';
 
 interface Todo {
   id: number;
@@ -136,7 +136,7 @@ renderList(
 Configure HTML sanitization for safe innerHTML bindings.
 
 ```typescript
-import { setSanitizer, getSanitizer } from '@gospa/client';
+import { setSanitizer, getSanitizer } from '/_gospa/runtime.js';
 
 // Set custom sanitizer
 setSanitizer((html: string) => {
@@ -153,7 +153,7 @@ const sanitize = getSanitizer();
 Internal binding management for cleanup and debugging.
 
 ```typescript
-import { registerBinding, unregisterBinding } from '@gospa/client';
+import { registerBinding, unregisterBinding } from '/_gospa/runtime.js';
 
 // Register a custom binding
 const bindingId = registerBinding(element, rune, config);

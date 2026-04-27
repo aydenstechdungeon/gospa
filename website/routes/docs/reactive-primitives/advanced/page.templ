@@ -16,7 +16,7 @@ templ Page() {
 			<p class="text-[var(--text-secondary)]">
 				Async data fetching with loading/error states.
 			</p>
-			@components.CodeBlock(`import { resourceReactive } from '@gospa/client';
+			@components.CodeBlock(`import { resourceReactive } from '/_gospa/runtime.js';
 
 const userId = new Rune(1);
 
@@ -44,7 +44,7 @@ await userResource.refetch();`, "typescript", " resource.ts")
 			<p class="text-[var(--text-secondary)]">
 				Shallow reactive state - only top-level changes tracked.
 			</p>
-			@components.CodeBlock(`import { RuneRaw } from '@gospa/client';
+			@components.CodeBlock(`import { RuneRaw } from '/_gospa/runtime.js';
 
 // Shallow reactivity
 const person = new RuneRaw({ name: 'Zeno', nested: { age: 30 } });
@@ -61,7 +61,7 @@ person.value = { ...person.value, name: 'New Name' };`, "typescript", " runeraw.
 			<p class="text-[var(--text-secondary)]">
 				Effect that runs before DOM updates.
 			</p>
-			@components.CodeBlock(`import { PreEffect } from '@gospa/client';
+			@components.CodeBlock(`import { PreEffect } from '/_gospa/runtime.js';
 
 // Runs before DOM updates
 const preEffect = new PreEffect(() => {
@@ -76,7 +76,7 @@ const preEffect = new PreEffect(() => {
 			<p class="text-[var(--text-secondary)]">
 				Non-tracked effect scope with manual cleanup.
 			</p>
-			@components.CodeBlock(`import { EffectRoot } from '@gospa/client';
+			@components.CodeBlock(`import { EffectRoot } from '/_gospa/runtime.js';
 
 // Non-tracked scope
 const cleanup = EffectRoot(() => {
