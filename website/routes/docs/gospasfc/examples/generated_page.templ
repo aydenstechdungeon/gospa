@@ -12,28 +12,19 @@ templ Page() {
 
 	<div data-gospa-page="routesdocsgospasfcexamplespage" class="">
 		<div class="space-y-12">
-		<header>
-			<div class="flex items-center gap-2 mb-4">
-				<span class="px-2 py-1 rounded bg-[var(--accent-primary)]/10 text-[var(--accent-primary)] text-xs font-bold uppercase tracking-wider">Features</span>
-				<span class="text-[var(--text-muted)] text-sm">/</span>
-				<span class="text-[var(--text-muted)] text-sm font-medium">Gospa SFC</span>
-			</div>
-			<h1 class="text-4xl font-bold tracking-tight mb-4 text-transparent bg-clip-text bg-gradient-to-r from-[var(--accent-primary)] to-[var(--accent-secondary)]">How-to Guides & Examples</h1>
-			<p class="text-xl text-[var(--text-secondary)] leading-relaxed">
-				Practical recipes for building common UI patterns with Gospa SFC.
+		<header class="space-y-3">
+			<p class="mono text-xs tracking-[0.18em] uppercase text-[var(--text-muted)]">GoSPA SFC</p>
+			<h1 class="text-4xl font-bold tracking-tight">Examples and Guides</h1>
+			<p class="text-lg text-[var(--text-secondary)] max-w-3xl">
+				Reference patterns for state, actions, route modules, and client integrations.
 			</p>
 		</header>
 
-		<section class="space-y-12">
-			<div>
-				<h2 class="text-2xl font-bold mb-4 flex items-center gap-3">
-					<div class="w-8 h-8 rounded-lg bg-cyan-500/10 flex items-center justify-center text-cyan-500 text-sm">01</div>
-					Multi-Step Form
-				</h2>
-				<p class="text-[var(--text-secondary)] mb-6">
-					Manage complex form state using the <code>$state</code> rune and conditional rendering.
-				</p>
-@components.CodeBlock(`<script lang="go">
+		<section class="space-y-10">
+			<div class="space-y-4">
+				<h2 class="text-2xl font-bold border-b border-[var(--border)] pb-2">1. Multi-Step Form</h2>
+				<p class="text-[var(--text-secondary)]">Use <code>$state</code> with conditional sections for progression.</p>
+				@components.CodeBlock(`<script lang="go">
   var step = $state(1)
   var formData = $state(map[string]string{})
 
@@ -70,14 +61,9 @@ templ Page() {
 </template>`, "svelte", "MultiStepForm.gospa")
 			</div>
 
-			<div>
-				<h2 class="text-2xl font-bold mb-4 flex items-center gap-3">
-					<div class="w-8 h-8 rounded-lg bg-emerald-500/10 flex items-center justify-center text-emerald-500 text-sm">05</div>
-					Full Route: <code>+page.gospa</code> with Load + Named Actions
-				</h2>
-				<p class="text-[var(--text-secondary)] mb-6">
-					A complete SvelteKit-like route setup using module exports and <code>?_action=...</code> forms.
-				</p>
+			<div class="space-y-4">
+				<h2 class="text-2xl font-bold border-b border-[var(--border)] pb-2">2. Full Route with Load and Actions</h2>
+				<p class="text-[var(--text-secondary)]">SvelteKit-style route behavior with module exports and <code>?_action=...</code>.</p>
 				@components.CodeBlock(`---
 type: page
 package: posts
@@ -113,15 +99,10 @@ func ActionArchive(c routing.LoadContext) (interface{}, error) {
 </template>`, "svelte", "+page.gospa")
 			</div>
 
-			<div>
-				<h2 class="text-2xl font-bold mb-4 flex items-center gap-3">
-					<div class="w-8 h-8 rounded-lg bg-purple-500/10 flex items-center justify-center text-purple-500 text-sm">02</div>
-					Real-time Search Filter
-				</h2>
-				<p class="text-[var(--text-secondary)] mb-6">
-					Use <code>$derived</code> to automatically filter a list based on user input.
-				</p>
-@components.CodeBlock(`<script lang="go">
+			<div class="space-y-4">
+				<h2 class="text-2xl font-bold border-b border-[var(--border)] pb-2">3. Real-Time Search Filter</h2>
+				<p class="text-[var(--text-secondary)]">Use <code>$derived</code> to project filtered lists from input state.</p>
+				@components.CodeBlock(`<script lang="go">
   var query = $state("")
   var items = []string{"Apple", "Banana", "Cherry", "Date"}
   func setApple() { query = "apple" }
@@ -129,7 +110,7 @@ func ActionArchive(c routing.LoadContext) (interface{}, error) {
 
 <script lang="ts">
   import { $derived } from "@gospa/client"
-  
+
   const filtered = $derived(() => {
     const q = query.toLowerCase().trim()
     if (!q) return items
@@ -149,26 +130,20 @@ func ActionArchive(c routing.LoadContext) (interface{}, error) {
 </template>`, "svelte", "SearchFilter.gospa")
 			</div>
 
-			<div>
-				<h2 class="text-2xl font-bold mb-4 flex items-center gap-3">
-					<div class="w-8 h-8 rounded-lg bg-orange-500/10 flex items-center justify-center text-orange-500 text-sm">03</div>
-					Using JS Libraries (e.g. Chart.js)
-				</h2>
-				<p class="text-[var(--text-secondary)] mb-6">
-					Integrate external JavaScript libraries using the <code>$effect</code> rune to initialize them after the component hydrates.
-				</p>
+			<div class="space-y-4">
+				<h2 class="text-2xl font-bold border-b border-[var(--border)] pb-2">4. JS Library Integration</h2>
+				<p class="text-[var(--text-secondary)]">Initialize browser-only dependencies inside <code>$effect</code>.</p>
 				@components.CodeBlock(`<script lang="ts">
   import { $effect } from "@gospa/client"
-  
+
   const data = [10, 20, 30]
-  
+
   $effect(() => {
-    // Initialize Chart.js on client after hydration.
     const canvas = document.getElementById("myChart") as HTMLCanvasElement | null
     if (!canvas) return
     const ctx = canvas.getContext("2d")
     if (!ctx) return
-    
+
     new Chart(ctx, {
       type: "bar",
       data: {
@@ -185,23 +160,16 @@ func ActionArchive(c routing.LoadContext) (interface{}, error) {
 </template>`, "svelte", "Chart.gospa")
 			</div>
 
-			<div>
-				<h2 class="text-2xl font-bold mb-4 flex items-center gap-3">
-					<div class="w-8 h-8 rounded-lg bg-blue-500/10 flex items-center justify-center text-blue-500 text-sm">04</div>
-					Mixed Go + TypeScript Logic
-				</h2>
-				<p class="text-[var(--text-secondary)] mb-6">
-					Handle data on the server with Go and perform complex client-side calculations or DOM manipulations with TypeScript.
-				</p>
+			<div class="space-y-4">
+				<h2 class="text-2xl font-bold border-b border-[var(--border)] pb-2">5. Mixed Go and TypeScript</h2>
+				<p class="text-[var(--text-secondary)]">Use server state for data and TS state for live client behavior.</p>
 				@components.CodeBlock(`<script lang="go">
-  // Go state that hydrates from the server
   var serverData = $state("Initial Server Data")
 </script>
 
 <script lang="ts">
   import { $state, $derived } from "@gospa/client"
-  
-  // Client-only state
+
   const clientTime = $state(Date.now())
   const uptime = $derived(() => {
     return Math.floor((Date.now() - clientTime.get()) / 1000)
@@ -209,19 +177,16 @@ func ActionArchive(c routing.LoadContext) (interface{}, error) {
 </script>
 
 <template>
-  <div class="stats-panel">
+  <div>
     <p>Server-side: {serverData}</p>
     <p>Client Uptime: {uptime.get()} seconds</p>
   </div>
 </template>`, "svelte", "MixedLogic.gospa")
 			</div>
 
-			<div class="flex justify-between items-center pt-8">
-				<a href="/docs/gospasfc/typescript" class="flex flex-col items-start gap-1 p-4 rounded-xl border border-[var(--border)] hover:bg-[var(--bg-secondary)] transition-all">
-					<span class="text-xs text-[var(--text-muted)] font-bold uppercase tracking-widest">Previous</span>
-					<span class="font-bold text-[var(--accent-primary)]">TypeScript Integration</span>
-				</a>
-				<div class="w-1/2"></div>
+			<div class="flex justify-between items-center pt-8 border-t border-[var(--border)] text-sm">
+				<a href="/docs/gospasfc/typescript" class="text-[var(--text-secondary)] hover:text-[var(--accent-primary)] transition-colors">← TypeScript Integration</a>
+				<span class="text-[var(--text-muted)]">End of examples</span>
 			</div>
 		</section>
 	</div>
