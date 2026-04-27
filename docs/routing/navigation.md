@@ -43,7 +43,7 @@ Use `data-gospa-permanent` to preserve elements across navigations (e.g., video 
 ## Programmatic Navigation
 
 ```typescript
-import { navigate } from '@gospa/client';
+import { navigate } from '/_gospa/runtime.js';
 
 navigate('/new-path', { 
     replace: true,
@@ -56,7 +56,7 @@ navigate('/new-path', {
 ## Invalidation API
 
 ```typescript
-import { invalidate, invalidateTag, invalidateKey } from '@gospa/client';
+import { invalidate, invalidateTag, invalidateKey } from '/_gospa/runtime.js';
 
 await invalidate('/blog/hello-world');
 await invalidateTag('route:/blog/hello-world');

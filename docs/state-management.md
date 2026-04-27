@@ -23,7 +23,7 @@ app.StateMap.Get("is_online").Set(true)
 GoSPA automatically serializes and hydrates the initial state on the client.
 
 ```typescript
-import { getState, setState } from "@gospa/client";
+import { getState, setState } from "/_gospa/runtime.js";
 
 const name = getState("user_name");
 console.log(name); // "New User"

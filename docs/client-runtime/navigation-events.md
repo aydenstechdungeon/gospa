@@ -7,7 +7,7 @@ Managing SPA navigation and advanced event handling in the GoSPA client runtime.
 Programmatic navigation for SPA behavior.
 
 ```typescript
-import { navigate, back, forward, go } from '@gospa/client';
+import { navigate, back, forward, go } from '/_gospa/runtime.js';
 
 // Basic navigation
 await navigate('/about');
@@ -32,7 +32,7 @@ go(-2);              // Go back 2 pages
 Preload pages for instant navigation.
 
 ```typescript
-import { prefetch, prefetchLinks } from '@gospa/client';
+import { prefetch, prefetchLinks } from '/_gospa/runtime.js';
 
 // Prefetch a specific page
 prefetch('/blog/hello-world');
@@ -49,7 +49,7 @@ prefetchLinks('a[data-prefetch]');
 Explicitly invalidate client/server navigation caches.
 
 ```typescript
-import { invalidate, invalidateTag, invalidateKey } from '@gospa/client';
+import { invalidate, invalidateTag, invalidateKey } from '/_gospa/runtime.js';
 
 await invalidate('/dashboard');
 await invalidateTag('route:/dashboard');
@@ -61,7 +61,7 @@ await invalidateKey('path:/dashboard');
 Track and manage navigation state reactively.
 
 ```typescript
-import { createNavigationState } from '@gospa/client';
+import { createNavigationState } from '/_gospa/runtime.js';
 
 const nav = createNavigationState();
 
@@ -76,7 +76,7 @@ nav.historyLength;   // Number of history entries
 Register callbacks that run before or after navigation.
 
 ```typescript
-import { onBeforeNavigate, onAfterNavigate } from '@gospa/client';
+import { onBeforeNavigate, onAfterNavigate } from '/_gospa/runtime.js';
 
 // Before navigation (can cancel)
 const unsubBefore = onBeforeNavigate((path) => {
@@ -116,7 +116,7 @@ You can override these via `setNavigationOptions` or `window.__GOSPA_CONFIG__.na
 Advanced event handling with modifiers and delegation.
 
 ```typescript
-import { on, delegate, debounce, throttle } from '@gospa/client';
+import { on, delegate, debounce, throttle } from '/_gospa/runtime.js';
 
 // Event with modifiers
 on(form, 'submit:prevent', (e) => {
@@ -136,7 +136,7 @@ delegate(document.body, '.item', 'click', (e, target) => {
 Keyboard shortcuts and key combinations.
 
 ```typescript
-import { onKey, keys } from '@gospa/client';
+import { onKey, keys } from '/_gospa/runtime.js';
 
 // Single key
 onKey(document, 'Escape', () => closeModal());

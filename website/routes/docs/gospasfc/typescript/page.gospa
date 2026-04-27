@@ -63,7 +63,7 @@ export function hydrate(element: Element, props: Record<string, any>, state: any
 </script>
 
 <script lang="ts">
-  import { $effect } from "@gospa/client"
+  import { $effect } from "/_gospa/runtime.js"
 
   $effect(() => {
     console.log("Component hydrated on client")
@@ -82,7 +82,7 @@ export function hydrate(element: Element, props: Record<string, any>, state: any
 				<h2 class="text-2xl font-bold">Client-Only State</h2>
 				<p class="text-[var(--text-secondary)]">Some UI state can remain entirely client-side when it has no SSR dependency.</p>
 				@components.CodeBlock(`<script lang="ts">
-  import { $state, $effect } from "@gospa/client"
+  import { $state, $effect } from "/_gospa/runtime.js"
 
   const isMenuOpen = $state(false)
 

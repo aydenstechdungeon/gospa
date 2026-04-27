@@ -3,7 +3,7 @@
 ## Navigation
 
 ```typescript
-import { navigate } from '@gospa/client';
+import { navigate } from '/_gospa/runtime.js';
 
 await navigate('/dashboard', { replace: true, scroll: false });
 // Deprecated alias: { scrollToTop: false }
@@ -12,7 +12,7 @@ await navigate('/dashboard', { replace: true, scroll: false });
 ## Invalidation
 
 ```typescript
-import { invalidate, invalidateTag, invalidateKey } from '@gospa/client';
+import { invalidate, invalidateTag, invalidateKey } from '/_gospa/runtime.js';
 
 await invalidate('/dashboard');
 await invalidateTag('route:/dashboard');
@@ -22,7 +22,7 @@ await invalidateKey('path:/dashboard');
 ## Progressive Form Actions
 
 ```typescript
-import { enhanceForms } from '@gospa/client';
+import { enhanceForms } from '/_gospa/runtime.js';
 
 enhanceForms('form[data-gospa-enhance]', {
   onValidation(validation) {
@@ -51,7 +51,7 @@ import {
   invalidateAll,
   beforeNavigate,
   afterNavigate,
-} from '@gospa/client';
+} from '/_gospa/runtime.js';
 ```
 
 - `loadRouteData(path)` fetches `?__data=1` payloads.

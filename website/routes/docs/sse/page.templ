@@ -84,7 +84,7 @@ helper.Progress(clientID, 75, "Uploading...")`, " go", " handlers.go")
 			<div>
 				<h2 class="text-2xl font-bold mb-4 border-b border-[var(--border)] pb-2 italic mono">Client-Side (TypeScript)</h2>
 				<p class="text-[var(--text-secondary)] mb-4">The client runtime provides an SSEClient to consume events with automatic reconnection and heartbeat monitoring.</p>
-				@components.CodeBlock(`import { connectSSE } from '@gospa/client';
+				@components.CodeBlock(`import { connectSSE } from '/_gospa/runtime.js';
 
 const sse = connectSSE('notifications', {
   url: '/_sse/connect',
@@ -153,7 +153,7 @@ sse.connect();`, "typescript", " connection.ts")
 			<div>
 				<h2 class="text-2xl font-bold mb-4 border-b border-[var(--border)] pb-2 italic mono">SSEManager (Advanced)</h2>
 				<p class="text-[var(--text-secondary)] mb-4">For multiple SSE connections, use the getSSEManager() API:</p>
-				@components.CodeBlock(`import { getSSEManager } from '@gospa/client';
+				@components.CodeBlock(`import { getSSEManager } from '/_gospa/runtime.js';
 
 const manager = getSSEManager();
 manager.setDefaultConfig({ autoReconnect: true });

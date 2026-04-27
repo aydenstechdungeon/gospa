@@ -859,13 +859,15 @@ GoSPA natively patches this by setting `Content-Type: application/javascript` on
 ```svelte
 <script lang="go">
   var count = $state(0)
+  func increment() { count++ }
+  func decrement() { count-- }
 </script>
 
 <template>
   <div class="counter">
     <p>Count: {count}</p>
-    <button on:click={func() { count++ }}>+</button>
-    <button on:click={func() { count-- }}>-</button>
+    <button on:click={increment}>+</button>
+    <button on:click={decrement}>-</button>
   </div>
 </template>
 
@@ -879,14 +881,15 @@ GoSPA natively patches this by setting `Content-Type: application/javascript` on
 ```svelte
 <script lang="go">
   var email = $state("")
-  var error = $derived(len(email) < 5 && len(email) > 0)
+  var error = $state(false)
+  func validateEmail() { error = email == "" }
 </script>
 
 <template>
   <form>
-    <input type="email" data-model="email" />
+    <input type="email" data-model="email" on:input={validateEmail} />
     {#if error}
-      <span class="error">Email too short</span>
+      <span class="error">Email is required</span>
     {/if}
   </form>
 </template>
@@ -940,13 +943,18 @@ The compiler transforms Go logic into efficient TypeScript.
 - `int`, `float64` → `number`
 - `string` → `string`
 - `bool` → `boolean`
-- `map[string]any` → `Record<string, any>`
+- other Go types currently fall back to `any`
 
 ### Expression Translation
 
+Current compiler rewrites include:
+
 - `fmt.Printf(...)` → `console.log(...)`
-- `len(arr)` → `arr.length`
-- `append(arr, item)` → `[...arr, item]`
+- `fmt.Sprint(...)` / `fmt.Sprintf(...)` → `String(...)` (best-effort fallback)
+- `for _, item := range items` → `for (const item of items)`
+- `:=` → `=`
+
+The compiler does not currently implement full Go→TS semantic translation (for example, `len(...)` and `append(...)` are not special-cased).
 
 ## Security & Trust Boundary
 
@@ -1120,7 +1128,7 @@ package components
 
 templ Counter(initial int) {
   <div data-gospa-component="Counter" data-gospa-state={ templ.JSONString(map[string]interface{}{"count": initial}) }>
-    <button data-on:click="count++">Increment</button>
+    <button data-on="click:increment">Increment</button>
     <span data-bind="text:count">{ fmt.Sprint(initial) }</span>
   </div>
 }
@@ -1132,9 +1140,8 @@ GoSPA runtime attributes supported in templ include:
 
 - `data-bind="text:key"`
 - `data-bind="html:key"` (sanitized)
-- `data-bind="class:name:key"`
 - `data-model="key"`
-- `data-on:<event>` handlers with modifiers like `.prevent`, `.stop`, `.debounce.*`, `.throttle.*`
+- `data-on="event:action"` for navigation/runtime action dispatch
 
 In SFC templates, `on:<event>` is lowered to runtime delegation attributes during compile:
 
@@ -1149,6 +1156,10 @@ In SFC templates, `on:<event>` is lowered to runtime delegation attributes durin
 This page documents the SFC API contracts as implemented in code (`compiler/module_exports.go`, `routing/registry.go`, `gospa.go`, `client/src/forms.ts`, `client/src/route-helpers.ts`).
 
 For a complete parser/compiler/runtime walkthrough, see [SFC System Reference](system-reference.md).
+
+Client runtime module reference:
+
+- Runtime module path: `/_gospa/runtime.js`
 
 ## SFC file contract (`.gospa`)
 
@@ -1181,6 +1192,14 @@ Hydration modes:
 - `visible`
 - `idle`
 - `interaction`
+
+## SFC event directive contract
+
+- Template syntax: `on:<event>={handlerName}`
+- Compiler lowering: `on:click={increment}` -> `data-gospa-on="click:increment"`
+- Runtime resolution looks up handler names on island handler registries.
+- Current generation path derives handler registries from transformed Go-script function names.
+- Use named function handlers. Inline function literals are not part of the current delegated handler lookup contract.
 
 Frontmatter keys consumed by compiler:
 
@@ -1281,6 +1300,15 @@ Key semantics:
 - Validation errors populate `aria-invalid` and `data-gospa-error`.
 - Revalidation hints (`revalidate*`) are applied before `onSuccess`.
 
+`options` callbacks:
+
+- `optimistic(form, formData)`
+- `onPending(form)`
+- `onSuccess(result, form, response)`
+- `onValidation(validation, form, response)`
+- `onRedirect(redirect, form, response)`
+- `onError(error, form, response?)`
+
 ### `callRouteAction(path, action, body?, init?)`
 
 - Appends `_action=<action>` query param.
@@ -1293,6 +1321,24 @@ Key semantics:
 
 - Fetches `?__data=1` endpoint with `Accept: application/json`.
 - Throws if response is not OK.
+
+### Additional route helper exports (`client/src/route-helpers.ts`)
+
+```ts
+function preloadData<T = Record<string, unknown>>(path: string, init?: RequestInit): Promise<T>;
+function preloadCode(path: string): Promise<void>;
+function goto(to: string, options?: NavigateOptions): Promise<boolean>;
+function refresh(init?: RequestInit): Promise<void>;
+function prefetchOnHover(
+  selector: string,
+  options?: { delay?: number; preloadCode?: boolean; preloadData?: boolean }
+): () => void;
+
+// re-exported aliases from navigation
+const beforeNavigate: typeof onBeforeNavigate;
+const afterNavigate: typeof onAfterNavigate;
+function invalidateAll(): Promise<void>;
+```
 
 ## M1 helper APIs (stable)
 
@@ -1319,7 +1365,7 @@ func Error(status int, body interface{}) error
 - `kit.Parent[T]` reads only the nearest parent layout load payload.
 - `kit.Error` is serialized for `?__data=1` and enhanced actions, and mapped to SSR status rendering.
 
-### Client helpers (`@gospa/client`)
+### Client helpers (`/_gospa/runtime.js`)
 
 ```ts
 // Reload current route data in place.
@@ -1360,10 +1406,11 @@ hydrate: true
 <script lang="go">
   // Go logic for server-side state and hydration
   var count = $state(0)
+  func increment() { count++ }
 </script>
 
 <template>
-  <button on:click={func() { count++ }}>
+  <button on:click={increment}>
     Count is {count}
   </button>
 </template>
@@ -1553,12 +1600,11 @@ Selectors only affect elements within the component template.
 
 ## Global Styles
 
-Use `:global()` to define styles that affect the whole page:
+Put global rules in app-level/global stylesheets (`styles/main.css`, route-level shared CSS, or Tailwind layers). SFC `<style>` blocks are component-scoped by default.
 
 ```css
-<style>
-  :global(body) { background: #000; }
-</style>
+/* styles/main.css */
+body { background: #000; }
 ```
 
 ## Integration with Tailwind
@@ -1599,7 +1645,7 @@ A route/component `.gospa` file goes through these stages:
 
 1. Parse SFC blocks (`<template>`, `<script>`, `<style>`, frontmatter).
 2. Validate module exports (`Load`, `ActionDefault`, `Action<Name>`).
-3. Parse template into AST (`Element`, `If`, `Await`, `Each`, `Snippet`, `Component`, expression/text/comment).
+3. Parse template into AST (`Element`, `If`, `Await`, `Each`, `Snippet`, `Component`, expression/text).
 4. Lower template directives (`on:<event>` -> `data-gospa-on="event:handler"`).
 5. Transform Go reactive DSL for server render and optional TS hydration.
 6. Generate output artifacts (Templ + optional TS module + scoped CSS injection).
@@ -1671,6 +1717,10 @@ Supported template node forms:
   - `<@Component ...>` tag form.
   - `@components.Namespace(arg1, arg2)` expression form.
 
+Note:
+
+- `CommentNode` exists in the AST types, but HTML comment parsing is not currently emitted by the template parser.
+
 Unknown `#{directive}` forms are compile errors with diagnostics.
 
 ## 3.1 Event directive syntax validation
@@ -1691,6 +1741,8 @@ Template compile lowers:
 - `on:click={increment}` -> `data-gospa-on="click:increment"`
 
 Event directives are lowered during code generation, not parsed as special AST node types.
+Handlers should be function identifiers (for example `increment` or `handleSubmit`), because runtime delegation resolves handler names from island handler maps.
+Current handler map generation derives names from transformed Go-script functions.
 
 ## 3.3 Await semantics generated by compiler
 
@@ -1980,8 +2032,8 @@ The `<template>` block is parsed into a GoSPA template AST and compiled into Tem
 
 ```svelte
 <ul>
-  {#each items as item, index}
-    <li>{index + 1}: {item.Name}</li>
+  {#each items as item}
+    <li>{item.Name}</li>
   {/each}
 </ul>
 ```
@@ -2008,14 +2060,18 @@ The `<template>` block is parsed into a GoSPA template AST and compiled into Tem
 
 ## Event Handlers
 
-Bind user interactions using `on:<event>`:
+Bind user interactions using `on:<event>` and a named handler function:
 
 ```svelte
+<script lang="go">
+  func handleClick() {}
+</script>
+
 <button on:click={handleClick}>Click Me</button>
-<input on:input={func(e *gospa.Event) { value = e.Value }} />
 ```
 
 `on:<event>` is lowered to `data-gospa-on="event:handler"` in generated output.
+Use function identifiers as handlers. Inline function literals are not part of the current delegated handler contract.
 
 ## Expressions
 
@@ -2047,6 +2103,8 @@ You can have both a Go script (for SSR/Runes) and a TS script for manual DOM log
   });
 </script>
 ```
+
+Note: `on:<event>` template handler names are resolved through the generated island handler registry. Prefer named handlers declared in the Go instance script for delegated template events.
 
 ## Generated Runtime Bridge
 
@@ -2109,7 +2167,7 @@ Use `data-gospa-permanent` to preserve elements across navigations (e.g., video 
 ## Programmatic Navigation
 
 ```typescript
-import { navigate } from '@gospa/client';
+import { navigate } from '/_gospa/runtime.js';
 
 navigate('/new-path', { 
     replace: true,
@@ -2122,7 +2180,7 @@ navigate('/new-path', {
 ## Invalidation API
 
 ```typescript
-import { invalidate, invalidateTag, invalidateKey } from '@gospa/client';
+import { invalidate, invalidateTag, invalidateKey } from '/_gospa/runtime.js';
 
 await invalidate('/blog/hello-world');
 await invalidateTag('route:/blog/hello-world');
@@ -2550,7 +2608,7 @@ app.StateMap.Get("is_online").Set(true)
 GoSPA automatically serializes and hydrates the initial state on the client.
 
 ```typescript
-import { getState, setState } from "@gospa/client";
+import { getState, setState } from "/_gospa/runtime.js";
 
 const name = getState("user_name");
 console.log(name); // "New User"
@@ -2628,7 +2686,7 @@ Bind runes to DOM elements manually for more complex scenarios.
 
 ```typescript
 // TypeScript
-import { bindElement, bindTwoWay, rune } from '@gospa/client';
+import { bindElement, bindTwoWay, rune } from '/_gospa/runtime.js';
 
 const element = document.getElementById('count');
 const textRune = rune('Hello');
@@ -2647,7 +2705,7 @@ bindTwoWay(inputElement, textRune);
 Creates a one-way binding from a rune to a DOM element.
 
 ```typescript
-import { bindElement, rune } from '@gospa/client';
+import { bindElement, rune } from '/_gospa/runtime.js';
 
 const count = rune(0);
 
@@ -2674,7 +2732,7 @@ bindElement(document.getElementById('item'), isActive, {
 Creates a two-way binding between an input element and a rune.
 
 ```typescript
-import { bindTwoWay, rune } from '@gospa/client';
+import { bindTwoWay, rune } from '/_gospa/runtime.js';
 
 const name = rune('');
 
@@ -2691,7 +2749,7 @@ bindTwoWay(input, name);
 Render elements conditionally based on rune state.
 
 ```typescript
-import { renderIf, rune } from '@gospa/client';
+import { renderIf, rune } from '/_gospa/runtime.js';
 
 const isLoggedIn = rune(false);
 
@@ -2707,7 +2765,7 @@ renderIf(document.getElementById('login-form'), isLoggedIn, { inverse: true });
 Render lists from reactive arrays with efficient DOM updates.
 
 ```typescript
-import { renderList, rune } from '@gospa/client';
+import { renderList, rune } from '/_gospa/runtime.js';
 
 interface Todo {
   id: number;
@@ -2736,7 +2794,7 @@ renderList(
 Configure HTML sanitization for safe innerHTML bindings.
 
 ```typescript
-import { setSanitizer, getSanitizer } from '@gospa/client';
+import { setSanitizer, getSanitizer } from '/_gospa/runtime.js';
 
 // Set custom sanitizer
 setSanitizer((html: string) => {
@@ -2753,7 +2811,7 @@ const sanitize = getSanitizer();
 Internal binding management for cleanup and debugging.
 
 ```typescript
-import { registerBinding, unregisterBinding } from '@gospa/client';
+import { registerBinding, unregisterBinding } from '/_gospa/runtime.js';
 
 // Register a custom binding
 const bindingId = registerBinding(element, rune, config);
@@ -2775,7 +2833,7 @@ Managing SPA navigation and advanced event handling in the GoSPA client runtime.
 Programmatic navigation for SPA behavior.
 
 ```typescript
-import { navigate, back, forward, go } from '@gospa/client';
+import { navigate, back, forward, go } from '/_gospa/runtime.js';
 
 // Basic navigation
 await navigate('/about');
@@ -2800,7 +2858,7 @@ go(-2);              // Go back 2 pages
 Preload pages for instant navigation.
 
 ```typescript
-import { prefetch, prefetchLinks } from '@gospa/client';
+import { prefetch, prefetchLinks } from '/_gospa/runtime.js';
 
 // Prefetch a specific page
 prefetch('/blog/hello-world');
@@ -2817,7 +2875,7 @@ prefetchLinks('a[data-prefetch]');
 Explicitly invalidate client/server navigation caches.
 
 ```typescript
-import { invalidate, invalidateTag, invalidateKey } from '@gospa/client';
+import { invalidate, invalidateTag, invalidateKey } from '/_gospa/runtime.js';
 
 await invalidate('/dashboard');
 await invalidateTag('route:/dashboard');
@@ -2829,7 +2887,7 @@ await invalidateKey('path:/dashboard');
 Track and manage navigation state reactively.
 
 ```typescript
-import { createNavigationState } from '@gospa/client';
+import { createNavigationState } from '/_gospa/runtime.js';
 
 const nav = createNavigationState();
 
@@ -2844,7 +2902,7 @@ nav.historyLength;   // Number of history entries
 Register callbacks that run before or after navigation.
 
 ```typescript
-import { onBeforeNavigate, onAfterNavigate } from '@gospa/client';
+import { onBeforeNavigate, onAfterNavigate } from '/_gospa/runtime.js';
 
 // Before navigation (can cancel)
 const unsubBefore = onBeforeNavigate((path) => {
@@ -2884,7 +2942,7 @@ You can override these via `setNavigationOptions` or `window.__GOSPA_CONFIG__.na
 Advanced event handling with modifiers and delegation.
 
 ```typescript
-import { on, delegate, debounce, throttle } from '@gospa/client';
+import { on, delegate, debounce, throttle } from '/_gospa/runtime.js';
 
 // Event with modifiers
 on(form, 'submit:prevent', (e) => {
@@ -2904,7 +2962,7 @@ delegate(document.body, '.item', 'click', (e, target) => {
 Keyboard shortcuts and key combinations.
 
 ```typescript
-import { onKey, keys } from '@gospa/client';
+import { onKey, keys } from '/_gospa/runtime.js';
 
 // Single key
 onKey(document, 'Escape', () => closeModal());
@@ -2934,17 +2992,17 @@ Configure navigation behavior at runtime via data attributes or JavaScript.
 
 GoSPA provides multiple runtime variants to balance security, performance, and bundle size.
 
-## Published npm packages
+## Runtime Distribution
 
-The **`@gospa/client`** package [exports](https://github.com/aydenstechdungeon/gospa/blob/main/client/package.json) only:
+The runtime module served at **`/_gospa/runtime.js`** is built from the client source at [`client/package.json`](https://github.com/aydenstechdungeon/gospa/blob/main/client/package.json):
 
-- `@gospa/client` → default runtime (`dist/runtime.js`)
+- `/_gospa/runtime.js` → default runtime (`dist/runtime.js`)
 
-Additional bundles (`runtime-core.js`, `runtime-micro.js`, `runtime-simple.js`) are built into `dist/` for **embedding** in the Go binary; they are **not** separate npm import paths unless you vendor the files.
+Additional bundles (`runtime-core.js`, `runtime-micro.js`, `runtime-simple.js`) are built into `dist/` for **embedding** in the Go binary. The runtime is not published as a standalone npm package; use the server-served module path (`/_gospa/runtime.js`) or vendor files from `dist/`.
 
 ## Runtime Variants
 
-### Default Runtime (`@gospa/client`) — Recommended
+### Default Runtime (`/_gospa/runtime.js`) — Recommended
 
 The default runtime trusts server-rendered HTML (Templ auto-escapes all content). No DOMPurify bundle is included by default.
 
@@ -2971,8 +3029,8 @@ The default runtime trusts server-rendered HTML (Templ auto-escapes all content)
 import * as GoSPA from "/_gospa/runtime.js";
 GoSPA.init();
 
-// npm style (with bundler)
-import { init, Rune, navigate } from '@gospa/client';
+// ES module import (browser or bundler)
+import { init, Rune, navigate } from '/_gospa/runtime.js';
 init();
 ```
 
@@ -2980,7 +3038,7 @@ init();
 
 | Import / bundle | Sanitizer | Trust model | Use case |
 |-----------------|-----------|-------------|----------|
-| `@gospa/client` | None (no bundled sanitizer) | Trust server (Templ) + escaped dynamic HTML by default | Most apps with CSP |
+| `/_gospa/runtime.js` | None (no bundled sanitizer) | Trust server (Templ) + escaped dynamic HTML by default | Most apps with CSP |
 | Embedded `runtime-core` / `micro` | None | Custom | Workers, embeds |
 
 
@@ -3008,7 +3066,7 @@ GoSPA provides several built-in transition functions.
 Control the timing curve of transitions. Available: `linear`, `cubicOut`, `cubicInOut`, `elasticOut`, `bounceOut`, etc.
 
 ```typescript
-import { fly, cubicOut } from '@gospa/client';
+import { fly, cubicOut } from '/_gospa/runtime.js';
 
 fly(element, { 
   duration: 400, 
@@ -3040,7 +3098,7 @@ Use HTML attributes to declaratively apply transitions.
 Control transitions programmatically with JavaScript.
 
 ```typescript
-import { transitionIn, transitionOut, fade, fly } from '@gospa/client';
+import { transitionIn, transitionOut, fade, fly } from '/_gospa/runtime.js';
 
 // Enter transition
 transitionIn(element, fade, { duration: 300 });
@@ -3080,7 +3138,7 @@ Real-time state synchronization between server and client.
 WebSocket client for real-time state synchronization with auto-reconnect and heartbeat support.
 
 ```typescript
-import { initWebSocket, getWebSocketClient } from '@gospa/client';
+import { initWebSocket, getWebSocketClient } from '/_gospa/runtime.js';
 
 // Initialize
 const ws = initWebSocket({
@@ -3135,7 +3193,7 @@ Event types:
 Create a rune that automatically syncs with the server.
 
 ```typescript
-import { syncedRune } from '@gospa/client';
+import { syncedRune } from '/_gospa/runtime.js';
 
 const count = syncedRune(0, {
   componentId: 'counter',
@@ -3756,7 +3814,7 @@ $effect(() => {
 ### Rune
 
 ```typescript
-import { Rune } from '@gospa/client';
+import { Rune } from '/_gospa/runtime.js';
 
 const count = new Rune(0);
 count.set(1);
@@ -3766,7 +3824,7 @@ const val = count.get();
 ### Derived
 
 ```typescript
-import { derived } from '@gospa/client';
+import { derived } from '/_gospa/runtime.js';
 
 const double = derived(() => count.get() * 2);
 ```
@@ -3774,7 +3832,7 @@ const double = derived(() => count.get() * 2);
 ### Effect
 
 ```typescript
-import { effect } from '@gospa/client';
+import { effect } from '/_gospa/runtime.js';
 
 effect(() => {
   console.log(count.get());
@@ -3818,7 +3876,7 @@ A `Rune` is the base atom of reactivity. It holds a single value and tracks its 
 
 **TypeScript:**
 ```typescript
-import { $state } from "@gospa/client";
+import { $state } from "/_gospa/runtime.js";
 
 const count = $state(0);
 console.log(count.get()); // 0
@@ -3956,7 +4014,7 @@ Advanced usage of the GoSPA reactive system.
 Batch multiple updates to minimize DOM reflows and WebSocket messages.
 
 ```typescript
-import { batch } from '@gospa/client';
+import { batch } from '/_gospa/runtime.js';
 
 batch(() => {
   count.set(1);
@@ -3969,7 +4027,7 @@ batch(() => {
 Execute logic without creating a reactive dependency.
 
 ```typescript
-import { untrack } from '@gospa/client';
+import { untrack } from '/_gospa/runtime.js';
 
 $effect(() => {
   const c = count.value; // Tracked
@@ -4117,7 +4175,7 @@ Registry for manually or automatically registered route components.
 ## Navigation
 
 ```typescript
-import { navigate } from '@gospa/client';
+import { navigate } from '/_gospa/runtime.js';
 
 await navigate('/dashboard', { replace: true, scroll: false });
 // Deprecated alias: { scrollToTop: false }
@@ -4126,7 +4184,7 @@ await navigate('/dashboard', { replace: true, scroll: false });
 ## Invalidation
 
 ```typescript
-import { invalidate, invalidateTag, invalidateKey } from '@gospa/client';
+import { invalidate, invalidateTag, invalidateKey } from '/_gospa/runtime.js';
 
 await invalidate('/dashboard');
 await invalidateTag('route:/dashboard');
@@ -4136,7 +4194,7 @@ await invalidateKey('path:/dashboard');
 ## Progressive Form Actions
 
 ```typescript
-import { enhanceForms } from '@gospa/client';
+import { enhanceForms } from '/_gospa/runtime.js';
 
 enhanceForms('form[data-gospa-enhance]', {
   onValidation(validation) {
@@ -4165,7 +4223,7 @@ import {
   invalidateAll,
   beforeNavigate,
   afterNavigate,
-} from '@gospa/client';
+} from '/_gospa/runtime.js';
 ```
 
 - `loadRouteData(path)` fetches `?__data=1` payloads.
@@ -5664,7 +5722,7 @@ routing.RegisterRemoteAction("greet", func(ctx context.Context, rc routing.Remot
 GoSPA provides a type-safe bridge for calling remote actions from your TypeScript code.
 
 ```typescript
-import { remoteAction } from "@gospa/client";
+import { remoteAction } from "/_gospa/runtime.js";
 
 async function sayHello() {
     const result = await remoteAction("greet", "World");
@@ -5814,7 +5872,7 @@ app.SSE().SendToClient(clientID, fiber.SSEEvent{
 GoSPA provides a standard way to consume SSE streams in your component's reactive logic.
 
 ```typescript
-import { onMount } from "@gospa/client";
+import { onMount } from "/_gospa/runtime.js";
 
 onMount(() => {
     const eventSource = new EventSource("/_gospa/sse/notifications");
@@ -6389,7 +6447,7 @@ app := gospa.New(gospa.Config{
 If you change this, ensure the client knows:
 
 ```javascript
-import { configureRemote } from '@gospa/client';
+import { configureRemote } from '/_gospa/runtime.js';
 
 configureRemote({ prefix: '/api/rpc' });
 ```
@@ -6596,7 +6654,7 @@ app.Use(fiber.WebSocketMiddleware())
 #### 3. Check Client Configuration
 
 ```javascript
-import { initWebSocket } from '@gospa/runtime';
+import { initWebSocket } from '/_gospa/runtime.js';
 
 const ws = initWebSocket({
     url: 'ws://localhost:3000/_gospa/ws',
@@ -6738,7 +6796,7 @@ Calling `connect()` multiple times throws an error or logs a warning.
 Check connection state before connecting:
 
 ```javascript
-import { getWebSocket } from '@gospa/runtime';
+import { getWebSocket } from '/_gospa/runtime.js';
 
 const ws = getWebSocket();
 
@@ -7437,11 +7495,11 @@ app := gospa.New(gospa.Config{
 
 ```javascript
 // BAD - Silent failures
-import { initHMR } from '@gospa/runtime';
+import { initHMR } from '/_gospa/runtime.js';
 initHMR();
 
 // GOOD - Handle errors
-import { initHMR } from '@gospa/runtime';
+import { initHMR } from '/_gospa/runtime.js';
 initHMR({
     onError: (error) => {
         console.error('[HMR] Error:', error);
@@ -7490,7 +7548,7 @@ Check browser Network tab for 404 errors on island module requests.
 
 ```javascript
 // Ensure islands are initialized
-import { initIslands } from '@gospa/runtime';
+import { initIslands } from '/_gospa/runtime.js';
 
 // Auto-initialization with data-gospa-auto on <html>
 // Or manual:
@@ -7595,7 +7653,7 @@ export default {
 Or use GoSPA's built-in protection:
 
 ```javascript
-import { hydrateIsland } from '@gospa/runtime';
+import { hydrateIsland } from '/_gospa/runtime.js';
 
 // This is idempotent - only hydrates once
 await hydrateIsland('counter');
@@ -7626,7 +7684,7 @@ await hydrateIsland('Counter');      // By island name
 Ensure island exists before calling:
 
 ```javascript
-import { getIslandManager } from '@gospa/runtime';
+import { getIslandManager } from '/_gospa/runtime.js';
 
 const manager = getIslandManager();
 const island = manager.getIsland('my-counter');
@@ -7809,7 +7867,7 @@ export default {
 #### 3. Use Global State
 
 ```javascript
-import { getState } from '@gospa/runtime';
+import { getState } from '/_gospa/runtime.js';
 
 export default {
     hydrate(element, props, state) {
@@ -7928,7 +7986,7 @@ document.addEventListener('DOMContentLoaded', () => {
 });
 
 // GOOD - Wait for manager ready
-import { initIslands } from '@gospa/runtime';
+import { initIslands } from '/_gospa/runtime.js';
 
 const manager = initIslands();
 manager.ready().then(() => {
@@ -7992,7 +8050,7 @@ Client state updates don't propagate to the server.
 #### 1. Use Synced Rune
 
 ```javascript
-import { syncedRune, getWebSocket } from '@gospa/runtime';
+import { syncedRune, getWebSocket } from '/_gospa/runtime.js';
 
 const ws = getWebSocket();
 const count = syncedRune('count', 0, ws);
@@ -8004,7 +8062,7 @@ count.set(5);
 #### 2. Manual State Sync
 
 ```javascript
-import { getWebSocket } from '@gospa/runtime';
+import { getWebSocket } from '/_gospa/runtime.js';
 
 const ws = getWebSocket();
 
@@ -8195,7 +8253,7 @@ state.Batch(func() {
 #### 2. Optimistic Updates with Rollback
 
 ```javascript
-import { optimisticUpdate } from '@gospa/runtime';
+import { optimisticUpdate } from '/_gospa/runtime.js';
 
 // Apply immediately, rollback on error
 optimisticUpdate(count, 5, {
@@ -8286,7 +8344,7 @@ Component unmounts but subscriptions remain active.
 #### 1. Always Unsubscribe
 
 ```javascript
-import { getState } from '@gospa/runtime';
+import { getState } from '/_gospa/runtime.js';
 
 const count = getState('count');
 
@@ -8307,7 +8365,7 @@ function destroy() {
 #### 2. Use Effect for Auto-Cleanup
 
 ```javascript
-import { Effect } from '@gospa/runtime';
+import { Effect } from '/_gospa/runtime.js';
 
 const effect = new Effect(() => {
     console.log('Count:', count.get());
@@ -10175,7 +10233,7 @@ In development mode, a full-page overlay displays the error message, stack trace
 The client-side runtime mirrors the server's error boundaries. If a client-side component crashes (e.g., in `onMount`), the runtime will catch the error and attempt to recover or display a fallback.
 
 ```typescript
-import { onComponentError } from "@gospa/client";
+import { onComponentError } from "/_gospa/runtime.js";
 
 onComponentError((id, error) => {
     console.error(`Component ${id} failed:`, error);
@@ -10247,7 +10305,7 @@ GoSPA's HMR system is carefully designed to preserve your reactive runes. When a
 The client-side runtime includes a performance monitoring utility to track hydration time, state update latency, and network performance.
 
 ```typescript
-import { measure } from "@gospa/client";
+import { measure } from "/_gospa/runtime.js";
 
 const result = await measure("heavyTask", async () => {
     // Perform complex logic...
@@ -10354,7 +10412,7 @@ GoSPA's client-side runtime is a high-performance, modular system that handles r
 The GoSPA runtime is usually initialized automatically when a client lands on a GoSPA page.
 
 ```typescript
-import GoSPA from "@gospa/client";
+import * as GoSPA from "/_gospa/runtime.js";
 
 GoSPA.init({
     wsUrl: "/_gospa/ws",
@@ -10381,7 +10439,7 @@ Hydration is the process of attaching reactive logic to server-rendered HTML. Go
 For large applications, you can also manually trigger hydration:
 
 ```typescript
-import { hydrateIsland } from "@gospa/client";
+import { hydrateIsland } from "/_gospa/runtime.js";
 
 // Hydrate a specific island by ID or Name
 await hydrateIsland("shopping-cart");
@@ -11807,7 +11865,7 @@ This guide maps common SvelteKit patterns to GoSPA equivalents.
 Client helper:
 
 ```ts
-import { loadRouteData } from "@gospa/client";
+import { loadRouteData } from "/_gospa/runtime.js";
 const data = await loadRouteData("/dashboard");
 ```
 
@@ -11819,7 +11877,7 @@ const data = await loadRouteData("/dashboard");
 Client helper:
 
 ```ts
-import { callRouteAction } from "@gospa/client";
+import { callRouteAction } from "/_gospa/runtime.js";
 const result = await callRouteAction("/posts", "publish", formData);
 ```
 
@@ -11855,7 +11913,7 @@ Helper markers: `kit.Parent`, `kit.Depends`, `kit.Untrack`
 ## Navigation lifecycle
 
 - SvelteKit: `beforeNavigate`, `afterNavigate`, `goto`, preloading APIs
-- GoSPA: same helper surface from `@gospa/client`:
+- GoSPA: same helper surface from GoSPA runtime module (`/_gospa/runtime.js`):
   - `beforeNavigate`, `afterNavigate`
   - `goto(path, options?)`
   - `preloadData(path)`, `preloadCode(path)`
@@ -11900,7 +11958,7 @@ Rules:
 
 1. Port `load` logic into `Load` function exports.
 2. Port `actions` into `ActionDefault` / `Action<Name>`.
-3. Replace client `goto`/preload calls with `@gospa/client` helpers.
+3. Replace client `goto`/preload calls with `/_gospa/runtime.js` helpers.
 4. Switch invalidation to path/tag/key helpers.
 5. Validate enhanced form behavior with `callRouteAction` and `enhanceForm`.
 

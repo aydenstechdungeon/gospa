@@ -342,6 +342,9 @@ export class IslandManager {
       });
     });
 
+    // Queue-driven hydration is fire-and-forget in most flows. Attach a
+    // consumer so rejections don't surface as unhandled between tests/runtime.
+    promise.catch(() => {});
     this.pending.set(island.id, promise);
     return promise;
   }
@@ -372,6 +375,8 @@ export class IslandManager {
         item.resolve(result);
       } catch (error) {
         item.reject(error as Error);
+      } finally {
+        this.pending.delete(item.island.id);
       }
     }
 

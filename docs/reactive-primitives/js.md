@@ -22,7 +22,7 @@ $effect(() => {
 ### Rune
 
 ```typescript
-import { Rune } from '@gospa/client';
+import { Rune } from '/_gospa/runtime.js';
 
 const count = new Rune(0);
 count.set(1);
@@ -32,7 +32,7 @@ const val = count.get();
 ### Derived
 
 ```typescript
-import { derived } from '@gospa/client';
+import { derived } from '/_gospa/runtime.js';
 
 const double = derived(() => count.get() * 2);
 ```
@@ -40,7 +40,7 @@ const double = derived(() => count.get() * 2);
 ### Effect
 
 ```typescript
-import { effect } from '@gospa/client';
+import { effect } from '/_gospa/runtime.js';
 
 effect(() => {
   console.log(count.get());

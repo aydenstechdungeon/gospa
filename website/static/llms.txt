@@ -25,40 +25,40 @@
 ### SFC Components
 
 [examples](docs/gospasfc/examples.md)
-  - Size: 1484 bytes
+  - Size: 1573 bytes
 
 [advanced](docs/gospasfc/advanced.md)
-  - Size: 2036 bytes
+  - Size: 2304 bytes
 
 [gospasfc](docs/gospasfc.md)
-  - Size: 4210 bytes
+  - Size: 4148 bytes
 
 [api-reference](docs/gospasfc/api-reference.md)
-  - Size: 6279 bytes
+  - Size: 7711 bytes
 
 [getting-started](docs/gospasfc/getting-started.md)
-  - Size: 4298 bytes
+  - Size: 4320 bytes
 
 [reactivity](docs/gospasfc/reactivity.md)
   - Size: 981 bytes
 
 [styles](docs/gospasfc/styles.md)
-  - Size: 661 bytes
+  - Size: 762 bytes
 
 [system-reference](docs/gospasfc/system-reference.md)
-  - Size: 11597 bytes
+  - Size: 11956 bytes
 
 [templates](docs/gospasfc/templates.md)
-  - Size: 1097 bytes
+  - Size: 1217 bytes
 
 [typescript](docs/gospasfc/typescript.md)
-  - Size: 872 bytes
+  - Size: 1063 bytes
 
 
 ### Routing
 
 [navigation](docs/routing/navigation.md)
-  - Size: 1741 bytes
+  - Size: 1751 bytes
 
 [api](docs/routing/api.md)
   - Size: 1054 bytes
@@ -88,25 +88,25 @@
   - Size: 1205 bytes
 
 [state-management](docs/state-management.md)
-  - Size: 2231 bytes
+  - Size: 2236 bytes
 
 
 ### Client Runtime
 
 [dom-bindings](docs/client-runtime/dom-bindings.md)
-  - Size: 3828 bytes
+  - Size: 3863 bytes
 
 [navigation-events](docs/client-runtime/navigation-events.md)
-  - Size: 4364 bytes
+  - Size: 4399 bytes
 
 [overview](docs/client-runtime/overview.md)
-  - Size: 1717 bytes
+  - Size: 1887 bytes
 
 [transitions](docs/client-runtime/transitions.md)
-  - Size: 2045 bytes
+  - Size: 2055 bytes
 
 [websocket](docs/client-runtime/websocket.md)
-  - Size: 2423 bytes
+  - Size: 2433 bytes
 
 
 ### Configuration
@@ -154,16 +154,16 @@
 ### Reactive Primitives
 
 [js](docs/reactive-primitives/js.md)
-  - Size: 1099 bytes
+  - Size: 1114 bytes
 
 [reactive-primitives](docs/reactive-primitives.md)
-  - Size: 1923 bytes
+  - Size: 1928 bytes
 
 [go](docs/reactive-primitives/go.md)
   - Size: 1065 bytes
 
 [advanced](docs/reactive-primitives/advanced.md)
-  - Size: 1248 bytes
+  - Size: 1258 bytes
 
 
 ### API Reference
@@ -175,7 +175,7 @@
   - Size: 2163 bytes
 
 [client](docs/api/client.md)
-  - Size: 1658 bytes
+  - Size: 1678 bytes
 
 [core](docs/api/core.md)
   - Size: 33981 bytes
@@ -184,13 +184,13 @@
   - Size: 24 bytes
 
 [remote-actions](docs/api/remote-actions.md)
-  - Size: 2130 bytes
+  - Size: 2135 bytes
 
 [routing](docs/api/routing.md)
   - Size: 1132 bytes
 
 [sse](docs/api/sse.md)
-  - Size: 1900 bytes
+  - Size: 1905 bytes
 
 [state](docs/api/state.md)
   - Size: 23 bytes
@@ -199,7 +199,7 @@
 ### Troubleshooting
 
 [troubleshooting](docs/troubleshooting.md)
-  - Size: 66075 bytes
+  - Size: 66136 bytes
 
 
 ### Other
@@ -217,19 +217,19 @@
   - Size: 1809 bytes
 
 [errors](docs/errors.md)
-  - Size: 1302 bytes
+  - Size: 1307 bytes
 
 [faq](docs/faq.md)
   - Size: 1550 bytes
 
 [devtools](docs/devtools.md)
-  - Size: 1945 bytes
+  - Size: 1950 bytes
 
 [README](docs/README.md)
   - Size: 2919 bytes
 
 [runtime](docs/runtime.md)
-  - Size: 1929 bytes
+  - Size: 1944 bytes
 
 [rendering](docs/rendering.md)
   - Size: 12488 bytes
@@ -253,7 +253,7 @@
   - Size: 2462 bytes
 
 [sveltekit-to-gospa](docs/migration/sveltekit-to-gospa.md)
-  - Size: 2936 bytes
+  - Size: 2979 bytes
 
 
 ## File Summary

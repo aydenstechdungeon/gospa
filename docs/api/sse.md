@@ -39,7 +39,7 @@ app.SSE().SendToClient(clientID, fiber.SSEEvent{
 GoSPA provides a standard way to consume SSE streams in your component's reactive logic.
 
 ```typescript
-import { onMount } from "@gospa/client";
+import { onMount } from "/_gospa/runtime.js";
 
 onMount(() => {
     const eventSource = new EventSource("/_gospa/sse/notifications");

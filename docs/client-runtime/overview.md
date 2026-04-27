@@ -2,17 +2,17 @@
 
 GoSPA provides multiple runtime variants to balance security, performance, and bundle size.
 
-## Published npm packages
+## Runtime Distribution
 
-The **`@gospa/client`** package [exports](https://github.com/aydenstechdungeon/gospa/blob/main/client/package.json) only:
+The runtime module served at **`/_gospa/runtime.js`** is built from the client source at [`client/package.json`](https://github.com/aydenstechdungeon/gospa/blob/main/client/package.json):
 
-- `@gospa/client` → default runtime (`dist/runtime.js`)
+- `/_gospa/runtime.js` → default runtime (`dist/runtime.js`)
 
-Additional bundles (`runtime-core.js`, `runtime-micro.js`, `runtime-simple.js`) are built into `dist/` for **embedding** in the Go binary; they are **not** separate npm import paths unless you vendor the files.
+Additional bundles (`runtime-core.js`, `runtime-micro.js`, `runtime-simple.js`) are built into `dist/` for **embedding** in the Go binary. The runtime is not published as a standalone npm package; use the server-served module path (`/_gospa/runtime.js`) or vendor files from `dist/`.
 
 ## Runtime Variants
 
-### Default Runtime (`@gospa/client`) — Recommended
+### Default Runtime (`/_gospa/runtime.js`) — Recommended
 
 The default runtime trusts server-rendered HTML (Templ auto-escapes all content). No DOMPurify bundle is included by default.
 
@@ -39,8 +39,8 @@ The default runtime trusts server-rendered HTML (Templ auto-escapes all content)
 import * as GoSPA from "/_gospa/runtime.js";
 GoSPA.init();
 
-// npm style (with bundler)
-import { init, Rune, navigate } from '@gospa/client';
+// ES module import (browser or bundler)
+import { init, Rune, navigate } from '/_gospa/runtime.js';
 init();
 ```
 
@@ -48,5 +48,5 @@ init();
 
 | Import / bundle | Sanitizer | Trust model | Use case |
 |-----------------|-----------|-------------|----------|
-| `@gospa/client` | None (no bundled sanitizer) | Trust server (Templ) + escaped dynamic HTML by default | Most apps with CSP |
+| `/_gospa/runtime.js` | None (no bundled sanitizer) | Trust server (Templ) + escaped dynamic HTML by default | Most apps with CSP |
 | Embedded `runtime-core` / `micro` | None | Custom | Workers, embeds |

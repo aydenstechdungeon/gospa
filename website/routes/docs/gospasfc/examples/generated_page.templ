@@ -109,7 +109,7 @@ func ActionArchive(c routing.LoadContext) (interface{}, error) {
 </script>
 
 <script lang="ts">
-  import { $derived } from "@gospa/client"
+  import { $derived } from "/_gospa/runtime.js"
 
   const filtered = $derived(() => {
     const q = query.toLowerCase().trim()
@@ -134,7 +134,7 @@ func ActionArchive(c routing.LoadContext) (interface{}, error) {
 				<h2 class="text-2xl font-bold border-b border-[var(--border)] pb-2">4. JS Library Integration</h2>
 				<p class="text-[var(--text-secondary)]">Initialize browser-only dependencies inside <code>$effect</code>.</p>
 				@components.CodeBlock(`<script lang="ts">
-  import { $effect } from "@gospa/client"
+  import { $effect } from "/_gospa/runtime.js"
 
   const data = [10, 20, 30]
 
@@ -168,7 +168,7 @@ func ActionArchive(c routing.LoadContext) (interface{}, error) {
 </script>
 
 <script lang="ts">
-  import { $state, $derived } from "@gospa/client"
+  import { $state, $derived } from "/_gospa/runtime.js"
 
   const clientTime = $state(Date.now())
   const uptime = $derived(() => {

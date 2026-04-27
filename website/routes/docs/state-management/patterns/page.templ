@@ -50,7 +50,7 @@ async function submit() {
   // Handle response
 }`,
 				`// TypeScript
-import { Rune, derived } from '@gospa/client';
+import { Rune, derived } from '/_gospa/runtime.js';
 
 // Form state
 const form = new Rune({
@@ -114,7 +114,7 @@ console.log(userResource.error);      // Error | undefined
 // Refetch
 await userResource.refetch();`,
 				`// TypeScript
-import { resourceReactive, Rune } from '@gospa/client';
+import { resourceReactive, Rune } from '/_gospa/runtime.js';
 
 const userId = new Rune(1);
 
@@ -164,7 +164,7 @@ function toggleTheme() {
   theme.update(t => t === 'light' ? 'dark' : 'light');
 }`,
 				`// TypeScript
-import { Rune, derived } from '@gospa/client';
+import { Rune, derived } from '/_gospa/runtime.js';
 
 // Global store
 export const user = new Rune<User | null>(null);
@@ -241,7 +241,7 @@ const unsub = GoSPA.watch([a, b], (values, oldValues) => {
 // Debug (dev only)
 GoSPA.inspect(a);`,
 				`// TypeScript
-import { batch, untrack, watch, inspect, effect, Rune } from '@gospa/client';
+import { batch, untrack, watch, inspect, effect, Rune } from '/_gospa/runtime.js';
 
 const a = new Rune(1);
 const b = new Rune(2);

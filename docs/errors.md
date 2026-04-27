@@ -20,7 +20,7 @@ In development mode, a full-page overlay displays the error message, stack trace
 The client-side runtime mirrors the server's error boundaries. If a client-side component crashes (e.g., in `onMount`), the runtime will catch the error and attempt to recover or display a fallback.
 
 ```typescript
-import { onComponentError } from "@gospa/client";
+import { onComponentError } from "/_gospa/runtime.js";
 
 onComponentError((id, error) => {
     console.error(`Component ${id} failed:`, error);
