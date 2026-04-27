@@ -14,9 +14,9 @@ import (
 )
 
 func main() {
-	skipTag, newTag, err := parseTagArgs(os.Args[1:])
+	skipTag, releaseBranchPrefix, newTag, err := parseTagArgs(os.Args[1:])
 	if err != nil {
-		fmt.Println("Usage: go run scripts/tag/main.go [-skip-tag] <tag>")
+		fmt.Println("Usage: go run scripts/tag/main.go [-skip-tag] [-release-branch-prefix <prefix>] <tag>")
 		fmt.Println("Error:", err)
 		os.Exit(1)
 	}
@@ -157,7 +157,7 @@ func main() {
 	cmd1.Stderr = os.Stderr
 	if err := cmd1.Run(); err != nil {
 		fmt.Printf("\nPush to '%s' failed (likely protected branch). Attempting to push to a release branch...\n", branch)
-		releaseBranch := "release/" + newTag
+		releaseBranch := releaseBranchPrefix + newTag
 		// Check if branch already exists and delete it if it's different
 		_ = exec.Command("git", "branch", "-D", releaseBranch).Run() //nolint:gosec // ignore error if it doesn't exist
 
@@ -182,12 +182,14 @@ func main() {
 	fmt.Println("\nSuccessfully updated tag", newTag)
 }
 
-func parseTagArgs(args []string) (bool, string, error) {
+func parseTagArgs(args []string) (bool, string, string, error) {
 	fs := flag.NewFlagSet("tag", flag.ContinueOnError)
 	fs.SetOutput(os.Stderr)
 
 	var skipTag bool
+	var releaseBranchPrefix string
 	fs.BoolVar(&skipTag, "skip-tag", false, "only update version in code, skip git commit, tag and push")
+	fs.StringVar(&releaseBranchPrefix, "release-branch-prefix", "release/", "prefix for fallback branch when direct push fails")
 
 	ordered := make([]string, 0, len(args))
 	positionals := make([]string, 0, 1)
@@ -201,12 +203,17 @@ func parseTagArgs(args []string) (bool, string, error) {
 	ordered = append(ordered, positionals...)
 
 	if err := fs.Parse(ordered); err != nil {
-		return false, "", err
+		return false, "", "", err
 	}
 	if fs.NArg() != 1 {
-		return false, "", errors.New("expected exactly one <tag> argument")
+		return false, "", "", errors.New("expected exactly one <tag> argument")
 	}
-	return skipTag, fs.Arg(0), nil
+
+	// Ensure user-provided branch prefix always creates a nested branch name by default.
+	if releaseBranchPrefix != "" && !strings.HasSuffix(releaseBranchPrefix, "/") {
+		releaseBranchPrefix += "/"
+	}
+	return skipTag, releaseBranchPrefix, fs.Arg(0), nil
 }
 
 func pushTag(newTag string) {
