@@ -240,8 +240,8 @@ func isFontFile(path string) bool {
 	return strings.HasSuffix(lower, ".woff2")
 }
 
-// hasContentHash checks if filename contains a content hash pattern
-// Supports patterns like: name-64.ext, name-a1b2c3.ext, name.abc123.ext
+// hasContentHash checks if filename contains a likely cache-busting hash.
+// Supports patterns like: name-a1b2c3d4.ext, name.abc12345.ext, name_abcdef12.ext.
 func hasContentHash(path string) bool {
 	// Extract filename from path
 	idx := strings.LastIndex(path, "/")
@@ -257,8 +257,7 @@ func hasContentHash(path string) bool {
 			last := parts[len(parts)-1]
 			if dotIdx := strings.Index(last, "."); dotIdx > 0 {
 				hash := last[:dotIdx]
-				// Accept 2+ character hashes for logo files like gospa1-64.webp
-				if isAlphanumeric(hash) && len(hash) >= 2 {
+				if isLikelyAssetHash(hash) {
 					return true
 				}
 			}
@@ -312,13 +311,24 @@ func generateFileETag(path string) string {
 	return generateETag(path)
 }
 
-func isAlphanumeric(s string) bool {
+func isLikelyAssetHash(s string) bool {
+	if len(s) < 8 || len(s) > 64 {
+		return false
+	}
+	hasLetter := false
+	hasDigit := false
 	for _, r := range s {
 		if (r < 'a' || r > 'z') && (r < 'A' || r > 'Z') && (r < '0' || r > '9') {
 			return false
 		}
+		if (r >= 'a' && r <= 'z') || (r >= 'A' && r <= 'Z') {
+			hasLetter = true
+		}
+		if r >= '0' && r <= '9' {
+			hasDigit = true
+		}
 	}
-	return true
+	return hasLetter && hasDigit
 }
 
 func getEnvBool(key string, defaultVal bool) bool {

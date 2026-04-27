@@ -82,8 +82,11 @@ body {
 	color: var(--text-primary);
 	-webkit-font-smoothing: antialiased;
 	scrollbar-gutter: stable;
-	selection-background: var(--accent-primary);
-	selection-color: var(--bg-primary);
+}
+
+::selection {
+	background: var(--accent-primary);
+	color: var(--bg-primary);
 }
 
 h1,
