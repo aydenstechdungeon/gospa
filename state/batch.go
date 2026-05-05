@@ -149,6 +149,11 @@ func addToBatch(n notifier) {
 // All state mutations inside fn() are deferred and flushed atomically when fn returns.
 // This is safe when fn() runs synchronously in the calling goroutine. If fn() spawns
 // new goroutines that also mutate state, use BatchWithContext and pass the ctx down.
+//
+// Panic behavior: if fn() panics, dirty notifiers are intentionally NOT flushed.
+// This prevents partial/corrupted state from being broadcast. The panic propagates
+// after cleanup (activeBatches entry removed, sync batch count decremented).
+// If you need to flush state even on panic, recover manually inside fn().
 func Batch(fn func()) {
 	bs := getBatchStateFromPool()
 	defer putBatchStateToPool(bs)

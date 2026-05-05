@@ -59,17 +59,15 @@ func (a *App) renderRoute(c gofiber.Ctx, route *routing.Route, routeParams map[s
 		if hit {
 			a.recordCacheHit(cacheKey)
 			c.Set("Content-Type", "text/html")
-			c.Set("Cache-Control", "public, max-age=31536000, immutable")
-
 			currentNonce, _ := c.Locals("gospa.csp_nonce").(string)
-			// Always replace placeholders so cached HTML cannot leak
-			// "__GOSPA_NONCE_PLACEHOLDER__" when nonce middleware is disabled.
+			if currentNonce != "" {
+				c.Set("Cache-Control", "no-cache")
+			} else {
+				c.Set("Cache-Control", "public, max-age=31536000, immutable")
+			}
 			return c.Send(a.replaceNonces(entry.html, currentNonce))
 		}
-		a.recordCacheMiss(cacheKey)
 	}
-
-	// 2. ISR Strategy
 	if a.Config.CacheTemplates && effStrategy == routing.StrategyISR {
 		a.initSemaphore()
 		ttl := opts.RevalidateAfter
@@ -440,7 +438,6 @@ import * as runtime from %s;
 window.__GOSPA_RUNTIME_ESM__ = runtime;
 window.__GOSPA_CONFIG__ = {
 	navigationOptions: %s,
-	csrfToken: %s,
 };
 runtime.init({
 	wsUrl: %s,
@@ -462,7 +459,7 @@ runtime.init({
 		pollInterval: %d
 	}
 });
-</script>`, nonceFmt, toJS(runtimePathForPage), toJS(a.Config.NavigationOptions), toJS(c.Locals("gospa.csrf_token")), toJS(wsURL), toJS(string(a.Config.SerializationFormat)), a.Config.DevMode, a.Config.SimpleRuntimeSVGs, a.Config.DisableSanitization, wsRD, wsMR, wsHB, toJS(a.Config.HydrationMode), a.Config.HydrationTimeout, toJS("/_sse/connect"), toJS("/_gospa/poll"), 5000)
+</script>`, nonceFmt, toJS(runtimePathForPage), toJS(a.Config.NavigationOptions), toJS(wsURL), toJS(string(a.Config.SerializationFormat)), a.Config.DevMode, a.Config.SimpleRuntimeSVGs, a.Config.DisableSanitization, wsRD, wsMR, wsHB, toJS(a.Config.HydrationMode), a.Config.HydrationTimeout, toJS("/_sse/connect"), toJS("/_gospa/poll"), 5000)
 
 	// Islands bundle — loads and registers all island setup functions
 	// Only include if the file exists (islands are optional)

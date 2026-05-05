@@ -523,8 +523,6 @@ func GetMiddleware(path string) MiddlewareFunc {
 }
 
 // GetLoading returns the loading component from the global registry.
-
-// GetLoading returns the loading component from the global registry.
 func GetLoading(path string) ComponentFunc {
 	return globalRegistry.GetLoading(path)
 }

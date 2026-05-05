@@ -9,7 +9,6 @@ import (
 	"log/slog"
 	"os"
 	"path/filepath"
-	"reflect"
 	"strings"
 	"sync"
 
@@ -56,7 +55,11 @@ func safeIslandTSPath(requestPath string) (string, int, error) {
 	if err != nil {
 		return "", fiberpkg.StatusInternalServerError, fmt.Errorf("failed to resolve islands file path")
 	}
-	if !strings.HasPrefix(targetAbs, baseAbs+string(filepath.Separator)) {
+	resolvedAbs, err := filepath.EvalSymlinks(targetAbs)
+	if err != nil {
+		return "", fiberpkg.StatusNotFound, fmt.Errorf("islands file not found")
+	}
+	if !strings.HasPrefix(resolvedAbs, baseAbs+string(filepath.Separator)) {
 		return "", fiberpkg.StatusForbidden, fmt.Errorf("forbidden islands path")
 	}
 
@@ -399,11 +402,8 @@ func isInMemoryStorage(storage store.Storage) bool {
 	if storage == nil {
 		return true
 	}
-	t := reflect.TypeOf(storage)
-	if t == nil {
-		return true
-	}
-	return strings.Contains(strings.ToLower(t.String()), "memorystorage")
+	_, ok := storage.(*store.MemoryStorage)
+	return ok
 }
 
 // setupRoutes configures core internal routes.
@@ -836,6 +836,7 @@ func (a *App) Shutdown() error {
 	if a.Hub != nil {
 		a.Hub.Close()
 	}
+	fiber.CloseGlobalRateLimiters()
 	if closer, ok := a.Config.Storage.(interface{ Close() error }); ok {
 		if err := closer.Close(); err != nil {
 			a.Logger().Error("Storage close failed", "err", err)

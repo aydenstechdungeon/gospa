@@ -9,28 +9,44 @@ import (
 
 func TestParseTagArgs(t *testing.T) {
 	tests := []struct {
-		name      string
-		args      []string
-		wantSkip  bool
-		wantTag   string
-		expectErr bool
+		name       string
+		args       []string
+		wantSkip   bool
+		wantPrefix string
+		wantTag    string
+		expectErr  bool
 	}{
 		{
-			name:     "flag before tag",
-			args:     []string{"-skip-tag", "v1.2.3"},
-			wantSkip: true,
-			wantTag:  "v1.2.3",
+			name:       "flag before tag",
+			args:       []string{"-skip-tag", "v1.2.3"},
+			wantSkip:   true,
+			wantPrefix: "release/",
+			wantTag:    "v1.2.3",
 		},
 		{
-			name:     "flag after tag",
-			args:     []string{"v1.2.3", "-skip-tag"},
-			wantSkip: true,
-			wantTag:  "v1.2.3",
+			name:       "flag after tag",
+			args:       []string{"v1.2.3", "-skip-tag"},
+			wantSkip:   true,
+			wantPrefix: "release/",
+			wantTag:    "v1.2.3",
 		},
 		{
-			name:    "tag only",
-			args:    []string{"v1.2.3"},
-			wantTag: "v1.2.3",
+			name:       "tag only",
+			args:       []string{"v1.2.3"},
+			wantPrefix: "release/",
+			wantTag:    "v1.2.3",
+		},
+		{
+			name:       "custom branch prefix",
+			args:       []string{"-release-branch-prefix", "rel/", "v1.2.3"},
+			wantPrefix: "rel/",
+			wantTag:    "v1.2.3",
+		},
+		{
+			name:       "custom branch prefix without trailing slash",
+			args:       []string{"-release-branch-prefix", "rel", "v1.2.3"},
+			wantPrefix: "rel/",
+			wantTag:    "v1.2.3",
 		},
 		{
 			name:      "missing tag",
@@ -46,7 +62,7 @@ func TestParseTagArgs(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			gotSkip, gotTag, err := parseTagArgs(tt.args)
+			gotSkip, gotPrefix, gotTag, err := parseTagArgs(tt.args)
 			if tt.expectErr {
 				if err == nil {
 					t.Fatal("expected error, got nil")
@@ -58,6 +74,9 @@ func TestParseTagArgs(t *testing.T) {
 			}
 			if gotSkip != tt.wantSkip {
 				t.Fatalf("skip mismatch: got %v want %v", gotSkip, tt.wantSkip)
+			}
+			if gotPrefix != tt.wantPrefix {
+				t.Fatalf("prefix mismatch: got %q want %q", gotPrefix, tt.wantPrefix)
 			}
 			if gotTag != tt.wantTag {
 				t.Fatalf("tag mismatch: got %q want %q", gotTag, tt.wantTag)

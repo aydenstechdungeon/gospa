@@ -432,12 +432,6 @@ export class WSClient {
             type: "init",
             clientId: this.sessionData.clientId,
           };
-
-          // Only send token if explicitly provided (legacy support)
-          if (this.sessionData.token) {
-            initMsg.sessionToken = this.sessionData.token;
-          }
-
           this.send(initMsg);
         }
 
@@ -734,10 +728,10 @@ export class WSClient {
         });
       }
 
-      // Save session data when server sends it (init message with session token)
-      if (message.type === "init" && message.sessionToken && message.clientId) {
+      // Save session data when server sends it (init message with clientId)
+      if (message.type === "init" && message.clientId) {
         this.sessionData = {
-          token: message.sessionToken,
+          token: "",
           clientId: message.clientId,
         };
         if (this.config.persistSession) {

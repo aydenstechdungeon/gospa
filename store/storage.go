@@ -167,13 +167,15 @@ func (s *MemoryStorage) pruneLoop() {
 	}
 }
 
-// prune handles the actual deletion.
+// prune handles the actual deletion of expired entries.
+// Scans up to 1000 entries per tick. Since Go map iteration is randomized,
+// repeated ticks will eventually cover all entries in the store.
 func (s *MemoryStorage) prune() {
 	s.mu.RLock()
 	now := time.Now()
 	var expired []string
 	i := 0
-	const maxScan = 1000 // Only scan up to 1000 entries per tick to prevent blocking
+	const maxScan = 1000
 	for key, entry := range s.store {
 		if !entry.exp.IsZero() && now.After(entry.exp) {
 			expired = append(expired, key)

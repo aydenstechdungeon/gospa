@@ -1013,21 +1013,63 @@ function runOnIdle(callback: () => void): void {
   setTimeout(callback, 0);
 }
 
+// Lightweight index of managed head elements for O(1) lookups
+interface HeadElementIndex {
+  links: Map<string, Element>;
+  metaNames: Map<string, Element>;
+  metaProperties: Map<string, Element>;
+  metaHttpEquivs: Map<string, Element>;
+  styleIds: Map<string, Element>;
+  scriptSrcs: Map<string, Element>;
+  inlineScripts: Map<string, Element>;
+}
+
+function buildHeadIndex(): HeadElementIndex {
+  const index: HeadElementIndex = {
+    links: new Map(),
+    metaNames: new Map(),
+    metaProperties: new Map(),
+    metaHttpEquivs: new Map(),
+    styleIds: new Map(),
+    scriptSrcs: new Map(),
+    inlineScripts: new Map(),
+  };
+  document.head.querySelectorAll("[data-gospa-head]").forEach((el) => {
+    if (el.matches("link[href]")) {
+      const href = el.getAttribute("href");
+      if (href) index.links.set(href, el);
+    } else if (el.matches("meta[name]")) {
+      const name = el.getAttribute("name");
+      if (name) index.metaNames.set(name, el);
+    } else if (el.matches("meta[property]")) {
+      const property = el.getAttribute("property");
+      if (property) index.metaProperties.set(property, el);
+    } else if (el.matches("meta[http-equiv]")) {
+      const httpEquiv = el.getAttribute("http-equiv");
+      if (httpEquiv) index.metaHttpEquivs.set(httpEquiv, el);
+    } else if (el.matches("style[id]")) {
+      if (el.id) index.styleIds.set(el.id, el);
+    } else if (el.matches("script[data-gospa-head]")) {
+      const src = el.getAttribute("src");
+      if (src) {
+        index.scriptSrcs.set(src, el);
+      } else {
+        const key = el.getAttribute("data-gospa-inline-key") ?? "";
+        index.inlineScripts.set(key, el);
+      }
+    }
+  });
+  return index;
+}
+
 // Update head elements - smart reconciliation to avoid CSS flashes
 // and clean up elements that are no longer needed
 function updateHead(newDoc: Document): void {
-  const escapeSelectorValue = (value: string): string => {
-    if (typeof CSS !== "undefined" && typeof CSS.escape === "function") {
-      return CSS.escape(value);
-    }
-    return value.replace(/["\\]/g, "\\$&");
-  };
-
   const newHead = newDoc.querySelector("head");
-
   if (!newHead) return;
 
-  // 1. Update title explicitly if it changed
+  const index = buildHeadIndex();
+
   const newTitle = newDoc.querySelector("title")?.textContent;
   if (newTitle && newTitle !== document.title) {
     document.title = newTitle;
@@ -1041,154 +1083,77 @@ function updateHead(newDoc: Document): void {
   const neededScriptSrcs = new Set<string>();
   const neededInlineScriptKeys = new Set<string>();
 
-  // 2. Smart reconciliation for link tags (CSS)
-  // Never remove existing stylesheets to avoid FOUC (Flash of Unstyled Content)
-  const newLinkElements = Array.from(newHead.querySelectorAll("link"));
-
-  newLinkElements.forEach((newEl) => {
+  Array.from(newHead.querySelectorAll("link")).forEach((newEl) => {
     const href = newEl.getAttribute("href");
-
-    // Build a unique selector for tracking
-    const selector = href ? `link[href="${escapeSelectorValue(href)}"]` : null;
     if (href) neededLinkHrefs.add(href);
-
-    // Check if this link already exists in the document
-    const existingEl = selector ? document.head.querySelector(selector) : null;
-
-    if (!existingEl) {
-      // Only add if it doesn't exist
+    if (href && !index.links.has(href)) {
       const clone = newEl.cloneNode(true) as HTMLElement;
       clone.setAttribute("data-gospa-head", "true");
       document.head.appendChild(clone);
     }
   });
 
-  // 3. Handle meta tags - update existing or add new
-  const newMetaElements = Array.from(newHead.querySelectorAll("meta"));
-
-  newMetaElements.forEach((newEl) => {
+  Array.from(newHead.querySelectorAll("meta")).forEach((newEl) => {
     const name = newEl.getAttribute("name");
     const property = newEl.getAttribute("property");
     const httpEquiv = newEl.getAttribute("http-equiv");
-
-    // Build selector to find existing meta and for tracking
-    let selector = "";
-    if (name) selector = `meta[name="${escapeSelectorValue(name)}"]`;
-    else if (property)
-      selector = `meta[property="${escapeSelectorValue(property)}"]`;
-    else if (httpEquiv) {
-      selector = `meta[http-equiv="${escapeSelectorValue(httpEquiv)}"]`;
-    }
-
     if (name) neededMetaNames.add(name);
     if (property) neededMetaProperties.add(property);
     if (httpEquiv) neededMetaHttpEquivs.add(httpEquiv);
-
-    const existingEl = selector ? document.head.querySelector(selector) : null;
-
+    const existingEl = name ? index.metaNames.get(name)
+      : property ? index.metaProperties.get(property)
+      : httpEquiv ? index.metaHttpEquivs.get(httpEquiv)
+      : null;
     if (existingEl) {
-      // Update content attribute only
       const content = newEl.getAttribute("content");
       if (content) existingEl.setAttribute("content", content);
     } else {
-      // Add new meta tag
       const clone = newEl.cloneNode(true) as HTMLElement;
       clone.setAttribute("data-gospa-head", "true");
       document.head.appendChild(clone);
     }
   });
 
-  // 4. Handle style tags - only add new ones, don't remove existing
-  const newStyleElements = Array.from(newHead.querySelectorAll("style"));
-
-  newStyleElements.forEach((newEl) => {
+  Array.from(newHead.querySelectorAll("style")).forEach((newEl) => {
     const id = newEl.id;
-    const selector = id ? `style#${id}` : null;
-
     if (id) neededStyleIds.add(id);
-
-    const existingEl = selector ? document.head.querySelector(selector) : null;
-
-    if (!existingEl) {
+    if (id && !index.styleIds.has(id)) {
       const clone = newEl.cloneNode(true) as HTMLElement;
       clone.setAttribute("data-gospa-head", "true");
       document.head.appendChild(clone);
     }
   });
 
-  // 5. Handle scripts separately if marked
   newHead.querySelectorAll("script[data-gospa-head]").forEach((el) => {
     const src = el.getAttribute("src");
-    if (src) {
-      neededScriptSrcs.add(src);
-    }
+    if (src) neededScriptSrcs.add(src);
     const inlineKey = src
       ? ""
       : `${el.getAttribute("type") ?? ""}::${el.getAttribute("id") ?? ""}::${el.textContent ?? ""}`;
-    if (inlineKey) {
-      neededInlineScriptKeys.add(inlineKey);
-    }
-
-    const existingEl = src
-      ? document.head.querySelector(`script[src="${escapeSelectorValue(src)}"]`)
-      : document.head.querySelector(
-          `script[data-gospa-head][data-gospa-inline-key="${escapeSelectorValue(inlineKey)}"]`,
-        );
-
+    if (inlineKey) neededInlineScriptKeys.add(inlineKey);
+    const existingEl = src ? index.scriptSrcs.get(src) : index.inlineScripts.get(inlineKey);
     if (!existingEl) {
       const script = document.createElement("script");
       Array.from(el.attributes).forEach((attr) =>
         script.setAttribute(attr.name, attr.value),
       );
-      if (inlineKey) {
-        script.setAttribute("data-gospa-inline-key", inlineKey);
-      }
+      if (inlineKey) script.setAttribute("data-gospa-inline-key", inlineKey);
       const nonce = getCSPNonce();
-      if (nonce) {
-        script.nonce = nonce;
-      }
+      if (nonce) script.nonce = nonce;
       script.textContent = el.textContent;
       document.head.appendChild(script);
     }
   });
 
-  // 6. Clean up old GoSPA-managed head elements that are no longer needed
-  // This prevents memory leaks and DOM bloat during long SPA sessions
-  const existingGoSPAElements =
-    document.head.querySelectorAll("[data-gospa-head]");
-  existingGoSPAElements.forEach((el) => {
-    let shouldRemove = false;
-
-    if (el.matches("link[href]")) {
-      const href = el.getAttribute("href");
-      shouldRemove = !href || !neededLinkHrefs.has(href);
-    } else if (el.matches("meta[name]")) {
-      const name = el.getAttribute("name");
-      shouldRemove = !name || !neededMetaNames.has(name);
-    } else if (el.matches("meta[property]")) {
-      const property = el.getAttribute("property");
-      shouldRemove = !property || !neededMetaProperties.has(property);
-    } else if (el.matches("meta[http-equiv]")) {
-      const httpEquiv = el.getAttribute("http-equiv");
-      shouldRemove = !httpEquiv || !neededMetaHttpEquivs.has(httpEquiv);
-    } else if (el.matches("style[id]")) {
-      const id = el.id;
-      shouldRemove = !id || !neededStyleIds.has(id);
-    } else if (el.matches("script[data-gospa-head]")) {
-      const src = el.getAttribute("src");
-      shouldRemove = src
-        ? !neededScriptSrcs.has(src)
-        : !neededInlineScriptKeys.has(
-            el.getAttribute("data-gospa-inline-key") ?? "",
-          );
-    } else {
-      shouldRemove = true;
-    }
-
-    if (shouldRemove) {
-      el.remove();
-    }
-  });
+  const toRemove: Element[] = [];
+  index.links.forEach((el, href) => { if (!neededLinkHrefs.has(href)) toRemove.push(el); });
+  index.metaNames.forEach((el, name) => { if (!neededMetaNames.has(name)) toRemove.push(el); });
+  index.metaProperties.forEach((el, prop) => { if (!neededMetaProperties.has(prop)) toRemove.push(el); });
+  index.metaHttpEquivs.forEach((el, eq) => { if (!neededMetaHttpEquivs.has(eq)) toRemove.push(el); });
+  index.styleIds.forEach((el, id) => { if (!neededStyleIds.has(id)) toRemove.push(el); });
+  index.scriptSrcs.forEach((el, src) => { if (!neededScriptSrcs.has(src)) toRemove.push(el); });
+  index.inlineScripts.forEach((el, key) => { if (!neededInlineScriptKeys.has(key)) toRemove.push(el); });
+  toRemove.forEach((el) => el.remove());
 }
 
 // Execute scripts in the given container
@@ -2088,15 +2053,10 @@ async function postInvalidatePayload(
   payload: Record<string, string | boolean>,
 ): Promise<void> {
   try {
-    const csrfToken =
-      (window as any).__GOSPA_CONFIG__?.csrfToken || getCookie("csrf_token");
     const headers: Record<string, string> = {
       "Content-Type": "application/json",
       Accept: "application/json",
     };
-    if (csrfToken) {
-      headers["X-CSRF-Token"] = csrfToken;
-    }
     await fetch("/_gospa/invalidate", {
       method: "POST",
       credentials: "same-origin",

@@ -111,10 +111,6 @@ export async function remote<T = unknown>(
   }
 
   const controller = new AbortController();
-  const csrfToken =
-    (typeof window !== "undefined" &&
-      (window as any).__GOSPA_CONFIG__?.csrfToken) ||
-    getCookie("csrf_token");
 
   let abortListener: (() => void) | undefined;
   if (externalSignal) {
@@ -137,7 +133,6 @@ export async function remote<T = unknown>(
         headers: {
           "Content-Type": "application/json",
           Accept: "application/json",
-          ...(csrfToken ? { "X-CSRF-Token": csrfToken } : {}),
           ...options.headers,
         },
         body: input !== undefined ? JSON.stringify(input) : undefined,

@@ -227,7 +227,7 @@ func DefaultConfig() Config {
 	return Config{
 		RuntimeTier:              RuntimeTierFull,
 		RoutesDir:                "./routes",
-		DevMode:                  true,
+		DevMode:                  false,
 		RuntimeScript:            "/_gospa/runtime.js",
 		StaticDir:                "./static",
 		StaticPrefix:             "/static",

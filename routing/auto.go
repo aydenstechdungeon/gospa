@@ -548,24 +548,10 @@ func compileRouteSegments(pattern string) []routeSegment {
 }
 
 func matchRouteSegments(pattern []routeSegment, pathSegs []string) (map[string]string, bool) {
-	cloneParams := func(src map[string]string) map[string]string {
-		if src == nil {
-			return make(map[string]string)
-		}
-		out := make(map[string]string, len(src)+1)
-		for k, v := range src {
-			out[k] = v
-		}
-		return out
-	}
-
 	var walk func(i, j int, params map[string]string) (map[string]string, bool)
 	walk = func(i, j int, params map[string]string) (map[string]string, bool) {
 		if i == len(pattern) {
 			if j == len(pathSegs) {
-				if params == nil {
-					return map[string]string{}, true
-				}
 				return params, true
 			}
 			return nil, false
@@ -583,46 +569,40 @@ func matchRouteSegments(pattern []routeSegment, pathSegs []string) (map[string]s
 			if j >= len(pathSegs) {
 				return nil, false
 			}
-			next := cloneParams(params)
-			next[seg.value] = pathSegs[j]
-			return walk(i+1, j+1, next)
+			params[seg.value] = pathSegs[j]
+			return walk(i+1, j+1, params)
 
 		case segmentOptionalParam:
-			// Try consuming first; fall back to omission when suffix segments require it.
 			if j < len(pathSegs) {
-				withValue := cloneParams(params)
-				withValue[seg.value] = pathSegs[j]
-				if out, ok := walk(i+1, j+1, withValue); ok {
+				params[seg.value] = pathSegs[j]
+				if out, ok := walk(i+1, j+1, params); ok {
 					return out, true
 				}
+				delete(params, seg.value)
 			}
-			withoutValue := cloneParams(params)
-			withoutValue[seg.value] = ""
-			return walk(i+1, j, withoutValue)
+			params[seg.value] = ""
+			return walk(i+1, j, params)
 
 		case segmentCatchAll:
-			// Required catch-all must capture at least one segment.
 			if j >= len(pathSegs) {
 				return nil, false
 			}
-			// Greedy but backtracking, so suffix segments can still match.
 			for k := len(pathSegs); k > j; k-- {
-				next := cloneParams(params)
-				next[seg.value] = strings.Join(pathSegs[j:k], "/")
-				if out, ok := walk(i+1, k, next); ok {
+				params[seg.value] = strings.Join(pathSegs[j:k], "/")
+				if out, ok := walk(i+1, k, params); ok {
 					return out, true
 				}
+				delete(params, seg.value)
 			}
 			return nil, false
 
 		case segmentOptionalCatchAll:
-			// Greedy with backtracking; may also capture empty.
 			for k := len(pathSegs); k >= j; k-- {
-				next := cloneParams(params)
-				next[seg.value] = strings.Join(pathSegs[j:k], "/")
-				if out, ok := walk(i+1, k, next); ok {
+				params[seg.value] = strings.Join(pathSegs[j:k], "/")
+				if out, ok := walk(i+1, k, params); ok {
 					return out, true
 				}
+				delete(params, seg.value)
 			}
 			return nil, false
 		}
@@ -630,7 +610,7 @@ func matchRouteSegments(pattern []routeSegment, pathSegs []string) (map[string]s
 		return nil, false
 	}
 
-	return walk(0, 0, nil)
+	return walk(0, 0, make(map[string]string))
 }
 
 // GetRoutes returns all routes.

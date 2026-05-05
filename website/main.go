@@ -188,8 +188,8 @@ func cacheMiddleware(c fiber.Ctx) error {
 			// Image files without hash: 30 days cache with revalidation
 			c.Set("Cache-Control", "public, max-age=2592000, stale-while-revalidate=31536000")
 		default:
-			// Other static assets (JS/CSS) without hash: 7 days cache, revalidate for 1 year
-			c.Set("Cache-Control", "public, max-age=604800, stale-while-revalidate=31536000")
+ 		// Other static assets (JS/CSS) without hash: 30 days cache, revalidate for 1 year
+ 		c.Set("Cache-Control", "public, max-age=2592000, stale-while-revalidate=31536000")
 		}
 
 		// Generate ETag for conditional requests
