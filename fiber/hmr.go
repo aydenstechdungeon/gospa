@@ -75,6 +75,7 @@ type HMRFileWatcher struct {
 	ignore     []string
 	changeChan chan HMRFileChangeEvent
 	stopChan   chan struct{}
+	stopOnce   sync.Once
 	running    bool
 	mu         sync.Mutex
 }
@@ -138,9 +139,11 @@ func (fw *HMRFileWatcher) Stop() {
 		return
 	}
 
-	close(fw.stopChan)
-	// Recreate channel so a subsequent Start() works without panicking
+	fw.stopOnce.Do(func() {
+		close(fw.stopChan)
+	})
 	fw.stopChan = make(chan struct{})
+	fw.stopOnce = sync.Once{}
 	fw.running = false
 }
 
@@ -520,10 +523,27 @@ func (mgr *HMRManager) handleClientMessage(c *websocket.Conn, data map[string]an
 }
 
 // HMREndpoint returns a Fiber handler for HMR WebSocket.
+// Validates the Origin header to prevent cross-origin WebSocket hijacking.
+// Only allows connections from localhost/127.0.0.1 origins in dev mode.
 func (mgr *HMRManager) HMREndpoint() fiberpkg.Handler {
-	return websocket.New(func(c *websocket.Conn) {
-		mgr.HandleWebSocket(c)
-	})
+	return func(c fiberpkg.Ctx) error {
+		origin := c.Get("Origin")
+		if origin != "" {
+			allowed := false
+			for _, prefix := range []string{"http://localhost", "http://127.0.0.1", "https://localhost", "https://127.0.0.1"} {
+				if strings.HasPrefix(origin, prefix) {
+					allowed = true
+					break
+				}
+			}
+			if !allowed {
+				return c.Status(fiberpkg.StatusForbidden).SendString("HMR: origin not allowed")
+			}
+		}
+		return websocket.New(func(c *websocket.Conn) {
+			mgr.HandleWebSocket(c)
+		})(c)
+	}
 }
 
 // HMRMiddleware returns middleware that adds HMR script to HTML responses.

@@ -172,8 +172,8 @@ func TestCSRFTokenMiddleware_FormSupport(t *testing.T) {
 		t.Errorf("expected 403 for missing token, got %v", resp1.StatusCode)
 	}
 
-	// 2. Token in form body - should succeed
-	csrfToken := "test-csrf-token" //nolint:gosec // this is a test token
+	// 2. Token in form body matching cookie - should succeed
+	csrfToken := "abcdef0123456789abcdef0123456789abcdef0123456789abcdef0123456789"
 	formData := "name=val&_csrf=" + csrfToken
 	req2 := httptest.NewRequest("POST", "/test", strings.NewReader(formData))
 	req2.Header.Set("Content-Type", "application/x-www-form-urlencoded")

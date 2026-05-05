@@ -473,7 +473,7 @@ type WSMessage struct {
 	Action       string                 `json:"action,omitempty" msgpack:"action,omitempty"`
 	Data         map[string]interface{} `json:"data,omitempty" msgpack:"data,omitempty"`
 	Payload      interface{}            `json:"payload,omitempty" msgpack:"payload,omitempty"`
-	SessionToken string                 `json:"sessionToken,omitempty" msgpack:"sessionToken,omitempty"`
+	SessionToken string                 `json:"-" msgpack:"-"`
 	ClientID     string                 `json:"clientId,omitempty" msgpack:"clientId,omitempty"`
 }
 
@@ -672,8 +672,9 @@ func (h *WSHub) broadcastWorker() {
 }
 
 // BroadcastToTopic sends a message to all clients subscribed to a topic.
+// The topic is injected into the JSON envelope to enable O(1) topic-based
+// delivery without re-parsing on the receiving end.
 func (h *WSHub) BroadcastToTopic(topic string, message []byte) {
-	// Add topic hint to message if it's JSON
 	var msgData map[string]interface{}
 	if err := json.Unmarshal(message, &msgData); err == nil {
 		msgData["_topic"] = topic
@@ -1088,8 +1089,8 @@ func (c *WSClient) SendState() {
 	})
 }
 
-// SendInitWithSession sends the initial state with a session token for HTTP state sync.
-func (c *WSClient) SendInitWithSession(sessionToken string) {
+// SendInitWithSession sends the initial state with session info for HTTP state sync.
+func (c *WSClient) SendInitWithSession() {
 	stateMap := c.State.ToMap()
 	if c.stateDiffing {
 		c.lastSentStateMu.Lock()
@@ -1119,10 +1120,9 @@ func (c *WSClient) SendInitWithSession(sessionToken string) {
 		return
 	}
 	c.sendEncodedPayload(map[string]interface{}{
-		"type":         "init",
-		"state":        stateData,
-		"sessionToken": sessionToken,
-		"clientId":     c.SessionID,
+		"type":     "init",
+		"state":    stateData,
+		"clientId": c.SessionID,
 	})
 }
 
@@ -1179,8 +1179,17 @@ func computeStateDiff(prev, next map[string]interface{}) map[string]interface{} 
 // deepEqual compares two values for equality with optimized paths for common types.
 // Uses fast path for primitives and type-specific comparisons, avoiding expensive
 // JSON marshaling except as final fallback for complex nested structures.
+// maxDepth limits recursion to prevent stack overflow from circular references.
+const maxDeepEqualDepth = 64
+
 func deepEqual(a, b interface{}) bool {
-	// Fast path: identical pointers or simple equality
+	return deepEqualDepth(a, b, 0)
+}
+
+func deepEqualDepth(a, b interface{}, depth int) bool {
+	if depth > maxDeepEqualDepth {
+		return false
+	}
 	if a == b {
 		return true
 	}
@@ -1222,7 +1231,7 @@ func deepEqual(a, b interface{}) bool {
 			return false
 		}
 		for k, v := range av {
-			if bvVal, exists := bv[k]; !exists || !deepEqual(v, bvVal) {
+			if bvVal, exists := bv[k]; !exists || !deepEqualDepth(v, bvVal, depth+1) {
 				return false
 			}
 		}
@@ -1233,7 +1242,7 @@ func deepEqual(a, b interface{}) bool {
 			return false
 		}
 		for i := range av {
-			if !deepEqual(av[i], bv[i]) {
+			if !deepEqualDepth(av[i], bv[i], depth+1) {
 				return false
 			}
 		}
@@ -1250,7 +1259,7 @@ func deepEqual(a, b interface{}) bool {
 			return false
 		}
 		for i := 0; i < av.Len(); i++ {
-			if !deepEqual(av.Index(i).Interface(), bv.Index(i).Interface()) {
+			if !deepEqualDepth(av.Index(i).Interface(), bv.Index(i).Interface(), depth+1) {
 				return false
 			}
 		}
@@ -1262,7 +1271,7 @@ func deepEqual(a, b interface{}) bool {
 		for _, key := range av.MapKeys() {
 			aVal := av.MapIndex(key)
 			bVal := bv.MapIndex(key)
-			if !bVal.IsValid() || !deepEqual(aVal.Interface(), bVal.Interface()) {
+			if !bVal.IsValid() || !deepEqualDepth(aVal.Interface(), bVal.Interface(), depth+1) {
 				return false
 			}
 		}
@@ -1279,7 +1288,7 @@ func deepEqual(a, b interface{}) bool {
 			if !fieldA.CanInterface() || !fieldB.CanInterface() {
 				continue
 			}
-			if !deepEqual(fieldA.Interface(), fieldB.Interface()) {
+			if !deepEqualDepth(fieldA.Interface(), fieldB.Interface(), depth+1) {
 				return false
 			}
 		}
@@ -1292,7 +1301,7 @@ func deepEqual(a, b interface{}) bool {
 		if av.IsNil() || bv.IsNil() {
 			return false
 		}
-		return deepEqual(av.Elem().Interface(), bv.Elem().Interface())
+		return deepEqualDepth(av.Elem().Interface(), bv.Elem().Interface(), depth+1)
 	case reflect.Interface:
 		// Handle interface comparison
 		if av.IsNil() && bv.IsNil() {
@@ -1301,7 +1310,7 @@ func deepEqual(a, b interface{}) bool {
 		if av.IsNil() || bv.IsNil() {
 			return false
 		}
-		return deepEqual(av.Elem().Interface(), bv.Elem().Interface())
+		return deepEqualDepth(av.Elem().Interface(), bv.Elem().Interface(), depth+1)
 	}
 
 	// Final fallback: use pure reflection to handle complex nested structures without JSON allocations
@@ -1380,11 +1389,10 @@ func WebSocketHandler(config WebSocketConfig) fiberpkg.Handler {
 			c.SetReadLimit(int64(config.WSMaxMessageSize))
 		}
 		var sessionID string
-		var sessionToken string
 		var restoredState *state.StateMap
 
-		// Session token is received via the first WebSocket message (preferred method).
-		// This avoids URL-based token leakage in logs/referer headers.
+		// Session is validated from the HttpOnly gospa_session cookie
+		// sent automatically with the WebSocket handshake.
 
 		// Generate unique connection ID so tabs don't kick each other off
 		connID := "conn_" + generateSecureToken()[:8]
@@ -1446,7 +1454,6 @@ func WebSocketHandler(config WebSocketConfig) fiberpkg.Handler {
 				if savedState, hasState := globalClientStateStore.Get(prevSessionID); hasState {
 					sessionID = prevSessionID
 					restoredState = savedState
-					sessionToken = cookieToken
 				}
 			}
 		}
@@ -1458,14 +1465,13 @@ func WebSocketHandler(config WebSocketConfig) fiberpkg.Handler {
 		// If no valid session, generate new session ID
 		if sessionID == "" {
 			sessionID = config.GenerateID()
-			token, err := globalSessionStore.CreateSession(sessionID)
+			_, err := globalSessionStore.CreateSession(sessionID)
 			if err != nil {
 				slog.Default().Error("failed to create websocket session", "session_id", sessionID, "err", err)
 				client.SendError("Failed to create session")
 				_ = c.Close()
 				return
 			}
-			sessionToken = token
 		}
 
 		// Update client with session ID
@@ -1539,8 +1545,8 @@ func WebSocketHandler(config WebSocketConfig) fiberpkg.Handler {
 			config.OnConnect(client)
 		}
 
-		// Send initial state with session token
-		client.SendInitWithSession(sessionToken)
+		// Send initial state
+		client.SendInitWithSession()
 
 		// Handle messages
 		onMessage := config.OnMessage
@@ -1884,7 +1890,13 @@ func BroadcastState(hub *WSHub, key string, value interface{}) error {
 	return nil
 }
 
-// SendToClient sends a message to a specific client.
+// CloseGlobalRateLimiters stops the background cleanup goroutines of the
+// global rate limiter instances to prevent goroutine leaks on shutdown.
+func CloseGlobalRateLimiters() {
+	globalConnRateLimiter.Close()
+	globalRemoteActionRateLimiter.Close()
+}
+// SendToClient sends a JSON message to a specific client by ID.
 func SendToClient(hub *WSHub, clientID string, message interface{}) error {
 	client, ok := hub.GetClient(clientID)
 	if !ok {

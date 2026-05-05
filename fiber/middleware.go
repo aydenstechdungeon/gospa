@@ -110,9 +110,6 @@ func StateMiddleware(config Config) gofiber.Handler {
 		// Inject state as a script tag before </body>
 		body := c.Response().Body()
 
-		// Retrieve CSRF token for possible forms and AJAX setup.
-		csrfToken, _ := c.Locals("gospa.csrf_token").(string)
-
 		// Retrieve CSP Nonce from locals
 		nonce, _ := c.Locals("gospa.csp_nonce").(string)
 		nonceAttr := ""
@@ -129,15 +126,7 @@ func StateMiddleware(config Config) gofiber.Handler {
 		}
 		// Encode appends a trailing newline; trim it for inline embedding.
 		escapedJSON := strings.TrimRight(buf.String(), "\n")
-		stateScript := `<script` + nonceAttr + `>window.__GOSPA_STATE__ = ` + escapedJSON + `;`
-		if isValidCSRFToken(csrfToken) {
-			csrfJSON, err := stdjson.Marshal(csrfToken)
-			if err != nil {
-				return err
-			}
-			stateScript += `window.__GOSPA_CSRF_TOKEN__ = ` + string(csrfJSON) + `;`
-		}
-		stateScript += `</script>`
+		stateScript := `<script` + nonceAttr + `>window.__GOSPA_STATE__ = ` + escapedJSON + `;</script>`
 
 		runtimePath := config.RuntimeScript
 		if strings.HasPrefix(runtimePath, "/_gospa/runtime.js") {
@@ -381,22 +370,31 @@ func SessionMiddleware() gofiber.Handler {
 }
 
 // CSRFTokenMiddleware validates CSRF tokens on mutating requests.
+// Since the CSRF cookie is HttpOnly, JavaScript cannot read it. Therefore:
+// - Standard HTML form submissions use the _csrf hidden field (progressive enhancement).
+// - API/AJAX requests rely on SameSite=Strict cookie + Origin header validation.
+// The X-CSRF-Token header is no longer supported since the token is not accessible to JS.
 func CSRFTokenMiddleware() gofiber.Handler {
 	return func(c gofiber.Ctx) error {
-		// Skip for GET, HEAD, OPTIONS
 		if c.Method() == "GET" || c.Method() == "HEAD" || c.Method() == "OPTIONS" {
 			return c.Next()
 		}
 
-		token := c.Get("X-CSRF-Token")
-		if token == "" {
-			// Fallback to form field for standard HTML submissions.
-			// This enables progressive enhancement without mandatory JS.
-			token = c.FormValue("_csrf")
-		}
 		cookie := c.Cookies("csrf_token")
+		if cookie == "" || !isValidCSRFToken(cookie) {
+			return c.Status(gofiber.StatusForbidden).JSON(gofiber.Map{
+				"error": "CSRF token missing",
+			})
+		}
 
-		if token == "" || cookie == "" || subtle.ConstantTimeCompare([]byte(token), []byte(cookie)) != 1 {
+		token := c.FormValue("_csrf")
+		if token == "" {
+			return c.Status(gofiber.StatusForbidden).JSON(gofiber.Map{
+				"error": "CSRF token mismatch",
+			})
+		}
+
+		if subtle.ConstantTimeCompare([]byte(token), []byte(cookie)) != 1 {
 			return c.Status(gofiber.StatusForbidden).JSON(gofiber.Map{
 				"error": "CSRF token mismatch",
 			})
@@ -570,6 +568,9 @@ const StrictContentSecurityPolicy = "default-src 'self'; base-uri 'none'; frame-
 
 // LegacyContentSecurityPolicy allows unsafe-inline for script-src. Use only when
 // the application requires inline event handlers or eval-based script execution.
+//
+// Deprecated: This policy defeats CSP protection against XSS. Use DefaultContentSecurityPolicy
+// or StrictContentSecurityPolicy instead. This constant will be removed in the next major version.
 const LegacyContentSecurityPolicy = "default-src 'self'; base-uri 'self'; frame-ancestors 'none'; object-src 'none'; script-src 'self' 'unsafe-inline'; style-src 'self' 'unsafe-inline'; img-src 'self' data: blob: https:; font-src 'self' data:; connect-src 'self' ws: wss:; form-action 'self'"
 
 // SecurityHeadersMiddleware adds security headers and handles the CSP nonce.
@@ -782,22 +783,22 @@ func removeUnsafeInlineFromScriptSrc(policy string) string {
 // generateComponentID generates a unique component ID using timestamp + random.
 // Timestamp ensures ordering/uniqueness, random provides entropy.
 func generateComponentID() string {
-	return fmt.Sprintf("gospa_%d_%s", time.Now().UnixNano(), randomString(8))
+	s, err := randomString(8)
+	if err != nil {
+		s = fmt.Sprintf("%x", time.Now().UnixNano())
+	}
+	return fmt.Sprintf("gospa_%d_%s", time.Now().UnixNano(), s)
 }
 
-// randomString generates a random string of given length.
-// It uses crypto/rand when available and falls back to a time-based value if entropy fails.
-func randomString(length int) string {
+// randomString generates a random string of given length using crypto/rand.
+// Returns an error if the system entropy source is unavailable.
+func randomString(length int) (string, error) {
 	const charset = "abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789"
 	b := make([]byte, length)
 	randomBytes := make([]byte, length)
 
 	if _, err := rand.Read(randomBytes); err != nil {
-		seed := time.Now().UnixNano()
-		for i := 0; i < length; i++ {
-			b[i] = charset[int((seed+int64(i*17))%int64(len(charset)))]
-		}
-		return string(b)
+		return "", fmt.Errorf("crypto/rand unavailable: %w", err)
 	}
 
 	for i := 0; i < length; {
@@ -807,13 +808,11 @@ func randomString(length int) string {
 			i++
 		} else {
 			if _, err := rand.Read(randomBytes[i : i+1]); err != nil {
-				seed := time.Now().UnixNano()
-				b[i] = charset[int((seed+int64(i*31))%int64(len(charset)))]
-				i++
+				return "", fmt.Errorf("crypto/rand unavailable: %w", err)
 			}
 		}
 	}
-	return string(b)
+	return string(b), nil
 }
 
 // JSONResponse sends a JSON response.

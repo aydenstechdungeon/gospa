@@ -343,7 +343,17 @@ func (sm *StateMap) Diff(other *StateMap) *StateMapComparison {
 // deepEqualValues compares two values for equality with optimized paths for common types.
 // Uses fast path for primitives and type-specific comparisons, avoiding expensive
 // JSON marshaling except as final fallback for complex nested structures.
+// maxDepth limits recursion to prevent stack overflow from circular references.
+const maxDeepEqualValuesDepth = 64
+
 func deepEqualValues(a, b interface{}) bool {
+	return deepEqualValuesDepth(a, b, 0)
+}
+
+func deepEqualValuesDepth(a, b interface{}, depth int) bool {
+	if depth > maxDeepEqualValuesDepth {
+		return false
+	}
 	// Fast path: identical pointers (but skip for maps/slices - not comparable)
 	// We check types first to avoid panics on incomparable types
 	if a != nil && b != nil {
@@ -393,7 +403,7 @@ func deepEqualValues(a, b interface{}) bool {
 			return false
 		}
 		for k, v := range av {
-			if bvVal, exists := bv[k]; !exists || !deepEqualValues(v, bvVal) {
+			if bvVal, exists := bv[k]; !exists || !deepEqualValuesDepth(v, bvVal, depth+1) {
 				return false
 			}
 		}
@@ -404,7 +414,7 @@ func deepEqualValues(a, b interface{}) bool {
 			return false
 		}
 		for i := range av {
-			if !deepEqualValues(av[i], bv[i]) {
+			if !deepEqualValuesDepth(av[i], bv[i], depth+1) {
 				return false
 			}
 		}
@@ -421,7 +431,7 @@ func deepEqualValues(a, b interface{}) bool {
 			return false
 		}
 		for i := 0; i < av.Len(); i++ {
-			if !deepEqualValues(av.Index(i).Interface(), bv.Index(i).Interface()) {
+			if !deepEqualValuesDepth(av.Index(i).Interface(), bv.Index(i).Interface(), depth+1) {
 				return false
 			}
 		}
