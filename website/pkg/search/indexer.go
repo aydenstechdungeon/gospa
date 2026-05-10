@@ -42,7 +42,7 @@ func GenerateIndex(routesDir string, outputDir string) error {
 			return err
 		}
 
-		if d.IsDir() || !strings.HasSuffix(path, ".templ") {
+		if d.IsDir() || (d.Name() != "page.templ" && d.Name() != "page.gospa") {
 			return nil
 		}
 
@@ -57,6 +57,7 @@ func GenerateIndex(routesDir string, outputDir string) error {
 		// Map file path to URL
 		relPath, _ := filepath.Rel(routesDir, path)
 		urlPath := strings.TrimSuffix(relPath, ".templ")
+		urlPath = strings.TrimSuffix(urlPath, ".gospa")
 		urlPath = strings.TrimSuffix(urlPath, "page")
 		urlPath = strings.TrimSuffix(urlPath, "/")
 

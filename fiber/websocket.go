@@ -434,6 +434,7 @@ func InitStores(storage store.Storage) {
 	globalSessionStore = NewSessionStore(storage)
 	globalClientStateStore = NewClientStateStore(storage)
 	globalConnRateLimiter.SetStorage(storage)
+	globalRemoteActionRateLimiter.SetStorage(storage)
 }
 
 // WSClient represents a connected WebSocket client.
@@ -1896,6 +1897,7 @@ func CloseGlobalRateLimiters() {
 	globalConnRateLimiter.Close()
 	globalRemoteActionRateLimiter.Close()
 }
+
 // SendToClient sends a JSON message to a specific client by ID.
 func SendToClient(hub *WSHub, clientID string, message interface{}) error {
 	client, ok := hub.GetClient(clientID)

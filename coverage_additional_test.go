@@ -16,6 +16,7 @@ import (
 	ahtempl "github.com/a-h/templ"
 	"github.com/aydenstechdungeon/gospa/plugin"
 	"github.com/aydenstechdungeon/gospa/routing"
+	"github.com/aydenstechdungeon/gospa/store"
 	templpkg "github.com/aydenstechdungeon/gospa/templ"
 	fiberpkg "github.com/gofiber/fiber/v3"
 )
@@ -63,6 +64,61 @@ func TestCacheTagAndKeyDefaults(t *testing.T) {
 	keys := app.defaultCacheKeys("   ")
 	if len(keys) != 2 || keys[0] != "path:/" || keys[1] != "/" {
 		t.Fatalf("unexpected default keys: %#v", keys)
+	}
+}
+
+func TestRouteCacheKeyIncludesUserQueryAndSkipsDataFlag(t *testing.T) {
+	fapp := fiberpkg.New()
+	defer func() { _ = fapp.Shutdown() }()
+
+	var got string
+	fapp.Get("/items", func(c fiberpkg.Ctx) error {
+		got = routeCacheKey(c)
+		return c.SendStatus(fiberpkg.StatusNoContent)
+	})
+
+	req := httptest.NewRequest(http.MethodGet, "/items?b=2&__data=1&a=1", nil)
+	resp, err := fapp.Test(req)
+	if err != nil {
+		t.Fatalf("request failed: %v", err)
+	}
+	_ = resp.Body.Close()
+
+	if got != "/items?a=1&b=2" {
+		t.Fatalf("unexpected route cache key: %q", got)
+	}
+}
+
+func TestPreforkUsesExternalRouteCachesWhenStorageConfigured(t *testing.T) {
+	storage := store.NewMemoryStorage()
+	defer func() { _ = storage.Close() }()
+
+	app := New(Config{Prefork: true, Storage: storage})
+	defer func() { _ = app.Fiber.Shutdown() }()
+
+	app.storeSsgEntry("/prefork", []byte("html"), nil, nil)
+	if _, ok := app.ssgCache["/prefork"]; ok {
+		t.Fatalf("expected prefork with storage to avoid process-local ssg cache")
+	}
+	data, err := storage.Get(app.Context(), "gospa:ssg:/prefork")
+	if err != nil {
+		t.Fatalf("expected ssg entry in storage: %v", err)
+	}
+	entry, ok := decodeSsgEntry(data)
+	if !ok || string(entry.html) != "html" {
+		t.Fatalf("unexpected stored ssg entry: ok=%v html=%q", ok, entry.html)
+	}
+
+	app.storePprShell("/prefork", []byte("shell"), nil, nil)
+	if _, ok := app.pprShellCache["/prefork"]; ok {
+		t.Fatalf("expected prefork with storage to avoid process-local ppr cache")
+	}
+	shell, err := storage.Get(app.Context(), "gospa:ppr:/prefork")
+	if err != nil {
+		t.Fatalf("expected ppr shell in storage: %v", err)
+	}
+	if string(shell) != "shell" {
+		t.Fatalf("unexpected stored ppr shell: %q", shell)
 	}
 }
 
@@ -270,6 +326,9 @@ func TestRouteHelpersAndFiberLoadContextMethods(t *testing.T) {
 
 	for _, tc := range cases {
 		req := httptest.NewRequest(tc.method, tc.target, tc.body)
+		if tc.method != http.MethodGet {
+			addValidCSRF(req)
+		}
 		resp, err := app.Fiber.Test(req)
 		if err != nil {
 			t.Fatalf("%s %s failed: %v", tc.method, tc.target, err)

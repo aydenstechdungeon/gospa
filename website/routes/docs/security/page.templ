@@ -1,0 +1,39 @@
+package security
+
+import "github.com/aydenstechdungeon/gospa/website/components"
+
+templ Page() {
+	<div class="space-y-10">
+		<header>
+			<h1 class="text-3xl font-bold tracking-tight mb-4">Security Guide</h1>
+			<p class="text-xl text-[var(--text-secondary)] leading-relaxed">
+				Production hardening, CSRF, CSP nonces, authentication storage, and SFC trust boundaries.
+			</p>
+		</header>
+
+		<section class="space-y-4">
+			<h2 class="text-2xl font-bold border-b border-[var(--border)] pb-2">Production Checklist</h2>
+			<ul class="space-y-2 text-[var(--text-secondary)] list-disc list-inside">
+				<li>Set <code class="mono">DevMode: false</code>.</li>
+				<li>Configure <code class="mono">PublicOrigin</code> and strict <code class="mono">AllowedOrigins</code>.</li>
+				<li>Use <code class="mono">RemoteActionMiddleware</code>, or explicitly set <code class="mono">AllowUnauthenticatedRemoteActions</code> when endpoints are intentionally public.</li>
+				<li>Use Redis-backed <code class="mono">Storage</code> to share sessions in multi-node deployments.</li>
+			</ul>
+		</section>
+
+		<section class="space-y-6">
+			<h2 class="text-2xl font-bold border-b border-[var(--border)] pb-2">CSP Nonces</h2>
+			@components.CodeBlock(`config.ContentSecurityPolicy = "default-src 'self'; script-src 'self' 'nonce-{nonce}'; ..."`, "go", "main.go")
+			@components.CodeBlock(`<script type="module" nonce={ gospatempl.GetNonce(ctx) }>
+  // custom bootstrap
+</script>`, "templ", "layout.templ")
+		</section>
+
+		<section class="space-y-4">
+			<h2 class="text-2xl font-bold border-b border-[var(--border)] pb-2">SFC Trust Boundary</h2>
+			<p class="text-[var(--text-secondary)]">
+				<code class="mono">.gospa</code> files compile into Go source. Treat them as application code and never compile untrusted SFCs.
+			</p>
+		</section>
+	</div>
+}

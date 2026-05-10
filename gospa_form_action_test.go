@@ -14,7 +14,7 @@ import (
 )
 
 func TestHandleFormAction_UsesActionQueryParam(t *testing.T) {
-	app := New(Config{})
+	app := New(Config{DisableCSRF: true})
 	defer func() { _ = app.Fiber.Shutdown() }()
 
 	routePath := fmt.Sprintf("/test-form-action-%d", time.Now().UnixNano())
@@ -57,7 +57,7 @@ func TestHandleFormAction_UsesActionQueryParam(t *testing.T) {
 }
 
 func TestHandleFormAction_FallsBackToDefaultForUnknownAction(t *testing.T) {
-	app := New(Config{})
+	app := New(Config{DisableCSRF: true})
 	defer func() { _ = app.Fiber.Shutdown() }()
 
 	routePath := fmt.Sprintf("/test-form-action-fallback-%d", time.Now().UnixNano())
@@ -97,7 +97,7 @@ func TestHandleFormAction_FallsBackToDefaultForUnknownAction(t *testing.T) {
 }
 
 func TestHandleFormAction_EnhancedStructuredResponse(t *testing.T) {
-	app := New(Config{})
+	app := New(Config{DisableCSRF: true})
 	defer func() { _ = app.Fiber.Shutdown() }()
 
 	routePath := fmt.Sprintf("/test-form-action-structured-%d", time.Now().UnixNano())
@@ -155,7 +155,7 @@ func TestHandleFormAction_EnhancedStructuredResponse(t *testing.T) {
 }
 
 func TestHandleFormAction_EnhancedKitRedirect(t *testing.T) {
-	app := New(Config{})
+	app := New(Config{DisableCSRF: true})
 	defer func() { _ = app.Fiber.Shutdown() }()
 
 	routePath := fmt.Sprintf("/test-form-action-kit-redirect-%d", time.Now().UnixNano())
@@ -194,7 +194,7 @@ func TestHandleFormAction_EnhancedKitRedirect(t *testing.T) {
 }
 
 func TestHandleFormAction_EnhancedKitFail(t *testing.T) {
-	app := New(Config{})
+	app := New(Config{DisableCSRF: true})
 	defer func() { _ = app.Fiber.Shutdown() }()
 
 	routePath := fmt.Sprintf("/test-form-action-kit-fail-%d", time.Now().UnixNano())
@@ -237,7 +237,7 @@ func TestHandleFormAction_EnhancedKitFail(t *testing.T) {
 }
 
 func TestHandleFormAction_EnhancedUnexpectedErrorUsesCanonicalEnvelope(t *testing.T) {
-	app := New(Config{})
+	app := New(Config{DisableCSRF: true})
 	defer func() { _ = app.Fiber.Shutdown() }()
 
 	routePath := fmt.Sprintf("/test-form-action-unexpected-fail-%d", time.Now().UnixNano())
@@ -279,7 +279,7 @@ func TestHandleFormAction_EnhancedUnexpectedErrorUsesCanonicalEnvelope(t *testin
 }
 
 func TestHandleFormAction_EnhancedKitError(t *testing.T) {
-	app := New(Config{})
+	app := New(Config{DisableCSRF: true})
 	defer func() { _ = app.Fiber.Shutdown() }()
 
 	routePath := fmt.Sprintf("/test-form-action-kit-error-%d", time.Now().UnixNano())

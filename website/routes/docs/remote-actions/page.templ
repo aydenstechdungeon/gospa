@@ -135,8 +135,8 @@ export interface RemoteActions {
   submitMessage: (input: Message) => Promise<Status>;
 }
 
-export function remoteAction<T extends keyof RemoteActions>(name: T, input: any): Promise<any> {
-    return window.GoSPA.remoteAction(name, input);
+export function remote<T extends keyof RemoteActions>(name: T, input: Parameters<RemoteActions[T]>[0]): ReturnType<RemoteActions[T]> {
+    return window.GoSPA.remote(name, input) as ReturnType<RemoteActions[T]>;
 }`, "typescript", " actions.ts")
 			<p class="text-[var(--text-secondary)]">
 				This provides full autocomplete and compile-time checking for your remote action names and inputs.
@@ -152,7 +152,7 @@ export function remoteAction<T extends keyof RemoteActions>(name: T, input: any)
     EnableCSRF: true,
 })`, "go", " main.go")
 			<p class="text-[var(--text-secondary)]">
-				The client reads the <code class="mono">csrf_token</code> cookie and sends <code class=" mono">X-CSRF-Token</code> automatically with <code class=" mono">GoSPA.remote()</code> requests.
+				The server injects the CSRF token into <code class="mono">window.__GOSPA_CONFIG__</code>. <code class="mono">GoSPA.remote()</code> sends it automatically as <code class="mono">X-CSRF-Token</code>.
 			</p>
 		</section>
 
@@ -162,7 +162,7 @@ export function remoteAction<T extends keyof RemoteActions>(name: T, input: any)
 				Use <code class="mono">RemoteActionMiddleware</code> to enforce auth/policy checks before every remote action.
 			</p>
 			@components.CodeBlock(`app := gospa.New(gospa.Config{
-    RemoteActionMiddleware: func(c *fiber.Ctx) error {
+    RemoteActionMiddleware: func(c fiber.Ctx) error {
         if c.Locals("user") == nil {
             return c.Status(fiber.StatusUnauthorized).JSON(fiber.Map{"error": " unauthorized"})
         }

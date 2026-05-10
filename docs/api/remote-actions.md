@@ -17,13 +17,13 @@ routing.RegisterRemoteAction("greet", func(ctx context.Context, rc routing.Remot
 
 ## Invoking From the Client
 
-GoSPA provides a type-safe bridge for calling remote actions from your TypeScript code.
+GoSPA provides `remote()` for direct calls and `remoteAction()` when you want a reusable typed caller.
 
 ```typescript
-import { remoteAction } from "/_gospa/runtime.js";
+import { remote } from "/_gospa/runtime.js";
 
 async function sayHello() {
-    const result = await remoteAction("greet", "World");
+    const result = await remote("greet", "World");
     console.log(result); // "Hello, World"
 }
 ```

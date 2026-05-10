@@ -16,6 +16,7 @@ GoSPA is configured primarily through the `gospa.Config` struct passed to `gospa
 | Property | Type | Description |
 | :--- | :--- | :--- |
 | `EnableCSRF` | `bool` | Enables built-in CSRF protection for forms and AJAX. |
+| `DisableCSRF` | `bool` | Explicitly disables built-in CSRF protection when you provide custom handling. |
 | `ContentSecurityPolicy` | `string` | Custom CSP header. Use `{nonce}` as a placeholder for automatically generated nonces. |
 | `AllowedOrigins` | `[]string` | Sets the `Access-Control-Allow-Origin` header for CORS. |
 | `PublicOrigin` | `string` | The base URL of your site (e.g., `https://example.com`). Required for secure WebSocket generation. |

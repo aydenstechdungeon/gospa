@@ -112,6 +112,7 @@ Presets:
 | `AllowUnauthenticatedRemoteActions` | `bool` |
 | `AllowedOrigins` | `[]string` |
 | `EnableCSRF` | `bool` |
+| `DisableCSRF` | `bool` |
 | `ContentSecurityPolicy` | `string` |
 | `PublicOrigin` | `string` |
 | `SSGCacheMaxEntries` | `int` |
@@ -133,6 +134,7 @@ Presets:
 - **`WSReconnectDelay` / `WSMaxReconnect` / `WSHeartbeat`**: Passed to the client; if unset/zero at runtime, HTML injection applies **1s / 10 / 30s** defaults when embedding config.
 - **`RemoteActionMiddleware`**: Required in production for remote actions unless `AllowUnauthenticatedRemoteActions` is set.
 - **`EnableCSRF`**: Defaults to `true`; wired in `gospa.New`.
+- **`DisableCSRF`**: Explicit escape hatch for trusted dev stacks or custom CSRF middleware.
 - **`ContentSecurityPolicy`**: Empty uses `fiber.DefaultContentSecurityPolicy` (compatibility policy for typical GoSPA apps). For stricter deployments, start from `fiber.StrictContentSecurityPolicy`.
 - **`PublicOrigin`**: Stable WebSocket URL behind proxies (see [Configuration](../configuration.md)).
 - **`Prefork` + `Storage` + `PubSub`**: Required together for correct multi-process behavior.
@@ -512,8 +514,8 @@ router.RegisterToFiber(fiberApp *fiber.App)
 **Handler Type**
 
 ```go
-type Handler func(c *fiber.Ctx) error
-type Middleware func(c *fiber.Ctx) error
+type Handler func(c fiber.Ctx) error
+type Middleware func(c fiber.Ctx) error
 ```
 
 ---
@@ -543,8 +545,8 @@ boolVal, err := params.Bool("active")
 sliceVal := params.Slice("path")
 
 // Utility functions
-params := routing.ExtractParams(c *fiber.Ctx, paramKeys []string)
-queryParams := routing.QueryParams(c *fiber.Ctx)
+params := routing.ExtractParams(c fiber.Ctx, paramKeys []string)
+queryParams := routing.QueryParams(c fiber.Ctx)
 ```
 
 ---
@@ -648,12 +650,12 @@ opts := routing.GetRouteOptions(path string)
 app.Use(fiber.SPAMiddleware(config fiber.Config))
 
 // Runtime script serving
-app.Get("/_gospa/runtime.js", fiber.RuntimeMiddleware(simple bool))
+app.Get("/_gospa/runtime.js", fiber.RuntimeMiddleware(compiler.RuntimeTierFull))
 app.Get("/_gospa/runtime.js", fiber.RuntimeMiddlewareWithContent(content []byte))
 
 // SPA navigation detection
 app.Use(fiber.SPANavigationMiddleware())
-isSPA := fiber.IsSPANavigation(c *fiber.Ctx) bool
+isSPA := fiber.IsSPANavigation(c)
 
 // CORS
 app.Use(fiber.CORSMiddleware(allowedOrigins []string))
@@ -674,7 +676,7 @@ app.Use(fiber.CSRFTokenMiddleware())
 
 ```go
 // Create hub
-hub := fiber.NewWSHub()
+hub := fiber.NewWSHub(store.NewMemoryPubSub())
 
 // Start hub (run in goroutine)
 go hub.Run()
@@ -701,7 +703,7 @@ count := hub.ClientCount()
 
 ```go
 // Create client
-client := fiber.NewWSClient(id string, conn *websocket.Conn)
+client := fiber.NewWSClient(id, conn, fiber.WebSocketConfig{})
 
 // Properties
 client.ID        string
@@ -768,7 +770,7 @@ fiber.RegisterActionHandler("increment", func(client *fiber.WSClient, payload js
 
 ```go
 // Session store - maps tokens to client IDs
-sessionStore := fiber.NewSessionStore()
+sessionStore := fiber.NewSessionStore(store.NewMemoryStorage())
 token, err := sessionStore.CreateSession(clientID)
 if err != nil {
     // handle persistence failure
@@ -778,7 +780,7 @@ sessionStore.RemoveSession(token string)
 sessionStore.RemoveClientSessions(clientID string)
 
 // Client state store - persists state by client ID
-stateStore := fiber.NewClientStateStore()
+stateStore := fiber.NewClientStateStore(store.NewMemoryStorage())
 stateStore.Save(clientID string, state *state.StateMap)
 state, ok := stateStore.Get(clientID string)
 stateStore.Remove(clientID string)
@@ -803,18 +805,18 @@ fiber.SendToClient(hub *WSHub, clientID string, message interface{}) error
 handler := fiber.StateSyncHandler(hub *WSHub)
 
 // Component rendering
-fiber.RenderComponent(c *fiber.Ctx, config Config, component templ.Component, name string) error
+fiber.RenderComponent(c fiber.Ctx, config Config, component templ.Component, name string) error
 
 // State access
-stateMap := fiber.GetState(c *fiber.Ctx, config Config)
-componentID := fiber.GetComponentID(c *fiber.Ctx, config Config)
-sessionState := fiber.GetSessionState(c *fiber.Ctx, config Config)
-fiber.SetSessionState(c *fiber.Ctx, config Config, key string, value interface{})
+stateMap := fiber.GetState(c fiber.Ctx, config Config)
+componentID := fiber.GetComponentID(c fiber.Ctx, config Config)
+sessionState := fiber.GetSessionState(c fiber.Ctx, config Config)
+fiber.SetSessionState(c fiber.Ctx, config Config, key string, value interface{})
 
 // Response helpers
-fiber.JSONResponse(c *fiber.Ctx, status int, data interface{}) error
-fiber.JSONError(c *fiber.Ctx, status int, message string) error
-fiber.ParseBody(c *fiber.Ctx, v interface{}) error
+fiber.JSONResponse(c fiber.Ctx, status int, data interface{}) error
+fiber.JSONError(c fiber.Ctx, status int, message string) error
+fiber.ParseBody(c fiber.Ctx, v interface{}) error
 ```
 
 ---

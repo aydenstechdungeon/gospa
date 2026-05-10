@@ -48,13 +48,11 @@ func Parse(input string) (*SFC, error) {
 
 	// 1. Handle Front Matter
 	if strings.HasPrefix(input, "---") {
-		endIdx := strings.Index(input[3:], "---")
-		if endIdx != -1 {
-			fmContent := input[3 : endIdx+3]
+		if endOffset := findFrontMatterEnd(input); endOffset != -1 {
+			fmContent := input[3:endOffset]
 			sfc.FrontMatter = parseFrontMatter(fmContent)
-			offset = endIdx + 6 // "---" + content + "---"
-			// Skip newline if any
-			if offset < len(input) && input[offset] == '\n' {
+			offset = endOffset + 3
+			if offset < len(input) && input[offset] == '\r' {
 				offset++
 			}
 			if offset < len(input) && input[offset] == '\n' {
@@ -251,6 +249,29 @@ func Load(c routing.LoadContext) (map[string]interface{}, error) { return nil, n
 	}
 
 	return sfc, nil
+}
+
+func findFrontMatterEnd(input string) int {
+	search := input[3:]
+	lineStart := 3
+	for len(search) > 0 {
+		next := strings.IndexByte(search, '\n')
+		if next == -1 {
+			break
+		}
+		lineStart += next + 1
+		search = input[lineStart:]
+
+		line := search
+		if end := strings.IndexByte(line, '\n'); end >= 0 {
+			line = line[:end]
+		}
+		line = strings.TrimSuffix(line, "\r")
+		if strings.TrimSpace(line) == "---" {
+			return lineStart
+		}
+	}
+	return -1
 }
 
 func parseErrorAtOffset(posIndex *positionIndex, offset int, message, suggestion, snippet string) error {

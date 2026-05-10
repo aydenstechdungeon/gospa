@@ -12,6 +12,31 @@ import type { ActionEnhanceSuccess } from "./forms.ts";
 
 export type { NavigateOptions };
 
+function getCSRFToken(): string | undefined {
+  const configToken =
+    typeof window !== "undefined"
+      ? (window as any).__GOSPA_CONFIG__?.csrfToken
+      : undefined;
+  return typeof configToken === "string" && configToken
+    ? configToken
+    : undefined;
+}
+
+function headersToRecord(headers?: HeadersInit): Record<string, string> {
+  if (!headers) return {};
+  if (headers instanceof Headers) {
+    const record: Record<string, string> = {};
+    headers.forEach((value, key) => {
+      record[key] = value;
+    });
+    return record;
+  }
+  if (Array.isArray(headers)) {
+    return Object.fromEntries(headers);
+  }
+  return { ...headers };
+}
+
 export interface CallRouteActionOptions extends RequestInit {
   throwOnError?: boolean;
 }
@@ -46,7 +71,7 @@ export async function loadRouteData<T = Record<string, unknown>>(
     credentials: init?.credentials ?? "same-origin",
     headers: {
       Accept: "application/json",
-      ...(init?.headers || {}),
+      ...headersToRecord(init?.headers),
     },
   });
   if (!res.ok) {
@@ -70,16 +95,25 @@ export async function callRouteAction<R = unknown>(
   const throwOnError = init?.throwOnError !== false;
   const requestInit = { ...(init || {}) };
   delete (requestInit as CallRouteActionOptions).throwOnError;
+  const csrfToken = getCSRFToken();
+  const actionBody = body ?? requestInit.body ?? null;
+  if (csrfToken && actionBody instanceof FormData && !actionBody.has("_csrf")) {
+    actionBody.set("_csrf", csrfToken);
+  }
+  const headers: Record<string, string> = {
+    Accept: "application/json",
+    "X-Gospa-Enhance": "1",
+    ...headersToRecord(requestInit.headers),
+  };
+  if (csrfToken && !(actionBody instanceof FormData)) {
+    headers["X-CSRF-Token"] = csrfToken;
+  }
   const res = await fetch(actionURL.toString(), {
     method: requestInit.method ?? "POST",
     credentials: requestInit.credentials ?? "same-origin",
     ...requestInit,
-    headers: {
-      Accept: "application/json",
-      "X-Gospa-Enhance": "1",
-      ...(requestInit.headers || {}),
-    },
-    body: body ?? requestInit.body ?? null,
+    headers,
+    body: actionBody,
   });
   const payload = await res
     .json()

@@ -21,7 +21,7 @@ import (
 
 // renderRoute renders a route with its layout chain.
 func (a *App) renderRoute(c gofiber.Ctx, route *routing.Route, routeParams map[string]interface{}) error {
-	cacheKey := c.Path()
+	cacheKey := routeCacheKey(c)
 	ctx := c.Context()
 	opts := routing.GetRouteOptions(route.Path)
 
@@ -42,7 +42,7 @@ func (a *App) renderRoute(c gofiber.Ctx, route *routing.Route, routeParams map[s
 	if a.Config.CacheTemplates && effStrategy == routing.StrategySSG {
 		var entry ssgEntry
 		var hit bool
-		if a.Config.Storage != nil && !a.Config.Prefork {
+		if a.Config.Storage != nil {
 			if data, err := a.Config.Storage.Get(c.Context(), "gospa:ssg:"+cacheKey); err == nil {
 				entry, hit = decodeSsgEntry(data)
 			}
@@ -81,7 +81,7 @@ func (a *App) renderRoute(c gofiber.Ctx, route *routing.Route, routeParams map[s
 
 		var entry ssgEntry
 		var hit bool
-		if a.Config.Storage != nil && !a.Config.Prefork {
+		if a.Config.Storage != nil {
 			if data, err := a.Config.Storage.Get(c.Context(), "gospa:ssg:"+cacheKey); err == nil {
 				entry, hit = decodeSsgEntry(data)
 			}
@@ -106,9 +106,13 @@ func (a *App) renderRoute(c gofiber.Ctx, route *routing.Route, routeParams map[s
 				}
 			}
 			c.Set("Content-Type", "text/html")
-			c.Set("Cache-Control", fmt.Sprintf("public, s-maxage=%d, stale-while-revalidate=%d", ttlSec, ttlSec))
 
 			currentNonce, _ := c.Locals("gospa.csp_nonce").(string)
+			if currentNonce != "" {
+				c.Set("Cache-Control", "no-cache")
+			} else {
+				c.Set("Cache-Control", fmt.Sprintf("public, s-maxage=%d, stale-while-revalidate=%d", ttlSec, ttlSec))
+			}
 			return c.Send(a.replaceNonces(entry.html, currentNonce))
 		}
 		a.recordCacheMiss(cacheKey)
@@ -118,7 +122,7 @@ func (a *App) renderRoute(c gofiber.Ctx, route *routing.Route, routeParams map[s
 	if a.Config.CacheTemplates && effStrategy == routing.StrategyPPR {
 		var shell []byte
 		var shellHit bool
-		if a.Config.Storage != nil && !a.Config.Prefork {
+		if a.Config.Storage != nil {
 			if data, err := a.Config.Storage.Get(c.Context(), "gospa:ppr:"+cacheKey); err == nil {
 				shell = data
 				shellHit = true
@@ -273,7 +277,11 @@ func (a *App) renderRoute(c gofiber.Ctx, route *routing.Route, routeParams map[s
 			}
 
 			a.storeSsgEntry(cacheKey, htmlBytes, cacheTags, cacheKeys)
-			c.Set("Cache-Control", "public, max-age=31536000, immutable")
+			if nonce, _ := c.Locals("gospa.csp_nonce").(string); nonce != "" {
+				c.Set("Cache-Control", "no-cache")
+			} else {
+				c.Set("Cache-Control", "public, max-age=31536000, immutable")
+			}
 			return c.Send(buf.Bytes())
 		}
 
@@ -299,7 +307,11 @@ func (a *App) renderRoute(c gofiber.Ctx, route *routing.Route, routeParams map[s
 			}
 
 			a.storeSsgEntry(cacheKey, htmlBytes, cacheTags, cacheKeys)
-			c.Set("Cache-Control", fmt.Sprintf("public, s-maxage=%d, stale-while-revalidate=%d", ttlSec, ttlSec))
+			if nonce, _ := c.Locals("gospa.csp_nonce").(string); nonce != "" {
+				c.Set("Cache-Control", "no-cache")
+			} else {
+				c.Set("Cache-Control", fmt.Sprintf("public, s-maxage=%d, stale-while-revalidate=%d", ttlSec, ttlSec))
+			}
 			return c.Send(buf.Bytes())
 		}
 
@@ -351,7 +363,7 @@ func (a *App) renderRoute(c gofiber.Ctx, route *routing.Route, routeParams map[s
 
 			var shellHTML []byte
 			var shellOk bool
-			if a.Config.Storage != nil && !a.Config.Prefork {
+			if a.Config.Storage != nil {
 				if data, err := a.Config.Storage.Get(c.Context(), "gospa:ppr:"+cacheKey); err == nil {
 					shellHTML, shellOk = data, true
 				}
@@ -370,7 +382,8 @@ func (a *App) renderRoute(c gofiber.Ctx, route *routing.Route, routeParams map[s
 					return a.renderError(c, gofiber.StatusInternalServerError, err)
 				}
 				c.Set("Cache-Control", "no-store")
-				return c.Send(result)
+				currentNonce, _ := c.Locals("gospa.csp_nonce").(string)
+				return c.Send(a.replaceNonces(result, currentNonce))
 			}
 
 			var fallbackBuf bytes.Buffer
@@ -433,12 +446,14 @@ func (a *App) renderRoute(c gofiber.Ctx, route *routing.Route, routeParams map[s
 	}
 
 	_, _ = fmt.Fprintf(&out, `<script src="%s" type="module"%s></script>`, runtimePathForPage, nonceFmt)
+	csrfToken, _ := c.Locals("gospa.csrf_token").(string)
 	_, _ = fmt.Fprintf(&out, `<script type="module"%s>
-import * as runtime from %s;
-window.__GOSPA_RUNTIME_ESM__ = runtime;
-window.__GOSPA_CONFIG__ = {
-	navigationOptions: %s,
-};
+	import * as runtime from %s;
+	window.__GOSPA_RUNTIME_ESM__ = runtime;
+	window.__GOSPA_CONFIG__ = {
+		navigationOptions: %s,
+		csrfToken: %s,
+	};
 runtime.init({
 	wsUrl: %s,
 	serializationFormat: %s,
@@ -459,7 +474,7 @@ runtime.init({
 		pollInterval: %d
 	}
 });
-</script>`, nonceFmt, toJS(runtimePathForPage), toJS(a.Config.NavigationOptions), toJS(wsURL), toJS(string(a.Config.SerializationFormat)), a.Config.DevMode, a.Config.SimpleRuntimeSVGs, a.Config.DisableSanitization, wsRD, wsMR, wsHB, toJS(a.Config.HydrationMode), a.Config.HydrationTimeout, toJS("/_sse/connect"), toJS("/_gospa/poll"), 5000)
+	</script>`, nonceFmt, toJS(runtimePathForPage), toJS(a.Config.NavigationOptions), toJS(csrfToken), toJS(wsURL), toJS(string(a.Config.SerializationFormat)), a.Config.DevMode, a.Config.SimpleRuntimeSVGs, a.Config.DisableSanitization, wsRD, wsMR, wsHB, toJS(a.Config.HydrationMode), a.Config.HydrationTimeout, toJS("/_sse/connect"), toJS("/_gospa/poll"), 5000)
 
 	// Islands bundle — loads and registers all island setup functions
 	// Only include if the file exists (islands are optional)
@@ -610,6 +625,38 @@ type staticLoadContext struct {
 	path   string
 	params map[string]string
 	query  url.Values
+}
+
+func routeCacheKey(c gofiber.Ctx) string {
+	path := c.Path()
+	if path == "" {
+		path = "/"
+	}
+
+	rawURL := c.OriginalURL()
+	if rawURL == "" {
+		return path
+	}
+	parsed, err := url.ParseRequestURI(rawURL)
+	if err != nil {
+		return path
+	}
+	query := parsed.Query()
+	query.Del("__data")
+	if len(query) == 0 {
+		return path
+	}
+	return path + "?" + query.Encode()
+}
+
+func routePathFromCacheKey(cacheKey string) string {
+	if parsed, err := url.Parse(cacheKey); err == nil && parsed.Path != "" {
+		return parsed.Path
+	}
+	if idx := strings.IndexByte(cacheKey, '?'); idx >= 0 {
+		return cacheKey[:idx]
+	}
+	return cacheKey
 }
 
 func newStaticLoadContext(path string, params map[string]interface{}) *staticLoadContext {

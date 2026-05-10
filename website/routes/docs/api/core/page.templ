@@ -107,7 +107,7 @@ app := gospa.New(config)`, "go", " main.go")
 			<div>
 				<h3 class="text-xl font-bold mb-4 mono italic">app.Use(handlers...)</h3>
 				<p class="text-[var(--text-secondary)] mb-4">Adds middleware to the application (Fiber style).</p>
-				@components.CodeBlock(`app.Use(func(c *fiber.Ctx) error {
+				@components.CodeBlock(`app.Use(func(c fiber.Ctx) error {
     log.Println("Request path:", c.Path())
     return c.Next()
 })`, "go", " main.go")
@@ -116,7 +116,7 @@ app := gospa.New(config)`, "go", " main.go")
 			<div>
 				<h3 class="text-xl font-bold mb-4 mono italic">app.Get(path, handlers...)</h3>
 				<p class="text-[var(--text-secondary)] mb-4">Registers a manual GET route (bypassing file-based routing).</p>
-				@components.CodeBlock(`app.Get("/health", func(c *fiber.Ctx) error {
+				@components.CodeBlock(`app.Get("/health", func(c fiber.Ctx) error {
     return c.SendString("OK")
 })`, "go", " main.go")
 			</div>

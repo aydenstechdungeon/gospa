@@ -17,6 +17,8 @@ describe("remote", () => {
   beforeEach(() => {
     // Reset to default prefix
     configureRemote({ prefix: "/_gospa/remote" });
+    delete (globalThis as any).window;
+    delete (globalThis as any).document;
 
     // Mock fetch
     fetchMock = mock(() =>
@@ -69,6 +71,25 @@ describe("remote", () => {
 
     expect(headers["Content-Type"]).toBe("application/json");
     expect(headers["Accept"]).toBe("application/json");
+  });
+
+  it("should include CSRF token from bootstrap config", async () => {
+    (globalThis as any).window = {
+      __GOSPA_CONFIG__: {
+        csrfToken:
+          "abcdef0123456789abcdef0123456789abcdef0123456789abcdef0123456789",
+      },
+    };
+
+    await remote("testAction", {});
+
+    const call = fetchMock.mock.calls[0];
+    const options = call[1] as RequestInit;
+    const headers = options.headers as Record<string, string>;
+
+    expect(headers["X-CSRF-Token"]).toBe(
+      "abcdef0123456789abcdef0123456789abcdef0123456789abcdef0123456789",
+    );
   });
 
   it("should handle successful response", async () => {

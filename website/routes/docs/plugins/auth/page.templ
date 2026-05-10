@@ -190,7 +190,7 @@ func main() {
     app.Get("/auth/callback/google", authPlugin.OAuthCallback(" google")) // returns {" success": true} after exchange
     
     // Protected route
-    app.Get("/protected", authPlugin.RequireAuth(), func(c *fiber.Ctx) error {
+    app.Get("/protected", authPlugin.RequireAuth(), func(c fiber.Ctx) error {
         user := c.Locals("user").(*auth.User)
         return c.JSON(user)
     })

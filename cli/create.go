@@ -197,7 +197,7 @@ func createGoMod(config *ProjectConfig) error {
 
 	content := fmt.Sprintf(`module %s
 
-go 1.23
+go 1.26
 
 require (
 	github.com/a-h/templ v0.3.1001

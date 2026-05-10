@@ -297,6 +297,12 @@ func applyDefaultConfig(config *Config) {
 	if config.IslandsBundlePath == "" {
 		config.IslandsBundlePath = "static/js/islands.js"
 	}
+	if !config.DisableCSRF {
+		config.EnableCSRF = true
+	}
+	if config.ContentSecurityPolicy == "" {
+		config.ContentSecurityPolicy = fiber.DefaultContentSecurityPolicy
+	}
 }
 
 func validateAndLogConfig(config *Config) error {
@@ -497,7 +503,24 @@ func (a *App) setupRoutes() {
 	}
 	a.Fiber.Post(a.Config.RemotePrefix+"/:name", rhAny[0], rhAny[1:]...)
 
-	a.Fiber.Post("/_gospa/invalidate", fiber.SessionMiddleware(), a.handleInvalidate)
+	invalidateHandlers := []fiberpkg.Handler{fiber.SessionMiddleware()}
+	if !a.Config.DevMode && a.Config.RemoteActionMiddleware == nil && !a.Config.AllowUnauthenticatedRemoteActions {
+		invalidateHandlers = append(invalidateHandlers, func(c fiberpkg.Ctx) error {
+			return c.Status(fiberpkg.StatusUnauthorized).JSON(fiberpkg.Map{
+				"error": "Cache invalidation requires RemoteActionMiddleware in production",
+				"code":  "INVALIDATION_AUTH_REQUIRED",
+			})
+		})
+	}
+	if a.Config.RemoteActionMiddleware != nil {
+		invalidateHandlers = append(invalidateHandlers, a.Config.RemoteActionMiddleware)
+	}
+	invalidateHandlers = append(invalidateHandlers, a.handleInvalidate)
+	ihAny := make([]any, len(invalidateHandlers))
+	for i, h := range invalidateHandlers {
+		ihAny[i] = h
+	}
+	a.Fiber.Post("/_gospa/invalidate", ihAny[0], ihAny[1:]...)
 	if a.Config.DevMode {
 		a.Fiber.Get("/__gospa/cache", a.handleCacheStats)
 	}
@@ -745,7 +768,7 @@ func (a *App) setupMiddleware() {
 	if len(a.Config.AllowedOrigins) > 0 {
 		a.Fiber.Use(fiber.CORSMiddleware(a.Config.AllowedOrigins))
 	}
-	if a.Config.EnableCSRF {
+	if a.Config.EnableCSRF && !a.Config.DisableCSRF {
 		a.Fiber.Use(fiber.CSRFSetTokenMiddleware())
 		a.Fiber.Use(fiber.CSRFTokenMiddleware())
 	}

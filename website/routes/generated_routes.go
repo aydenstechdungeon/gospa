@@ -32,6 +32,7 @@ import (
 	docsgetstartedinstallation "github.com/aydenstechdungeon/gospa/website/routes/docs/getstarted/installation"
 	docsgetstartedquickstart "github.com/aydenstechdungeon/gospa/website/routes/docs/getstarted/quickstart"
 	docsgetstartedstructure "github.com/aydenstechdungeon/gospa/website/routes/docs/getstarted/structure"
+	docsgetstartedtutorial "github.com/aydenstechdungeon/gospa/website/routes/docs/getstarted/tutorial"
 	docsgospasfc "github.com/aydenstechdungeon/gospa/website/routes/docs/gospasfc"
 	docsgospasfcadvanced "github.com/aydenstechdungeon/gospa/website/routes/docs/gospasfc/advanced"
 	docsgospasfcapireference "github.com/aydenstechdungeon/gospa/website/routes/docs/gospasfc/api-reference"
@@ -43,7 +44,10 @@ import (
 	docsgospasfctemplates "github.com/aydenstechdungeon/gospa/website/routes/docs/gospasfc/templates"
 	docsgospasfctypescript "github.com/aydenstechdungeon/gospa/website/routes/docs/gospasfc/typescript"
 	docshmr "github.com/aydenstechdungeon/gospa/website/routes/docs/hmr"
+	docsinternalsruntime "github.com/aydenstechdungeon/gospa/website/routes/docs/internals/runtime"
 	docsislands "github.com/aydenstechdungeon/gospa/website/routes/docs/islands"
+	docsmigrationfibertogospa "github.com/aydenstechdungeon/gospa/website/routes/docs/migration/fiber-to-gospa"
+	docsmigrationsveltekittogospa "github.com/aydenstechdungeon/gospa/website/routes/docs/migration/sveltekit-to-gospa"
 	docsparams "github.com/aydenstechdungeon/gospa/website/routes/docs/params"
 	docsplugins "github.com/aydenstechdungeon/gospa/website/routes/docs/plugins"
 	docspluginsauth "github.com/aydenstechdungeon/gospa/website/routes/docs/plugins/auth"
@@ -59,18 +63,21 @@ import (
 	docsreactiveprimitivesjs "github.com/aydenstechdungeon/gospa/website/routes/docs/reactive-primitives/js"
 	docsremoteactions "github.com/aydenstechdungeon/gospa/website/routes/docs/remote-actions"
 	docsrendering "github.com/aydenstechdungeon/gospa/website/routes/docs/rendering"
+	docsroot "github.com/aydenstechdungeon/gospa/website/routes/docs/root"
 	docsrouting "github.com/aydenstechdungeon/gospa/website/routes/docs/routing"
 	docsroutingapi "github.com/aydenstechdungeon/gospa/website/routes/docs/routing/api"
 	docsroutingdynamic "github.com/aydenstechdungeon/gospa/website/routes/docs/routing/dynamic"
 	docsroutinglayouts "github.com/aydenstechdungeon/gospa/website/routes/docs/routing/layouts"
 	docsroutingnavigation "github.com/aydenstechdungeon/gospa/website/routes/docs/routing/navigation"
 	docsruntime "github.com/aydenstechdungeon/gospa/website/routes/docs/runtime"
+	docssecurity "github.com/aydenstechdungeon/gospa/website/routes/docs/security"
 	docssse "github.com/aydenstechdungeon/gospa/website/routes/docs/sse"
 	docsstatemanagement "github.com/aydenstechdungeon/gospa/website/routes/docs/state-management"
 	docsstatemanagementclient "github.com/aydenstechdungeon/gospa/website/routes/docs/state-management/client"
 	docsstatemanagementpatterns "github.com/aydenstechdungeon/gospa/website/routes/docs/state-management/patterns"
 	docsstatemanagementserver "github.com/aydenstechdungeon/gospa/website/routes/docs/state-management/server"
 	docsstatemanagementsync "github.com/aydenstechdungeon/gospa/website/routes/docs/state-management/sync"
+	docsstorage "github.com/aydenstechdungeon/gospa/website/routes/docs/storage"
 	docstroubleshooting "github.com/aydenstechdungeon/gospa/website/routes/docs/troubleshooting"
 	docswebsocket "github.com/aydenstechdungeon/gospa/website/routes/docs/websocket"
 )
@@ -174,6 +181,9 @@ func init() {
 	routing.RegisterPageWithOptions("/docs/getstarted/structure", func(props map[string]interface{}) templ.Component {
 		return docsgetstartedstructure.Page()
 	}, routing.RouteOptions{RuntimeTier: ""})
+	routing.RegisterPageWithOptions("/docs/getstarted/tutorial", func(props map[string]interface{}) templ.Component {
+		return docsgetstartedtutorial.Page()
+	}, routing.RouteOptions{RuntimeTier: ""})
 	routing.RegisterPageWithOptions("/docs/gospasfc", func(props map[string]interface{}) templ.Component {
 		return docsgospasfc.Page()
 	}, routing.RouteOptions{RuntimeTier: ""})
@@ -207,8 +217,17 @@ func init() {
 	routing.RegisterPageWithOptions("/docs/hmr", func(props map[string]interface{}) templ.Component {
 		return docshmr.Page()
 	}, routing.RouteOptions{RuntimeTier: ""})
+	routing.RegisterPageWithOptions("/docs/internals/runtime", func(props map[string]interface{}) templ.Component {
+		return docsinternalsruntime.Page()
+	}, routing.RouteOptions{RuntimeTier: "core`, \"go\", \"page.templ\")"})
 	routing.RegisterPageWithOptions("/docs/islands", func(props map[string]interface{}) templ.Component {
 		return docsislands.Page()
+	}, routing.RouteOptions{RuntimeTier: ""})
+	routing.RegisterPageWithOptions("/docs/migration/fiber-to-gospa", func(props map[string]interface{}) templ.Component {
+		return docsmigrationfibertogospa.Page()
+	}, routing.RouteOptions{RuntimeTier: ""})
+	routing.RegisterPageWithOptions("/docs/migration/sveltekit-to-gospa", func(props map[string]interface{}) templ.Component {
+		return docsmigrationsveltekittogospa.Page()
 	}, routing.RouteOptions{RuntimeTier: ""})
 	routing.RegisterPageWithOptions("/docs/params", func(props map[string]interface{}) templ.Component {
 		return docsparams.Page()
@@ -255,6 +274,9 @@ func init() {
 	routing.RegisterPageWithOptions("/docs/rendering", func(props map[string]interface{}) templ.Component {
 		return docsrendering.Page()
 	}, routing.RouteOptions{RuntimeTier: ""})
+	routing.RegisterPageWithOptions("/docs/root", func(props map[string]interface{}) templ.Component {
+		return docsroot.Page()
+	}, routing.RouteOptions{RuntimeTier: ""})
 	routing.RegisterPageWithOptions("/docs/routing", func(props map[string]interface{}) templ.Component {
 		return docsrouting.Page()
 	}, routing.RouteOptions{RuntimeTier: ""})
@@ -273,6 +295,9 @@ func init() {
 	routing.RegisterPageWithOptions("/docs/runtime", func(props map[string]interface{}) templ.Component {
 		return docsruntime.Page()
 	}, routing.RouteOptions{RuntimeTier: ""})
+	routing.RegisterPageWithOptions("/docs/security", func(props map[string]interface{}) templ.Component {
+		return docssecurity.Page()
+	}, routing.RouteOptions{RuntimeTier: ""})
 	routing.RegisterPageWithOptions("/docs/sse", func(props map[string]interface{}) templ.Component {
 		return docssse.Page()
 	}, routing.RouteOptions{RuntimeTier: ""})
@@ -290,6 +315,9 @@ func init() {
 	}, routing.RouteOptions{RuntimeTier: ""})
 	routing.RegisterPageWithOptions("/docs/state-management/sync", func(props map[string]interface{}) templ.Component {
 		return docsstatemanagementsync.Page()
+	}, routing.RouteOptions{RuntimeTier: ""})
+	routing.RegisterPageWithOptions("/docs/storage", func(props map[string]interface{}) templ.Component {
+		return docsstorage.Page()
 	}, routing.RouteOptions{RuntimeTier: ""})
 	routing.RegisterPageWithOptions("/docs/troubleshooting", func(props map[string]interface{}) templ.Component {
 		return docstroubleshooting.Page()

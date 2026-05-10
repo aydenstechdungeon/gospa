@@ -1,0 +1,44 @@
+package root
+
+import "github.com/aydenstechdungeon/gospa/website/components"
+
+templ Page() {
+	<div class="space-y-10">
+		<header>
+			<h1 class="text-3xl font-bold tracking-tight mb-4">Framework Root and Layouts</h1>
+			<p class="text-xl text-[var(--text-secondary)] leading-relaxed">
+				The root layout wraps every page and anchors server rendering, runtime scripts, and hydration.
+			</p>
+		</header>
+
+		<section class="space-y-6">
+			<h2 class="text-2xl font-bold border-b border-[var(--border)] pb-2">Root Layout</h2>
+			@components.CodeBlock(`package routes
+
+import "github.com/aydenstechdungeon/gospa/fiber"
+
+templ RootLayout(children templ.Component, props map[string]interface{}) {
+    <!DOCTYPE html>
+    <html lang="en" data-gospa-auto>
+        <head>
+            <meta charset="utf-8" />
+            <title>My GoSPA App</title>
+            @fiber.RuntimeScript()
+        </head>
+        <body>
+            <div id="root">
+                @children
+            </div>
+        </body>
+    </html>
+}`, "templ", "routes/layout.templ")
+		</section>
+
+		<section class="space-y-4">
+			<h2 class="text-2xl font-bold border-b border-[var(--border)] pb-2">Nested Layouts</h2>
+			<p class="text-[var(--text-secondary)]">
+				Each directory can define its own <code class="mono">layout.templ</code>. GoSPA resolves layouts from root to leaf, then renders the page inside that chain.
+			</p>
+		</section>
+	</div>
+}

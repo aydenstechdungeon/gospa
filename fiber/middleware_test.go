@@ -184,6 +184,26 @@ func TestCSRFTokenMiddleware_FormSupport(t *testing.T) {
 	}
 }
 
+func TestCSRFTokenMiddleware_JSONHeaderSupport(t *testing.T) {
+	app := gofiber.New()
+	app.Post("/test", CSRFTokenMiddleware(), func(c gofiber.Ctx) error {
+		return c.SendStatus(gofiber.StatusOK)
+	})
+
+	csrfToken := "abcdef0123456789abcdef0123456789abcdef0123456789abcdef0123456789"
+	req := httptest.NewRequest("POST", "/test", strings.NewReader(`{"ok":true}`))
+	req.Header.Set("Content-Type", "application/json")
+	req.Header.Set("Cookie", "csrf_token="+csrfToken)
+	req.Header.Set("X-CSRF-Token", csrfToken)
+	resp, err := app.Test(req)
+	if err != nil {
+		t.Fatalf("request failed: %v", err)
+	}
+	if resp.StatusCode != gofiber.StatusOK {
+		t.Errorf("expected 200 for valid header token, got %v", resp.StatusCode)
+	}
+}
+
 func TestSecurityHeadersMiddleware_Nonce(t *testing.T) {
 	app := gofiber.New()
 	app.Use(SecurityHeadersMiddleware("script-src 'self' {nonce}"))
@@ -249,8 +269,34 @@ func TestStateMiddleware_IgnoresInvalidCSRFTokensForInlineScript(t *testing.T) {
 	}
 	defer func() { _ = resp.Body.Close() }()
 	body, _ := io.ReadAll(resp.Body)
-	if strings.Contains(string(body), "__GOSPA_CSRF_TOKEN__") {
+	if strings.Contains(string(body), "__GOSPA_CSRF_TOKEN__") || strings.Contains(string(body), "csrfToken") {
 		t.Fatalf("expected invalid csrf token to be omitted from inline script, got %s", string(body))
+	}
+}
+
+func TestStateMiddleware_InjectsValidCSRFTokenIntoConfig(t *testing.T) {
+	config := Config{StateKey: "gospa.state"}
+	app := gofiber.New()
+	app.Use(func(c gofiber.Ctx) error {
+		stateMap := state.NewStateMap()
+		c.Locals(config.StateKey, stateMap)
+		c.Locals("gospa.csrf_token", "abcdef0123456789abcdef0123456789abcdef0123456789abcdef0123456789")
+		return c.Next()
+	})
+	app.Use(StateMiddleware(config))
+	app.Get("/", func(c gofiber.Ctx) error {
+		c.Set("Content-Type", "text/html")
+		return c.SendString("<body></body>")
+	})
+
+	resp, err := app.Test(httptest.NewRequest("GET", "/", nil))
+	if err != nil {
+		t.Fatalf("request failed: %v", err)
+	}
+	defer func() { _ = resp.Body.Close() }()
+	body, _ := io.ReadAll(resp.Body)
+	if !strings.Contains(string(body), `csrfToken: "abcdef0123456789abcdef0123456789abcdef0123456789abcdef0123456789"`) {
+		t.Fatalf("expected csrf token in bootstrap config, got %s", string(body))
 	}
 }
 

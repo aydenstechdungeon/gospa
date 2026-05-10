@@ -44,8 +44,8 @@ func generateSearchIndex() error {
 			return err
 		}
 
-		// Skip directories and non-page.templ files
-		if info.IsDir() || info.Name() != "page.templ" {
+		// Skip directories and non-page files
+		if info.IsDir() || (info.Name() != "page.templ" && info.Name() != "page.gospa") {
 			return nil
 		}
 
@@ -118,6 +118,10 @@ func pathToURL(path string) string {
 		return "/docs"
 	}
 	path = strings.TrimSuffix(path, "/page.templ")
+	if path == "page.gospa" {
+		return "/docs"
+	}
+	path = strings.TrimSuffix(path, "/page.gospa")
 
 	if path == "" {
 		return "/docs"

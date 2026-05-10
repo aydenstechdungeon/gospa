@@ -25,6 +25,16 @@ function getCookie(name: string): string | undefined {
     : undefined;
 }
 
+function getCSRFToken(): string | undefined {
+  const configToken =
+    typeof window !== "undefined"
+      ? (window as any).__GOSPA_CONFIG__?.csrfToken
+      : undefined;
+  return typeof configToken === "string" && configToken
+    ? configToken
+    : getCookie("csrf_token");
+}
+
 // Navigation state
 const state = reactive({
   currentPath:
@@ -784,12 +794,6 @@ async function getPageData(
   return fetchPageFromServer(path, signal);
 }
 
-// Content is trusted - Templ auto-escapes on the server
-// For user-generated content, the server is expected to provide safe HTML.
-async function prepareContent(html: string): Promise<string> {
-  return html;
-}
-
 // Sanitize HTML for data-bind="html:*" bindings
 // Trusts server-provided HTML per the "trust-the-server" model.
 async function sanitizeHTML(html: unknown): Promise<string> {
@@ -904,7 +908,7 @@ async function reconcileDOM(data: PageData): Promise<void> {
   if (morphTarget && newContent) {
     Idiomorph.morph(morphTarget, newContent, {
       callbacks: {
-        beforeNodeMorphed: (oldNode, newNode) => {
+        beforeNodeMorphed: (oldNode, _newNode) => {
           // Compatibility with data-gospa-permanent
           if (
             oldNode instanceof Element &&
@@ -2057,6 +2061,8 @@ async function postInvalidatePayload(
       "Content-Type": "application/json",
       Accept: "application/json",
     };
+    const csrfToken = getCSRFToken();
+    if (csrfToken) headers["X-CSRF-Token"] = csrfToken;
     await fetch("/_gospa/invalidate", {
       method: "POST",
       credentials: "same-origin",
@@ -2143,6 +2149,7 @@ declare global {
     };
     __GOSPA_CONFIG__?: {
       navigationOptions?: NavigationOptions;
+      csrfToken?: string;
     };
   }
 }

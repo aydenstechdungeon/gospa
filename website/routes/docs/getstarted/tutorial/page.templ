@@ -1,0 +1,53 @@
+package tutorial
+
+import "github.com/aydenstechdungeon/gospa/website/components"
+
+templ Page() {
+	<div class="space-y-10">
+		<header>
+			<h1 class="text-3xl font-bold tracking-tight mb-4">Todo App Tutorial</h1>
+			<p class="text-xl text-[var(--text-secondary)] leading-relaxed">
+				A practical todo app plan covering reactive state, derived values, persistence, and UI behavior.
+			</p>
+		</header>
+
+		<section class="space-y-6">
+			<h2 class="text-2xl font-bold border-b border-[var(--border)] pb-2">State Model</h2>
+			@components.CodeBlock(`type Todo struct {
+    ID        string `+"`"+`json:"id"`+"`"+`
+    Text      string `+"`"+`json:"text"`+"`"+`
+    Completed bool   `+"`"+`json:"completed"`+"`"+`
+    CreatedAt int64  `+"`"+`json:"createdAt"`+"`"+`
+}
+
+type TodoState struct {
+    Todos      []*Todo `+"`"+`json:"todos"`+"`"+`
+    Filter     string  `+"`"+`json:"filter"`+"`"+`
+    InputValue string  `+"`"+`json:"inputValue"`+"`"+`
+}`, "go", "state.go")
+		</section>
+
+		<section class="space-y-4">
+			<h2 class="text-2xl font-bold border-b border-[var(--border)] pb-2">Feature Checklist</h2>
+			<ul class="space-y-2 text-[var(--text-secondary)] list-disc list-inside">
+				<li>Add, toggle, delete, and clear completed todos.</li>
+				<li>Filter by all, active, and completed states.</li>
+				<li>Compute active count, completed count, and all-completed state with derived values.</li>
+				<li>Persist client state with an effect that writes to localStorage.</li>
+				<li>Keep DOM updates declarative with <code class="mono">data-gospa-state</code> and <code class="mono">data-bind</code>.</li>
+			</ul>
+		</section>
+
+		<section class="space-y-6">
+			<h2 class="text-2xl font-bold border-b border-[var(--border)] pb-2">Persistence Effect</h2>
+			@components.CodeBlock(`Effect(() => {
+    localStorage.setItem("gospa-todos", JSON.stringify(todos.value));
+});
+
+const saved = localStorage.getItem("gospa-todos");
+if (saved) {
+    todos.value = JSON.parse(saved);
+}`, "typescript", "todos.ts")
+		</section>
+	</div>
+}

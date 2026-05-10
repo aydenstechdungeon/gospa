@@ -1,0 +1,35 @@
+package storage
+
+import "github.com/aydenstechdungeon/gospa/website/components"
+
+templ Page() {
+	<div class="space-y-10">
+		<header>
+			<h1 class="text-3xl font-bold tracking-tight mb-4">Storage and PubSub</h1>
+			<p class="text-xl text-[var(--text-secondary)] leading-relaxed">
+				Shared state, rate limiting, route caches, and realtime broadcasts across one or many processes.
+			</p>
+		</header>
+
+		<section class="space-y-6">
+			<h2 class="text-2xl font-bold border-b border-[var(--border)] pb-2">Storage Interface</h2>
+			@components.CodeBlock(`type Storage interface {
+    Get(ctx context.Context, key string) ([]byte, error)
+    Set(ctx context.Context, key string, val []byte, exp time.Duration) error
+    Delete(ctx context.Context, key string) error
+}`, "go", "storage.go")
+		</section>
+
+		<section class="space-y-6">
+			<h2 class="text-2xl font-bold border-b border-[var(--border)] pb-2">Prefork Configuration</h2>
+			@components.CodeBlock(`app := gospa.New(gospa.Config{
+    Prefork: true,
+    Storage: redis.NewStore(rdb),
+    PubSub:  redis.NewPubSub(rdb),
+})`, "go", "main.go")
+			<p class="text-[var(--text-secondary)]">
+				External storage is used for sessions, client state, rate limits, and SSG/ISR/PPR route caches. External PubSub is required for broadcasts across workers.
+			</p>
+		</section>
+	</div>
+}

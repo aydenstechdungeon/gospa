@@ -60,6 +60,25 @@ func TestGOSPAWSInsecureHonoredInDevMode(t *testing.T) {
 	}
 }
 
+func TestNewAppliesSecurityDefaultsToZeroConfig(t *testing.T) {
+	app := New(Config{})
+
+	if !app.Config.EnableCSRF {
+		t.Fatal("expected EnableCSRF to default to true")
+	}
+	if app.Config.ContentSecurityPolicy == "" {
+		t.Fatal("expected ContentSecurityPolicy default to be applied")
+	}
+}
+
+func TestNewAllowsExplicitCSRFDisable(t *testing.T) {
+	app := New(Config{DisableCSRF: true})
+
+	if app.Config.EnableCSRF {
+		t.Fatal("expected DisableCSRF to keep EnableCSRF false")
+	}
+}
+
 func TestGOSPAWSInsecureIgnoredInProduction(t *testing.T) {
 	_ = os.Setenv("GOSPA_WS_INSECURE", "1")
 	defer func() { _ = os.Unsetenv("GOSPA_WS_INSECURE") }()

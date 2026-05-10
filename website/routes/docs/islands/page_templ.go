@@ -62,7 +62,7 @@ console.log(scheduler.getStats());
 			return templ_7745c5c3_Err
 		}
 		templ_7745c5c3_Err = components.CodeBlock(`// Server-side
-app.Get("/dashboard", func(c *fiber.Ctx) error {
+app.Get("/dashboard", func(c fiber.Ctx) error {
     return fiber.RenderStream(c, DashboardPage())
 })`, "go", " main.go").Render(ctx, templ_7745c5c3_Buffer)
 		if templ_7745c5c3_Err != nil {

@@ -6,7 +6,7 @@ GoSPA is designed with security as a first-class citizen. This guide outlines th
 
 When deploying GoSPA to production, ensure that `DevMode` is set to `false` in your `gospa.Config`.
 
-- **Insecure Settings Enforcement**: In production, GoSPA automatically ignores `AllowInsecureWS` (forcing `wss://`) and `AllowUnauthenticatedRemoteActions`.
+- **Insecure Settings Enforcement**: In production, GoSPA ignores `AllowInsecureWS` unless explicitly configured for local/private deployments. Remote actions require `RemoteActionMiddleware` unless you intentionally set `AllowUnauthenticatedRemoteActions`.
 - **Logger**: Use a structured logger (`slog.Default()` or similar) to track security events without leaking sensitive data in logs.
 
 ### Checklist
@@ -24,8 +24,8 @@ GoSPA includes robust CSRF (Cross-Site Request Forgery) protection for both AJAX
 2. `CSRFTokenMiddleware` validates incoming mutating requests (POST, PUT, DELETE, PATCH).
 
 ### Usage
-- **AJAX/Fetch**: Include the `X-CSRF-Token` header.
-- **HTML Forms**: Include a hidden input named `_csrf`. GoSPA provides the token in the global state as `window.__GOSPA_CSRF_TOKEN__`.
+- **AJAX/Fetch**: Use GoSPA's built-in helpers. The server injects the token into `window.__GOSPA_CONFIG__.csrfToken`, and helpers send it as `X-CSRF-Token`.
+- **HTML Forms**: Include a hidden input named `_csrf`, or use `enhanceForm`, which appends the token automatically when framework bootstrap config is present.
 
 ```html
 <form method="POST" action="/update">

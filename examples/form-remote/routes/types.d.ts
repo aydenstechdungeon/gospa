@@ -2,23 +2,23 @@
 // TypeScript Definitions for Go Structs
 
 export interface MessageInput {
-	name: string;
 	content: string;
+	name: string;
 }
 
 export interface Message {
-	timestamp: string;
 	id: number;
 	name: string;
 	content: string;
+	timestamp: string;
 }
 
 export interface PaginatedMessages {
-	pageSize: number;
 	totalPages: number;
 	messages: Message[];
 	total: number;
 	page: number;
+	pageSize: number;
 }
 
 export interface MessageStore {

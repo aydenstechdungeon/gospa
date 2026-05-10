@@ -154,8 +154,8 @@ export interface RemoteActions {
   submitMessage: (input: Message) => Promise<Status>;
 }
 
-export function remoteAction<T extends keyof RemoteActions>(name: T, input: any): Promise<any> {
-    return window.GoSPA.remoteAction(name, input);
+export function remote<T extends keyof RemoteActions>(name: T, input: Parameters<RemoteActions[T]>[0]): ReturnType<RemoteActions[T]> {
+    return window.GoSPA.remote(name, input) as ReturnType<RemoteActions[T]>;
 }`, "typescript", " actions.ts").Render(ctx, templ_7745c5c3_Buffer)
 		if templ_7745c5c3_Err != nil {
 			return templ_7745c5c3_Err
@@ -170,12 +170,12 @@ export function remoteAction<T extends keyof RemoteActions>(name: T, input: any)
 		if templ_7745c5c3_Err != nil {
 			return templ_7745c5c3_Err
 		}
-		templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 9, "<p class=\"text-[var(--text-secondary)]\">The client reads the <code class=\"mono\">csrf_token</code> cookie and sends <code class=\"mono\">X-CSRF-Token</code> automatically with <code class=\"mono\">GoSPA.remote()</code> requests.</p></section><section id=\"global-guards\" class=\"space-y-6\"><h2 class=\"text-2xl font-bold border-b border-[var(--border)] pb-2\">Global Guards</h2><p class=\"text-[var(--text-secondary)]\">Use <code class=\"mono\">RemoteActionMiddleware</code> to enforce auth/policy checks before every remote action.</p>")
+		templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 9, "<p class=\"text-[var(--text-secondary)]\">The server injects the CSRF token into <code class=\"mono\">window.__GOSPA_CONFIG__</code>. <code class=\"mono\">GoSPA.remote()</code> sends it automatically as <code class=\"mono\">X-CSRF-Token</code>.</p></section><section id=\"global-guards\" class=\"space-y-6\"><h2 class=\"text-2xl font-bold border-b border-[var(--border)] pb-2\">Global Guards</h2><p class=\"text-[var(--text-secondary)]\">Use <code class=\"mono\">RemoteActionMiddleware</code> to enforce auth/policy checks before every remote action.</p>")
 		if templ_7745c5c3_Err != nil {
 			return templ_7745c5c3_Err
 		}
 		templ_7745c5c3_Err = components.CodeBlock(`app := gospa.New(gospa.Config{
-    RemoteActionMiddleware: func(c *fiber.Ctx) error {
+    RemoteActionMiddleware: func(c fiber.Ctx) error {
         if c.Locals("user") == nil {
             return c.Status(fiber.StatusUnauthorized).JSON(fiber.Map{"error": " unauthorized"})
         }
