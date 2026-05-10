@@ -1,6 +1,16 @@
 import { invalidate, invalidateKey, invalidateTag } from "./navigation.ts";
 import { emitRuntimeSignal } from "./runtime-signals.ts";
 
+function getCSRFToken(): string | undefined {
+  const configToken =
+    typeof window !== "undefined"
+      ? (window as any).__GOSPA_CONFIG__?.csrfToken
+      : undefined;
+  return typeof configToken === "string" && configToken
+    ? configToken
+    : undefined;
+}
+
 export interface ActionValidationError {
   fieldErrors?: Record<string, string>;
   formError?: string;
@@ -145,6 +155,10 @@ export function enhanceForm<T = unknown>(
       | HTMLInputElement
       | null;
     const formData = new FormData(form);
+    const csrfToken = getCSRFToken();
+    if (csrfToken && !formData.has("_csrf")) {
+      formData.set("_csrf", csrfToken);
+    }
 
     if (submitter && submitter.name) {
       formData.set(submitter.name, submitter.value ?? "");

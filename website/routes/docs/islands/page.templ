@@ -81,7 +81,7 @@ console.log(scheduler.getStats());
 				<h2 class="text-2xl font-bold mb-4 border-b border-[var(--border)] pb-2 italic mono">Streaming SSR</h2>
 				<p class="text-[var(--text-secondary)] mb-4">Send the HTML skeleton immediately and stream in islands and state updates as they resolve.</p>
 				@components.CodeBlock(`// Server-side
-app.Get("/dashboard", func(c *fiber.Ctx) error {
+app.Get("/dashboard", func(c fiber.Ctx) error {
     return fiber.RenderStream(c, DashboardPage())
 })`, "go", " main.go")
 			</div>

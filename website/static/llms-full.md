@@ -112,7 +112,7 @@ GoSPA automatically compiles this to a reactive Templ component and a TypeScript
 | **Type Safety** | ✅ | ❌ | ❌ | ✅ | ✅ |
 
 GoSPA Docs page (gospa.onrender.com - free hosting)
-<img width="693" height="29" alt="Screenshot_20260415_184459-1" src="https://github.com/user-attachments/assets/ae973cae-26fc-4ebf-9290-7be3b966d286" />
+<img width="707" height="33" alt="Screenshot_20260427_134230" src="https://github.com/user-attachments/assets/72151d12-e295-43e9-8591-4e174c41a8fc" />
 
 SvelteKit Docs page (svelte.dev/docs/kit/introduction)
 <img width="687" height="25" alt="Screenshot_20260415_184329" src="https://github.com/user-attachments/assets/8cc0b88d-3b61-49ae-92cf-aa0e289e6f19" />
@@ -3256,6 +3256,7 @@ Distributed deployment, horizontal scaling, and security configuration.
 |--------|------|---------|-------------|
 | `AllowedOrigins` | `[]string` | `[]` | Allowed CORS origins |
 | `EnableCSRF` | `bool` | `true` | Enable automatic CSRF protection |
+| `DisableCSRF` | `bool` | `false` | Explicitly disable built-in CSRF handling |
 | `ContentSecurityPolicy` | `string` | built-in | Optional CSP header value |
 | `PublicOrigin` | `string` | `""` | Public base URL for stable WebSocket URLs |
 | `AllowInsecureWS` | `bool` | `false` | Allow `ws://` even on `https://` pages |
@@ -3397,6 +3398,7 @@ GoSPA is configured primarily through the `gospa.Config` struct passed to `gospa
 | Property | Type | Description |
 | :--- | :--- | :--- |
 | `EnableCSRF` | `bool` | Enables built-in CSRF protection for forms and AJAX. |
+| `DisableCSRF` | `bool` | Explicitly disables built-in CSRF protection when you provide custom handling. |
 | `ContentSecurityPolicy` | `string` | Custom CSP header. Use `{nonce}` as a placeholder for automatically generated nonces. |
 | `AllowedOrigins` | `[]string` | Sets the `Access-Control-Allow-Origin` header for CORS. |
 | `PublicOrigin` | `string` | The base URL of your site (e.g., `https://example.com`). Required for secure WebSocket generation. |
@@ -4351,6 +4353,7 @@ Presets:
 | `AllowUnauthenticatedRemoteActions` | `bool` |
 | `AllowedOrigins` | `[]string` |
 | `EnableCSRF` | `bool` |
+| `DisableCSRF` | `bool` |
 | `ContentSecurityPolicy` | `string` |
 | `PublicOrigin` | `string` |
 | `SSGCacheMaxEntries` | `int` |
@@ -4372,6 +4375,7 @@ Presets:
 - **`WSReconnectDelay` / `WSMaxReconnect` / `WSHeartbeat`**: Passed to the client; if unset/zero at runtime, HTML injection applies **1s / 10 / 30s** defaults when embedding config.
 - **`RemoteActionMiddleware`**: Required in production for remote actions unless `AllowUnauthenticatedRemoteActions` is set.
 - **`EnableCSRF`**: Defaults to `true`; wired in `gospa.New`.
+- **`DisableCSRF`**: Explicit escape hatch for trusted dev stacks or custom CSRF middleware.
 - **`ContentSecurityPolicy`**: Empty uses `fiber.DefaultContentSecurityPolicy` (compatibility policy for typical GoSPA apps). For stricter deployments, start from `fiber.StrictContentSecurityPolicy`.
 - **`PublicOrigin`**: Stable WebSocket URL behind proxies (see [Configuration](../configuration.md)).
 - **`Prefork` + `Storage` + `PubSub`**: Required together for correct multi-process behavior.
@@ -4751,8 +4755,8 @@ router.RegisterToFiber(fiberApp *fiber.App)
 **Handler Type**
 
 ```go
-type Handler func(c *fiber.Ctx) error
-type Middleware func(c *fiber.Ctx) error
+type Handler func(c fiber.Ctx) error
+type Middleware func(c fiber.Ctx) error
 ```
 
 ---
@@ -4782,8 +4786,8 @@ boolVal, err := params.Bool("active")
 sliceVal := params.Slice("path")
 
 // Utility functions
-params := routing.ExtractParams(c *fiber.Ctx, paramKeys []string)
-queryParams := routing.QueryParams(c *fiber.Ctx)
+params := routing.ExtractParams(c fiber.Ctx, paramKeys []string)
+queryParams := routing.QueryParams(c fiber.Ctx)
 ```
 
 ---
@@ -4887,12 +4891,12 @@ opts := routing.GetRouteOptions(path string)
 app.Use(fiber.SPAMiddleware(config fiber.Config))
 
 // Runtime script serving
-app.Get("/_gospa/runtime.js", fiber.RuntimeMiddleware(simple bool))
+app.Get("/_gospa/runtime.js", fiber.RuntimeMiddleware(compiler.RuntimeTierFull))
 app.Get("/_gospa/runtime.js", fiber.RuntimeMiddlewareWithContent(content []byte))
 
 // SPA navigation detection
 app.Use(fiber.SPANavigationMiddleware())
-isSPA := fiber.IsSPANavigation(c *fiber.Ctx) bool
+isSPA := fiber.IsSPANavigation(c)
 
 // CORS
 app.Use(fiber.CORSMiddleware(allowedOrigins []string))
@@ -4913,7 +4917,7 @@ app.Use(fiber.CSRFTokenMiddleware())
 
 ```go
 // Create hub
-hub := fiber.NewWSHub()
+hub := fiber.NewWSHub(store.NewMemoryPubSub())
 
 // Start hub (run in goroutine)
 go hub.Run()
@@ -4940,7 +4944,7 @@ count := hub.ClientCount()
 
 ```go
 // Create client
-client := fiber.NewWSClient(id string, conn *websocket.Conn)
+client := fiber.NewWSClient(id, conn, fiber.WebSocketConfig{})
 
 // Properties
 client.ID        string
@@ -5007,7 +5011,7 @@ fiber.RegisterActionHandler("increment", func(client *fiber.WSClient, payload js
 
 ```go
 // Session store - maps tokens to client IDs
-sessionStore := fiber.NewSessionStore()
+sessionStore := fiber.NewSessionStore(store.NewMemoryStorage())
 token, err := sessionStore.CreateSession(clientID)
 if err != nil {
     // handle persistence failure
@@ -5017,7 +5021,7 @@ sessionStore.RemoveSession(token string)
 sessionStore.RemoveClientSessions(clientID string)
 
 // Client state store - persists state by client ID
-stateStore := fiber.NewClientStateStore()
+stateStore := fiber.NewClientStateStore(store.NewMemoryStorage())
 stateStore.Save(clientID string, state *state.StateMap)
 state, ok := stateStore.Get(clientID string)
 stateStore.Remove(clientID string)
@@ -5042,18 +5046,18 @@ fiber.SendToClient(hub *WSHub, clientID string, message interface{}) error
 handler := fiber.StateSyncHandler(hub *WSHub)
 
 // Component rendering
-fiber.RenderComponent(c *fiber.Ctx, config Config, component templ.Component, name string) error
+fiber.RenderComponent(c fiber.Ctx, config Config, component templ.Component, name string) error
 
 // State access
-stateMap := fiber.GetState(c *fiber.Ctx, config Config)
-componentID := fiber.GetComponentID(c *fiber.Ctx, config Config)
-sessionState := fiber.GetSessionState(c *fiber.Ctx, config Config)
-fiber.SetSessionState(c *fiber.Ctx, config Config, key string, value interface{})
+stateMap := fiber.GetState(c fiber.Ctx, config Config)
+componentID := fiber.GetComponentID(c fiber.Ctx, config Config)
+sessionState := fiber.GetSessionState(c fiber.Ctx, config Config)
+fiber.SetSessionState(c fiber.Ctx, config Config, key string, value interface{})
 
 // Response helpers
-fiber.JSONResponse(c *fiber.Ctx, status int, data interface{}) error
-fiber.JSONError(c *fiber.Ctx, status int, message string) error
-fiber.ParseBody(c *fiber.Ctx, v interface{}) error
+fiber.JSONResponse(c fiber.Ctx, status int, data interface{}) error
+fiber.JSONError(c fiber.Ctx, status int, message string) error
+fiber.ParseBody(c fiber.Ctx, v interface{}) error
 ```
 
 ---
@@ -5719,13 +5723,13 @@ routing.RegisterRemoteAction("greet", func(ctx context.Context, rc routing.Remot
 
 ## Invoking From the Client
 
-GoSPA provides a type-safe bridge for calling remote actions from your TypeScript code.
+GoSPA provides `remote()` for direct calls and `remoteAction()` when you want a reusable typed caller.
 
 ```typescript
-import { remoteAction } from "/_gospa/runtime.js";
+import { remote } from "/_gospa/runtime.js";
 
 async function sayHello() {
-    const result = await remoteAction("greet", "World");
+    const result = await remote("greet", "World");
     console.log(result); // "Hello, World"
 }
 ```
@@ -6292,7 +6296,7 @@ With `DevMode: false`, GoSPA blocks remote actions unless you either configure *
 ```go
 app := gospa.New(gospa.Config{
     DevMode: false,
-    RemoteActionMiddleware: func(c *fiber.Ctx) error {
+    RemoteActionMiddleware: func(c fiber.Ctx) error {
         // your auth / session check
         return c.Next()
     },
@@ -6352,13 +6356,14 @@ With `EnableCSRF: true`, GoSPA wires the middleware automatically. You only need
 
 #### 2. Check cookies are enabled
 
-The client reads the `csrf_token` cookie. If cookies are disabled, remote actions will fail.
+The server sets the `csrf_token` cookie and injects the same token into `window.__GOSPA_CONFIG__.csrfToken` for framework helpers. If cookies are disabled, remote actions will fail.
 
 #### 3. Verify token is being sent
 
 Check browser dev tools:
 1. Look for `csrf_token` cookie in Application → Cookies
 2. Check that `X-CSRF-Token` header is sent in the request. The built-in `remote()` helper sends it automatically for same-origin requests.
+3. Check that the rendered page contains `window.__GOSPA_CONFIG__.csrfToken`.
 
 
 ## "unauthorized" Error (Global Remote Middleware)
@@ -6374,7 +6379,7 @@ Make sure your middleware allows authenticated requests to continue:
 
 ```go
 app := gospa.New(gospa.Config{
-    RemoteActionMiddleware: func(c *fiber.Ctx) error {
+    RemoteActionMiddleware: func(c fiber.Ctx) error {
         if c.Locals("user") == nil {
             return c.Status(fiber.StatusUnauthorized).JSON(fiber.Map{"error": "unauthorized"})
         }
@@ -6571,6 +6576,7 @@ routing.RegisterRemoteAction("process", loggedAction("process", func(ctx context
 1. **Network tab**: Look for the POST request to `/_gospa/remote/*`
 2. **Console**: Look for JavaScript errors
 3. **Application > Cookies**: Verify `csrf_token` exists
+4. **Elements/Console**: Verify `window.__GOSPA_CONFIG__.csrfToken` exists and the request sends `X-CSRF-Token`
 
 ## Common Mistakes
 
@@ -6973,7 +6979,7 @@ WebSocket connects but server rejects messages due to authentication.
 #### 1. Use Middleware for Auth
 
 ```go
-app.Use(func(c *fiber.Ctx) error {
+app.Use(func(c fiber.Ctx) error {
     // Skip WebSocket upgrade path
     if strings.HasPrefix(c.Path(), "/_gospa/ws") {
         return c.Next()
@@ -9944,7 +9950,7 @@ GoSPA is designed with security as a first-class citizen. This guide outlines th
 
 When deploying GoSPA to production, ensure that `DevMode` is set to `false` in your `gospa.Config`.
 
-- **Insecure Settings Enforcement**: In production, GoSPA automatically ignores `AllowInsecureWS` (forcing `wss://`) and `AllowUnauthenticatedRemoteActions`.
+- **Insecure Settings Enforcement**: In production, GoSPA ignores `AllowInsecureWS` unless explicitly configured for local/private deployments. Remote actions require `RemoteActionMiddleware` unless you intentionally set `AllowUnauthenticatedRemoteActions`.
 - **Logger**: Use a structured logger (`slog.Default()` or similar) to track security events without leaking sensitive data in logs.
 
 ### Checklist
@@ -9962,8 +9968,8 @@ GoSPA includes robust CSRF (Cross-Site Request Forgery) protection for both AJAX
 2. `CSRFTokenMiddleware` validates incoming mutating requests (POST, PUT, DELETE, PATCH).
 
 ### Usage
-- **AJAX/Fetch**: Include the `X-CSRF-Token` header.
-- **HTML Forms**: Include a hidden input named `_csrf`. GoSPA provides the token in the global state as `window.__GOSPA_CSRF_TOKEN__`.
+- **AJAX/Fetch**: Use GoSPA's built-in helpers. The server injects the token into `window.__GOSPA_CONFIG__.csrfToken`, and helpers send it as `X-CSRF-Token`.
+- **HTML Forms**: Include a hidden input named `_csrf`, or use `enhanceForm`, which appends the token automatically when framework bootstrap config is present.
 
 ```html
 <form method="POST" action="/update">
@@ -10474,8 +10480,8 @@ GoSPA supports four per-page rendering strategies that can be mixed freely acros
 | Strategy | When to Use | Cache-Control |
 |----------|-------------|---------------|
 | `StrategySSR` | Auth-gated pages, real-time data, per-user content | `no-store` |
-| `StrategySSG` | Fully static content: marketing pages, docs, landing pages | `public, max-age=31536000, immutable` |
-| `StrategyISR` | Mostly static, acceptable to serve stale for N minutes | `public, s-maxage=<TTL>, stale-while-revalidate=<TTL>` |
+| `StrategySSG` | Fully static content: marketing pages, docs, landing pages | `public, max-age=31536000, immutable`; `no-cache` when the response carries a CSP nonce |
+| `StrategyISR` | Mostly static, acceptable to serve stale for N minutes | `public, s-maxage=<TTL>, stale-while-revalidate=<TTL>`; `no-cache` when the response carries a CSP nonce |
 | `StrategyPPR` | "App shell" pages with a static outer frame and dynamic inner sections | `no-store` (slots rendered per-request) |
 
 All four strategies share the same rendering pipeline (file-based routing, layout chain, root layout). The strategy only affects **caching and when re-rendering occurs**.
@@ -10503,7 +10509,7 @@ routing.RegisterPageWithOptions("/dashboard", dashboardPage, routing.RouteOption
 
 ## SSG — Static Site Generation
 
-The page is rendered **once** on first request and cached until `SSGCacheTTL` expires or it is evicted by FIFO policy or server restart. Subsequent requests are served instantly from the in-memory cache.
+The page is rendered **once** on first request and cached until `SSGCacheTTL` expires or it is evicted by FIFO policy, external storage, or server restart. Subsequent requests are served instantly from cache. Cache keys include the normalized query string, excluding GoSPA's internal `__data` flag.
 
 > **Warning:** If `SSGCacheTTL` is set to `0` (the default), SSG caches forever without expiring, making it susceptible to stale content and memory pressure over time. **For most use-cases, we strongly recommend using ISR (Incremental Static Regeneration) instead**, which provides the exact same performance but allows pages to expire.
 
@@ -10525,7 +10531,7 @@ app := gospa.New(gospa.Config{
 })
 ```
 
-**HTTP header:** `Cache-Control: public, max-age=31536000, immutable`  
+**HTTP header:** `Cache-Control: public, max-age=31536000, immutable`, or `no-cache` when CSP nonces are enabled  
 **Requires `CacheTemplates`:** Yes
 
 > **Note:** If `CacheTemplates` is `false`, SSG pages fall back to per-request SSR rendering. No error is raised.
@@ -10551,7 +10557,7 @@ app := gospa.New(gospa.Config{
 })
 ```
 
-**HTTP header:** `Cache-Control: public, s-maxage=300, stale-while-revalidate=300`  
+**HTTP header:** `Cache-Control: public, s-maxage=300, stale-while-revalidate=300`, or `no-cache` when CSP nonces are enabled  
 **Requires `CacheTemplates`:** Yes
 
 ### ISR Behaviour Details
@@ -10563,7 +10569,7 @@ app := gospa.New(gospa.Config{
 | Cache hit, age ≥ TTL | Serve stale cache immediately; background goroutine re-renders and updates cache |
 | Multiple simultaneous stale requests | Only **one** background goroutine is launched (deduplicated via `sync.Map`) |
 
-> **Prefork warning:** By default, ISR cache is in-memory and per-process. With `Prefork: true` each child process maintains its own cache. TTL-based revalidation still works correctly per process, but cache entries are not shared between processes. For shared ISR, configure an external `Storage` backend (e.g., Redis).
+> **Prefork note:** By default, ISR cache is in-memory and per-process. With `Prefork: true` each child process maintains its own cache. Configure an external `Storage` backend (e.g., Redis) to share SSG, ISR, and PPR entries across workers.
 
 ---
 
@@ -10712,7 +10718,7 @@ All three caching strategies (SSG, ISR, PPR shells) share a unified **FIFO evict
 
 In Prefork mode (`Prefork: true`), if no external `Storage` is configured, each child process has its own independent in-memory cache. Cache entries are not shared between processes. ISR TTLs fire independently per process.
 
-To support shared SSG, ISR, and PPR caching across Prefork child processes or horizontally scaled clusters, configure the `Storage` option in `gospa.Config` with a distributed backend such as Redis. This ensures consistent cache hits and dedicates a single background revalidation per route across the entire cluster.
+To support shared SSG, ISR, and PPR caching across Prefork child processes or horizontally scaled clusters, configure the `Storage` option in `gospa.Config` with a distributed backend such as Redis. GoSPA uses that storage for route cache reads and writes even when `Prefork` is enabled.
 
 ---
 

@@ -29,6 +29,7 @@ Distributed deployment, horizontal scaling, and security configuration.
 |--------|------|---------|-------------|
 | `AllowedOrigins` | `[]string` | `[]` | Allowed CORS origins |
 | `EnableCSRF` | `bool` | `true` | Enable automatic CSRF protection |
+| `DisableCSRF` | `bool` | `false` | Explicitly disable built-in CSRF handling |
 | `ContentSecurityPolicy` | `string` | built-in | Optional CSP header value |
 | `PublicOrigin` | `string` | `""` | Public base URL for stable WebSocket URLs |
 | `AllowInsecureWS` | `bool` | `false` | Allow `ws://` even on `https://` pages |

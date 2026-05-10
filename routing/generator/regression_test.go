@@ -1,6 +1,8 @@
 package generator
 
 import (
+	"os"
+	"path/filepath"
 	"strings"
 	"testing"
 )
@@ -84,5 +86,30 @@ func TestRouteTypeScriptGenerator_GetLinkPropsQueryDetection(t *testing.T) {
 	}
 	if strings.Contains(output, `!('toString' in a)`) {
 		t.Fatalf("legacy toString-based query detection should not exist\n%s", output)
+	}
+}
+
+func TestActionTypeScriptGenerator_UsesDirectRemoteCall(t *testing.T) {
+	g := NewActionTypeScriptGenerator()
+	g.actions = []string{"greet", "action with spaces"}
+
+	tmpDir := t.TempDir()
+	if err := g.GenerateActionsFile(tmpDir); err != nil {
+		t.Fatalf("GenerateActionsFile failed: %v", err)
+	}
+	code, err := os.ReadFile(filepath.Join(tmpDir, "actions.ts"))
+	if err != nil {
+		t.Fatalf("read generated actions.ts: %v", err)
+	}
+	output := string(code)
+
+	if !strings.Contains(output, `"action with spaces": (input: any) => Promise<any>;`) {
+		t.Fatalf("expected action names to be quoted\n%s", output)
+	}
+	if !strings.Contains(output, `return esmRuntime.remote(name, input) as ReturnType<RemoteActions[T]>;`) {
+		t.Fatalf("expected direct esm remote call\n%s", output)
+	}
+	if strings.Contains(output, `remoteAction(name, input)`) {
+		t.Fatalf("generated code should not call curried remoteAction with an input\n%s", output)
 	}
 }

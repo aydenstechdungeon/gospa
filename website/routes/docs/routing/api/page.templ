@@ -20,7 +20,7 @@ templ Page() {
 			<p class="text-[var(--text-secondary)]">
 				Create Go files in the routes directory for REST endpoints. GoSPA integrates with Fiber.
 			</p>
-			@components.CodeBlock("// routes/api/users.go\npackage api\n\nimport (\n\t\" github.com/gofiber/fiber/v2\"\n)\n\ntype User struct {\n\tID   int    `json:\" id\"`\n\tName string `json:\" name\"`\n}\n\n// GET /api/users\nfunc ListUsers(c *fiber.Ctx) error {\n\tusers := []User{{ID: 1, Name: \" Alice\"}}\n\treturn c.JSON(users)\n}\n\n// POST /api/users\nfunc CreateUser(c *fiber.Ctx) error {\n\tvar user User\n\tif err := c.BodyParser(&user); err != nil {\n\t\treturn c.Status(400).JSON(fiber.Map{\n\t\t\t\" error\": \" Invalid request\",\n\t\t})\n\t}\n\treturn c.Status(201).JSON(user)\n}", " go", " api.go")
+			@components.CodeBlock("// routes/api/users.go\npackage api\n\nimport \"github.com/gofiber/fiber/v3\"\n\ntype User struct {\n\tID   int    `json:\"id\"`\n\tName string `json:\"name\"`\n}\n\n// GET /api/users\nfunc ListUsers(c fiber.Ctx) error {\n\tusers := []User{{ID: 1, Name: \"Alice\"}}\n\treturn c.JSON(users)\n}\n\n// POST /api/users\nfunc CreateUser(c fiber.Ctx) error {\n\tvar user User\n\tif err := c.Bind().Body(&user); err != nil {\n\t\treturn c.Status(fiber.StatusBadRequest).JSON(fiber.Map{\n\t\t\t\"error\": \"Invalid request\",\n\t\t})\n\t}\n\treturn c.Status(fiber.StatusCreated).JSON(user)\n}", "go", "api.go")
 		</section>
 
 		<section class="space-y-6">

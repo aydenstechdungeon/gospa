@@ -158,14 +158,14 @@ func main() {
 
 import (
     "github.com/aydenstechdungeon/gospa/plugin/qrcode"
-    "github.com/gofiber/fiber/v2"
+    "github.com/gofiber/fiber/v3"
 )
 
 func main() {
     app := fiber.New()
     
     // Serve QR code as PNG image
-    app.Get("/qr/:content", func(c *fiber.Ctx) error {
+    app.Get("/qr/:content", func(c fiber.Ctx) error {
         content := c.Params("content")
         
         pngBytes, err := qrcode.GeneratePNG(content,
@@ -182,7 +182,7 @@ func main() {
     })
     
     // Serve QR code as data URL (for JSON APIs)
-    app.Get("/api/qr/:content", func(c *fiber.Ctx) error {
+    app.Get("/api/qr/:content", func(c fiber.Ctx) error {
         content := c.Params("content")
         
         dataURL, err := qrcode.GenerateDataURL(content)

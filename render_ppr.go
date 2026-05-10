@@ -11,7 +11,7 @@ import (
 )
 
 func (a *App) storePprShell(key string, shell []byte, tags, keys []string) {
-	if a.Config.Storage != nil && !a.Config.Prefork {
+	if a.Config.Storage != nil {
 		_ = a.Config.Storage.Set(a.Context(), "gospa:ppr:"+key, shell, 0)
 		a.indexCacheEntry(key, tags, keys)
 		return

@@ -227,6 +227,12 @@ func (a *App) invalidateCacheKey(cacheKey string) int {
 	a.pprShellMu.Unlock()
 
 	if a.Config.Storage != nil {
+		if _, err := a.Config.Storage.Get(a.Context(), "gospa:ssg:"+cacheKey); err == nil {
+			invalidated++
+		}
+		if _, err := a.Config.Storage.Get(a.Context(), "gospa:ppr:"+cacheKey); err == nil {
+			invalidated++
+		}
 		_ = a.Config.Storage.Delete(a.Context(), "gospa:ssg:"+cacheKey)
 		_ = a.Config.Storage.Delete(a.Context(), "gospa:ppr:"+cacheKey)
 	}

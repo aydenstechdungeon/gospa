@@ -13,6 +13,13 @@ import (
 	"github.com/gofiber/fiber/v3"
 )
 
+const testCSRFToken = "abcdef0123456789abcdef0123456789abcdef0123456789abcdef0123456789"
+
+func addValidCSRF(req *http.Request) {
+	req.Header.Set("Cookie", "csrf_token="+testCSRFToken)
+	req.Header.Set("X-CSRF-Token", testCSRFToken)
+}
+
 func TestRemoteAction_ProductionBlocksWithoutMiddleware(t *testing.T) {
 	name := strings.ReplaceAll(t.Name(), "/", "_")
 	var called atomic.Bool
@@ -28,6 +35,7 @@ func TestRemoteAction_ProductionBlocksWithoutMiddleware(t *testing.T) {
 
 	req := httptest.NewRequest(http.MethodPost, "/_gospa/remote/"+name, strings.NewReader(`{}`))
 	req.Header.Set("Content-Type", "application/json")
+	addValidCSRF(req)
 	res, err := app.Fiber.Test(req)
 	if err != nil {
 		t.Fatalf("request failed: %v", err)
@@ -47,6 +55,31 @@ func TestRemoteAction_ProductionBlocksWithoutMiddleware(t *testing.T) {
 	}
 }
 
+func TestInvalidate_ProductionBlocksWithoutMiddleware(t *testing.T) {
+	app := New(Config{DevMode: false, PublicOrigin: "http://localhost"})
+	app.applyPluginMiddleware()
+	app.setupRoutes()
+	defer func() { _ = app.Fiber.Shutdown() }()
+
+	req := httptest.NewRequest(http.MethodPost, "/_gospa/invalidate", strings.NewReader(`{"all":true}`))
+	req.Header.Set("Content-Type", "application/json")
+	addValidCSRF(req)
+	res, err := app.Fiber.Test(req)
+	if err != nil {
+		t.Fatalf("request failed: %v", err)
+	}
+	if res.StatusCode != fiber.StatusUnauthorized {
+		t.Fatalf("expected status %d, got %d", fiber.StatusUnauthorized, res.StatusCode)
+	}
+	var body map[string]any
+	if err := json.NewDecoder(res.Body).Decode(&body); err != nil {
+		t.Fatalf("decode: %v", err)
+	}
+	if body["code"] != "INVALIDATION_AUTH_REQUIRED" {
+		t.Fatalf("expected INVALIDATION_AUTH_REQUIRED, got %#v", body)
+	}
+}
+
 func TestRemoteAction_JSONTooDeep(t *testing.T) {
 	name := strings.ReplaceAll(t.Name(), "/", "_")
 	routing.RegisterRemoteAction(name, func(_ context.Context, _ routing.RemoteContext, _ interface{}) (interface{}, error) {
@@ -63,6 +96,7 @@ func TestRemoteAction_JSONTooDeep(t *testing.T) {
 	payload := strings.Repeat(`{"a":`, n) + `0` + strings.Repeat(`}`, n)
 	req := httptest.NewRequest(http.MethodPost, "/_gospa/remote/"+name, strings.NewReader(payload))
 	req.Header.Set("Content-Type", "application/json")
+	addValidCSRF(req)
 	res, err := app.Fiber.Test(req)
 	if err != nil {
 		t.Fatalf("request failed: %v", err)
@@ -99,6 +133,7 @@ func TestRemoteActionMiddleware_BlocksRequestBeforeHandler(t *testing.T) {
 
 	req := httptest.NewRequest(http.MethodPost, "/_gospa/remote/"+actionName, strings.NewReader(`{"k":"v"}`))
 	req.Header.Set("Content-Type", "application/json")
+	addValidCSRF(req)
 	res, err := app.Fiber.Test(req)
 	if err != nil {
 		t.Fatalf("request failed: %v", err)

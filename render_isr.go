@@ -21,7 +21,8 @@ func (a *App) initSemaphore() {
 func (a *App) backgroundRevalidate(cacheKey string, routeSnap interface{}) {
 	route, _ := routeSnap.(*routing.Route)
 	routeParams := map[string]interface{}{}
-	if matchedRoute, params := a.Router.Match(cacheKey); matchedRoute != nil {
+	routePath := routePathFromCacheKey(cacheKey)
+	if matchedRoute, params := a.Router.Match(routePath); matchedRoute != nil {
 		route = matchedRoute
 		for k, v := range params {
 			routeParams[k] = v

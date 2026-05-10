@@ -129,6 +129,9 @@ func init() {
 			@components.CodeBlock(`app := gospa.New(gospa.Config{
     EnableCSRF: true,
 })`, "go", " main.go")
+			<p class="text-[var(--text-secondary)]">
+				The server sets <code class="mono">csrf_token</code> and injects <code class="mono">window.__GOSPA_CONFIG__.csrfToken</code>. Built-in helpers send it as <code class="mono">X-CSRF-Token</code>.
+			</p>
 		</section>
 
 		<section id="remote-middleware" class="space-y-6">
@@ -138,7 +141,7 @@ func init() {
 			</p>
 			@components.CodeBlock(`{ "error": " unauthorized"}`, " json", "")
 			@components.CodeBlock(`app := gospa.New(gospa.Config{
-    RemoteActionMiddleware: func(c *fiber.Ctx) error {
+    RemoteActionMiddleware: func(c fiber.Ctx) error {
         if c.Locals("user") == nil {
             return c.Status(fiber.StatusUnauthorized).JSON(fiber.Map{"error": " unauthorized"})
         }
@@ -168,6 +171,7 @@ func init() {
 				<li>Look for POST to <code class="mono">/_gospa/remote/*</code></li>
 				<li>Check Console for errors</li>
 				<li>Verify Application → Cookies has <code class="mono">csrf_token</code></li>
+				<li>Verify <code class="mono">window.__GOSPA_CONFIG__.csrfToken</code> exists and the request sends <code class="mono">X-CSRF-Token</code></li>
 			</ol>
 		</section>
 

@@ -35,6 +35,7 @@ export type RoutePath =
   | "/docs/getstarted/installation"
   | "/docs/getstarted/quickstart"
   | "/docs/getstarted/structure"
+  | "/docs/getstarted/tutorial"
   | "/docs/gospasfc"
   | "/docs/gospasfc/advanced"
   | "/docs/gospasfc/api-reference"
@@ -46,7 +47,10 @@ export type RoutePath =
   | "/docs/gospasfc/templates"
   | "/docs/gospasfc/typescript"
   | "/docs/hmr"
+  | "/docs/internals/runtime"
   | "/docs/islands"
+  | "/docs/migration/fiber-to-gospa"
+  | "/docs/migration/sveltekit-to-gospa"
   | "/docs/params"
   | "/docs/plugins"
   | "/docs/plugins/auth"
@@ -62,18 +66,21 @@ export type RoutePath =
   | "/docs/reactive-primitives/js"
   | "/docs/remote-actions"
   | "/docs/rendering"
+  | "/docs/root"
   | "/docs/routing"
   | "/docs/routing/api"
   | "/docs/routing/dynamic"
   | "/docs/routing/layouts"
   | "/docs/routing/navigation"
   | "/docs/runtime"
+  | "/docs/security"
   | "/docs/sse"
   | "/docs/state-management"
   | "/docs/state-management/client"
   | "/docs/state-management/patterns"
   | "/docs/state-management/server"
   | "/docs/state-management/sync"
+  | "/docs/storage"
   | "/docs/troubleshooting"
   | "/docs/websocket"
 ;
@@ -107,6 +114,7 @@ export interface RouteMap {
   DocsGetstartedInstallation: "/docs/getstarted/installation";
   DocsGetstartedQuickstart: "/docs/getstarted/quickstart";
   DocsGetstartedStructure: "/docs/getstarted/structure";
+  DocsGetstartedTutorial: "/docs/getstarted/tutorial";
   DocsGospasfc: "/docs/gospasfc";
   DocsGospasfcAdvanced: "/docs/gospasfc/advanced";
   DocsGospasfcApi-reference: "/docs/gospasfc/api-reference";
@@ -118,7 +126,10 @@ export interface RouteMap {
   DocsGospasfcTemplates: "/docs/gospasfc/templates";
   DocsGospasfcTypescript: "/docs/gospasfc/typescript";
   DocsHmr: "/docs/hmr";
+  DocsInternalsRuntime: "/docs/internals/runtime";
   DocsIslands: "/docs/islands";
+  DocsMigrationFiber-to-gospa: "/docs/migration/fiber-to-gospa";
+  DocsMigrationSveltekit-to-gospa: "/docs/migration/sveltekit-to-gospa";
   DocsParams: "/docs/params";
   DocsPlugins: "/docs/plugins";
   DocsPluginsAuth: "/docs/plugins/auth";
@@ -134,18 +145,21 @@ export interface RouteMap {
   DocsReactive-primitivesJs: "/docs/reactive-primitives/js";
   DocsRemote-actions: "/docs/remote-actions";
   DocsRendering: "/docs/rendering";
+  DocsRoot: "/docs/root";
   DocsRouting: "/docs/routing";
   DocsRoutingApi: "/docs/routing/api";
   DocsRoutingDynamic: "/docs/routing/dynamic";
   DocsRoutingLayouts: "/docs/routing/layouts";
   DocsRoutingNavigation: "/docs/routing/navigation";
   DocsRuntime: "/docs/runtime";
+  DocsSecurity: "/docs/security";
   DocsSse: "/docs/sse";
   DocsState-management: "/docs/state-management";
   DocsState-managementClient: "/docs/state-management/client";
   DocsState-managementPatterns: "/docs/state-management/patterns";
   DocsState-managementServer: "/docs/state-management/server";
   DocsState-managementSync: "/docs/state-management/sync";
+  DocsStorage: "/docs/storage";
   DocsTroubleshooting: "/docs/troubleshooting";
   DocsWebsocket: "/docs/websocket";
 }
@@ -249,6 +263,24 @@ export class RouteActionError<T = unknown> extends Error {
   }
 }
 
+function getCSRFToken(): string | undefined {
+  const configToken = typeof window !== 'undefined' ? (window as any).__GOSPA_CONFIG__?.csrfToken : undefined;
+  return typeof configToken === 'string' && configToken ? configToken : undefined;
+}
+
+function headersToRecord(headers?: HeadersInit): Record<string, string> {
+  if (!headers) return {};
+  if (headers instanceof Headers) {
+    const record: Record<string, string> = {};
+    headers.forEach((value, key) => {
+      record[key] = value;
+    });
+    return record;
+  }
+  if (Array.isArray(headers)) return Object.fromEntries(headers);
+  return { ...headers };
+}
+
 /**
  * Fetch typed load data for a route (server Load chain only).
  */
@@ -291,16 +323,25 @@ export async function callRouteAction<
   const throwOnError = init?.throwOnError !== false;
   const requestInit = { ...(init || {}) };
   delete (requestInit as RouteActionOptions).throwOnError;
+  const csrfToken = getCSRFToken();
+  const actionBody = body ?? requestInit.body ?? null;
+  if (csrfToken && actionBody instanceof FormData && !actionBody.has('_csrf')) {
+    actionBody.set('_csrf', csrfToken);
+  }
+  const headers: Record<string, string> = {
+    Accept: 'application/json',
+    'X-Gospa-Enhance': '1',
+    ...headersToRecord(requestInit.headers),
+  };
+  if (csrfToken && !(actionBody instanceof FormData)) {
+    headers['X-CSRF-Token'] = csrfToken;
+  }
   const res = await fetch(actionURL.toString(), {
     method: requestInit.method ?? 'POST',
     credentials: requestInit.credentials ?? 'same-origin',
     ...requestInit,
-    headers: {
-      Accept: 'application/json',
-      'X-Gospa-Enhance': '1',
-      ...(requestInit.headers || {}),
-    },
-    body: body ?? requestInit.body ?? null,
+    headers,
+    body: actionBody,
   });
   const payload = await res.json().catch(() => ({}));
   if (!res.ok && throwOnError) {
@@ -435,6 +476,10 @@ export function docsGetstartedStructureRoute(): string {
   return "/docs/getstarted/structure";
 }
 
+export function docsGetstartedTutorialRoute(): string {
+  return "/docs/getstarted/tutorial";
+}
+
 export function docsGospasfcRoute(): string {
   return "/docs/gospasfc";
 }
@@ -479,8 +524,20 @@ export function docsHmrRoute(): string {
   return "/docs/hmr";
 }
 
+export function docsInternalsRuntimeRoute(): string {
+  return "/docs/internals/runtime";
+}
+
 export function docsIslandsRoute(): string {
   return "/docs/islands";
+}
+
+export function docsMigrationFiber-to-gospaRoute(): string {
+  return "/docs/migration/fiber-to-gospa";
+}
+
+export function docsMigrationSveltekit-to-gospaRoute(): string {
+  return "/docs/migration/sveltekit-to-gospa";
 }
 
 export function docsParamsRoute(): string {
@@ -543,6 +600,10 @@ export function docsRenderingRoute(): string {
   return "/docs/rendering";
 }
 
+export function docsRootRoute(): string {
+  return "/docs/root";
+}
+
 export function docsRoutingRoute(): string {
   return "/docs/routing";
 }
@@ -567,6 +628,10 @@ export function docsRuntimeRoute(): string {
   return "/docs/runtime";
 }
 
+export function docsSecurityRoute(): string {
+  return "/docs/security";
+}
+
 export function docsSseRoute(): string {
   return "/docs/sse";
 }
@@ -589,6 +654,10 @@ export function docsState-managementServerRoute(): string {
 
 export function docsState-managementSyncRoute(): string {
   return "/docs/state-management/sync";
+}
+
+export function docsStorageRoute(): string {
+  return "/docs/storage";
 }
 
 export function docsTroubleshootingRoute(): string {
@@ -928,6 +997,12 @@ export const routes: RouteMeta[] = [
     params: [],
   },
   {
+    path: "/docs/getstarted/tutorial",
+    name: "DocsGetstartedTutorial",
+    isDynamic: false,
+    params: [],
+  },
+  {
     path: "/docs/gospasfc",
     name: "DocsGospasfc",
     isDynamic: false,
@@ -994,8 +1069,26 @@ export const routes: RouteMeta[] = [
     params: [],
   },
   {
+    path: "/docs/internals/runtime",
+    name: "DocsInternalsRuntime",
+    isDynamic: false,
+    params: [],
+  },
+  {
     path: "/docs/islands",
     name: "DocsIslands",
+    isDynamic: false,
+    params: [],
+  },
+  {
+    path: "/docs/migration/fiber-to-gospa",
+    name: "DocsMigrationFiber-to-gospa",
+    isDynamic: false,
+    params: [],
+  },
+  {
+    path: "/docs/migration/sveltekit-to-gospa",
+    name: "DocsMigrationSveltekit-to-gospa",
     isDynamic: false,
     params: [],
   },
@@ -1090,6 +1183,12 @@ export const routes: RouteMeta[] = [
     params: [],
   },
   {
+    path: "/docs/root",
+    name: "DocsRoot",
+    isDynamic: false,
+    params: [],
+  },
+  {
     path: "/docs/routing",
     name: "DocsRouting",
     isDynamic: false,
@@ -1126,6 +1225,12 @@ export const routes: RouteMeta[] = [
     params: [],
   },
   {
+    path: "/docs/security",
+    name: "DocsSecurity",
+    isDynamic: false,
+    params: [],
+  },
+  {
     path: "/docs/sse",
     name: "DocsSse",
     isDynamic: false,
@@ -1158,6 +1263,12 @@ export const routes: RouteMeta[] = [
   {
     path: "/docs/state-management/sync",
     name: "DocsState-managementSync",
+    isDynamic: false,
+    params: [],
+  },
+  {
+    path: "/docs/storage",
+    name: "DocsStorage",
     isDynamic: false,
     params: [],
   },

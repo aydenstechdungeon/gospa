@@ -29,6 +29,7 @@ describe("forms", () => {
 
   beforeEach(() => {
     document.body.innerHTML = "";
+    (window as any).__GOSPA_CONFIG__ = {};
   });
 
   it("sends GET form fields as query params without request body", async () => {
@@ -116,6 +117,40 @@ describe("forms", () => {
     expect(onError).toHaveBeenCalledTimes(0);
     expect(email.getAttribute("aria-invalid")).toBe("true");
     expect(email.getAttribute("data-gospa-error")).toBe("invalid email");
+  });
+
+  it("adds CSRF token from bootstrap config to POST FormData", async () => {
+    (window as any).__GOSPA_CONFIG__.csrfToken =
+      "abcdef0123456789abcdef0123456789abcdef0123456789abcdef0123456789";
+    const form = document.createElement("form");
+    form.method = "POST";
+    form.action = "/save";
+    form.dataset.gospaAction = "save";
+    document.body.appendChild(form);
+
+    const fetchMock = mock(
+      async () =>
+        new Response(JSON.stringify({ data: { ok: true } }), {
+          status: 200,
+          headers: { "content-type": "application/json" },
+        }),
+    );
+    (globalThis as any).fetch = fetchMock;
+
+    const cleanup = enhanceForm(form);
+    form.requestSubmit();
+    await Promise.resolve();
+    await Promise.resolve();
+    await new Promise((resolve) => setTimeout(resolve, 0));
+    cleanup();
+
+    const [, init] = fetchMock.mock.calls[0] as unknown as [
+      string,
+      RequestInit,
+    ];
+    expect((init.body as FormData).get("_csrf")).toBe(
+      "abcdef0123456789abcdef0123456789abcdef0123456789abcdef0123456789",
+    );
   });
 
   it("aborts stale requests and only applies latest response", async () => {

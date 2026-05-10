@@ -8,6 +8,7 @@ import (
 	"os"
 	"path/filepath"
 	"sort"
+	"strconv"
 	"strings"
 )
 
@@ -106,23 +107,26 @@ func (g *ActionTypeScriptGenerator) GenerateActionsFile(outputDir string) error 
 	sb.WriteString(" */\n")
 	sb.WriteString("export interface RemoteActions {\n")
 	for _, action := range g.actions {
-		fmt.Fprintf(&sb, "  %s: (input: any) => Promise<any>;\n", action)
+		fmt.Fprintf(&sb, "  %s: (input: any) => Promise<any>;\n", strconv.Quote(action))
 	}
 	sb.WriteString("}\n\n")
 
 	sb.WriteString("/**\n")
 	sb.WriteString(" * Type-safe way to call a remote action.\n")
 	sb.WriteString(" */\n")
-	sb.WriteString("export function remoteAction<T extends keyof RemoteActions>(name: T, input: any): Promise<any> {\n")
+	sb.WriteString("export function remote<T extends keyof RemoteActions>(name: T, input: Parameters<RemoteActions[T]>[0]): ReturnType<RemoteActions[T]> {\n")
 	sb.WriteString("  const esmRuntime = (globalThis as any).__GOSPA_RUNTIME_ESM__;\n")
-	sb.WriteString("  if (esmRuntime && typeof esmRuntime.remoteAction === 'function') {\n")
-	sb.WriteString("    return esmRuntime.remoteAction(name, input);\n")
+	sb.WriteString("  if (esmRuntime && typeof esmRuntime.remote === 'function') {\n")
+	sb.WriteString("    return esmRuntime.remote(name, input) as ReturnType<RemoteActions[T]>;\n")
 	sb.WriteString("  }\n")
 	sb.WriteString("  const legacyRuntime = (globalThis as any).GoSPA;\n")
-	sb.WriteString("  if (legacyRuntime && typeof legacyRuntime.remoteAction === 'function') {\n")
-	sb.WriteString("    return legacyRuntime.remoteAction(name, input);\n")
+	sb.WriteString("  if (legacyRuntime && typeof legacyRuntime.remote === 'function') {\n")
+	sb.WriteString("    return legacyRuntime.remote(name, input) as ReturnType<RemoteActions[T]>;\n")
 	sb.WriteString("  }\n")
-	sb.WriteString("  throw new Error(\"GoSPA runtime not initialized. Ensure runtime.init() runs before calling remoteAction().\");\n")
+	sb.WriteString("  throw new Error(\"GoSPA runtime not initialized. Ensure runtime.init() runs before calling remote().\");\n")
+	sb.WriteString("}\n\n")
+	sb.WriteString("export function remoteAction<T extends keyof RemoteActions>(name: T): RemoteActions[T] {\n")
+	sb.WriteString("  return ((input: Parameters<RemoteActions[T]>[0]) => remote(name, input)) as RemoteActions[T];\n")
 	sb.WriteString("}\n")
 
 	outPath := filepath.Join(outputDir, "actions.ts")

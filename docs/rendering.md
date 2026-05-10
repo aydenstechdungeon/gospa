@@ -7,8 +7,8 @@ GoSPA supports four per-page rendering strategies that can be mixed freely acros
 | Strategy | When to Use | Cache-Control |
 |----------|-------------|---------------|
 | `StrategySSR` | Auth-gated pages, real-time data, per-user content | `no-store` |
-| `StrategySSG` | Fully static content: marketing pages, docs, landing pages | `public, max-age=31536000, immutable` |
-| `StrategyISR` | Mostly static, acceptable to serve stale for N minutes | `public, s-maxage=<TTL>, stale-while-revalidate=<TTL>` |
+| `StrategySSG` | Fully static content: marketing pages, docs, landing pages | `public, max-age=31536000, immutable`; `no-cache` when the response carries a CSP nonce |
+| `StrategyISR` | Mostly static, acceptable to serve stale for N minutes | `public, s-maxage=<TTL>, stale-while-revalidate=<TTL>`; `no-cache` when the response carries a CSP nonce |
 | `StrategyPPR` | "App shell" pages with a static outer frame and dynamic inner sections | `no-store` (slots rendered per-request) |
 
 All four strategies share the same rendering pipeline (file-based routing, layout chain, root layout). The strategy only affects **caching and when re-rendering occurs**.
@@ -36,7 +36,7 @@ routing.RegisterPageWithOptions("/dashboard", dashboardPage, routing.RouteOption
 
 ## SSG — Static Site Generation
 
-The page is rendered **once** on first request and cached until `SSGCacheTTL` expires or it is evicted by FIFO policy or server restart. Subsequent requests are served instantly from the in-memory cache.
+The page is rendered **once** on first request and cached until `SSGCacheTTL` expires or it is evicted by FIFO policy, external storage, or server restart. Subsequent requests are served instantly from cache. Cache keys include the normalized query string, excluding GoSPA's internal `__data` flag.
 
 > **Warning:** If `SSGCacheTTL` is set to `0` (the default), SSG caches forever without expiring, making it susceptible to stale content and memory pressure over time. **For most use-cases, we strongly recommend using ISR (Incremental Static Regeneration) instead**, which provides the exact same performance but allows pages to expire.
 
@@ -58,7 +58,7 @@ app := gospa.New(gospa.Config{
 })
 ```
 
-**HTTP header:** `Cache-Control: public, max-age=31536000, immutable`  
+**HTTP header:** `Cache-Control: public, max-age=31536000, immutable`, or `no-cache` when CSP nonces are enabled  
 **Requires `CacheTemplates`:** Yes
 
 > **Note:** If `CacheTemplates` is `false`, SSG pages fall back to per-request SSR rendering. No error is raised.
@@ -84,7 +84,7 @@ app := gospa.New(gospa.Config{
 })
 ```
 
-**HTTP header:** `Cache-Control: public, s-maxage=300, stale-while-revalidate=300`  
+**HTTP header:** `Cache-Control: public, s-maxage=300, stale-while-revalidate=300`, or `no-cache` when CSP nonces are enabled  
 **Requires `CacheTemplates`:** Yes
 
 ### ISR Behaviour Details
@@ -96,7 +96,7 @@ app := gospa.New(gospa.Config{
 | Cache hit, age ≥ TTL | Serve stale cache immediately; background goroutine re-renders and updates cache |
 | Multiple simultaneous stale requests | Only **one** background goroutine is launched (deduplicated via `sync.Map`) |
 
-> **Prefork warning:** By default, ISR cache is in-memory and per-process. With `Prefork: true` each child process maintains its own cache. TTL-based revalidation still works correctly per process, but cache entries are not shared between processes. For shared ISR, configure an external `Storage` backend (e.g., Redis).
+> **Prefork note:** By default, ISR cache is in-memory and per-process. With `Prefork: true` each child process maintains its own cache. Configure an external `Storage` backend (e.g., Redis) to share SSG, ISR, and PPR entries across workers.
 
 ---
 
@@ -245,7 +245,7 @@ All three caching strategies (SSG, ISR, PPR shells) share a unified **FIFO evict
 
 In Prefork mode (`Prefork: true`), if no external `Storage` is configured, each child process has its own independent in-memory cache. Cache entries are not shared between processes. ISR TTLs fire independently per process.
 
-To support shared SSG, ISR, and PPR caching across Prefork child processes or horizontally scaled clusters, configure the `Storage` option in `gospa.Config` with a distributed backend such as Redis. This ensures consistent cache hits and dedicates a single background revalidation per route across the entire cluster.
+To support shared SSG, ISR, and PPR caching across Prefork child processes or horizontally scaled clusters, configure the `Storage` option in `gospa.Config` with a distributed backend such as Redis. GoSPA uses that storage for route cache reads and writes even when `Prefork` is enabled.
 
 ---
 

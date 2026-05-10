@@ -1,0 +1,39 @@
+package sveltekittogospa
+
+import "github.com/aydenstechdungeon/gospa/website/components"
+
+templ Page() {
+	<div class="space-y-10">
+		<header>
+			<h1 class="text-3xl font-bold tracking-tight mb-4">SvelteKit to GoSPA Migration</h1>
+			<p class="text-xl text-[var(--text-secondary)] leading-relaxed">
+				Common SvelteKit concepts mapped to GoSPA routing, actions, invalidation, and SFC helpers.
+			</p>
+		</header>
+
+		<section class="space-y-4">
+			<h2 class="text-2xl font-bold border-b border-[var(--border)] pb-2">Concept Map</h2>
+			<div class="overflow-x-auto">
+				<table class="w-full text-sm border border-[var(--border)] rounded-lg">
+					<thead class="bg-[var(--bg-tertiary)]"><tr><th class="px-4 py-2 text-left">SvelteKit</th><th class="px-4 py-2 text-left">GoSPA</th></tr></thead>
+					<tbody class="divide-y divide-[var(--border)]">
+						<tr><td class="px-4 py-2 mono">load</td><td class="px-4 py-2 mono">Load(c routing.LoadContext)</td></tr>
+						<tr><td class="px-4 py-2 mono">actions</td><td class="px-4 py-2 mono">ActionDefault / ActionName</td></tr>
+						<tr><td class="px-4 py-2 mono">redirect / fail / error</td><td class="px-4 py-2 mono">kit.Redirect / kit.Fail / kit.Error</td></tr>
+						<tr><td class="px-4 py-2 mono">invalidate</td><td class="px-4 py-2 mono">invalidate / invalidateTag / invalidateKey</td></tr>
+						<tr><td class="px-4 py-2 mono">$state / $derived / $effect</td><td class="px-4 py-2 mono">GoSPA runes in .gospa files</td></tr>
+					</tbody>
+				</table>
+			</div>
+		</section>
+
+		<section class="space-y-6">
+			<h2 class="text-2xl font-bold border-b border-[var(--border)] pb-2">Navigation Helpers</h2>
+			@components.CodeBlock(`import { goto, preloadData, invalidate } from "/_gospa/runtime.js";
+
+await preloadData("/dashboard");
+await goto("/dashboard");
+await invalidate("/dashboard");`, "typescript", "navigation.ts")
+		</section>
+	</div>
+}

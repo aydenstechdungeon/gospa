@@ -1,0 +1,30 @@
+package fibertogospa
+
+import "github.com/aydenstechdungeon/gospa/website/components"
+
+templ Page() {
+	<div class="space-y-10">
+		<header>
+			<h1 class="text-3xl font-bold tracking-tight mb-4">Fiber to GoSPA Migration</h1>
+			<p class="text-xl text-[var(--text-secondary)] leading-relaxed">
+				A checklist for adding GoSPA routes and runtime behavior to an existing Fiber application.
+			</p>
+		</header>
+
+		<section class="space-y-4">
+			<h2 class="text-2xl font-bold border-b border-[var(--border)] pb-2">Preflight</h2>
+			<ul class="space-y-2 text-[var(--text-secondary)] list-disc list-inside">
+				<li>Run <code class="mono">gospa verify</code> and resolve blocking diagnostics.</li>
+				<li>Keep existing Fiber APIs and static routes unchanged.</li>
+				<li>Move UI routes into <code class="mono">routes/</code> as <code class="mono">.templ</code> or <code class="mono">.gospa</code>.</li>
+				<li>Configure <code class="mono">Storage</code> and <code class="mono">PubSub</code> when <code class="mono">Prefork</code> is enabled.</li>
+			</ul>
+		</section>
+
+		<section class="space-y-6">
+			<h2 class="text-2xl font-bold border-b border-[var(--border)] pb-2">Verification Gate</h2>
+			@components.CodeBlock(`gospa generate
+gospa doctor --strict`, "bash", "terminal")
+		</section>
+	</div>
+}

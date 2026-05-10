@@ -384,7 +384,7 @@ With `DevMode: false`, GoSPA blocks remote actions unless you either configure *
 ```go
 app := gospa.New(gospa.Config{
     DevMode: false,
-    RemoteActionMiddleware: func(c *fiber.Ctx) error {
+    RemoteActionMiddleware: func(c fiber.Ctx) error {
         // your auth / session check
         return c.Next()
     },
@@ -444,13 +444,14 @@ With `EnableCSRF: true`, GoSPA wires the middleware automatically. You only need
 
 #### 2. Check cookies are enabled
 
-The client reads the `csrf_token` cookie. If cookies are disabled, remote actions will fail.
+The server sets the `csrf_token` cookie and injects the same token into `window.__GOSPA_CONFIG__.csrfToken` for framework helpers. If cookies are disabled, remote actions will fail.
 
 #### 3. Verify token is being sent
 
 Check browser dev tools:
 1. Look for `csrf_token` cookie in Application → Cookies
 2. Check that `X-CSRF-Token` header is sent in the request. The built-in `remote()` helper sends it automatically for same-origin requests.
+3. Check that the rendered page contains `window.__GOSPA_CONFIG__.csrfToken`.
 
 
 ## "unauthorized" Error (Global Remote Middleware)
@@ -466,7 +467,7 @@ Make sure your middleware allows authenticated requests to continue:
 
 ```go
 app := gospa.New(gospa.Config{
-    RemoteActionMiddleware: func(c *fiber.Ctx) error {
+    RemoteActionMiddleware: func(c fiber.Ctx) error {
         if c.Locals("user") == nil {
             return c.Status(fiber.StatusUnauthorized).JSON(fiber.Map{"error": "unauthorized"})
         }
@@ -663,6 +664,7 @@ routing.RegisterRemoteAction("process", loggedAction("process", func(ctx context
 1. **Network tab**: Look for the POST request to `/_gospa/remote/*`
 2. **Console**: Look for JavaScript errors
 3. **Application > Cookies**: Verify `csrf_token` exists
+4. **Elements/Console**: Verify `window.__GOSPA_CONFIG__.csrfToken` exists and the request sends `X-CSRF-Token`
 
 ## Common Mistakes
 
@@ -1065,7 +1067,7 @@ WebSocket connects but server rejects messages due to authentication.
 #### 1. Use Middleware for Auth
 
 ```go
-app.Use(func(c *fiber.Ctx) error {
+app.Use(func(c fiber.Ctx) error {
     // Skip WebSocket upgrade path
     if strings.HasPrefix(c.Path(), "/_gospa/ws") {
         return c.Next()

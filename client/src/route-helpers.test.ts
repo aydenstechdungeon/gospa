@@ -39,6 +39,9 @@ describe("route-helpers", () => {
 
   beforeEach(() => {
     document.body.innerHTML = "";
+    (window as any).__GOSPA_CONFIG__ = {
+      navigationOptions: { speculativePrefetching: { enabled: false } },
+    };
   });
 
   it("loadRouteData fetches __data endpoint with same-origin defaults", async () => {
@@ -95,6 +98,50 @@ describe("route-helpers", () => {
       "1",
     );
     expect(payload.data?.ok).toBe(true);
+  });
+
+  it("callRouteAction injects CSRF into FormData bodies", async () => {
+    (window as any).__GOSPA_CONFIG__.csrfToken =
+      "abcdef0123456789abcdef0123456789abcdef0123456789abcdef0123456789";
+    const fetchMock = mock(
+      async (_url: string, _init?: RequestInit) =>
+        new Response(JSON.stringify({ code: "SUCCESS" }), {
+          status: 200,
+          headers: { "content-type": "application/json" },
+        }),
+    );
+    (globalThis as any).fetch = fetchMock;
+
+    const body = new FormData();
+    await callRouteAction("/users", "save", body);
+
+    const [, init] = fetchMock.mock.calls[0] as [string, RequestInit];
+    expect((init.body as FormData).get("_csrf")).toBe(
+      "abcdef0123456789abcdef0123456789abcdef0123456789abcdef0123456789",
+    );
+    expect(
+      (init.headers as Record<string, string>)["X-CSRF-Token"],
+    ).toBeUndefined();
+  });
+
+  it("callRouteAction sends CSRF header for non-FormData bodies", async () => {
+    (window as any).__GOSPA_CONFIG__.csrfToken =
+      "abcdef0123456789abcdef0123456789abcdef0123456789abcdef0123456789";
+    const fetchMock = mock(
+      async (_url: string, _init?: RequestInit) =>
+        new Response(JSON.stringify({ code: "SUCCESS" }), {
+          status: 200,
+          headers: { "content-type": "application/json" },
+        }),
+    );
+    (globalThis as any).fetch = fetchMock;
+
+    await callRouteAction("/users", "save", JSON.stringify({ ok: true }));
+
+    const [, init] = fetchMock.mock.calls[0] as [string, RequestInit];
+    expect((init.headers as Record<string, string>)["X-CSRF-Token"]).toBe(
+      "abcdef0123456789abcdef0123456789abcdef0123456789abcdef0123456789",
+    );
   });
 
   it("callRouteAction throws RouteActionError by default on non-2xx", async () => {

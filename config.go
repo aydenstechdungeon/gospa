@@ -173,8 +173,12 @@ type Config struct {
 	AllowUnauthenticatedRemoteActions bool             // Default false
 
 	// Security Options
-	AllowedOrigins        []string
-	EnableCSRF            bool
+	AllowedOrigins []string
+	EnableCSRF     bool
+	// DisableCSRF explicitly disables built-in CSRF protection. EnableCSRF
+	// defaults to true during app initialization, so use this only for trusted
+	// local/dev stacks or fully custom CSRF handling.
+	DisableCSRF           bool
 	ContentSecurityPolicy string
 	PublicOrigin          string
 	// StrictProduction enforces hard startup validation for production deployments.

@@ -38,3 +38,21 @@ func TestParseOffsets(t *testing.T) {
 		t.Errorf("Expected offset 10, got %d", parsed.Template.ByteOffset)
 	}
 }
+
+func TestParseFrontMatterRequiresDelimiterOnOwnLine(t *testing.T) {
+	input := `---
+title: A --- B
+---
+<template><h1>Hello</h1></template>`
+
+	parsed, err := Parse(input)
+	if err != nil {
+		t.Fatalf("Failed to parse: %v", err)
+	}
+	if got := parsed.FrontMatter["title"]; got != "A --- B" {
+		t.Fatalf("unexpected frontmatter title: %q", got)
+	}
+	if parsed.Template.Content != "<h1>Hello</h1>" {
+		t.Fatalf("unexpected template content: %q", parsed.Template.Content)
+	}
+}

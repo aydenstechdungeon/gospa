@@ -44,6 +44,16 @@ function getCookie(name: string): string | undefined {
     : undefined;
 }
 
+function getCSRFToken(): string | undefined {
+  const configToken =
+    typeof window !== "undefined"
+      ? (window as any).__GOSPA_CONFIG__?.csrfToken
+      : undefined;
+  return typeof configToken === "string" && configToken
+    ? configToken
+    : getCookie("csrf_token");
+}
+
 /**
  * Configure the remote action client
  */
@@ -127,12 +137,14 @@ export async function remote<T = unknown>(
   });
 
   try {
+    const csrfToken = getCSRFToken();
     const response = await Promise.race([
       fetch(url, {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
           Accept: "application/json",
+          ...(csrfToken ? { "X-CSRF-Token": csrfToken } : {}),
           ...options.headers,
         },
         body: input !== undefined ? JSON.stringify(input) : undefined,

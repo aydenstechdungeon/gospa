@@ -112,7 +112,7 @@
 ### Configuration
 
 [scaling](docs/configuration/scaling.md)
-  - Size: 2085 bytes
+  - Size: 2166 bytes
 
 [basic](docs/configuration/basic.md)
   - Size: 1695 bytes
@@ -121,7 +121,7 @@
   - Size: 1894 bytes
 
 [configuration](docs/configuration.md)
-  - Size: 2067 bytes
+  - Size: 2175 bytes
 
 
 ### Plugins
@@ -178,13 +178,13 @@
   - Size: 1678 bytes
 
 [core](docs/api/core.md)
-  - Size: 33981 bytes
+  - Size: 34159 bytes
 
 [fiber](docs/api/fiber.md)
   - Size: 24 bytes
 
 [remote-actions](docs/api/remote-actions.md)
-  - Size: 2135 bytes
+  - Size: 2138 bytes
 
 [routing](docs/api/routing.md)
   - Size: 1132 bytes
@@ -199,7 +199,7 @@
 ### Troubleshooting
 
 [troubleshooting](docs/troubleshooting.md)
-  - Size: 66136 bytes
+  - Size: 66412 bytes
 
 
 ### Other
@@ -208,7 +208,7 @@
   - Size: 19543 bytes
 
 [security](docs/security.md)
-  - Size: 6397 bytes
+  - Size: 6627 bytes
 
 [root](docs/root.md)
   - Size: 2109 bytes
@@ -232,7 +232,7 @@
   - Size: 1944 bytes
 
 [rendering](docs/rendering.md)
-  - Size: 12488 bytes
+  - Size: 12660 bytes
 
 [components](docs/components.md)
   - Size: 13710 bytes

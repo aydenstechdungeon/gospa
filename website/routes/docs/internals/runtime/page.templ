@@ -1,0 +1,39 @@
+package runtime
+
+import "github.com/aydenstechdungeon/gospa/website/components"
+
+templ Page() {
+	<div class="space-y-10">
+		<header>
+			<h1 class="text-3xl font-bold tracking-tight mb-4">Client Runtime Internals</h1>
+			<p class="text-xl text-[var(--text-secondary)] leading-relaxed">
+				How GoSPA selects and serves runtime tiers for navigation, reactivity, islands, and realtime features.
+			</p>
+		</header>
+
+		<section class="space-y-4">
+			<h2 class="text-2xl font-bold border-b border-[var(--border)] pb-2">Runtime Tiers</h2>
+			<div class="overflow-x-auto">
+				<table class="w-full text-sm border border-[var(--border)] rounded-lg">
+					<thead class="bg-[var(--bg-tertiary)]">
+						<tr><th class="px-4 py-2 text-left">Tier</th><th class="px-4 py-2 text-left">Use</th><th class="px-4 py-2 text-left">Includes</th></tr>
+					</thead>
+					<tbody class="divide-y divide-[var(--border)]">
+						<tr><td class="px-4 py-2 mono">micro</td><td class="px-4 py-2">Static pages</td><td class="px-4 py-2">Navigation and minimal bootstrap</td></tr>
+						<tr><td class="px-4 py-2 mono">core</td><td class="px-4 py-2">Reactive pages</td><td class="px-4 py-2">Runes, effects, derived values, DOM bindings</td></tr>
+						<tr><td class="px-4 py-2 mono">full</td><td class="px-4 py-2">Realtime apps</td><td class="px-4 py-2">WebSocket, state sync, HMR, remote actions</td></tr>
+					</tbody>
+				</table>
+			</div>
+		</section>
+
+		<section class="space-y-6">
+			<h2 class="text-2xl font-bold border-b border-[var(--border)] pb-2">Manual Tier Directive</h2>
+			@components.CodeBlock(`// page.templ
+// @gospa:tier core`, "go", "page.templ")
+			<p class="text-[var(--text-secondary)]">
+				Layouts and pages are resolved as a chain. If any component needs a higher tier, GoSPA serves the higher runtime for that request.
+			</p>
+		</section>
+	</div>
+}

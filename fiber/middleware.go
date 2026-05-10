@@ -126,7 +126,14 @@ func StateMiddleware(config Config) gofiber.Handler {
 		}
 		// Encode appends a trailing newline; trim it for inline embedding.
 		escapedJSON := strings.TrimRight(buf.String(), "\n")
-		stateScript := `<script` + nonceAttr + `>window.__GOSPA_STATE__ = ` + escapedJSON + `;</script>`
+		configScript := ""
+		if csrfToken, _ := c.Locals("gospa.csrf_token").(string); isValidCSRFToken(csrfToken) {
+			csrfJSON, err := stdjson.Marshal(csrfToken)
+			if err == nil {
+				configScript = `window.__GOSPA_CONFIG__ = Object.assign(window.__GOSPA_CONFIG__ || {}, { csrfToken: ` + string(csrfJSON) + ` });`
+			}
+		}
+		stateScript := `<script` + nonceAttr + `>` + configScript + `window.__GOSPA_STATE__ = ` + escapedJSON + `;</script>`
 
 		runtimePath := config.RuntimeScript
 		if strings.HasPrefix(runtimePath, "/_gospa/runtime.js") {
@@ -370,10 +377,10 @@ func SessionMiddleware() gofiber.Handler {
 }
 
 // CSRFTokenMiddleware validates CSRF tokens on mutating requests.
-// Since the CSRF cookie is HttpOnly, JavaScript cannot read it. Therefore:
-// - Standard HTML form submissions use the _csrf hidden field (progressive enhancement).
-// - API/AJAX requests rely on SameSite=Strict cookie + Origin header validation.
-// The X-CSRF-Token header is no longer supported since the token is not accessible to JS.
+// The csrf_token cookie is HttpOnly, and GoSPA injects the same per-session
+// token into framework-managed bootstrap config for same-origin JSON helpers.
+// - Standard HTML form submissions use the _csrf hidden field.
+// - JSON/AJAX helpers send X-CSRF-Token from the bootstrap config.
 func CSRFTokenMiddleware() gofiber.Handler {
 	return func(c gofiber.Ctx) error {
 		if c.Method() == "GET" || c.Method() == "HEAD" || c.Method() == "OPTIONS" {
@@ -388,6 +395,9 @@ func CSRFTokenMiddleware() gofiber.Handler {
 		}
 
 		token := c.FormValue("_csrf")
+		if token == "" {
+			token = c.Get("X-CSRF-Token")
+		}
 		if token == "" {
 			return c.Status(gofiber.StatusForbidden).JSON(gofiber.Map{
 				"error": "CSRF token mismatch",

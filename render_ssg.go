@@ -5,7 +5,7 @@ import (
 )
 
 func (a *App) storeSsgEntry(key string, html []byte, tags, keys []string) {
-	if a.Config.Storage != nil && !a.Config.Prefork {
+	if a.Config.Storage != nil {
 		entry := ssgEntry{html: html, createdAt: time.Now()}
 		_ = a.Config.Storage.Set(a.Context(), "gospa:ssg:"+key, encodeSsgEntry(entry), 0)
 		a.indexCacheEntry(key, tags, keys)
